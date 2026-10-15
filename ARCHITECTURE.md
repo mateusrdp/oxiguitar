@@ -3,20 +3,20 @@
 OxiGuitar is a Cargo workspace. One score model sits at the centre; readers and writers, layout, playback and the GUI are separate crates around it. The GUI can change without touching the music code, and a command-line tool can convert, render and test files in CI without a window.
 
 ```text
-                 oxiguitar-app (GUI shell)        oxiguitar-cli (no window)
+                 oxiguitar-app (GUI shell, Slint)   oxiguitar-cli (no window)
                      |        |        \              |        |
                      v        v         v             v        v
           oxiguitar-render  oxiguitar-play   oxiguitar-edit  oxiguitar-formats
-          (screen, PDF)     (events, synth)  (commands,      (detect, read,
+          (pixels, PDF)     (events, synth)  (commands,      (detect, read,
                 |                 |           undo/redo)      write, import log)
                 v                 |               |               |
-          oxiguitar-layout        |               |               |
-          (engraving ->           |               |               |
-           display list)          |               |               |
-                \_________________|_______________|_______________/
-                                  v
-                           oxiguitar-model
-              Score > Track > Staff > Bar > Voice > Beat > Note
+          oxiguitar-display <- oxiguitar-layout   |               |
+          (display list,       (engraving)        |               |
+           fonts, SMuFL)           |              |               |
+                                   \______________|_______________/
+                                                  v
+                                           oxiguitar-model
+                              Score > Track > Staff > Bar > Voice > Beat > Note
 ```
 
 Arrows show which crate calls which. Every crate reads or writes the shared model, so a new file format or output touches one box.
@@ -29,12 +29,13 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | `oxiguitar-formats` | M0 | Format detection from contents (FMT-6), readers and writers, import logs (FMT-2). |
 | `oxiguitar-cli` | M0 | `info`, later `convert`, `render` and test helpers. Used by CI. |
 | `oxiguitar-edit` | M2 | Edit commands, selection, undo and redo. |
-| `oxiguitar-layout` | M1 | Engraving: turns the model into a display list of positioned glyphs and lines. |
-| `oxiguitar-render` | M1 | Draws a display list on screen, into PDF, later SVG and PNG. |
+| `oxiguitar-display` | M0 | The display list (positioned glyph runs, lines, rectangles, paths, colour roles), the bundled fonts and SMuFL metadata (ADR 0005). |
+| `oxiguitar-layout` | M1 | Engraving: turns the model into a display list. |
+| `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. |
 | `oxiguitar-play` | M3 | Score-to-event conversion, the synthesiser, the real-time audio thread. |
-| `oxiguitar-app` | M1 | The desktop GUI shell. Toolkit chosen by the M0 spike. |
+| `oxiguitar-app` | M1 | The desktop GUI shell, in Slint (ADR 0004, proposed). Shows the renderer's pixels as the score canvas. |
 
-Crates marked with a later milestone do not exist yet.
+Crates marked with a later milestone do not exist yet. Throwaway experiments live in [spikes/](spikes/), outside the workspace.
 
 ## Design rules
 

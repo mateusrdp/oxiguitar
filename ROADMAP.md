@@ -6,7 +6,7 @@ v1.0, a full TuxGuitar replacement for reading, editing and playing, ships at th
 
 | Milestone | Release | Status |
 | --- | --- | --- |
-| M0 Foundations | — | **In progress** |
+| M0 Foundations | — | **Done, awaiting review** |
 | M1 Viewer | v0.1 | Not started |
 | M2 Editor | v0.5 | Not started |
 | M3 MIDI player | **v1.0** | Not started |
@@ -29,17 +29,30 @@ Set up everything the later milestones stand on, and settle the open technical c
 - [x] Format detection from file contents (FMT-6) and a GP3/GP4/GP5 reader with import log
 - [x] `oxiguitar-cli info` prints the structure of any GP5 file
 - [x] Corpus manifest: names, formats, sources and checksums (per-file source URLs still to collect)
-- [ ] Public fixture set of self-made and freely licensed files (started: GP3/4/5 test songs)
+- [x] Public fixture set of self-made and freely licensed files (GP3/4/5 test songs; each new reader adds its own in M1)
 - [x] Placeholder app icon: a green guitar pick with "OxG"
-- [ ] Licences marked "confirm" in the brief checked before any code is copied
-- [ ] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR: GUI toolkit)
-- [ ] Render spike: SMuFL glyphs and tab numbers on screen and in a PDF from one display list (ADR: renderer)
+- [x] Licences marked "confirm" in the brief checked before any code is copied (see below)
+- [x] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR 0004: Slint, proposed)
+- [x] Render spike: SMuFL glyphs and tab numbers on screen and in a PDF from one display list (ADR 0005)
 
 Done when:
 
-- [ ] Decision records exist for GUI toolkit, renderer, model and file-reader strategy
+- [x] Decision records exist for GUI toolkit (0004), renderer (0005), model (0002) and file-reader strategy (0003)
 - [x] `oxiguitar-cli` prints the structure of any GP5 file (all 27 GP5 files in the corpus)
-- [ ] CI is green on all three systems
+- [x] CI is green on all three systems (Windows, macOS, Linux; x86_64 and ARM64)
+
+Licences confirmed on 15 October 2026, from each package's own metadata and licence files:
+
+| Project | Version | Licence | Note |
+| --- | --- | --- | --- |
+| PyGuitarPro | 0.11 | LGPL-3.0-only | Reference only; ported code would keep LGPL-3.0 notices |
+| musicxml | 1.1.2 | MIT | Last release November 2024 |
+| abc-parser | 0.4.0 | MIT | |
+| krilla | 0.8.2 | MIT OR Apache-2.0 | Its NOTICE credits MPL-2.0 and Apache-2.0 snippets; all GPL-3.0-compatible |
+| cpal | 0.18.2 | Apache-2.0 | |
+| midir | 0.11.1 | MIT | |
+| zip | 9.0.3 | MIT | Use without default features: they build the zstd C library |
+| quick-xml | 0.42.0 | MIT | |
 
 ## M1 — Viewer (v0.1)
 
