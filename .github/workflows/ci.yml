@@ -38,14 +38,46 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+      # Lints run on the minimum supported Rust, the same rustc and clippy
+      # that Debian unstable ships, so CI and contributors' machines agree and
+      # a new upstream lint cannot turn CI red overnight.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      # Each problem also becomes an annotation on the pull request.
+      - name: Clippy
+        run: |
+          set -o pipefail
+          cargo clippy --workspace --all-targets --all-features --locked \
+            --message-format=short -- -D warnings 2>&1 \
+            | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+      - name: Docs
+        run: |
+          set -o pipefail
+          cargo doc --workspace --no-deps --locked 2>&1 \
+            | sed -E 's/^(error|warning)(\[[^]]*\])?: (.*)$/::error::\3\n&/'
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  # Advisory only (not part of ci-success): shows what the next Rust
+  # release's clippy will ask for, before Debian unstable ships it.
+  lint-next:
+    name: Lint on latest stable (advisory)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-      - run: cargo doc --workspace --no-deps --locked
-        env:
-          RUSTDOCFLAGS: -D warnings
+      - run: |
+          set -o pipefail
+          rustc --version
+          cargo clippy --workspace --all-targets --all-features --locked \
+            --message-format=short -- -D warnings 2>&1 \
+            | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::warning file=\1,line=\2,col=\3::\5\n&/'
 
   test:
     name: Test (${{ matrix.name }})
