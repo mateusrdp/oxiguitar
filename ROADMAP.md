@@ -25,11 +25,11 @@ Set up everything the later milestones stand on, and settle the open technical c
 - [x] CI on Windows, macOS and Linux, x86_64 and ARM64; cargo-deny licence check; no-network test (NET-5); `ci-success` gate
 - [x] Test builds of every push to `develop` for all targets
 - [x] Score model, first version (ADR 0002)
-- [ ] Evaluate the guitarpro crate on the corpus: adopt, fork or write our own (ADR 0003)
-- [ ] Format detection from file contents (FMT-6) and a GP5 reader
-- [ ] `oxiguitar-cli info` prints the structure of any GP5 file
-- [ ] Corpus manifest: names, formats, sources and checksums
-- [ ] Public fixture set of self-made and freely licensed files
+- [x] Evaluate the guitarpro crate on the corpus: adopt, fork or write our own (ADR 0003: write our own)
+- [x] Format detection from file contents (FMT-6) and a GP3/GP4/GP5 reader with import log
+- [x] `oxiguitar-cli info` prints the structure of any GP5 file
+- [x] Corpus manifest: names, formats, sources and checksums (per-file source URLs still to collect)
+- [ ] Public fixture set of self-made and freely licensed files (started: GP3/4/5 test songs)
 - [x] Placeholder app icon: a green guitar pick with "OxG"
 - [ ] Licences marked "confirm" in the brief checked before any code is copied
 - [ ] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR: GUI toolkit)
@@ -38,7 +38,7 @@ Set up everything the later milestones stand on, and settle the open technical c
 Done when:
 
 - [ ] Decision records exist for GUI toolkit, renderer, model and file-reader strategy
-- [ ] `oxiguitar-cli` prints the structure of any GP5 file
+- [x] `oxiguitar-cli` prints the structure of any GP5 file (all 27 GP5 files in the corpus)
 - [ ] CI is green on all three systems
 
 ## M1 — Viewer (v0.1)
