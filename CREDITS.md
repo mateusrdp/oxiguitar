@@ -19,7 +19,7 @@ Each file ported or adapted from one of these starts with an SPDX header, the or
 | [MuseScore Studio](https://github.com/musescore/MuseScore) 4.7 | Muse Group and contributors | GPL-3.0-only | Engraving and layout algorithms, .mscz logic, guitar features |
 | [TuxGuitar](https://github.com/helge17/tuxguitar) 2.0 | Julian Casadesus, helge17 and contributors | LGPL-2.1-only | Data model, Guitar Pro importers, effect-to-MIDI mapping |
 | [alphaTab](https://github.com/CoderLine/alphaTab) 1.x | Danielku15 / CoderLine and contributors | MPL-2.0 | Guitar Pro 3–8 readers and writer, GPIF knowledge, effect rendering |
-| [PyGuitarPro](https://github.com/Perlence/PyGuitarPro) | Perlence and contributors | LGPL-3.0 | Byte-level documentation of the GP3–5 formats |
+| [PyGuitarPro](https://github.com/Perlence/PyGuitarPro) 0.11 | Sviatoslav Abakumov (Perlence) and contributors | LGPL-3.0-only | Byte-level documentation of the GP3–5 formats |
 | [guitarpro / scorelib](https://codeberg.org/slundi/scorelib) 0.4 | slundi | MIT | Rust readers for GP3–8; used as a cross-check while testing our readers (see ADR 0003) |
 | [Verovio](https://github.com/rism-digital/verovio) | RISM Digital Center and contributors | LGPL-3.0 | Engraving techniques; reference only |
 
@@ -27,15 +27,36 @@ Each file ported or adapted from one of these starts with an SPDX header, the or
 
 The authoritative list, with exact versions and licenses, is generated from `Cargo.lock` and shipped with every release as a third-party license file. CI runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) and fails on any license outside the allow-list in `deny.toml`.
 
-So far OxiGuitar uses only the Rust standard library.
+Direct dependencies so far, all pure Rust:
+
+| Crate | Authors | License | Use |
+| --- | --- | --- | --- |
+| [krilla](https://github.com/LaurenzV/krilla) 0.8 | Laurenz Stampfl | MIT OR Apache-2.0 | PDF output. Its NOTICE.md credits code adapted from resvg (MPL-2.0) and from typst, svg2pdf and vello (Apache-2.0). |
+| [tiny-skia](https://github.com/linebender/tiny-skia) 0.12 | Yevhenii Reizner and contributors; a port of parts of Skia (Google) | BSD-3-Clause | Pixel output: screen, PNG |
+| [skrifa](https://github.com/googlefonts/fontations) 0.42 | Google (fontations) | MIT OR Apache-2.0 | Font outlines and metrics |
+| [serde](https://serde.rs), [serde_json](https://github.com/serde-rs/json) | David Tolnay, Erick Tryzelaar | MIT OR Apache-2.0 | Reading the SMuFL metadata file |
+
+Checked for later milestones (licences confirmed 15 October 2026, see ROADMAP.md):
+
+| Crate | Version checked | License | Note |
+| --- | --- | --- | --- |
+| [rustysynth](https://github.com/sinshu/rustysynth) | 1.3.7 | MIT | SoundFont synthesiser (M3) |
+| [cpal](https://github.com/RustAudio/cpal) | 0.18.2 | Apache-2.0 | Audio output (M3); compatible with GPL-3.0, not GPL-2.0 |
+| [midir](https://github.com/Boddlnagg/midir) | 0.11.1 | MIT | MIDI ports (M8) |
+| [zip](https://github.com/zip-rs/zip2) | 9.0.3 | MIT | GP7/8 and .mscz containers (M1). Use without default features: the defaults compile the zstd C library. |
+| [quick-xml](https://github.com/tafia/quick-xml) | 0.42.0 | MIT | GPIF, MusicXML and .mscx (M1) |
+| [musicxml](https://github.com/hedgetechllc/musicxml) | 1.1.2 | MIT | MusicXML reader/writer or reference (M1); last release November 2024 |
+| [abc-parser](https://gitlab.com/Askaholic/rust-abc-2) | 0.4.0 | MIT | ABC 2.1 parser, incomplete (M1) |
 
 ## Fonts and assets
 
 | Asset | Authors | License | Use |
 | --- | --- | --- | --- |
 | Placeholder icon (green pick, "OxG") | OxiGuitar contributors | GPL-3.0-or-later | App icon until real artwork exists |
+| [Bravura](https://github.com/steinbergmedia/bravura) 1.482 and its SMuFL metadata | Steinberg Media Technologies GmbH | OFL-1.1 | Default music font |
+| [Noto Sans](https://github.com/notofonts/latin-greek-cyrillic) 2.015 | The Noto Project Authors | OFL-1.1 | Text and tab numbers |
 
-Planned: [Bravura](https://github.com/steinbergmedia/bravura) (Steinberg, OFL-1.1) as the default music font and [Leland](https://github.com/MuseScoreFonts/Leland) (Martin Keary, Simon Smith, OFL-1.1) as an alternative. Fonts ship beside the program under their own license.
+[assets/fonts/](assets/fonts/) holds the font files with their copyright notices and licence texts. [Leland](https://github.com/MuseScoreFonts/Leland) (Martin Keary, Simon Smith, OFL-1.1) is planned as an alternative music font. Fonts travel with the program under their own license; documents made with them are not affected.
 
 ## Trademarks
 

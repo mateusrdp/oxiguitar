@@ -1,0 +1,19 @@
+[package]
+name = "oxiguitar-render"
+description = "Draws an OxiGuitar display list into a pixel image (screen, PNG) or a PDF."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+oxiguitar-display.workspace = true
+skrifa.workspace = true
+tiny-skia.workspace = true
+krilla.workspace = true
+
+[lints]
+workspace = true

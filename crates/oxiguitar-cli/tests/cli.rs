@@ -75,3 +75,31 @@ fn bad_usage_exits_with_2() {
     let out = cli().arg("frobnicate").output().unwrap();
     assert_eq!(out.status.code(), Some(2));
 }
+
+#[test]
+fn specimen_writes_a_png_and_a_pdf() {
+    let dir = std::env::temp_dir().join(format!("oxiguitar-specimen-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let (png, pdf) = (dir.join("page.png"), dir.join("page.pdf"));
+    let out = cli()
+        .args(["specimen", "--scale", "0.5", "--png"])
+        .arg(&png)
+        .arg("--pdf")
+        .arg(&pdf)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(std::fs::read(&png).unwrap().starts_with(b"\x89PNG"));
+    assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF-"));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn specimen_needs_an_output() {
+    let out = cli().arg("specimen").output().unwrap();
+    assert_eq!(out.status.code(), Some(2));
+}
