@@ -81,9 +81,9 @@ Scores run from 1 (fails the need) to 5 (fully meets it).
 
 ### API stability
 
-- **Slint:** stable 1.x API since April 2023, a minor release about every two months; breaking changes stay behind features named `unstable-*`. Deprecated names keep working with a warning (we hit two in the spike).
+- **Slint:** stable 1.x API since April 2023, a minor release about every two months; breaking changes stay behind features named `unstable-*`. Renamed properties keep working with a deprecation warning, as the spike's scroll properties did.
 - **iced:** 0.x, with breaking changes in every release; 0.14 is ten months old and is mostly one maintainer's work.
-- **egui:** 0.x, four releases in the last twelve months, each with breaking changes (0.34 replaced `App::update` and the panel types; 0.35 removed the deprecated items; 0.36 changed input events). Its minimum Rust rose from 1.88 to 1.95 during 2026, which matters because our minimum follows Debian unstable's rustc.
+- **egui:** 0.x, three releases in 2026, each with breaking changes (0.34 replaced `App::update` and the panel types; 0.35 removed the deprecated items; 0.36 changed input events). Its minimum Rust rose from 1.88 to 1.95 during 2026, which matters because our minimum follows Debian unstable's rustc.
 
 ### Path to Android and iPad
 
@@ -99,7 +99,7 @@ Scores run from 1 (fails the need) to 5 (fully meets it).
 
 ## Decision
 
-Slint. It is the only candidate that meets the accessibility, international-text and mobile requirements today, and the only one with a stable API, which suits a project that will live for years with a thin GUI on top. We build what it lacks, splitters and collapsible panels, and draw our own icons for the palette (UI-3), which also removes the music-font metric problems we saw on palette buttons in all three toolkits.
+Slint. It is the only candidate that meets the accessibility, international-text and mobile requirements today, and the only one with a stable API, which suits a project that will live for years with a thin GUI on top. We build what it lacks, splitters and collapsible panels, and draw our own icons for the palette (UI-3), which also removes the music-font metric problems we saw on palette buttons in Slint and egui.
 
 egui is the fallback if Slint stalls: it scored second and is the easiest to extend.
 
