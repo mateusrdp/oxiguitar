@@ -5587,6 +5587,7 @@ dependencies = [
  "const-field-offset",
  "i-slint-backend-linuxkms",
  "i-slint-backend-selector",
+ "i-slint-backend-winit",
  "i-slint-common",
  "i-slint-core",
  "i-slint-core-macros",
@@ -5780,6 +5781,7 @@ version = "0.0.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-render",
+ "tiny-skia 0.12.0",
 ]
 
 [[package]]
@@ -5802,6 +5804,7 @@ dependencies = [
 name = "spike-slint"
 version = "0.0.0"
 dependencies = [
+ "oxiguitar-display",
  "slint",
  "slint-build",
  "spike-common",
