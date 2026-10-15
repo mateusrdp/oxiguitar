@@ -11,6 +11,7 @@ publish.workspace = true
 
 [dependencies]
 oxiguitar-model.workspace = true
+oxiguitar-formats.workspace = true
 
 [lints]
 workspace = true

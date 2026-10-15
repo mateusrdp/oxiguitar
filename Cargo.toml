@@ -15,6 +15,7 @@ publish = false
 
 [workspace.dependencies]
 oxiguitar-model = { path = "crates/oxiguitar-model" }
+oxiguitar-formats = { path = "crates/oxiguitar-formats" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
