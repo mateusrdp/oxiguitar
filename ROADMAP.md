@@ -24,7 +24,7 @@ Set up everything the later milestones stand on, and settle the open technical c
 - [x] Cargo workspace, formatting and lint rules, LICENSE, CREDITS.md, CONTRIBUTING.md with DCO sign-off
 - [x] CI on Windows, macOS and Linux, x86_64 and ARM64; cargo-deny licence check; no-network test (NET-5); `ci-success` gate
 - [x] Test builds of every push to `develop` for all targets
-- [ ] Score model, first version (ADR 0002)
+- [x] Score model, first version (ADR 0002)
 - [ ] Evaluate the guitarpro crate on the corpus: adopt, fork or write our own (ADR 0003)
 - [ ] Format detection from file contents (FMT-6) and a GP5 reader
 - [ ] `oxiguitar-cli info` prints the structure of any GP5 file
