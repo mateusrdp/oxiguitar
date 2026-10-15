@@ -108,5 +108,5 @@ egui is the fallback if Slint stalls: it scored second and is the easiest to ext
 - `oxiguitar-app` (M1) uses Slint 1.x with the winit backend; the screen lives in `.slint` files, the logic in Rust. The score canvas is an `Image` fed by `oxiguitar-render`, as in the spike.
 - Linux builds need `libfontconfig1-dev`, `libxkbcommon-dev` and `libwayland-dev` (already on the brief's list); `libasound2-dev` arrives with audio in M3. The README lists them.
 - In M1 we turn the spike's splitter into a collapsible panel component and write the Guitar Pro-like style.
-- CI builds the spikes on all five desktop targets (`.github/workflows/spikes.yml`, advisory); the first run shows whether each toolkit builds on Windows ARM64.
+- CI builds the spikes on all five desktop targets with Rust 1.97 (`.github/workflows/spikes.yml`, advisory). On its first run all three toolkits built on Linux and Windows (x86_64 and ARM64) and on macOS (ARM64).
 - Revisit if Slint changes its licence terms, if a 1.x release breaks us without warning, or if Mateus's hands-on test on Debian (screen reader, input methods) finds a blocker.
