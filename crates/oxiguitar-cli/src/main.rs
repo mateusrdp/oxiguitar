@@ -6,6 +6,7 @@
 mod info;
 mod manifest;
 mod sha256;
+mod specimen;
 
 use std::process::ExitCode;
 
@@ -20,6 +21,9 @@ Commands:
                              contents rather than its extension
   manifest <dir>...          Print a TOML manifest (name, format, size,
                              SHA-256) of every file in the folders
+  specimen [--png FILE] [--pdf FILE] [--scale N] [--dark]
+                             Draw the render spike's test page into a PNG
+                             (N pixels per point, default 2) and/or a PDF
   version                    Print the version and exit
   help                       Print this help
 
@@ -32,6 +36,7 @@ fn main() -> ExitCode {
         Some("info") => info::run(rest),
         Some("detect") => info::detect(rest),
         Some("manifest") => manifest::run(rest),
+        Some("specimen") => specimen::run(rest),
         Some("version" | "--version" | "-V") => {
             println!("oxiguitar-cli {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
