@@ -110,3 +110,10 @@ egui is the fallback if Slint stalls: it scored second and is the easiest to ext
 - In M1 we turn the spike's splitter into a collapsible panel component and write the Guitar Pro-like style.
 - CI builds the spikes on all five desktop targets with Rust 1.97 (`.github/workflows/spikes.yml`, advisory). On its first run all three toolkits built on Linux and Windows (x86_64 and ARM64) and on macOS (ARM64).
 - Revisit if Slint changes its licence terms, if a 1.x release breaks us without warning, or if Mateus's hands-on test on Debian (screen reader, input methods) finds a blocker.
+
+## Update, 16 October 2026
+
+Mateus ran all three spikes on Debian sid under Wayland: everything worked. Two decisions followed:
+
+- **Screen readers are a late nice-to-have**, not a v1.0 goal. Scored on keyboard access alone, the criterion becomes Slint 5, egui 4, iced 2, and the totals Slint 23, egui 17, iced 13 of 25: the choice does not change. Slint's AccessKit support keeps screen readers within reach later.
+- **The interface follows [docs/design/ui.md](../design/ui.md):** menus only along the top, no labels that repeat what is visible, collapsible palette groups, interface zoom by Ctrl + wheel and Ctrl + `+` / `-` / `0`, score zoom by a slider in the canvas corner, page styles under View. The Slint spike now does all of this, which tested three more things Slint needs: a native-looking menu bar with shortcuts and checkable items (built in), whole-window zoom (the winit event hook behind Slint's `unstable-winit-030` feature, plus a scale-factor change; about 80 lines), and palette icons drawn by our renderer and tinted by Slint (`Image` with `colorize`). The winit hook is marked unstable: a minor Slint release may change it, and adapting would take a few lines.

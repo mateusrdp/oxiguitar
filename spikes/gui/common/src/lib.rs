@@ -8,6 +8,8 @@
 //! for the visible part of the page at its zoom and pixel density and shows
 //! the pixels it gets back.
 
+pub mod icons;
+
 use oxiguitar_display::{DisplayList, FontSet, Theme, smufl::Metadata, specimen};
 use oxiguitar_render::{Raster, View};
 
@@ -36,8 +38,8 @@ pub struct Tool {
 /// What a palette button shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Face {
-    /// A SMuFL codepoint, drawn with Bravura.
-    Symbol(char),
+    /// SMuFL codepoints, drawn with Bravura (usually one).
+    Symbol(&'static str),
     /// Plain text, drawn with the interface font.
     Text(&'static str),
 }
@@ -47,7 +49,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "whole",
         "Whole note",
-        Face::Symbol('\u{E1D2}'),
+        Face::Symbol("\u{E1D2}"),
         '1',
         "Note values",
         true,
@@ -55,7 +57,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "half",
         "Half note",
-        Face::Symbol('\u{E1D3}'),
+        Face::Symbol("\u{E1D3}"),
         '2',
         "Note values",
         true,
@@ -63,7 +65,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "quarter",
         "Quarter note",
-        Face::Symbol('\u{E1D5}'),
+        Face::Symbol("\u{E1D5}"),
         '3',
         "Note values",
         true,
@@ -71,7 +73,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "eighth",
         "Eighth note",
-        Face::Symbol('\u{E1D7}'),
+        Face::Symbol("\u{E1D7}"),
         '4',
         "Note values",
         true,
@@ -79,7 +81,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "16th",
         "Sixteenth note",
-        Face::Symbol('\u{E1D9}'),
+        Face::Symbol("\u{E1D9}"),
         '5',
         "Note values",
         true,
@@ -87,7 +89,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "32nd",
         "Thirty-second note",
-        Face::Symbol('\u{E1DB}'),
+        Face::Symbol("\u{E1DB}"),
         '6',
         "Note values",
         true,
@@ -95,7 +97,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "dot",
         "Dotted",
-        Face::Symbol('\u{E1E7}'),
+        Face::Symbol("\u{E1E7}"),
         '.',
         "Note values",
         false,
@@ -103,7 +105,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "rest",
         "Rest",
-        Face::Symbol('\u{E4E5}'),
+        Face::Symbol("\u{E4E5}"),
         'r',
         "Note values",
         false,
@@ -117,11 +119,18 @@ pub const TOOLS: &[Tool] = &[
         false,
     ),
     t("slide", "Slide", Face::Text("/"), 's', "Effects", false),
-    t("bend", "Bend", Face::Text("↗"), 'b', "Effects", false),
+    t(
+        "bend",
+        "Bend",
+        Face::Symbol("\u{EB61}"),
+        'b',
+        "Effects",
+        false,
+    ),
     t(
         "vibrato",
         "Vibrato",
-        Face::Symbol('\u{EAB2}'),
+        Face::Symbol("\u{EAB2}\u{EAB2}\u{EAB2}"),
         'v',
         "Effects",
         false,
@@ -145,7 +154,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "dead",
         "Dead note",
-        Face::Symbol('\u{E0A9}'),
+        Face::Symbol("\u{E0A9}"),
         'x',
         "Effects",
         false,
@@ -161,7 +170,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "accent",
         "Accent",
-        Face::Symbol('\u{E4A0}'),
+        Face::Symbol("\u{E4A0}"),
         'a',
         "Effects",
         false,
@@ -169,7 +178,7 @@ pub const TOOLS: &[Tool] = &[
     t(
         "staccato",
         "Staccato",
-        Face::Symbol('\u{E4A2}'),
+        Face::Symbol("\u{E4A2}"),
         't',
         "Effects",
         false,
@@ -351,6 +360,7 @@ impl Canvas {
     /// Draw the part of the page at (`x`, `y`) points, `width` × `height`
     /// pixels, at `zoom` (1.0 = 100 %, 96 dpi) on a screen with `dpr`
     /// physical pixels per logical pixel.
+    #[allow(clippy::too_many_arguments)]
     pub fn frame(
         &mut self,
         x: f32,
@@ -361,6 +371,22 @@ impl Canvas {
         dpr: f32,
         dark: bool,
     ) -> Frame {
+        let theme = if dark { Theme::DARK } else { Theme::LIGHT };
+        self.frame_themed(x, y, width, height, zoom, dpr, &theme)
+    }
+
+    /// Like [`Canvas::frame`], with any page theme.
+    #[allow(clippy::too_many_arguments)]
+    pub fn frame_themed(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: u32,
+        height: u32,
+        zoom: f32,
+        dpr: f32,
+        theme: &Theme,
+    ) -> Frame {
         let scale = zoom * 96.0 / 72.0 * dpr;
         let view = View {
             scale,
@@ -369,10 +395,9 @@ impl Canvas {
             width: width.max(1),
             height: height.max(1),
         };
-        let theme = if dark { Theme::DARK } else { Theme::LIGHT };
         let rgba = self
             .raster
-            .render(&self.page, &self.fonts, &theme, &view)
+            .render(&self.page, &self.fonts, theme, &view)
             .map(|p| p.take())
             .unwrap_or_else(|| vec![0; (view.width * view.height * 4) as usize]);
         Frame {

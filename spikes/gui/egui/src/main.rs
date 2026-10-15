@@ -185,7 +185,7 @@ impl App {
             Face::Text(_) => FontId::proportional(13.0),
         };
         let text = match tool.face {
-            Face::Symbol(c) => c.to_string(),
+            Face::Symbol(s) => s.to_owned(),
             Face::Text(s) => s.to_owned(),
         };
         let galley = ui

@@ -158,10 +158,7 @@ impl App {
     fn tool_button(&self, i: usize) -> Element<'_, Message> {
         let tool = &TOOLS[i];
         let face: Element<'_, Message> = match tool.face {
-            Face::Symbol(c) => text(c.to_string())
-                .font(Font::with_name("Bravura"))
-                .size(20)
-                .into(),
+            Face::Symbol(s) => text(s).font(Font::with_name("Bravura")).size(20).into(),
             Face::Text(s) => text(s).size(12).into(),
         };
         let b = button(container(face).center(36))

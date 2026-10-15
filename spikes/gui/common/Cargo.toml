@@ -10,3 +10,4 @@ publish.workspace = true
 [dependencies]
 oxiguitar-display.workspace = true
 oxiguitar-render.workspace = true
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd", "png-format"] }

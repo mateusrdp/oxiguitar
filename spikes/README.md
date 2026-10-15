@@ -15,13 +15,22 @@ The same small screen in three toolkits: a palette of note-value and effect tool
 | `spike-egui` | egui and eframe 0.36 |
 | `spike-common` | What all three share: tools, tracks, the canvas |
 
-Each one does the same things:
+All three were built for the comparison in ADR 0004 and do the same things:
 
 - Palette buttons with Bravura symbols, tooltips that name the tool and its shortcut, and selected states. Note values exclude each other; effects toggle.
-- Single-key shortcuts (1–6 for note values, H, S, B, V, P, L, X, G, A, T for effects) that do nothing while you type in a text field. Ctrl and + or − zoom.
-- A command search field that filters the palette.
-- Track names you can edit (the first contains "Água"), mute and solo, a volume slider.
+- Single-key shortcuts (1–6 for note values, H, S, B, V, P, L, X, G, A, T for effects) that do nothing while you type in a text field.
+- A search field that filters the palette.
+- Track names you can edit (in Portuguese, Japanese and Arabic), mute and solo, a volume slider.
 - The score canvas: zoom from 25 % to 400 %, a dark page, scrolling, and only the visible part of the page rendered.
+
+The iced and egui spikes stay as they were for that comparison. **The Slint spike has since followed Mateus's review** (16 October 2026) and shows the rules in [docs/design/ui.md](../docs/design/ui.md):
+
+- Only menus along the top (File, Edit, View, Help); no title, status caption or zoom buttons in the window. Most File and Edit items are placeholders, greyed out.
+- View → Page: Light, Dark or Parchment. View → Palette (F7) and Tracks (F8) show or hide the panels; the splitters resize them.
+- Palette groups collapse and expand from their headings. Ctrl + K focuses the tool search.
+- Palette icons are drawn by our renderer and centred on their ink (`spike-common/src/icons.rs`; `cargo run -p spike-common --example icon_sheet -- icons.png` draws them all).
+- Interface zoom: Ctrl + mouse wheel, Ctrl + `+` / `-` / `0`. Score zoom: the slider at the bottom right of the canvas; click its percentage for 100 %.
+- Help → Keyboard and Mouse (F1) lists all of this.
 
 ### Running a spike
 
