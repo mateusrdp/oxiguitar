@@ -73,11 +73,16 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: |
-          set -o pipefail
           rustc --version
-          cargo clippy --workspace --all-targets --all-features --locked \
-            --message-format=short -- -D warnings 2>&1 \
-            | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::warning file=\1,line=\2,col=\3::\5\n&/'
+          if ! cargo clippy --workspace --all-targets --all-features --locked \
+              --message-format=short -- -D warnings > clippy.log 2>&1; then
+            sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::warning file=\1,line=\2,col=\3::\5/;t;d' clippy.log
+            # Anything without a file position (a crash, a lockfile problem):
+            # show the end of the output as one annotation.
+            echo "::warning title=clippy on $(rustc --version)::$(tail -n 25 clippy.log | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            cat clippy.log
+            exit 1
+          fi
 
   test:
     name: Test (${{ matrix.name }})
