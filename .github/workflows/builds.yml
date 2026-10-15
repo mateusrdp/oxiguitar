@@ -1,0 +1,68 @@
+# Test builds for every target on each push to develop, kept 14 days under the
+# Actions tab so testers can try them. Until the desktop app exists (M1) these
+# are builds of oxiguitar-cli; packaging (AppImage, .deb, .rpm, .dmg, .exe)
+# arrives with release.yml.
+name: Test builds
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: builds-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, os: ubuntu-24.04, exe: "" }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, exe: "" }
+          - { name: windows-x86_64, os: windows-2025, exe: ".exe" }
+          - { name: windows-arm64, os: windows-11-arm, exe: ".exe" }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p oxiguitar-cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oxiguitar-cli-${{ matrix.name }}
+          path: target/release/oxiguitar-cli${{ matrix.exe }}
+          retention-days: 14
+          if-no-files-found: error
+
+  macos:
+    name: Build (macos-universal)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          cargo build --release --locked -p oxiguitar-cli --target aarch64-apple-darwin
+          cargo build --release --locked -p oxiguitar-cli --target x86_64-apple-darwin
+          mkdir -p dist
+          lipo -create -output dist/oxiguitar-cli \
+            target/aarch64-apple-darwin/release/oxiguitar-cli \
+            target/x86_64-apple-darwin/release/oxiguitar-cli
+          lipo -info dist/oxiguitar-cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oxiguitar-cli-macos-universal
+          path: dist/oxiguitar-cli
+          retention-days: 14
+          if-no-files-found: error

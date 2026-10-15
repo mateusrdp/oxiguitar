@@ -1,0 +1,16 @@
+* text=auto eol=lf
+*.gp binary
+*.gp3 binary
+*.gp4 binary
+*.gp5 binary
+*.gpx binary
+*.gtp binary
+*.mscz binary
+*.mxl binary
+*.mid binary
+*.midi binary
+*.sf2 binary
+*.otf binary
+*.ttf binary
+*.png binary
+*.pdf binary

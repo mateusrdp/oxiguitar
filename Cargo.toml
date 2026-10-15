@@ -1,0 +1,34 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+# Follows the rustc in Debian unstable, so apt's toolchain always builds OxiGuitar.
+rust-version = "1.97"
+license = "GPL-3.0-or-later"
+authors = ["Mateus Rocha de Paula", "The OxiGuitar contributors"]
+repository = "https://github.com/mateusrdp/oxiguitar"
+homepage = "https://github.com/mateusrdp/oxiguitar"
+publish = false
+
+[workspace.dependencies]
+oxiguitar-model = { path = "crates/oxiguitar-model" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+print_stderr = "allow"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

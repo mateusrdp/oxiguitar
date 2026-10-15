@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later
+     Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+     Placeholder app icon: a green guitar pick with "OxG". -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>OxiGuitar</title>
+  <defs>
+    <linearGradient id="pick" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3fbf5f"/>
+      <stop offset="1" stop-color="#1e8a3c"/>
+    </linearGradient>
+  </defs>
+  <path d="M128 244 C 92 210, 22 130, 22 76 C 22 30, 70 12, 128 12 C 186 12, 234 30, 234 76 C 234 130, 164 210, 128 244 Z"
+        fill="url(#pick)" stroke="#135c28" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M60 52 C 80 36, 118 30, 150 32" fill="none" stroke="#ffffff" stroke-opacity="0.35"
+        stroke-width="10" stroke-linecap="round"/>
+  <text x="128" y="122" text-anchor="middle" font-family="DejaVu Sans, Verdana, Arial, sans-serif"
+        font-size="72" font-weight="700" fill="#ffffff" letter-spacing="-2">OxG</text>
+</svg>

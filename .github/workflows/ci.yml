@@ -1,0 +1,121 @@
+# Formatting, lint, tests, licence check, sign-off check and the no-network test.
+# The final job, ci-success, passes only if every other job passed; branch rules
+# require it before anything merges into develop or main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # Must match rust-version in Cargo.toml (Debian unstable's rustc).
+  MSRV: "1.97"
+
+jobs:
+  fmt:
+    name: Formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  lint:
+    name: Lint and docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo doc --workspace --no-deps --locked
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  test:
+    name: Test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux x86_64, os: ubuntu-24.04, toolchain: stable }
+          - { name: Linux x86_64 MSRV, os: ubuntu-24.04, toolchain: msrv }
+          - { name: Linux ARM64, os: ubuntu-24.04-arm, toolchain: stable }
+          - { name: Windows x86_64, os: windows-2025, toolchain: stable }
+          - { name: Windows ARM64, os: windows-11-arm, toolchain: stable }
+          - { name: macOS, os: macos-15, toolchain: stable }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain == 'msrv' && env.MSRV || matrix.toolchain }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.toolchain }}
+      - run: cargo test --workspace --all-features --locked
+
+  deny:
+    name: Licences and advisories
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+          arguments: --all-features
+
+  no-network:
+    name: No network (NET-5)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace
+      - run: cargo build --workspace --locked
+      - run: scripts/no-network.sh target/debug/oxiguitar-cli
+
+  dco:
+    name: Sign-off (DCO)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: >-
+          scripts/check-dco.sh
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
+
+  ci-success:
+    name: ci-success
+    if: always()
+    needs: [fmt, lint, test, deny, no-network, dco]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          # 'skipped' is fine: the DCO job runs on pull requests only.
+          if echo "$RESULTS" | grep -Eq '"(failure|cancelled)"'; then
+            exit 1
+          fi
