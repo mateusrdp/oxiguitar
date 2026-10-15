@@ -1,0 +1,12 @@
+[package]
+name = "spike-egui"
+description = "GUI-toolkit spike: palette, track list and score canvas in egui."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+spike-common.workspace = true
+eframe = "0.36"

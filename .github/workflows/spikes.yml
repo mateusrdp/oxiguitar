@@ -1,0 +1,82 @@
+# Builds the GUI-toolkit spikes (spikes/gui, ADR 0004) on every target with the
+# minimum supported Rust, to show which toolkits build where. Advisory only:
+# not part of ci-success, so a spike can never block a merge. The Linux x86_64
+# binaries are kept for 14 days under the Actions tab so they can be tried
+# without building.
+name: Spikes
+
+on:
+  pull_request:
+    paths:
+      - "spikes/**"
+      - "crates/oxiguitar-display/**"
+      - "crates/oxiguitar-render/**"
+      - ".github/workflows/spikes.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spikes-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Must match rust-version in Cargo.toml (Debian unstable's rustc).
+  MSRV: "1.97"
+
+jobs:
+  gui:
+    name: GUI spikes (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, os: ubuntu-24.04, exe: "" }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, exe: "" }
+          - { name: windows-x86_64, os: windows-2025, exe: ".exe" }
+          - { name: windows-arm64, os: windows-11-arm, exe: ".exe" }
+          - { name: macos-arm64, os: macos-15, exe: "" }
+    defaults:
+      run:
+        shell: bash
+        working-directory: spikes/gui
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: spikes/gui
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
+      - name: Build each toolkit
+        run: |
+          echo "| Spike | Result | Size |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          failed=0
+          for t in slint iced egui; do
+            if cargo build --release --locked -p "spike-$t"; then
+              size=$(wc -c < "target/release/spike-$t${{ matrix.exe }}")
+              echo "| $t | built | $((size / 1048576)) MB |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "| $t | **failed** | |" >> "$GITHUB_STEP_SUMMARY"
+              failed=1
+            fi
+          done
+          exit $failed
+      - name: Test the shared spike code
+        run: cargo test --release --locked -p spike-common
+      - if: matrix.name == 'linux-x86_64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-spikes-linux-x86_64
+          path: |
+            spikes/gui/target/release/spike-slint
+            spikes/gui/target/release/spike-iced
+            spikes/gui/target/release/spike-egui
+          retention-days: 14
+          if-no-files-found: error

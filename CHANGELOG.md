@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+Milestone M0 (foundations) is complete. No version is tagged for it: the first release, v0.1, comes with the viewer at the end of M1.
+
 ### Added
 
 - Cargo workspace, licence, contributor guide, credits, roadmap and architecture notes.
@@ -15,3 +17,9 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 - `oxiguitar-cli info`, `detect` and `manifest` commands.
 - Public test songs in Guitar Pro 3, 4 and 5 format (`fixtures/gp/`) and a manifest of the private test corpus (`corpus/MANIFEST.toml`).
 - Decision record 0003: OxiGuitar writes its own file readers.
+- `oxiguitar-display`: the display list that layout produces and every renderer draws, with colour roles for light and dark pages, the bundled Bravura and Noto Sans fonts, and a reader for SMuFL metadata.
+- `oxiguitar-render`: draws a display list into pixels (screen, PNG) and into PDF with embedded font subsets.
+- `oxiguitar-cli specimen`: a test page of notation and tablature as PNG and PDF.
+- Decision record 0005: the renderer draws one display list on the CPU for the screen and with krilla for PDF.
+- GUI-toolkit spike in Slint, iced and egui (`spikes/gui/`), built on every target by an advisory CI workflow. Decision record 0004 proposes Slint.
+- Licences of the crates planned for later milestones checked and recorded in CREDITS.md and ROADMAP.md.

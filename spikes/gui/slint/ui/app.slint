@@ -1,0 +1,272 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+// GUI spike in Slint 1.18: palette on the left, track list along the bottom,
+// the score canvas in the middle.
+
+import { Button, LineEdit, CheckBox, Slider, ListView, Palette } from "std-widgets.slint";
+import "../../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
+import "../../../../assets/fonts/bravura/Bravura.otf";
+
+export struct ToolItem {
+    index: int,
+    name: string,
+    face: string,
+    symbol: bool,
+    key: string,
+    group: string,
+    on: bool,
+}
+
+export struct TrackItem {
+    name: string,
+    instrument: string,
+    mute: bool,
+    solo: bool,
+    volume: float,
+}
+
+// A palette button: a SMuFL symbol in Bravura or a short label, a tooltip
+// with the shortcut, keyboard focus and a screen-reader description.
+component ToolButton inherits Rectangle {
+    in property <ToolItem> tool;
+    callback clicked();
+
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    background: tool.on ? Palette.accent-background : touch.has-hover ? Palette.control-background.darker(0.2) : Palette.control-background;
+    border-width: focus.has-focus ? 2px : 1px;
+    border-color: focus.has-focus ? Palette.accent-background.brighter(0.4) : Palette.border;
+
+    accessible-role: button;
+    accessible-label: tool.name;
+    accessible-checkable: true;
+    accessible-checked: tool.on;
+    accessible-action-default => { root.clicked(); }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); focus.focus(); }
+    }
+    focus := FocusScope {
+        key-pressed(event) => {
+            if (event.text == " " || event.text == "\n") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+    }
+    Text {
+        text: tool.face;
+        font-family: tool.symbol ? "Bravura" : "Noto Sans";
+        font-size: tool.symbol ? 20px : 12px;
+        color: tool.on ? Palette.accent-foreground : Palette.control-foreground;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    Tooltip {
+        text: @markdown("\{tool.name} (\{tool.key})");
+    }
+}
+
+// One palette group: a title and buttons that wrap onto as many rows as needed.
+component ToolGrid inherits VerticalLayout {
+    in property <string> title;
+    in property <[ToolItem]> items;
+    callback clicked(int);
+    spacing: 4px;
+    alignment: start;
+    if items.length > 0 : Text { text: title; font-size: 11px; font-weight: 700; }
+    FlexboxLayout {
+        spacing: 4px;
+        for item in items : ToolButton {
+            tool: item;
+            clicked => { root.clicked(self.tool.index); }
+        }
+    }
+}
+
+// A splitter bar: drag it to resize the panel next to it. Slint has none
+// built in; this is all it takes.
+component Splitter inherits Rectangle {
+    in property <bool> vertical;
+    callback dragged(length);
+    background: ta.has-hover || ta.pressed ? Palette.accent-background : Palette.border;
+    accessible-role: none;
+    ta := TouchArea {
+        mouse-cursor: vertical ? col-resize : row-resize;
+        moved => {
+            if (self.pressed) {
+                root.dragged(vertical ? self.mouse-x - self.pressed-x : self.mouse-y - self.pressed-y);
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "OxiGuitar GUI spike — Slint";
+    preferred-width: 1280px;
+    preferred-height: 800px;
+    default-font-family: "Noto Sans";
+
+    in property <[ToolItem]> values;
+    in property <[ToolItem]> effects;
+    in-out property <[TrackItem]> tracks;
+    in property <string> status;
+    in-out property <bool> dark;
+    in property <float> zoom: 1.0;
+    in-out property <string> search;
+    in-out property <length> palette-width: 190px;
+    in-out property <length> tracks-height: 170px;
+
+    // The score canvas: the page's size, and the rendered visible part.
+    in property <length> page-width;
+    in property <length> page-height;
+    in property <image> score;
+    in property <length> score-x;
+    in property <length> score-y;
+    in property <length> score-width;
+    in property <length> score-height;
+    out property <length> view-x: -flick.content-x;
+    out property <length> view-y: -flick.content-y;
+    out property <length> view-width: flick.width;
+    out property <length> view-height: flick.height;
+
+    callback tool-clicked(int);
+    callback shortcut(string) -> bool;
+    callback zoom-step(int);
+    callback canvas-changed();
+    callback search-edited(string);
+
+    forward-focus: keys;
+
+    keys := FocusScope {
+        key-pressed(event) => {
+            if (event.modifiers.control && (event.text == "+" || event.text == "=")) {
+                root.zoom-step(1);
+                return accept;
+            }
+            if (event.modifiers.control && event.text == "-") {
+                root.zoom-step(-1);
+                return accept;
+            }
+            if (!event.modifiers.control && root.shortcut(event.text)) {
+                return accept;
+            }
+            reject
+        }
+
+        VerticalLayout {
+            // Toolbar.
+            Rectangle {
+                height: 40px;
+                background: Palette.alternate-background;
+                HorizontalLayout {
+                    padding: 4px;
+                    spacing: 8px;
+                    alignment: start;
+                    Text { text: "OxiGuitar"; font-weight: 700; vertical-alignment: center; }
+                    Button { text: "−"; clicked => { root.zoom-step(-1); } }
+                    Text { text: round(root.zoom * 100) + " %"; vertical-alignment: center; min-width: 48px; horizontal-alignment: center; }
+                    Button { text: "+"; clicked => { root.zoom-step(1); } }
+                    CheckBox {
+                        text: "Dark page";
+                        checked <=> root.dark;
+                        toggled => { root.canvas-changed(); }
+                    }
+                    LineEdit {
+                        width: 220px;
+                        placeholder-text: "Search commands…";
+                        text <=> root.search;
+                        edited(t) => { root.search-edited(t); }
+                    }
+                    Text { text: "Tool: " + root.status; vertical-alignment: center; }
+                }
+            }
+
+            HorizontalLayout {
+                // Palette.
+                Rectangle {
+                    width: root.palette-width;
+                    background: Palette.alternate-background;
+                    VerticalLayout {
+                        padding: 8px;
+                        spacing: 4px;
+                        alignment: start;
+                        ToolGrid {
+                            title: root.search == "" ? "Note values" : "Commands";
+                            items: root.values;
+                            clicked(i) => { root.tool-clicked(i); }
+                        }
+                        Rectangle { height: 8px; }
+                        ToolGrid {
+                            title: "Effects";
+                            items: root.effects;
+                            clicked(i) => { root.tool-clicked(i); }
+                        }
+                    }
+                }
+
+                Splitter {
+                    vertical: true;
+                    width: 5px;
+                    dragged(d) => { root.palette-width = clamp(root.palette-width + d, 120px, 400px); }
+                }
+
+                // Score canvas: only the visible part of the page is rendered.
+                Rectangle {
+                    background: root.dark ? #2a2b2e : #d8d8d8;
+                    clip: true;
+                    flick := Flickable {
+                        content-width: root.page-width + 48px;
+                        content-height: root.page-height + 48px;
+                        changed content-x => { root.canvas-changed(); }
+                        changed content-y => { root.canvas-changed(); }
+                        changed width => { root.canvas-changed(); }
+                        changed height => { root.canvas-changed(); }
+                        Image {
+                            x: root.score-x;
+                            y: root.score-y;
+                            width: root.score-width;
+                            height: root.score-height;
+                            source: root.score;
+                            image-rendering: pixelated;
+                            accessible-role: image;
+                            accessible-label: "Score";
+                        }
+                    }
+                }
+            }
+
+            Splitter {
+                vertical: false;
+                height: 5px;
+                dragged(d) => { root.tracks-height = clamp(root.tracks-height - d, 60px, 400px); }
+            }
+
+            // Track list.
+            Rectangle {
+                height: root.tracks-height;
+                background: Palette.alternate-background;
+                VerticalLayout {
+                    padding: 6px;
+                    Text { text: "Tracks"; font-size: 11px; font-weight: 700; }
+                    ListView {
+                        for track[i] in root.tracks : HorizontalLayout {
+                            spacing: 8px;
+                            height: 32px;
+                            Text { text: i + 1; width: 20px; vertical-alignment: center; }
+                            LineEdit { text <=> track.name; width: 220px; }
+                            Text { text: track.instrument; width: 130px; vertical-alignment: center; }
+                            Button { text: "M"; width: 40px; checkable: true; checked <=> track.mute; }
+                            Button { text: "S"; width: 40px; checkable: true; checked <=> track.solo; }
+                            Slider { minimum: 0; maximum: 1; value <=> track.volume; width: 120px; }
+                            Rectangle { }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
