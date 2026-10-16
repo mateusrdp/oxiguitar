@@ -17,8 +17,10 @@ pub(crate) struct GridCol {
     /// Room needed left and right of the note centre, on any staff.
     pub(crate) left: f32,
     pub(crate) right: f32,
-    /// Half the widest tab number or chord name.
+    /// Half the widest tab number.
     pub(crate) tab_half: f32,
+    /// Width of the widest chord name here, 0 if none.
+    pub(crate) chord_w: f32,
     /// What the duration asks for, to the next moment.
     pub(crate) space: f32,
 }
@@ -46,6 +48,7 @@ impl BarGrid {
                             g.left = g.left.max(c.left);
                             g.right = g.right.max(c.right);
                             g.tab_half = g.tab_half.max(c.tab_half);
+                            g.chord_w = g.chord_w.max(c.chord_w);
                         }
                     }
                     Err(i) => cols.insert(
@@ -55,6 +58,7 @@ impl BarGrid {
                             left: c.left,
                             right: c.right,
                             tab_half: c.tab_half,
+                            chord_w: c.chord_w,
                             space: 0.0,
                         },
                     ),
@@ -67,6 +71,7 @@ impl BarGrid {
                 left: 0.0,
                 right: 0.0,
                 tab_half: 0.0,
+                chord_w: 0.0,
                 space: 0.0,
             });
         }
@@ -92,6 +97,7 @@ impl BarGrid {
             };
             gaps.push(gap);
         }
+        make_room_for_chords(&cols, &mut gaps, sp);
         let lead = cols
             .first()
             .map_or(sp, |c| (c.left + sp).max(c.tab_half + 0.6 * sp));
@@ -143,6 +149,31 @@ impl BarGrid {
     }
 }
 
+/// Chord names stay over their beat; they are never pushed sideways. The
+/// music opens up instead, so each name ends before the next one starts and
+/// the last one before the bar line. A name starts half a notehead left of
+/// its column; the extra room goes into the gap just before the next name
+/// (or the bar line).
+fn make_room_for_chords(cols: &[GridCol], gaps: &mut [f32], sp: f32) {
+    for i in 0..cols.len() {
+        let w = cols.get(i).map_or(0.0, |c| c.chord_w);
+        if w <= 0.0 {
+            continue;
+        }
+        let next = (i + 1..cols.len()).find(|&j| cols.get(j).is_some_and(|c| c.chord_w > 0.0));
+        let (need, end) = match next {
+            Some(j) => (w + 0.5 * sp, j),
+            None => (w - 0.3 * sp, cols.len()),
+        };
+        let have: f32 = gaps.get(i..end).map_or(0.0, |g| g.iter().sum());
+        if have < need
+            && let Some(g) = end.checked_sub(1).and_then(|k| gaps.get_mut(k))
+        {
+            *g += need - have;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -153,8 +184,28 @@ mod tests {
             left: 1.0,
             right: 1.0,
             tab_half: 0.0,
+            chord_w: 0.0,
             space,
         }
+    }
+
+    #[test]
+    fn chord_names_get_room_instead_of_moving() {
+        let named = |w: f32| GridCol {
+            chord_w: w,
+            ..col(Ratio::ZERO, 10.0)
+        };
+        // Names 30 wide on columns 0 and 2, 20 apart: the gap before the
+        // second name grows until the first fits (30 + 0.5 sp), and the
+        // last gap until the second ends before the bar line (30 - 0.3 sp).
+        let cols = vec![named(30.0), named(0.0), named(30.0)];
+        let mut gaps = vec![10.0, 10.0, 10.0];
+        make_room_for_chords(&cols, &mut gaps, 5.0);
+        assert_eq!(gaps, vec![10.0, 22.5, 28.5]);
+        // Without names nothing changes.
+        let mut plain = vec![10.0, 10.0, 10.0];
+        make_room_for_chords(&[named(0.0), named(0.0), named(0.0)], &mut plain, 5.0);
+        assert_eq!(plain, vec![10.0, 10.0, 10.0]);
     }
 
     #[test]

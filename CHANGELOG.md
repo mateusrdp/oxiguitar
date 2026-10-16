@@ -40,4 +40,6 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 ### Changed
 
 - Stems follow the voice number, as Mateus asked after the first review: voices 1 and 3 up, voices 2 and 4 down, whenever a voice other than the first has notes in the bar (before, the first voice with notes went up and all others down, so voice 3 pointed down and a lone voice 2 pointed up). Drums always follow it; voice 1 alone still points its stems by where its notes sit. Rests of several voices move up or down by the same rule.
+- Rhythm on tablature (tab-only tracks) shows every voice with the same rule: voices 1 and 3 with stems up above the tab, voices 2 and 4 with stems down below it. Before, only voice 1 was drawn, with stems down. Rests on tab move out of the staff into each voice's rhythm area, so they no longer cover fret numbers.
+- Chord names stay over their beat. Instead of pushing a name sideways when it would touch the next one, the music opens up to make room. On tab-only tracks the chord names sit above the upward stems.
 - Drum notes from Guitar Pro 3–5 files are kept as pitches (the General MIDI drum) rather than as string and fret, as the score model intends for instruments without strings.
