@@ -1,5 +1,6 @@
 /target
 /spikes/*/target/
+/scripts/*/target/
 **/*.rs.bk
 
 # The private test corpus is never committed (see corpus/README.md).

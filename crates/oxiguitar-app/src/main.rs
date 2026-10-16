@@ -95,6 +95,8 @@ struct App {
     pdf_name: String,
     folder: Option<PathBuf>,
     status_serial: u64,
+    /// A dropped file is being opened; the rest of the same drop is ignored.
+    drop_pending: bool,
 }
 
 type Shared = Rc<RefCell<App>>;
@@ -148,6 +150,7 @@ fn main() -> Result<(), slint::PlatformError> {
         pdf_name: "score.pdf".to_owned(),
         folder: None,
         status_serial: 0,
+        drop_pending: false,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
 
@@ -214,7 +217,7 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-    install_interface_zoom(&ui, &app);
+    install_window_events(&ui, &app);
 
     // A file named on the command line (or by the system's file manager).
     if let Some(path) = std::env::args_os().nth(1) {
@@ -736,14 +739,41 @@ fn run_dialog(pick: impl FnOnce() + Send + 'static) {
     }
 }
 
-/// Ctrl + wheel and Ctrl + + / − / 0 scale the whole interface, wherever the
-/// pointer or the keyboard focus is. The winit event filter sees them before
-/// any widget, so the score never scrolls by accident.
-fn install_interface_zoom(ui: &AppWindow, app: &Shared) {
+/// The window's raw events, before any widget sees them:
+///
+/// - Ctrl + wheel and Ctrl + + / − / 0 scale the whole interface, wherever
+///   the pointer or the keyboard focus is, so the score never scrolls by
+///   accident.
+/// - A file dropped on the window opens like File → Open.
+///
+/// **Drops don't work on Wayland** (ADR 0006; CONTRIBUTING.md, "Known
+/// platform gaps"). winit 0.30 sends `DroppedFile` on Windows, macOS and
+/// X11 only: its Wayland backend has no drag and drop, and Slint 1.18
+/// passes no operating-system drops on. Listening ourselves would need our
+/// own `wl_data_device` on winit's connection, through an `unsafe` raw
+/// pointer and with no way to wake on its events but polling, which we
+/// rejected. Drops will work on Wayland with no change here once the winit
+/// in our Slint version emits `DroppedFile` on Wayland; or switch to Slint's
+/// own event if Slint starts forwarding OS drops. Check either with
+/// `scripts/wayland-dnd-test/`.
+fn install_window_events(ui: &AppWindow, app: &Shared) {
     let a = app.clone();
     ui.window().on_winit_window_event(move |_, event| {
         let mut s = a.borrow_mut();
         let step = match event {
+            WinitEvent::DroppedFile(path) => {
+                // Several files dropped at once arrive one by one: open the
+                // first, as File → Open opens one file.
+                if !s.drop_pending {
+                    s.drop_pending = true;
+                    s.worker.send(Request::Open(path.clone()));
+                    let a = a.clone();
+                    slint::Timer::single_shot(Duration::from_millis(100), move || {
+                        a.borrow_mut().drop_pending = false;
+                    });
+                }
+                return EventResult::PreventDefault;
+            }
             WinitEvent::ModifiersChanged(m) => {
                 // ⌘ on macOS, as Slint maps the menus' Control shortcuts.
                 s.ctrl = if cfg!(target_os = "macos") {

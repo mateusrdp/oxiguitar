@@ -1,0 +1,14 @@
+# A test drag source for Wayland file drops (ADR 0006). Not part of the
+# workspace and not built by CI: run it by hand, see README.md.
+[package]
+name = "wayland-dnd-source"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[dependencies]
+wayland-client = "0.31.15"
+wayland-protocols = { version = "0.32", features = ["client"] }
+
+[workspace]

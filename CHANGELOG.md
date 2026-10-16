@@ -72,6 +72,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - GUI-toolkit spike in Slint, iced and egui (`spikes/gui/`), built on every target by an advisory CI workflow. Decision record 0004 chooses Slint.
 - Licences of the crates planned for later milestones checked and recorded in CREDITS.md and ROADMAP.md.
 - Interface design rules (`docs/design/ui.md`) from the first review of the GUI spike. The Slint spike follows them: menus only on top, collapsible palette groups, palette icons centred on their ink, interface zoom with Ctrl + wheel and Ctrl + + / − / 0, a score-zoom slider and a dark page. View → Layout lists the four staff layouts to come in M1: Page, Vertical, Horizontal and Parchment.
+- Drop a file on the window to open it, on Windows, macOS and X11. Of several files dropped at once, the first opens. Not on Wayland yet: winit and Slint report no drops there (ADR 0006).
 
 ### Fixed
 
