@@ -47,7 +47,7 @@ git status fixtures/reference
 
 Blessing writes every picture that differs at all, the stored scores, the index, and removes files that are no longer references. To add a reference, add it to `references()` (the test there keeps the count at fifty and every bar full) and bless.
 
-The references show what the engraver draws today, including what it does not draw yet: the segno, coda and D.S. directions in `sections-and-directions` are in the file but not on the page, and `dynamics` shows ppp and pp crowding each other (see `docs/design/engraving.md`). When those are fixed, the pictures change and are blessed again.
+The references show what the engraver draws today. When an engraving change is intended, the pictures it touches change and are blessed again; the ones that showed gaps (directions in `sections-and-directions`, ppp and pp crowding in `dynamics`) were blessed that way in session 6.
 
 ## Fuzzing
 

@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use oxiguitar_model::{Bar, BeatKind, Clef, Dynamic, Score, Staff};
 
 use crate::draw::{Painter, glyphs};
+use crate::effects;
 use crate::grid::BarGrid;
 use crate::hands;
 use crate::plan::{BarPlan, Planner, lyric_size};
@@ -180,6 +181,7 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
                 .collect();
             if dynamics {
                 mark_dynamics(&mut planned);
+                measure_dynamics(&mut planned, p);
             }
             if v.staff == 0 && v.carries_shared_marks() {
                 for (line, lyric) in track.lyrics.iter().enumerate() {
@@ -216,6 +218,23 @@ fn mark_dynamics(bars: &mut [BarPlan]) {
                 b.show_dynamic = Some(d);
                 current = d;
             }
+        }
+    }
+}
+
+/// Records how wide each column's dynamic marking is, so spacing keeps
+/// neighbouring markings (ppp, pp on quarter notes) apart.
+fn measure_dynamics(bars: &mut [BarPlan], p: &Painter<'_>) {
+    for bar in bars {
+        let BarPlan { voices, cols, .. } = bar;
+        for c in cols.iter_mut() {
+            c.dynamic_w = c
+                .column
+                .beats
+                .iter()
+                .filter_map(|r| voices.get(r.voice)?.get(r.beat)?.show_dynamic)
+                .map(|d| p.width(effects::dynamic_glyph(d)))
+                .fold(0.0, f32::max);
         }
     }
 }

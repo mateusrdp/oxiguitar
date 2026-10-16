@@ -96,7 +96,7 @@ These are the M1 engraving items still to do (see ROADMAP.md):
 
 - **Notation marks not in the score model yet:** slurs between different notes (other than hammer-ons, pull-offs and legato slides), hairpins, ornaments, fermatas and ottava lines (NOT-3). The readers log them as not carried over.
 - **Effects:** whammy-bar curves (shown as "w/bar" only), fingering numbers, and articulations on tab-only tracks.
-- **Overlap pass, second round:** bend amounts of quick successive bends can touch, dynamics on neighbouring short notes can crowd each other (ppp and pp in the `dynamics` reference), and dense chords can crowd ledger lines (VIEW-7). Tuplet numbers and articulations now reserve their room.
+- **Overlap pass, second round:** bend amounts of quick successive bends can touch, and dense chords can crowd ledger lines (VIEW-7). Tuplet numbers, articulations and dynamics now reserve their room (dynamics like chord names: they stay under their beat and the music opens up).
 - **Nested tuplets:** only the outermost tuplet of a note is marked (TAB-2, M4).
 - **Courtesy signatures:** key and time signatures at the end of a system before a change.
 - **Grand staff details:** voices are split one by one, so a part written as one voice with both hands gets each hand's stems from that voice's rule; cross-staff beams and clef changes within a staff are not drawn.

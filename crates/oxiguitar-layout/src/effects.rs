@@ -637,7 +637,7 @@ pub(crate) fn bend_amount(cents: i32) -> String {
     }
 }
 
-fn dynamic_glyph(d: Dynamic) -> G {
+pub(crate) fn dynamic_glyph(d: Dynamic) -> G {
     match d {
         Dynamic::PPP => G("dynamicPPP", '\u{E52A}'),
         Dynamic::PP => G("dynamicPP", '\u{E52B}'),
