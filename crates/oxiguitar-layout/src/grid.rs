@@ -21,6 +21,8 @@ pub(crate) struct GridCol {
     pub(crate) tab_half: f32,
     /// Width of the widest chord name here, 0 if none.
     pub(crate) chord_w: f32,
+    /// Half the widest lyric syllable here, 0 if none.
+    pub(crate) lyric_half: f32,
     /// What the duration asks for, to the next moment.
     pub(crate) space: f32,
 }
@@ -49,6 +51,7 @@ impl BarGrid {
                             g.right = g.right.max(c.right);
                             g.tab_half = g.tab_half.max(c.tab_half);
                             g.chord_w = g.chord_w.max(c.chord_w);
+                            g.lyric_half = g.lyric_half.max(c.lyric_half);
                         }
                     }
                     Err(i) => cols.insert(
@@ -59,6 +62,7 @@ impl BarGrid {
                             right: c.right,
                             tab_half: c.tab_half,
                             chord_w: c.chord_w,
+                            lyric_half: c.lyric_half,
                             space: 0.0,
                         },
                     ),
@@ -72,6 +76,7 @@ impl BarGrid {
                 right: 0.0,
                 tab_half: 0.0,
                 chord_w: 0.0,
+                lyric_half: 0.0,
                 space: 0.0,
             });
         }
@@ -98,9 +103,12 @@ impl BarGrid {
             gaps.push(gap);
         }
         make_room_for_chords(&cols, &mut gaps, sp);
-        let lead = cols
-            .first()
-            .map_or(sp, |c| (c.left + sp).max(c.tab_half + 0.6 * sp));
+        make_room_for_lyrics(&cols, &mut gaps, sp);
+        let lead = cols.first().map_or(sp, |c| {
+            (c.left + sp)
+                .max(c.tab_half + 0.6 * sp)
+                .max(c.lyric_half + 0.3 * sp)
+        });
         BarGrid { cols, lead, gaps }
     }
 
@@ -174,6 +182,32 @@ fn make_room_for_chords(cols: &[GridCol], gaps: &mut [f32], sp: f32) {
     }
 }
 
+/// Lyric syllables are centred under their notes; the music opens up so
+/// neighbouring syllables keep apart, and the last one ends before the bar
+/// line.
+fn make_room_for_lyrics(cols: &[GridCol], gaps: &mut [f32], sp: f32) {
+    for i in 0..cols.len() {
+        let half = cols.get(i).map_or(0.0, |c| c.lyric_half);
+        if half <= 0.0 {
+            continue;
+        }
+        let next = (i + 1..cols.len()).find(|&j| cols.get(j).is_some_and(|c| c.lyric_half > 0.0));
+        let (need, end) = match next {
+            Some(j) => (
+                half + cols.get(j).map_or(0.0, |c| c.lyric_half) + 0.7 * sp,
+                j,
+            ),
+            None => (half + 0.3 * sp, cols.len()),
+        };
+        let have: f32 = gaps.get(i..end).map_or(0.0, |g| g.iter().sum());
+        if have < need
+            && let Some(g) = end.checked_sub(1).and_then(|k| gaps.get_mut(k))
+        {
+            *g += need - have;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,6 +219,7 @@ mod tests {
             right: 1.0,
             tab_half: 0.0,
             chord_w: 0.0,
+            lyric_half: 0.0,
             space,
         }
     }

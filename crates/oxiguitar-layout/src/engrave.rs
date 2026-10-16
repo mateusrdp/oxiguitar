@@ -12,12 +12,16 @@
 use std::collections::HashMap;
 
 use oxiguitar_display::{DisplayList, Paint, Path, Point, Rect};
-use oxiguitar_model::{BeatKind, Clef, NoteValue, Ratio, Score, Tuplet};
+use oxiguitar_model::{BeatKind, Clef, GraceKind, NoteValue, Ratio, Score, Tuplet};
 
 use crate::draw::{G, Painter, accidental_glyph, glyphs};
+use crate::effects;
 use crate::grid::BarGrid;
 use crate::pitch::key_signature_steps;
-use crate::plan::{BarPlan, BeatInfo, chord_name_size, notehead, rest_glyph, voice_stems_up};
+use crate::plan::{
+    BarPlan, BeatInfo, GRACE_SCALE, Lanes, chord_name_size, grace_step, notehead, rest_glyph,
+    voice_stems_up,
+};
 use crate::rhythm::beam_count;
 use crate::system::{
     Plans, SystemSpec, TAB_GAP, View, bar_prefix, bar_suffix, track_name_size, track_names,
@@ -67,15 +71,68 @@ struct Lines {
 }
 
 /// Where one view sits in its system.
-struct Band {
+pub(crate) struct Band {
     /// Top line of the standard staff.
-    std_top: Option<f32>,
+    pub(crate) std_top: Option<f32>,
     /// Top line (string 1) of the tablature.
-    tab_top: Option<f32>,
+    pub(crate) tab_top: Option<f32>,
     /// Top and bottom lines of the band's staves.
-    top: f32,
-    bottom: f32,
+    pub(crate) top: f32,
+    pub(crate) bottom: f32,
     lines: Lines,
+    /// Effect lanes, nearest the staff first.
+    pub(crate) lanes: Vec<LanePos>,
+    /// Baseline of the dynamics under the staff.
+    pub(crate) dynamics: Option<f32>,
+    /// Baselines of the lyric lines, by line number.
+    pub(crate) lyrics: Vec<f32>,
+}
+
+/// The kinds of effect lane, nearest the staff first.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Lane {
+    Hp,
+    Bend,
+    Vibrato,
+    Trill,
+    PalmMute,
+    LetRing,
+    Harmonic,
+    Technique,
+}
+
+/// One effect lane: its kind, its top and its baseline.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct LanePos {
+    pub(crate) lane: Lane,
+    pub(crate) top: f32,
+    pub(crate) base: f32,
+}
+
+impl Band {
+    pub(crate) fn lane(&self, lane: Lane) -> Option<LanePos> {
+        self.lanes.iter().copied().find(|l| l.lane == lane)
+    }
+}
+
+/// The lanes present in a system and their heights, in staff spaces,
+/// nearest the staff first. The H/P lane leaves room under its letters for
+/// the arcs over the top string's numbers.
+fn lane_list(l: Lanes, tab: bool) -> Vec<(Lane, f32)> {
+    [
+        (Lane::Hp, tab && l.hp, 2.6),
+        (Lane::Bend, tab && l.bend, 3.6),
+        (Lane::Vibrato, l.vibrato, 1.4),
+        (Lane::Trill, l.trill, 2.0),
+        (Lane::PalmMute, l.palm_mute, 1.8),
+        (Lane::LetRing, l.let_ring, 1.8),
+        (Lane::Harmonic, l.harmonic, 1.8),
+        (Lane::Technique, l.technique, 2.0),
+    ]
+    .into_iter()
+    .filter(|(_, present, _)| *present)
+    .map(|(lane, _, h)| (lane, h))
+    .collect()
 }
 
 /// Staff geometry: y of a staff step on a standard staff whose top line is
@@ -150,6 +207,26 @@ pub(crate) fn system(
             && vplans
                 .iter()
                 .any(|b| shown_voices(b).into_iter().any(|vi| !voice_stems_up(vi)));
+        let lanes_used = vplans
+            .iter()
+            .map(|b| b.lanes)
+            .fold(Lanes::default(), Lanes::or);
+        let lane_kinds = lane_list(lanes_used, v.show_tab);
+        let lanes_height: f32 = lane_kinds.iter().map(|(_, h)| h * sp).sum();
+        let has_dynamics = vplans.iter().any(|b| {
+            b.voices
+                .iter()
+                .flatten()
+                .any(|bt| bt.show_dynamic.is_some())
+        });
+        let lyric_lines = vplans
+            .iter()
+            .flat_map(|b| b.voices.iter().flatten())
+            .flat_map(|bt| bt.lyrics.iter().map(|(l, _)| l + 1))
+            .max()
+            .unwrap_or(0);
+        // Lanes above the tab when there is one, otherwise above the staff.
+        let lanes_on_top = !v.show_std || !v.show_tab;
         let mut stack = if v.show_std {
             ((high - 8).max(0) as f32) * sp / 2.0 + sp
         } else if voices_up {
@@ -159,6 +236,10 @@ pub(crate) fn system(
         };
         if first {
             stack = stack.max(2.5 * sp);
+        }
+        let lanes_from = stack;
+        if lanes_on_top {
+            stack += lanes_height;
         }
         // Baselines measured upwards from the top staff line.
         let mut line = |present: bool, height: f32| -> Option<f32> {
@@ -184,8 +265,30 @@ pub(crate) fn system(
         };
         let below_std = ((-low).max(0) as f32) * sp / 2.0;
         let std_top = v.show_std.then_some(top);
+        // Under the staff (or under the tab and its rhythm): dynamics, then
+        // lyrics.
+        let under_lines = |from: f32| -> (Option<f32>, Vec<f32>, f32) {
+            let mut y = from;
+            let dynamics = has_dynamics.then(|| {
+                y += 2.6 * sp;
+                y - 0.6 * sp
+            });
+            let lyrics = (0..lyric_lines)
+                .map(|_| {
+                    y += 2.4 * sp;
+                    y - 0.5 * sp
+                })
+                .collect();
+            (dynamics, lyrics, y)
+        };
+        let std_bottom = top + 4.0 * sp + below_std;
+        let (mut dynamics, mut lyrics, after_std) = if v.show_std {
+            under_lines(std_bottom)
+        } else {
+            (None, Vec::new(), std_bottom)
+        };
         let tab_top = v.show_tab.then_some(if v.show_std {
-            top + 4.0 * sp + below_std + 2.0 * sp
+            after_std + 2.0 * sp + lanes_height
         } else {
             top
         });
@@ -194,21 +297,46 @@ pub(crate) fn system(
             Some(t) => t + (strings - 1) as f32 * tg,
             None => top + 4.0 * sp,
         };
-        let after = if tab_top.is_some() {
+        // Effect lanes upwards from the tab, or from the top staff line.
+        let mut lanes = Vec::new();
+        let mut y = match tab_top {
+            Some(t) if v.show_std => t,
+            _ => top - lanes_from,
+        };
+        for (lane, h) in &lane_kinds {
+            let lift = if *lane == Lane::Hp { 1.3 } else { 0.45 };
+            let base = y - lift * sp;
+            y -= h * sp;
+            lanes.push(LanePos {
+                lane: *lane,
+                top: y,
+                base,
+            });
+        }
+        let mut after = if tab_top.is_some() {
             if voices_down {
                 TAB_RHYTHM * sp + 2.5 * sp
             } else {
                 1.5 * sp
             }
         } else {
-            below_std + 1.5 * sp
+            after_std - bottom + 1.5 * sp
         };
+        if !v.show_std {
+            let (d, l, end) = under_lines(bottom + after - 1.0 * sp);
+            dynamics = d;
+            lyrics = l;
+            after = end - bottom + 1.0 * sp;
+        }
         bands.push(Band {
             std_top,
             tab_top,
             top,
             bottom,
             lines,
+            lanes,
+            dynamics,
+            lyrics,
         });
         cursor = bottom + after + 2.5 * sp;
     }
@@ -230,6 +358,7 @@ pub(crate) fn system(
             band,
             view: v,
             tg,
+            right,
         };
         ctx.staff_lines(&mut list, spec.indent, right);
         ctx.clefs_and_key(&mut list, spec.indent, clef, fifths);
@@ -264,6 +393,32 @@ pub(crate) fn system(
             ctx.bar_end(&mut list, bx);
             ctx.marks(&mut list, plan, grid, bx, vi == 0);
         }
+        // Effects, once every bar of the view is placed.
+        let mut marks = Vec::new();
+        for bx in &bars {
+            let (Some(plan), Some(grid)) = (plan_of(bx.index), plans.grids.get(bx.index)) else {
+                continue;
+            };
+            for (voice, beats) in plan.voices.iter().enumerate() {
+                for b in beats {
+                    let Some(onset) = b.onset else { continue };
+                    if b.kind == BeatKind::Empty {
+                        continue;
+                    }
+                    let ci = grid.index_of(onset);
+                    let x = bx.cols.get(ci).copied().unwrap_or(bx.notes);
+                    let next_x = bx.cols.get(ci + 1).copied().unwrap_or(bx.end);
+                    marks.push(effects::Mark {
+                        voice,
+                        x,
+                        next_x,
+                        beat: b,
+                    });
+                }
+            }
+        }
+        let geometry = effects::Geometry { band, tg, right };
+        effects::draw(p, &mut list, &marks, &geometry);
     }
     // The line joining every staff at the start of the system.
     if let (Some(first), Some(last)) = (bands.first(), bands.last())
@@ -302,6 +457,8 @@ struct Ctx<'a> {
     band: &'a Band,
     view: &'a View,
     tg: f32,
+    /// The system's right edge: text never runs past it.
+    right: f32,
 }
 
 impl Ctx<'_> {
@@ -591,6 +748,11 @@ impl Ctx<'_> {
                         self.chord(list, b, cx, top, stem, (view_index, vi), ties);
                         if let Some(s) = stem {
                             p.vline(list, s.x, s.base, s.tip, stem_t);
+                            if let Some(g) = tremolo_glyph(b) {
+                                let w = p.width(g);
+                                let mid = s.base + (s.tip - s.base) * 0.55;
+                                p.glyph(list, g, s.x - w / 2.0 + 0.6 * sp, mid, Paint::Ink);
+                            }
                             let beams = beam_count(b.value);
                             if b.group.is_none() && beams > 0 {
                                 let flags = if s.up {
@@ -607,6 +769,98 @@ impl Ctx<'_> {
                 }
             }
             self.tuplets(list, beats, &xs, &stems, top, hw);
+            self.std_graces(list, beats, &xs, top);
+        }
+    }
+
+    /// Grace notes on the staff: small notes with stems up before their
+    /// main note, slashed when played before the beat, slurred to it.
+    fn std_graces(&self, list: &mut DisplayList, beats: &[BeatInfo], xs: &[Option<f32>], top: f32) {
+        let p = self.p;
+        let sp = self.sp();
+        let y = |step: i32| step_y(top, sp, step);
+        let scale = GRACE_SCALE;
+        let step = grace_step(p, self.tg);
+        let hw = p.width(glyphs::NOTEHEAD_BLACK);
+        let ed = p.ed();
+        for (i, b) in beats.iter().enumerate() {
+            if b.grace.is_none() || b.notes.is_empty() {
+                continue;
+            }
+            let Some(main_x) = xs.get(i + b.grace_rank).copied().flatten() else {
+                continue;
+            };
+            let main = beats.get(i + b.grace_rank);
+            let main_left = hw / 2.0
+                + if main.is_some_and(|m| m.notes.iter().any(|n| n.accidental.is_some())) {
+                    p.width(glyphs::SHARP) + 0.2 * sp
+                } else {
+                    0.0
+                };
+            let gx = main_x - main_left - 0.3 * sp - (b.grace_rank as f32 - 0.5) * step;
+            let head = notehead(b.value.max(NoteValue::Quarter), false);
+            let w = p.width(head) * scale;
+            let left = gx - w / 2.0;
+            for n in &b.notes {
+                let ny = y(n.step);
+                let ext = ed.leger_line_extension * sp * scale;
+                let mut l = -2;
+                while l >= n.step {
+                    p.hline(
+                        list,
+                        left - ext,
+                        left + w + ext,
+                        y(l),
+                        ed.leger_line_thickness * sp,
+                    );
+                    l -= 2;
+                }
+                let mut l = 10;
+                while l <= n.step {
+                    p.hline(
+                        list,
+                        left - ext,
+                        left + w + ext,
+                        y(l),
+                        ed.leger_line_thickness * sp,
+                    );
+                    l += 2;
+                }
+                p.glyph_scaled(list, head, scale, left, ny, Paint::Ink);
+                if let Some(alter) = n.accidental {
+                    let g = accidental_glyph(alter);
+                    let aw = p.width(g) * scale;
+                    p.glyph_scaled(list, g, scale, left - 0.15 * sp - aw, ny, Paint::Ink);
+                }
+            }
+            let (Some(low), Some(high)) = (b.notes.first(), b.notes.last()) else {
+                continue;
+            };
+            let (ax, ay) = p.anchor(head, "stemUpSE", [1.18, 0.168]);
+            let t = ed.stem_thickness * sp * scale;
+            let sx = left + ax * scale - t / 2.0;
+            let tip = y(high.step) - 2.5 * sp;
+            p.vline(list, sx, y(low.step) + ay * scale, tip, t);
+            let beams = beam_count(b.value).clamp(1, 4);
+            if let Some(f) = glyphs::FLAGS_UP.get(beams - 1) {
+                p.glyph_scaled(list, *f, scale, sx - t / 2.0, tip, Paint::Ink);
+            }
+            if b.grace == Some(GraceKind::BeforeBeat) {
+                p.line_between(
+                    list,
+                    Point::new(sx - 0.45 * sp, tip + 1.4 * sp),
+                    Point::new(sx + 0.8 * sp, tip + 0.5 * sp),
+                    0.1 * sp,
+                );
+            }
+            // Slur from the first grace note to the main note.
+            if b.grace_rank == main.map_or(0, |m| m.graces_before) {
+                let sy = y(low.step) + 0.7 * sp;
+                let to = main_x - hw / 2.0;
+                if to > gx {
+                    p.slur(list, Point::new(gx, sy), Point::new(to, sy), 0.5 * sp);
+                }
+            }
         }
     }
 
@@ -755,7 +1009,11 @@ impl Ctx<'_> {
         let up = stem.map_or(b.up, |s| s.up);
         let count = b.notes.len();
         for (k, n) in b.notes.iter().enumerate() {
-            let head = notehead(b.value, n.dead);
+            let head = if n.diamond {
+                diamond_head(b.value)
+            } else {
+                notehead(b.value, n.dead)
+            };
             let w = p.width(head);
             let hx = if n.shifted {
                 if b.up {
@@ -779,11 +1037,28 @@ impl Ctx<'_> {
                 l += 2;
             }
             p.glyph(list, head, hx, ny, Paint::Ink);
+            if n.ghost {
+                let lw = p.width(glyphs::PAREN_LEFT);
+                p.glyph(
+                    list,
+                    glyphs::PAREN_LEFT,
+                    hx - lw - 0.05 * sp,
+                    ny,
+                    Paint::Ink,
+                );
+                p.glyph(list, glyphs::PAREN_RIGHT, hx + w + 0.2 * sp, ny, Paint::Ink);
+            }
             if let Some(alter) = n.accidental {
                 let g = accidental_glyph(alter);
                 let column_w = p.width(glyphs::SHARP) + 0.15 * sp;
                 let edge = if shifted_left { left - hw } else { left };
-                let ax = edge - 0.2 * sp - n.accidental_column as f32 * column_w - p.width(g);
+                let paren = if n.ghost {
+                    p.width(glyphs::PAREN_LEFT)
+                } else {
+                    0.0
+                };
+                let ax =
+                    edge - 0.2 * sp - paren - n.accidental_column as f32 * column_w - p.width(g);
                 p.glyph(list, g, ax, ny, Paint::Ink);
             }
             if b.dots > 0 {
@@ -1110,7 +1385,35 @@ impl Ctx<'_> {
 
     /// Fret numbers on the tablature.
     fn tab_bar(&self, list: &mut DisplayList, plan: &BarPlan, grid: &BarGrid, bx: &BarX, top: f32) {
+        let step = grace_step(self.p, self.tg);
+        let sp = self.sp();
         for beats in &plan.voices {
+            // Grace notes: small numbers before their main note.
+            for (i, b) in beats.iter().enumerate() {
+                if b.grace.is_none() {
+                    continue;
+                }
+                let Some(main) = beats.get(i + b.grace_rank) else {
+                    continue;
+                };
+                let Some(onset) = main.onset else { continue };
+                let main_half = main
+                    .notes
+                    .iter()
+                    .filter_map(|n| n.tab.as_ref())
+                    .map(|(_, l)| self.p.tab_number_width(self.tg, l) / 2.0)
+                    .fold(0.0, f32::max);
+                let gx = bx.x_of(grid, onset)
+                    - main_half
+                    - 0.2 * sp
+                    - (b.grace_rank as f32 - 0.5) * step;
+                for n in &b.notes {
+                    if let Some((string, label)) = &n.tab {
+                        let y = top + f32::from(string.saturating_sub(1)) * self.tg;
+                        self.p.tab_number(list, gx, y, self.tg * GRACE_SCALE, label);
+                    }
+                }
+            }
             for b in beats {
                 let Some(onset) = b.onset else { continue };
                 if b.kind != BeatKind::Notes {
@@ -1150,8 +1453,10 @@ impl Ctx<'_> {
                     p.text(list, name, chord_name_size(sp), x, base, Paint::Ink);
                 }
                 if let (false, Some(base)) = (b.text.is_empty(), lines.text) {
-                    let x = x.max(text_right + 0.4 * sp);
-                    text_right = x + p.text(list, &b.text, 1.8 * sp, x, base, Paint::Ink);
+                    let size = 1.8 * sp;
+                    let w = p.text_width(&b.text, size);
+                    let x = x.max(text_right + 0.4 * sp).min(self.right - w).max(0.0);
+                    text_right = x + p.text(list, &b.text, size, x, base, Paint::Ink);
                 }
             }
         }
@@ -1267,6 +1572,34 @@ struct Stem {
     tip: f32,
     far: f32,
     up: bool,
+}
+
+/// A diamond notehead for a natural harmonic.
+fn diamond_head(value: NoteValue) -> G {
+    match value {
+        NoteValue::DoubleWhole | NoteValue::Whole => glyphs::NOTEHEAD_DIAMOND_WHOLE,
+        NoteValue::Half => glyphs::NOTEHEAD_DIAMOND_HALF,
+        _ => glyphs::NOTEHEAD_DIAMOND_BLACK,
+    }
+}
+
+/// Tremolo-picking strokes for a beat: one for eighths, two for sixteenths,
+/// three for shorter.
+fn tremolo_glyph(b: &BeatInfo) -> Option<G> {
+    let value = b
+        .effects
+        .tremolo_picking
+        .or_else(|| b.notes.iter().find_map(|n| n.effects.tremolo_picking))?;
+    let strokes: usize = match value {
+        NoteValue::DoubleWhole | NoteValue::Whole | NoteValue::Half | NoteValue::Quarter => 0,
+        NoteValue::Eighth => 1,
+        NoteValue::Sixteenth => 2,
+        _ => 3,
+    };
+    strokes
+        .checked_sub(1)
+        .and_then(|i| glyphs::TREMOLO.get(i))
+        .copied()
 }
 
 /// The voices of a bar that have something to draw, by index.

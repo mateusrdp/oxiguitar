@@ -773,10 +773,11 @@ impl<'a> Reader<'a> {
             Some("BeforeBeat") => Some(GraceKind::BeforeBeat),
             _ => None,
         };
-        let dynamic = el
-            .child_text("Dynamic")
-            .and_then(dynamic)
-            .unwrap_or_default();
+        // The beat's dynamic is an explicit marking in Guitar Pro 6-8 (mf
+        // unless changed); notes also take it as their velocity.
+        let marked = el.child_text("Dynamic").and_then(dynamic);
+        beat.effects.dynamic = marked;
+        let dynamic = marked.unwrap_or_default();
         beat.text = el
             .child("FreeText")
             .map(|t| t.text().to_owned())

@@ -19,6 +19,30 @@ How `oxiguitar-layout` turns a score into pages, and what it does not draw yet. 
    - Marks above the staff go on lines of their own, bottom to top: volta brackets, chord names, beat text, tempo, sections. A line exists only when the system uses it, so marks cannot collide with each other or with the notes and stems.
    - Chord names stay exactly over their beat and are never pushed sideways (Mateus, 16 Oct 2026). The grid opens up instead, so each name ends before the next one starts and before the bar line.
    - Tablature always sits under its standard staff. When standard notation is hidden (the file says which notation each track shows), the tab shows the rhythm of every voice (VIEW-2). Stems follow the same voice rule as the staff: voices 1 and 3 above the tab pointing up, voices 2 and 4 below pointing down. Each voice's beams, flags, dots, tuplet numbers and rests (at 80 % size) sit in its own rhythm area, clear of the fret numbers.
+   - Effects and marks (`effects.rs`) are drawn once every bar of the view is placed. Marks that run along the music get **lanes** of their own above the tablature (between the staff and the tab when both are shown; above the staff when there is no tab), nearest the tab first:
+     - H/P letters, lifted clear of the arcs over the top string;
+     - bends;
+     - vibrato;
+     - trill;
+     - P.M.;
+     - let ring;
+     - harmonic kinds;
+     - techniques: tap, slap, pop, w/bar, fade in, pick strokes.
+
+     A lane exists only when the system uses it, so marks cannot collide.
+   - **Hammer-ons, pull-offs and slides** connect a note to the next note on the same string, even in the next bar. On the tab that is an arc or a slanted line; on the staff, a slur or a line between noteheads.
+   - **Bends** draw arrows from the fret number, with the amount ("1/4", "1/2", "full", "1 1/2") over each peak, release arrows down, and dashes while the bend is held. Pre-bends are drawn too.
+   - **Notehead marks:**
+     - natural harmonics: diamond heads and `<12>` on the tab;
+     - ghost notes: in parentheses;
+     - dead notes: × heads;
+     - accents and staccato: on the notehead side away from the stem;
+     - tremolo strokes: on the stem;
+     - strums: an arrow left of the chord.
+   - **Grace notes:** small notes before their main note, stem up, slashed when played before the beat, slurred to the main note; small fret numbers on the tab. Spacing makes room for them.
+   - **Under the staff:**
+     - Dynamics are shown where the first voice's dynamic *marking* changes from Guitar Pro's default *mf*. Only Guitar Pro 6–8 store markings (a beat property); Guitar Pro 3–5 only store a velocity per note, which is not a marking and is never shown.
+     - Lyrics go one line per verse, one syllable per sung beat (tied notes continue the syllable). Spacing keeps syllables apart.
    - With several tracks, each track's name stands left of its staves: the full name on the first system, the short name after, shortened with "…" past a fifth of the line.
 6. **Pages** (`page.rs`). The header (title, subtitle, artist, album, credits on the right, tuning and capo on the left, copyright at the foot) goes on page one (VIEW-6). Systems stack down the page, and a new page starts when the next system does not fit. If a system is taller than a page, the whole score is engraved again with a smaller staff.
 
@@ -29,6 +53,9 @@ Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bound
 - **Staff space:** 4.5 pt by default, a 6.4 mm staff. A4 with 15 mm margins.
 - **Tablature:** lines 1.5 staff spaces apart. Fret numbers are 1.2 times that gap, with the line knocked out behind them.
 - **Rhythm on tab:** stems end 3 staff spaces beyond the tab staff (above it for voices 1 and 3, below for 2 and 4).
+- **Grace notes:** 65 % of a normal note.
+- **Text:** characters Noto Sans lacks (♯ ♭ ♮) come from Bravura, raised to sit with the letters.
+- **Chord diagrams in the header:** 4.2 pt between strings, 5.2 pt between frets, four frets shown.
 
 ## Checking
 
@@ -39,10 +66,8 @@ Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bound
 
 These are the M1 engraving items still to do (see ROADMAP.md):
 
-- **Effects:** TAB-1 effects: bends, slides, hammer-ons and pull-offs, palm mute, let ring, vibrato, harmonics, trills, tremolo picking, strokes. Also grace notes.
-- **Notation marks:** slurs, dynamics, articulations, ornaments, fermatas, ottavas (NOT-3), and lyrics.
-- **Score header:** chord diagrams in the header (VIEW-6).
+- **Notation marks not in the score model yet:** slurs between different notes (other than hammer-ons, pull-offs and legato slides), hairpins, ornaments, fermatas and ottava lines (NOT-3). The readers log them as not carried over.
+- **Effects:** whammy-bar curves (shown as "w/bar" only), fingering numbers, and articulations on tab-only tracks.
 - **Other layouts:** Vertical, Horizontal and Parchment (VIEW-3).
-- **Overlap pass:** tuplet numbers under down-stem beams can touch the tab staff, and dense chords can crowd ledger lines (VIEW-7).
-- **Text fallback:** characters missing from Noto Sans (♯ ♭ in chord names, non-Latin scripts) should fall back to another font.
+- **Overlap pass, second round:** bend amounts of quick successive bends can touch, and dense chords can crowd ledger lines (VIEW-7). Tuplet numbers and articulations now reserve their room.
 - **Courtesy signatures:** key and time signatures at the end of a system before a change.

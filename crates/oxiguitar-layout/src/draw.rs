@@ -5,7 +5,7 @@
 //! metadata, lines, beams, ties and tab numbers.
 
 use oxiguitar_display::smufl::{EngravingDefaults, Metadata};
-use oxiguitar_display::{DisplayList, FontSet, Paint, Path, Point, Rect};
+use oxiguitar_display::{DisplayList, FontId, FontSet, Paint, Path, Point, Rect};
 
 /// A SMuFL glyph: its metadata name and codepoint.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -42,6 +42,31 @@ pub(crate) mod glyphs {
     pub(crate) const TAB_CLEF_6: G = G("6stringTabClef", '\u{E06D}');
     pub(crate) const TAB_CLEF_4: G = G("4stringTabClef", '\u{E06E}');
     pub(crate) const AUGMENTATION_DOT: G = G("augmentationDot", '\u{E1E7}');
+    pub(crate) const PAREN_LEFT: G = G("noteheadParenthesisLeft", '\u{E0F5}');
+    pub(crate) const PAREN_RIGHT: G = G("noteheadParenthesisRight", '\u{E0F6}');
+    pub(crate) const NOTEHEAD_DIAMOND_BLACK: G = G("noteheadDiamondBlack", '\u{E0DB}');
+    pub(crate) const NOTEHEAD_DIAMOND_HALF: G = G("noteheadDiamondHalf", '\u{E0D9}');
+    pub(crate) const NOTEHEAD_DIAMOND_WHOLE: G = G("noteheadDiamondWhole", '\u{E0D8}');
+    pub(crate) const ACCENT_ABOVE: G = G("articAccentAbove", '\u{E4A0}');
+    pub(crate) const ACCENT_BELOW: G = G("articAccentBelow", '\u{E4A1}');
+    pub(crate) const STACCATO_ABOVE: G = G("articStaccatoAbove", '\u{E4A2}');
+    pub(crate) const STACCATO_BELOW: G = G("articStaccatoBelow", '\u{E4A3}');
+    pub(crate) const MARCATO_ABOVE: G = G("articMarcatoAbove", '\u{E4AC}');
+    pub(crate) const MARCATO_BELOW: G = G("articMarcatoBelow", '\u{E4AD}');
+    pub(crate) const VIBRATO: G = G("guitarVibratoStroke", '\u{EAB2}');
+    pub(crate) const VIBRATO_WIDE: G = G("guitarWideVibratoStroke", '\u{EAB3}');
+    pub(crate) const TRILL: G = G("ornamentTrill", '\u{E566}');
+    pub(crate) const WIGGLE_TRILL: G = G("wiggleTrill", '\u{EAA4}');
+    pub(crate) const TREMOLO: [G; 3] = [
+        G("tremolo1", '\u{E220}'),
+        G("tremolo2", '\u{E221}'),
+        G("tremolo3", '\u{E222}'),
+    ];
+    pub(crate) const DOWN_BOW: G = G("stringsDownBow", '\u{E610}');
+    pub(crate) const UP_BOW: G = G("stringsUpBow", '\u{E612}');
+    pub(crate) const ARROWHEAD_UP: G = G("arrowheadBlackUp", '\u{EB78}');
+    pub(crate) const ARROWHEAD_DOWN: G = G("arrowheadBlackDown", '\u{EB7C}');
+    pub(crate) const GRACE_SLASH_UP: G = G("graceNoteSlashStemUp", '\u{E564}');
     pub(crate) const REPEAT_DOT: G = G("repeatDot", '\u{E044}');
     pub(crate) const NOTE_QUARTER_UP: G = G("noteQuarterUp", '\u{E1D5}');
     pub(crate) const FLAGS_UP: [G; 4] = [
@@ -149,16 +174,62 @@ impl Painter<'_> {
         y: f32,
         paint: Paint,
     ) -> f32 {
-        let run = self
-            .fonts
-            .text_run(FontSet::TEXT, size, Point::new(x, y), text, paint);
-        let w = run.glyphs.last().map_or(0.0, |g| g.x + g.advance);
-        list.glyphs(run);
-        w
+        let mut cx = x;
+        for (font, segment) in self.segments(text) {
+            let dy = if font == FontSet::MUSIC {
+                -FALLBACK_RAISE * size
+            } else {
+                0.0
+            };
+            let run = self
+                .fonts
+                .text_run(font, size, Point::new(cx, y + dy), segment, paint);
+            cx += run.glyphs.last().map_or(0.0, |g| g.x + g.advance);
+            list.glyphs(run);
+        }
+        cx - x
     }
 
     pub(crate) fn text_width(&self, text: &str, size: f32) -> f32 {
-        self.fonts.text_width(FontSet::TEXT, size, text)
+        self.segments(text)
+            .into_iter()
+            .map(|(font, segment)| self.fonts.text_width(font, size, segment))
+            .sum()
+    }
+
+    /// Splits text into runs by font: the text font, or the music font for
+    /// characters only it has (♯ ♭ ♮ in chord names).
+    fn segments<'t>(&self, text: &'t str) -> Vec<(FontId, &'t str)> {
+        let font_of = |c: char| {
+            if c.is_whitespace() || self.fonts.glyph_for(FontSet::TEXT, c) != 0 {
+                FontSet::TEXT
+            } else if self.fonts.glyph_for(FontSet::MUSIC, c) != 0 {
+                FontSet::MUSIC
+            } else {
+                FontSet::TEXT
+            }
+        };
+        let mut out: Vec<(FontId, &str)> = Vec::new();
+        let mut start = 0;
+        let mut current: Option<FontId> = None;
+        for (i, c) in text.char_indices() {
+            let f = font_of(c);
+            match current {
+                Some(cur) if cur != f => {
+                    if let Some(seg) = text.get(start..i) {
+                        out.push((cur, seg));
+                    }
+                    start = i;
+                    current = Some(f);
+                }
+                None => current = Some(f),
+                _ => {}
+            }
+        }
+        if let (Some(cur), Some(seg)) = (current, text.get(start..)) {
+            out.push((cur, seg));
+        }
+        out
     }
 
     /// Text centred on `cx`.
@@ -224,6 +295,16 @@ impl Painter<'_> {
             .cubic_to(c(0.75, inner), c(0.25, inner), a)
             .close();
         list.fill(p, Paint::Ink);
+    }
+
+    /// A straight line between two points, `width` thick.
+    pub(crate) fn line_between(&self, list: &mut DisplayList, a: Point, b: Point, width: f32) {
+        list.line(a, b, width, Paint::Ink);
+    }
+
+    /// A slur: like a tie, but between any two points.
+    pub(crate) fn slur(&self, list: &mut DisplayList, a: Point, b: Point, height: f32) {
+        self.tie(list, a, b, height);
     }
 
     /// A tab number centred on (`cx`, `y`) with the string line knocked out
@@ -356,6 +437,10 @@ pub(crate) fn accidental_glyph(alter: i8) -> G {
         _ => glyphs::DOUBLE_SHARP,
     }
 }
+
+/// How far music-font characters inside text are raised, as a fraction of
+/// the text size, so a ♯ sits with the letters instead of on the baseline.
+const FALLBACK_RAISE: f32 = 0.3;
 
 /// Tab numbers: their digits fill most of the space between tab lines.
 fn tab_number_size(gap: f32) -> f32 {

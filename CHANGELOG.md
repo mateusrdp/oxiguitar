@@ -19,6 +19,17 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - Engraving tests: public fixtures, damaged scores, a 300-bar 8-track score (engraved in well under half a second), and every Guitar Pro file of the private corpus with all its tracks, checking that everything lands on the page and every glyph exists in the fonts (`cargo test --release -p oxiguitar-layout --test engrave`).
 - `docs/design/engraving.md`: how the engraver works, and what it does not draw yet.
 - CI shows failing tests as an annotation on the pull request.
+- Effects and marks in the engraving (TAB-1, NOT-3):
+  - **Between notes:** hammer-ons and pull-offs (arcs with H/P), slides between notes and into or out of them, bends and releases with their amounts.
+  - **Along the music:** vibrato, trills, palm mute, let ring, harmonic kinds, tap/slap/pop, w/bar, fade in, pick strokes.
+  - **On notes:** natural harmonics (diamond heads, `<12>` on tab), ghost notes in parentheses, accents and staccato, tremolo strokes, strums.
+  - **Grace notes** before their main note.
+  - **Dynamics** where the marking changes.
+  - **Lyrics** under the staff, with room made for each syllable.
+
+  Marks that run along the music get lanes of their own above the tablature, so they never collide.
+- Chord diagrams of the chords used, in the score header (VIEW-6).
+- Characters the text font lacks, such as ♯ and ♭ in chord names, come from the music font.
 - Track names at the start of each system when several tracks are shown: full names on the first system, short names after, as in Guitar Pro's multitrack view.
 - Cargo workspace, licence, contributor guide, credits, roadmap and architecture notes.
 - CI on Windows, macOS and Linux (x86_64 and ARM64): formatting, lint, tests, minimum Rust version, licence and advisory checks, sign-off check and a no-network test.
@@ -39,6 +50,8 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 ### Changed
 
+- Guitar Pro 6–8 beats keep their dynamic as a marking (`BeatEffects::dynamic`) as well as giving it to their notes as velocity, so the engraver can tell a marking from a velocity.
+- Beat text at the end of a system no longer runs off the page; the page test now checks where each text ends, not only where it starts.
 - Plan (Mateus, 16 Oct 2026): the core reads and writes Guitar Pro formats only. MuseScore, MusicXML, ABC and MIDI files, and tab derivation for staves without tablature, become plugins after the plugin system (M5). M1's "98 % of the corpus opens" counts Guitar Pro files only. Visual regression uses 50 generated reference scores kept in the repository. ROADMAP and README follow. Opening one of those files now says that a format plugin will open it, instead of "not supported yet".
 - Voice 1's stems point up even when it is the only voice in the bar (Mateus, 16 Oct 2026). Stems on the staff now always follow the voice number.
 - Stems follow the voice number, as Mateus asked after the first review: voices 1 and 3 up, voices 2 and 4 down, whenever a voice other than the first has notes in the bar (before, the first voice with notes went up and all others down, so voice 3 pointed down and a lone voice 2 pointed up). Drums always follow it; voice 1 alone still points its stems by where its notes sit. Rests of several voices move up or down by the same rule.

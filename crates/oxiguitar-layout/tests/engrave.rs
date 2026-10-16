@@ -49,8 +49,9 @@ fn page_problems(page: &DisplayList, fonts: &FontSet, slack: f32) -> Vec<String>
                     let font = fonts.get(run.font).map_or("?", |f| f.name());
                     out.push(format!("missing glyph in {font}: {:?}", run.text));
                 }
-                // The origin is where the glyph is placed.
-                oxiguitar_display::Rect::new(run.origin.x, run.origin.y, 0.0, 0.0)
+                // From the origin to the end of the last glyph's advance.
+                let width = run.glyphs.last().map_or(0.0, |g| g.x + g.advance);
+                oxiguitar_display::Rect::new(run.origin.x, run.origin.y, width, 0.0)
             }
             other => other.bounds(),
         };
@@ -341,4 +342,100 @@ fn corpus_engraves() {
     );
     assert!(failures.is_empty(), "{}", failures.join("\n"));
     assert!(count >= 100, "{count}");
+}
+
+/// Every text of a page, in drawing order.
+fn texts(page: &DisplayList) -> Vec<String> {
+    page.items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Glyphs(run) => Some(run.text.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn effects_lyrics_and_diagrams_are_drawn() {
+    let (fonts, meta) = setup();
+    // The GP7 test song: a hammer-on, a full bend, lyrics "la la la", one
+    // chord diagram.
+    let score = read(&root().join("fixtures/gp/oxiguitar-test-song.gp"));
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("gp", &e, &fonts);
+    let t = texts(&e.pages[0]);
+    assert!(
+        t.iter().any(|s| s == "H" || s == "P"),
+        "hammer-on letter: {t:?}"
+    );
+    assert!(t.iter().any(|s| s == "full"), "bend amount: {t:?}");
+    assert_eq!(t.iter().filter(|s| *s == "la").count(), 3, "lyrics: {t:?}");
+    let chord = &score.tracks[0].chords[0].name;
+    assert_eq!(
+        t.iter().filter(|s| *s == chord).count(),
+        2,
+        "the chord name over the staff and over its diagram in the header"
+    );
+}
+
+#[test]
+fn chord_names_with_music_signs_have_every_glyph() {
+    let (fonts, meta) = setup();
+    let mut score = read(&root().join("fixtures/gp/oxiguitar-test-song.gp"));
+    score.tracks[0].chords[0].name = "F♯m7♭5 B♮".to_owned();
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("music signs", &e, &fonts);
+}
+
+#[test]
+fn grace_notes_come_small_before_their_note() {
+    let (fonts, meta) = setup();
+    let mut score = Score::new();
+    score.master_bars.push(MasterBar::default());
+    let mut grace = Beat {
+        notes: vec![Note::fretted(2, 5)],
+        duration: Duration::new(NoteValue::Sixteenth),
+        grace: Some(oxiguitar_model::GraceKind::BeforeBeat),
+        ..Beat::default()
+    };
+    grace.kind = BeatKind::Notes;
+    let main = Beat {
+        notes: vec![Note::fretted(2, 7)],
+        duration: Duration::new(NoteValue::Whole),
+        ..Beat::default()
+    };
+    let staff = Staff {
+        tuning: Staff::standard_guitar_tuning(),
+        bars: vec![Bar {
+            voices: vec![Voice {
+                beats: vec![grace, main],
+            }],
+            ..Bar::default()
+        }],
+        ..Staff::default()
+    };
+    score.tracks.push(Track {
+        staves: vec![staff],
+        ..Track::default()
+    });
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("grace", &e, &fonts);
+    let runs: Vec<&oxiguitar_display::GlyphRun> = e.pages[0]
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Glyphs(r) if r.text == "5" || r.text == "7" => Some(r),
+            _ => None,
+        })
+        .collect();
+    let five = runs
+        .iter()
+        .find(|r| r.text == "5")
+        .expect("grace fret number");
+    let seven = runs
+        .iter()
+        .find(|r| r.text == "7")
+        .expect("main fret number");
+    assert!(five.size < seven.size, "the grace number is smaller");
+    assert!(five.origin.x < seven.origin.x, "and comes first");
 }
