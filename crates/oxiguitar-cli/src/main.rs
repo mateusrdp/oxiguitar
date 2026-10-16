@@ -23,11 +23,14 @@ Commands:
   manifest <dir>...          Print a TOML manifest (name, format, size,
                              SHA-256) of every file in the folders
   render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
-         [--tracks 1,2|all] [--staff-space PT] [--quiet]
+         [--tracks 1,2|all] [--staff-space PT] [--no-dynamics]
+         [--no-key-inference] [--quiet]
                              Engrave a score: PNG pages PREFIX-1.png, … (N
                              pixels per point, default 2) and/or a PDF.
                              --tracks picks tracks (default: the first),
-                             --quiet only reports errors
+                             --no-dynamics hides dynamics markings;
+                             --no-key-inference keeps the file's keys even
+                             when it sets none; --quiet only reports errors
   specimen [--png FILE] [--pdf FILE] [--scale N] [--dark]
                              Draw the render spike's test page into a PNG
                              (N pixels per point, default 2) and/or a PDF

@@ -72,6 +72,7 @@ Progress:
 - [ ] Engraving into a display list (`oxiguitar-layout`): standard notation, tablature, rhythm on tab, effects
   - [x] First engraving (16 Oct 2026): notes, rests, chords, accidentals, beams, flags, dots, ties, tuplets, signatures and key changes, repeats, voltas, sections, tempo, chord names, text; tab sharing columns with the staff; rhythm on tab-only tracks; drum staff. `oxiguitar-cli render` writes PNG and PDF. Every Guitar Pro file in the corpus engraves with all its tracks.
   - [x] Effects (TAB-1), grace notes, lyrics, dynamics, articulations, chord diagrams in the header, text font fallback, overlap room for tuplets and articulations (16 Oct 2026)
+  - [x] Key signatures inferred for files that set none, with key changes; dynamics can be hidden (16 Oct 2026)
   - [ ] Slurs, hairpins, ornaments, fermatas and ottavas once the score model holds them (NOT-3); whammy curves; fingering; second overlap pass (VIEW-7); courtesy signatures
 - [ ] Page, vertical, horizontal and parchment layouts; multi-track; score header
   - [x] Page layout, multi-track alignment, score header (16 Oct 2026)

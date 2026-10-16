@@ -29,7 +29,11 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
   Marks that run along the music get lanes of their own above the tablature, so they never collide.
 - Chord diagrams of the chords used, in the score header (VIEW-6).
+- Key signatures for files that set none, as most tabs do (they leave every bar in C major): the engraver infers a key per bar from the notes, changing key mid-song where the music modulates, and keeps C for chromatic music. Files that set their own keys are left as they are. `--no-key-inference` turns it off.
+- `--no-dynamics` hides dynamics markings (`Options::dynamics` in `oxiguitar-layout`).
 - Characters the text font lacks, such as ♯ and ♭ in chord names, come from the music font.
+- Tempo marks are shown only where the tempo changes, and never on top of each other.
+- In the score header, the tuning goes under the credits when the two would meet.
 - Track names at the start of each system when several tracks are shown: full names on the first system, short names after, as in Guitar Pro's multitrack view.
 - Cargo workspace, licence, contributor guide, credits, roadmap and architecture notes.
 - CI on Windows, macOS and Linux (x86_64 and ARM64): formatting, lint, tests, minimum Rust version, licence and advisory checks, sign-off check and a no-network test.

@@ -57,6 +57,7 @@ cargo run --release -p oxiguitar-cli -- info fixtures/gp/oxiguitar-test-song.gp
 cargo run --release -p oxiguitar-cli -- info --bars path/to/your/song.gp5
 cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --png page --pdf song.pdf
 cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --tracks all --dark --pdf song-dark.pdf
+cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --no-dynamics --no-key-inference --pdf plain.pdf
 ```
 
 ## Testers wanted

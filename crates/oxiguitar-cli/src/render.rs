@@ -50,6 +50,8 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
                 _ => return crate::usage_error("--staff-space takes points from 2 to 20"),
             },
             "--dark" => theme = Theme::DARK,
+            "--no-dynamics" => options.dynamics = false,
+            "--no-key-inference" => options.infer_keys = false,
             "--quiet" => quiet = true,
             other if other.starts_with("--") => {
                 return crate::usage_error(&format!("render: unknown option '{other}'"));

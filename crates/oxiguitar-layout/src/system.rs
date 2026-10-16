@@ -64,7 +64,7 @@ pub(crate) struct Plans {
     pub(crate) grids: Vec<BarGrid>,
 }
 
-pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>) -> Plans {
+pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics: bool) -> Plans {
     let empty = Bar::default();
     let bars: Vec<Vec<BarPlan>> = views
         .iter()
@@ -85,7 +85,9 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>) -> Plans 
                 .enumerate()
                 .map(|(i, mb)| planner.bar(staff.bars.get(i).unwrap_or(&empty), mb))
                 .collect();
-            mark_dynamics(&mut planned);
+            if dynamics {
+                mark_dynamics(&mut planned);
+            }
             if v.staff == 0 {
                 for (line, lyric) in track.lyrics.iter().enumerate() {
                     place_lyrics(&mut planned, line, lyric.start_bar, &lyric.text);

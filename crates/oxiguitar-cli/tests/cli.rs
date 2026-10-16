@@ -158,7 +158,7 @@ fn render_engraves_pages_and_a_pdf() {
             .arg("--pdf")
             .arg(&pdf);
         if dark {
-            cmd.arg("--dark");
+            cmd.args(["--dark", "--no-dynamics", "--no-key-inference"]);
         }
         let out = cmd.output().unwrap();
         assert!(

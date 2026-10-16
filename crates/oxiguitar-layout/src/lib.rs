@@ -26,6 +26,7 @@ mod draw;
 mod effects;
 mod engrave;
 mod grid;
+mod key;
 mod page;
 mod pitch;
 mod plan;
@@ -48,6 +49,11 @@ pub struct Options {
     pub tracks: Vec<usize>,
     /// Draw the score header (title, artist, credits, tuning) on page one.
     pub header: bool,
+    /// Infer key signatures from the notes when the file sets none (most
+    /// tabs leave every bar in C major).
+    pub infer_keys: bool,
+    /// Show dynamics markings.
+    pub dynamics: bool,
 }
 
 impl Default for Options {
@@ -60,6 +66,8 @@ impl Default for Options {
             staff_space: 4.5,
             tracks: Vec::new(),
             header: true,
+            infer_keys: true,
+            dynamics: true,
         }
     }
 }
@@ -78,6 +86,12 @@ pub struct Engraved {
 /// Never panics on a damaged score: bars that cannot be measured get a
 /// minimal width, notes outside the instrument are left out.
 pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Options) -> Engraved {
+    let inferred = if options.infer_keys {
+        key::with_inferred_keys(score)
+    } else {
+        None
+    };
+    let score = inferred.as_ref().unwrap_or(score);
     let views = system::views(score, &options.tracks);
     let room = options.page_height - 2.0 * options.margin - page::FOOTER;
     let mut sp = options.staff_space.clamp(1.0, 50.0);
@@ -87,7 +101,7 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
     loop {
         let painter = draw::Painter { fonts, meta, sp };
         let width = (options.page_width - 2.0 * options.margin).max(10.0 * sp);
-        let plans = system::plan_all(score, &views, &painter);
+        let plans = system::plan_all(score, &views, &painter, options.dynamics);
         let systems = system::break_systems(score, &views, &plans, &painter, width);
         let drawn: Vec<engrave::DrawnSystem> = systems
             .iter()

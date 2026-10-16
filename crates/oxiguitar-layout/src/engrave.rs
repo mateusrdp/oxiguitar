@@ -1501,8 +1501,14 @@ impl Ctx<'_> {
             if bx.index == 0 && !marks.iter().any(|(pos, _)| pos.is_zero()) {
                 marks.insert(0, (Ratio::ZERO, self.score.initial_tempo));
             }
+            // Only real changes are shown, and a mark that would run into
+            // the one before it in the bar is left out.
+            let mut current = (bx.index > 0).then(|| tempo_before(self.score, bx.index));
+            let mut free_from = f32::NEG_INFINITY;
             for (pos, bpm) in marks {
-                if !(bpm.is_finite() && bpm > 0.0) {
+                if !(bpm.is_finite() && bpm > 0.0)
+                    || current.is_some_and(|c| c.round() == bpm.round())
+                {
                     continue;
                 }
                 let x = if pos.is_zero() {
@@ -1510,11 +1516,17 @@ impl Ctx<'_> {
                 } else {
                     bx.x_of(grid, pos) - hw / 2.0
                 };
+                if x < free_from {
+                    continue;
+                }
                 let scale = 0.7;
                 p.glyph_scaled(list, glyphs::NOTE_QUARTER_UP, scale, x, base, Paint::Ink);
                 let w = p.width(glyphs::NOTE_QUARTER_UP) * scale;
                 let label = format!(" = {}", bpm.round());
-                p.text(list, &label, 1.9 * sp, x + w, base, Paint::Ink);
+                let size = 1.9 * sp;
+                p.text(list, &label, size, x + w, base, Paint::Ink);
+                free_from = x + w + p.text_width(&label, size) + sp;
+                current = Some(bpm);
             }
         }
         if let Some(base) = lines.ending {
@@ -1714,6 +1726,19 @@ fn key_signature_steps_for(fifths: i8, clef: Clef) -> Vec<(i32, i8)> {
         },
         clef,
     )
+}
+
+/// The tempo in force when bar `index` starts.
+fn tempo_before(score: &Score, index: usize) -> f64 {
+    score
+        .master_bars
+        .iter()
+        .take(index)
+        .rev()
+        .flat_map(|mb| mb.tempo_changes.iter().rev())
+        .map(|t| t.bpm)
+        .find(|b| b.is_finite() && *b > 0.0)
+        .unwrap_or(score.initial_tempo)
 }
 
 #[cfg(test)]

@@ -439,3 +439,78 @@ fn grace_notes_come_small_before_their_note() {
     assert!(five.size < seven.size, "the grace number is smaller");
     assert!(five.origin.x < seven.origin.x, "and comes first");
 }
+
+/// A one-track score in G major written without a key signature, as most
+/// tabs are: each bar G B D F♯, the first beat marked forte.
+fn tune_in_g(bars: usize) -> Score {
+    let mut score = Score::new();
+    let mut staff = Staff::default();
+    for _ in 0..bars {
+        score.master_bars.push(MasterBar::default());
+        let beats = [67, 71, 74, 66]
+            .into_iter()
+            .map(|p| Beat {
+                notes: vec![Note {
+                    place: NotePlace::Pitched(Pitch(p)),
+                    ..Note::fretted(1, 0)
+                }],
+                duration: Duration::new(NoteValue::Quarter),
+                ..Beat::default()
+            })
+            .collect();
+        staff.bars.push(Bar {
+            voices: vec![Voice { beats }],
+            ..Bar::default()
+        });
+    }
+    if let Some(beat) = staff.bars[0].voices[0].beats.first_mut() {
+        beat.effects.dynamic = Some(oxiguitar_model::Dynamic::F);
+    }
+    score.tracks.push(Track {
+        staves: vec![staff],
+        ..Track::default()
+    });
+    score
+}
+
+/// How many times `c` is drawn on every page.
+fn count_char(e: &Engraved, c: char) -> usize {
+    e.pages
+        .iter()
+        .flat_map(texts)
+        .map(|t| t.chars().filter(|x| *x == c).count())
+        .sum()
+}
+
+#[test]
+fn a_key_is_inferred_when_the_file_sets_none() {
+    let (fonts, meta) = setup();
+    let score = tune_in_g(12);
+    let sharp = '\u{E262}';
+    // Inferred: one sharp in the signature of each system, none on the notes.
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("inferred key", &e, &fonts);
+    assert_eq!(count_char(&e, sharp), e.systems);
+    // Not inferred: a sharp before every F♯.
+    let plain = Options {
+        infer_keys: false,
+        ..Options::default()
+    };
+    let e = engrave(&score, &fonts, &meta, &plain);
+    assert_eq!(count_char(&e, sharp), 12);
+}
+
+#[test]
+fn dynamics_can_be_hidden() {
+    let (fonts, meta) = setup();
+    let score = tune_in_g(2);
+    let forte = '\u{E522}';
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    assert_eq!(count_char(&e, forte), 1);
+    let hidden = Options {
+        dynamics: false,
+        ..Options::default()
+    };
+    let e = engrave(&score, &fonts, &meta, &hidden);
+    assert_eq!(count_char(&e, forte), 0);
+}
