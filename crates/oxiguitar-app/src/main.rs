@@ -79,6 +79,12 @@ struct App {
     paint: u64,
     tiles: HashMap<(u32, u32), Image>,
     tile_model: Rc<VecModel<TileItem>>,
+    /// Tiles from before the last zoom, engraving or repaint, scaled to the
+    /// current zoom and drawn under the new ones until those cover the
+    /// view, so the canvas never goes blank in between.
+    old_tile_model: Rc<VecModel<TileItem>>,
+    /// The tiles the view itself shows (without the margin drawn ahead).
+    visible: Vec<(u32, u32)>,
     /// Score zoom, 0.25 to 4.
     zoom: f32,
     /// Scale factor the system gives the window, and our interface zoom.
@@ -110,6 +116,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let ui = AppWindow::new()?;
     let tile_model = Rc::new(VecModel::<TileItem>::default());
     ui.set_tiles(ModelRc::from(tile_model.clone()));
+    let old_tile_model = Rc::new(VecModel::<TileItem>::default());
+    ui.set_old_tiles(ModelRc::from(old_tile_model.clone()));
 
     let worker = Worker::start(|event| {
         let _ = slint::invoke_from_event_loop(move || {
@@ -130,6 +138,8 @@ fn main() -> Result<(), slint::PlatformError> {
         paint: 0,
         tiles: HashMap::new(),
         tile_model,
+        old_tile_model,
+        visible: Vec::new(),
         zoom: 1.0,
         system_scale: 1.0,
         ui_zoom: 1.0,
@@ -345,6 +355,10 @@ fn handle(app: &Shared, event: Event) {
                 s.settings.notation = s.tracks.notation();
                 s.pdf_name = pdf_name;
                 s.folder = folder;
+                // Another song: nothing of the last one stays on screen.
+                s.tiles.clear();
+                s.tile_model.clear();
+                s.old_tile_model.clear();
             }
             let rows: Vec<TrackRow> = tracks
                 .iter()
@@ -378,8 +392,7 @@ fn handle(app: &Shared, event: Event) {
                     lists: Vec::new(),
                     rects: sheets,
                 };
-                s.tiles.clear();
-                s.tile_model.clear();
+                retire_tiles(&mut s, 1.0);
             }
             set_content_size(app, &ui);
             canvas_changed(app);
@@ -410,6 +423,7 @@ fn handle(app: &Shared, event: Event) {
                 y: row as f32 * size,
                 size,
             });
+            drop_old_tiles_when_covered(&s);
         }
         Event::Tools(tools) => set_tools(&ui, &tool_rows(&tools)),
         Event::Status(message) => status(app, message),
@@ -438,8 +452,7 @@ fn settings_changed(app: &Shared) {
     }
     // Dark Page only needs new tiles; everything else a new engraving.
     s.paint += 1;
-    s.tiles.clear();
-    s.tile_model.clear();
+    retire_tiles(&mut s, 1.0);
     if s.track_count > 0 {
         let settings = s.settings.clone();
         s.worker.send(Request::Engrave(settings));
@@ -541,6 +554,8 @@ fn canvas_changed(app: &Shared) {
     );
     // Draw a little beyond the view, keep more than that.
     let (near, keep) = Sheets::around(view);
+    s.visible = s.sheets.tiles_for(view, device);
+    drop_old_tiles_when_covered(&s);
     let wanted = s.sheets.tiles_for(near, device);
     let kept = s.sheets.tiles_for(keep, device);
     let before = s.tiles.len();
@@ -575,6 +590,36 @@ fn canvas_changed(app: &Shared) {
     }
 }
 
+/// Most old tiles kept at once: enough for a few screens, so dragging the
+/// zoom slider cannot pile them up.
+const MAX_OLD_TILES: usize = 96;
+
+/// The tiles on screen no longer match the score (zoom, engraving, page
+/// colour, scale): they move to the layer underneath, scaled by `k` around
+/// the canvas origin, and new tiles are drawn over them.
+fn retire_tiles(s: &mut App, k: f32) {
+    let scaled = |t: TileItem| TileItem {
+        x: t.x * k,
+        y: t.y * k,
+        size: t.size * k,
+        ..t
+    };
+    let mut items: Vec<TileItem> = s.old_tile_model.iter().map(scaled).collect();
+    items.extend(s.tile_model.iter().map(scaled));
+    let extra = items.len().saturating_sub(MAX_OLD_TILES);
+    items.drain(..extra);
+    s.old_tile_model.set_vec(items);
+    s.tiles.clear();
+    s.tile_model.clear();
+}
+
+/// Once every tile the view shows has arrived, the old layer goes.
+fn drop_old_tiles_when_covered(s: &App) {
+    if s.old_tile_model.row_count() > 0 && s.visible.iter().all(|k| s.tiles.contains_key(k)) {
+        s.old_tile_model.clear();
+    }
+}
+
 /// The score-zoom slider moved: keep the middle of the view where it is.
 fn zoom_moved(app: &Shared, v: f32) {
     let Some(ui) = app.borrow().ui.upgrade() else {
@@ -600,8 +645,7 @@ fn zoom_moved(app: &Shared, v: f32) {
         let mut s = app.borrow_mut();
         s.zoom = zoom;
         s.paint += 1;
-        s.tiles.clear();
-        s.tile_model.clear();
+        retire_tiles(&mut s, zoom / old);
     }
     set_content_size(app, &ui);
     let k = zoom / old;
@@ -816,8 +860,8 @@ fn install_interface_zoom(ui: &AppWindow, app: &Shared) {
             {
                 let mut s = a.borrow_mut();
                 s.paint += 1;
-                s.tiles.clear();
-                s.tile_model.clear();
+                // Tiles sit in logical pixels, which still fit the score.
+                retire_tiles(&mut s, 1.0);
             }
             canvas_changed(&a);
         });
