@@ -35,20 +35,23 @@ Releases will come as a portable .exe for Windows; AppImage, .deb and .rpm for L
 You need Rust 1.97 or newer. On Debian sid everything comes from apt:
 
 ```sh
-sudo apt install git build-essential pkg-config rustc cargo rustfmt rust-clippy
+sudo apt install git build-essential pkg-config rustc cargo rustfmt rust-clippy \
+  libfontconfig1-dev libxkbcommon-dev libwayland-dev
 git clone https://github.com/mateusrdp/oxiguitar.git
 cd oxiguitar
 cargo build --release
 cargo test
 ```
 
-Elsewhere, install Rust from your system's packages or from [rustup.rs](https://rustup.rs). The desktop app (from milestone M1) also needs the system libraries for fonts, keyboard and windows; on Debian and Ubuntu:
+Elsewhere, install Rust from your system's packages or from [rustup.rs](https://rustup.rs). The last three packages are the system libraries the desktop app needs for fonts, keyboard and windows (the same names on Ubuntu). Audio, from milestone M3, adds `libasound2-dev`.
+
+Run the desktop app, optionally with a file to open:
 
 ```sh
-sudo apt install libfontconfig1-dev libxkbcommon-dev libwayland-dev
+cargo run --release -p oxiguitar-app -- path/to/your/song.gp
 ```
 
-Audio, from milestone M3, adds `libasound2-dev`.
+It opens Guitar Pro 3 to 8 files and shows them in four layouts (View → Layout), with a dark page, the track list (F8), the Tools menu and PDF export. On Linux, the Open and Export dialogs come from the desktop portal (`xdg-desktop-portal` with your desktop's backend, installed by default with GNOME and KDE). The binary is `target/release/oxiguitar` and needs no files beside it.
 
 Try the command-line tool, which can already read Guitar Pro 3 to 8 files (.gp3, .gp4, .gp5, .gpx, .gp) and engrave them into PNG pages and a PDF:
 

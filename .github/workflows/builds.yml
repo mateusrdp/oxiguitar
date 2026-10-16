@@ -1,7 +1,7 @@
 # Test builds for every target on each push to develop, kept 14 days under the
-# Actions tab so testers can try them. Until the desktop app exists (M1) these
-# are builds of oxiguitar-cli; packaging (AppImage, .deb, .rpm, .dmg, .exe)
-# arrives with release.yml.
+# Actions tab so testers can try them: the desktop app (oxiguitar) and the
+# command-line tool (oxiguitar-cli). Packaging (AppImage, .deb, .rpm, .dmg,
+# .exe) arrives with release.yml.
 name: Test builds
 
 on:
@@ -35,11 +35,15 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked -p oxiguitar-cli
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
+      - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
       - uses: actions/upload-artifact@v4
         with:
-          name: oxiguitar-cli-${{ matrix.name }}
-          path: target/release/oxiguitar-cli${{ matrix.exe }}
+          name: oxiguitar-${{ matrix.name }}
+          path: |
+            target/release/oxiguitar${{ matrix.exe }}
+            target/release/oxiguitar-cli${{ matrix.exe }}
           retention-days: 14
           if-no-files-found: error
 
@@ -53,16 +57,21 @@ jobs:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
       - run: |
-          cargo build --release --locked -p oxiguitar-cli --target aarch64-apple-darwin
-          cargo build --release --locked -p oxiguitar-cli --target x86_64-apple-darwin
           mkdir -p dist
-          lipo -create -output dist/oxiguitar-cli \
-            target/aarch64-apple-darwin/release/oxiguitar-cli \
-            target/x86_64-apple-darwin/release/oxiguitar-cli
-          lipo -info dist/oxiguitar-cli
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli --target "$target"
+          done
+          for bin in oxiguitar oxiguitar-cli; do
+            lipo -create -output "dist/$bin" \
+              "target/aarch64-apple-darwin/release/$bin" \
+              "target/x86_64-apple-darwin/release/$bin"
+            lipo -info "dist/$bin"
+          done
       - uses: actions/upload-artifact@v4
         with:
-          name: oxiguitar-cli-macos-universal
-          path: dist/oxiguitar-cli
+          name: oxiguitar-macos-universal
+          path: |
+            dist/oxiguitar
+            dist/oxiguitar-cli
           retention-days: 14
           if-no-files-found: error
