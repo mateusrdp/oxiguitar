@@ -76,6 +76,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 ### Fixed
 
+- Escape closes the Help notes (Keyboard and Mouse, About), as a click already did.
 - View → Layout and File → Paper Size tick only the current choice.
 - View → Multitrack follows the track list: ticked whenever more than one track is shown.
 - The score no longer blinks blank after a zoom, a new engraving (layout, tracks, paper, dynamics) or Dark Page: the old tiles, scaled to the new zoom, stay under the new ones until those cover the view.

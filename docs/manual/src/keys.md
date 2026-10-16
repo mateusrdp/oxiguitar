@@ -18,3 +18,4 @@
 | Click a track's name | Show that track alone |
 | Click a hidden track's clef or TAB | Show it with the others |
 | Click the status line | Close the message |
+| Escape, or a click anywhere | Close Keyboard and Mouse or About |
