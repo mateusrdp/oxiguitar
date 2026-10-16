@@ -13,6 +13,7 @@ publish.workspace = true
 oxiguitar-model.workspace = true
 oxiguitar-formats.workspace = true
 oxiguitar-display.workspace = true
+oxiguitar-layout.workspace = true
 oxiguitar-render.workspace = true
 
 [lints]
