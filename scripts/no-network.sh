@@ -44,7 +44,7 @@ for step in "${session[@]}"; do
         args=("$step")
     fi
     if trace "$cli" "${args[@]}"; then
-        echo "no-network: FAIL, network attempt during: oxiguitar-cli ${args[*]}" >&2
+        echo "::error title=NET-5::network attempt during: oxiguitar-cli ${args[*]}"
         failed=1
     else
         echo "no-network: ok   oxiguitar-cli ${args[*]}"
@@ -63,18 +63,23 @@ if [[ -n "$app" ]]; then
     for file in "$root"/fixtures/gp/oxiguitar-test-song.*; do
         : > "$log"
         status=0
+        out="$(mktemp)"
         DISPLAY=:77 WAYLAND_DISPLAY= OXIGUITAR_EXIT_AFTER_MS=4000 \
             strace -f -qq -e trace=connect,sendto,sendmsg -o "$log" \
-            timeout 60 "$app" "$file" > /dev/null 2>&1 || status=$?
+            timeout 60 "$app" "$file" > "$out" 2>&1 || status=$?
         if grep -E 'sa_family=AF_INET6?\b' "$log"; then
-            echo "no-network: FAIL, network attempt in the app with $(basename "$file")" >&2
+            echo "::error title=NET-5::network attempt in the app with $(basename "$file")"
             failed=1
         elif [[ "$status" -ne 0 ]]; then
-            echo "no-network: FAIL, the app exited with status $status on $(basename "$file")" >&2
+            # The app's own output, as one annotation (CI logs cannot be fetched).
+            msg="$(tail -n 20 "$out" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            echo "::error title=NET-5 app exit $status on $(basename "$file")::$msg"
+            cat "$out" >&2
             failed=1
         else
             echo "no-network: ok   oxiguitar $(basename "$file")"
         fi
+        rm -f "$out"
     done
 fi
 
