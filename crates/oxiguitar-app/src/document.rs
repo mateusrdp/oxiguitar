@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet, Theme};
-use oxiguitar_layout::{Layout, Options, Paper, engrave};
+use oxiguitar_layout::{Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::Score;
 use oxiguitar_tools::Availability;
 
@@ -25,9 +25,8 @@ pub(crate) struct Settings {
     pub(crate) dynamics: bool,
     /// Width of the score area in points, for the Vertical layout.
     pub(crate) screen_width: f32,
-    /// Tracks whose tablature the user has shown or hidden; the others
-    /// follow `oxiguitar_layout::default_tablature`.
-    pub(crate) tablature: BTreeMap<usize, bool>,
+    /// Each track's notation, from the track list.
+    pub(crate) notation: BTreeMap<usize, Notation>,
 }
 
 impl Default for Settings {
@@ -38,7 +37,7 @@ impl Default for Settings {
             tracks: vec![0],
             dynamics: true,
             screen_width: 800.0,
-            tablature: BTreeMap::new(),
+            notation: BTreeMap::new(),
         }
     }
 }
@@ -51,7 +50,7 @@ impl Settings {
             screen_width: self.screen_width,
             tracks: self.tracks.clone(),
             dynamics: self.dynamics,
-            tablature: self.tablature.clone(),
+            notation: self.notation.clone(),
             ..Options::default().with_paper(self.paper)
         }
     }
@@ -64,8 +63,8 @@ pub(crate) struct TrackInfo {
     pub(crate) instrument: String,
     /// The track has strings to tab (not drums, not a track without strings).
     pub(crate) can_tab: bool,
-    /// Its tablature is shown unless the user decides otherwise.
-    pub(crate) default_tab: bool,
+    /// Its notation unless the user decides otherwise.
+    pub(crate) default_notation: Notation,
 }
 
 /// A Tools menu entry for the open score.
@@ -115,7 +114,7 @@ impl Document {
                     }
                 },
                 can_tab: !t.instrument.percussion && t.staves.iter().any(|s| s.string_count() > 0),
-                default_tab: oxiguitar_layout::default_tablature(t),
+                default_notation: oxiguitar_layout::default_notation(t),
             })
             .collect()
     }
@@ -273,9 +272,10 @@ mod tests {
         let doc = Document::open(&fixture("gp5")).unwrap();
         for (info, track) in doc.tracks().iter().zip(&doc.score.tracks) {
             assert_eq!(
-                info.default_tab,
+                info.default_notation.tablature,
                 track.instrument.is_fretted() && info.can_tab
             );
+            assert!(info.default_notation.any());
         }
     }
 

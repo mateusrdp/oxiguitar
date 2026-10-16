@@ -42,7 +42,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - Test builds of the app for every system, beside the command-line tool.
 - Guitar Pro 3–5 tracks get the clef Guitar Pro gives them: bass clef for basses, treble at sounding pitch for keyboards and voices, treble 8vb for guitars (these formats store no clef).
 - Keyboard tracks (pianos, organs, …) are shown on a grand staff with a brace: right hand in the treble clef, left in the bass clef, split by hand range.
-- Tablature is shown by default only for fretted instruments; the track list's Tab tick (and `render --tab` / `--no-tab`) shows or hides any track's tab.
+- Tablature is shown by default only for fretted instruments. Each track in the list has two notation buttons, a G clef and TAB, drawn by our renderer and lit when on: standard notation, tablature, both, or neither (which hides the track, in step with its tick). `render --notation 2=tab,3=both` does the same.
 - Tools → Infer Key Signatures is always offered: on a score that already has keys it replaces them if the notes say otherwise, and says so when they already fit.
 - The app's icon: the placeholder pick (now with a rounded tip, darker green and a light sheen) as the window icon, a desktop entry with the app id `io.github.mateusrdp.OxiGuitar` for Wayland, and `scripts/install-desktop-entry.sh` for builds from source.
 - A new track's default instrument is a steel-string guitar (General MIDI 25) rather than a piano.

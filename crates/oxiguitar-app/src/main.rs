@@ -14,6 +14,8 @@
 
 mod canvas;
 mod document;
+mod icons;
+mod tracks;
 mod worker;
 
 use std::cell::RefCell;
@@ -34,6 +36,7 @@ use slint::{
 
 use crate::canvas::{Sheets, TILE};
 use crate::document::{Settings, ToolEntry};
+use crate::tracks::Tracks;
 use crate::worker::{Event, Request, Worker};
 
 /// The code Slint generates from `ui/app.slint`.
@@ -47,6 +50,8 @@ use ui::{AppWindow, TileItem, ToolRow, TrackRow};
 const APP_ID: &str = "io.github.mateusrdp.OxiGuitar";
 /// Interface zoom steps, as in web browsers.
 const UI_ZOOMS: &[f32] = &[0.5, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0];
+/// Size of the notation buttons' icons, in logical pixels.
+const NOTATION_ICON: f32 = 24.0;
 /// Pixels of smooth (touchpad) scrolling per interface-zoom step.
 const PIXELS_PER_STEP: f64 = 60.0;
 /// Logical pixels per point at 100 % score zoom (96 dpi).
@@ -61,6 +66,10 @@ struct App {
     worker: Worker,
     settings: Settings,
     track_count: usize,
+    /// The track list: shown tracks and their notation.
+    tracks: Tracks,
+    /// The notation buttons' icons, and the scale they were drawn for.
+    icons_scale: f32,
     /// The newest engraving: its id and where its sheets sit, in points.
     engraving: u64,
     sheets: Sheets,
@@ -112,6 +121,8 @@ fn main() -> Result<(), slint::PlatformError> {
         worker,
         settings: Settings::default(),
         track_count: 0,
+        tracks: Tracks::default(),
+        icons_scale: 0.0,
         engraving: 0,
         sheets: Sheets::default(),
         paint: 0,
@@ -162,42 +173,35 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_zoom_moved(move |v| zoom_moved(&a, v));
     let a = app.clone();
     ui.on_track_toggled(move |i| {
-        let mut tracks = a.borrow().settings.tracks.clone();
-        let i = i as usize;
-        if let Some(pos) = tracks.iter().position(|&t| t == i) {
-            if tracks.len() > 1 {
-                tracks.remove(pos);
-            }
-        } else {
-            tracks.push(i);
-            tracks.sort_unstable();
-        }
-        set_tracks(&a, tracks);
+        // The tick has already flipped (two-way binding): follow it.
+        let on = a
+            .borrow()
+            .ui
+            .upgrade()
+            .and_then(|ui| ui.get_tracks().row_data(i as usize))
+            .is_some_and(|r| r.shown);
+        a.borrow_mut().tracks.set_shown(i as usize, on);
+        sync_tracks(&a);
     });
     let a = app.clone();
-    ui.on_tab_toggled(move |i| {
-        let Some(ui) = a.borrow().ui.upgrade() else {
-            return;
-        };
-        // The tick has already flipped (two-way binding): record it.
-        let Some(row) = ui.get_tracks().row_data(i as usize) else {
-            return;
-        };
-        a.borrow_mut()
-            .settings
-            .tablature
-            .insert(i as usize, row.tab);
-        settings_changed(&a);
+    ui.on_standard_clicked(move |i| {
+        a.borrow_mut().tracks.toggle_standard(i as usize);
+        sync_tracks(&a);
     });
     let a = app.clone();
-    ui.on_track_solo(move |i| set_tracks(&a, vec![i as usize]));
+    ui.on_tablature_clicked(move |i| {
+        a.borrow_mut().tracks.toggle_tablature(i as usize);
+        sync_tracks(&a);
+    });
+    let a = app.clone();
+    ui.on_track_solo(move |i| {
+        a.borrow_mut().tracks.solo(i as usize);
+        sync_tracks(&a);
+    });
     let a = app.clone();
     ui.on_multitrack_toggled(move || {
-        let (count, tracks) = {
-            let s = a.borrow();
-            (s.track_count, s.settings.tracks.clone())
-        };
-        set_tracks(&a, multitrack_toggled(count, &tracks));
+        a.borrow_mut().tracks.toggle_multitrack();
+        sync_tracks(&a);
     });
     let a = app.clone();
     ui.on_tool_picked(move |i| {
@@ -331,20 +335,28 @@ fn handle(app: &Shared, event: Event) {
             {
                 let mut s = app.borrow_mut();
                 s.track_count = tracks.len();
-                s.settings.tracks = vec![0];
-                s.settings.tablature.clear();
+                s.tracks = Tracks::new(
+                    tracks.iter().map(|t| t.default_notation).collect(),
+                    tracks.iter().map(|t| t.can_tab).collect(),
+                );
+                s.settings.tracks = s.tracks.shown();
+                s.settings.notation = s.tracks.notation();
                 s.pdf_name = pdf_name;
                 s.folder = folder;
             }
             let rows: Vec<TrackRow> = tracks
                 .iter()
                 .enumerate()
-                .map(|(i, t)| TrackRow {
-                    name: t.name.as_str().into(),
-                    instrument: t.instrument.as_str().into(),
-                    shown: i == 0,
-                    tab: t.default_tab,
-                    can_tab: t.can_tab,
+                .map(|(i, t)| {
+                    let row = app.borrow().tracks.row(i);
+                    TrackRow {
+                        name: t.name.as_str().into(),
+                        instrument: t.instrument.as_str().into(),
+                        shown: row.shown,
+                        standard: row.standard,
+                        tablature: row.tablature,
+                        can_tab: t.can_tab,
+                    }
                 })
                 .collect();
             ui.set_tracks(ModelRc::new(VecModel::from(rows)));
@@ -432,36 +444,54 @@ fn settings_changed(app: &Shared) {
     }
 }
 
-fn set_tracks(app: &Shared, tracks: Vec<usize>) {
+/// The track list changed: show its state in every row and in View →
+/// Multitrack, and engrave again.
+fn sync_tracks(app: &Shared) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
     let model = ui.get_tracks();
-    for i in 0..model.row_count() {
-        if let Some(mut row) = model.row_data(i) {
-            row.shown = tracks.contains(&i);
-            model.set_row_data(i, row);
+    {
+        let s = app.borrow();
+        for i in 0..model.row_count() {
+            if let Some(mut row) = model.row_data(i) {
+                let r = s.tracks.row(i);
+                row.shown = r.shown;
+                row.standard = r.standard;
+                row.tablature = r.tablature;
+                model.set_row_data(i, row);
+            }
         }
+        ui.set_multitrack(s.tracks.is_multitrack());
     }
-    ui.set_multitrack(is_multitrack(&tracks));
-    app.borrow_mut().settings.tracks = tracks;
+    {
+        let mut s = app.borrow_mut();
+        s.settings.tracks = s.tracks.shown();
+        s.settings.notation = s.tracks.notation();
+    }
     settings_changed(app);
 }
 
-/// View → Multitrack is ticked whenever more than one track is shown, however
-/// they were chosen (Mateus, 16 Oct 2026).
-fn is_multitrack(tracks: &[usize]) -> bool {
-    tracks.len() > 1
-}
-
-/// The tracks to show after View → Multitrack is clicked: from several
-/// tracks back to the first of them; from one track to all of them.
-fn multitrack_toggled(count: usize, tracks: &[usize]) -> Vec<usize> {
-    if is_multitrack(tracks) {
-        tracks.iter().copied().take(1).collect()
-    } else {
-        (0..count).collect()
+/// Draws the notation buttons' icons for the window's current scale.
+fn refresh_icons(app: &Shared, ui: &AppWindow) {
+    let scale = ui.window().scale_factor();
+    if (scale - app.borrow().icons_scale).abs() < 1e-3 {
+        return;
     }
+    let px = (NOTATION_ICON * scale).round().max(8.0) as u32;
+    let images: Vec<Image> = icons::symbol_icons(&[icons::G_CLEF, icons::TAB_CLEF], px)
+        .into_iter()
+        .map(|icon| {
+            let buf =
+                SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&icon.rgba, icon.size, icon.size);
+            Image::from_rgba8_premultiplied(buf)
+        })
+        .collect();
+    if let [std, tab] = images.as_slice() {
+        ui.set_standard_icon(std.clone());
+        ui.set_tablature_icon(tab.clone());
+    }
+    app.borrow_mut().icons_scale = scale;
 }
 
 /// The window's score area in points, for the Vertical layout.
@@ -483,6 +513,8 @@ fn canvas_changed(app: &Shared) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
+    // The interface zoom or the screen changed the scale: redraw the icons.
+    refresh_icons(app, &ui);
     let mut s = app.borrow_mut();
     if s.track_count == 0 {
         return;
@@ -821,15 +853,6 @@ mod tests {
             "Infer Key Signatures (the score has no bars)"
         );
         assert!(!rows[0].enabled);
-    }
-
-    #[test]
-    fn multitrack_follows_the_shown_tracks() {
-        assert!(!is_multitrack(&[2]));
-        assert!(is_multitrack(&[0, 2]));
-        assert_eq!(multitrack_toggled(4, &[2]), vec![0, 1, 2, 3]);
-        assert_eq!(multitrack_toggled(4, &[1, 3]), vec![1]);
-        assert_eq!(multitrack_toggled(4, &[0, 1, 2, 3]), vec![0]);
     }
 
     #[test]

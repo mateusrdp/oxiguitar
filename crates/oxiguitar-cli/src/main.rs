@@ -26,7 +26,7 @@ Commands:
   render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
          [--layout page|vertical|horizontal|parchment] [--width PT]
          [--paper a4|letter] [--tracks 1,2|all] [--staff-space PT]
-         [--tab 1,2] [--no-tab 1,2] [--no-dynamics] [--tool ID]...
+         [--notation 2=tab,3=both] [--no-dynamics] [--tool ID]...
          [--quiet]
                              Engrave a score: PNG pages PREFIX-1.png, … (N
                              pixels per point, default 2) and/or a PDF.
@@ -35,8 +35,8 @@ Commands:
                              pixels); --width is the window width for the
                              vertical layout; the PDF is always in pages;
                              --tracks picks tracks (default: the first);
-                             --tab / --no-tab show or hide those tracks'
-                             tablature (default: fretted instruments only);
+                             --notation sets tracks' notation: std, tab or
+                             both (default: tab for fretted instruments);
                              --no-dynamics hides dynamics markings;
                              --tool runs a tool on the score first, as the
                              app's Tools menu does; --quiet only reports
