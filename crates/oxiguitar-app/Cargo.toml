@@ -28,6 +28,10 @@ slint = { version = "1.18", features = ["unstable-winit-030"] }
 # (pure Rust, no GTK), the native dialogs on Windows and macOS.
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal", "wayland"] }
 
+[dev-dependencies]
+# The speed budget's 300-bar, 8-track score (src/speed.rs).
+oxiguitar-testgen.workspace = true
+
 [build-dependencies]
 slint-build = "1.18"
 

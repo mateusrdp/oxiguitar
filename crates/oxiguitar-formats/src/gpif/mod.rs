@@ -61,11 +61,13 @@ pub(crate) fn read_gp7(data: &[u8]) -> Result<GpifRead, ReadError> {
 }
 
 fn read_files(files: &GpFiles) -> Result<GpifRead, ReadError> {
-    let root = xml::parse(&files.score).map_err(|e| e.within(|| "score.gpif".into()))?;
-    if root.name != "GPIF" {
+    let text = xml::decode(&files.score);
+    let doc = xml::parse(&text).map_err(|e| e.within(|| "score.gpif".into()))?;
+    let root = doc.root();
+    if root.name() != "GPIF" {
         return Err(ReadError::invalid(
-            format!("score.gpif starts with <{}>, not <GPIF>", root.name),
-            root.offset,
+            format!("score.gpif starts with <{}>, not <GPIF>", root.name()),
+            root.offset(),
         )
         .within(|| "score.gpif".into()));
     }
@@ -73,7 +75,7 @@ fn read_files(files: &GpFiles) -> Result<GpifRead, ReadError> {
         .part_configuration
         .as_deref()
         .and_then(container::part_configuration);
-    let mut r = Reader::new(&root);
+    let mut r = Reader::new(root);
     let score = r
         .score(notation.as_deref())
         .map_err(|e| e.within(|| "score.gpif".into()))?;
@@ -82,16 +84,16 @@ fn read_files(files: &GpFiles) -> Result<GpifRead, ReadError> {
 
 /// The flat sections of a GPIF document, indexed by id.
 struct Index<'a> {
-    bars: HashMap<&'a str, &'a Element>,
-    voices: HashMap<&'a str, &'a Element>,
-    beats: HashMap<&'a str, &'a Element>,
-    notes: HashMap<&'a str, &'a Element>,
-    rhythms: HashMap<&'a str, &'a Element>,
+    bars: HashMap<&'a str, Element<'a>>,
+    voices: HashMap<&'a str, Element<'a>>,
+    beats: HashMap<&'a str, Element<'a>>,
+    notes: HashMap<&'a str, Element<'a>>,
+    rhythms: HashMap<&'a str, Element<'a>>,
 }
 
 impl<'a> Index<'a> {
-    fn new(root: &'a Element) -> Index<'a> {
-        let section = |outer: &str, inner: &'a str| -> HashMap<&'a str, &'a Element> {
+    fn new(root: Element<'a>) -> Index<'a> {
+        let section = |outer: &str, inner: &'a str| -> HashMap<&'a str, Element<'a>> {
             root.child(outer)
                 .map(|s| {
                     s.children_named(inner)
@@ -131,7 +133,7 @@ struct TrackContext {
 }
 
 pub(super) struct Reader<'a> {
-    root: &'a Element,
+    root: Element<'a>,
     index: Index<'a>,
     pub(super) log: ImportLog,
     /// Where the current beat is, for log messages: (bar, track), 1-based.
@@ -156,7 +158,7 @@ pub(super) fn float(s: &str) -> Option<f64> {
 }
 
 /// The `<Property name="…">` children of a `<Properties>` element.
-pub(super) fn properties(parent: &Element) -> impl Iterator<Item = (&str, &Element)> {
+pub(super) fn properties<'e>(parent: Element<'e>) -> impl Iterator<Item = (&'e str, Element<'e>)> {
     parent
         .child("Properties")
         .into_iter()
@@ -165,12 +167,12 @@ pub(super) fn properties(parent: &Element) -> impl Iterator<Item = (&str, &Eleme
 }
 
 /// One property by name.
-pub(super) fn property<'e>(parent: &'e Element, name: &str) -> Option<&'e Element> {
+pub(super) fn property<'e>(parent: Element<'e>, name: &str) -> Option<Element<'e>> {
     properties(parent).find(|(n, _)| *n == name).map(|(_, p)| p)
 }
 
 impl<'a> Reader<'a> {
-    fn new(root: &'a Element) -> Reader<'a> {
+    fn new(root: Element<'a>) -> Reader<'a> {
         Reader {
             root,
             index: Index::new(root),
@@ -195,12 +197,12 @@ impl<'a> Reader<'a> {
         // Tracks, in the order the master track lists them.
         let tracks_el = root
             .child("Tracks")
-            .ok_or_else(|| ReadError::invalid("no <Tracks> section", root.offset))?;
-        let by_id: HashMap<&str, &Element> = tracks_el
+            .ok_or_else(|| ReadError::invalid("no <Tracks> section", root.offset()))?;
+        let by_id: HashMap<&str, Element<'_>> = tracks_el
             .children_named("Track")
             .filter_map(|t| Some((t.attr("id")?, t)))
             .collect();
-        let order: Vec<&Element> = match root.path(&["MasterTrack", "Tracks"]) {
+        let order: Vec<Element<'_>> = match root.path(&["MasterTrack", "Tracks"]) {
             Some(list) => list
                 .text()
                 .split_whitespace()
@@ -211,41 +213,41 @@ impl<'a> Reader<'a> {
         if order.is_empty() {
             return Err(ReadError::invalid(
                 "the score has no tracks",
-                tracks_el.offset,
+                tracks_el.offset(),
             ));
         }
         if order.len() > MAX_TRACKS {
             return Err(ReadError::invalid(
                 format!("{} tracks is more than any real score has", order.len()),
-                tracks_el.offset,
+                tracks_el.offset(),
             ));
         }
         let mut contexts = Vec::with_capacity(order.len());
         for (ti, el) in order.iter().enumerate() {
             self.place = (0, ti + 1);
             let flags = notation.and_then(|n| n.get(ti)).copied();
-            let (track, ctx) = self.track(el, flags);
+            let (track, ctx) = self.track(*el, flags);
             score.tracks.push(track);
             contexts.push(ctx);
         }
 
         // Master bars, then each staff's bars.
-        let master_bars: Vec<&Element> = root
+        let master_bars: Vec<Element<'_>> = root
             .child("MasterBars")
             .map(|m| m.children_named("MasterBar").collect())
             .unwrap_or_default();
         if master_bars.is_empty() {
-            return Err(ReadError::invalid("the score has no bars", root.offset));
+            return Err(ReadError::invalid("the score has no bars", root.offset()));
         }
         if master_bars.len() > MAX_BARS {
             return Err(ReadError::invalid(
                 format!("{} bars is more than any real score has", master_bars.len()),
-                root.offset,
+                root.offset(),
             ));
         }
         for (bi, el) in master_bars.iter().enumerate() {
             self.place = (bi + 1, 0);
-            score.master_bars.push(self.master_bar(el));
+            score.master_bars.push(self.master_bar(*el));
         }
         self.tempo(&mut score);
 
@@ -273,7 +275,7 @@ impl<'a> Reader<'a> {
                 let bar = match ids.get(k).and_then(|id| self.index.bars.get(id)) {
                     Some(bar_el) => {
                         self.voice_key.0 = k;
-                        self.bar(bar_el, &ctx, si)
+                        self.bar(*bar_el, &ctx, si)
                     }
                     None => {
                         if ids.get(k).is_some() {
@@ -293,7 +295,7 @@ impl<'a> Reader<'a> {
         Ok(score)
     }
 
-    fn track(&mut self, el: &Element, notation_flags: Option<u8>) -> (Track, TrackContext) {
+    fn track(&mut self, el: Element<'_>, notation_flags: Option<u8>) -> (Track, TrackContext) {
         let mut track = Track {
             name: el.child_text("Name").unwrap_or_default().to_owned(),
             short_name: el.child_text("ShortName").unwrap_or_default().to_owned(),
@@ -359,11 +361,11 @@ impl<'a> Reader<'a> {
         let transposition = i8::try_from(-total + 12 * ctx.octave_shift).unwrap_or(0);
 
         // Staves: GP7/8 list them; GP6 keeps one staff's properties on the track.
-        let staff_els: Vec<&Element> = el
+        let staff_els: Vec<Element<'_>> = el
             .child("Staves")
             .map(|s| s.children_named("Staff").collect())
             .unwrap_or_default();
-        let staff_props: Vec<&Element> = if staff_els.is_empty() {
+        let staff_props: Vec<Element<'_>> = if staff_els.is_empty() {
             vec![el]
         } else {
             staff_els
@@ -375,7 +377,7 @@ impl<'a> Reader<'a> {
             );
         }
         for props in staff_props.iter().take(MAX_STAVES_PER_TRACK) {
-            let (staff, sctx) = self.staff(props, &mut track, &ctx, transposition, notation_flags);
+            let (staff, sctx) = self.staff(*props, &mut track, &ctx, transposition, notation_flags);
             track.staves.push(staff);
             ctx.staves.push(sctx);
         }
@@ -404,7 +406,7 @@ impl<'a> Reader<'a> {
 
     fn staff(
         &mut self,
-        props: &Element,
+        props: Element<'_>,
         track: &mut Track,
         tctx: &TrackContext,
         transposition: i8,
@@ -495,7 +497,7 @@ impl<'a> Reader<'a> {
         (staff, sctx)
     }
 
-    fn master_bar(&mut self, el: &Element) -> MasterBar {
+    fn master_bar(&mut self, el: Element<'_>) -> MasterBar {
         let mut mb = MasterBar::default();
         if let Some((n, d)) = el.child_text("Time").and_then(|t| t.split_once('/')) {
             match (num::<u8>(n), num::<u8>(d)) {
@@ -565,7 +567,7 @@ impl<'a> Reader<'a> {
             };
         }
         if let Some(dirs) = el.child("Directions") {
-            for d in &dirs.children {
+            for d in dirs.children() {
                 match direction(d.text()) {
                     Some(dir) => mb.directions.push(dir),
                     None => self.log.warn(
@@ -575,7 +577,7 @@ impl<'a> Reader<'a> {
                 }
             }
         }
-        if el.child("Fermatas").is_some_and(|f| !f.children.is_empty()) {
+        if el.child("Fermatas").is_some_and(|f| f.has_children()) {
             self.log.warn(
                 "fermatas are not supported yet",
                 format!("bar {}", self.place.0),
@@ -657,7 +659,7 @@ impl<'a> Reader<'a> {
         }
     }
 
-    fn bar(&mut self, el: &Element, ctx: &TrackContext, staff_index: usize) -> Bar {
+    fn bar(&mut self, el: Element<'_>, ctx: &TrackContext, staff_index: usize) -> Bar {
         let ottava = el.child_text("Ottavia");
         let clef = self.clef(el.child_text("Clef").unwrap_or("G2"), ottava, ctx);
         if el.child("SimileMark").is_some() {
@@ -723,7 +725,7 @@ impl<'a> Reader<'a> {
         }
     }
 
-    fn voice(&mut self, el: &Element, ctx: &TrackContext, sctx: &StaffContext) -> Voice {
+    fn voice(&mut self, el: Element<'_>, ctx: &TrackContext, sctx: &StaffContext) -> Voice {
         let mut voice = Voice::default();
         let ids: Vec<&str> = el
             .child_text("Beats")
@@ -751,7 +753,7 @@ impl<'a> Reader<'a> {
         voice
     }
 
-    fn beat(&mut self, el: &Element, ctx: &TrackContext, sctx: &StaffContext) -> Option<Beat> {
+    fn beat(&mut self, el: Element<'_>, ctx: &TrackContext, sctx: &StaffContext) -> Option<Beat> {
         let Some(duration) = el
             .child("Rhythm")
             .and_then(|r| r.attr("ref"))
@@ -831,7 +833,7 @@ impl<'a> Reader<'a> {
         Some(beat)
     }
 
-    fn duration(&mut self, el: &Element) -> Option<Duration> {
+    fn duration(&mut self, el: Element<'_>) -> Option<Duration> {
         let value = match el.child_text("NoteValue")? {
             "DoubleWhole" => NoteValue::DoubleWhole,
             "Long" => {
@@ -907,7 +909,7 @@ fn empty_bar(ctx: &TrackContext) -> Bar {
     }
 }
 
-fn score_info(el: &Element) -> ScoreInfo {
+fn score_info(el: Element<'_>) -> ScoreInfo {
     let t = |name: &str| el.child_text(name).unwrap_or_default().to_owned();
     let mut info = ScoreInfo {
         title: t("Title"),
@@ -957,7 +959,7 @@ fn color(text: &str) -> Color {
 
 /// Volume and pan from the RSE channel strip (parameters 12 and 11, each
 /// 0 to 1), mute and solo from the playback state.
-fn mix(el: &Element) -> Mix {
+fn mix(el: Element<'_>) -> Mix {
     let mut m = Mix::default();
     if let Some(params) = el.path(&["RSE", "ChannelStrip", "Parameters"]) {
         let p: Vec<f32> = params
@@ -981,7 +983,7 @@ fn mix(el: &Element) -> Mix {
 
 /// A chord diagram item. GPIF numbers strings from the lowest (0) and counts
 /// frets from the diagram's base fret.
-fn chord_diagram(item: &Element, track_strings: usize) -> ChordDiagram {
+fn chord_diagram(item: Element<'_>, track_strings: usize) -> ChordDiagram {
     let name = item.attr("name").unwrap_or_default().to_owned();
     let Some(diagram) = item.child("Diagram") else {
         return ChordDiagram {
@@ -1068,12 +1070,12 @@ mod tests {
     #[test]
     fn chord_diagram_strings_and_base_fret() {
         let item = xml::parse(
-            br#"<Item id="0" name="C7M9"><Diagram stringCount="6" baseFret="0">
+            r#"<Item id="0" name="C7M9"><Diagram stringCount="6" baseFret="0">
             <Fret string="1" fret="3"/><Fret string="2" fret="2"/><Fret string="3" fret="4"/>
             <Fret string="4" fret="3"/><Fret string="5" fret="0"/></Diagram></Item>"#,
         )
         .unwrap();
-        let c = chord_diagram(&item, 6);
+        let c = chord_diagram(item.root(), 6);
         assert_eq!(c.name, "C7M9");
         assert_eq!(c.first_fret, 1);
         // Highest string first: x32430 read from the top.
