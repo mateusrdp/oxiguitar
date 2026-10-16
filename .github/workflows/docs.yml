@@ -2,15 +2,18 @@
 #
 # - On pull requests that touch the manual: build it, so broken links and
 #   missing pages show up before the merge.
-# - On pushes to develop that touch it, and by hand: build it and publish it
-#   to https://mateusrdp.github.io/oxiguitar/.
+# - On pushes to main that touch it (so it describes the released program),
+#   and by hand: build it and publish it to https://mateusrdp.github.io/oxiguitar/.
 #
-# Pages must use "GitHub Actions" as its source (Settings → Pages).
+# Pages must use "GitHub Actions" as its source (Settings → Pages), and the
+# github-pages environment must allow main (Settings → Environments).
+# Rulesets don't count as "protected branches" there, so main is listed by
+# name.
 name: Manual
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
     paths: [docs/manual/**, .github/workflows/docs.yml]
   pull_request:
     paths: [docs/manual/**, .github/workflows/docs.yml]
