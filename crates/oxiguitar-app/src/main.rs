@@ -713,7 +713,12 @@ fn install_interface_zoom(ui: &AppWindow, app: &Shared) {
         let mut s = a.borrow_mut();
         let step = match event {
             WinitEvent::ModifiersChanged(m) => {
-                s.ctrl = m.state().control_key();
+                // ⌘ on macOS, as Slint maps the menus' Control shortcuts.
+                s.ctrl = if cfg!(target_os = "macos") {
+                    m.state().super_key()
+                } else {
+                    m.state().control_key()
+                };
                 return EventResult::Propagate;
             }
             WinitEvent::ScaleFactorChanged { scale_factor, .. } => {

@@ -24,7 +24,7 @@ These promises cover OxiGuitar and the plugins we publish. Plugins written by ot
 | Linux | current distributions with glibc 2.39 or newer: Debian trixie and sid, Ubuntu 24.04+, Fedora 40+ | x86_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
-Releases come as a portable .exe for Windows (in a zip); an AppImage, a .deb and an .rpm for Linux; and one .dmg for macOS. Each [release](https://github.com/mateusrdp/oxiguitar/releases) carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Guitar Pro file types (.gp, .gpx, .gp5, .gp4, .gp3), so double-clicking a file opens OxiGuitar; the portable .exe and the AppImage register nothing, and the user manual shows how to do it by hand.
+Releases come as a portable .exe for Windows (in a zip); an AppImage, a .deb and an .rpm for Linux; and one .dmg for macOS. Each [release](https://github.com/mateusrdp/oxiguitar/releases) carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Guitar Pro file types (.gp, .gpx, .gp5, .gp4, .gp3), so double-clicking a file opens OxiGuitar; the portable .exe and the AppImage register nothing, and the [user manual](https://mateusrdp.github.io/oxiguitar/installing.html) shows how to do it by hand. The [manual](https://mateusrdp.github.io/oxiguitar/) explains the whole program in a few short pages.
 
 - **Debian, Ubuntu:** `sudo apt install ./oxiguitar_VERSION_amd64.deb` (or `_arm64.deb`).
 - **Fedora:** `sudo dnf install ./oxiguitar-VERSION-1.x86_64.rpm` (or `.aarch64.rpm`).
