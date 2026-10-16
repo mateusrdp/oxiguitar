@@ -27,7 +27,7 @@ Each file ported or adapted from one of these starts with an SPDX header, the or
 
 The authoritative list, with exact versions and licenses, is generated from `Cargo.lock` and shipped with every release as a third-party license file. CI runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) and fails on any license outside the allow-list in `deny.toml`.
 
-Direct dependencies so far, all pure Rust:
+Direct dependencies so far, all Rust (the desktop app also links the system's font, keyboard and window libraries):
 
 | Crate | Authors | License | Use |
 | --- | --- | --- | --- |
@@ -37,6 +37,8 @@ Direct dependencies so far, all pure Rust:
 | [serde](https://serde.rs), [serde_json](https://github.com/serde-rs/json) | David Tolnay, Erick Tryzelaar | MIT OR Apache-2.0 | Reading the SMuFL metadata file |
 | [zip](https://github.com/zip-rs/zip2) 9 | Mathijs van de Nes, Marli Frost, Ryan Levick, Chris Hennick and contributors | MIT | Guitar Pro 7/8 archives (later .mscz). No default features (they compile the zstd C library); deflate through flate2 with the pure-Rust [zlib-rs](https://github.com/trifectatechfoundation/zlib-rs) (Zlib) |
 | [quick-xml](https://github.com/tafia/quick-xml) 0.42 | Johann Tuffe, Mingun and contributors | MIT | GPIF (Guitar Pro 6–8); later MusicXML and .mscx |
+| [Slint](https://slint.dev) 1.18 | SixtyFPS GmbH and contributors | GPL-3.0-only (one of its three licences; the one we use) | The desktop window (ADR 0004). Because Slint is GPL-3.0-only, the distributed app is under GPL-3.0. Its dependencies include winit, femtovg, AccessKit and ksni (Unlicense) |
+| [rfd](https://github.com/PolyMeilex/rfd) 0.17 | Bartłomiej Maryńczak (PolyMeilex) and contributors | MIT | The system's Open and Save dialogs (the XDG desktop portal on Linux, no GTK) |
 
 Checked for later milestones (licences confirmed 15 October 2026, see ROADMAP.md):
 

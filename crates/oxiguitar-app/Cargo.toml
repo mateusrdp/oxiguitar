@@ -1,0 +1,47 @@
+[package]
+name = "oxiguitar-app"
+description = "The OxiGuitar desktop window: open, view and export Guitar Pro scores."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "oxiguitar"
+path = "src/main.rs"
+
+[dependencies]
+oxiguitar-model.workspace = true
+oxiguitar-formats.workspace = true
+oxiguitar-display.workspace = true
+oxiguitar-layout.workspace = true
+oxiguitar-render.workspace = true
+oxiguitar-tools.workspace = true
+tiny-skia.workspace = true
+# GUI (ADR 0004). unstable-winit-030: the window's raw events, for interface
+# zoom (Ctrl + wheel) before any widget sees them.
+slint = { version = "1.18", features = ["unstable-winit-030"] }
+# The system's own Open and Save dialogs: the XDG desktop portal on Linux
+# (pure Rust, no GTK), the native dialogs on Windows and macOS.
+rfd = { version = "0.17", default-features = false, features = ["xdg-portal", "wayland"] }
+
+[build-dependencies]
+slint-build = "1.18"
+
+# The workspace's lints, except that unsafe code is denied rather than
+# forbidden: the code Slint generates for ui/app.slint allows it locally,
+# which "forbid" would refuse. Our own code still may not use unsafe.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+print_stderr = "allow"

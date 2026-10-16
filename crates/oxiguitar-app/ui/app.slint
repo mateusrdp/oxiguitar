@@ -1,0 +1,367 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+// The OxiGuitar window (M1, the viewer), following docs/design/ui.md:
+// menus only along the top, the score in the middle with its zoom slider
+// in the corner, the track list along the bottom (F8). The score is drawn
+// by our renderer on the worker thread and shown here as tiles.
+
+import { CheckBox, Slider, ScrollView, Palette } from "std-widgets.slint";
+import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
+
+export struct TileItem {
+    image: image,
+    x: length,
+    y: length,
+    size: length,
+}
+
+export struct TrackRow {
+    name: string,
+    instrument: string,
+    shown: bool,
+}
+
+export struct ToolRow {
+    title: string,
+    enabled: bool,
+}
+
+// A splitter bar: drag it to resize the panel next to it.
+component Splitter inherits Rectangle {
+    callback dragged(length);
+    height: 4px;
+    background: ta.has-hover || ta.pressed ? Palette.accent-background : Palette.border;
+    ta := TouchArea {
+        mouse-cursor: row-resize;
+        moved => {
+            if (self.pressed) {
+                root.dragged(self.mouse-y - self.pressed-y);
+            }
+        }
+    }
+}
+
+// A small framed note that closes when clicked anywhere.
+component InfoPopup inherits PopupWindow {
+    in property <string> heading;
+    in property <[string]> lines;
+    width: 420px;
+    Rectangle {
+        background: Palette.background;
+        border-color: Palette.border;
+        border-width: 1px;
+        border-radius: 6px;
+        drop-shadow-blur: 12px;
+        drop-shadow-color: #00000040;
+        VerticalLayout {
+            padding: 16px;
+            spacing: 6px;
+            Text { text: root.heading; font-size: 14px; font-weight: 700; }
+            for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+        }
+    }
+}
+
+// A rounded pill floating over the canvas.
+component Pill inherits Rectangle {
+    height: 26px;
+    border-radius: 13px;
+    background: Palette.background.with-alpha(0.9);
+    border-color: Palette.border;
+    border-width: 1px;
+}
+
+export component AppWindow inherits Window {
+    title: "OxiGuitar";
+    preferred-width: 1280px;
+    preferred-height: 800px;
+    min-width: 400px;
+    min-height: 300px;
+    default-font-family: "Noto Sans";
+
+    // The score canvas, in logical pixels: its size, where canvas point
+    // (0, 0) sits, and the tiles drawn so far.
+    in property <bool> has-score: false;
+    in property <length> content-width;
+    in property <length> content-height;
+    in property <[TileItem]> tiles;
+    out property <length> view-x: -flick.content-x;
+    out property <length> view-y: -flick.content-y;
+    out property <length> view-width: flick.visible-width;
+    out property <length> view-height: flick.visible-height;
+    // Pages are centred when narrower than the canvas.
+    out property <length> origin-x: max(24px, (flick.visible-width - root.content-width) / 2);
+    out property <length> origin-y: 24px;
+
+    // View settings.
+    in-out property <int> layout: 0;
+    in-out property <int> paper: 0;
+    in-out property <bool> dark-page: false;
+    in-out property <bool> dynamics: true;
+    in-out property <bool> multitrack: false;
+    in-out property <bool> show-tracks: true;
+    in-out property <length> tracks-height: 120px;
+
+    in property <[TrackRow]> tracks;
+    in property <[ToolRow]> tools;
+
+    // Score zoom as log2 of the zoom factor: -2 is 25 %, 0 is 100 %, 2 is 400 %.
+    in-out property <float> zoom-log: 0;
+    in property <string> zoom-text: "100 %";
+    in property <string> status;
+    in property <[string]> shortcut-lines;
+    in property <[string]> about-lines;
+
+    callback open-file();
+    callback export-pdf();
+    callback quit();
+    callback settings-changed();
+    callback canvas-changed();
+    callback zoom-moved(float);
+    callback track-toggled(int);
+    callback track-solo(int);
+    callback multitrack-toggled();
+    callback tool-picked(int);
+    callback status-dismissed();
+
+    // Scroll the canvas by (dx, dy), within its bounds.
+    public function scroll-by(dx: length, dy: length) {
+        flick.content-x = clamp(flick.content-x - dx, min(0px, flick.visible-width - flick.content-width), 0px);
+        flick.content-y = clamp(flick.content-y - dy, min(0px, flick.visible-height - flick.content-height), 0px);
+    }
+    // Put canvas pixel (x, y) at the top left of the view.
+    public function scroll-to(x: length, y: length) {
+        flick.content-x = clamp(-x, min(0px, flick.visible-width - flick.content-width), 0px);
+        flick.content-y = clamp(-y, min(0px, flick.visible-height - flick.content-height), 0px);
+    }
+
+    MenuBar {
+        Menu {
+            title: "File";
+            MenuItem { title: "Open…"; shortcut: @keys(Control + O); activated => { root.open-file(); } }
+            MenuItem { title: "Export PDF…"; enabled: root.has-score; activated => { root.export-pdf(); } }
+            Menu {
+                title: "Paper Size";
+                MenuItem { title: "A4"; checkable: true; checked: root.paper == 0; activated => { root.paper = 0; root.settings-changed(); } }
+                MenuItem { title: "Letter"; checkable: true; checked: root.paper == 1; activated => { root.paper = 1; root.settings-changed(); } }
+            }
+            MenuSeparator { }
+            MenuItem { title: "Quit"; shortcut: @keys(Control + Q); activated => { root.quit(); } }
+        }
+        Menu {
+            title: "View";
+            // Staff layouts (VIEW-3), as in Guitar Pro.
+            Menu {
+                title: "Layout";
+                MenuItem { title: "Page"; checkable: true; checked: root.layout == 0; activated => { root.layout = 0; root.settings-changed(); } }
+                MenuItem { title: "Vertical"; checkable: true; checked: root.layout == 1; activated => { root.layout = 1; root.settings-changed(); } }
+                MenuItem { title: "Horizontal"; checkable: true; checked: root.layout == 2; activated => { root.layout = 2; root.settings-changed(); } }
+                MenuItem { title: "Parchment"; checkable: true; checked: root.layout == 3; activated => { root.layout = 3; root.settings-changed(); } }
+            }
+            MenuItem { title: "Multitrack"; checkable: true; checked: root.multitrack; enabled: root.tracks.length > 1; activated => { root.multitrack-toggled(); } }
+            MenuSeparator { }
+            MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
+            MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
+            MenuSeparator { }
+            MenuItem { title: "Tracks"; checkable: true; checked <=> root.show-tracks; shortcut: @keys(F8); }
+        }
+        Menu {
+            title: "Tools";
+            for tool[i] in root.tools : MenuItem {
+                title: tool.title;
+                enabled: root.has-score && tool.enabled;
+                activated => { root.tool-picked(i); }
+            }
+        }
+        Menu {
+            title: "Help";
+            MenuItem { title: "Keyboard and Mouse"; shortcut: @keys(F1); activated => { shortcuts-popup.show(); } }
+            MenuItem { title: "About OxiGuitar"; activated => { about-popup.show(); } }
+        }
+    }
+
+    shortcuts-popup := InfoPopup {
+        x: (root.width - self.width) / 2;
+        y: 60px;
+        heading: "Keyboard and mouse";
+        lines: root.shortcut-lines;
+    }
+    about-popup := InfoPopup {
+        x: (root.width - self.width) / 2;
+        y: 60px;
+        heading: "OxiGuitar";
+        lines: root.about-lines;
+    }
+
+    forward-focus: keys;
+
+    keys := FocusScope {
+        key-pressed(event) => {
+            if (event.modifiers.control || event.modifiers.alt) {
+                return reject;
+            }
+            if (event.text == Key.PageDown || event.text == " ") {
+                root.scroll-by(0, flick.visible-height * 0.9);
+            } else if (event.text == Key.PageUp) {
+                root.scroll-by(0, -flick.visible-height * 0.9);
+            } else if (event.text == Key.DownArrow) {
+                root.scroll-by(0, 40px);
+            } else if (event.text == Key.UpArrow) {
+                root.scroll-by(0, -40px);
+            } else if (event.text == Key.RightArrow) {
+                root.scroll-by(40px, 0);
+            } else if (event.text == Key.LeftArrow) {
+                root.scroll-by(-40px, 0);
+            } else if (event.text == Key.Home) {
+                root.scroll-to(0, 0);
+            } else if (event.text == Key.End) {
+                root.scroll-to(flick.content-width, flick.content-height);
+            } else {
+                return reject;
+            }
+            accept
+        }
+
+        VerticalLayout {
+            // Score canvas: tiles drawn by the worker thread.
+            canvas := Rectangle {
+                background: root.dark-page ? #2a2b2e : #d4d4d6;
+                clip: true;
+                flick := ScrollView {
+                    content-width: max(self.visible-width, root.content-width + 48px);
+                    content-height: max(self.visible-height, root.content-height + 48px);
+                    changed content-x => { root.canvas-changed(); }
+                    changed content-y => { root.canvas-changed(); }
+                    changed visible-width => { root.canvas-changed(); }
+                    changed visible-height => { root.canvas-changed(); }
+                    for t in root.tiles : Image {
+                        x: root.origin-x + t.x;
+                        y: root.origin-y + t.y;
+                        width: t.size;
+                        height: t.size;
+                        source: t.image;
+                        image-rendering: pixelated;
+                    }
+                }
+
+                if !root.has-score : Text {
+                    text: "File → Open (Ctrl + O) to open a Guitar Pro file";
+                    font-size: 14px;
+                    color: root.dark-page ? #ffffff80 : #00000080;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                // Status line, bottom left: errors and tool reports. Click to
+                // dismiss; it also goes away on its own.
+                if root.status != "" : Pill {
+                    x: 10px;
+                    y: parent.height - self.height - 10px;
+                    width: min(status-text.preferred-width + 24px, parent.width - 200px);
+                    status-text := Text {
+                        x: 12px;
+                        width: parent.width - 24px;
+                        text: root.status;
+                        font-size: 12px;
+                        overflow: elide;
+                        vertical-alignment: center;
+                        color: Palette.foreground;
+                    }
+                    TouchArea {
+                        clicked => { root.status-dismissed(); }
+                    }
+                }
+
+                // Score zoom, bottom right: 25 % to 400 % on a logarithmic
+                // scale, so 100 % sits in the middle. Clicking the
+                // percentage resets it to 100 %.
+                Pill {
+                    width: 168px;
+                    x: parent.width - self.width - 10px;
+                    y: parent.height - self.height - 10px;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 6px;
+                        spacing: 4px;
+                        Text {
+                            text: root.zoom-text;
+                            font-size: 11px;
+                            width: 38px;
+                            vertical-alignment: center;
+                            color: Palette.foreground.transparentize(0.2);
+                            TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.zoom-log = 0; root.zoom-moved(0); }
+                            }
+                        }
+                        Slider {
+                            minimum: -2;
+                            maximum: 2;
+                            step: 0.01;
+                            value <=> root.zoom-log;
+                            changed(v) => { root.zoom-moved(v); }
+                        }
+                    }
+                }
+            }
+
+            if root.show-tracks && root.has-score : Splitter {
+                dragged(d) => { root.tracks-height = clamp(root.tracks-height - d, 48px, 400px); }
+            }
+
+            // Track list: tick tracks to show them together; click a name to
+            // show that track alone.
+            if root.show-tracks && root.has-score : Rectangle {
+                height: root.tracks-height;
+                background: Palette.alternate-background;
+                ScrollView {
+                    VerticalLayout {
+                        alignment: start;
+                        padding-top: 4px;
+                        for track[i] in root.tracks : HorizontalLayout {
+                            padding-left: 8px;
+                            spacing: 8px;
+                            height: 28px;
+                            Text {
+                                text: i + 1;
+                                width: 20px;
+                                vertical-alignment: center;
+                                horizontal-alignment: right;
+                                font-size: 12px;
+                                color: Palette.foreground.transparentize(0.4);
+                            }
+                            CheckBox {
+                                checked: track.shown;
+                                toggled => { root.track-toggled(i); }
+                            }
+                            Rectangle {
+                                width: 260px;
+                                Text {
+                                    x: 0;
+                                    width: parent.width;
+                                    text: track.name;
+                                    font-size: 12px;
+                                    font-weight: track.shown ? 600 : 400;
+                                    overflow: elide;
+                                    vertical-alignment: center;
+                                }
+                                TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.track-solo(i); }
+                                }
+                            }
+                            Text {
+                                text: track.instrument;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                                color: Palette.foreground.transparentize(0.3);
+                            }
+                            Rectangle { }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

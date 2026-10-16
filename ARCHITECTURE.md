@@ -34,7 +34,7 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | `oxiguitar-tools` | M1 | The Tools menu: actions the user starts that change a score, such as inferring key signatures. Model only, one shape per tool, so plugins can add tools from M5. See [docs/design/tools.md](docs/design/tools.md). |
 | `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. |
 | `oxiguitar-play` | M3 | Score-to-event conversion, the synthesiser, the real-time audio thread. |
-| `oxiguitar-app` | M1 | The desktop GUI shell, in Slint (ADR 0004). Shows the renderer's pixels as the score canvas. |
+| `oxiguitar-app` | M1 | The desktop window, binary `oxiguitar`, in Slint (ADR 0004), following [docs/design/ui.md](docs/design/ui.md). A worker thread reads, engraves and draws the score as tiles; the window only shows them, so it never waits on the music code. |
 
 Crates marked with a later milestone do not exist yet. Throwaway experiments live in [spikes/](spikes/), outside the workspace.
 

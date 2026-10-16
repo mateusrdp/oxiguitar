@@ -46,6 +46,9 @@ jobs:
           toolchain: ${{ env.MSRV }}
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      # The desktop app (Slint, winit) needs these headers to build on Linux.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       # Each problem also becomes an annotation on the pull request.
       - name: Clippy
         run: |
@@ -72,6 +75,9 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      # The desktop app (Slint, winit) needs these headers to build on Linux.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       - env:
           CARGO_TERM_COLOR: never
         run: |
@@ -107,6 +113,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.toolchain }}
+      # The desktop app (Slint, winit) needs these headers to build on Linux.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       # Failing tests also become an annotation, so they can be read without
       # downloading the job log. Bash on every runner, Windows included.
       - name: cargo test
@@ -142,7 +151,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace libfontconfig1-dev libxkbcommon-dev libwayland-dev
       - run: cargo build --workspace --locked
       - run: scripts/no-network.sh target/debug/oxiguitar-cli
 
