@@ -283,6 +283,12 @@ export component AppWindow inherits Window {
             if (event.modifiers.control || event.modifiers.alt) {
                 return reject;
             }
+            if (event.text == Key.Escape) {
+                // Closes the Help popups (a click anywhere does too).
+                shortcuts-popup.close();
+                about-popup.close();
+                return reject;
+            }
             if (event.text == Key.PageDown || event.text == " ") {
                 root.scroll-by(0, flick.visible-height * 0.9);
             } else if (event.text == Key.PageUp) {

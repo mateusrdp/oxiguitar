@@ -73,6 +73,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 ### Fixed
 
+- Escape closes the Help notes (Keyboard and Mouse, About), as a click already did.
 - View → Layout and File → Paper Size tick only the current choice.
 - View → Multitrack follows the track list: ticked whenever more than one track is shown.
 

@@ -143,6 +143,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.set_shortcut_lines(lines(&[
         "Ctrl + O: open a file;  Ctrl + Q: quit;  F8: show or hide the track list",
+        "Escape or a click: close this note",
         "Mouse wheel, arrow keys, Page Up / Page Down, Home / End: scroll the score",
         "Score zoom: the slider at the bottom right of the score; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
