@@ -31,6 +31,16 @@ Option 3, kept in one file, `crates/oxiguitar-app/src/wayland_drop.rs`, built on
 - **Protocol:** on `enter`, accept only offers listing `text/uri-list`, with the `copy` action (data device version 3). On `drop`, `receive` the list through a pipe read on its own thread (the source may be slow), then `finish` and `destroy` the offer on the UI thread. Open the first `file://` path, like a drop on X11. Clipboard offers (`selection`) are destroyed at once, because Slint copies and pastes through its own data device.
 - **Dependencies:** `wayland-client` and `wayland-backend` (with `client_system`), the versions winit already uses. Nothing new is compiled or linked.
 
+## Testing
+
+No compositor runs in CI, so this was tested by hand on 17 Oct 2026 with the tools in [`scripts/wayland-dnd-test/`](../../scripts/wayland-dnd-test/README.md). They are Smithay's smallvil compositor nested in Xvfb, a drag source that offers `text/uri-list` like a file manager, and XTEST for the mouse. The results:
+
+- the target accepted the copy action, the source sent the list and got `finished`, and the song opened;
+- the app quit cleanly with the listener live (exit code 0);
+- X11 drops still worked with the same build.
+
+Run the same steps on whatever replaces this module. Mateus checks it on GNOME (Wayland).
+
 ## Consequences
 
 - Drops work on Wayland, X11, Windows and macOS alike, and the manual no longer needs an exception.
@@ -45,6 +55,6 @@ Replace it when **either** holds for the versions in our Cargo.lock:
 - winit's Wayland backend emits `WindowEvent::DroppedFile`. Check with `grep -rn DroppedFile ~/.cargo/registry/src/*/winit-<version>/src/platform_impl/linux/wayland/`; today nothing matches.
 - Slint passes operating-system file drops to the window, for example as a `DropArea` event carrying `DataTransfer::file_paths`.
 
-Then delete `src/wayland_drop.rs`, its `mod` line, `install_wayland_drops`, `try_wayland_drops`, the `WaylandListener` type and the drop after `run` in `main.rs`, and the `wayland-*` target dependencies in the app's Cargo.toml. Remove the CONTRIBUTING.md entry and mark this ADR "superseded". The X11, Windows and macOS path (`DroppedFile` in `install_window_events`) stays as it is.
+Check the replacement with `scripts/wayland-dnd-test/`, then delete `src/wayland_drop.rs`, its `mod` line, `install_wayland_drops`, `try_wayland_drops`, the `WaylandListener` type and the drop after `run` in `main.rs`, and the `wayland-*` target dependencies in the app's Cargo.toml. Remove the CONTRIBUTING.md entry and mark this ADR "superseded". Keep `scripts/wayland-dnd-test/` for testing the replacement. The X11, Windows and macOS path (`DroppedFile` in `install_window_events`) stays as it is.
 
 Also revisit it if a winit or Slint upgrade changes how the event loop owns the Wayland connection, because the safety argument above depends on it.

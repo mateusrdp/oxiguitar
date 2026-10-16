@@ -44,7 +44,7 @@ Every piece of `unsafe` code and every workaround waiting for an upstream fix is
 
 | Where | What | Why, and when it goes | Upstream to watch |
 | --- | --- | --- | --- |
-| `crates/oxiguitar-app/src/wayland_drop.rs` | One `unsafe` call (`Backend::from_foreign_display`) to listen for file drops on winit's Wayland connection, polled every 100 ms | [ADR 0006](docs/adr/0006-wayland-file-drops.md): winit 0.30 and Slint 1.18 report no file drops on Wayland. Remove it when either does | winit's Wayland backend (`DroppedFile`), Slint's winit backend (OS drops) |
+| `crates/oxiguitar-app/src/wayland_drop.rs` | One `unsafe` call (`Backend::from_foreign_display`) to listen for file drops on winit's Wayland connection, polled every 100 ms | [ADR 0006](docs/adr/0006-wayland-file-drops.md): winit 0.30 and Slint 1.18 report no file drops on Wayland. Remove it when either does | winit's Wayland backend (`DroppedFile`), Slint's winit backend (OS drops). Test with `scripts/wayland-dnd-test/` |
 
 ## File headers
 
