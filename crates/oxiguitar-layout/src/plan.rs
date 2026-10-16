@@ -166,38 +166,23 @@ impl Planner<'_> {
             }
         }
 
-        // Stems and beams.
-        let active: Vec<usize> = bar
-            .voices
-            .iter()
-            .enumerate()
-            .filter(|(_, v)| v.beats.iter().any(|b| b.kind == BeatKind::Notes))
-            .map(|(i, _)| i)
-            .collect();
-        // Stems follow the voice number (voices 1 and 3 up, 2 and 4 down)
-        // whenever a voice other than the first has notes in the bar, and
-        // always on drums. Voice 1 alone points its stems by where its notes
-        // sit.
-        let by_voice = active.iter().any(|&v| v > 0) || self.track.instrument.percussion;
+        // Stems and beams. Stems follow the voice number: voices 1 and 3
+        // up, 2 and 4 down, always, wherever the notes sit (Mateus's rule,
+        // 16 Oct 2026).
         let mut groups = Vec::new();
         for (vi, voice) in bar.voices.iter().enumerate() {
             let g = rhythm::beam_groups(voice, mb.time_signature);
             if let Some(beats) = voices.get_mut(vi) {
-                let forced = by_voice.then_some(voice_stems_up(vi));
+                let up = voice_stems_up(vi);
                 for (gi, members) in g.iter().enumerate() {
-                    let up = forced
-                        .unwrap_or_else(|| stem_up(members.iter().filter_map(|&i| beats.get(i))));
                     for &i in members {
                         if let Some(b) = beats.get_mut(i) {
                             b.group = Some(gi);
-                            b.up = up;
                         }
                     }
                 }
-                for b in beats.iter_mut().filter(|b| b.group.is_none()) {
-                    b.up = forced.unwrap_or_else(|| stem_up(std::iter::once(&*b)));
-                }
                 for b in beats.iter_mut() {
+                    b.up = up;
                     place_seconds(&mut b.notes, b.up);
                 }
             }
@@ -375,23 +360,6 @@ pub(crate) fn voice_stems_up(voice_index: usize) -> bool {
     voice_index.is_multiple_of(2)
 }
 
-/// Stems point away from the notes' side of the middle line; down when the
-/// note furthest from the middle is above it.
-fn stem_up<'b>(beats: impl Iterator<Item = &'b BeatInfo>) -> bool {
-    let mut lowest = i32::MAX;
-    let mut highest = i32::MIN;
-    for b in beats {
-        for n in &b.notes {
-            lowest = lowest.min(n.step);
-            highest = highest.max(n.step);
-        }
-    }
-    if lowest == i32::MAX {
-        return true;
-    }
-    (highest - 4) <= (4 - lowest)
-}
-
 /// Accidentals in a chord are set in columns, so that two within a sixth of
 /// each other do not collide. They are placed in the usual order: the top
 /// one nearest the chord, then the bottom one, then the second from the
@@ -560,12 +528,12 @@ mod tests {
 
     #[test]
     fn stems_follow_the_voice_number() {
-        // G string, fret 12: written G5, above the middle line, so a lone
-        // first voice points its stem down by itself.
+        // G string, fret 12: written G5, above the middle line. Voice 1
+        // points up even alone.
         let high = Some(12);
         assert_eq!(
             stems([high, None, None, None]),
-            vec![Some(false), None, None, None]
+            vec![Some(true), None, None, None]
         );
         // Voices 1 and 3: both up, wherever the notes are.
         assert_eq!(
