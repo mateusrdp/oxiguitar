@@ -36,6 +36,8 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - Tempo marks are shown only where the tempo changes, and never on top of each other.
 - In the score header, the tuning goes under the credits when the two would meet.
 - Track names at the start of each system when several tracks are shown: full names on the first system, short names after, as in Guitar Pro's multitrack view.
+- The other three staff layouts (VIEW-3), checked against the Guitar Pro 8 user guide: **Vertical** (lines fill the window's width, one long sheet), **Horizontal** (every bar on one line) and **Parchment** (page-width lines with no page breaks, Guitar Pro 8's Page – Scroll). `oxiguitar-cli render --layout NAME [--width PT]`; long sheets are cut into PNGs of at most 8192 pixels.
+- Letter paper beside A4 (`--paper letter`). PDFs are always in pages, whatever the layout.
 - Cargo workspace, licence, contributor guide, credits, roadmap and architecture notes.
 - CI on Windows, macOS and Linux (x86_64 and ARM64): formatting, lint, tests, minimum Rust version, licence and advisory checks, sign-off check and a no-network test.
 - Test builds of `oxiguitar-cli` for every target on each push to `develop`.

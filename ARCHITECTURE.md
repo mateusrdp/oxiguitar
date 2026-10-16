@@ -30,7 +30,7 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | `oxiguitar-cli` | M0 | `info`, later `convert`, `render` and test helpers. Used by CI. |
 | `oxiguitar-edit` | M2 | Edit commands, selection, undo and redo. |
 | `oxiguitar-display` | M0 | The display list (positioned glyph runs, lines, rectangles, paths, colour roles), the bundled fonts and SMuFL metadata (ADR 0005). |
-| `oxiguitar-layout` | M1 | Engraving: turns the model into a display list per page. See [docs/design/engraving.md](docs/design/engraving.md). |
+| `oxiguitar-layout` | M1 | Engraving: turns the model into a display list per page, or one long sheet, in four layouts. See [docs/design/engraving.md](docs/design/engraving.md). |
 | `oxiguitar-tools` | M1 | The Tools menu: actions the user starts that change a score, such as inferring key signatures. Model only, one shape per tool, so plugins can add tools from M5. See [docs/design/tools.md](docs/design/tools.md). |
 | `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. |
 | `oxiguitar-play` | M3 | Score-to-event conversion, the synthesiser, the real-time audio thread. |

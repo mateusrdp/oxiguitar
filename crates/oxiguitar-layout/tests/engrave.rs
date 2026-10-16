@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet, Item};
-use oxiguitar_layout::{Engraved, Options, engrave};
+use oxiguitar_layout::{Engraved, Layout, Options, Paper, engrave};
 use oxiguitar_model::{
     Bar, Beat, BeatKind, Duration, MasterBar, Note, NotePlace, NoteValue, Pitch, Score, Staff,
     TimeSignature, Track, Tuplet, Voice,
@@ -295,8 +295,8 @@ fn corpus_files() -> Vec<PathBuf> {
     v
 }
 
-/// Every Guitar Pro file of the corpus engraves with every track shown,
-/// everything on the page and every glyph in the fonts.
+/// Every Guitar Pro file of the corpus engraves in every layout with every
+/// track shown, everything on the sheet and every glyph in the fonts.
 #[test]
 fn corpus_engraves() {
     let files = corpus_files();
@@ -318,20 +318,35 @@ fn corpus_engraves() {
         let name = path
             .file_name()
             .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-        let started = std::time::Instant::now();
-        let e = engrave(&imported.score, &fonts, &meta, &all_tracks());
-        let ms = started.elapsed().as_secs_f32() * 1000.0;
-        if ms > slowest.0 {
-            slowest = (ms, name.clone());
-        }
-        for (n, page) in e.pages.iter().enumerate() {
-            let problems = page_problems(page, &fonts, 1.0);
-            if let Some(first) = problems.first() {
+        for layout in Layout::ALL {
+            let options = Options {
+                layout,
+                screen_width: 900.0,
+                ..all_tracks()
+            };
+            let started = std::time::Instant::now();
+            let e = engrave(&imported.score, &fonts, &meta, &options);
+            let ms = started.elapsed().as_secs_f32() * 1000.0;
+            if ms > slowest.0 {
+                slowest = (ms, format!("{name}, {}", layout.name()));
+            }
+            if !layout.has_pages() && e.pages.len() != 1 {
                 failures.push(format!(
-                    "{name}, page {}: {} problem(s), first: {first}",
-                    n + 1,
-                    problems.len()
+                    "{name}, {}: {} sheets",
+                    layout.name(),
+                    e.pages.len()
                 ));
+            }
+            for (n, page) in e.pages.iter().enumerate() {
+                let problems = page_problems(page, &fonts, 1.0);
+                if let Some(first) = problems.first() {
+                    failures.push(format!(
+                        "{name}, {}, page {}: {} problem(s), first: {first}",
+                        layout.name(),
+                        n + 1,
+                        problems.len()
+                    ));
+                }
             }
         }
         count += 1;
@@ -568,4 +583,71 @@ fn any_tuplet_grouping_is_drawn() {
     assert_eq!(count_char(&e, five_glyph), 1);
     assert_eq!(count_char(&e, three_glyph), 1);
     assert_eq!(count_char(&e, six_glyph), 1);
+}
+
+/// The same bars in each of the four layouts (VIEW-3).
+#[test]
+fn the_four_layouts() {
+    let (fonts, meta) = setup();
+    let mut score = tune_in_g(150);
+    score.info.title = "Four layouts".to_owned();
+    let with = |layout, screen_width| Options {
+        layout,
+        screen_width,
+        ..Options::default()
+    };
+
+    let page = engrave(&score, &fonts, &meta, &with(Layout::Page, 0.0));
+    check("page", &page, &fonts);
+    assert!(page.pages.len() > 1, "150 bars need more than one page");
+    let a4 = Options::default();
+    assert!(
+        page.pages
+            .iter()
+            .all(|p| p.width == a4.page_width && p.height == a4.page_height)
+    );
+
+    // Parchment: the Page layout's systems, on one sheet as wide as the page.
+    let parchment = engrave(&score, &fonts, &meta, &with(Layout::Parchment, 0.0));
+    check("parchment", &parchment, &fonts);
+    assert_eq!(parchment.pages.len(), 1);
+    assert_eq!(parchment.systems, page.systems);
+    assert_eq!(parchment.pages[0].width, a4.page_width);
+    assert!(parchment.pages[0].height > a4.page_height);
+
+    // Vertical: systems fill the window's width; a narrower window takes
+    // more systems.
+    let wide = engrave(&score, &fonts, &meta, &with(Layout::Vertical, 1400.0));
+    let narrow = engrave(&score, &fonts, &meta, &with(Layout::Vertical, 400.0));
+    check("vertical, wide", &wide, &fonts);
+    check("vertical, narrow", &narrow, &fonts);
+    assert_eq!(wide.pages.len(), 1);
+    assert_eq!(wide.pages[0].width, 1400.0);
+    assert!(
+        narrow.systems > wide.systems,
+        "{} vs {}",
+        narrow.systems,
+        wide.systems
+    );
+
+    // Horizontal: one line as long as the music, no header.
+    let line = engrave(&score, &fonts, &meta, &with(Layout::Horizontal, 0.0));
+    check("horizontal", &line, &fonts);
+    assert_eq!((line.pages.len(), line.systems), (1, 1));
+    let sheet = &line.pages[0];
+    assert!(sheet.width > 10.0 * a4.page_width, "{}", sheet.width);
+    assert!(sheet.height < a4.page_height / 2.0, "{}", sheet.height);
+    assert!(!texts(sheet).contains(&score.info.title));
+    assert!(texts(&page.pages[0]).contains(&score.info.title));
+}
+
+#[test]
+fn layouts_and_paper_have_names() {
+    for l in Layout::ALL {
+        assert_eq!(Layout::from_name(&l.name().to_lowercase()), Some(l));
+    }
+    assert_eq!(Layout::from_name("scroll"), None);
+    let letter = Options::default().with_paper(Paper::Letter);
+    assert_eq!((letter.page_width, letter.page_height), (612.0, 792.0));
+    assert_eq!(Paper::from_name("a4"), Some(Paper::A4));
 }
