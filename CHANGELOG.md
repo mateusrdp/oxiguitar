@@ -4,7 +4,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
-Milestone M0 (foundations) is complete. No version is tagged for it: the first release, v0.1, comes with the viewer at the end of M1.
+Milestone M0 (foundations) is complete and merged into `main` (16 October 2026). No version is tagged for it: the first release, v0.1, comes with the viewer at the end of M1.
 
 ### Added
 
@@ -21,6 +21,6 @@ Milestone M0 (foundations) is complete. No version is tagged for it: the first r
 - `oxiguitar-render`: draws a display list into pixels (screen, PNG) and into PDF with embedded font subsets.
 - `oxiguitar-cli specimen`: a test page of notation and tablature as PNG and PDF.
 - Decision record 0005: the renderer draws one display list on the CPU for the screen and with krilla for PDF.
-- GUI-toolkit spike in Slint, iced and egui (`spikes/gui/`), built on every target by an advisory CI workflow. Decision record 0004 proposes Slint.
+- GUI-toolkit spike in Slint, iced and egui (`spikes/gui/`), built on every target by an advisory CI workflow. Decision record 0004 chooses Slint.
 - Licences of the crates planned for later milestones checked and recorded in CREDITS.md and ROADMAP.md.
 - Interface design rules (`docs/design/ui.md`) from the first review of the GUI spike. The Slint spike follows them: menus only on top, collapsible palette groups, palette icons centred on their ink, interface zoom with Ctrl + wheel and Ctrl + + / − / 0, a score-zoom slider and a dark page. View → Layout lists the four staff layouts to come in M1: Page, Vertical, Horizontal and Parchment.

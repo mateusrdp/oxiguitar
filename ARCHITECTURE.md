@@ -33,7 +33,7 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | `oxiguitar-layout` | M1 | Engraving: turns the model into a display list. |
 | `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. |
 | `oxiguitar-play` | M3 | Score-to-event conversion, the synthesiser, the real-time audio thread. |
-| `oxiguitar-app` | M1 | The desktop GUI shell, in Slint (ADR 0004, proposed). Shows the renderer's pixels as the score canvas. |
+| `oxiguitar-app` | M1 | The desktop GUI shell, in Slint (ADR 0004). Shows the renderer's pixels as the score canvas. |
 
 Crates marked with a later milestone do not exist yet. Throwaway experiments live in [spikes/](spikes/), outside the workspace.
 

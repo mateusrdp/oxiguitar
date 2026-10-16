@@ -1,6 +1,6 @@
 # 0004 — GUI toolkit: Slint
 
-- Status: proposed (Mateus accepts or rejects it when reviewing the M0 pull request into `main`)
+- Status: accepted (Mateus merged the M0 pull request, #5, on 16 October 2026)
 - Date: 2026-10-15
 - Milestone: M0
 

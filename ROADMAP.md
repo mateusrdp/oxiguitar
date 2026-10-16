@@ -6,8 +6,8 @@ v1.0, a full TuxGuitar replacement for reading, editing and playing, ships at th
 
 | Milestone | Release | Status |
 | --- | --- | --- |
-| M0 Foundations | — | **Done, awaiting review** |
-| M1 Viewer | v0.1 | Not started |
+| M0 Foundations | — | **Done** (16 Oct 2026) |
+| M1 Viewer | v0.1 | **Next** |
 | M2 Editor | v0.5 | Not started |
 | M3 MIDI player | **v1.0** | Not started |
 | M4 Guitar Pro 8 notation and editing parity | | Not started |
@@ -32,7 +32,7 @@ Set up everything the later milestones stand on, and settle the open technical c
 - [x] Public fixture set of self-made and freely licensed files (GP3/4/5 test songs; each new reader adds its own in M1)
 - [x] Placeholder app icon: a green guitar pick with "OxG"
 - [x] Licences marked "confirm" in the brief checked before any code is copied (see below)
-- [x] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR 0004: Slint, proposed)
+- [x] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR 0004: Slint)
 - [x] Render spike: SMuFL glyphs and tab numbers on screen and in a PDF from one display list (ADR 0005)
 
 Done when:
