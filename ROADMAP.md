@@ -86,7 +86,7 @@ Progress:
   - [x] Visual regression (16 Oct 2026): 50 generated reference scores in `fixtures/reference/`, each a Guitar Pro 7 file and its pictures, compared with a tolerance on every CI target
   - [ ] Fuzzing: six hours per reader without a crash. Targets for every reader and a CI workflow (short runs on reader pull requests, the long run by hand) are in place (16 Oct 2026); the first six-hour run is under way
 - [x] Release packages (16 Oct 2026): `release.yml` builds the .exe zip, AppImage, .deb, .rpm (x86_64 and ARM64) and universal .dmg, unsigned, on v* tags and by hand; the .deb, .rpm and .dmg register the Guitar Pro file types (UI-4)
-- [x] User manual (16 Oct 2026): `docs/manual/` (mdBook), published to GitHub Pages by the "Manual" workflow
+- [x] User manual (16 Oct 2026): `docs/manual/` (mdBook), published to GitHub Pages from main by the "Manual" workflow
 
 Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5, 3 GPX, 12 GP). Counted separately, for the format plugins after M5: 5 MuseScore and 1 MusicXML file; no ABC yet.
 
