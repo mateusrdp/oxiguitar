@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The score header (VIEW-6) and the Page layout: systems stacked down the
-//! page, a new page when the next system does not fit (VIEW-3).
+//! The score header (VIEW-6), and how systems become sheets (VIEW-3): the
+//! Page layout stacks them down the page and starts a new page when the next
+//! one does not fit; the other layouts put them all on one long sheet.
 
 use oxiguitar_display::{DisplayList, Paint, Path, Point};
 use oxiguitar_model::{ChordDiagram, Pitch, Score, Staff};
@@ -350,6 +351,59 @@ pub(crate) fn assemble(
         }
     }
     pages
+}
+
+/// Puts the header and every system on one long sheet: stacked down it
+/// (Vertical, Parchment) or, for the single line of the Horizontal layout,
+/// as wide as the line. No page numbers; the copyright, if any, closes the
+/// sheet.
+pub(crate) fn sheet(
+    score: &Score,
+    header: Header,
+    systems: Vec<DrawnSystem>,
+    p: &Painter<'_>,
+    o: &Options,
+    width: f32,
+) -> DisplayList {
+    let gap = 3.5 * p.sp;
+    let widest = systems.iter().map(|s| s.list.width).fold(0.0, f32::max);
+    let width = if o.layout == crate::Layout::Horizontal {
+        widest + 2.0 * o.margin
+    } else if widest + 2.0 * o.margin > width + 0.5 {
+        // Only a bar wider than the whole line widens the sheet; rounding
+        // in the stretched systems does not.
+        widest + 2.0 * o.margin
+    } else {
+        width
+    };
+    let mut list = DisplayList::new(width, 0.0);
+    let mut y = o.margin;
+    if header.height > 0.0 {
+        list.items.extend(
+            header
+                .list
+                .items
+                .iter()
+                .map(|i| i.offset(o.margin, o.margin)),
+        );
+        y += header.height;
+    }
+    let count = systems.len();
+    for (n, s) in systems.into_iter().enumerate() {
+        list.items
+            .extend(s.list.items.iter().map(|i| i.offset(o.margin, y)));
+        y += s.height;
+        if n + 1 < count {
+            y += gap;
+        }
+    }
+    let copyright = score.info.copyright.trim();
+    if o.layout != crate::Layout::Horizontal && !copyright.is_empty() {
+        y += 2.0 * gap;
+        p.text_centred(&mut list, copyright, 8.0, width / 2.0, y, Paint::Muted);
+    }
+    list.height = y + o.margin;
+    list
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 # Engraving
 
-How `oxiguitar-layout` turns a score into pages, and what it does not draw yet. Requirement IDs refer to the project brief.
+How `oxiguitar-layout` turns a score into pages or sheets, and what it does not draw yet. Requirement IDs refer to the project brief.
 
 The engraver shows what the file says and never second-guesses it: a tab that leaves every bar in C major is engraved in C major. Changes such as inferring key signatures are tools the user picks ([tools.md](tools.md)).
 
@@ -17,7 +17,7 @@ The engraver shows what the file says and never second-guesses it: a tab that le
 
    Voices after the first that hold only rests in a bar are not drawn, as Guitar Pro does.
 3. **Grid** (`grid.rs`). The columns of all views in a bar merge into one grid, so every staff of every track puts the same moment at the same x (VIEW-1, VIEW-4). The distance between columns grows with duration, less than in proportion (1.6 + 2·q^0.6 staff spaces for q quarter notes), and widens where symbols would touch.
-4. **Systems** (`system.rs`). Bars fill a line at natural spacing. The system is then stretched to the full width, sharing the extra room by duration. The last system is stretched only if it is more than two thirds full. A single bar wider than the line is squeezed.
+4. **Systems** (`system.rs`). Bars fill a line at natural spacing (in the Horizontal layout the line has no end, so every bar goes on it, unstretched). The system is then stretched to the full width, sharing the extra room by duration. The last system is stretched only if it is more than two thirds full. A single bar wider than the line is squeezed.
 5. **Drawing** (`engrave.rs`). Each system is drawn at the origin:
    - Marks above the staff go on lines of their own, bottom to top: volta brackets, chord names, beat text, tempo, sections. A line exists only when the system uses it, so marks cannot collide with each other or with the notes and stems.
    - Chord names stay exactly over their beat and are never pushed sideways (Mateus, 16 Oct 2026). The grid opens up instead, so each name ends before the next one starts and before the bar line.
@@ -47,9 +47,26 @@ The engraver shows what the file says and never second-guesses it: a tab that le
      - Dynamics are shown where the first voice's dynamic *marking* changes from Guitar Pro's default *mf*, unless `Options::dynamics` is off (`--no-dynamics`). Only Guitar Pro 6–8 store markings (a beat property); Guitar Pro 3–5 only store a velocity per note, which is not a marking and is never shown.
      - Lyrics go one line per verse, one syllable per sung beat (tied notes continue the syllable). Spacing keeps syllables apart.
    - With several tracks, each track's name stands left of its staves: the full name on the first system, the short name after, shortened with "…" past a fifth of the line.
-6. **Pages** (`page.rs`). The header (title, subtitle, artist, album, credits on the right, tuning and capo on the left, copyright at the foot) goes on page one (VIEW-6). Systems stack down the page, and a new page starts when the next system does not fit. If a system is taller than a page, the whole score is engraved again with a smaller staff.
+6. **Pages and sheets** (`page.rs`), by layout (below). The header (title, subtitle, artist, album, credits on the right, tuning and capo on the left) goes at the top (VIEW-6), the copyright at the foot of page one or of the sheet.
 
-Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bounding boxes, engraving defaults (VIEW-7). The output is a display list per page, so the screen, PNG and PDF show exactly the same thing.
+Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bounding boxes, engraving defaults (VIEW-7). The output is a display list per page or sheet, so the screen, PNG and PDF show exactly the same thing.
+
+## Layouts (VIEW-3)
+
+`Options::layout` picks one of four staff layouts; the app offers them under View → Layout.
+
+| Layout | Line width | Sheets | Header | Guitar Pro 8 name |
+| --- | --- | --- | --- | --- |
+| **Page** | the paper's, less margins | one per page, page numbers, a new page when the next system does not fit | yes | Page – Vertical |
+| **Vertical** | the window's (`Options::screen_width`), less margins | one long sheet | yes | Screen – Vertical |
+| **Horizontal** | none: every bar on one line at natural spacing | one sheet as wide as the music | no | Screen – Horizontal |
+| **Parchment** | the paper's, less margins | one long sheet, no page breaks | yes | Page – Scroll |
+
+- Only the Page layout shrinks the staff when a system is taller than a page; the others have no page to fit.
+- In the Vertical layout the app passes the window's width divided by the score zoom, so zooming in puts fewer bars on a line, as in Guitar Pro's screen modes.
+- PDF export always uses the Page layout, on A4 or Letter (`Paper`, EXP-1).
+
+**Checked against Guitar Pro (16 Oct 2026).** The four names come from Guitar Pro 6 and 7 and from Mateus's description. Guitar Pro 8's user guide ("Page and Screen Display Modes") lists six modes: Page – Vertical (pages stacked, as printed), Page – Horizontal (pages side by side), Page – Grid (as many pages across as the window holds), Page – Scroll (page breaks removed, a continuous view), Screen – Vertical (bars arranged in lines that use the window's width) and Screen – Horizontal (one line). Guitar Pro 6's guide describes Parchment as scrolling through the file without turning pages. So Parchment is Guitar Pro 8's Page – Scroll: paper-width lines with no page breaks, which is what sets it apart from Vertical (window-width lines). Page – Horizontal and Page – Grid only arrange the same pages differently on screen; they are not in the brief and are left for later, if wanted. Guitar Pro 8's guide does not say whether screen modes show the score header; we show it in Vertical and leave it out of the single line of Horizontal.
 
 ## Sizes
 
@@ -62,8 +79,8 @@ Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bound
 
 ## Checking
 
-- **Tests:** `cargo test --release -p oxiguitar-layout --test engrave` engraves the public fixtures, damaged scores and a 300-bar 8-track score. Where `corpus/files/` exists, it also engraves every Guitar Pro file in the corpus with all its tracks. Each run checks that every item lands on the page, every glyph exists in its font and output is deterministic.
-- **By eye:** `oxiguitar-cli render FILE --png out/page --pdf out/score.pdf [--tracks all] [--dark] [--no-dynamics] [--tool ID]`.
+- **Tests:** `cargo test --release -p oxiguitar-layout --test engrave` engraves the public fixtures, damaged scores, a 300-bar 8-track score and the same bars in all four layouts. Where `corpus/files/` exists, it also engraves every Guitar Pro file in the corpus with all its tracks, in every layout. Each run checks that every item lands on the page or sheet, every glyph exists in its font and output is deterministic.
+- **By eye:** `oxiguitar-cli render FILE --png out/page --pdf out/score.pdf [--layout page|vertical|horizontal|parchment] [--width PT] [--paper a4|letter] [--tracks all] [--dark] [--no-dynamics] [--tool ID]`. Long sheets are cut into PNGs of at most 8192 pixels.
 
 ## Not drawn yet
 
@@ -71,7 +88,6 @@ These are the M1 engraving items still to do (see ROADMAP.md):
 
 - **Notation marks not in the score model yet:** slurs between different notes (other than hammer-ons, pull-offs and legato slides), hairpins, ornaments, fermatas and ottava lines (NOT-3). The readers log them as not carried over.
 - **Effects:** whammy-bar curves (shown as "w/bar" only), fingering numbers, and articulations on tab-only tracks.
-- **Other layouts:** Vertical, Horizontal and Parchment (VIEW-3).
 - **Overlap pass, second round:** bend amounts of quick successive bends can touch, and dense chords can crowd ledger lines (VIEW-7). Tuplet numbers and articulations now reserve their room.
 - **Nested tuplets:** only the outermost tuplet of a note is marked (TAB-2, M4).
 - **Courtesy signatures:** key and time signatures at the end of a system before a change.

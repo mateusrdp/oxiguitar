@@ -74,10 +74,10 @@ Progress:
   - [x] Effects (TAB-1), grace notes, lyrics, dynamics, articulations, chord diagrams in the header, text font fallback, overlap room for tuplets and articulations (16 Oct 2026)
   - [x] Dynamics can be hidden (16 Oct 2026)
   - [ ] Slurs, hairpins, ornaments, fermatas and ottavas once the score model holds them (NOT-3); whammy curves; fingering; second overlap pass (VIEW-7); courtesy signatures
-- [ ] Page, vertical, horizontal and parchment layouts; multi-track; score header
+- [x] Page, vertical, horizontal and parchment layouts; multi-track; score header
   - [x] Page layout, multi-track alignment, score header (16 Oct 2026)
   - [x] Track names at the start of systems (16 Oct 2026)
-  - [ ] Vertical, horizontal and parchment layouts
+  - [x] Vertical, horizontal and parchment layouts, checked against the Guitar Pro 8 user guide (16 Oct 2026)
 - [ ] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu
 - [x] `oxiguitar-tools`: the Tools menu's tools, one shape for all so plugins can add more (M5); first tool: Infer Key Signatures, with key changes (16 Oct 2026)
 - [ ] PDF export

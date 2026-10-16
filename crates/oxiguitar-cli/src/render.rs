@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 use oxiguitar_display::{FontSet, Theme, smufl::Metadata};
-use oxiguitar_layout::{Options, engrave};
+use oxiguitar_layout::{Layout, Options, Paper, engrave};
 use oxiguitar_render::{Raster, View, to_pdf};
 
 pub(crate) fn run(args: &[String]) -> ExitCode {
@@ -49,6 +49,22 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
             "--staff-space" => match it.next().and_then(|s| s.parse::<f32>().ok()) {
                 Some(s) if (2.0..=20.0).contains(&s) => options.staff_space = s,
                 _ => return crate::usage_error("--staff-space takes points from 2 to 20"),
+            },
+            "--layout" => match it.next().and_then(|n| Layout::from_name(n)) {
+                Some(l) => options.layout = l,
+                None => {
+                    return crate::usage_error(
+                        "--layout takes page, vertical, horizontal or parchment",
+                    );
+                }
+            },
+            "--paper" => match it.next().and_then(|n| Paper::from_name(n)) {
+                Some(p) => options = options.with_paper(p),
+                None => return crate::usage_error("--paper takes a4 or letter"),
+            },
+            "--width" => match it.next().and_then(|s| s.parse::<f32>().ok()) {
+                Some(w) if (100.0..=20000.0).contains(&w) => options.screen_width = w,
+                _ => return crate::usage_error("--width takes points from 100 to 20000"),
             },
             "--dark" => theme = Theme::DARK,
             "--no-dynamics" => options.dynamics = false,
@@ -123,28 +139,49 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
 
     if let Some(prefix) = png {
         let mut raster = Raster::new();
-        for (n, page) in engraved.pages.iter().enumerate() {
-            let view = View::page(page, scale);
-            let Some(pixmap) = raster.render(page, &fonts, &theme, &view) else {
-                eprintln!("oxiguitar-cli: page {} is empty", n + 1);
-                return ExitCode::FAILURE;
-            };
-            let path = format!("{prefix}-{}.png", n + 1);
-            let written = pixmap
-                .encode_png()
-                .map_err(|e| e.to_string())
-                .and_then(|b| std::fs::write(&path, b).map_err(|e| e.to_string()));
-            if let Err(e) = written {
-                eprintln!("oxiguitar-cli: {path}: {e}");
-                return ExitCode::FAILURE;
-            }
-            if !quiet {
-                println!("wrote {path}");
+        let mut n = 0;
+        for (p, page) in engraved.pages.iter().enumerate() {
+            // A long sheet (Horizontal, Vertical, Parchment) is cut into
+            // pieces of at most PNG_MAX pixels along its length.
+            for view in png_pieces(page, scale) {
+                let Some(pixmap) = raster.render(page, &fonts, &theme, &view) else {
+                    eprintln!("oxiguitar-cli: sheet {} is empty", p + 1);
+                    return ExitCode::FAILURE;
+                };
+                n += 1;
+                let path = format!("{prefix}-{n}.png");
+                let written = pixmap
+                    .encode_png()
+                    .map_err(|e| e.to_string())
+                    .and_then(|b| std::fs::write(&path, b).map_err(|e| e.to_string()));
+                if let Err(e) = written {
+                    eprintln!("oxiguitar-cli: {path}: {e}");
+                    return ExitCode::FAILURE;
+                }
+                if !quiet {
+                    println!("wrote {path}");
+                }
             }
         }
     }
 
     if let Some(path) = pdf {
+        // PDF export is always the Page layout, on paper (EXP-1).
+        let paged;
+        let engraved = if options.layout == Layout::Page {
+            &engraved
+        } else {
+            paged = engrave(
+                &score,
+                &fonts,
+                &meta,
+                &Options {
+                    layout: Layout::Page,
+                    ..options.clone()
+                },
+            );
+            &paged
+        };
         let pages: Vec<_> = engraved.pages.iter().collect();
         let title = score.info.title.trim();
         let title = if title.is_empty() { "OxiGuitar" } else { title };
@@ -165,6 +202,39 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         }
     }
     ExitCode::SUCCESS
+}
+
+/// The longest side of one PNG, in pixels.
+const PNG_MAX: u32 = 8192;
+
+/// Views covering `page` at `scale`, cut across its longer side into pieces
+/// no longer than [`PNG_MAX`] pixels.
+fn png_pieces(page: &oxiguitar_display::DisplayList, scale: f32) -> Vec<View> {
+    let whole = View::page(page, scale);
+    let wide = whole.width >= whole.height;
+    let length = if wide { whole.width } else { whole.height };
+    let count = length.div_ceil(PNG_MAX).max(1);
+    let piece = length.div_ceil(count);
+    (0..count)
+        .map(|i| {
+            let start = i * piece;
+            let len = piece.min(length - start);
+            let offset = start as f32 / scale;
+            if wide {
+                View {
+                    x: offset,
+                    width: len,
+                    ..whole
+                }
+            } else {
+                View {
+                    y: offset,
+                    height: len,
+                    ..whole
+                }
+            }
+        })
+        .collect()
 }
 
 fn ms(since: Instant) -> f64 {

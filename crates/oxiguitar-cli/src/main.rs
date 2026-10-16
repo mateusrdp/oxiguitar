@@ -24,10 +24,15 @@ Commands:
   manifest <dir>...          Print a TOML manifest (name, format, size,
                              SHA-256) of every file in the folders
   render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
-         [--tracks 1,2|all] [--staff-space PT] [--no-dynamics]
-         [--tool ID]... [--quiet]
+         [--layout page|vertical|horizontal|parchment] [--width PT]
+         [--paper a4|letter] [--tracks 1,2|all] [--staff-space PT]
+         [--no-dynamics] [--tool ID]... [--quiet]
                              Engrave a score: PNG pages PREFIX-1.png, … (N
                              pixels per point, default 2) and/or a PDF.
+                             --layout picks the staff layout (default page;
+                             long sheets are cut into PNGs of at most 8192
+                             pixels); --width is the window width for the
+                             vertical layout; the PDF is always in pages;
                              --tracks picks tracks (default: the first);
                              --no-dynamics hides dynamics markings;
                              --tool runs a tool on the score first, as the
