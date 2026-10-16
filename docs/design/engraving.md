@@ -12,6 +12,7 @@ The engraver shows what the file says and never second-guesses it: a tab that le
    - notes are spelt in the key (flats in flat keys, except the relative minor's leading tone), placed on staff steps and given the accidentals the bar needs;
    - stems follow the voice number, always: voices 1 and 3 up, voices 2 and 4 down, on the staff, on drums and in rhythm on tab (Mateus's rule, 16 Oct 2026);
    - beams group eighths and shorter within a beat (a dotted quarter in compound time);
+   - tuplets are marked with their number of notes ("3", "6") when they take the usual time (the power of two just below: 3:2, 5:4, 6:4, 7:4, 9:8; or 2:3 and 4:3), and with the full ratio ("5:3") otherwise, so any grouping reads unambiguously. Successive tuplets are marked one by one, as the file stores them: two triplets show two 3s, a sextuplet one 6 (Cliffs of Dover stores its runs as triplets);
    - the room each column needs on each side (noteheads, seconds, accidentals, dots, flags, fret numbers, chord names) is measured.
 
    Voices after the first that hold only rests in a bar are not drawn, as Guitar Pro does.
@@ -72,4 +73,5 @@ These are the M1 engraving items still to do (see ROADMAP.md):
 - **Effects:** whammy-bar curves (shown as "w/bar" only), fingering numbers, and articulations on tab-only tracks.
 - **Other layouts:** Vertical, Horizontal and Parchment (VIEW-3).
 - **Overlap pass, second round:** bend amounts of quick successive bends can touch, and dense chords can crowd ledger lines (VIEW-7). Tuplet numbers and articulations now reserve their room.
+- **Nested tuplets:** only the outermost tuplet of a note is marked (TAB-2, M4).
 - **Courtesy signatures:** key and time signatures at the end of a system before a change.

@@ -95,6 +95,9 @@ pub(crate) mod glyphs {
         )
     }
 
+    /// The colon between the numbers of a tuplet ratio, as in 5:3.
+    pub(crate) const TUPLET_COLON: G = G("tupletColon", '\u{E88A}');
+
     /// The tuplet number glyph for 0–9.
     pub(crate) fn tuplet_digit(d: u32) -> G {
         const NAMES: [&str; 10] = [

@@ -43,6 +43,7 @@ The first tool is **Infer Key Signatures** (16 Oct 2026).
 
 ## Palette
 
+- **Tuplets** (EDIT-10, M2): a palette tool with a shortcut makes triplets; "Other…" opens a small dialog to choose any grouping, n notes in the time of m, with the usual m filled in (Mateus, 16 Oct 2026). Shortcuts follow Guitar Pro's, checked against the GP8 user guide when the palette is built.
 - Tools are grouped (Note values, Effects, and many more later). Each group has a small heading with a chevron; clicking it collapses or expands the group, and the state is kept while searching.
 - A compact search field at the top of the palette filters tools by name (Ctrl + K focuses it).
 - Buttons are 32 × 32 logical pixels, wrapping to the panel's width.

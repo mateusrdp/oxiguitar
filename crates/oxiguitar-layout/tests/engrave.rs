@@ -514,3 +514,58 @@ fn dynamics_can_be_hidden() {
     let e = engrave(&score, &fonts, &meta, &hidden);
     assert_eq!(count_char(&e, forte), 0);
 }
+
+#[test]
+fn any_tuplet_grouping_is_drawn() {
+    let (fonts, meta) = setup();
+    // One 4/4 bar: five eighths in the time of three, then six sixteenths
+    // in the time of four, then a quarter rest's worth of plain eighths.
+    let beat = |value, tuplet: Option<Tuplet>| Beat {
+        notes: vec![Note {
+            place: NotePlace::Pitched(Pitch(67)),
+            ..Note::fretted(1, 0)
+        }],
+        duration: Duration {
+            tuplets: tuplet.into_iter().collect(),
+            ..Duration::new(value)
+        },
+        ..Beat::default()
+    };
+    let five = Tuplet {
+        notes: 5,
+        in_time_of: 3,
+    };
+    let six = Tuplet {
+        notes: 6,
+        in_time_of: 4,
+    };
+    let mut beats: Vec<Beat> = (0..5)
+        .map(|_| beat(NoteValue::Eighth, Some(five)))
+        .collect();
+    beats.extend((0..6).map(|_| beat(NoteValue::Sixteenth, Some(six))));
+    beats.extend((0..2).map(|_| beat(NoteValue::Eighth, None)));
+    let mut score = Score::new();
+    score.master_bars.push(MasterBar::default());
+    score.tracks.push(Track {
+        staves: vec![Staff {
+            bars: vec![Bar {
+                voices: vec![Voice { beats }],
+                ..Bar::default()
+            }],
+            ..Staff::default()
+        }],
+        ..Track::default()
+    });
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("tuplets", &e, &fonts);
+    let colon = '\u{E88A}';
+    let (five_glyph, three_glyph, six_glyph) = ('\u{E885}', '\u{E883}', '\u{E886}');
+    assert_eq!(
+        count_char(&e, colon),
+        1,
+        "5:3 shows its ratio, 6:4 does not"
+    );
+    assert_eq!(count_char(&e, five_glyph), 1);
+    assert_eq!(count_char(&e, three_glyph), 1);
+    assert_eq!(count_char(&e, six_glyph), 1);
+}
