@@ -192,8 +192,11 @@ pub enum KeyMode {
 }
 
 /// A section marker, such as "Verse" or "Solo".
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Marker {
+    /// Rehearsal letter shown in a box, such as "A"; empty for none.
+    /// Guitar Pro 7 and 8 have it, Guitar Pro 5 does not.
+    pub letter: String,
     /// The text.
     pub text: String,
     /// Display colour.

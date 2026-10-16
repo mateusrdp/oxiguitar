@@ -7,7 +7,7 @@ v1.0, a full TuxGuitar replacement for reading, editing and playing, ships at th
 | Milestone | Release | Status |
 | --- | --- | --- |
 | M0 Foundations | — | **Done** (16 Oct 2026) |
-| M1 Viewer | v0.1 | **Next** |
+| M1 Viewer | v0.1 | **In progress** |
 | M2 Editor | v0.5 | Not started |
 | M3 MIDI player | **v1.0** | Not started |
 | M4 Guitar Pro 8 notation and editing parity | | Not started |
@@ -66,6 +66,19 @@ Open every supported format and show it beautifully.
 - PDF export (EXP-1). User manual on GitHub Pages. Release packages (release.yml).
 
 Done when: 98% of the GP5-and-later corpus opens without error, the rest with clear messages; 24 hours of fuzzing per reader without a crash; a 300-bar, 8-track file opens in under a second; visual regression tests cover 50 reference scores; Mateus has reviewed PDFs of 10 songs.
+
+Progress:
+
+- [x] Guitar Pro 6 (.gpx) and 7/8 (.gp) readers, with import logs and public fixtures (16 Oct 2026). Every GPX and GP file in the corpus opens; alphaTab reads the same notes from each, bar for bar; six songs saved in two formats agree (`--test corpus`).
+- [ ] Engraving into a display list (`oxiguitar-layout`): standard notation, tablature, rhythm on tab, effects
+- [ ] Page, vertical, horizontal and parchment layouts; multi-track; score header
+- [ ] `oxiguitar-app` window (Slint) following docs/design/ui.md
+- [ ] PDF export
+- [ ] MuseScore, MusicXML and ABC readers; tab derivation
+- [ ] Fuzzing, speed budget, visual regression tests
+- [ ] User manual, release packages
+
+Corpus status (GP5 and later, 16 Oct 2026): 27 GP5, 3 GPX and 12 GP files open (42 of 48); the 6 MuseScore and MusicXML files wait for their readers.
 
 ## M2 — Editor (v0.5)
 

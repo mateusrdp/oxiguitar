@@ -72,6 +72,15 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
     }
 }
 
+/// A marker as `"[A] Verse"`, or `"Verse"` when it has no letter.
+fn marker_label(m: &oxiguitar_model::Marker) -> String {
+    if m.letter.is_empty() {
+        format!("\"{}\"", m.text)
+    } else {
+        format!("[{}] \"{}\"", m.letter, m.text)
+    }
+}
+
 fn extension_note(path: &str, usual: &str) -> String {
     let ext = Path::new(path)
         .extension()
@@ -144,7 +153,7 @@ pub(crate) fn describe(path: &str, imported: &Imported, with_bars: bool) -> Stri
         .filter_map(|(i, m)| {
             m.marker
                 .as_ref()
-                .map(|mk| format!("{} \"{}\"", i + 1, mk.text))
+                .map(|mk| format!("{} {}", i + 1, marker_label(mk)))
         })
         .collect();
     if !markers.is_empty() {
@@ -323,7 +332,7 @@ fn bar_table(s: &Score) -> String {
             let _ = write!(line, " [{:b}]", mb.alternate_endings);
         }
         if let Some(m) = &mb.marker {
-            let _ = write!(line, " \"{}\"", m.text);
+            let _ = write!(line, " {}", marker_label(m));
         }
         for tc in &mb.tempo_changes {
             let _ = write!(line, " ♩={}@{}", tc.bpm, tc.position);
