@@ -1,0 +1,60 @@
+# Fuzz targets for every file reader (cargo-fuzz, nightly Rust). Not part of
+# the main workspace: run from this folder, see README.md. CI runs them in
+# .github/workflows/fuzz.yml.
+[package]
+name = "oxiguitar-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+oxiguitar-formats = { path = "../crates/oxiguitar-formats" }
+# The GPIF target packs its input into a .gp archive.
+zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+
+# Its own workspace, so the main one never builds libFuzzer.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "guitar_pro_3_5"
+path = "fuzz_targets/guitar_pro_3_5.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "guitar_pro_6"
+path = "fuzz_targets/guitar_pro_6.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "guitar_pro_7"
+path = "fuzz_targets/guitar_pro_7.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "gpif"
+path = "fuzz_targets/gpif.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "any_file"
+path = "fuzz_targets/any_file.rs"
+test = false
+doc = false
+bench = false

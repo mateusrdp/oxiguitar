@@ -60,6 +60,8 @@ Add the project to [CREDITS.md](CREDITS.md) in the same pull request. Nothing ma
 
 ## Test files
 
+[docs/testing.md](docs/testing.md) describes the kinds of tests and the quality gates (speed budget, visual regression, fuzzing).
+
 - **Public fixtures** (`fixtures/`) are files we made ourselves or that carry a license allowing redistribution. Each one is listed in `fixtures/README.md` with its origin.
 - **The private corpus** — community transcriptions of unclear ownership — is never committed. `corpus/MANIFEST.toml` lists names and checksums only. Never add such a file to the repository, even temporarily.
 

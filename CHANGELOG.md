@@ -8,6 +8,10 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 ### Added
 
+- The speed budget (M1): a 300-bar, 8-track file opens in under a second, from reading the file to the first tiles. A test opens a generated score as dense and as long as a real Guitar Pro 7 file the way the window does (0.18 s, or 0.23 s with all eight tracks shown), and CI's "Speed budget" job holds release builds to it. See `docs/testing.md`.
+- `oxiguitar-testgen`: test scores written in a short text notation and saved as Guitar Pro 7 files, starting with the speed budget's eight-track band song. Test code only.
+- Fuzzing of every file reader (M1): cargo-fuzz targets for Guitar Pro 3–5, Guitar Pro 6, Guitar Pro 7 and 8, the GPIF XML, and any file through format detection (`fuzz/`), seeded from the public fixtures. The "Fuzz" workflow runs each for four minutes on pull requests that touch a reader, and for six hours per reader when started by hand. M1's target is six hours per reader without a crash (lowered from 24).
+- Visual regression tests (M1): fifty generated reference scores, kept in `fixtures/reference/` as Guitar Pro 7 files with the pictures they engrave to, read back through the reader, engraved and compared with a tolerance on every CI target. Failures leave the drawn picture and a picture of the differences, uploaded by CI. `OXIGUITAR_BLESS=1` writes new pictures after an intended change. See `docs/testing.md`.
 - `oxiguitar-formats` reads Guitar Pro 6 (.gpx) and Guitar Pro 7 and 8 (.gp) files: the BCFZ/BCFS and ZIP containers and the GPIF score inside, with an import log of anything not carried over yet. Which notation each track shows (standard, tablature) comes from the file. All 15 GPX and GP files in the test corpus open; alphaTab reads the same notes from every one of them, bar for bar.
 - Guitar Pro 6 tied notes with a stale fret take the fret of the note they continue; flat "bends" that Guitar Pro 7 writes on tied notes are dropped.
 - Public test songs in Guitar Pro 6 and 7 format (`fixtures/gp/oxiguitar-test-song.gpx` and `.gp`), checked against the Guitar Pro 5 reader on the same music.
@@ -70,6 +74,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 ### Changed
 
+- Guitar Pro 6–8 files open about twice as fast: the XML tree keeps every element in one list and borrows names and text from the file instead of copying them (`oxiguitar-cli info` on Seek and Destroy: 0.11 s instead of 0.26 s). The scores and import logs read from every GPX and GP file in the corpus are unchanged.
 - Guitar Pro 6–8 beats keep their dynamic as a marking (`BeatEffects::dynamic`) as well as giving it to their notes as velocity, so the engraver can tell a marking from a velocity.
 - Beat text at the end of a system no longer runs off the page; the page test now checks where each text ends, not only where it starts.
 - Plan (Mateus, 16 Oct 2026): the core reads and writes Guitar Pro formats only. MuseScore, MusicXML, ABC and MIDI files, and tab derivation for staves without tablature, become plugins after the plugin system (M5). M1's "98 % of the corpus opens" counts Guitar Pro files only. Visual regression uses 50 generated reference scores kept in the repository. ROADMAP and README follow. Opening one of those files now says that a format plugin will open it, instead of "not supported yet".

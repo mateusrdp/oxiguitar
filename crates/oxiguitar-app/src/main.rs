@@ -15,6 +15,8 @@
 mod canvas;
 mod document;
 mod icons;
+#[cfg(test)]
+mod speed;
 mod tracks;
 mod worker;
 
@@ -538,8 +540,7 @@ fn canvas_changed(app: &Shared) {
         ui.get_view_height() / px,
     );
     // Draw a little beyond the view, keep more than that.
-    let near = view.inflate(0.25 * view.width.max(view.height));
-    let keep = view.inflate(1.0 * view.width.max(view.height));
+    let (near, keep) = Sheets::around(view);
     let wanted = s.sheets.tiles_for(near, device);
     let kept = s.sheets.tiles_for(keep, device);
     let before = s.tiles.len();

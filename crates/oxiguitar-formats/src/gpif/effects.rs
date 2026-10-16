@@ -45,9 +45,9 @@ const GP6_DRUMS: [[u8; 3]; 17] = [
 ];
 
 impl Reader<'_> {
-    pub(super) fn beat_effects(&mut self, el: &Element, fx: &mut BeatEffects) {
-        for child in &el.children {
-            match child.name.as_str() {
+    pub(super) fn beat_effects(&mut self, el: Element<'_>, fx: &mut BeatEffects) {
+        for child in el.children() {
+            match child.name() {
                 "Fadding" => match child.text() {
                     "FadeIn" => fx.fade_in = true,
                     other => self.log.warn(
@@ -191,7 +191,7 @@ impl Reader<'_> {
 
     pub(super) fn note(
         &mut self,
-        el: &Element,
+        el: Element<'_>,
         ctx: &TrackContext,
         sctx: &StaffContext,
         beat_fx: &mut oxiguitar_model::BeatEffects,
@@ -258,8 +258,8 @@ impl Reader<'_> {
         }
 
         let mut tie = false;
-        for child in &el.children {
-            match child.name.as_str() {
+        for child in el.children() {
+            match child.name() {
                 "Tie" => tie = child.attr("destination") == Some("true"),
                 "Vibrato" => fx.vibrato = true,
                 "LetRing" => fx.let_ring = true,

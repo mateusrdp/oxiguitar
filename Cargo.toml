@@ -1,8 +1,9 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
-# Throwaway experiments with their own workspaces and lock files (see spikes/README.md).
-exclude = ["spikes"]
+# Throwaway experiments with their own workspaces and lock files (see
+# spikes/README.md), and the fuzz targets (nightly Rust, see fuzz/README.md).
+exclude = ["spikes", "fuzz"]
 
 [workspace.package]
 version = "0.0.0"
@@ -22,6 +23,7 @@ oxiguitar-display = { path = "crates/oxiguitar-display" }
 oxiguitar-layout = { path = "crates/oxiguitar-layout" }
 oxiguitar-render = { path = "crates/oxiguitar-render" }
 oxiguitar-tools = { path = "crates/oxiguitar-tools" }
+oxiguitar-testgen = { path = "crates/oxiguitar-testgen" }
 # Fonts: skrifa reads outlines and metrics; keep it on the version krilla uses.
 skrifa = "0.42"
 serde = { version = "1", features = ["derive"] }

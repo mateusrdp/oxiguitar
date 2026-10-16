@@ -64,7 +64,7 @@ Open every Guitar Pro file and show it beautifully.
 - The desktop window (`oxiguitar-app`, Slint) following [docs/design/ui.md](docs/design/ui.md): menus only on top, collapsible palette groups, interface zoom by keys and wheel, score-zoom slider, dark page (UI-7 to UI-10).
 - PDF export (EXP-1). User manual on GitHub Pages. Release packages (release.yml).
 
-Done when: 98% of the Guitar Pro 5-and-later files in the corpus open without error, the rest with clear messages (MuseScore, MusicXML and ABC files are counted separately and do not count towards this); 24 hours of fuzzing per reader without a crash; a 300-bar, 8-track file opens in under a second; visual regression tests cover 50 reference scores, generated and kept in the repository (the private corpus is checked locally only); Mateus has reviewed PDFs of 10 songs.
+Done when: 98% of the Guitar Pro 5-and-later files in the corpus open without error, the rest with clear messages (MuseScore, MusicXML and ABC files are counted separately and do not count towards this); 6 hours of fuzzing per reader without a crash (lowered from 24 hours by Mateus, 16 Oct 2026); a 300-bar, 8-track file opens in under a second; visual regression tests cover 50 reference scores, generated and kept in the repository (the private corpus is checked locally only); Mateus has reviewed PDFs of 10 songs.
 
 Progress:
 
@@ -81,7 +81,10 @@ Progress:
 - [x] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu (16 Oct 2026): File → Open, tiled canvas on a worker thread, the four layouts, multitrack, Dark Page, score and interface zoom, track list, status line
 - [x] `oxiguitar-tools`: the Tools menu's tools, one shape for all so plugins can add more (M5); first tool: Infer Key Signatures, with key changes (16 Oct 2026)
 - [x] PDF export of the shown tracks, A4 or Letter (16 Oct 2026)
-- [ ] Fuzzing, speed budget, visual regression tests
+- [ ] Quality gates (see [docs/testing.md](docs/testing.md))
+  - [x] Speed budget (16 Oct 2026): a generated 300-bar, 8-track score as long as a real Guitar Pro 7 file (16 MB of XML) opens to its first tiles in 0.18 s, or 0.23 s with every track shown; CI's "Speed budget" job holds release builds to one second. Reading GPIF is about twice as fast as before.
+  - [x] Visual regression (16 Oct 2026): 50 generated reference scores in `fixtures/reference/`, each a Guitar Pro 7 file and its pictures, compared with a tolerance on every CI target
+  - [ ] Fuzzing: six hours per reader without a crash. Targets for every reader and a CI workflow (short runs on reader pull requests, the long run by hand) are in place (16 Oct 2026); the first six-hour run is under way
 - [ ] User manual, release packages
 
 Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5, 3 GPX, 12 GP). Counted separately, for the format plugins after M5: 5 MuseScore and 1 MusicXML file; no ABC yet.
