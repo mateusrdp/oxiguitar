@@ -18,6 +18,11 @@ mod icons;
 #[cfg(test)]
 mod speed;
 mod tracks;
+#[cfg(all(
+    unix,
+    not(any(target_os = "macos", target_os = "ios", target_os = "android"))
+))]
+mod wayland_drop;
 mod worker;
 
 use std::cell::RefCell;
@@ -247,9 +252,79 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    // File drops on Wayland, where winit reports none (ADR 0006). The
+    // winit window exists once the event loop runs.
+    #[cfg(all(
+        unix,
+        not(any(target_os = "macos", target_os = "ios", target_os = "android"))
+    ))]
+    let wayland = install_wayland_drops(&ui, &app);
+
     ui.run()?;
+    // Before anything else goes: it borrows winit's Wayland connection.
+    #[cfg(all(
+        unix,
+        not(any(target_os = "macos", target_os = "ios", target_os = "android"))
+    ))]
+    wayland.borrow_mut().take();
     APP.with(|a| a.borrow_mut().take());
     Ok(())
+}
+
+/// The Wayland drop listener and the timer that polls it ([`wayland_drop`],
+/// a stopgap: ADR 0006). `main` drops it as soon as the event loop returns.
+#[cfg(all(
+    unix,
+    not(any(target_os = "macos", target_os = "ios", target_os = "android"))
+))]
+type WaylandListener = Rc<RefCell<Option<(slint::Timer, Rc<RefCell<wayland_drop::WaylandDrops>>)>>>;
+
+/// Listens for file drops on Wayland, where winit reports none. The winit
+/// window appears once the event loop runs, so this looks for it every
+/// 100 ms for two seconds; on X11 (and if the compositor has no data device
+/// manager) it gives up at once and nothing keeps running.
+#[cfg(all(
+    unix,
+    not(any(target_os = "macos", target_os = "ios", target_os = "android"))
+))]
+fn install_wayland_drops(ui: &AppWindow, app: &Shared) -> WaylandListener {
+    let slot: WaylandListener = Rc::new(RefCell::new(None));
+    try_wayland_drops(ui.as_weak(), app.clone(), slot.clone(), 20);
+    slot
+}
+
+#[cfg(all(
+    unix,
+    not(any(target_os = "macos", target_os = "ios", target_os = "android"))
+))]
+fn try_wayland_drops(ui: Weak<AppWindow>, app: Shared, slot: WaylandListener, tries: u32) {
+    slint::Timer::single_shot(Duration::from_millis(100), move || {
+        let Some(window) = ui.upgrade() else { return };
+        if !window.window().has_winit_window() {
+            if tries > 0 {
+                try_wayland_drops(ui, app, slot, tries - 1);
+            }
+            return;
+        }
+        let a = app.clone();
+        let Some(drops) = wayland_drop::WaylandDrops::new(
+            window.window(),
+            Box::new(move |path| a.borrow().worker.send(Request::Open(path))),
+        ) else {
+            return; // not Wayland
+        };
+        let drops = Rc::new(RefCell::new(drops));
+        let timer = slint::Timer::default();
+        let d = drops.clone();
+        timer.start(
+            slint::TimerMode::Repeated,
+            Duration::from_millis(100),
+            move || {
+                d.borrow_mut().dispatch();
+            },
+        );
+        *slot.borrow_mut() = Some((timer, drops));
+    });
 }
 
 fn lines(items: &[&str]) -> ModelRc<SharedString> {

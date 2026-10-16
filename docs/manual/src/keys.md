@@ -5,7 +5,7 @@
 | Keys and mouse | Does |
 | --- | --- |
 | Ctrl + O | Open a file |
-| Drop a file on the window | Open it (not yet on Wayland) |
+| Drop a file on the window | Open it |
 | Ctrl + Q | Quit |
 | F1 | Keyboard and mouse help |
 | F8 | Show or hide the track list |
