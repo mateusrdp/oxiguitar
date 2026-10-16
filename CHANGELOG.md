@@ -40,6 +40,12 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - Letter paper beside A4 (`--paper letter`). PDFs are always in pages, whatever the layout.
 - **The desktop app**, `oxiguitar` (crate `oxiguitar-app`, Slint), the first version of the viewer. File → Open (or `oxiguitar FILE`) opens any Guitar Pro 3–8 file; the score is drawn in tiles on a worker thread, so the window never waits. View → Layout (Page, Vertical, Horizontal, Parchment), Multitrack, Dark Page and Dynamics; the track list (F8) shows any set of tracks; the score-zoom slider (25–400 %) and interface zoom (Ctrl + wheel, Ctrl + + / − / 0); the Tools menu with Infer Key Signatures, greyed out with its reason when it cannot run; File → Export PDF… of the shown tracks on A4 or Letter (EXP-1); errors and tool reports in a status line. The system's own file dialogs (XDG desktop portal on Linux).
 - Test builds of the app for every system, beside the command-line tool.
+- Guitar Pro 3–5 tracks get the clef Guitar Pro gives them: bass clef for basses, treble at sounding pitch for keyboards and voices, treble 8vb for guitars (these formats store no clef).
+- Keyboard tracks (pianos, organs, …) are shown on a grand staff with a brace: right hand in the treble clef, left in the bass clef, split by hand range.
+- Tablature is shown by default only for fretted instruments; the track list's Tab tick (and `render --tab` / `--no-tab`) shows or hides any track's tab.
+- Tools → Infer Key Signatures is always offered: on a score that already has keys it replaces them if the notes say otherwise, and says so when they already fit.
+- The app's icon: the placeholder pick (now with a rounded tip, darker green and a light sheen) as the window icon, a desktop entry with the app id `io.github.mateusrdp.OxiGuitar` for Wayland, and `scripts/install-desktop-entry.sh` for builds from source.
+- A new track's default instrument is a steel-string guitar (General MIDI 25) rather than a piano.
 - Cargo workspace, licence, contributor guide, credits, roadmap and architecture notes.
 - CI on Windows, macOS and Linux (x86_64 and ARM64): formatting, lint, tests, minimum Rust version, licence and advisory checks, sign-off check and a no-network test.
 - Test builds of `oxiguitar-cli` for every target on each push to `develop`.
@@ -56,6 +62,11 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - GUI-toolkit spike in Slint, iced and egui (`spikes/gui/`), built on every target by an advisory CI workflow. Decision record 0004 chooses Slint.
 - Licences of the crates planned for later milestones checked and recorded in CREDITS.md and ROADMAP.md.
 - Interface design rules (`docs/design/ui.md`) from the first review of the GUI spike. The Slint spike follows them: menus only on top, collapsible palette groups, palette icons centred on their ink, interface zoom with Ctrl + wheel and Ctrl + + / − / 0, a score-zoom slider and a dark page. View → Layout lists the four staff layouts to come in M1: Page, Vertical, Horizontal and Parchment.
+
+### Fixed
+
+- View → Layout and File → Paper Size tick only the current choice.
+- View → Multitrack follows the track list: ticked whenever more than one track is shown.
 
 ### Changed
 

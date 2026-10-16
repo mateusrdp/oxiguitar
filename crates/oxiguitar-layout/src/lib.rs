@@ -21,12 +21,15 @@
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet};
-use oxiguitar_model::Score;
+use std::collections::BTreeMap;
+
+use oxiguitar_model::{Score, Track};
 
 mod draw;
 mod effects;
 mod engrave;
 mod grid;
+mod hands;
 mod page;
 mod pitch;
 mod plan;
@@ -149,6 +152,21 @@ pub struct Options {
     pub header: bool,
     /// Show dynamics markings.
     pub dynamics: bool,
+    /// The user's choice to show or hide a track's tablature, by track
+    /// index. Tracks not listed follow [`default_tablature`].
+    pub tablature: BTreeMap<usize, bool>,
+}
+
+/// Whether a track shows tablature unless the user decides otherwise: only
+/// fretted string instruments do (Mateus, 16 Oct 2026), and only where the
+/// file shows it. Keyboards, voices, winds, bowed strings and fretless bass
+/// are shown in standard notation; the user can still ask for their tab.
+pub fn default_tablature(track: &Track) -> bool {
+    track.instrument.is_fretted()
+        && track
+            .staves
+            .iter()
+            .any(|s| s.show_tablature && s.string_count() > 0)
 }
 
 impl Options {
@@ -172,6 +190,7 @@ impl Default for Options {
             tracks: Vec::new(),
             header: true,
             dynamics: true,
+            tablature: BTreeMap::new(),
         }
     }
 }
@@ -191,7 +210,7 @@ pub struct Engraved {
 /// Never panics on a damaged score: bars that cannot be measured get a
 /// minimal width, notes outside the instrument are left out.
 pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Options) -> Engraved {
-    let views = system::views(score, &options.tracks);
+    let views = system::views(score, &options.tracks, &options.tablature);
     let layout = options.layout;
     let sheet_width = match layout {
         Layout::Vertical => options.screen_width,

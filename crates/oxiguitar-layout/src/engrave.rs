@@ -426,10 +426,49 @@ pub(crate) fn system(
     {
         p.thin_bar(&mut list, spec.indent, first.top, last.bottom);
     }
+    // Grand staves: a brace before the system line, and bar lines running
+    // through from the right-hand staff to the left-hand staff.
+    for (i, v) in views.iter().enumerate() {
+        let (Some(upper), Some(lower)) = (bands.get(i), bands.get(i + 1)) else {
+            continue;
+        };
+        if !v.opens_grand_staff() {
+            continue;
+        }
+        let top = upper.top;
+        let bottom = lower.top + 4.0 * sp;
+        let (_, below) = p.height(glyphs::BRACE);
+        let natural = 4.0 * sp;
+        let scale = (bottom - top) / natural;
+        let w = p.width(glyphs::BRACE) * scale;
+        p.glyph_scaled(
+            &mut list,
+            glyphs::BRACE,
+            scale,
+            spec.indent - 0.4 * sp - w,
+            bottom - below * scale,
+            Paint::Ink,
+        );
+        let gap_top = upper.top + 4.0 * sp;
+        let gap_bottom = lower.top;
+        let thick = p.ed().thick_barline_thickness * sp;
+        for bx in &bars {
+            let last = bx.index + 1 == score.master_bars.len();
+            let repeat = score
+                .master_bars
+                .get(bx.index)
+                .is_some_and(|mb| mb.repeat_end.is_some());
+            if last || repeat {
+                p.thick_bar(&mut list, bx.end - thick / 2.0, gap_top, gap_bottom);
+            } else {
+                p.thin_bar(&mut list, bx.end, gap_top, gap_bottom);
+            }
+        }
+    }
     // Track names, right-aligned in the indent, centred on each track's
     // staves.
     let size = track_name_size(p);
-    let room = spec.indent - sp;
+    let room = spec.indent - sp - crate::system::brace_room(views, p);
     for (track, name) in track_names(score, views, spec.index == 0) {
         let mine: Vec<&Band> = views
             .iter()

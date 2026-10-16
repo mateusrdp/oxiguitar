@@ -146,6 +146,24 @@ fn songs_in_two_formats_agree() {
                 failures.push(format!("{new}: {category} {:.3}", report.ratio(category)));
             }
         }
+        // Guitar Pro 3–5 store no clef; the reader picks it from the
+        // instrument, which must give what Guitar Pro 7 wrote on converting.
+        for (ta, tb) in a.tracks.iter().zip(&b.tracks) {
+            let clef = |t: &oxiguitar_model::Track| {
+                t.staves
+                    .first()
+                    .and_then(|s| s.bars.first())
+                    .map(|bar| bar.clef)
+            };
+            if clef(ta) != clef(tb) {
+                failures.push(format!(
+                    "{new}: track {:?}: clef {:?} in the old format, {:?} in the new",
+                    tb.name,
+                    clef(ta),
+                    clef(tb)
+                ));
+            }
+        }
     }
     assert!(failures.is_empty(), "{failures:#?}");
 }

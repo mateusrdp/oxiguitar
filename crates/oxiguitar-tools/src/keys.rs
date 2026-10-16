@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Tools → Infer Key Signatures: key signatures for scores that set none.
+//! Tools → Infer Key Signatures: key signatures from the notes.
 //!
 //! Most tabs leave every bar in C major, the format's default, whatever the
-//! music. On request, this tool infers a key per bar by counting
+//! music, and some set keys that do not fit it. On request, this tool infers
+//! a key per bar by counting
 //! accidentals: for each of the 12 key signatures from six flats to five
 //! sharps, how much of the bar's music (weighted by duration, across every
 //! pitched track) falls outside that key's scale, as a share of the bar's
@@ -15,9 +16,11 @@
 //! fifths), so a chromatic passage does not change the key but a real
 //! modulation does. Ties go to the signature with fewer accidentals.
 //!
-//! The keys are set only if they spare at least 2.5 % of the music its
-//! accidentals; otherwise (chromatic riffs, atonal passages) the score stays
-//! in C. A score that already sets a key other than C is left alone.
+//! The inferred keys are used only if they spare at least 2.5 % of the music
+//! its accidentals compared with C major; otherwise (chromatic riffs, atonal
+//! passages) the music is written in C. The tool is always offered, even when
+//! the file sets keys, in case they are wrong (Mateus, 16 Oct 2026): the
+//! inferred keys then replace the file's, and nothing changes if they agree.
 
 use oxiguitar_model::{BeatKind, NotePlace, Score};
 
@@ -44,14 +47,6 @@ const DISTANCE: f32 = 0.2;
 /// Inferred keys are used only if they spare this share of the music its
 /// accidentals compared with C major; chromatic songs stay in C.
 const MIN_GAIN: f32 = 0.025;
-
-/// True if the score sets a key other than C major anywhere.
-fn file_has_keys(score: &Score) -> bool {
-    score
-        .master_bars
-        .iter()
-        .any(|mb| mb.key_signature.fifths != 0)
-}
 
 /// The pitch classes of the major scale with `fifths` sharps (or flats if
 /// negative), as a bit set.
@@ -223,13 +218,11 @@ impl Tool for InferKeySignatures {
 
     fn description(&self) -> &'static str {
         "Sets key signatures from the notes, with key changes where the music \
-         modulates, for scores that leave every bar in C major."
+         modulates, replacing any the score already has."
     }
 
     fn availability(&self, score: &Score) -> Availability {
-        if file_has_keys(score) {
-            Availability::Unavailable("The score already has key signatures.".to_owned())
-        } else if score.master_bars.is_empty() {
+        if score.master_bars.is_empty() {
             Availability::Unavailable("The score has no bars.".to_owned())
         } else {
             Availability::Available
@@ -241,15 +234,25 @@ impl Tool for InferKeySignatures {
             return unchanged(why);
         }
         let bars = weights(score);
-        let keys = infer_bars(score, &bars);
-        if keys.iter().all(|k| *k == 0) {
-            return unchanged("The music fits C major; nothing to change.".to_owned());
+        let mut keys = infer_bars(score, &bars);
+        let too_little = keys.iter().any(|k| *k != 0) && gain(&bars, &keys) < MIN_GAIN;
+        if too_little {
+            keys = vec![0; keys.len()];
         }
-        if gain(&bars, &keys) < MIN_GAIN {
-            return unchanged(
+        let current: Vec<i8> = score
+            .master_bars
+            .iter()
+            .map(|mb| mb.key_signature.fifths)
+            .collect();
+        if keys == current {
+            let why = if too_little {
                 "No key signature would spare enough accidentals; the score stays in C major."
-                    .to_owned(),
-            );
+            } else if current.iter().all(|k| *k == 0) {
+                "The music fits C major; nothing to change."
+            } else {
+                "The score's key signatures already fit the music; nothing to change."
+            };
+            return unchanged(why.to_owned());
         }
         let mut s = score.clone();
         for (mb, k) in s.master_bars.iter_mut().zip(&keys) {
@@ -442,13 +445,56 @@ mod tests {
     }
 
     #[test]
-    fn the_files_own_keys_are_kept() {
+    fn wrong_keys_in_the_file_are_replaced() {
+        // Always offered, even when the file sets keys (Mateus, 16 Oct 2026).
         let mut s = song(&[G_MAJOR; 2]);
         s.master_bars[1].key_signature.fifths = -2;
+        assert_eq!(InferKeySignatures.availability(&s), Availability::Available);
+        let out = InferKeySignatures.apply(&s);
+        let fixed = out.score.expect("the wrong key is replaced");
+        assert!(
+            fixed
+                .master_bars
+                .iter()
+                .all(|mb| mb.key_signature.fifths == 1)
+        );
+        assert_eq!(
+            out.report,
+            "Key signatures set: G major or E minor (1♯) in bars 1–2."
+        );
+    }
+
+    #[test]
+    fn keys_that_already_fit_are_left_alone() {
+        let mut s = song(&[G_MAJOR; 3]);
+        for mb in &mut s.master_bars {
+            mb.key_signature.fifths = 1;
+        }
+        let out = InferKeySignatures.apply(&s);
+        assert!(out.score.is_none());
+        assert!(out.report.contains("already fit"), "{}", out.report);
+    }
+
+    #[test]
+    fn a_key_on_music_in_c_is_taken_away() {
+        let bar: &[u8] = &[60, 62, 64, 67];
+        let mut s = song(&[bar; 3]);
+        s.master_bars[0].key_signature.fifths = 3;
+        let out = InferKeySignatures.apply(&s);
+        let fixed = out.score.expect("back to C");
+        assert!(
+            fixed
+                .master_bars
+                .iter()
+                .all(|mb| mb.key_signature.fifths == 0)
+        );
+    }
+
+    #[test]
+    fn only_a_score_without_bars_is_unavailable() {
         assert!(matches!(
-            InferKeySignatures.availability(&s),
+            InferKeySignatures.availability(&Score::new()),
             Availability::Unavailable(_)
         ));
-        assert!(InferKeySignatures.apply(&s).score.is_none());
     }
 }

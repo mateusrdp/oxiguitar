@@ -4,10 +4,13 @@
 //! Which staves are shown, the plan of every bar, and how bars are broken
 //! into systems (NOT-4).
 
-use oxiguitar_model::{Bar, BeatKind, Dynamic, Score};
+use std::collections::HashMap;
+
+use oxiguitar_model::{Bar, BeatKind, Clef, Dynamic, Score, Staff};
 
 use crate::draw::{Painter, glyphs};
 use crate::grid::BarGrid;
+use crate::hands;
 use crate::plan::{BarPlan, Planner, lyric_size};
 
 /// Tablature lines are this many staff spaces apart.
@@ -22,11 +25,48 @@ pub(crate) struct View {
     pub(crate) show_std: bool,
     pub(crate) show_tab: bool,
     pub(crate) strings: usize,
+    /// Which part of the staff this view shows.
+    pub(crate) part: Part,
+}
+
+/// What part of a staff a view shows. A keyboard staff is shown as a grand
+/// staff of three views: the right hand, the left hand and, if asked for,
+/// the tablature of both.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Part {
+    /// The whole staff, as the file has it.
+    Whole,
+    /// The right hand of a grand staff, in the treble clef.
+    Right,
+    /// The left hand of a grand staff, in the bass clef.
+    Left,
+    /// The tablature under a grand staff, every note.
+    GrandTab,
+}
+
+impl View {
+    /// The first of the views that make one track's staff: lyrics and the
+    /// marks a track has once go here.
+    pub(crate) fn carries_shared_marks(&self) -> bool {
+        matches!(self.part, Part::Whole | Part::Right)
+    }
+
+    /// The top staff of a grand staff: a brace joins it to the next view.
+    pub(crate) fn opens_grand_staff(&self) -> bool {
+        self.part == Part::Right
+    }
 }
 
 /// The staves to show for the chosen tracks. Unknown track numbers are
-/// skipped; if none is left, the first track is shown.
-pub(crate) fn views(score: &Score, tracks: &[usize]) -> Vec<View> {
+/// skipped; if none is left, the first track is shown. Tablature follows
+/// the user's choice for the track, if any, or [`crate::default_tablature`].
+/// A keyboard track with one staff in standard notation becomes a grand
+/// staff (Mateus, 16 Oct 2026).
+pub(crate) fn views(
+    score: &Score,
+    tracks: &[usize],
+    tablature: &std::collections::BTreeMap<usize, bool>,
+) -> Vec<View> {
     let mut chosen: Vec<usize> = tracks
         .iter()
         .copied()
@@ -40,17 +80,36 @@ pub(crate) fn views(score: &Score, tracks: &[usize]) -> Vec<View> {
         let Some(track) = score.tracks.get(t) else {
             continue;
         };
+        let percussion = track.instrument.percussion;
+        let fretted = track.instrument.is_fretted();
+        let choice = tablature.get(&t).copied();
+        let grand = track.instrument.is_keyboard() && track.staves.len() == 1;
         for (s, staff) in track.staves.iter().enumerate() {
             let strings = staff.string_count();
-            let show_tab = staff.show_tablature && strings > 0 && !track.instrument.percussion;
+            let can_tab = strings > 0 && !percussion;
+            let show_tab = can_tab
+                && match choice {
+                    Some(on) => on,
+                    None => fretted && staff.show_tablature,
+                };
             let show_std = staff.show_standard || !show_tab;
-            out.push(View {
+            let view = |show_std, show_tab, part| View {
                 track: t,
                 staff: s,
                 show_std,
                 show_tab,
                 strings,
-            });
+                part,
+            };
+            if grand && show_std {
+                out.push(view(true, false, Part::Right));
+                out.push(view(true, false, Part::Left));
+                if show_tab {
+                    out.push(view(false, true, Part::GrandTab));
+                }
+            } else {
+                out.push(view(show_std, show_tab, Part::Whole));
+            }
         }
     }
     out
@@ -66,11 +125,40 @@ pub(crate) struct Plans {
 
 pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics: bool) -> Plans {
     let empty = Bar::default();
+    // Grand staves, split once per track and staff.
+    let mut hands: HashMap<(usize, usize), (Staff, Staff, Staff)> = HashMap::new();
+    for v in views.iter().filter(|v| v.part != Part::Whole) {
+        let Some(staff) = score
+            .tracks
+            .get(v.track)
+            .and_then(|t| t.staves.get(v.staff))
+        else {
+            continue;
+        };
+        hands.entry((v.track, v.staff)).or_insert_with(|| {
+            let (mut right, left) = hands::split(staff);
+            let mut left = hands::without_shared_marks(&left);
+            for bar in &mut right.bars {
+                bar.clef = Clef::Treble;
+            }
+            for bar in &mut left.bars {
+                bar.clef = Clef::Bass;
+            }
+            (right, left, hands::without_shared_marks(staff))
+        });
+    }
     let bars: Vec<Vec<BarPlan>> = views
         .iter()
         .filter_map(|v| {
             let track = score.tracks.get(v.track)?;
-            let staff = track.staves.get(v.staff)?;
+            let file_staff = track.staves.get(v.staff)?;
+            let split = hands.get(&(v.track, v.staff));
+            let staff = match (v.part, split) {
+                (Part::Right, Some((r, _, _))) => r,
+                (Part::Left, Some((_, l, _))) => l,
+                (Part::GrandTab, Some((_, _, t))) => t,
+                _ => file_staff,
+            };
             let planner = Planner {
                 p,
                 track,
@@ -88,7 +176,7 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
             if dynamics {
                 mark_dynamics(&mut planned);
             }
-            if v.staff == 0 {
+            if v.staff == 0 && v.carries_shared_marks() {
                 for (line, lyric) in track.lyrics.iter().enumerate() {
                     place_lyrics(&mut planned, line, lyric.start_bar, &lyric.text);
                 }
@@ -252,6 +340,15 @@ pub(crate) fn names_indent(names: &[(usize, String)], p: &Painter<'_>, line: f32
     }
 }
 
+/// Room left of the staves for grand-staff braces (0 when there is none).
+pub(crate) fn brace_room(views: &[View], p: &Painter<'_>) -> f32 {
+    if views.iter().any(View::opens_grand_staff) {
+        p.width(glyphs::BRACE) * 3.0 + 0.8 * p.sp
+    } else {
+        0.0
+    }
+}
+
 /// Width of the clef and key signature that open a system.
 pub(crate) fn system_prefix(p: &Painter<'_>, fifths: i8) -> f32 {
     let sp = p.sp;
@@ -322,7 +419,8 @@ pub(crate) fn break_systems(
             .master_bars
             .get(first)
             .map_or(0, |mb| mb.key_signature.fifths);
-        let indent = names_indent(&track_names(score, views, systems.is_empty()), p, width);
+        let indent = names_indent(&track_names(score, views, systems.is_empty()), p, width)
+            + brace_room(views, p);
         let prefix = indent + system_prefix(p, fifths);
         let mut used = prefix;
         let mut end = first;

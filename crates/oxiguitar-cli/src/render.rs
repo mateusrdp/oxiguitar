@@ -66,6 +66,22 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
                 Some(w) if (100.0..=20000.0).contains(&w) => options.screen_width = w,
                 _ => return crate::usage_error("--width takes points from 100 to 20000"),
             },
+            "--tab" | "--no-tab" => {
+                let on = arg == "--tab";
+                let parsed: Option<Vec<usize>> = it.next().and_then(|list| {
+                    list.split(',')
+                        .map(|t| t.trim().parse::<usize>().ok()?.checked_sub(1))
+                        .collect()
+                });
+                match parsed {
+                    Some(t) if !t.is_empty() => {
+                        for track in t {
+                            options.tablature.insert(track, on);
+                        }
+                    }
+                    _ => return crate::usage_error("--tab and --no-tab take track numbers from 1"),
+                }
+            }
             "--dark" => theme = Theme::DARK,
             "--no-dynamics" => options.dynamics = false,
             "--tool" => match it.next().and_then(|id| oxiguitar_tools::find(id)) {

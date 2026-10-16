@@ -13,12 +13,12 @@ The command line runs the same tools: `oxiguitar-cli tools` lists them and `oxig
 
 ## Infer Key Signatures
 
-Most tabs leave every bar in C major, Guitar Pro's default, whatever the music. This tool sets key signatures from the notes, with key changes where the music modulates. It is unavailable when the score already sets a key other than C.
+Most tabs leave every bar in C major, Guitar Pro's default, whatever the music, and some set keys that do not fit it. This tool sets key signatures from the notes, with key changes where the music modulates. It is always offered (Mateus, 16 Oct 2026), even when the score sets keys, in case they are wrong: the inferred keys then replace the score's, and the report says nothing changed when they already agree. Only a score without bars greys it out.
 
 1. For each bar, the music in each pitch class is counted across every pitched track, at written pitch, weighted by duration (a note counts for at most a half note; grace notes a sixteenth; tied and dead notes and drums not at all).
 2. For each key from six flats to five sharps, a bar costs the share of its music outside that key's scale. G flat major stands for F sharp major, as songs in E flat tuning are usually written.
 3. A best path through the song (Viterbi) picks one key per bar. Changing key costs as much as two and a half bars wholly out of key, one and a half where a section starts (a marker, a repeat, after a double bar), plus a fifth of a bar per step round the circle of fifths. A chromatic run therefore stays in the key, while a modulation that lasts changes it where it happens. Ties go to fewer accidentals.
-4. The keys are set only if they spare at least 2.5 % of the music its accidentals compared with C; chromatic riffs stay in C, and the report says so.
+4. The keys are used only if they spare at least 2.5 % of the music its accidentals compared with C; otherwise the music is written in C (chromatic riffs), and the report says so.
 
 The report names each key with its relative minor, such as "Key signatures set: G major or E minor (1♯) in bars 1–102, E♭ major or C minor (3♭) in bars 103–153."
 

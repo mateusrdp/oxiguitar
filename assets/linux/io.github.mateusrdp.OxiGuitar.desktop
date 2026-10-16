@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=OxiGuitar
+GenericName=Guitar Tablature Editor
+Comment=View, edit and play guitar tablature and scores
+Exec=oxiguitar %f
+Icon=io.github.mateusrdp.OxiGuitar
+Terminal=false
+Categories=AudioVideo;Audio;Music;
+Keywords=guitar;tab;tablature;score;notation;Guitar Pro;
+StartupWMClass=io.github.mateusrdp.OxiGuitar

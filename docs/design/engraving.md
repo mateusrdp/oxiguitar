@@ -6,7 +6,7 @@ The engraver shows what the file says and never second-guesses it: a tab that le
 
 ## Pipeline
 
-1. **Views** (`system.rs`). Each shown track contributes one view per staff: standard notation, tablature or both, as the file says (VIEW-1). Tracks with no strings get only standard notation; drum tracks get a drum staff.
+1. **Views** (`system.rs`). Each shown track contributes one view per staff: standard notation, tablature or both (VIEW-1; see "Clefs, tablature and keyboards" below for which). Tracks with no strings get only standard notation; drum tracks get a drum staff; a keyboard track becomes a grand staff.
 2. **Plans** (`plan.rs`, `pitch.rs`, `rhythm.rs`). Every bar of every view is planned once:
    - beats are grouped into columns by start time;
    - notes are spelt in the key (flats in flat keys, except the relative minor's leading tone), placed on staff steps and given the accidentals the bar needs;
@@ -51,6 +51,14 @@ The engraver shows what the file says and never second-guesses it: a tab that le
 
 Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bounding boxes, engraving defaults (VIEW-7). The output is a display list per page or sheet, so the screen, PNG and PDF show exactly the same thing.
 
+## Clefs, tablature and keyboards
+
+Decided with Mateus on 16 Oct 2026.
+
+- **Clefs.** Guitar Pro 6–8 files store the clef of every bar, and it is used as stored. Guitar Pro 3–5 files store none, so the reader picks it from the instrument as Guitar Pro does: basses, and any track tuned below G1, in the bass clef an octave down; guitars and other fretted instruments in the treble clef an octave down; everything else (keyboards, voices, winds, strings) in the treble clef at sounding pitch. This gives exactly the clefs Guitar Pro 7 wrote for the five corpus songs saved in both formats (checked by `oxiguitar-formats --test corpus`).
+- **Tablature** is shown by default only for fretted string instruments (`Instrument::is_fretted`: guitars, fretted basses, sitar, banjo), and only where the file shows it. Keyboards, voices, winds, bowed strings, synth basses and fretless bass get standard notation. The user can show or hide any track's tablature (`Options::tablature`; the app's track list; `render --tab N` / `--no-tab N`). A track whose tablature is hidden always shows standard notation.
+- **Keyboards** (`Instrument::is_keyboard`: pianos, electric pianos, harpsichord, clavinet, organs, accordions) with a single staff in standard notation are shown on a **grand staff**: the right hand on a treble staff, the left on a bass staff, joined by a brace, with bar lines through both. If their tablature is asked for, it goes under the grand staff with every note. `hands.rs` splits the notes by hand range, not at a fixed note: a chord one hand can span (an octave and a little more) goes to one hand, the one that played the voice's last chord unless it lies clearly on the other side of the split point; a wider chord is cut at the gap that best separates two hands. The split point starts at middle C, follows those gaps and drifts back, staying between F3 and G4. Rests left by the other hand merge into the fewest rests on their own beats; a hand with nothing in a bar gets one whole-bar rest. Chord names, beat text, dynamics and lyrics go on the top staff only.
+
 ## Layouts (VIEW-3)
 
 `Options::layout` picks one of four staff layouts; the app offers them under View → Layout.
@@ -91,3 +99,4 @@ These are the M1 engraving items still to do (see ROADMAP.md):
 - **Overlap pass, second round:** bend amounts of quick successive bends can touch, and dense chords can crowd ledger lines (VIEW-7). Tuplet numbers and articulations now reserve their room.
 - **Nested tuplets:** only the outermost tuplet of a note is marked (TAB-2, M4).
 - **Courtesy signatures:** key and time signatures at the end of a system before a change.
+- **Grand staff details:** voices are split one by one, so a part written as one voice with both hands gets each hand's stems from that voice's rule; cross-staff beams and clef changes within a staff are not drawn.
