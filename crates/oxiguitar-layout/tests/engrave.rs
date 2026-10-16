@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet, Item};
-use oxiguitar_layout::{Engraved, Layout, Options, Paper, engrave};
+use oxiguitar_layout::{Engraved, Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::{
     Bar, Beat, BeatKind, Duration, MasterBar, Note, NotePlace, NoteValue, Pitch, Score, Staff,
     TimeSignature, Track, Tuplet, Voice,
@@ -696,7 +696,13 @@ fn keyboards_get_a_grand_staff_and_tab_only_when_asked() {
     assert!(!g.contains(tab_clef), "no tablature for a piano by default");
 
     let mut asked = Options::default();
-    asked.tablature.insert(0, true);
+    asked.notation.insert(
+        0,
+        Notation {
+            standard: true,
+            tablature: true,
+        },
+    );
     let e = engrave(&score, &fonts, &meta, &asked);
     check("piano with tab", &e, &fonts);
     assert!(
@@ -714,10 +720,34 @@ fn keyboards_get_a_grand_staff_and_tab_only_when_asked() {
     let e = engrave(&score, &fonts, &meta, &Options::default());
     assert!(glyphs_on_first_page(&e).contains(tab_clef));
     let mut hidden = Options::default();
-    hidden.tablature.insert(0, false);
+    hidden.notation.insert(
+        0,
+        Notation {
+            standard: true,
+            tablature: false,
+        },
+    );
     let e = engrave(&score, &fonts, &meta, &hidden);
     assert!(
         !glyphs_on_first_page(&e).contains(tab_clef),
         "tab hidden when asked"
+    );
+    // Tab only: no staff clef, the tab with its rhythm.
+    let mut tab_only = Options::default();
+    tab_only.notation.insert(
+        0,
+        Notation {
+            standard: false,
+            tablature: true,
+        },
+    );
+    let g = glyphs_on_first_page(&engrave(&score, &fonts, &meta, &tab_only));
+    assert!(g.contains(tab_clef) && !g.contains('\u{E052}'), "tab only");
+    // A piano shown as tab only has no grand staff.
+    score.tracks[0].instrument.midi_program = 0;
+    let g = glyphs_on_first_page(&engrave(&score, &fonts, &meta, &tab_only));
+    assert!(
+        g.contains(tab_clef) && !g.contains(brace),
+        "piano as tab only"
     );
 }

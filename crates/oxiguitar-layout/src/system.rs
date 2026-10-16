@@ -59,13 +59,14 @@ impl View {
 
 /// The staves to show for the chosen tracks. Unknown track numbers are
 /// skipped; if none is left, the first track is shown. Tablature follows
-/// the user's choice for the track, if any, or [`crate::default_tablature`].
+/// the user's choice for the track, if any ([`crate::Notation`]), or else
+/// the file and [`crate::default_tablature`].
 /// A keyboard track with one staff in standard notation becomes a grand
 /// staff (Mateus, 16 Oct 2026).
 pub(crate) fn views(
     score: &Score,
     tracks: &[usize],
-    tablature: &std::collections::BTreeMap<usize, bool>,
+    notation: &std::collections::BTreeMap<usize, crate::Notation>,
 ) -> Vec<View> {
     let mut chosen: Vec<usize> = tracks
         .iter()
@@ -82,17 +83,21 @@ pub(crate) fn views(
         };
         let percussion = track.instrument.percussion;
         let fretted = track.instrument.is_fretted();
-        let choice = tablature.get(&t).copied();
+        let choice = notation.get(&t).copied();
         let grand = track.instrument.is_keyboard() && track.staves.len() == 1;
         for (s, staff) in track.staves.iter().enumerate() {
             let strings = staff.string_count();
             let can_tab = strings > 0 && !percussion;
-            let show_tab = can_tab
-                && match choice {
-                    Some(on) => on,
-                    None => fretted && staff.show_tablature,
-                };
-            let show_std = staff.show_standard || !show_tab;
+            let (show_std, show_tab) = match choice {
+                Some(n) => {
+                    let tab = n.tablature && can_tab;
+                    (n.standard || !tab, tab)
+                }
+                None => {
+                    let tab = can_tab && fretted && staff.show_tablature;
+                    (staff.show_standard || !tab, tab)
+                }
+            };
             let view = |show_std, show_tab, part| View {
                 track: t,
                 staff: s,

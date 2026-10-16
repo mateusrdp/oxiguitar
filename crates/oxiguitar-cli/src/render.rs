@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 use oxiguitar_display::{FontSet, Theme, smufl::Metadata};
-use oxiguitar_layout::{Layout, Options, Paper, engrave};
+use oxiguitar_layout::{Layout, Notation, Options, Paper, engrave};
 use oxiguitar_render::{Raster, View, to_pdf};
 
 pub(crate) fn run(args: &[String]) -> ExitCode {
@@ -66,20 +66,36 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
                 Some(w) if (100.0..=20000.0).contains(&w) => options.screen_width = w,
                 _ => return crate::usage_error("--width takes points from 100 to 20000"),
             },
-            "--tab" | "--no-tab" => {
-                let on = arg == "--tab";
-                let parsed: Option<Vec<usize>> = it.next().and_then(|list| {
+            "--notation" => {
+                // TRACK=std|tab|both, comma-separated: 2=tab,3=both
+                let parsed: Option<Vec<(usize, Notation)>> = it.next().and_then(|list| {
                     list.split(',')
-                        .map(|t| t.trim().parse::<usize>().ok()?.checked_sub(1))
+                        .map(|item| {
+                            let (t, n) = item.split_once('=')?;
+                            let track = t.trim().parse::<usize>().ok()?.checked_sub(1)?;
+                            let (standard, tablature) = match n.trim() {
+                                "std" => (true, false),
+                                "tab" => (false, true),
+                                "both" => (true, true),
+                                _ => return None,
+                            };
+                            Some((
+                                track,
+                                Notation {
+                                    standard,
+                                    tablature,
+                                },
+                            ))
+                        })
                         .collect()
                 });
                 match parsed {
-                    Some(t) if !t.is_empty() => {
-                        for track in t {
-                            options.tablature.insert(track, on);
-                        }
+                    Some(list) if !list.is_empty() => options.notation.extend(list),
+                    _ => {
+                        return crate::usage_error(
+                            "--notation takes TRACK=std|tab|both, such as 2=tab,3=both",
+                        );
                     }
-                    _ => return crate::usage_error("--tab and --no-tab take track numbers from 1"),
                 }
             }
             "--dark" => theme = Theme::DARK,

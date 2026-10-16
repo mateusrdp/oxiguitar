@@ -152,9 +152,45 @@ pub struct Options {
     pub header: bool,
     /// Show dynamics markings.
     pub dynamics: bool,
-    /// The user's choice to show or hide a track's tablature, by track
-    /// index. Tracks not listed follow [`default_tablature`].
-    pub tablature: BTreeMap<usize, bool>,
+    /// The user's choice of notation for a track, by track index. Tracks
+    /// not listed follow the file and [`default_tablature`]. A choice of
+    /// neither is shown as standard notation: hiding a track is done by
+    /// leaving it out of [`Options::tracks`].
+    pub notation: BTreeMap<usize, Notation>,
+}
+
+/// Which notations a track shows (VIEW-1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Notation {
+    /// Standard notation.
+    pub standard: bool,
+    /// Tablature (only for tracks with strings; drums never have any).
+    pub tablature: bool,
+}
+
+impl Notation {
+    /// Neither: the track is hidden.
+    pub const NONE: Notation = Notation {
+        standard: false,
+        tablature: false,
+    };
+
+    /// Whether anything is shown.
+    pub fn any(self) -> bool {
+        self.standard || self.tablature
+    }
+}
+
+/// The notation a track shows unless the user decides otherwise: tablature
+/// as [`default_tablature`] says, standard notation where the file shows it
+/// or where there is no tablature.
+pub fn default_notation(track: &Track) -> Notation {
+    let tablature = default_tablature(track);
+    let standard = !tablature || track.staves.iter().any(|s| s.show_standard);
+    Notation {
+        standard,
+        tablature,
+    }
 }
 
 /// Whether a track shows tablature unless the user decides otherwise: only
@@ -190,7 +226,7 @@ impl Default for Options {
             tracks: Vec::new(),
             header: true,
             dynamics: true,
-            tablature: BTreeMap::new(),
+            notation: BTreeMap::new(),
         }
     }
 }
@@ -210,7 +246,7 @@ pub struct Engraved {
 /// Never panics on a damaged score: bars that cannot be measured get a
 /// minimal width, notes outside the instrument are left out.
 pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Options) -> Engraved {
-    let views = system::views(score, &options.tracks, &options.tablature);
+    let views = system::views(score, &options.tracks, &options.notation);
     let layout = options.layout;
     let sheet_width = match layout {
         Layout::Vertical => options.screen_width,

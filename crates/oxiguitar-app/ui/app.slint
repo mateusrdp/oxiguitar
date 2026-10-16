@@ -20,9 +20,56 @@ export struct TrackRow {
     name: string,
     instrument: string,
     shown: bool,
-    // Tablature: shown, and whether the track has strings to tab at all.
-    tab: bool,
+    // The notation buttons: standard notation and tablature (both off when
+    // the track is hidden), and whether the track has strings to tab.
+    standard: bool,
+    tablature: bool,
     can-tab: bool,
+}
+
+// A notation button: a symbol drawn by our renderer and centred on its ink,
+// highlighted when on, like the palette buttons of the GUI spike.
+component NotationButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> on;
+    in property <string> tip;
+    callback clicked();
+
+    width: 28px;
+    height: 26px;
+    border-radius: 4px;
+    background: root.on ? Palette.accent-background
+        : touch.has-hover ? Palette.control-background.darker(0.15) : Palette.control-background;
+    border-width: focus.has-focus ? 2px : 1px;
+    border-color: focus.has-focus ? Palette.accent-background.brighter(0.4) : Palette.border;
+    accessible-role: button;
+    accessible-label: root.tip;
+    accessible-checked: root.on;
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    focus := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == " " || event.text == "\n") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+    }
+    Image {
+        source: root.icon;
+        width: 24px;
+        height: 24px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        colorize: root.on ? Palette.accent-foreground : Palette.control-foreground.transparentize(0.25);
+    }
+    Tooltip {
+        text: @markdown("\{root.tip}");
+    }
 }
 
 export struct ToolRow {
@@ -137,7 +184,10 @@ export component AppWindow inherits Window {
     callback zoom-moved(float);
     callback track-toggled(int);
     callback track-solo(int);
-    callback tab-toggled(int);
+    callback standard-clicked(int);
+    callback tablature-clicked(int);
+    in property <image> standard-icon;
+    in property <image> tablature-icon;
     callback multitrack-toggled();
     callback tool-picked(int);
     callback status-dismissed();
@@ -392,13 +442,19 @@ export component AppWindow inherits Window {
                                 vertical-alignment: center;
                                 color: Palette.foreground.transparentize(0.3);
                             }
-                            // Show this track's tablature. Only fretted
-                            // instruments start ticked; any track with
-                            // strings can be ticked (Mateus, 16 Oct 2026).
-                            if track.can-tab : CheckBox {
-                                text: "Tab";
-                                checked <=> track.tab;
-                                toggled => { root.tab-toggled(i); }
+                            // Notation: standard notation and tablature, in
+                            // any combination; both off hides the track.
+                            NotationButton {
+                                icon: root.standard-icon;
+                                on: track.standard;
+                                tip: "Standard notation";
+                                clicked => { root.standard-clicked(i); }
+                            }
+                            if track.can-tab : NotationButton {
+                                icon: root.tablature-icon;
+                                on: track.tablature;
+                                tip: "Tablature";
+                                clicked => { root.tablature-clicked(i); }
                             }
                             Rectangle { }
                         }
