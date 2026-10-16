@@ -244,7 +244,32 @@ fn public_fixtures_match_the_writer() {
                 path.display()
             )
         });
-        assert_eq!(on_disk, expected, "{} is out of date", path.display());
+        if ext == "gp" {
+            // Deflate output depends on the CPU's code path in zlib-rs (it
+            // differs on Windows), so compare what the archive holds.
+            assert_eq!(
+                zip_entries(&on_disk),
+                zip_entries(&expected),
+                "{} is out of date",
+                path.display()
+            );
+        } else {
+            assert_eq!(on_disk, expected, "{} is out of date", path.display());
+        }
         check_song(&read(&on_disk).unwrap().score, 7);
     }
+}
+
+/// Names and uncompressed contents of every file in a ZIP archive.
+fn zip_entries(data: &[u8]) -> Vec<(String, Vec<u8>)> {
+    use std::io::Read;
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(data)).unwrap();
+    (0..zip.len())
+        .map(|i| {
+            let mut f = zip.by_index(i).unwrap();
+            let mut bytes = Vec::new();
+            f.read_to_end(&mut bytes).unwrap();
+            (f.name().unwrap().into_owned(), bytes)
+        })
+        .collect()
 }
