@@ -8,7 +8,7 @@ How `oxiguitar-layout` turns a score into pages, and what it does not draw yet. 
 2. **Plans** (`plan.rs`, `pitch.rs`, `rhythm.rs`). Every bar of every view is planned once:
    - beats are grouped into columns by start time;
    - notes are spelt in the key (flats in flat keys, except the relative minor's leading tone), placed on staff steps and given the accidentals the bar needs;
-   - stems point by voice (first voice up, others down, when several voices have notes) or by the notes' distance from the middle line;
+   - stems follow the voice number (voices 1 and 3 up, 2 and 4 down) whenever a voice other than the first has notes in the bar, and always on drums; voice 1 alone points its stems away from the middle line (rule from Mateus's review, 16 Oct 2026);
    - beams group eighths and shorter within a beat (a dotted quarter in compound time);
    - the room each column needs on each side (noteheads, seconds, accidentals, dots, flags, fret numbers, chord names) is measured.
 
@@ -17,7 +17,8 @@ How `oxiguitar-layout` turns a score into pages, and what it does not draw yet. 
 4. **Systems** (`system.rs`). Bars fill a line at natural spacing. The system is then stretched to the full width, sharing the extra room by duration. The last system is stretched only if it is more than two thirds full. A single bar wider than the line is squeezed.
 5. **Drawing** (`engrave.rs`). Each system is drawn at the origin:
    - Marks above the staff go on lines of their own, bottom to top: volta brackets, chord names, beat text, tempo, sections. A line exists only when the system uses it, so marks cannot collide with each other or with the notes.
-   - Tablature sits under its standard staff. When standard notation is hidden, the tab shows rhythm below it (VIEW-2).
+   - Tablature always sits under its standard staff. When standard notation is hidden (the file says which notation each track shows), the tab shows rhythm below it (VIEW-2).
+   - With several tracks, each track's name stands left of its staves: the full name on the first system, the short name after, shortened with "…" past a fifth of the line.
 6. **Pages** (`page.rs`). The header (title, subtitle, artist, album, credits on the right, tuning and capo on the left, copyright at the foot) goes on page one (VIEW-6). Systems stack down the page, and a new page starts when the next system does not fit. If a system is taller than a page, the whole score is engraved again with a smaller staff.
 
 Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bounding boxes, engraving defaults (VIEW-7). The output is a display list per page, so the screen, PNG and PDF show exactly the same thing.
@@ -39,7 +40,7 @@ These are the M1 engraving items still to do (see ROADMAP.md):
 
 - **Effects:** TAB-1 effects: bends, slides, hammer-ons and pull-offs, palm mute, let ring, vibrato, harmonics, trills, tremolo picking, strokes. Also grace notes.
 - **Notation marks:** slurs, dynamics, articulations, ornaments, fermatas, ottavas (NOT-3), and lyrics.
-- **Score header and system starts:** chord diagrams in the header (VIEW-6), and track names at the start of systems.
+- **Score header:** chord diagrams in the header (VIEW-6).
 - **Other layouts:** Vertical, Horizontal and Parchment (VIEW-3).
 - **Overlap pass:** tuplet numbers under down-stem beams can touch the tab staff, and dense chords can crowd ledger lines (VIEW-7).
 - **Text fallback:** characters missing from Noto Sans (♯ ♭ in chord names, non-Latin scripts) should fall back to another font.

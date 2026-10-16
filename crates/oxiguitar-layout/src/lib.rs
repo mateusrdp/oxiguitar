@@ -86,7 +86,7 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
         let painter = draw::Painter { fonts, meta, sp };
         let width = (options.page_width - 2.0 * options.margin).max(10.0 * sp);
         let plans = system::plan_all(score, &views, &painter);
-        let systems = system::break_systems(score, &plans, &painter, width);
+        let systems = system::break_systems(score, &views, &plans, &painter, width);
         let drawn: Vec<engrave::DrawnSystem> = systems
             .iter()
             .map(|s| engrave::system(score, &views, &plans, s, &painter))
