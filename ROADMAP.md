@@ -83,7 +83,7 @@ Progress:
 - [x] PDF export of the shown tracks, A4 or Letter (16 Oct 2026)
 - [ ] Quality gates (see [docs/testing.md](docs/testing.md))
   - [x] Speed budget (16 Oct 2026): a generated 300-bar, 8-track score as long as a real Guitar Pro 7 file (16 MB of XML) opens to its first tiles in 0.18 s, or 0.23 s with every track shown; CI's "Speed budget" job holds release builds to one second. Reading GPIF is about twice as fast as before.
-  - [ ] Visual regression tests: 50 generated reference scores
+  - [x] Visual regression (16 Oct 2026): 50 generated reference scores in `fixtures/reference/`, each a Guitar Pro 7 file and its pictures, compared with a tolerance on every CI target
   - [ ] Fuzzing of every reader
 - [ ] User manual, release packages
 

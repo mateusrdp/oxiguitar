@@ -31,7 +31,7 @@
 //! - **Beat marks** start with `@` and apply to the next beat: `@c` and a
 //!   number names the track's chord diagram (`@c0`); `@t` and text writes
 //!   beat text, `_` for spaces (`@tlet_ring`); `@ppp` to `@fff` set the
-//!   dynamic; `@grace` makes the beat a grace note before the beat;
+//!   dynamic, which holds until the next one; `@grace` makes the beat a grace note before the beat;
 //!   `@trem8`, `@trem16`, `@trem32` tremolo picking; `@down` and `@up`
 //!   strums; `@slap`, `@pop`, `@tap`; `@fade` a fade-in; `@dive` a whammy-bar
 //!   dive.
@@ -482,6 +482,7 @@ pub fn parse(text: &str) -> Result<Vec<Vec<Beat>>, ParseError> {
     let mut bars: Vec<Vec<Beat>> = vec![Vec::new()];
     let mut dur = Dur::new(4);
     let mut marks = Beat::new(dur);
+    let mut dynamic = None;
     for token in text.split_whitespace() {
         if token == "|" {
             bars.push(Vec::new());
@@ -498,6 +499,12 @@ pub fn parse(text: &str) -> Result<Vec<Vec<Beat>>, ParseError> {
         let mut beat = marks.clone();
         beat.dur = dur;
         marks = Beat::new(dur);
+        // A dynamic holds until the next one, as Guitar Pro writes it on
+        // every beat.
+        match beat.dynamic {
+            Some(_) => dynamic = beat.dynamic,
+            None => beat.dynamic = dynamic,
+        }
         if token != "r" {
             for part in token.split('+') {
                 beat.notes.push(note(part)?);
@@ -732,6 +739,7 @@ mod tests {
         assert_eq!(b[0].dynamic, Some("FF"));
         assert_eq!(b[0].notes[1].fx, vec![Fx::HammerPull, Fx::PalmMute]);
         assert_eq!(b[1].chord, None, "marks apply to one beat");
+        assert_eq!(b[1].dynamic, Some("FF"), "but a dynamic holds");
         assert!(b[1].notes[0].tied);
         assert_eq!(b[1].notes[0].at, At::Fret(3, 12));
         assert_eq!(b[2].notes[0].at, At::Pitch(46));

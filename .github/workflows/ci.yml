@@ -133,6 +133,14 @@ jobs:
             echo "::error title=cargo test (${{ matrix.name }})::$(printf '%s' "$report" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
           fi
           exit "$status"
+      # A visual-regression failure leaves what was drawn and a picture of
+      # the differences here (crates/oxiguitar-testgen/tests/visual.rs).
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diff ${{ matrix.name }}
+          path: target/tmp/visual-diff/
+          if-no-files-found: ignore
 
   # M1's speed budget: a 300-bar, 8-track file opens in under a second, from
   # reading the file to the first tiles (crates/oxiguitar-app/src/speed.rs).

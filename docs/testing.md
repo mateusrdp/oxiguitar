@@ -26,3 +26,25 @@ cargo test --release -p oxiguitar-app speed -- --nocapture
 CI's "Speed budget" job runs it on Linux x86_64 on every pull request. Its times show as a notice on the run.
 
 Times on the development machine (2 cores, 16 October 2026): 0.18 s with one track, 0.23 s with all eight; reading the file is most of it. Before this gate the XML tree made several allocations per element, and `oxiguitar-cli info` took 0.40 s on the same file; it now takes 0.18 s (Seek and Destroy: 0.26 s, now 0.11 s).
+
+## Visual regression
+
+M1 asks for visual regression tests over 50 reference scores, generated and kept in the repository. `crates/oxiguitar-testgen/tests/visual.rs` holds it:
+
+- **The references** are defined in `crates/oxiguitar-testgen/src/references.rs`: fifty small scores, each about one part of engraving (rhythm, tuplets, keys and times, repeats, chord names, lyrics, dynamics, every effect, bass, seven strings, drums, piano, several tracks, the four layouts, Letter paper, the dark page, a system that must shrink to fit), with the options to show each. `fixtures/reference/README.md` lists them.
+- **Kept in the repository** (`fixtures/reference/`): each as a Guitar Pro 7 file and its pictures at 1.5 pixels per point, `NAME-1.png` and on for each page. 1.4 MB in all, grey PNGs where the page is grey.
+- **The check** first makes sure the stored file is what the generator makes, then reads it through the real reader (no reader warnings allowed), engraves it, draws it and compares the pictures. A pixel counts as changed when a channel moved by more than 40 of 255, and a picture fails when more than 4 pixels changed or its size changed: anti-aliasing noise passes, a missing staccato dot does not. A second test makes sure a picture shifted by one pixel, or with a dot painted out, fails.
+- **On failure** the test writes what it drew and a picture of the differences (changes in red, the rest faded) to `target/tmp/visual-diff/`. In CI that folder is uploaded as an artifact named "visual-diff" and the platform.
+
+It runs in every `cargo test`, on all six CI targets.
+
+After an intended change to engraving (or to the references), bless the new pictures and look at every one that changed before committing:
+
+```sh
+OXIGUITAR_BLESS=1 cargo test -p oxiguitar-testgen --test visual -- --nocapture
+git status fixtures/reference
+```
+
+Blessing writes every picture that differs at all, the stored scores, the index, and removes files that are no longer references. To add a reference, add it to `references()` (the test there keeps the count at fifty and every bar full) and bless.
+
+The references show what the engraver draws today, including what it does not draw yet: the segno, coda and D.S. directions in `sections-and-directions` are in the file but not on the page, and `dynamics` shows ppp and pp crowding each other (see `docs/design/engraving.md`). When those are fixed, the pictures change and are blessed again.
