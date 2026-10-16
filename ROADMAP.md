@@ -88,7 +88,7 @@ Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5
 
 ## M2 — Editor (v0.5)
 
-- M2a: note entry on tab and staff, the full core palette, 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition (EDIT-1 to EDIT-9); writer for .gp, the default save format.
+- M2a: note entry on tab and staff, the full core palette, 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition, tuplets of any grouping with a triplet shortcut and "Other…" (EDIT-1 to EDIT-10); writer for .gp, the default save format.
 - M2b: writer for .gp5, with loss warnings (FMT-3).
 
 Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; round-trip tests pass for every writable format; files we write open correctly in Guitar Pro 8; transposition works chromatically and diatonically.

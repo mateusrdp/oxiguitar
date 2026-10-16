@@ -1156,13 +1156,7 @@ impl Ctx<'_> {
                     .iter()
                     .all(|&m| beats.get(m).is_some_and(|x| x.group == g))
         };
-        let digits: Vec<G> = t
-            .notes
-            .to_string()
-            .chars()
-            .filter_map(|c| c.to_digit(10))
-            .map(glyphs::tuplet_digit)
-            .collect();
+        let digits = tuplet_label(t);
         let w: f32 = digits.iter().map(|g| p.width(*g)).sum();
         let (above, below) = digits.first().map_or((sp, 0.0), |g| p.height(*g));
         let cx = (xa + xb) / 2.0;
@@ -1361,13 +1355,7 @@ impl Ctx<'_> {
             ) else {
                 continue;
             };
-            let digits: Vec<G> = tuplet
-                .notes
-                .to_string()
-                .chars()
-                .filter_map(|c| c.to_digit(10))
-                .map(glyphs::tuplet_digit)
-                .collect();
+            let digits = tuplet_label(tuplet);
             let w: f32 = digits.iter().map(|g| p.width(*g)).sum();
             let (above, below) = digits.first().map_or((sp, 0.0), |g| p.height(*g));
             let base = if up {
@@ -1640,6 +1628,38 @@ fn fit_text(p: &Painter<'_>, text: &str, size: f32, room: f32) -> String {
     String::new()
 }
 
+/// The glyphs of a tuplet's mark: its number of notes ("3") when it takes
+/// the usual time, the full ratio ("5:3") otherwise, so any grouping reads
+/// unambiguously.
+fn tuplet_label(t: Tuplet) -> Vec<G> {
+    let digits = |n: u8| -> Vec<G> {
+        n.to_string()
+            .chars()
+            .filter_map(|c| c.to_digit(10))
+            .map(glyphs::tuplet_digit)
+            .collect()
+    };
+    let mut out = digits(t.notes);
+    if !usual_tuplet(t) {
+        out.push(glyphs::TUPLET_COLON);
+        out.extend(digits(t.in_time_of));
+    }
+    out
+}
+
+/// Whether a tuplet takes the time readers assume from its number alone:
+/// the power of two just below it (3:2, 5:4, 6:4, 7:4, 9:8 … 15:8), or 3
+/// for duplets and quadruplets (2:3, 4:3).
+fn usual_tuplet(t: Tuplet) -> bool {
+    let n = u32::from(t.notes);
+    let m = u32::from(t.in_time_of);
+    match n {
+        0 | 1 => true,
+        2 | 4 => m == 3,
+        _ => m.is_power_of_two() && m < n && n < 2 * m,
+    }
+}
+
 /// Consecutive beats that form one tuplet: they share the ratio and add up
 /// to its number of notes of the shortest value among them.
 fn tuplet_groups(beats: &[BeatInfo]) -> Vec<(std::ops::Range<usize>, Tuplet)> {
@@ -1744,6 +1764,30 @@ fn tempo_before(score: &Score, index: usize) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tuplets_show_a_ratio_only_when_unusual() {
+        let t = |notes, in_time_of| Tuplet { notes, in_time_of };
+        for usual in [
+            t(3, 2),
+            t(5, 4),
+            t(6, 4),
+            t(7, 4),
+            t(9, 8),
+            t(13, 8),
+            t(2, 3),
+            t(4, 3),
+        ] {
+            assert!(usual_tuplet(usual), "{usual:?}");
+            assert_eq!(tuplet_label(usual).len(), usual.notes.to_string().len());
+        }
+        for unusual in [t(5, 3), t(3, 4), t(6, 8), t(7, 6), t(4, 2), t(11, 4)] {
+            assert!(!usual_tuplet(unusual), "{unusual:?}");
+        }
+        let label = tuplet_label(t(10, 7));
+        assert_eq!(label.len(), 4); // 1 0 : 7
+        assert_eq!(label.get(2), Some(&glyphs::TUPLET_COLON));
+    }
 
     #[test]
     fn dotted_lengths() {

@@ -32,6 +32,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - `oxiguitar-tools` and the Tools menu's first tool, **Infer Key Signatures**: for scores that leave every bar in C major, as most tabs do, it sets key signatures from the notes, with key changes where the music modulates, and leaves chromatic music in C. It runs only when the user asks; the engraver shows what the file says. Every tool has the same small shape, so plugins can add tools in M5. `oxiguitar-cli tools` lists the tools and `render --tool ID` applies one.
 - `--no-dynamics` hides dynamics markings (`Options::dynamics` in `oxiguitar-layout`).
 - Characters the text font lacks, such as ♯ and ♭ in chord names, come from the music font.
+- Tuplets that do not take the usual time are marked with their ratio, such as 5:3; the usual ones keep their single number.
 - Tempo marks are shown only where the tempo changes, and never on top of each other.
 - In the score header, the tuning goes under the credits when the two would meet.
 - Track names at the start of each system when several tracks are shown: full names on the first system, short names after, as in Guitar Pro's multitrack view.
