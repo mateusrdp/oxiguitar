@@ -17,9 +17,11 @@ use oxiguitar_model::{BeatKind, Clef, NoteValue, Ratio, Score, Tuplet};
 use crate::draw::{G, Painter, accidental_glyph, glyphs};
 use crate::grid::BarGrid;
 use crate::pitch::key_signature_steps;
-use crate::plan::{BarPlan, BeatInfo, chord_name_size, notehead, rest_glyph};
+use crate::plan::{BarPlan, BeatInfo, chord_name_size, notehead, rest_glyph, voice_stems_up};
 use crate::rhythm::beam_count;
-use crate::system::{Plans, SystemSpec, TAB_GAP, View, bar_prefix, bar_suffix};
+use crate::system::{
+    Plans, SystemSpec, TAB_GAP, View, bar_prefix, bar_suffix, track_name_size, track_names,
+};
 
 /// Length of rhythm stems below a tab staff, in staff spaces from its
 /// bottom line.
@@ -216,15 +218,15 @@ pub(crate) fn system(
             view: v,
             tg,
         };
-        ctx.staff_lines(&mut list, right);
-        ctx.clefs_and_key(&mut list, clef, fifths);
+        ctx.staff_lines(&mut list, spec.indent, right);
+        ctx.clefs_and_key(&mut list, spec.indent, clef, fifths);
         if vi == 0 && spec.index > 0 {
             let number = (spec.first + 1).to_string();
             p.text(
                 &mut list,
                 &number,
                 1.6 * sp,
-                0.0,
+                spec.indent,
                 band.top - 2.0 * sp,
                 Paint::Muted,
             );
@@ -254,7 +256,28 @@ pub(crate) fn system(
     if let (Some(first), Some(last)) = (bands.first(), bands.last())
         && (bands.len() > 1 || first.std_top.is_some() && first.tab_top.is_some())
     {
-        p.thin_bar(&mut list, 0.0, first.top, last.bottom);
+        p.thin_bar(&mut list, spec.indent, first.top, last.bottom);
+    }
+    // Track names, right-aligned in the indent, centred on each track's
+    // staves.
+    let size = track_name_size(p);
+    let room = spec.indent - sp;
+    for (track, name) in track_names(score, views, spec.index == 0) {
+        let mine: Vec<&Band> = views
+            .iter()
+            .zip(&bands)
+            .filter(|(v, _)| v.track == track)
+            .map(|(_, b)| b)
+            .collect();
+        let (Some(first), Some(last)) = (mine.first(), mine.last()) else {
+            continue;
+        };
+        if name.is_empty() || room <= 0.0 {
+            continue;
+        }
+        let label = fit_text(p, &name, size, room);
+        let y = (first.top + last.bottom) / 2.0 + 0.35 * size;
+        p.text_right(&mut list, &label, size, room, y, Paint::Ink);
     }
     DrawnSystem { list, height }
 }
@@ -293,25 +316,25 @@ impl Ctx<'_> {
         v
     }
 
-    fn staff_lines(&self, list: &mut DisplayList, right: f32) {
+    fn staff_lines(&self, list: &mut DisplayList, left: f32, right: f32) {
         let sp = self.sp();
         let t = self.line_t();
         if let Some(top) = self.band.std_top {
             for i in 0..5 {
-                self.p.hline(list, 0.0, right, top + i as f32 * sp, t);
+                self.p.hline(list, left, right, top + i as f32 * sp, t);
             }
         }
         if let Some(top) = self.band.tab_top {
             for i in 0..self.view.strings {
-                self.p.hline(list, 0.0, right, top + i as f32 * self.tg, t);
+                self.p.hline(list, left, right, top + i as f32 * self.tg, t);
             }
         }
     }
 
-    fn clefs_and_key(&self, list: &mut DisplayList, clef: Clef, fifths: i8) {
+    fn clefs_and_key(&self, list: &mut DisplayList, left: f32, clef: Clef, fifths: i8) {
         let p = self.p;
         let sp = self.sp();
-        let x = 0.6 * sp;
+        let x = left + 0.6 * sp;
         if let Some(top) = self.band.std_top {
             let (g, step) = clef_glyph(clef);
             p.glyph(list, g, x, step_y(top, sp, step), Paint::Ink);
@@ -541,7 +564,7 @@ impl Ctx<'_> {
                         let g = rest_glyph(b.value);
                         let mut step = if b.value <= NoteValue::Whole { 6 } else { 4 };
                         if multi {
-                            step += if filled.first() == Some(&vi) { 4 } else { -4 };
+                            step += if voice_stems_up(vi) { 4 } else { -4 };
                         }
                         let w = p.width(g);
                         p.glyph(list, g, cx - w / 2.0, y(step), Paint::Ink);
@@ -1197,6 +1220,22 @@ struct Stem {
     tip: f32,
     far: f32,
     up: bool,
+}
+
+/// `text`, shortened with an ellipsis if it is wider than `room` points.
+fn fit_text(p: &Painter<'_>, text: &str, size: f32, room: f32) -> String {
+    if p.text_width(text, size) <= room {
+        return text.to_owned();
+    }
+    let mut chars: Vec<char> = text.chars().collect();
+    while !chars.is_empty() {
+        chars.pop();
+        let candidate: String = chars.iter().collect::<String>().trim_end().to_owned() + "…";
+        if p.text_width(&candidate, size) <= room {
+            return candidate;
+        }
+    }
+    String::new()
 }
 
 /// Consecutive beats that form one tuplet: they share the ratio and add up

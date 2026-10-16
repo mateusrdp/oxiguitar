@@ -106,10 +106,60 @@ pub(crate) struct SystemSpec {
     /// First bar and one past the last.
     pub(crate) first: usize,
     pub(crate) end: usize,
-    /// Width of the clef and key signature at the start.
+    /// Room on the left for track names (0 when none are shown).
+    pub(crate) indent: f32,
+    /// Where the bars begin: the indent, then the clef and key signature.
     pub(crate) prefix: f32,
     /// Extra room given to each bar to fill the line.
     pub(crate) extra: Vec<f32>,
+}
+
+/// The track names shown at the start of a system, one per shown track in
+/// order, when more than one track is shown: full names on the first
+/// system, short names after (none if a track has no short name).
+pub(crate) fn track_names(
+    score: &Score,
+    views: &[View],
+    first_system: bool,
+) -> Vec<(usize, String)> {
+    let mut tracks: Vec<usize> = views.iter().map(|v| v.track).collect();
+    tracks.dedup();
+    if tracks.len() < 2 {
+        return Vec::new();
+    }
+    tracks
+        .into_iter()
+        .filter_map(|t| {
+            let track = score.tracks.get(t)?;
+            let name = if first_system {
+                &track.name
+            } else {
+                &track.short_name
+            };
+            Some((t, name.trim().to_owned()))
+        })
+        .collect()
+}
+
+/// The size of track names, in points.
+pub(crate) fn track_name_size(p: &Painter<'_>) -> f32 {
+    1.9 * p.sp
+}
+
+/// Room for track names left of the staves: the widest name, at most a
+/// fifth of the line, plus a gap. Names longer than that are shortened
+/// when drawn.
+pub(crate) fn names_indent(names: &[(usize, String)], p: &Painter<'_>, line: f32) -> f32 {
+    let size = track_name_size(p);
+    let widest = names
+        .iter()
+        .map(|(_, n)| p.text_width(n, size))
+        .fold(0.0, f32::max);
+    if widest <= 0.0 {
+        0.0
+    } else {
+        widest.min(line / 5.0) + 1.0 * p.sp
+    }
 }
 
 /// Width of the clef and key signature that open a system.
@@ -169,6 +219,7 @@ pub(crate) fn bar_suffix(score: &Score, p: &Painter<'_>, i: usize) -> f32 {
 /// stretched only if it is already more than two thirds full.
 pub(crate) fn break_systems(
     score: &Score,
+    views: &[View],
     plans: &Plans,
     p: &Painter<'_>,
     width: f32,
@@ -181,7 +232,8 @@ pub(crate) fn break_systems(
             .master_bars
             .get(first)
             .map_or(0, |mb| mb.key_signature.fifths);
-        let prefix = system_prefix(p, fifths);
+        let indent = names_indent(&track_names(score, views, systems.is_empty()), p, width);
+        let prefix = indent + system_prefix(p, fifths);
         let mut used = prefix;
         let mut end = first;
         while end < n {
@@ -211,6 +263,7 @@ pub(crate) fn break_systems(
             index: systems.len(),
             first,
             end,
+            indent,
             prefix,
             extra,
         });

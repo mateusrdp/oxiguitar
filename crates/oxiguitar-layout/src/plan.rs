@@ -172,15 +172,16 @@ impl Planner<'_> {
             .filter(|(_, v)| v.beats.iter().any(|b| b.kind == BeatKind::Notes))
             .map(|(i, _)| i)
             .collect();
-        let multi = active.len() > 1;
+        // Stems follow the voice number (voices 1 and 3 up, 2 and 4 down)
+        // whenever a voice other than the first has notes in the bar, and
+        // always on drums. Voice 1 alone points its stems by where its notes
+        // sit.
+        let by_voice = active.iter().any(|&v| v > 0) || self.track.instrument.percussion;
         let mut groups = Vec::new();
         for (vi, voice) in bar.voices.iter().enumerate() {
             let g = rhythm::beam_groups(voice, mb.time_signature);
             if let Some(beats) = voices.get_mut(vi) {
-                // Several voices: the first up, the others down. Drums: the
-                // same even with one voice, as drum parts are written.
-                let forced = (multi || self.track.instrument.percussion)
-                    .then(|| active.first().is_none_or(|&a| a == vi));
+                let forced = by_voice.then_some(voice_stems_up(vi));
                 for (gi, members) in g.iter().enumerate() {
                     let up = forced
                         .unwrap_or_else(|| stem_up(members.iter().filter_map(|&i| beats.get(i))));
@@ -365,6 +366,12 @@ pub(crate) fn beat_at(voices: &[Vec<BeatInfo>], r: BeatRef) -> Option<&BeatInfo>
     voices.get(r.voice)?.get(r.beat)
 }
 
+/// The stem direction a voice takes when stems follow the voice number:
+/// up for voices 1 and 3 (indices 0 and 2), down for voices 2 and 4.
+pub(crate) fn voice_stems_up(voice_index: usize) -> bool {
+    voice_index.is_multiple_of(2)
+}
+
 /// Stems point away from the notes' side of the middle line; down when the
 /// note furthest from the middle is above it.
 fn stem_up<'b>(beats: impl Iterator<Item = &'b BeatInfo>) -> bool {
@@ -491,6 +498,86 @@ mod tests {
             dead: false,
             tab: None,
         }
+    }
+
+    #[test]
+    fn odd_voices_up_even_voices_down() {
+        let up: Vec<bool> = (0..4).map(voice_stems_up).collect();
+        assert_eq!(up, vec![true, false, true, false]);
+    }
+
+    /// Plans one bar whose voices hold one quarter note each (or nothing),
+    /// and returns each voice's stem direction.
+    fn stems(voices: [Option<u8>; 4]) -> Vec<Option<bool>> {
+        use oxiguitar_display::FontSet;
+        use oxiguitar_display::smufl::Metadata;
+        use oxiguitar_model::{Beat, Duration, Voice};
+        let fonts = FontSet::bundled();
+        let meta = Metadata::bravura().unwrap_or_else(|e| panic!("{e}"));
+        let p = Painter {
+            fonts: &fonts,
+            meta: &meta,
+            sp: 5.0,
+        };
+        let staff = Staff {
+            tuning: Staff::standard_guitar_tuning(),
+            ..Staff::default()
+        };
+        let track = Track::default();
+        let planner = Planner {
+            p: &p,
+            track: &track,
+            staff: &staff,
+            tab_gap: 7.5,
+            show_std: true,
+            show_tab: true,
+        };
+        let bar = Bar {
+            voices: voices
+                .iter()
+                .map(|fret| Voice {
+                    beats: fret
+                        .map(|f| Beat {
+                            notes: vec![Note::fretted(3, f)],
+                            duration: Duration::new(NoteValue::Whole),
+                            ..Beat::default()
+                        })
+                        .into_iter()
+                        .collect(),
+                })
+                .collect(),
+            ..Bar::default()
+        };
+        let plan = planner.bar(&bar, &MasterBar::default());
+        plan.voices
+            .iter()
+            .map(|v| v.first().map(|b| b.up))
+            .collect()
+    }
+
+    #[test]
+    fn stems_follow_the_voice_number() {
+        // G string, fret 12: written G5, above the middle line, so a lone
+        // first voice points its stem down by itself.
+        let high = Some(12);
+        assert_eq!(
+            stems([high, None, None, None]),
+            vec![Some(false), None, None, None]
+        );
+        // Voices 1 and 3: both up, wherever the notes are.
+        assert_eq!(
+            stems([high, None, high, None]),
+            vec![Some(true), None, Some(true), None]
+        );
+        // Voice 2 alone in the bar: still down; with voice 4: both down.
+        assert_eq!(
+            stems([None, Some(0), None, None]),
+            vec![None, Some(false), None, None]
+        );
+        assert_eq!(
+            stems([high, Some(0), high, Some(0)]),
+            vec![Some(true), Some(false), Some(true), Some(false)]
+        );
     }
 
     #[test]

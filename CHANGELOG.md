@@ -19,6 +19,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - Engraving tests: public fixtures, damaged scores, a 300-bar 8-track score (engraved in well under half a second), and every Guitar Pro file of the private corpus with all its tracks, checking that everything lands on the page and every glyph exists in the fonts (`cargo test --release -p oxiguitar-layout --test engrave`).
 - `docs/design/engraving.md`: how the engraver works, and what it does not draw yet.
 - CI shows failing tests as an annotation on the pull request.
+- Track names at the start of each system when several tracks are shown: full names on the first system, short names after, as in Guitar Pro's multitrack view.
 - Cargo workspace, licence, contributor guide, credits, roadmap and architecture notes.
 - CI on Windows, macOS and Linux (x86_64 and ARM64): formatting, lint, tests, minimum Rust version, licence and advisory checks, sign-off check and a no-network test.
 - Test builds of `oxiguitar-cli` for every target on each push to `develop`.
@@ -38,4 +39,5 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 ### Changed
 
+- Stems follow the voice number, as Mateus asked after the first review: voices 1 and 3 up, voices 2 and 4 down, whenever a voice other than the first has notes in the bar (before, the first voice with notes went up and all others down, so voice 3 pointed down and a lone voice 2 pointed up). Drums always follow it; voice 1 alone still points its stems by where its notes sit. Rests of several voices move up or down by the same rule.
 - Drum notes from Guitar Pro 3–5 files are kept as pitches (the General MIDI drum) rather than as string and fret, as the score model intends for instruments without strings.
