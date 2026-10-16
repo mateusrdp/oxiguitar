@@ -259,6 +259,7 @@ version = "0.0.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-formats",
+ "oxiguitar-layout",
  "oxiguitar-model",
  "oxiguitar-render",
 ]
@@ -279,6 +280,15 @@ dependencies = [
  "oxiguitar-model",
  "quick-xml",
  "zip",
+]
+
+[[package]]
+name = "oxiguitar-layout"
+version = "0.0.0"
+dependencies = [
+ "oxiguitar-display",
+ "oxiguitar-formats",
+ "oxiguitar-model",
 ]
 
 [[package]]

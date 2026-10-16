@@ -71,7 +71,11 @@ Progress:
 
 - [x] Guitar Pro 6 (.gpx) and 7/8 (.gp) readers, with import logs and public fixtures (16 Oct 2026). Every GPX and GP file in the corpus opens; alphaTab reads the same notes from each, bar for bar; six songs saved in two formats agree (`--test corpus`).
 - [ ] Engraving into a display list (`oxiguitar-layout`): standard notation, tablature, rhythm on tab, effects
+  - [x] First engraving (16 Oct 2026): notes, rests, chords, accidentals, beams, flags, dots, ties, tuplets, signatures and key changes, repeats, voltas, sections, tempo, chord names, text; tab sharing columns with the staff; rhythm on tab-only tracks; drum staff. `oxiguitar-cli render` writes PNG and PDF. Every Guitar Pro file in the corpus engraves with all its tracks.
+  - [ ] Effects (TAB-1: bends, slides, hammer-ons and pull-offs, palm mute, let ring, vibrato, harmonics, …), grace notes, lyrics, dynamics and articulations (NOT-3), slurs, chord diagrams in the header, overlap checks (VIEW-7)
 - [ ] Page, vertical, horizontal and parchment layouts; multi-track; score header
+  - [x] Page layout, multi-track alignment, score header (16 Oct 2026)
+  - [ ] Vertical, horizontal and parchment layouts; track names at the start of systems
 - [ ] `oxiguitar-app` window (Slint) following docs/design/ui.md
 - [ ] PDF export
 - [ ] MuseScore, MusicXML and ABC readers; tab derivation

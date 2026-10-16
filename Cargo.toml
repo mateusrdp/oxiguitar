@@ -19,6 +19,7 @@ publish = false
 oxiguitar-model = { path = "crates/oxiguitar-model" }
 oxiguitar-formats = { path = "crates/oxiguitar-formats" }
 oxiguitar-display = { path = "crates/oxiguitar-display" }
+oxiguitar-layout = { path = "crates/oxiguitar-layout" }
 oxiguitar-render = { path = "crates/oxiguitar-render" }
 # Fonts: skrifa reads outlines and metrics; keep it on the version krilla uses.
 skrifa = "0.42"

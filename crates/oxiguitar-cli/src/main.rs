@@ -5,6 +5,7 @@
 
 mod info;
 mod manifest;
+mod render;
 mod sha256;
 mod specimen;
 
@@ -21,6 +22,12 @@ Commands:
                              contents rather than its extension
   manifest <dir>...          Print a TOML manifest (name, format, size,
                              SHA-256) of every file in the folders
+  render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
+         [--tracks 1,2|all] [--staff-space PT] [--quiet]
+                             Engrave a score: PNG pages PREFIX-1.png, … (N
+                             pixels per point, default 2) and/or a PDF.
+                             --tracks picks tracks (default: the first),
+                             --quiet only reports errors
   specimen [--png FILE] [--pdf FILE] [--scale N] [--dark]
                              Draw the render spike's test page into a PNG
                              (N pixels per point, default 2) and/or a PDF
@@ -36,6 +43,7 @@ fn main() -> ExitCode {
         Some("info") => info::run(rest),
         Some("detect") => info::detect(rest),
         Some("manifest") => manifest::run(rest),
+        Some("render") => render::run(rest),
         Some("specimen") => specimen::run(rest),
         Some("version" | "--version" | "-V") => {
             println!("oxiguitar-cli {}", env!("CARGO_PKG_VERSION"));

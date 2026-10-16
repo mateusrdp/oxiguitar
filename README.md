@@ -50,12 +50,13 @@ sudo apt install libfontconfig1-dev libxkbcommon-dev libwayland-dev
 
 Audio, from milestone M3, adds `libasound2-dev`.
 
-Try the command-line tool, which can already read Guitar Pro 3, 4 and 5 files and draw a test page of notation and tablature:
+Try the command-line tool, which can already read Guitar Pro 3 to 8 files (.gp3, .gp4, .gp5, .gpx, .gp) and engrave them into PNG pages and a PDF:
 
 ```sh
-cargo run --release -p oxiguitar-cli -- info fixtures/gp/oxiguitar-test-song.gp5
+cargo run --release -p oxiguitar-cli -- info fixtures/gp/oxiguitar-test-song.gp
 cargo run --release -p oxiguitar-cli -- info --bars path/to/your/song.gp5
-cargo run --release -p oxiguitar-cli -- specimen --png page.png --pdf page.pdf
+cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --png page --pdf song.pdf
+cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --tracks all --dark --pdf song-dark.pdf
 ```
 
 ## Testers wanted
