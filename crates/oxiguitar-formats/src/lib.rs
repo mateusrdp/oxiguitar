@@ -53,7 +53,9 @@ pub struct Imported {
 /// Recognises the format of `data` from its contents and reads it.
 ///
 /// Reads Guitar Pro 3, 4 and 5 (binary), Guitar Pro 6 (.gpx) and Guitar Pro
-/// 7 and 8 (.gp). Other recognised formats give
+/// 7 and 8 (.gp). MuseScore, MusicXML, ABC and MIDI files give
+/// [`ReadErrorKind::NeedsPlugin`]: the core reads Guitar Pro only, and format
+/// plugins will read the rest. Guitar Pro 1 and 2 give
 /// [`ReadErrorKind::Unsupported`].
 pub fn read(data: &[u8]) -> Result<Imported, ReadError> {
     let format = detect(data).ok_or_else(|| ReadError::new(ReadErrorKind::UnknownFormat, None))?;
@@ -91,6 +93,15 @@ pub fn read(data: &[u8]) -> Result<Imported, ReadError> {
                 trailing_bytes: 0,
             })
         }
+        Format::MuseScoreCompressed
+        | Format::MuseScoreXml
+        | Format::MusicXmlCompressed
+        | Format::MusicXml
+        | Format::Abc
+        | Format::Midi => Err(ReadError::new(
+            ReadErrorKind::NeedsPlugin(format.describe()),
+            None,
+        )),
         other => Err(ReadError::new(
             ReadErrorKind::Unsupported(format!("reading {}", other.describe())),
             None,

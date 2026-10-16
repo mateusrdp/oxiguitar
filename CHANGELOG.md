@@ -39,6 +39,8 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 ### Changed
 
+- Plan (Mateus, 16 Oct 2026): the core reads and writes Guitar Pro formats only. MuseScore, MusicXML, ABC and MIDI files, and tab derivation for staves without tablature, become plugins after the plugin system (M5). M1's "98 % of the corpus opens" counts Guitar Pro files only. Visual regression uses 50 generated reference scores kept in the repository. ROADMAP and README follow. Opening one of those files now says that a format plugin will open it, instead of "not supported yet".
+- Voice 1's stems point up even when it is the only voice in the bar (Mateus, 16 Oct 2026). Stems on the staff now always follow the voice number.
 - Stems follow the voice number, as Mateus asked after the first review: voices 1 and 3 up, voices 2 and 4 down, whenever a voice other than the first has notes in the bar (before, the first voice with notes went up and all others down, so voice 3 pointed down and a lone voice 2 pointed up). Drums always follow it; voice 1 alone still points its stems by where its notes sit. Rests of several voices move up or down by the same rule.
 - Rhythm on tablature (tab-only tracks) shows every voice with the same rule: voices 1 and 3 with stems up above the tab, voices 2 and 4 with stems down below it. Before, only voice 1 was drawn, with stems down. Rests on tab move out of the staff into each voice's rhythm area, so they no longer cover fret numbers.
 - Chord names stay over their beat. Instead of pushing a name sideways when it would touch the next one, the music opens up to make room. On tab-only tracks the chord names sit above the upward stems.

@@ -4,7 +4,7 @@
 
 **OxiGuitar** is a free, open-source guitar tablature and score viewer, editor and player for Windows, macOS and Linux, written entirely in Rust.
 
-It opens Guitar Pro (.gp, .gpx, .gp5), MuseScore (.mscz), MusicXML, ABC and MIDI files, shows them as standard notation and tablature, lets you edit them and plays them back. Its layout follows Guitar Pro 8 closely, so it feels familiar; every icon and piece of artwork is our own.
+It opens Guitar Pro files (.gp, .gpx, .gp5, and the older .gp3 and .gp4), shows them as standard notation and tablature, lets you edit them and plays them back. MuseScore, MusicXML, ABC and MIDI files are planned as plugins once the plugin system exists. Its layout follows Guitar Pro 8 closely, so it feels familiar; every icon and piece of artwork is our own.
 
 > **Status: early development (milestone M0, foundations).** There is nothing to play with yet beyond a command-line tool. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next.
 

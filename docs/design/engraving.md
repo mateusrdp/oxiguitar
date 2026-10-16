@@ -8,7 +8,7 @@ How `oxiguitar-layout` turns a score into pages, and what it does not draw yet. 
 2. **Plans** (`plan.rs`, `pitch.rs`, `rhythm.rs`). Every bar of every view is planned once:
    - beats are grouped into columns by start time;
    - notes are spelt in the key (flats in flat keys, except the relative minor's leading tone), placed on staff steps and given the accidentals the bar needs;
-   - stems follow the voice number (voices 1 and 3 up, 2 and 4 down) whenever a voice other than the first has notes in the bar, and always on drums; voice 1 alone points its stems away from the middle line (rule from Mateus's review, 16 Oct 2026);
+   - stems follow the voice number, always: voices 1 and 3 up, voices 2 and 4 down, on the staff, on drums and in rhythm on tab (Mateus's rule, 16 Oct 2026);
    - beams group eighths and shorter within a beat (a dotted quarter in compound time);
    - the room each column needs on each side (noteheads, seconds, accidentals, dots, flags, fret numbers, chord names) is measured.
 
