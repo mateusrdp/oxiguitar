@@ -202,7 +202,7 @@ pub fn references() -> Vec<Reference> {
             song.bars[6].section = Some(("C".to_owned(), "Outro".to_owned()));
             reference(
                 "sections-and-directions",
-                "Rehearsal letters with section names. Segno, coda, fine and D.S. al Coda are in the file but not drawn yet.",
+                "Rehearsal letters with section names; segno and coda signs at the start of their bars, To Coda, Fine and D.S. al Coda at the end of theirs.",
                 song,
             )
         },
