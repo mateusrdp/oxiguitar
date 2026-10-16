@@ -15,6 +15,7 @@ oxiguitar-formats.workspace = true
 oxiguitar-display.workspace = true
 oxiguitar-layout.workspace = true
 oxiguitar-render.workspace = true
+oxiguitar-tools.workspace = true
 
 [lints]
 workspace = true

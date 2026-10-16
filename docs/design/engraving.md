@@ -2,6 +2,8 @@
 
 How `oxiguitar-layout` turns a score into pages, and what it does not draw yet. Requirement IDs refer to the project brief.
 
+The engraver shows what the file says and never second-guesses it: a tab that leaves every bar in C major is engraved in C major. Changes such as inferring key signatures are tools the user picks ([tools.md](tools.md)).
+
 ## Pipeline
 
 1. **Views** (`system.rs`). Each shown track contributes one view per staff: standard notation, tablature or both, as the file says (VIEW-1). Tracks with no strings get only standard notation; drum tracks get a drum staff.
@@ -41,7 +43,7 @@ How `oxiguitar-layout` turns a score into pages, and what it does not draw yet. 
      - strums: an arrow left of the chord.
    - **Grace notes:** small notes before their main note, stem up, slashed when played before the beat, slurred to the main note; small fret numbers on the tab. Spacing makes room for them.
    - **Under the staff:**
-     - Dynamics are shown where the first voice's dynamic *marking* changes from Guitar Pro's default *mf*. Only Guitar Pro 6–8 store markings (a beat property); Guitar Pro 3–5 only store a velocity per note, which is not a marking and is never shown.
+     - Dynamics are shown where the first voice's dynamic *marking* changes from Guitar Pro's default *mf*, unless `Options::dynamics` is off (`--no-dynamics`). Only Guitar Pro 6–8 store markings (a beat property); Guitar Pro 3–5 only store a velocity per note, which is not a marking and is never shown.
      - Lyrics go one line per verse, one syllable per sung beat (tied notes continue the syllable). Spacing keeps syllables apart.
    - With several tracks, each track's name stands left of its staves: the full name on the first system, the short name after, shortened with "…" past a fifth of the line.
 6. **Pages** (`page.rs`). The header (title, subtitle, artist, album, credits on the right, tuning and capo on the left, copyright at the foot) goes on page one (VIEW-6). Systems stack down the page, and a new page starts when the next system does not fit. If a system is taller than a page, the whole score is engraved again with a smaller staff.
@@ -60,7 +62,7 @@ Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bound
 ## Checking
 
 - **Tests:** `cargo test --release -p oxiguitar-layout --test engrave` engraves the public fixtures, damaged scores and a 300-bar 8-track score. Where `corpus/files/` exists, it also engraves every Guitar Pro file in the corpus with all its tracks. Each run checks that every item lands on the page, every glyph exists in its font and output is deterministic.
-- **By eye:** `oxiguitar-cli render FILE --png out/page --pdf out/score.pdf [--tracks all] [--dark]`.
+- **By eye:** `oxiguitar-cli render FILE --png out/page --pdf out/score.pdf [--tracks all] [--dark] [--no-dynamics] [--tool ID]`.
 
 ## Not drawn yet
 

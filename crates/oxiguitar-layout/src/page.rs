@@ -95,7 +95,18 @@ pub(crate) fn header(
         right_y += size + 2.0;
         p.text_right(&mut list, c, size, width, right_y, Paint::Ink);
     }
-    let mut left_y = side_top;
+    // Tunings go beside the credits, or under them when the two would meet.
+    let widest = |lines: &[String]| {
+        lines
+            .iter()
+            .map(|l| p.text_width(l, size))
+            .fold(0.0, f32::max)
+    };
+    let mut left_y = if widest(&tunings) + widest(&credits) + 2.0 * size > width {
+        right_y
+    } else {
+        side_top
+    };
     for t in &tunings {
         left_y += size + 2.0;
         p.text(&mut list, t, size, 0.0, left_y, Paint::Ink);

@@ -48,6 +48,8 @@ pub struct Options {
     pub tracks: Vec<usize>,
     /// Draw the score header (title, artist, credits, tuning) on page one.
     pub header: bool,
+    /// Show dynamics markings.
+    pub dynamics: bool,
 }
 
 impl Default for Options {
@@ -60,6 +62,7 @@ impl Default for Options {
             staff_space: 4.5,
             tracks: Vec::new(),
             header: true,
+            dynamics: true,
         }
     }
 }
@@ -87,7 +90,7 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
     loop {
         let painter = draw::Painter { fonts, meta, sp };
         let width = (options.page_width - 2.0 * options.margin).max(10.0 * sp);
-        let plans = system::plan_all(score, &views, &painter);
+        let plans = system::plan_all(score, &views, &painter, options.dynamics);
         let systems = system::break_systems(score, &views, &plans, &painter, width);
         let drawn: Vec<engrave::DrawnSystem> = systems
             .iter()

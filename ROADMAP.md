@@ -72,12 +72,14 @@ Progress:
 - [ ] Engraving into a display list (`oxiguitar-layout`): standard notation, tablature, rhythm on tab, effects
   - [x] First engraving (16 Oct 2026): notes, rests, chords, accidentals, beams, flags, dots, ties, tuplets, signatures and key changes, repeats, voltas, sections, tempo, chord names, text; tab sharing columns with the staff; rhythm on tab-only tracks; drum staff. `oxiguitar-cli render` writes PNG and PDF. Every Guitar Pro file in the corpus engraves with all its tracks.
   - [x] Effects (TAB-1), grace notes, lyrics, dynamics, articulations, chord diagrams in the header, text font fallback, overlap room for tuplets and articulations (16 Oct 2026)
+  - [x] Dynamics can be hidden (16 Oct 2026)
   - [ ] Slurs, hairpins, ornaments, fermatas and ottavas once the score model holds them (NOT-3); whammy curves; fingering; second overlap pass (VIEW-7); courtesy signatures
 - [ ] Page, vertical, horizontal and parchment layouts; multi-track; score header
   - [x] Page layout, multi-track alignment, score header (16 Oct 2026)
   - [x] Track names at the start of systems (16 Oct 2026)
   - [ ] Vertical, horizontal and parchment layouts
-- [ ] `oxiguitar-app` window (Slint) following docs/design/ui.md
+- [ ] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu
+- [x] `oxiguitar-tools`: the Tools menu's tools, one shape for all so plugins can add more (M5); first tool: Infer Key Signatures, with key changes (16 Oct 2026)
 - [ ] PDF export
 - [ ] Fuzzing, speed budget, visual regression tests
 - [ ] User manual, release packages
@@ -102,7 +104,7 @@ Done when: playback matches the written effects by ear; playback starts in under
 ## Later milestones
 
 - **M4** — the full Guitar Pro 8 notation set (TAB-2), its editing tools, stylesheets and design mode, per-note playback settings.
-- **M5** — plugin system (WebAssembly and native), plugin manager; the metronome becomes the reference plugin. Then the format plugins, each reading and writing: MuseScore (.mscz, .mscx), MusicXML (.musicxml, .xml, .mxl), ABC and MIDI files, with tab derivation for staves without tablature (TAB-3, TAB-4). Their sample files are counted apart from the Guitar Pro corpus (decided 16 Oct 2026).
+- **M5** — plugin system (WebAssembly and native), plugin manager; the metronome becomes the reference plugin. Plugins can add tools to the Tools menu, in the shape of `oxiguitar-tools`. Then the format plugins, each reading and writing: MuseScore (.mscz, .mscx), MusicXML (.musicxml, .xml, .mxl), ABC and MIDI files, with tab derivation for staves without tablature (TAB-3, TAB-4). Their sample files are counted apart from the Guitar Pro corpus (decided 16 Oct 2026).
 - **M6** — a pure-Rust plucked-string model through Neural Amp Modeler and cabinet impulse responses, as a plugin.
 - **M7** — research spike and go/no-go on reading users' own Guitar Pro RSE soundbanks, as a plugin.
 - **M8** — audio tracks, advanced practice tools, line-in, PNG/SVG export, external MIDI devices.

@@ -8,6 +8,7 @@ mod manifest;
 mod render;
 mod sha256;
 mod specimen;
+mod tools;
 
 use std::process::ExitCode;
 
@@ -23,11 +24,16 @@ Commands:
   manifest <dir>...          Print a TOML manifest (name, format, size,
                              SHA-256) of every file in the folders
   render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
-         [--tracks 1,2|all] [--staff-space PT] [--quiet]
+         [--tracks 1,2|all] [--staff-space PT] [--no-dynamics]
+         [--tool ID]... [--quiet]
                              Engrave a score: PNG pages PREFIX-1.png, … (N
                              pixels per point, default 2) and/or a PDF.
-                             --tracks picks tracks (default: the first),
-                             --quiet only reports errors
+                             --tracks picks tracks (default: the first);
+                             --no-dynamics hides dynamics markings;
+                             --tool runs a tool on the score first, as the
+                             app's Tools menu does; --quiet only reports
+                             errors
+  tools                      List the tools (the app's Tools menu)
   specimen [--png FILE] [--pdf FILE] [--scale N] [--dark]
                              Draw the render spike's test page into a PNG
                              (N pixels per point, default 2) and/or a PDF
@@ -45,6 +51,7 @@ fn main() -> ExitCode {
         Some("manifest") => manifest::run(rest),
         Some("render") => render::run(rest),
         Some("specimen") => specimen::run(rest),
+        Some("tools") => tools::list(),
         Some("version" | "--version" | "-V") => {
             println!("oxiguitar-cli {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
