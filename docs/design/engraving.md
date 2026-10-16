@@ -2,15 +2,10 @@
 
 How `oxiguitar-layout` turns a score into pages, and what it does not draw yet. Requirement IDs refer to the project brief.
 
+The engraver shows what the file says and never second-guesses it: a tab that leaves every bar in C major is engraved in C major. Changes such as inferring key signatures are tools the user picks ([tools.md](tools.md)).
+
 ## Pipeline
 
-0. **Keys** (`key.rs`). Most tabs set no key signature: every bar stays in C major, Guitar Pro's default, whatever the music. When a file sets no key other than C anywhere, the engraver infers one per bar (Mateus, 16 Oct 2026):
-   - For each bar, the music in each pitch class is counted across every pitched track, written pitch, weighted by duration (a note counts for at most a half note; grace notes a sixteenth; tied and dead notes and drums not at all).
-   - For each key from six flats to five sharps, a bar costs the share of its music outside that key's scale. G flat major stands for F sharp major, as songs in E flat tuning are usually written.
-   - A best path through the song (Viterbi) picks one key per bar. Changing key costs as much as two and a half bars wholly out of key, one and a half where a section starts (a marker, a repeat, after a double bar), plus a fifth of a bar per step round the circle of fifths. So a chromatic run stays in the key, while a modulation that lasts changes it where it happens. Ties go to fewer accidentals.
-   - The inferred keys are used only if they spare at least 2.5 % of the music its accidentals compared with C; chromatic riffs stay in C.
-
-   On the private corpus, the inference agrees with every file that sets its own single key (Wish You Were Here, Little Wing, Shine On, The Loner, Reelin' in the Years) and finds the modulations of The Bigger Picture and Sardinha Desvairada bar for bar. Where it differs, it usually picks a relative or neighbouring key (Surfing with the Alien's modal passages, for one). `Options::infer_keys` (`--no-key-inference`) turns it off.
 1. **Views** (`system.rs`). Each shown track contributes one view per staff: standard notation, tablature or both, as the file says (VIEW-1). Tracks with no strings get only standard notation; drum tracks get a drum staff.
 2. **Plans** (`plan.rs`, `pitch.rs`, `rhythm.rs`). Every bar of every view is planned once:
    - beats are grouped into columns by start time;
@@ -67,7 +62,7 @@ Every symbol is a SMuFL glyph placed by the font's metadata: stem anchors, bound
 ## Checking
 
 - **Tests:** `cargo test --release -p oxiguitar-layout --test engrave` engraves the public fixtures, damaged scores and a 300-bar 8-track score. Where `corpus/files/` exists, it also engraves every Guitar Pro file in the corpus with all its tracks. Each run checks that every item lands on the page, every glyph exists in its font and output is deterministic.
-- **By eye:** `oxiguitar-cli render FILE --png out/page --pdf out/score.pdf [--tracks all] [--dark] [--no-dynamics] [--no-key-inference]`.
+- **By eye:** `oxiguitar-cli render FILE --png out/page --pdf out/score.pdf [--tracks all] [--dark] [--no-dynamics] [--tool ID]`.
 
 ## Not drawn yet
 

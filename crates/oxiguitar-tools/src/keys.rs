@@ -1,25 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Key signatures for files that do not set one (NOT-1).
+//! Tools → Infer Key Signatures: key signatures for scores that set none.
 //!
 //! Most tabs leave every bar in C major, the format's default, whatever the
-//! music. When a file sets no key anywhere, the engraver infers one per bar
-//! by counting accidentals: for each of the 12 key signatures from six flats
-//! to five sharps, how much of the bar's music (weighted by duration, across
-//! every pitched track) falls outside that key's scale, as a share of the
-//! bar's music. A best path through the song then picks one key per bar,
-//! where changing key costs as much as two and a half bars of music wholly
-//! out of key (less at section marks, double bars and repeats, where
-//! modulations usually happen; more the further the new key is round the
-//! circle of fifths), so a chromatic passage does not change the key but a
-//! real modulation does. Ties go to the signature with fewer accidentals.
+//! music. On request, this tool infers a key per bar by counting
+//! accidentals: for each of the 12 key signatures from six flats to five
+//! sharps, how much of the bar's music (weighted by duration, across every
+//! pitched track) falls outside that key's scale, as a share of the bar's
+//! music. A best path through the song then picks one key per bar, where
+//! changing key costs as much as two and a half bars of music wholly out of
+//! key (less at section marks, double bars and repeats, where modulations
+//! usually happen; more the further the new key is round the circle of
+//! fifths), so a chromatic passage does not change the key but a real
+//! modulation does. Ties go to the signature with fewer accidentals.
 //!
-//! The inferred keys are used only if they spare at least 2.5 % of the music
-//! its accidentals; otherwise (chromatic riffs, atonal passages) the song
-//! stays in C. A file that sets any key other than C is trusted as it is.
+//! The keys are set only if they spare at least 2.5 % of the music its
+//! accidentals; otherwise (chromatic riffs, atonal passages) the score stays
+//! in C. A score that already sets a key other than C is left alone.
 
 use oxiguitar_model::{BeatKind, NotePlace, Score};
+
+use crate::{Availability, Outcome, Tool};
 
 /// Key signatures considered, in fifths: six flats to five sharps. G flat
 /// major (E flat minor) stands for its enharmonic twin F sharp major, as
@@ -43,8 +45,8 @@ const DISTANCE: f32 = 0.2;
 /// accidentals compared with C major; chromatic songs stay in C.
 const MIN_GAIN: f32 = 0.025;
 
-/// True if the file sets a key other than C major anywhere.
-pub(crate) fn file_has_keys(score: &Score) -> bool {
+/// True if the score sets a key other than C major anywhere.
+fn file_has_keys(score: &Score) -> bool {
     score
         .master_bars
         .iter()
@@ -206,22 +208,112 @@ fn starts_section(score: &Score, i: usize) -> bool {
         || before.is_some_and(|mb| mb.double_bar || mb.repeat_end.is_some())
 }
 
-/// A copy of `score` with inferred key signatures, if the file sets none;
-/// `None` if the file's own keys should be used.
-pub(crate) fn with_inferred_keys(score: &Score) -> Option<Score> {
-    if file_has_keys(score) {
-        return None;
+/// Tools → Infer Key Signatures.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct InferKeySignatures;
+
+impl Tool for InferKeySignatures {
+    fn id(&self) -> &'static str {
+        "infer-key-signatures"
     }
-    let bars = weights(score);
-    let keys = infer_bars(score, &bars);
-    if keys.iter().all(|k| *k == 0) || gain(&bars, &keys) < MIN_GAIN {
-        return None;
+
+    fn name(&self) -> &'static str {
+        "Infer Key Signatures"
     }
-    let mut s = score.clone();
-    for (mb, k) in s.master_bars.iter_mut().zip(keys) {
-        mb.key_signature.fifths = k;
+
+    fn description(&self) -> &'static str {
+        "Sets key signatures from the notes, with key changes where the music \
+         modulates, for scores that leave every bar in C major."
     }
-    Some(s)
+
+    fn availability(&self, score: &Score) -> Availability {
+        if file_has_keys(score) {
+            Availability::Unavailable("The score already has key signatures.".to_owned())
+        } else if score.master_bars.is_empty() {
+            Availability::Unavailable("The score has no bars.".to_owned())
+        } else {
+            Availability::Available
+        }
+    }
+
+    fn apply(&self, score: &Score) -> Outcome {
+        if let Availability::Unavailable(why) = self.availability(score) {
+            return unchanged(why);
+        }
+        let bars = weights(score);
+        let keys = infer_bars(score, &bars);
+        if keys.iter().all(|k| *k == 0) {
+            return unchanged("The music fits C major; nothing to change.".to_owned());
+        }
+        if gain(&bars, &keys) < MIN_GAIN {
+            return unchanged(
+                "No key signature would spare enough accidentals; the score stays in C major."
+                    .to_owned(),
+            );
+        }
+        let mut s = score.clone();
+        for (mb, k) in s.master_bars.iter_mut().zip(&keys) {
+            mb.key_signature.fifths = *k;
+        }
+        Outcome {
+            score: Some(s),
+            report: report(&keys),
+        }
+    }
+}
+
+fn unchanged(report: String) -> Outcome {
+    Outcome {
+        score: None,
+        report,
+    }
+}
+
+/// "Key signatures set: G major or E minor (1♯) in bars 1–102, …".
+fn report(keys: &[i8]) -> String {
+    let mut runs: Vec<(i8, usize, usize)> = Vec::new();
+    for (i, k) in keys.iter().enumerate() {
+        match runs.last_mut() {
+            Some(run) if run.0 == *k => run.2 = i + 1,
+            _ => runs.push((*k, i + 1, i + 1)),
+        }
+    }
+    const SHOWN: usize = 4;
+    let mut parts: Vec<String> = runs
+        .iter()
+        .take(SHOWN)
+        .map(|(k, from, to)| {
+            let bars = if from == to {
+                format!("bar {from}")
+            } else {
+                format!("bars {from}–{to}")
+            };
+            format!("{} in {bars}", key_name(*k))
+        })
+        .collect();
+    if runs.len() > SHOWN {
+        parts.push(format!("{} more", runs.len() - SHOWN));
+    }
+    format!("Key signatures set: {}.", parts.join(", "))
+}
+
+/// "G major or E minor (1♯)".
+fn key_name(fifths: i8) -> String {
+    const MAJOR: [&str; 15] = [
+        "C♭", "G♭", "D♭", "A♭", "E♭", "B♭", "F", "C", "G", "D", "A", "E", "B", "F♯", "C♯",
+    ];
+    const MINOR: [&str; 15] = [
+        "A♭", "E♭", "B♭", "F", "C", "G", "D", "A", "E", "B", "F♯", "C♯", "G♯", "D♯", "A♯",
+    ];
+    let i = usize::try_from(i32::from(fifths) + 7).unwrap_or(7);
+    let major = MAJOR.get(i).copied().unwrap_or("C");
+    let minor = MINOR.get(i).copied().unwrap_or("A");
+    let sign = match fifths {
+        0 => String::new(),
+        f if f > 0 => format!(" ({f}♯)"),
+        f => format!(" ({}♭)", f.unsigned_abs()),
+    };
+    format!("{major} major or {minor} minor{sign}")
 }
 
 #[cfg(test)]
@@ -282,7 +374,7 @@ mod tests {
         let bar: &[u8] = &[60, 62, 64, 67]; // C D E G: fits C, F and G; C is simplest
         let s = song(&[bar; 3]);
         assert_eq!(infer(&s), vec![0; 3]);
-        assert!(with_inferred_keys(&s).is_none());
+        assert!(InferKeySignatures.apply(&s).score.is_none());
     }
 
     #[test]
@@ -310,7 +402,9 @@ mod tests {
         bar.push(66);
         let s = song(&[bar.as_slice(); 8]);
         assert_eq!(infer(&s), vec![1; 8]);
-        assert!(with_inferred_keys(&s).is_none());
+        let out = InferKeySignatures.apply(&s);
+        assert!(out.score.is_none());
+        assert!(out.report.contains("stays in C"), "{}", out.report);
     }
 
     #[test]
@@ -321,14 +415,40 @@ mod tests {
 
     #[test]
     fn inferred_keys_reach_the_score() {
-        let s = with_inferred_keys(&song(&[G_MAJOR; 3])).expect("a key");
+        let before = song(&[G_MAJOR; 3]);
+        let out = InferKeySignatures.apply(&before);
+        let s = out.score.expect("a key");
         assert!(s.master_bars.iter().all(|mb| mb.key_signature.fifths == 1));
+        assert!(
+            before
+                .master_bars
+                .iter()
+                .all(|mb| mb.key_signature.fifths == 0)
+        );
+        assert_eq!(
+            out.report,
+            "Key signatures set: G major or E minor (1♯) in bars 1–3."
+        );
+    }
+
+    #[test]
+    fn the_report_lists_key_changes() {
+        assert_eq!(
+            report(&[0, 0, -3, -3, -3, 5]),
+            "Key signatures set: C major or A minor in bars 1–2, \
+             E♭ major or C minor (3♭) in bars 3–5, B major or G♯ minor (5♯) in bar 6."
+        );
+        assert_eq!(key_name(-6), "G♭ major or E♭ minor (6♭)");
     }
 
     #[test]
     fn the_files_own_keys_are_kept() {
         let mut s = song(&[G_MAJOR; 2]);
         s.master_bars[1].key_signature.fifths = -2;
-        assert!(with_inferred_keys(&s).is_none());
+        assert!(matches!(
+            InferKeySignatures.availability(&s),
+            Availability::Unavailable(_)
+        ));
+        assert!(InferKeySignatures.apply(&s).score.is_none());
     }
 }

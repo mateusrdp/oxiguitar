@@ -35,6 +35,12 @@ Everything about how the score is shown lives in the View menu:
 - **Dark Page** (VIEW-8): light notation on a dark page. Page colours are themes of the display list (`Theme::LIGHT`, `Theme::DARK` in `oxiguitar-display`), so the PDF can use them too.
 - **Multitrack** (VIEW-4) and the panels (Palette, Tracks).
 
+## Tools menu
+
+The Tools menu lists the tools of `oxiguitar-tools` in order, each with its description as a tooltip ([tools.md](tools.md)). An entry that cannot run on the open score is greyed out, with the reason in its tooltip. Picking one applies it and shows its report in the status line. Plugins add their tools to the same menu from M5.
+
+The first tool is **Infer Key Signatures** (16 Oct 2026).
+
 ## Palette
 
 - Tools are grouped (Note values, Effects, and many more later). Each group has a small heading with a chevron; clicking it collapses or expands the group, and the state is kept while searching.

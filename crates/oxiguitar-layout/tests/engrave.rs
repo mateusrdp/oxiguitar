@@ -483,21 +483,21 @@ fn count_char(e: &Engraved, c: char) -> usize {
 }
 
 #[test]
-fn a_key_is_inferred_when_the_file_sets_none() {
+fn the_files_key_is_shown_as_it_is() {
     let (fonts, meta) = setup();
-    let score = tune_in_g(12);
+    let mut score = tune_in_g(12);
     let sharp = '\u{E262}';
-    // Inferred: one sharp in the signature of each system, none on the notes.
+    // The file says C major: a sharp before every F♯, and nothing is
+    // inferred (that is a tool the user picks, in oxiguitar-tools).
     let e = engrave(&score, &fonts, &meta, &Options::default());
-    check("inferred key", &e, &fonts);
-    assert_eq!(count_char(&e, sharp), e.systems);
-    // Not inferred: a sharp before every F♯.
-    let plain = Options {
-        infer_keys: false,
-        ..Options::default()
-    };
-    let e = engrave(&score, &fonts, &meta, &plain);
     assert_eq!(count_char(&e, sharp), 12);
+    // In G: one sharp in the signature of each system, none on the notes.
+    for mb in &mut score.master_bars {
+        mb.key_signature.fifths = 1;
+    }
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("key of G", &e, &fonts);
+    assert_eq!(count_char(&e, sharp), e.systems);
 }
 
 #[test]

@@ -262,6 +262,7 @@ dependencies = [
  "oxiguitar-layout",
  "oxiguitar-model",
  "oxiguitar-render",
+ "oxiguitar-tools",
 ]
 
 [[package]]
@@ -303,6 +304,14 @@ dependencies = [
  "oxiguitar-display",
  "skrifa",
  "tiny-skia",
+]
+
+[[package]]
+name = "oxiguitar-tools"
+version = "0.0.0"
+dependencies = [
+ "oxiguitar-formats",
+ "oxiguitar-model",
 ]
 
 [[package]]

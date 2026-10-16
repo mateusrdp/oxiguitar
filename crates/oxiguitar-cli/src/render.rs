@@ -18,6 +18,7 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
     let mut theme = Theme::LIGHT;
     let mut options = Options::default();
     let mut quiet = false;
+    let mut tools: Vec<&'static dyn oxiguitar_tools::Tool> = Vec::new();
     let mut it = args.iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
@@ -51,7 +52,14 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
             },
             "--dark" => theme = Theme::DARK,
             "--no-dynamics" => options.dynamics = false,
-            "--no-key-inference" => options.infer_keys = false,
+            "--tool" => match it.next().and_then(|id| oxiguitar_tools::find(id)) {
+                Some(t) => tools.push(t),
+                None => {
+                    return crate::usage_error(
+                        "--tool takes a tool id; `oxiguitar-cli tools` lists them",
+                    );
+                }
+            },
             "--quiet" => quiet = true,
             other if other.starts_with("--") => {
                 return crate::usage_error(&format!("render: unknown option '{other}'"));
@@ -83,6 +91,16 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         }
     };
     let read_ms = ms(started);
+    let mut score = imported.score;
+    for tool in tools {
+        let outcome = tool.apply(&score);
+        if !quiet {
+            println!("{file}: {}: {}", tool.name(), outcome.report);
+        }
+        if let Some(changed) = outcome.score {
+            score = changed;
+        }
+    }
     let fonts = FontSet::bundled();
     let meta = match Metadata::bravura() {
         Ok(m) => m,
@@ -92,7 +110,7 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         }
     };
     let started = Instant::now();
-    let engraved = engrave(&imported.score, &fonts, &meta, &options);
+    let engraved = engrave(&score, &fonts, &meta, &options);
     let items: usize = engraved.pages.iter().map(|p| p.items.len()).sum();
     if !quiet {
         println!(
@@ -128,7 +146,7 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
 
     if let Some(path) = pdf {
         let pages: Vec<_> = engraved.pages.iter().collect();
-        let title = imported.score.info.title.trim();
+        let title = score.info.title.trim();
         let title = if title.is_empty() { "OxiGuitar" } else { title };
         match to_pdf(&pages, &fonts, &theme, title) {
             Ok(bytes) => {

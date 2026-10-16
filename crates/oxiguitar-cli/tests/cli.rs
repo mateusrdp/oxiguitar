@@ -158,7 +158,7 @@ fn render_engraves_pages_and_a_pdf() {
             .arg("--pdf")
             .arg(&pdf);
         if dark {
-            cmd.args(["--dark", "--no-dynamics", "--no-key-inference"]);
+            cmd.args(["--dark", "--no-dynamics", "--tool", "infer-key-signatures"]);
         }
         let out = cmd.output().unwrap();
         assert!(
@@ -182,6 +182,7 @@ fn render_rejects_bad_usage() {
         &["render", "x.gp"],
         &["render", "x.gp", "--png", "out", "--tracks", "0"],
         &["render", "x.gp", "--png", "out", "--frobnicate"],
+        &["render", "x.gp", "--png", "out", "--tool", "frobnicate"],
     ] {
         let out = cli().args(args).output().unwrap();
         assert_eq!(out.status.code(), Some(2), "{args:?}");
@@ -191,4 +192,13 @@ fn render_rejects_bad_usage() {
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(1));
+}
+
+#[test]
+fn tools_are_listed() {
+    let out = cli().arg("tools").output().unwrap();
+    assert!(out.status.success());
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert!(text.contains("infer-key-signatures"), "{text}");
+    assert!(text.contains("Infer Key Signatures"), "{text}");
 }

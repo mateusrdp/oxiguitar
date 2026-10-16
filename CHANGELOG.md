@@ -29,7 +29,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
   Marks that run along the music get lanes of their own above the tablature, so they never collide.
 - Chord diagrams of the chords used, in the score header (VIEW-6).
-- Key signatures for files that set none, as most tabs do (they leave every bar in C major): the engraver infers a key per bar from the notes, changing key mid-song where the music modulates, and keeps C for chromatic music. Files that set their own keys are left as they are. `--no-key-inference` turns it off.
+- `oxiguitar-tools` and the Tools menu's first tool, **Infer Key Signatures**: for scores that leave every bar in C major, as most tabs do, it sets key signatures from the notes, with key changes where the music modulates, and leaves chromatic music in C. It runs only when the user asks; the engraver shows what the file says. Every tool has the same small shape, so plugins can add tools in M5. `oxiguitar-cli tools` lists the tools and `render --tool ID` applies one.
 - `--no-dynamics` hides dynamics markings (`Options::dynamics` in `oxiguitar-layout`).
 - Characters the text font lacks, such as ♯ and ♭ in chord names, come from the music font.
 - Tempo marks are shown only where the tempo changes, and never on top of each other.
