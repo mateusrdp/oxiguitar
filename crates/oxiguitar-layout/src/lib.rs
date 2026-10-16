@@ -13,15 +13,17 @@
 //! to the screen, PNG or PDF, so what is shown is what is exported.
 //!
 //! Status (M1): the Page layout, one or more tracks, notes, rests, chords,
-//! accidentals, beams, flags, dots, ties, tuplets, repeats and alternate
-//! endings, sections, tempo, chord names, beat text and the score header.
-//! Effects, rhythm on tab, lyrics, grace notes and the other layouts follow.
+//! accidentals, beams, flags, dots, ties, tuplets, grace notes, repeats and
+//! alternate endings, sections, tempo, chord names and diagrams, beat text,
+//! the TAB-1 effects, articulations, dynamics, lyrics and the score header.
+//! The Vertical, Horizontal and Parchment layouts follow.
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet};
 use oxiguitar_model::Score;
 
 mod draw;
+mod effects;
 mod engrave;
 mod grid;
 mod page;

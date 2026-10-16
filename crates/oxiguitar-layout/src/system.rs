@@ -4,11 +4,11 @@
 //! Which staves are shown, the plan of every bar, and how bars are broken
 //! into systems (NOT-4).
 
-use oxiguitar_model::{Bar, Score};
+use oxiguitar_model::{Bar, BeatKind, Dynamic, Score};
 
 use crate::draw::{Painter, glyphs};
 use crate::grid::BarGrid;
-use crate::plan::{BarPlan, Planner};
+use crate::plan::{BarPlan, Planner, lyric_size};
 
 /// Tablature lines are this many staff spaces apart.
 pub(crate) const TAB_GAP: f32 = 1.5;
@@ -79,14 +79,20 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>) -> Plans 
                 show_std: v.show_std,
                 show_tab: v.show_tab,
             };
-            Some(
-                score
-                    .master_bars
-                    .iter()
-                    .enumerate()
-                    .map(|(i, mb)| planner.bar(staff.bars.get(i).unwrap_or(&empty), mb))
-                    .collect(),
-            )
+            let mut planned: Vec<BarPlan> = score
+                .master_bars
+                .iter()
+                .enumerate()
+                .map(|(i, mb)| planner.bar(staff.bars.get(i).unwrap_or(&empty), mb))
+                .collect();
+            mark_dynamics(&mut planned);
+            if v.staff == 0 {
+                for (line, lyric) in track.lyrics.iter().enumerate() {
+                    place_lyrics(&mut planned, line, lyric.start_bar, &lyric.text);
+                }
+                measure_lyrics(&mut planned, p);
+            }
+            Some(planned)
         })
         .collect();
     let grids = (0..score.master_bars.len())
@@ -96,6 +102,88 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>) -> Plans 
         })
         .collect();
     Plans { bars, grids }
+}
+
+/// Marks where the first voice's dynamic marking changes, across the whole
+/// staff. Only explicit markings count (Guitar Pro 6-8 beats); a note's
+/// velocity is not a marking. Nothing is shown while the music stays at
+/// Guitar Pro's default, mezzo-forte.
+fn mark_dynamics(bars: &mut [BarPlan]) {
+    let mut current = Dynamic::MF;
+    for bar in bars {
+        let Some(beats) = bar.voices.first_mut() else {
+            continue;
+        };
+        for b in beats.iter_mut().filter(|b| b.grace.is_none()) {
+            if let Some(d) = b.effects.dynamic
+                && d != current
+            {
+                b.show_dynamic = Some(d);
+                current = d;
+            }
+        }
+    }
+}
+
+/// Splits Guitar Pro lyrics into syllables: words are separated by spaces
+/// or line breaks, syllables by hyphens (kept on the syllable they follow,
+/// so the reader sees the word continue).
+pub(crate) fn syllables(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for word in text.split_whitespace() {
+        let parts: Vec<&str> = word.split('-').filter(|s| !s.is_empty()).collect();
+        let last = parts.len().saturating_sub(1);
+        for (i, part) in parts.into_iter().enumerate() {
+            out.push(if i < last {
+                format!("{part}-")
+            } else {
+                part.to_owned()
+            });
+        }
+    }
+    out
+}
+
+/// Gives one line of lyrics to the first voice's beats with notes, from
+/// `start_bar` on, one syllable per beat. Beats whose notes are all tied
+/// continue the previous syllable and get none.
+fn place_lyrics(bars: &mut [BarPlan], line: usize, start_bar: usize, text: &str) {
+    let mut words = syllables(text).into_iter();
+    for bar in bars.iter_mut().skip(start_bar) {
+        let Some(beats) = bar.voices.first_mut() else {
+            continue;
+        };
+        for b in beats.iter_mut() {
+            let sung = b.grace.is_none()
+                && b.kind == BeatKind::Notes
+                && !b.notes.is_empty()
+                && !b.notes.iter().all(|n| n.tie);
+            if sung {
+                let Some(w) = words.next() else {
+                    return;
+                };
+                b.lyrics.push((line, w));
+            }
+        }
+    }
+}
+
+/// Records how wide each column's lyrics are, so spacing makes room.
+fn measure_lyrics(bars: &mut [BarPlan], p: &Painter<'_>) {
+    let size = lyric_size(p.sp);
+    for bar in bars {
+        let BarPlan { voices, cols, .. } = bar;
+        for c in cols.iter_mut() {
+            c.lyric_half = c
+                .column
+                .beats
+                .iter()
+                .filter_map(|r| voices.get(r.voice)?.get(r.beat))
+                .flat_map(|b| b.lyrics.iter())
+                .map(|(_, w)| p.text_width(w, size) / 2.0)
+                .fold(0.0, f32::max);
+        }
+    }
 }
 
 /// One line of music.
@@ -270,4 +358,18 @@ pub(crate) fn break_systems(
         first = end;
     }
     systems
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lyrics_split_into_syllables() {
+        assert_eq!(
+            syllables("Tar-de em  Ita-pu-ã\nnum"),
+            vec!["Tar-", "de", "em", "Ita-", "pu-", "ã", "num"]
+        );
+        assert!(syllables("  ").is_empty());
+    }
 }

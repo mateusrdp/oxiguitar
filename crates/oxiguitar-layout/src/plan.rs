@@ -5,8 +5,8 @@
 //! way stems point, how wide each column must be (NOT-1, NOT-2, NOT-4).
 
 use oxiguitar_model::{
-    Bar, BeatKind, Clef, KeySignature, MasterBar, Note, NotePlace, NoteValue, Pitch, Ratio, Staff,
-    Track, Tuplet,
+    Bar, BeatEffects, BeatKind, Clef, Dynamic, GraceKind, Harmonic, KeySignature, MasterBar, Note,
+    NoteEffects, NotePlace, NoteValue, Pitch, Ratio, Staff, Track, Tuplet,
 };
 
 use crate::draw::{G, Painter, glyphs};
@@ -32,6 +32,14 @@ pub(crate) struct NoteInfo {
     pub(crate) dead: bool,
     /// String and tab label, for notes on strings.
     pub(crate) tab: Option<(u8, String)>,
+    /// Fret, for notes on strings.
+    pub(crate) fret: Option<u8>,
+    /// Natural harmonic: a diamond notehead.
+    pub(crate) diamond: bool,
+    /// Ghost note: in parentheses.
+    pub(crate) ghost: bool,
+    /// The note's effects (TAB-1).
+    pub(crate) effects: NoteEffects,
 }
 
 /// One beat as it will be drawn.
@@ -53,6 +61,82 @@ pub(crate) struct BeatInfo {
     pub(crate) chord: Option<String>,
     /// Free text above the staff.
     pub(crate) text: String,
+    /// Effects on the whole beat.
+    pub(crate) effects: BeatEffects,
+    /// A grace beat, and how it relates to its main note.
+    pub(crate) grace: Option<GraceKind>,
+    /// For a grace beat, its place counted back from the main beat (1 is
+    /// nearest); for a main beat, how many grace beats come right before it.
+    pub(crate) grace_rank: usize,
+    pub(crate) graces_before: usize,
+    /// A dynamic to print under this beat (a change), set across the whole
+    /// track in [`crate::system::plan_all`].
+    pub(crate) show_dynamic: Option<Dynamic>,
+    /// Lyric syllables under this beat: (line, syllable).
+    pub(crate) lyrics: Vec<(usize, String)>,
+}
+
+/// Lanes of effect marks a bar needs above its tablature (or above its staff
+/// when it has no tablature). Each lane exists in a system only if one of its
+/// bars uses it, so marks never collide.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct Lanes {
+    /// Bend and release arrows with their amounts.
+    pub(crate) bend: bool,
+    /// Hammer-on and pull-off letters.
+    pub(crate) hp: bool,
+    /// Vibrato and wide vibrato.
+    pub(crate) vibrato: bool,
+    /// Trills.
+    pub(crate) trill: bool,
+    /// Palm mute.
+    pub(crate) palm_mute: bool,
+    /// Let ring.
+    pub(crate) let_ring: bool,
+    /// Harmonic kinds other than natural (A.H., P.H., T.H., S.H., Fdbk.).
+    pub(crate) harmonic: bool,
+    /// Tap, slap, pop, whammy bar, fade in, pick strokes.
+    pub(crate) technique: bool,
+}
+
+impl Lanes {
+    /// Lanes needed by either.
+    pub(crate) fn or(self, o: Lanes) -> Lanes {
+        Lanes {
+            bend: self.bend || o.bend,
+            hp: self.hp || o.hp,
+            vibrato: self.vibrato || o.vibrato,
+            trill: self.trill || o.trill,
+            palm_mute: self.palm_mute || o.palm_mute,
+            let_ring: self.let_ring || o.let_ring,
+            harmonic: self.harmonic || o.harmonic,
+            technique: self.technique || o.technique,
+        }
+    }
+
+    fn of_beat(b: &BeatInfo) -> Lanes {
+        let mut l = Lanes::default();
+        let e = &b.effects;
+        l.vibrato = e.vibrato_wide;
+        l.let_ring = e.let_ring;
+        l.technique =
+            e.technique.is_some() || e.whammy.is_some() || e.fade_in || e.pick_stroke.is_some();
+        for n in &b.notes {
+            let f = &n.effects;
+            l.bend |= f
+                .bend
+                .as_ref()
+                .is_some_and(|b| b.points.iter().any(|p| p.cents != 0));
+            l.hp |= f.hammer_pull;
+            l.vibrato |= f.vibrato;
+            l.trill |= f.trill.is_some();
+            l.palm_mute |= f.palm_mute;
+            l.let_ring |= f.let_ring;
+            l.harmonic |= f.harmonic.is_some_and(|h| h != Harmonic::Natural);
+            l.technique |= f.left_hand_tap;
+        }
+        l
+    }
 }
 
 /// Horizontal needs of one column, in points.
@@ -66,6 +150,9 @@ pub(crate) struct ColPlan {
     pub(crate) tab_half: f32,
     /// Width of the widest chord name over this column, 0 if none.
     pub(crate) chord_w: f32,
+    /// Half the widest lyric syllable under this column, 0 if none (set
+    /// once lyrics are placed).
+    pub(crate) lyric_half: f32,
 }
 
 /// One bar of one staff, planned but not yet placed.
@@ -85,6 +172,8 @@ pub(crate) struct BarPlan {
     pub(crate) high: i32,
     pub(crate) has_chords: bool,
     pub(crate) has_text: bool,
+    /// Effect lanes this bar needs.
+    pub(crate) lanes: Lanes,
 }
 
 /// The distance a duration asks for, in staff spaces: grows with the
@@ -141,12 +230,58 @@ impl Planner<'_> {
                             .map(|c| c.name.clone())
                             .filter(|n| !n.is_empty()),
                         text: b.text.trim().to_owned(),
+                        effects: b.effects.clone(),
+                        grace: b.grace,
+                        grace_rank: 0,
+                        graces_before: 0,
+                        show_dynamic: None,
+                        lyrics: Vec::new(),
                     })
                     .collect()
             })
             .collect();
+        // Grace beats belong to the main beat after them.
+        for beats in &mut voices {
+            let mut run = 0;
+            for b in beats.iter_mut() {
+                if b.grace.is_some() {
+                    run += 1;
+                } else {
+                    b.graces_before = run;
+                    run = 0;
+                }
+            }
+            let mut rank = 0;
+            for b in beats.iter_mut().rev() {
+                if b.grace.is_some() {
+                    rank += 1;
+                    b.grace_rank = rank;
+                } else {
+                    rank = 0;
+                }
+            }
+        }
         for col in &columns {
             for r in &col.beats {
+                // Grace notes first, in time order, so accidentals carry.
+                let graces = voices
+                    .get(r.voice)
+                    .and_then(|v| v.get(r.beat))
+                    .map_or(0, |b| b.graces_before);
+                for g in (r.beat.saturating_sub(graces)..r.beat).filter(|_| graces > 0) {
+                    let Some(beat) = bar.voices.get(r.voice).and_then(|v| v.beats.get(g)) else {
+                        continue;
+                    };
+                    let mut notes: Vec<NoteInfo> = beat
+                        .notes
+                        .iter()
+                        .filter_map(|n| self.note(n, clef, key, &mut acc))
+                        .collect();
+                    notes.sort_by_key(|n| n.step);
+                    if let Some(info) = voices.get_mut(r.voice).and_then(|v| v.get_mut(g)) {
+                        info.notes = notes;
+                    }
+                }
                 let Some(beat) = bar.voices.get(r.voice).and_then(|v| v.beats.get(r.beat)) else {
                     continue;
                 };
@@ -197,12 +332,24 @@ impl Planner<'_> {
                 continue;
             };
             let stem = if b.value >= NoteValue::Half { 7 } else { 0 };
-            if b.up {
-                high = high.max(last.step + stem);
-                low = low.min(first.step);
+            // Tuplet numbers beyond the stems; articulations on the notehead
+            // side.
+            let tuplet = if b.tuplet.is_some() { 4 } else { 0 };
+            let artic = if b
+                .notes
+                .iter()
+                .any(|n| n.effects.accent.is_some() || n.effects.staccato)
+            {
+                4
             } else {
-                low = low.min(first.step - stem);
-                high = high.max(last.step);
+                0
+            };
+            if b.up {
+                high = high.max(last.step + stem + tuplet);
+                low = low.min(first.step - artic);
+            } else {
+                low = low.min(first.step - stem - tuplet);
+                high = high.max(last.step + artic);
             }
         }
 
@@ -211,7 +358,13 @@ impl Planner<'_> {
             .into_iter()
             .map(|column| self.column_needs(column, &voices))
             .collect();
+        let lanes = voices
+            .iter()
+            .flatten()
+            .map(Lanes::of_beat)
+            .fold(Lanes::default(), Lanes::or);
         BarPlan {
+            lanes,
             has_chords: voices.iter().flatten().any(|b| b.chord.is_some()),
             has_text: voices.iter().flatten().any(|b| !b.text.is_empty()),
             voices,
@@ -245,20 +398,31 @@ impl Planner<'_> {
                 tie: n.tie,
                 dead: cross || n.effects.dead,
                 tab: None,
+                fret: None,
+                diamond: false,
+                ghost: n.effects.ghost,
+                effects: n.effects.clone(),
             });
         }
-        let (pitch, tab) = match n.place {
+        let natural = n.effects.harmonic == Some(Harmonic::Natural);
+        let (pitch, tab, fret) = match n.place {
             NotePlace::Fretted { string, fret } => {
                 let label = if n.effects.dead {
                     "X".to_owned()
+                } else if natural {
+                    format!("<{fret}>")
                 } else if n.tie || n.effects.ghost {
                     format!("({fret})")
                 } else {
                     fret.to_string()
                 };
-                (self.staff.pitch_of(string, fret), Some((string, label)))
+                (
+                    self.staff.pitch_of(string, fret),
+                    Some((string, label)),
+                    Some(fret),
+                )
             }
-            NotePlace::Pitched(p) => (Some(p), None),
+            NotePlace::Pitched(p) => (Some(p), None, None),
         };
         let spelled = spell(written(pitch?, self.staff.transposition, clef), key);
         Some(NoteInfo {
@@ -270,6 +434,10 @@ impl Planner<'_> {
             tie: n.tie,
             dead: n.effects.dead,
             tab,
+            fret,
+            diamond: natural,
+            ghost: n.effects.ghost,
+            effects: n.effects.clone(),
         })
     }
 
@@ -335,14 +503,53 @@ impl Planner<'_> {
             left = 0.0;
             right = 0.0;
         }
+        // Grace notes before the main note, and ghost-note parentheses.
+        let mut grace_room: f32 = 0.0;
+        for r in &column.beats {
+            let Some(b) = beat_at(voices, *r) else {
+                continue;
+            };
+            if b.graces_before > 0 {
+                grace_room = grace_room.max(b.graces_before as f32 * self.grace_step() + 0.3 * sp);
+            }
+            if self.show_std && b.notes.iter().any(|n| n.ghost) {
+                left += p.width(glyphs::PAREN_LEFT);
+                right += p.width(glyphs::PAREN_RIGHT);
+            }
+        }
+        left += grace_room;
         ColPlan {
             column,
             left,
             right,
             tab_half,
             chord_w,
+            lyric_half: 0.0,
         }
     }
+}
+
+impl Planner<'_> {
+    /// Distance between grace notes, and from the last one to its main
+    /// note, in points.
+    pub(crate) fn grace_step(&self) -> f32 {
+        grace_step(self.p, self.tab_gap)
+    }
+}
+
+/// Grace notes are drawn at this scale of normal notes.
+pub(crate) const GRACE_SCALE: f32 = 0.65;
+
+/// Distance between grace notes, on the staff and on the tab.
+pub(crate) fn grace_step(p: &Painter<'_>, tab_gap: f32) -> f32 {
+    let head = p.width(glyphs::NOTEHEAD_BLACK) * GRACE_SCALE;
+    let number = p.tab_number_width(tab_gap * GRACE_SCALE, "10");
+    head.max(number) + 0.35 * p.sp
+}
+
+/// The size of lyrics, in points.
+pub(crate) fn lyric_size(sp: f32) -> f32 {
+    1.9 * sp
 }
 
 /// The size of chord names, in points.
@@ -468,6 +675,10 @@ mod tests {
             tie: false,
             dead: false,
             tab: None,
+            fret: None,
+            diamond: false,
+            ghost: false,
+            effects: NoteEffects::default(),
         }
     }
 

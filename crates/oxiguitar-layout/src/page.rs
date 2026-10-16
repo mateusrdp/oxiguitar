@@ -4,8 +4,8 @@
 //! The score header (VIEW-6) and the Page layout: systems stacked down the
 //! page, a new page when the next system does not fit (VIEW-3).
 
-use oxiguitar_display::{DisplayList, Paint};
-use oxiguitar_model::{Pitch, Score, Staff};
+use oxiguitar_display::{DisplayList, Paint, Path, Point};
+use oxiguitar_model::{ChordDiagram, Pitch, Score, Staff};
 
 use crate::Options;
 use crate::draw::Painter;
@@ -100,9 +100,155 @@ pub(crate) fn header(
         left_y += size + 2.0;
         p.text(&mut list, t, size, 0.0, left_y, Paint::Ink);
     }
-    let height = centre_bottom.max(right_y).max(left_y) + 3.0 * p.sp;
+    let mut height = centre_bottom.max(right_y).max(left_y) + 3.0 * p.sp;
+    // The chord diagrams the shown tracks use, in order of first use.
+    let diagrams = used_diagrams(score, views);
+    if !diagrams.is_empty() {
+        height = chord_diagrams(&mut list, p, &diagrams, height, width) + 2.0 * p.sp;
+    }
     list.height = height;
     Header { list, height }
+}
+
+/// Chord diagrams used by the shown tracks: unique by name and frets, in
+/// the order the music first uses them.
+fn used_diagrams<'s>(score: &'s Score, views: &[View]) -> Vec<&'s ChordDiagram> {
+    let mut out: Vec<&ChordDiagram> = Vec::new();
+    for v in views {
+        let Some(track) = score.tracks.get(v.track) else {
+            continue;
+        };
+        let Some(staff) = track.staves.get(v.staff) else {
+            continue;
+        };
+        let used = staff
+            .bars
+            .iter()
+            .flat_map(|b| b.voices.iter())
+            .flat_map(|v| v.beats.iter())
+            .filter_map(|b| b.chord.and_then(|c| track.chords.get(c)));
+        for d in used {
+            let drawable = d.frets.iter().any(Option::is_some) && !d.name.trim().is_empty();
+            if drawable && !out.iter().any(|o| o.name == d.name && o.frets == d.frets) {
+                out.push(d);
+            }
+        }
+    }
+    out
+}
+
+/// Draws chord diagrams in rows from `y`; returns the bottom of the last row.
+fn chord_diagrams(
+    list: &mut DisplayList,
+    p: &Painter<'_>,
+    diagrams: &[&ChordDiagram],
+    y: f32,
+    width: f32,
+) -> f32 {
+    let sg = 4.2; // between strings, points
+    let fg = 5.2; // between frets
+    let name_size = 8.0;
+    let frets_shown = 4;
+    let mut x = 0.0;
+    let mut row_top = y;
+    let mut row_bottom = y;
+    for d in diagrams {
+        let strings = d.frets.len().max(1);
+        let grid_w = (strings - 1) as f32 * sg;
+        let name_w = p.text_width(&d.name, name_size);
+        let cell = grid_w.max(name_w) + 16.0;
+        if x > 0.0 && x + cell > width {
+            x = 0.0;
+            row_top = row_bottom + 6.0;
+        }
+        let gx = x + (cell - grid_w) / 2.0;
+        let name_base = row_top + name_size;
+        p.text_centred(
+            list,
+            &d.name,
+            name_size,
+            gx + grid_w / 2.0,
+            name_base,
+            Paint::Ink,
+        );
+        let marks_y = name_base + 5.5; // centre of the x/o marks
+        let grid_top = marks_y + 4.0;
+        let grid_bottom = grid_top + frets_shown as f32 * fg;
+        let thin = 0.5;
+        // Strings, frets, and the nut when the diagram starts at the nut.
+        for s in 0..strings {
+            let sx = gx + s as f32 * sg;
+            p.vline(list, sx, grid_top, grid_bottom, thin);
+        }
+        for f in 0..=frets_shown {
+            let fy = grid_top + f as f32 * fg;
+            p.hline(list, gx, gx + grid_w, fy, thin);
+        }
+        let first = d.first_fret.max(1);
+        if first <= 1 {
+            p.hline(list, gx, gx + grid_w, grid_top - 0.6, 1.6);
+        } else {
+            p.text(
+                list,
+                &format!("{first}fr"),
+                6.5,
+                gx + grid_w + 2.5,
+                grid_top + fg * 0.8,
+                Paint::Ink,
+            );
+        }
+        // Frets per string: highest string first, drawn low string left.
+        for (i, fret) in d.frets.iter().enumerate() {
+            let sx = gx + (strings - 1 - i) as f32 * sg;
+            match fret {
+                None => p.text_centred(list, "x", 6.0, sx, marks_y + 2.0, Paint::Ink),
+                Some(0) => circle(list, sx, marks_y, 1.5, false),
+                Some(f) => {
+                    let row = i32::from(*f) - i32::from(first) + 1;
+                    if (1..=frets_shown).contains(&row) {
+                        let cy = grid_top + (row as f32 - 0.5) * fg;
+                        circle(list, sx, cy, 1.7, true);
+                    }
+                }
+            }
+        }
+        row_bottom = row_bottom.max(grid_bottom);
+        x += cell;
+    }
+    row_bottom
+}
+
+/// A circle of radius `r` centred on (`cx`, `cy`), filled or outlined.
+fn circle(list: &mut DisplayList, cx: f32, cy: f32, r: f32, filled: bool) {
+    let k = 0.552_284_8 * r;
+    let path = Path::new()
+        .move_to(cx + r, cy)
+        .cubic_to(
+            Point::new(cx + r, cy + k),
+            Point::new(cx + k, cy + r),
+            Point::new(cx, cy + r),
+        )
+        .cubic_to(
+            Point::new(cx - k, cy + r),
+            Point::new(cx - r, cy + k),
+            Point::new(cx - r, cy),
+        )
+        .cubic_to(
+            Point::new(cx - r, cy - k),
+            Point::new(cx - k, cy - r),
+            Point::new(cx, cy - r),
+        )
+        .cubic_to(
+            Point::new(cx + k, cy - r),
+            Point::new(cx + r, cy - k),
+            Point::new(cx + r, cy),
+        )
+        .close();
+    if filled {
+        list.fill(path, Paint::Ink);
+    } else {
+        list.stroke(path, 0.5, Paint::Ink);
+    }
 }
 
 /// "Standard tuning", or the open strings from the lowest, such as
