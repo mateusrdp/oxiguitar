@@ -6,7 +6,7 @@
 // in the corner, the track list along the bottom (F8). The score is drawn
 // by our renderer on the worker thread and shown here as tiles.
 
-import { CheckBox, Slider, ScrollView, Palette } from "std-widgets.slint";
+import { Slider, ScrollView, Palette } from "std-widgets.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
 
 export struct TileItem {
@@ -182,7 +182,6 @@ export component AppWindow inherits Window {
     callback settings-changed();
     callback canvas-changed();
     callback zoom-moved(float);
-    callback track-toggled(int);
     callback track-solo(int);
     callback standard-clicked(int);
     callback tablature-clicked(int);
@@ -392,8 +391,9 @@ export component AppWindow inherits Window {
                 dragged(d) => { root.tracks-height = clamp(root.tracks-height - d, 48px, 400px); }
             }
 
-            // Track list: tick tracks to show them together; click a name to
-            // show that track alone.
+            // Track list: each track's notation buttons show it (both off
+            // hides it); click a name to show that track alone. No show tick:
+            // the buttons do that (Mateus, 17 Oct 2026).
             if root.show-tracks && root.has-score : Rectangle {
                 height: root.tracks-height;
                 background: Palette.alternate-background;
@@ -412,12 +412,6 @@ export component AppWindow inherits Window {
                                 horizontal-alignment: right;
                                 font-size: 12px;
                                 color: Palette.foreground.transparentize(0.4);
-                            }
-                            CheckBox {
-                                // Two-way, so the tick follows the model when
-                                // Multitrack or a click on a name changes it.
-                                checked <=> track.shown;
-                                toggled => { root.track-toggled(i); }
                             }
                             Rectangle {
                                 width: 260px;
