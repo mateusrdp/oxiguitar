@@ -1,0 +1,18 @@
+[package]
+name = "oxiguitar-display"
+description = "The display list OxiGuitar's layout produces and every renderer draws, plus the fonts it refers to."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+skrifa.workspace = true
+serde = { workspace = true }
+serde_json.workspace = true
+
+[lints]
+workspace = true

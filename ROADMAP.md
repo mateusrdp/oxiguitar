@@ -6,7 +6,7 @@ v1.0, a full TuxGuitar replacement for reading, editing and playing, ships at th
 
 | Milestone | Release | Status |
 | --- | --- | --- |
-| M0 Foundations | — | **In progress** |
+| M0 Foundations | — | **Done, awaiting review** |
 | M1 Viewer | v0.1 | Not started |
 | M2 Editor | v0.5 | Not started |
 | M3 MIDI player | **v1.0** | Not started |
@@ -24,22 +24,35 @@ Set up everything the later milestones stand on, and settle the open technical c
 - [x] Cargo workspace, formatting and lint rules, LICENSE, CREDITS.md, CONTRIBUTING.md with DCO sign-off
 - [x] CI on Windows, macOS and Linux, x86_64 and ARM64; cargo-deny licence check; no-network test (NET-5); `ci-success` gate
 - [x] Test builds of every push to `develop` for all targets
-- [ ] Score model, first version (ADR 0002)
-- [ ] Evaluate the guitarpro crate on the corpus: adopt, fork or write our own (ADR 0003)
-- [ ] Format detection from file contents (FMT-6) and a GP5 reader
-- [ ] `oxiguitar-cli info` prints the structure of any GP5 file
-- [ ] Corpus manifest: names, formats, sources and checksums
-- [ ] Public fixture set of self-made and freely licensed files
+- [x] Score model, first version (ADR 0002)
+- [x] Evaluate the guitarpro crate on the corpus: adopt, fork or write our own (ADR 0003: write our own)
+- [x] Format detection from file contents (FMT-6) and a GP3/GP4/GP5 reader with import log
+- [x] `oxiguitar-cli info` prints the structure of any GP5 file
+- [x] Corpus manifest: names, formats, sources and checksums (per-file source URLs still to collect)
+- [x] Public fixture set of self-made and freely licensed files (GP3/4/5 test songs; each new reader adds its own in M1)
 - [x] Placeholder app icon: a green guitar pick with "OxG"
-- [ ] Licences marked "confirm" in the brief checked before any code is copied
-- [ ] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR: GUI toolkit)
-- [ ] Render spike: SMuFL glyphs and tab numbers on screen and in a PDF from one display list (ADR: renderer)
+- [x] Licences marked "confirm" in the brief checked before any code is copied (see below)
+- [x] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR 0004: Slint, proposed)
+- [x] Render spike: SMuFL glyphs and tab numbers on screen and in a PDF from one display list (ADR 0005)
 
 Done when:
 
-- [ ] Decision records exist for GUI toolkit, renderer, model and file-reader strategy
-- [ ] `oxiguitar-cli` prints the structure of any GP5 file
-- [ ] CI is green on all three systems
+- [x] Decision records exist for GUI toolkit (0004), renderer (0005), model (0002) and file-reader strategy (0003)
+- [x] `oxiguitar-cli` prints the structure of any GP5 file (all 27 GP5 files in the corpus)
+- [x] CI is green on all three systems (Windows, macOS, Linux; x86_64 and ARM64)
+
+Licences confirmed on 15 October 2026, from each package's own metadata and licence files:
+
+| Project | Version | Licence | Note |
+| --- | --- | --- | --- |
+| PyGuitarPro | 0.11 | LGPL-3.0-only | Reference only; ported code would keep LGPL-3.0 notices |
+| musicxml | 1.1.2 | MIT | Last release November 2024 |
+| abc-parser | 0.4.0 | MIT | |
+| krilla | 0.8.2 | MIT OR Apache-2.0 | Its NOTICE credits MPL-2.0 and Apache-2.0 snippets; all GPL-3.0-compatible |
+| cpal | 0.18.2 | Apache-2.0 | |
+| midir | 0.11.1 | MIT | |
+| zip | 9.0.3 | MIT | Use without default features: they build the zstd C library |
+| quick-xml | 0.42.0 | MIT | |
 
 ## M1 — Viewer (v0.1)
 
@@ -48,7 +61,8 @@ Open every supported format and show it beautifully.
 - Readers for GP5 onwards and the other formats in the brief, with import logs; GP3 and GP4 if cheap. Guitar Pro readers first; MuseScore, MusicXML and ABC once more sample files arrive.
 - Engraving for standard notation, tablature and rhythm-on-tab, with the core effects drawn (VIEW-1, VIEW-2, VIEW-7, NOT-1 to NOT-4).
 - Tab derivation for files with only standard notation (TAB-3, TAB-4).
-- Page, vertical and horizontal views, multi-track display, zoom, score header (VIEW-3 to VIEW-6).
+- Page, vertical, horizontal and parchment layouts, multi-track display, zoom, score header (VIEW-3 to VIEW-6).
+- The desktop window (`oxiguitar-app`, Slint) following [docs/design/ui.md](docs/design/ui.md): menus only on top, collapsible palette groups, interface zoom by keys and wheel, score-zoom slider, dark page (UI-7 to UI-10).
 - PDF export (EXP-1). User manual on GitHub Pages. Release packages (release.yml).
 
 Done when: 98% of the GP5-and-later corpus opens without error, the rest with clear messages; 24 hours of fuzzing per reader without a crash; a 300-bar, 8-track file opens in under a second; visual regression tests cover 50 reference scores; Mateus has reviewed PDFs of 10 songs.
@@ -76,3 +90,5 @@ Done when: playback matches the written effects by ear; playback starts in under
 - **M7** — research spike and go/no-go on reading users' own Guitar Pro RSE soundbanks, as a plugin.
 - **M8** — audio tracks, advanced practice tools, line-in, PNG/SVG export, external MIDI devices.
 - **M9** — a simpler viewer and player for Android and iPad.
+
+Unscheduled, late nice-to-have: screen-reader support (UI-11). Keyboard access is required from M1.

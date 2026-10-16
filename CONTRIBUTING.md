@@ -22,7 +22,7 @@ git commit -s -m "Read GP5 bends"
 
 This adds a line such as `Signed-off-by: Your Name <you@example.com>`, which must match the commit's author email. To fix a branch afterwards: `git rebase --signoff develop`, then force-push your branch.
 
-Commits made by the Claude GitHub app, which writes much of the code with the maintainer, carry a `Co-Authored-By: Claude` trailer instead. The DCO is a statement by a person, so the check skips them; the maintainer's approval of the pull request into `main` is the human sign-off for that work.
+Commits made by the Claude GitHub app, which writes much of the code with the maintainer, carry a `Co-Authored-By: Claude` trailer instead. The DCO is a statement by a person, so the check skips them, and also skips GitHub's squash merges of those pull requests into `develop`, which GitHub attributes to the account that merged them. The maintainer's review and merge of the pull request into `main` is the human sign-off for that work.
 
 You keep the copyright on what you contribute. Your name goes in [CREDITS.md](CREDITS.md) with your first merged contribution.
 

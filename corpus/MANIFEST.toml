@@ -1,0 +1,783 @@
+# OxiGuitar private test corpus — manifest only. The files themselves are never
+# committed (see corpus/README.md and CONTRIBUTING.md).
+#
+# To check you have the same files: put the two sets in corpus/files/tabs and
+# corpus/files/scores, then run
+#   cargo run --release -p oxiguitar-cli -- manifest corpus/files/tabs corpus/files/scores
+# and compare the output with the [[file]] entries below.
+#
+# To read every file and see what fails:
+#   cargo run --release -p oxiguitar-cli -- info corpus/files/tabs/* corpus/files/scores/*
+
+[sets.tabs]
+received = 2026-10-15
+source = "Free community transcriptions from CifraClub and Ultimate Guitar, collected by Mateus Rocha de Paula. Per-file URLs not yet recorded."
+notes = "One exact duplicate: angra-caa_e_caador.gp4 and angra-caca-cacador.gp4. Four files named .gp3 are Guitar Pro 5."
+
+[sets.scores]
+received = 2026-10-15
+source = "Collected by Mateus Rocha de Paula. Origin of each file not yet recorded."
+notes = "No tablature staves in the MuseScore and MusicXML files, so they double as tab-derivation tests (TAB-3)."
+
+[[file]]
+set = "tabs"
+name = "ACDC - Back In Black V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 27488
+sha256 = "992bddeb85586eeea97d583f7d0e82611ca9ad50a2c62c7d37f57014b5cb5eff"
+
+[[file]]
+set = "tabs"
+name = "ACDC - Hells Bells V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 30668
+sha256 = "3de33dbac97143923cb7e5fba6b95be19ac980b6e03fe77cf8ea418ab67c4020"
+
+[[file]]
+set = "tabs"
+name = "ACDC - High Voltage.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 11143
+sha256 = "128ea66ec61773f014ca0a5a0b11d28de7a8294a9ce00fa9da5872b5978776f2"
+
+[[file]]
+set = "tabs"
+name = "ACDC - Highway To Hell V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 32529
+sha256 = "512b9a7d22915dfa0119b07609c829447835ba3e6736f6a52fc096a6363bf552"
+
+[[file]]
+set = "tabs"
+name = "ACDC - Thunderstruck V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 72277
+sha256 = "ad42e2eb3c65f491cfdc18fbaf066bcadd1317fa095ae66cd8a62718ef604a5d"
+
+[[file]]
+set = "tabs"
+name = "ACDC - Tnt V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 7212
+sha256 = "0b4f1c789c58ee3882f1ba7fa3ce9117afd2ee2b28c30d45558944e8e8acfe08"
+
+[[file]]
+set = "tabs"
+name = "Allman Brothers Band (The) - Jessica.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 186027
+sha256 = "83e215d97d43a916b58b8aaceb2de01809811d99d32d2bd42c19596a65edd884"
+
+[[file]]
+set = "tabs"
+name = "Avenged Sevenfold - Dear god.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 201310
+sha256 = "efa9e38ae256d7ddf52947cff887ad5e25f62f11e0cc8f27278c51e7f019cc61"
+
+[[file]]
+set = "tabs"
+name = "Avenged Sevenfold - Sidewinder.gp5"
+format = "Guitar Pro 5.00 (.gp5)"
+bytes = 155664
+sha256 = "16cf65a1160a898d8da499d92fc6be9278d4328a8345055b62cc93c30e08a517"
+
+[[file]]
+set = "tabs"
+name = "Black Sabbath - Children Of The Grave V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 17305
+sha256 = "38d930d122b4a7ff2a502444bed8c86177c16d4024aea75db3a5af50c82f5bcb"
+
+[[file]]
+set = "tabs"
+name = "Black Sabbath - Fairies Wear Boots V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 8845
+sha256 = "42063d0122dd2a3ad531101d7c3bfb47f2c3a2cb331d09cb60c517592d4f997d"
+
+[[file]]
+set = "tabs"
+name = "Black Sabbath - Iron Man V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 16818
+sha256 = "f7bc71c33d2947d23a4a7ad74fd0acb62f21e865a337d916dafd799b9b8e12e6"
+
+[[file]]
+set = "tabs"
+name = "Black Sabbath - NIB V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 33330
+sha256 = "211ee53a0206ff03d2f168cc33aac310639ec145154e9c582df5e16060f8b0ed"
+
+[[file]]
+set = "tabs"
+name = "Black Sabbath - Paranoid V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 14398
+sha256 = "8a8887b0ea2772b4b746761481d637a03f7180245a3506ea35865b2937b5f043"
+
+[[file]]
+set = "tabs"
+name = "Black Sabbath - Sabbath Bloody Sabbath V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 37056
+sha256 = "f73f4b5e145e72c0a0b1afecd1564868a843f2a822834553b51424584edd0ddc"
+
+[[file]]
+set = "tabs"
+name = "Black Sabbath - Snowblind V1.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 5261
+sha256 = "4e0e3acd6c56241002d8a4df806c19f0742e830b3787272f1f0c0d11bb27b7c2"
+
+[[file]]
+set = "tabs"
+name = "Dream Theater - The Bigger Picture v4.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 49674
+sha256 = "f90206bbd11ccdad2eaa79ed33fe7efcd91131a76063eccbd037b77408d1378c"
+
+[[file]]
+set = "tabs"
+name = "Eric Johnson - Cliffs Of Dover.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 32977
+sha256 = "9b7287305785f2d0226c9d6e5bc7762aeeafd163dcf93d94edb9b1f6bdfb849d"
+
+[[file]]
+set = "tabs"
+name = "Eric Johnson - Manhattan.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 64103
+sha256 = "9a86864b882c1963d380b3494c78044751095c69a620e75bf1abd70c4a8aba6b"
+
+[[file]]
+set = "tabs"
+name = "Eric Johnson - Manhattan.gp5"
+format = "Guitar Pro 5.00 (.gp5)"
+bytes = 57549
+sha256 = "69c1ec83916d1b24066b482fb7401c5b120a158de69e345b7dc54bdefb082a20"
+
+[[file]]
+set = "tabs"
+name = "Ghost - Faith.gpx"
+format = "Guitar Pro 6 (.gpx)"
+bytes = 87860
+sha256 = "5da2e63578bd68f636871dece1f077642260231f9c2081ba1066018af59c7661"
+
+[[file]]
+set = "tabs"
+name = "Ghost - From The Pinnacle To The Pit (ver 2 by t0mm1_).gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 82944
+sha256 = "315908e4aa16baebeda8dfe8c78c42cc1612a7d76b95782e66ed23f3802492e9"
+
+[[file]]
+set = "tabs"
+name = "Ghost - he is.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 69908
+sha256 = "68b4b0cddcb1e6d956c47b09ff25c7b8031581594e72821df0c7dfb7fbb1cb5c"
+
+[[file]]
+set = "tabs"
+name = "Heart - Alone.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 26128
+sha256 = "3b97d39100dbc30eeafef348c002791069519a94747cb545e453625e09b0ab52"
+
+[[file]]
+set = "tabs"
+name = "Joe_Bonamassa-Just_Got_Paid.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 232986
+sha256 = "df31f6f298ea893e8b4ab72e54fea3febd6c9f5ce77fbd03395e3330ecf8e7a9"
+
+[[file]]
+set = "tabs"
+name = "Led Zeppelin - Black Dog.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 39058
+sha256 = "7901ecc3108d6459a621cb10429f9bc69b3453f88e95cb933d2be8109481c9c5"
+
+[[file]]
+set = "tabs"
+name = "Led Zeppelin - Communication Breakdown.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 23005
+sha256 = "b797c4c593ebba30768529937cc76f46c8eb6bb07d1ca896d38cc9521f0c6a31"
+
+[[file]]
+set = "tabs"
+name = "Led Zeppelin - Kashmir.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 178149
+sha256 = "9dc6cbbbb918829fdb2876ac9a29ad820d320ac097598e808aafa1a3cbfa08ba"
+
+[[file]]
+set = "tabs"
+name = "Led Zeppelin - Whole Lotta Love.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 27410
+sha256 = "fad4d6d1870cee96fb7a69fcc5cf8b2f1515143632abbb2f56f778b14c296156"
+
+[[file]]
+set = "tabs"
+name = "Mötley Crüe - Sticky Sweet (ver 2 by Mr. Mustaine).gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 52365
+sha256 = "70e4fefcd6d3071acda2bc60f74c04d9fea2980acf83100880594c6d143bae21"
+
+[[file]]
+set = "tabs"
+name = "Mötley Crüe - Wild Side.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 55039
+sha256 = "8bb323829c49502cb8b5ee8d8fcb162acd7aa9be7d228e25727faeaf6ca1158f"
+
+[[file]]
+set = "tabs"
+name = "Nightwish - Nightquest.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 149005
+sha256 = "da471f5deae32fab47bf567f0fba1220d53cf1c3a7a9df3ecaf8a4079cc5538a"
+
+[[file]]
+set = "tabs"
+name = "Pink Floyd - Shine On You Crazy Diamond Part I - V (ver 3 by Moutardentube).gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 165827
+sha256 = "2236bf2fef0bf458f5c1793f234a3f902cd2319acf902a7feb38bdb1bff2505f"
+
+[[file]]
+set = "tabs"
+name = "Pink Floyd - Wish You Were Here.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 145179
+sha256 = "38eaa5a573a113cbb8a81a89ae76e03c25aecda2e46b3f83557323742ca4c299"
+
+[[file]]
+set = "tabs"
+name = "Zequinha de Abreu - Tico Tico No Fuba.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 13938
+sha256 = "70c30098b17fc279d9cdc8c62f892b34177a60fdaea8a28fa7ad283a7cf23572"
+
+[[file]]
+set = "tabs"
+name = "angra-caa_e_caador.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 60011
+sha256 = "6bd5b607e873d2b1864b196ec251461f675ce916f81c24999025493544d488af"
+
+[[file]]
+set = "tabs"
+name = "angra-caca-cacador.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 60011
+sha256 = "6bd5b607e873d2b1864b196ec251461f675ce916f81c24999025493544d488af"
+
+[[file]]
+set = "tabs"
+name = "angra-hunters-and-pray.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 53874
+sha256 = "a9a01fd3881edb8cc3c562f56b24768fccdb11c004b9d3050487bbd670c8cbd8"
+
+[[file]]
+set = "tabs"
+name = "angra-nothing-to-say.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 112634
+sha256 = "547ae662a2a71f67dca6f851eb3ddc92a838c4c24bb0db45c357a7bc97550840"
+
+[[file]]
+set = "tabs"
+name = "angra-petrified-eyes.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 64555
+sha256 = "03d0052c033bb8fb974990620e615c8bd0d90087fcbdbfe73d834a0173fd9a01"
+
+[[file]]
+set = "tabs"
+name = "avenged-sevenfold-hail-to-the-king.gpx"
+format = "Guitar Pro 6 (.gpx)"
+bytes = 81619
+sha256 = "10ef391d934b5b2cfb3b1b5c122830545c9219b638c0e8b1a570fdfde9ce4e52"
+
+[[file]]
+set = "tabs"
+name = "avenged-sevenfold-nightmare.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 111849
+sha256 = "c43376545f5e32fbb94e7cf795d8e8a287e776ab30538caf2664b901b4eb80d3"
+
+[[file]]
+set = "tabs"
+name = "barao-vermelho-bete-balanco.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 28345
+sha256 = "edd145701170e9c1efb8b54a801ca5aa133e78a814042b54dc4032f24990278a"
+
+[[file]]
+set = "tabs"
+name = "blackmores-night-magical-world-66692723.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 59525
+sha256 = "00625ab85f22e548b2a85e818ca4a52d876b6a0438e186b879e4bc4862d6a4c3"
+
+[[file]]
+set = "tabs"
+name = "blackmores-night-under-violet-moon.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 40702
+sha256 = "1d9de34f291b95c5bdb08fd716342ac840edfe9f5ce97ba2891e7bd27d8041f6"
+
+[[file]]
+set = "tabs"
+name = "bob-marley-is-this-love.gp4"
+format = "Guitar Pro 4.00 (.gp4)"
+bytes = 26511
+sha256 = "1f812a223e1d8b7c8e607d5aee486b70e07ec98cb1453bfd0ba2fa401daef7a3"
+
+[[file]]
+set = "tabs"
+name = "deep-purple-black_night.gp3"
+format = "Guitar Pro 5.00 (.gp5)"
+bytes = 66618
+sha256 = "364d4e4622593ced9c4760bedb9c60e2949129be2787a53d234d7d101ae12fce"
+
+[[file]]
+set = "tabs"
+name = "dr-sin-futebol-mulher-rockn-roll.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 24622
+sha256 = "5603104d043b08ae3a52691ae89be7c535b7134e955a7bb087f64a74d1e1867a"
+
+[[file]]
+set = "tabs"
+name = "dream-theater-another-day-88265445.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 22506
+sha256 = "a8e9675b574b3b8e796e2e78dd26a4db521850b3ca820e9890ea5667cc97517b"
+
+[[file]]
+set = "tabs"
+name = "dream-theater-erotomania.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 60355
+sha256 = "4125fd9c9d99dff7c723ddfa4bf5b210430d05dcb7c0728573e5475962930143"
+
+[[file]]
+set = "tabs"
+name = "dream-theater-hollow-years.gp5"
+format = "Guitar Pro 5.00 (.gp5)"
+bytes = 70589
+sha256 = "bf4c752735d2f5e23ee16103a088e0d58adcc0343eab4ec59af32e5dcbea3eac"
+
+[[file]]
+set = "tabs"
+name = "garoto-annibal-augusto-sardinha-desvairada.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 21157
+sha256 = "41b5b8938836e0a06b82d56f80d854ceb2ccaf1f5e49d2e8d8d9047ecba82a5e"
+
+[[file]]
+set = "tabs"
+name = "garoto-annibal-augusto-sardinha-desvairada.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 10503
+sha256 = "c7f1411271b58470896d71489e286b13ec5c0874b42b3630caa55f33baa1ec6a"
+
+[[file]]
+set = "tabs"
+name = "gary-moore-one_day_ver2.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 96366
+sha256 = "3126b42547ce852fbdc7c153200f551c9e8c9a6f90095a0047aaaccfb4f227ce"
+
+[[file]]
+set = "tabs"
+name = "gary-moore-one_day_ver2.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 42058
+sha256 = "eaf106214189ca1c66bb94f8694e2c5e9f4bdc12e37d3813b85bc175e46624d8"
+
+[[file]]
+set = "tabs"
+name = "gary-moore-parisienne_walkways_ver2.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 41322
+sha256 = "52d96b2ef6c135c6995b4e1bd7be7fc30bef3955ab1ef9cf6201e83549ca9e72"
+
+[[file]]
+set = "tabs"
+name = "gary-moore-still-got-the-blues.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 49599
+sha256 = "44a5700b4cd9730a30466ada00fce45641ef6c9f6365692633efea07e4da7d04"
+
+[[file]]
+set = "tabs"
+name = "gary-moore-the_loner_ver2.gp3"
+format = "Guitar Pro 5.00 (.gp5)"
+bytes = 13145
+sha256 = "f13c7624dcf20bb6700a8918ddde6581f3359ad8ecab728ca983aa8c9f7e9634"
+
+[[file]]
+set = "tabs"
+name = "gary-moore-walking_by_myself.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 15327
+sha256 = "5566893937790cde2c2fb733a2a9ad97f24c42cf759ac9e02b3f2b2d21720c12"
+
+[[file]]
+set = "tabs"
+name = "george-michael-careless_whisper.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 64864
+sha256 = "409755f85d2d3da859ce6751ec6f1b7a9ad1750c70c5a307511573c4bd5a014f"
+
+[[file]]
+set = "tabs"
+name = "ghost-cirice.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 50923
+sha256 = "8df9ab3919baaa3b40285649a0065135c8c4100b72b02bf1577f6aa61b6cd82a"
+
+[[file]]
+set = "tabs"
+name = "ghost-cirice.gp5"
+format = "Guitar Pro 5.00 (.gp5)"
+bytes = 107179
+sha256 = "f4ee6d25d1d294b12bc7800963318cd89af9ca4abfd4fadd0e61aedd6a7d23c0"
+
+[[file]]
+set = "tabs"
+name = "ghost-year-zero.gpx"
+format = "Guitar Pro 6 (.gpx)"
+bytes = 100881
+sha256 = "434e32869c6d4e5a5ead617b8a3274227fcfe24924dd716639f41a173e91e78d"
+
+[[file]]
+set = "tabs"
+name = "guns-n-roses-patience-1570105.gp4"
+format = "Guitar Pro 4.00 (.gp4)"
+bytes = 45588
+sha256 = "c71da9098622ab681367a7bc99b76294a57d6c332c025c2cbff0bc5d984c0608"
+
+[[file]]
+set = "tabs"
+name = "jason-becker-altitudes_ver2.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 39711
+sha256 = "95575326dbaf50bf3e02554712108da76eca91c749b0d0f7fb9a6c51e22a0ea3"
+
+[[file]]
+set = "tabs"
+name = "jimi-hendrix-all-along-the-watchower.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 46803
+sha256 = "dfc590375b0bb752fbf60f76c6ccea2b571e0c4e9e857bc6694608cdfbc6e1d8"
+
+[[file]]
+set = "tabs"
+name = "jimi-hendrix-little-wing.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 17556
+sha256 = "6ae522182b4ced81843b4f0f950ee166018357226c310b9b97f62a5f225fd07f"
+
+[[file]]
+set = "tabs"
+name = "jimi-hendrix-purple-haze.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 15935
+sha256 = "d615dc6baaf5864d655dffcc86159f280175df4202de7961465be0dbbaf4d9ea"
+
+[[file]]
+set = "tabs"
+name = "joe-satriani-satch-boogie.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 43400
+sha256 = "dcb64fd67408a3fbc8add49605a4e1c885fcc180ac627f7c766e906a61cf502d"
+
+[[file]]
+set = "tabs"
+name = "joe-satriani-surfing-with-the-alien.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 118071
+sha256 = "046c00d90716f9ee99cd76af7c7068a26bcf375d5ce0de3892685ce307a4036d"
+
+[[file]]
+set = "tabs"
+name = "kansas-carry-on-wayward-son_1421875687.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 167774
+sha256 = "c9da68d7b6b8428a534f18258957145b46656ec499f23c9535f6c080442a3bf5"
+
+[[file]]
+set = "tabs"
+name = "lynyrd-skynyrd-lynyrd-skynyrd-simple-man-competa_1327613798.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 60345
+sha256 = "7d0bc71561865cf6dc7c9986aa493dc112bd7227c69873a1d4325eec01a40fbf"
+
+[[file]]
+set = "tabs"
+name = "lynyrd-skynyrd-sweet-home-alabama.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 38722
+sha256 = "6e8c54ce62360c66ce45b4e304c69f7bc42c5036155d21804c97902c579561fc"
+
+[[file]]
+set = "tabs"
+name = "malmsteen-yngwie-arpeggios-from-hell.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 21962
+sha256 = "773e50a7858f23688c48d6374732ec35edc5384fc153419227c38527ec69e17b"
+
+[[file]]
+set = "tabs"
+name = "megadeth-killing-is-my-business-and-my-business-is-good.gp4"
+format = "Guitar Pro 4.00 (.gp4)"
+bytes = 36318
+sha256 = "d3c503b9185c7d4c628b61a7cae3ab145b29d5570fe80263b58a3c5cfb8e4c7e"
+
+[[file]]
+set = "tabs"
+name = "megadeth-tornado_of_souls.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 51612
+sha256 = "7a3366605322458a760c0f61c73a4a598638c391110a5259d9640a06c4619cfb"
+
+[[file]]
+set = "tabs"
+name = "megadeth-trust.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 136536
+sha256 = "22cd6db59786ef67a12423844cbf375c179696a73eacfe120b630ed5a9822811"
+
+[[file]]
+set = "tabs"
+name = "megadeth-trust.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 41267
+sha256 = "dada503568401856741fdd5718ffbfb86c33ca7f38e5b566a9ad6f1f74d46507"
+
+[[file]]
+set = "tabs"
+name = "metallica-enter-sandman.gp3"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 69434
+sha256 = "aee4e1b168636fbd30b984d740479d493f26a045138c6828aaf0c81a4e986d98"
+
+[[file]]
+set = "tabs"
+name = "metallica-metallica-seek-and-destroy_1424280142.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 250614
+sha256 = "a571bff5089a433fd4a2e14620a872d6de4863fe4117c5906b6c68e34540ec9b"
+
+[[file]]
+set = "tabs"
+name = "metallica-metallica-seek-and-destroy_1424280142.gp5"
+format = "Guitar Pro 5.00 (.gp5)"
+bytes = 135892
+sha256 = "9601a7c7a27b662cf07eec37c41ab273fcd5faa600b952340b93ead50313c5fe"
+
+[[file]]
+set = "tabs"
+name = "metallica-the-unforgiven-ii.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 52421
+sha256 = "6971d89a91d1c6b4f173e46f50787aead7c373b79f0c9b45cf247d4fbb296998"
+
+[[file]]
+set = "tabs"
+name = "metallica-the-unforgiven-iii.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 84553
+sha256 = "b408e240bb777091334095e0855fbfb47f81d0c6a7dbd16fcdecb0f77fd825f5"
+
+[[file]]
+set = "tabs"
+name = "mettalica-master-off-puppets.gp5"
+format = "Guitar Pro 5.00 (.gp5)"
+bytes = 170975
+sha256 = "5443edd05d96fd7bd69e7272c0588c7d7f420453b396519d71f420d7ceb5afab"
+
+[[file]]
+set = "tabs"
+name = "motley-crue-drfeelgood.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 72101
+sha256 = "7ba938bd9adb0f6ed55b1368018babd3eaaf4aec246563c75536e652f3525d87"
+
+[[file]]
+set = "tabs"
+name = "nightwish-over-the-hills-and-far-away.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 43151
+sha256 = "d73d0feb7c09b3c9a3c54752d1d840133dfb8a4d83866ff27963e6acf2c77afc"
+
+[[file]]
+set = "tabs"
+name = "ozielzinho-izabella_2.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 6961
+sha256 = "bc6018348fb65d5538cec6a75a6aefeab1ff54699f7d8a71c971e88949d95365"
+
+[[file]]
+set = "tabs"
+name = "ozielzinho-izabella_4.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 51541
+sha256 = "3d46f214a244b123fb048a55d79a882265c41c359a3087c95f1097aadfbde230"
+
+[[file]]
+set = "tabs"
+name = "ozielzinho-we_are_the_champions.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 5071
+sha256 = "139bc3a625fdd1e7cbe2c0f3d5876162d7f3111231aee92649ef408b48506007"
+
+[[file]]
+set = "tabs"
+name = "prince-purple-rain.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 13982
+sha256 = "da3f64dfe1e82917f4637f1afa5e0c0965f794a1d2641ac1d17d895762a40406"
+
+[[file]]
+set = "tabs"
+name = "rainbow-long-live-rockn-roll.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 41322
+sha256 = "9a18a2ad34aa92f658f5a88e3bc3413fa26b23e9519cad5a82f5f093a9a088e5"
+
+[[file]]
+set = "tabs"
+name = "santana-smooth.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 117086
+sha256 = "128a70aaf3860f3ce3c8a4ed30caaac57b6f4ebbffa80dedf9f0bc687bf8da81"
+
+[[file]]
+set = "tabs"
+name = "scorpions-wind-of-change-11370381.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 60970
+sha256 = "bdda59f5cc51b8bc235f47f960a00937ff22b6a56f8557726b2f76ea3aee5b10"
+
+[[file]]
+set = "tabs"
+name = "steely-dan-reelin-in-the-years.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 65624
+sha256 = "4e33497a75ee8f833b2980f0ea53ae3b24591c6bd665b4915f664c7ccb8d55e7"
+
+[[file]]
+set = "tabs"
+name = "steve-vai-for-the-love-of-god.gp3"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 59783
+sha256 = "70da6fc088b6ffe6d88f738dc9810a4ed0ee4185f6880b2f3983e7a06c7312af"
+
+[[file]]
+set = "tabs"
+name = "steve-vai-tender-surrender-47484055.gp4"
+format = "Guitar Pro 4.00 (.gp4)"
+bytes = 82406
+sha256 = "ec53be2ad8241406d3ddf983c81b5342ef3aa78da955a5aef7f4a311c10d9ffd"
+
+[[file]]
+set = "tabs"
+name = "the-beatles-while-my-guitar-gently-weeps-6625470.gp4"
+format = "Guitar Pro 4.00 (.gp4)"
+bytes = 52589
+sha256 = "49df77cbdfa5c7ab97c08c54346171fbc87019a0a4f30166cef5bde1d4f866cf"
+
+[[file]]
+set = "tabs"
+name = "waldir-azevedo-brasileirinho-waldir-azevedo_1359763256.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 82241
+sha256 = "2756d2098df940ffbb0fd3dc9db5cfc587a23d4e535ba4c6123cf6a89a520863"
+
+[[file]]
+set = "tabs"
+name = "whitesnake-fool-for-your-loving.gp5"
+format = "Guitar Pro 5.10 (.gp5)"
+bytes = 57756
+sha256 = "289fe05c77135143b032fe17a832ced7bbda9ae9b555782b766e540350cbc96e"
+
+[[file]]
+set = "tabs"
+name = "yngwie-malmsteen-arpeggios-from-hell.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 2101
+sha256 = "7b005e98dfd9b96c0fdfd0721af8e87a3cd08eefc7b64d10f5deb778e03488ac"
+
+[[file]]
+set = "tabs"
+name = "zz-top-la-grange.gp3"
+format = "Guitar Pro 3.00 (.gp3)"
+bytes = 51595
+sha256 = "78bfcab43b3482297c3c1b9038e32f534abf4c5bd1c3494e710f970a12bd61bc"
+
+[[file]]
+set = "tabs"
+name = "zz-top-sharp_dressed_man.gp4"
+format = "Guitar Pro 4.06 (.gp4)"
+bytes = 45258
+sha256 = "32ce2ad3e7d50a464f5ad0dc9fe7439788233549aa4bbdb9c4e95a3021795789"
+
+[[file]]
+set = "scores"
+name = "Dona da Minha Cabeça.mscz"
+format = "MuseScore (.mscz)"
+bytes = 95081
+sha256 = "773f94eb707229805a9466a41e71cd62ab5b9c98f72054d77445da0987f445cf"
+
+[[file]]
+set = "scores"
+name = "Flor de Lis.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 23418
+sha256 = "9cc771ea7e2871eb142e808526a02a0e4b6a853ee4e47c310e03ec831acc38cd"
+
+[[file]]
+set = "scores"
+name = "O Princípio do Prazer.mscz"
+format = "MuseScore (.mscz)"
+bytes = 90360
+sha256 = "692afffc4fa9ca58083fa77416745439dc4af70659890fa7eee5ad67d507519e"
+
+[[file]]
+set = "scores"
+name = "Samba de Uma Nota So.mscz"
+format = "MuseScore (.mscz)"
+bytes = 39928
+sha256 = "a2c908236e6b89b6ca2ec8e8980b2bbeb328cb12b3bc799b544a4dc6be2266a5"
+
+[[file]]
+set = "scores"
+name = "Tarde em Itapuã.gp"
+format = "Guitar Pro 7/8 (.gp)"
+bytes = 16323
+sha256 = "af1a08ab6851d39730e80b6c26ccca4574cc470ab7633099f583c916b69a43d9"
+
+[[file]]
+set = "scores"
+name = "agua_de_beber.musicxml"
+format = "MusicXML"
+bytes = 63684
+sha256 = "c5e9833346e235de5546c2c9c0339b60856ffc890f7fef2162df01d2c0b7609d"
+
+[[file]]
+set = "scores"
+name = "Água de Beber.mscz"
+format = "MuseScore (.mscz)"
+bytes = 63905
+sha256 = "2c47ff65d0ecc106c3defde92e14a8eee392822797d70777525a4506082132b8"

@@ -1,0 +1,17 @@
+[package]
+name = "spike-slint"
+description = "GUI-toolkit spike: palette, track list and score canvas in slint."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+spike-common.workspace = true
+# unstable-winit-030: raw window events, for interface zoom (Ctrl + wheel).
+slint = { version = "1.18", features = ["unstable-winit-030"] }
+oxiguitar-display.workspace = true
+
+[build-dependencies]
+slint-build = "1.18"

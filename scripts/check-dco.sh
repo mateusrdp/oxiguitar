@@ -5,10 +5,14 @@
 # Checks that every commit in BASE..HEAD carries a Developer Certificate of
 # Origin sign-off (git commit -s) matching its author's email.
 #
-# Commits made by the Claude GitHub app (author noreply@anthropic.com) are
-# skipped: the DCO is a statement by a person. Those commits carry a
-# Co-Authored-By: Claude trailer, and the maintainer's approval of the pull
-# request into main is the human sign-off for them. See CONTRIBUTING.md.
+# Commits made by the Claude GitHub app are skipped: the DCO is a statement by
+# a person. They are recognised two ways:
+#   - authored by noreply@anthropic.com (commits on Claude's branches);
+#   - committed by GitHub (noreply@github.com) with a Co-Authored-By trailer
+#     for noreply@anthropic.com: the squash merges of Claude's pull requests
+#     into develop, which GitHub attributes to the account that merged them.
+# The maintainer's review and merge of the pull request into main is the
+# human sign-off for them. See CONTRIBUTING.md.
 #
 # Usage: scripts/check-dco.sh BASE_SHA HEAD_SHA
 
@@ -23,6 +27,13 @@ for sha in $(git rev-list --no-merges "$base..$head"); do
     subject="$(git show -s --format='%s' "$sha")"
     if [[ "$email" == "noreply@anthropic.com" ]]; then
         echo "skip  ${sha:0:10} (Claude app commit) $subject"
+        continue
+    fi
+    committer="$(git show -s --format='%ce' "$sha")"
+    if [[ "$committer" == "noreply@github.com" ]] \
+        && git show -s --format='%(trailers:key=Co-authored-by,valueonly)' "$sha" \
+            | grep -qiF "<noreply@anthropic.com>"; then
+        echo "skip  ${sha:0:10} (squash merge of a Claude pull request) $subject"
         continue
     fi
     if git show -s --format='%(trailers:key=Signed-off-by,valueonly)' "$sha" \

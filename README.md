@@ -42,12 +42,20 @@ cargo build --release
 cargo test
 ```
 
-Elsewhere, install Rust from your system's packages or from [rustup.rs](https://rustup.rs). The desktop app will need a few more system libraries for windows and audio; this section will list them once the GUI toolkit is chosen (milestone M0).
-
-Try the command-line tool:
+Elsewhere, install Rust from your system's packages or from [rustup.rs](https://rustup.rs). The desktop app (from milestone M1) also needs the system libraries for fonts, keyboard and windows; on Debian and Ubuntu:
 
 ```sh
-cargo run --release -p oxiguitar-cli -- help
+sudo apt install libfontconfig1-dev libxkbcommon-dev libwayland-dev
+```
+
+Audio, from milestone M3, adds `libasound2-dev`.
+
+Try the command-line tool, which can already read Guitar Pro 3, 4 and 5 files and draw a test page of notation and tablature:
+
+```sh
+cargo run --release -p oxiguitar-cli -- info fixtures/gp/oxiguitar-test-song.gp5
+cargo run --release -p oxiguitar-cli -- info --bars path/to/your/song.gp5
+cargo run --release -p oxiguitar-cli -- specimen --png page.png --pdf page.pdf
 ```
 
 ## Testers wanted

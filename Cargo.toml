@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
+# Throwaway experiments with their own workspaces and lock files (see spikes/README.md).
+exclude = ["spikes"]
 
 [workspace.package]
 version = "0.0.0"
@@ -15,6 +17,18 @@ publish = false
 
 [workspace.dependencies]
 oxiguitar-model = { path = "crates/oxiguitar-model" }
+oxiguitar-formats = { path = "crates/oxiguitar-formats" }
+oxiguitar-display = { path = "crates/oxiguitar-display" }
+oxiguitar-render = { path = "crates/oxiguitar-render" }
+# Fonts: skrifa reads outlines and metrics; keep it on the version krilla uses.
+skrifa = "0.42"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Pixel output for the screen, PNG and visual regression tests.
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd", "png-format"] }
+# PDF output. No default features: we position every glyph ourselves and
+# embed no raster images yet.
+krilla = { version = "0.8", default-features = false }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

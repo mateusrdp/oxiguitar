@@ -1,0 +1,23 @@
+# GUI-toolkit spike (M0): the same small screen in Slint, iced and egui.
+# A separate workspace so the main build, CI gate and cargo-deny never see
+# these dependencies. See spikes/README.md and docs/adr/0004-gui-toolkit.md.
+[workspace]
+resolver = "3"
+members = ["common", "slint", "iced", "egui"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.97"
+license = "GPL-3.0-or-later"
+publish = false
+
+[workspace.dependencies]
+spike-common = { path = "common" }
+oxiguitar-display = { path = "../../crates/oxiguitar-display" }
+oxiguitar-render = { path = "../../crates/oxiguitar-render" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
