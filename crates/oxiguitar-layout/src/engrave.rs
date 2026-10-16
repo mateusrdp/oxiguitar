@@ -139,8 +139,21 @@ pub(crate) fn system(
         let chords = vplans.iter().any(|b| b.has_chords);
         let text = vplans.iter().any(|b| b.has_text);
         let first = vi == 0;
+        // Tab-only views draw rhythm: voices 1 and 3 above the tab, 2 and 4
+        // below, so marks above start beyond the upward stems.
+        let tab_rhythm = v.show_tab && !v.show_std;
+        let voices_up = tab_rhythm
+            && vplans
+                .iter()
+                .any(|b| shown_voices(b).into_iter().any(voice_stems_up));
+        let voices_down = tab_rhythm
+            && vplans
+                .iter()
+                .any(|b| shown_voices(b).into_iter().any(|vi| !voice_stems_up(vi)));
         let mut stack = if v.show_std {
             ((high - 8).max(0) as f32) * sp / 2.0 + sp
+        } else if voices_up {
+            TAB_RHYTHM * sp + 2.0 * sp
         } else {
             sp
         };
@@ -182,10 +195,10 @@ pub(crate) fn system(
             None => top + 4.0 * sp,
         };
         let after = if tab_top.is_some() {
-            if v.show_std {
-                1.5 * sp
-            } else {
+            if voices_down {
                 TAB_RHYTHM * sp + 2.5 * sp
+            } else {
+                1.5 * sp
             }
         } else {
             below_std + 1.5 * sp
@@ -908,10 +921,11 @@ impl Ctx<'_> {
         }
     }
 
-    /// Rhythm on the tablature when standard notation is hidden (VIEW-2):
-    /// stems below the staff, flat beams or flags at their ends, dots,
-    /// tuplet numbers, and rests in the middle of the staff. Only the first
-    /// voice, as Guitar Pro shows it.
+    /// Rhythm on the tablature when standard notation is hidden (VIEW-2),
+    /// for every voice shown: stems by voice number as on the staff
+    /// (voices 1 and 3 above the tab, pointing up; voices 2 and 4 below,
+    /// pointing down), flat beams or flags at their ends, dots, tuplet
+    /// numbers, and rests inside the staff.
     fn tab_rhythm(
         &self,
         list: &mut DisplayList,
@@ -920,14 +934,38 @@ impl Ctx<'_> {
         bx: &BarX,
         top: f32,
     ) {
+        for vi in shown_voices(plan) {
+            let Some(beats) = plan.voices.get(vi) else {
+                continue;
+            };
+            let groups = plan.groups.get(vi).map_or(&[][..], Vec::as_slice);
+            self.tab_voice(list, beats, groups, grid, bx, top, voice_stems_up(vi));
+        }
+    }
+
+    /// One voice of [`Ctx::tab_rhythm`], with its stems up or down.
+    #[allow(clippy::too_many_arguments)]
+    fn tab_voice(
+        &self,
+        list: &mut DisplayList,
+        beats: &[BeatInfo],
+        groups: &[Vec<usize>],
+        grid: &BarGrid,
+        bx: &BarX,
+        top: f32,
+        up: bool,
+    ) {
         let p = self.p;
         let sp = self.sp();
-        let Some(beats) = plan.voices.first() else {
-            return;
-        };
         let bottom = self.tab_bottom(top);
-        let tip = bottom + TAB_RHYTHM * sp;
+        // The stem tips; away from the tab is `dir`.
+        let (tip, dir) = if up {
+            (top - TAB_RHYTHM * sp, -1.0)
+        } else {
+            (bottom + TAB_RHYTHM * sp, 1.0)
+        };
         let t = p.ed().stem_thickness * sp;
+        let string_y = |s: u8| top + f32::from(s.saturating_sub(1)) * self.tg;
         let xs: Vec<Option<f32>> = beats
             .iter()
             .map(|b| b.onset.map(|o| bx.x_of(grid, o)))
@@ -937,55 +975,60 @@ impl Ctx<'_> {
             match b.kind {
                 BeatKind::Notes => {
                     if b.value >= NoteValue::Half {
-                        // From just under the lowest fret number.
-                        let lowest = b
+                        // From just beyond the outermost fret number on the
+                        // stem's side; half notes get a short stem.
+                        let strings = b
                             .notes
                             .iter()
-                            .filter_map(|n| n.tab.as_ref().map(|(s, _)| *s))
-                            .max()
-                            .map_or(bottom, |s| top + f32::from(s.saturating_sub(1)) * self.tg);
+                            .filter_map(|n| n.tab.as_ref().map(|(s, _)| *s));
                         let from = if b.value == NoteValue::Half {
-                            tip - 1.5 * sp
+                            tip - dir * 1.5 * sp
+                        } else if up {
+                            strings.min().map_or(top, string_y) - 0.6 * self.tg
                         } else {
-                            lowest + 0.6 * self.tg
+                            strings.max().map_or(bottom, string_y) + 0.6 * self.tg
                         };
                         p.vline(list, x, from, tip, t);
                         let beams = beam_count(b.value);
+                        let flags = if up {
+                            &glyphs::FLAGS_UP
+                        } else {
+                            &glyphs::FLAGS_DOWN
+                        };
                         if b.group.is_none()
                             && beams > 0
-                            && let Some(f) = glyphs::FLAGS_DOWN.get(beams.min(4) - 1)
+                            && let Some(f) = flags.get(beams.min(4) - 1)
                         {
                             p.glyph(list, *f, x - t / 2.0, tip, Paint::Ink);
                         }
                     }
                     for d in 0..b.dots {
                         let dx = x + 0.5 * sp + f32::from(d) * 0.5 * sp;
-                        p.glyph(
-                            list,
-                            glyphs::AUGMENTATION_DOT,
-                            dx,
-                            tip - 1.0 * sp,
-                            Paint::Ink,
-                        );
+                        let dy = tip - dir * 1.0 * sp;
+                        p.glyph(list, glyphs::AUGMENTATION_DOT, dx, dy, Paint::Ink);
                     }
                 }
                 BeatKind::Rest => {
+                    // In the voice's rhythm area, clear of the fret
+                    // numbers, a little smaller than on the staff.
+                    let scale = 0.8;
                     let g = rest_glyph(b.value);
-                    let w = p.width(g);
-                    let mid = (top + bottom) / 2.0;
-                    let y = if b.value <= NoteValue::Whole {
-                        mid - sp
-                    } else {
-                        mid
+                    let w = p.width(g) * scale;
+                    let edge = if up { top } else { bottom };
+                    let centre = edge + dir * 0.55 * TAB_RHYTHM * sp;
+                    let y = match b.value {
+                        NoteValue::DoubleWhole | NoteValue::Whole => centre - 0.25 * sp,
+                        NoteValue::Half => centre + 0.25 * sp,
+                        _ => centre,
                     };
-                    p.glyph(list, g, x - w / 2.0, y, Paint::Ink);
+                    p.glyph_scaled(list, g, scale, x - w / 2.0, y, Paint::Ink);
                     for d in 0..b.dots {
                         let dx = x + w / 2.0 + 0.3 * sp + f32::from(d) * 0.5 * sp;
                         p.glyph(
                             list,
                             glyphs::AUGMENTATION_DOT,
                             dx,
-                            mid - 0.5 * sp,
+                            centre - 0.5 * sp,
                             Paint::Ink,
                         );
                     }
@@ -993,11 +1036,11 @@ impl Ctx<'_> {
                 BeatKind::Empty => {}
             }
         }
-        // Flat beams at the stem ends, secondary beams above them.
+        // Flat beams at the stem ends, secondary beams towards the tab.
         let h = p.ed().beam_thickness * sp;
         let step = h + 0.25 * sp;
         let hook = p.width(glyphs::NOTEHEAD_BLACK);
-        for g in plan.groups.first().map_or(&[][..], Vec::as_slice) {
+        for g in groups {
             let ms: Vec<(f32, usize)> = g
                 .iter()
                 .filter_map(|&i| {
@@ -1009,7 +1052,7 @@ impl Ctx<'_> {
                 .collect();
             let levels = ms.iter().map(|m| m.1).max().unwrap_or(0);
             for level in 0..levels {
-                let y = tip - h / 2.0 - level as f32 * step;
+                let y = tip - dir * (h / 2.0 + level as f32 * step);
                 let mut k = 0;
                 while k < ms.len() {
                     let has = |j: usize| ms.get(j).is_some_and(|m| m.1 > level);
@@ -1032,6 +1075,7 @@ impl Ctx<'_> {
                 }
             }
         }
+        // Tuplet numbers beyond the beams.
         for (range, tuplet) in tuplet_groups(beats) {
             let (Some(xa), Some(xb)) = (
                 xs.get(range.start).copied().flatten(),
@@ -1050,10 +1094,15 @@ impl Ctx<'_> {
                 .map(glyphs::tuplet_digit)
                 .collect();
             let w: f32 = digits.iter().map(|g| p.width(*g)).sum();
-            let above = digits.first().map_or(sp, |g| p.height(*g).0);
+            let (above, below) = digits.first().map_or((sp, 0.0), |g| p.height(*g));
+            let base = if up {
+                tip - 0.4 * sp - below
+            } else {
+                tip + 0.4 * sp + above
+            };
             let mut x = (xa + xb) / 2.0 - w / 2.0;
             for g in &digits {
-                p.glyph(list, *g, x, tip + 0.4 * sp + above, Paint::Ink);
+                p.glyph(list, *g, x, base, Paint::Ink);
                 x += p.width(*g);
             }
         }
@@ -1092,15 +1141,13 @@ impl Ctx<'_> {
         let sp = self.sp();
         let lines = &self.band.lines;
         let hw = p.width(glyphs::NOTEHEAD_BLACK);
-        let mut chord_right = f32::NEG_INFINITY;
         let mut text_right = f32::NEG_INFINITY;
         for beats in &plan.voices {
             for b in beats {
                 let Some(onset) = b.onset else { continue };
                 let x = bx.x_of(grid, onset) - hw / 2.0;
                 if let (Some(name), Some(base)) = (&b.chord, lines.chord) {
-                    let x = x.max(chord_right + 0.4 * sp);
-                    chord_right = x + p.text(list, name, chord_name_size(sp), x, base, Paint::Ink);
+                    p.text(list, name, chord_name_size(sp), x, base, Paint::Ink);
                 }
                 if let (false, Some(base)) = (b.text.is_empty(), lines.text) {
                     let x = x.max(text_right + 0.4 * sp);
@@ -1220,6 +1267,16 @@ struct Stem {
     tip: f32,
     far: f32,
     up: bool,
+}
+
+/// The voices of a bar that have something to draw, by index.
+fn shown_voices(plan: &BarPlan) -> Vec<usize> {
+    plan.voices
+        .iter()
+        .enumerate()
+        .filter(|(_, v)| v.iter().any(|b| b.kind != BeatKind::Empty))
+        .map(|(i, _)| i)
+        .collect()
 }
 
 /// `text`, shortened with an ellipsis if it is wider than `room` points.

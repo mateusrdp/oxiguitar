@@ -123,14 +123,49 @@ fn tablature_only_shows_rhythm() {
             .filter(|i| matches!(i, Item::Line { .. }))
             .count()
     };
-    // Five staff lines fewer, but stems are still drawn under the tab.
+    // Five staff lines fewer, but the rhythm is drawn around the tab.
     assert!(lines(&tab) < lines(&both));
-    let stems = tab.pages[0]
+
+    // The tab staff: the long horizontal lines of the one system.
+    let page = &tab.pages[0];
+    let tab_lines: Vec<f32> = page
         .items
         .iter()
-        .filter(|i| matches!(i, Item::Line { from, to, .. } if from.x == to.x && to.y > from.y))
+        .filter_map(|i| match i {
+            Item::Line { from, to, .. } if from.y == to.y && to.x - from.x > 200.0 => Some(from.y),
+            _ => None,
+        })
+        .collect();
+    let top = tab_lines.iter().copied().fold(f32::INFINITY, f32::min);
+    let bottom = tab_lines.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    assert_eq!(tab_lines.len(), 6, "{tab_lines:?}");
+    // Stems by voice number: voice 1 above the tab, voice 2 below.
+    let stem_width = meta.engraving_defaults.stem_thickness * Options::default().staff_space;
+    let (mut up, mut down) = (0, 0);
+    for i in &page.items {
+        if let Item::Line {
+            from, to, width, ..
+        } = i
+            && from.x == to.x
+            && (*width - stem_width).abs() < 0.01
+        {
+            if from.y.min(to.y) < top - 5.0 {
+                up += 1;
+            }
+            if from.y.max(to.y) > bottom + 5.0 {
+                down += 1;
+            }
+        }
+    }
+    let voice_1 = score.tracks[0].staves[0]
+        .bars
+        .iter()
+        .flat_map(|b| b.voices.first())
+        .flat_map(|v| &v.beats)
+        .filter(|b| !b.notes.is_empty() && b.duration.value >= NoteValue::Half && b.grace.is_none())
         .count();
-    assert!(stems > 10, "{stems} vertical lines");
+    assert_eq!(up, voice_1, "voice 1 stems above the tab");
+    assert!(down > 0, "voice 2 stems below the tab");
 }
 
 #[test]

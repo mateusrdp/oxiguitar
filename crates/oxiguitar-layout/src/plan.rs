@@ -64,6 +64,8 @@ pub(crate) struct ColPlan {
     pub(crate) right: f32,
     /// Half the width of the widest tab number.
     pub(crate) tab_half: f32,
+    /// Width of the widest chord name over this column, 0 if none.
+    pub(crate) chord_w: f32,
 }
 
 /// One bar of one staff, planned but not yet placed.
@@ -292,6 +294,7 @@ impl Planner<'_> {
         let mut left: f32 = 0.0;
         let mut right: f32 = 0.0;
         let mut tab_half: f32 = 0.0;
+        let mut chord_w: f32 = 0.0;
         for r in &column.beats {
             let Some(b) = beat_at(voices, *r) else {
                 continue;
@@ -340,8 +343,7 @@ impl Planner<'_> {
                 }
             }
             if let Some(name) = &b.chord {
-                // Chord names may overhang a little into the next column.
-                tab_half = tab_half.max(0.35 * p.text_width(name, chord_name_size(sp)));
+                chord_w = chord_w.max(p.text_width(name, chord_name_size(sp)));
             }
         }
         if !self.show_std {
@@ -353,6 +355,7 @@ impl Planner<'_> {
             left,
             right,
             tab_half,
+            chord_w,
         }
     }
 }
