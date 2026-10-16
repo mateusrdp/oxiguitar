@@ -15,5 +15,5 @@
 | Ctrl + + / Ctrl + − / Ctrl + 0 | Zoom the interface in, out, back to 100 % |
 | Score zoom slider, bottom right | Zoom the score; click the percentage for 100 % |
 | Click a track's name | Show that track alone |
-| Tick a track | Show it with the others |
+| Click a hidden track's clef or TAB | Show it with the others |
 | Click the status line | Close the message |

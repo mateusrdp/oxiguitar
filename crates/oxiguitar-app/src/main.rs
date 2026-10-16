@@ -147,7 +147,7 @@ fn main() -> Result<(), slint::PlatformError> {
         "Score zoom: the slider at the bottom right of the score; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
-        "Track list: tick tracks to show them together; click a name to show that track alone",
+        "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to show that track alone",
     ]));
     ui.set_about_lines(lines(&[
         &format!(
@@ -173,18 +173,6 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_canvas_changed(move || canvas_changed(&a));
     let a = app.clone();
     ui.on_zoom_moved(move |v| zoom_moved(&a, v));
-    let a = app.clone();
-    ui.on_track_toggled(move |i| {
-        // The tick has already flipped (two-way binding): follow it.
-        let on = a
-            .borrow()
-            .ui
-            .upgrade()
-            .and_then(|ui| ui.get_tracks().row_data(i as usize))
-            .is_some_and(|r| r.shown);
-        a.borrow_mut().tracks.set_shown(i as usize, on);
-        sync_tracks(&a);
-    });
     let a = app.clone();
     ui.on_standard_clicked(move |i| {
         a.borrow_mut().tracks.toggle_standard(i as usize);
