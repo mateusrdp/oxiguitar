@@ -339,10 +339,10 @@ fn set_page_size(ui: &AppWindow, s: &State) {
 }
 
 fn theme(ui: &AppWindow) -> Theme {
-    match ui.get_page_style() {
-        1 => Theme::DARK,
-        2 => Theme::PARCHMENT,
-        _ => Theme::LIGHT,
+    if ui.get_dark_page() {
+        Theme::DARK
+    } else {
+        Theme::LIGHT
     }
 }
 

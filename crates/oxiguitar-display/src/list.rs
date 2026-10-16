@@ -142,15 +142,6 @@ impl Theme {
         muted: Rgba::rgb(0x8c, 0x8c, 0x8c),
     };
 
-    /// Dark brown ink on a warm, paper-like page, easier on the eyes for
-    /// long reading.
-    pub const PARCHMENT: Theme = Theme {
-        ink: Rgba::rgb(0x2e, 0x25, 0x1a),
-        page: Rgba::rgb(0xf3, 0xe9, 0xd2),
-        accent: Rgba::rgb(0x2e, 0x8a, 0x4a),
-        muted: Rgba::rgb(0x8a, 0x7b, 0x63),
-    };
-
     /// The colour for a role.
     pub fn resolve(&self, paint: Paint) -> Rgba {
         match paint {
@@ -480,7 +471,7 @@ mod tests {
 
     #[test]
     fn themes_resolve_every_role() {
-        for t in [Theme::LIGHT, Theme::DARK, Theme::PARCHMENT] {
+        for t in [Theme::LIGHT, Theme::DARK] {
             assert_ne!(t.resolve(Paint::Ink), t.resolve(Paint::Page));
         }
     }
