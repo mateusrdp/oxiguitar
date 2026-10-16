@@ -27,7 +27,7 @@ Each file ported or adapted from one of these starts with an SPDX header, the or
 
 The authoritative list, with exact versions and licenses, is generated from `Cargo.lock` and shipped with every release as a third-party license file. CI runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) and fails on any license outside the allow-list in `deny.toml`.
 
-Direct dependencies so far, all pure Rust:
+Direct dependencies so far, all Rust (the desktop app also links the system's font, keyboard and window libraries):
 
 | Crate | Authors | License | Use |
 | --- | --- | --- | --- |
@@ -35,6 +35,10 @@ Direct dependencies so far, all pure Rust:
 | [tiny-skia](https://github.com/linebender/tiny-skia) 0.12 | Yevhenii Reizner and contributors; a port of parts of Skia (Google) | BSD-3-Clause | Pixel output: screen, PNG |
 | [skrifa](https://github.com/googlefonts/fontations) 0.42 | Google (fontations) | MIT OR Apache-2.0 | Font outlines and metrics |
 | [serde](https://serde.rs), [serde_json](https://github.com/serde-rs/json) | David Tolnay, Erick Tryzelaar | MIT OR Apache-2.0 | Reading the SMuFL metadata file |
+| [zip](https://github.com/zip-rs/zip2) 9 | Mathijs van de Nes, Marli Frost, Ryan Levick, Chris Hennick and contributors | MIT | Guitar Pro 7/8 archives (later .mscz). No default features (they compile the zstd C library); deflate through flate2 with the pure-Rust [zlib-rs](https://github.com/trifectatechfoundation/zlib-rs) (Zlib) |
+| [quick-xml](https://github.com/tafia/quick-xml) 0.42 | Johann Tuffe, Mingun and contributors | MIT | GPIF (Guitar Pro 6–8); later MusicXML and .mscx |
+| [Slint](https://slint.dev) 1.18 | SixtyFPS GmbH and contributors | GPL-3.0-only (one of its three licences; the one we use) | The desktop window (ADR 0004). Because Slint is GPL-3.0-only, the distributed app is under GPL-3.0. Its dependencies include winit, femtovg, AccessKit and ksni (Unlicense) |
+| [rfd](https://github.com/PolyMeilex/rfd) 0.17 | Bartłomiej Maryńczak (PolyMeilex) and contributors | MIT | The system's Open and Save dialogs (the XDG desktop portal on Linux, no GTK) |
 
 Checked for later milestones (licences confirmed 15 October 2026, see ROADMAP.md):
 
@@ -43,8 +47,6 @@ Checked for later milestones (licences confirmed 15 October 2026, see ROADMAP.md
 | [rustysynth](https://github.com/sinshu/rustysynth) | 1.3.7 | MIT | SoundFont synthesiser (M3) |
 | [cpal](https://github.com/RustAudio/cpal) | 0.18.2 | Apache-2.0 | Audio output (M3); compatible with GPL-3.0, not GPL-2.0 |
 | [midir](https://github.com/Boddlnagg/midir) | 0.11.1 | MIT | MIDI ports (M8) |
-| [zip](https://github.com/zip-rs/zip2) | 9.0.3 | MIT | GP7/8 and .mscz containers (M1). Use without default features: the defaults compile the zstd C library. |
-| [quick-xml](https://github.com/tafia/quick-xml) | 0.42.0 | MIT | GPIF, MusicXML and .mscx (M1) |
 | [musicxml](https://github.com/hedgetechllc/musicxml) | 1.1.2 | MIT | MusicXML reader/writer or reference (M1); last release November 2024 |
 | [abc-parser](https://gitlab.com/Askaholic/rust-abc-2) | 0.4.0 | MIT | ABC 2.1 parser, incomplete (M1) |
 

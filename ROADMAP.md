@@ -6,8 +6,8 @@ v1.0, a full TuxGuitar replacement for reading, editing and playing, ships at th
 
 | Milestone | Release | Status |
 | --- | --- | --- |
-| M0 Foundations | — | **Done, awaiting review** |
-| M1 Viewer | v0.1 | Not started |
+| M0 Foundations | — | **Done** (16 Oct 2026) |
+| M1 Viewer | v0.1 | **In progress** |
 | M2 Editor | v0.5 | Not started |
 | M3 MIDI player | **v1.0** | Not started |
 | M4 Guitar Pro 8 notation and editing parity | | Not started |
@@ -32,7 +32,7 @@ Set up everything the later milestones stand on, and settle the open technical c
 - [x] Public fixture set of self-made and freely licensed files (GP3/4/5 test songs; each new reader adds its own in M1)
 - [x] Placeholder app icon: a green guitar pick with "OxG"
 - [x] Licences marked "confirm" in the brief checked before any code is copied (see below)
-- [x] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR 0004: Slint, proposed)
+- [x] GUI spike: the same small screen (palette, track list, score canvas) in Slint, iced and egui (ADR 0004: Slint)
 - [x] Render spike: SMuFL glyphs and tab numbers on screen and in a PDF from one display list (ADR 0005)
 
 Done when:
@@ -56,36 +56,55 @@ Licences confirmed on 15 October 2026, from each package's own metadata and lice
 
 ## M1 — Viewer (v0.1)
 
-Open every supported format and show it beautifully.
+Open every Guitar Pro file and show it beautifully.
 
-- Readers for GP5 onwards and the other formats in the brief, with import logs; GP3 and GP4 if cheap. Guitar Pro readers first; MuseScore, MusicXML and ABC once more sample files arrive.
+- Readers for Guitar Pro 5 onwards (.gp5, .gpx, .gp), with import logs; GP3 and GP4 if cheap. The core reads and writes Guitar Pro formats only. MuseScore, MusicXML, ABC and MIDI files are recognised (FMT-6) and refused with a clear message naming the plugin they will need (decided 16 Oct 2026; see M5).
 - Engraving for standard notation, tablature and rhythm-on-tab, with the core effects drawn (VIEW-1, VIEW-2, VIEW-7, NOT-1 to NOT-4).
-- Tab derivation for files with only standard notation (TAB-3, TAB-4).
 - Page, vertical, horizontal and parchment layouts, multi-track display, zoom, score header (VIEW-3 to VIEW-6).
 - The desktop window (`oxiguitar-app`, Slint) following [docs/design/ui.md](docs/design/ui.md): menus only on top, collapsible palette groups, interface zoom by keys and wheel, score-zoom slider, dark page (UI-7 to UI-10).
 - PDF export (EXP-1). User manual on GitHub Pages. Release packages (release.yml).
 
-Done when: 98% of the GP5-and-later corpus opens without error, the rest with clear messages; 24 hours of fuzzing per reader without a crash; a 300-bar, 8-track file opens in under a second; visual regression tests cover 50 reference scores; Mateus has reviewed PDFs of 10 songs.
+Done when: 98% of the Guitar Pro 5-and-later files in the corpus open without error, the rest with clear messages (MuseScore, MusicXML and ABC files are counted separately and do not count towards this); 24 hours of fuzzing per reader without a crash; a 300-bar, 8-track file opens in under a second; visual regression tests cover 50 reference scores, generated and kept in the repository (the private corpus is checked locally only); Mateus has reviewed PDFs of 10 songs.
+
+Progress:
+
+- [x] Guitar Pro 6 (.gpx) and 7/8 (.gp) readers, with import logs and public fixtures (16 Oct 2026). Every GPX and GP file in the corpus opens; alphaTab reads the same notes from each, bar for bar; six songs saved in two formats agree (`--test corpus`).
+- [ ] Engraving into a display list (`oxiguitar-layout`): standard notation, tablature, rhythm on tab, effects
+  - [x] First engraving (16 Oct 2026): notes, rests, chords, accidentals, beams, flags, dots, ties, tuplets, signatures and key changes, repeats, voltas, sections, tempo, chord names, text; tab sharing columns with the staff; rhythm on tab-only tracks; drum staff. `oxiguitar-cli render` writes PNG and PDF. Every Guitar Pro file in the corpus engraves with all its tracks.
+  - [x] Effects (TAB-1), grace notes, lyrics, dynamics, articulations, chord diagrams in the header, text font fallback, overlap room for tuplets and articulations (16 Oct 2026)
+  - [x] Dynamics can be hidden (16 Oct 2026)
+  - [ ] Slurs, hairpins, ornaments, fermatas and ottavas once the score model holds them (NOT-3); whammy curves; fingering; second overlap pass (VIEW-7); courtesy signatures
+- [x] Page, vertical, horizontal and parchment layouts; multi-track; score header
+  - [x] Page layout, multi-track alignment, score header (16 Oct 2026)
+  - [x] Track names at the start of systems (16 Oct 2026)
+  - [x] Vertical, horizontal and parchment layouts, checked against the Guitar Pro 8 user guide (16 Oct 2026)
+- [x] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu (16 Oct 2026): File → Open, tiled canvas on a worker thread, the four layouts, multitrack, Dark Page, score and interface zoom, track list, status line
+- [x] `oxiguitar-tools`: the Tools menu's tools, one shape for all so plugins can add more (M5); first tool: Infer Key Signatures, with key changes (16 Oct 2026)
+- [x] PDF export of the shown tracks, A4 or Letter (16 Oct 2026)
+- [ ] Fuzzing, speed budget, visual regression tests
+- [ ] User manual, release packages
+
+Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5, 3 GPX, 12 GP). Counted separately, for the format plugins after M5: 5 MuseScore and 1 MusicXML file; no ABC yet.
 
 ## M2 — Editor (v0.5)
 
-- M2a: note entry on tab and staff, the full core palette, 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition (EDIT-1 to EDIT-9); writers for .gp and MusicXML.
-- M2b: writers for .gp5, .mscz and ABC, with loss warnings (FMT-3).
+- M2a: note entry on tab and staff, the full core palette, 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition, tuplets of any grouping with a triplet shortcut and "Other…" (EDIT-1 to EDIT-10); writer for .gp, the default save format.
+- M2b: writer for .gp5, with loss warnings (FMT-3).
 
-Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; round-trip tests pass for every writable format; files we write open correctly in Guitar Pro 8 and MuseScore 4.7; transposition works chromatically and diatonically.
+Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; round-trip tests pass for every writable format; files we write open correctly in Guitar Pro 8; transposition works chromatically and diatonically.
 
 ## M3 — MIDI player (v1.0)
 
 - Score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); built-in SoundFont synthesiser (PLAY-1).
 - Transport, speed, follow cursor, mixer; looping, count-in, audible and visual metronome (PLAY-5, PLAY-6).
-- MIDI import with quantisation and tab derivation; MIDI and WAV export (PLAY-7).
+- WAV export (PLAY-7). MIDI file import and export move to a format plugin after M5.
 
 Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes; golden-file tests cover event output; the practice tools work on every reference song.
 
 ## Later milestones
 
 - **M4** — the full Guitar Pro 8 notation set (TAB-2), its editing tools, stylesheets and design mode, per-note playback settings.
-- **M5** — plugin system (WebAssembly and native), plugin manager; the metronome becomes the reference plugin.
+- **M5** — plugin system (WebAssembly and native), plugin manager; the metronome becomes the reference plugin. Plugins can add tools to the Tools menu, in the shape of `oxiguitar-tools`. Then the format plugins, each reading and writing: MuseScore (.mscz, .mscx), MusicXML (.musicxml, .xml, .mxl), ABC and MIDI files, with tab derivation for staves without tablature (TAB-3, TAB-4). Their sample files are counted apart from the Guitar Pro corpus (decided 16 Oct 2026).
 - **M6** — a pure-Rust plucked-string model through Neural Amp Modeler and cabinet impulse responses, as a plugin.
 - **M7** — research spike and go/no-go on reading users' own Guitar Pro RSE soundbanks, as a plugin.
 - **M8** — audio tracks, advanced practice tools, line-in, PNG/SVG export, external MIDI devices.

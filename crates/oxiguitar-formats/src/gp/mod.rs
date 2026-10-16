@@ -13,8 +13,8 @@ mod effects;
 use oxiguitar_model::{
     Bar, Beat, BeatKind, ChordDiagram, Clef, Color, Direction, Duration, Dynamic, GraceKind,
     Instrument, KeyMode, KeySignature, LyricLine, Marker, MasterBar, Mix, Note, NotePlace,
-    NoteValue, Ratio, Score, ScoreInfo, Staff, TempoChange, TimeSignature, Track, TripletFeel,
-    Tuplet, Voice,
+    NoteValue, Pitch, Ratio, Score, ScoreInfo, Staff, TempoChange, TimeSignature, Track,
+    TripletFeel, Tuplet, Voice,
 };
 
 use crate::Format;
@@ -397,6 +397,7 @@ impl Reader<'_> {
         }
         if flags & 0x20 != 0 {
             mb.marker = Some(Marker {
+                letter: String::new(),
                 text: self.c.int_byte_size_string()?,
                 color: self.color()?,
             });
@@ -580,11 +581,7 @@ impl Reader<'_> {
             .and_then(|t| t.staves.first())
             .map_or(6, Staff::string_count);
         let mut bar = Bar {
-            clef: if percussion {
-                Clef::Neutral
-            } else {
-                Clef::Treble8vb
-            },
+            clef: score.tracks.get(ti).map_or(Clef::Treble8vb, clef_for),
             voices: Vec::new(),
         };
         let voices = if self.major() == 5 { 2 } else { 1 };
@@ -592,6 +589,20 @@ impl Reader<'_> {
             let voice = self.voice(ti, string_count, vi == 0, tempo)?;
             if vi == 0 || !voice.is_empty() {
                 bar.voices.push(voice);
+            }
+        }
+        if percussion {
+            // Guitar Pro 3–5 store drum notes as string and fret, the fret
+            // being the General MIDI drum. The model keeps them as pitches.
+            for note in bar
+                .voices
+                .iter_mut()
+                .flat_map(|v| &mut v.beats)
+                .flat_map(|b| &mut b.notes)
+            {
+                if let NotePlace::Fretted { fret, .. } = note.place {
+                    note.place = NotePlace::Pitched(Pitch(fret.min(127)));
+                }
             }
         }
         if self.major() == 5 {
@@ -920,9 +931,58 @@ fn grace_beat(graces: Vec<PendingGrace>) -> Beat {
     }
 }
 
+/// The clef of a Guitar Pro 3–5 track, which these formats do not store.
+/// Guitar Pro decides it from the instrument, and so do we (Guitar Pro 7
+/// writes these clefs when it converts such a file, as Manhattan in the
+/// corpus shows): basses, and any track tuned below G1, in the bass clef an
+/// octave down; guitars and other fretted instruments in the treble clef an
+/// octave down; everything else (keyboards, voices, winds, strings) in the
+/// treble clef at sounding pitch.
+fn clef_for(track: &Track) -> Clef {
+    let i = track.instrument;
+    let lowest = track
+        .staves
+        .first()
+        .and_then(|s| s.tuning.iter().map(|p| p.0).min());
+    if i.percussion {
+        Clef::Neutral
+    } else if i.is_bass() || lowest.is_some_and(|p| p <= 31) {
+        Clef::Bass8vb
+    } else if i.is_fretted() {
+        Clef::Treble8vb
+    } else {
+        Clef::Treble
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn clefs_come_from_the_instrument() {
+        let track = |program: u8, low: u8| Track {
+            instrument: Instrument {
+                midi_program: program,
+                percussion: false,
+            },
+            staves: vec![Staff {
+                tuning: vec![Pitch(low + 24), Pitch(low)],
+                ..Staff::default()
+            }],
+            ..Track::default()
+        };
+        assert_eq!(clef_for(&track(25, 40)), Clef::Treble8vb);
+        assert_eq!(clef_for(&track(33, 28)), Clef::Bass8vb);
+        // A bass part on a track with a guitar program but a bass tuning.
+        assert_eq!(clef_for(&track(24, 28)), Clef::Bass8vb);
+        // Keyboards and voices tabbed on guitar tuning sound as written.
+        assert_eq!(clef_for(&track(0, 40)), Clef::Treble);
+        assert_eq!(clef_for(&track(53, 40)), Clef::Treble);
+        let mut drums = track(0, 40);
+        drums.instrument.percussion = true;
+        assert_eq!(clef_for(&drums), Clef::Neutral);
+    }
 
     #[test]
     fn versions() {

@@ -11,6 +11,12 @@ publish.workspace = true
 
 [dependencies]
 oxiguitar-model.workspace = true
+zip.workspace = true
+quick-xml.workspace = true
+
+[dev-dependencies]
+# Test support writes .gp fixtures.
+zip.workspace = true
 
 [lints]
 workspace = true

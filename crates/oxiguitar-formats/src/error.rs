@@ -24,6 +24,9 @@ pub enum ReadErrorKind {
     UnknownFormat,
     /// A format we recognise but cannot read yet.
     Unsupported(String),
+    /// A format the core does not read: a format plugin will (MuseScore,
+    /// MusicXML, ABC, MIDI files; planned after the plugin system).
+    NeedsPlugin(String),
     /// The file ends before the data it promises.
     UnexpectedEnd,
     /// A value is outside what the format allows.
@@ -57,6 +60,10 @@ impl fmt::Display for ReadError {
         match &self.kind {
             ReadErrorKind::UnknownFormat => write!(f, "not a file format OxiGuitar knows")?,
             ReadErrorKind::Unsupported(what) => write!(f, "{what} is not supported yet")?,
+            ReadErrorKind::NeedsPlugin(what) => write!(
+                f,
+                "{what} files are not supported yet: they will be opened by a format plugin"
+            )?,
             ReadErrorKind::UnexpectedEnd => write!(f, "the file ends too early")?,
             ReadErrorKind::Invalid(what) => write!(f, "{what}")?,
         }

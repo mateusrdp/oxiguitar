@@ -1,19 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: GPL-3.0-or-later
      Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
-     Placeholder app icon: a green guitar pick with "OxG". -->
+     Placeholder app icon: a green guitar pick with "OxG". A standard pick
+     shape with a rounded tip, in the dark green of a medium (0.88 mm) pick,
+     with a light sheen. Our own drawing; no maker's shape or logo is copied. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
   <title>OxiGuitar</title>
   <defs>
+    <!-- Lighter at the shoulders, deeper at the tip. -->
     <linearGradient id="pick" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3fbf5f"/>
-      <stop offset="1" stop-color="#1e8a3c"/>
+      <stop offset="0" stop-color="#3f9d65"/>
+      <stop offset="0.55" stop-color="#2a7247"/>
+      <stop offset="1" stop-color="#1a4f30"/>
+    </linearGradient>
+    <!-- A soft glow where light falls on the upper left. -->
+    <radialGradient id="sheen" cx="0.36" cy="0.26" r="0.55">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glint" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.1"/>
     </linearGradient>
   </defs>
-  <path d="M128 244 C 92 210, 22 130, 22 76 C 22 30, 70 12, 128 12 C 186 12, 234 30, 234 76 C 234 130, 164 210, 128 244 Z"
-        fill="url(#pick)" stroke="#135c28" stroke-width="6" stroke-linejoin="round"/>
-  <path d="M60 52 C 80 36, 118 30, 150 32" fill="none" stroke="#ffffff" stroke-opacity="0.35"
-        stroke-width="10" stroke-linecap="round"/>
+  <path d="M128 240 C 113 240, 101 229, 90 214 C 62 176, 26 126, 24 84 C 22 38, 70 14, 128 14 C 186 14, 234 38, 232 84 C 230 126, 194 176, 166 214 C 155 229, 143 240, 128 240 Z"
+        fill="url(#pick)" stroke="#143b24" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M128 240 C 113 240, 101 229, 90 214 C 62 176, 26 126, 24 84 C 22 38, 70 14, 128 14 C 186 14, 234 38, 232 84 C 230 126, 194 176, 166 214 C 155 229, 143 240, 128 240 Z"
+        fill="url(#sheen)"/>
+  <path d="M60 56 C 80 38, 118 31, 152 33" fill="none" stroke="url(#glint)"
+        stroke-width="9" stroke-linecap="round"/>
   <text x="128" y="122" text-anchor="middle" font-family="DejaVu Sans, Verdana, Arial, sans-serif"
         font-size="72" font-weight="700" fill="#ffffff" letter-spacing="-2">OxG</text>
 </svg>

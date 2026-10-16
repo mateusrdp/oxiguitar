@@ -40,6 +40,42 @@ fn info_prints_the_structure_of_a_gp5_file() {
 }
 
 #[test]
+fn info_reads_gp7_and_gpx_files() {
+    for (file, format) in [
+        (
+            "oxiguitar-test-song.gp",
+            "Format:      Guitar Pro 7/8 (.gp)",
+        ),
+        (
+            "oxiguitar-test-song.gpx",
+            "Format:      Guitar Pro 6 (.gpx)",
+        ),
+    ] {
+        let out = cli()
+            .arg("info")
+            .arg("--bars")
+            .arg(fixture(file))
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "{file}");
+        let text = String::from_utf8(out.stdout).unwrap();
+        for expected in [
+            format,
+            "Title:       OxiGuitar Test Song",
+            "Time sigs:   4/4 ×2, 3/4 ×1",
+            "1. Guitar, 6 strings E2 A2 D3 G3 B3 E4, program 27, 2 voice(s), 13 notes, 1 chord diagram(s), lyrics",
+            "Bar check:   every bar matches its time signature",
+            "1  4/4  |: [A] \"Intro\" | t1: 6/6",
+        ] {
+            assert!(
+                text.contains(expected),
+                "{file}: missing {expected:?} in:\n{text}"
+            );
+        }
+    }
+}
+
+#[test]
 fn unreadable_files_fail_with_a_message() {
     let dir = std::env::temp_dir().join(format!("oxiguitar-cli-test-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
@@ -102,4 +138,67 @@ fn specimen_writes_a_png_and_a_pdf() {
 fn specimen_needs_an_output() {
     let out = cli().arg("specimen").output().unwrap();
     assert_eq!(out.status.code(), Some(2));
+}
+
+#[test]
+fn render_engraves_pages_and_a_pdf() {
+    let dir = std::env::temp_dir().join(format!("oxiguitar-render-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    for (file, dark) in [
+        ("oxiguitar-test-song.gp", false),
+        ("oxiguitar-test-song.gp5", true),
+    ] {
+        let prefix = dir.join("song");
+        let pdf = dir.join("song.pdf");
+        let mut cmd = cli();
+        cmd.arg("render")
+            .arg(fixture(file))
+            .args(["--scale", "0.5", "--tracks", "all", "--png"])
+            .arg(&prefix)
+            .arg("--pdf")
+            .arg(&pdf);
+        if dark {
+            cmd.args(["--dark", "--no-dynamics", "--tool", "infer-key-signatures"]);
+        }
+        let out = cmd.output().unwrap();
+        assert!(
+            out.status.success(),
+            "{file}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let text = String::from_utf8(out.stdout).unwrap();
+        assert!(text.contains("1 page(s), 1 system(s)"), "{text}");
+        let png = dir.join("song-1.png");
+        assert!(std::fs::read(&png).unwrap().starts_with(b"\x89PNG"));
+        assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF-"));
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn render_rejects_bad_usage() {
+    for args in [
+        &["render"][..],
+        &["render", "x.gp"],
+        &["render", "x.gp", "--png", "out", "--tracks", "0"],
+        &["render", "x.gp", "--png", "out", "--frobnicate"],
+        &["render", "x.gp", "--png", "out", "--tool", "frobnicate"],
+    ] {
+        let out = cli().args(args).output().unwrap();
+        assert_eq!(out.status.code(), Some(2), "{args:?}");
+    }
+    let out = cli()
+        .args(["render", "does-not-exist.gp", "--quiet"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1));
+}
+
+#[test]
+fn tools_are_listed() {
+    let out = cli().arg("tools").output().unwrap();
+    assert!(out.status.success());
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert!(text.contains("infer-key-signatures"), "{text}");
+    assert!(text.contains("Infer Key Signatures"), "{text}");
 }

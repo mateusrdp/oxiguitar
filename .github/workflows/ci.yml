@@ -46,6 +46,9 @@ jobs:
           toolchain: ${{ env.MSRV }}
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      # The desktop app (Slint, winit) needs these headers to build on Linux.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       # Each problem also becomes an annotation on the pull request.
       - name: Clippy
         run: |
@@ -72,6 +75,9 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      # The desktop app (Slint, winit) needs these headers to build on Linux.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       - env:
           CARGO_TERM_COLOR: never
         run: |
@@ -107,7 +113,26 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.toolchain }}
-      - run: cargo test --workspace --all-features --locked
+      # The desktop app (Slint, winit) needs these headers to build on Linux.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
+      # Failing tests also become an annotation, so they can be read without
+      # downloading the job log. Bash on every runner, Windows included.
+      - name: cargo test
+        shell: bash
+        env:
+          CARGO_TERM_COLOR: never
+        run: |
+          set +e
+          cargo test --workspace --all-features --locked 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # The "failures:" report (panic messages), or else the end of the output.
+            report=$(sed -n '/^failures:$/,/^test result:/p' test.log | head -n 60)
+            [ -n "$report" ] || report=$(tail -n 40 test.log)
+            echo "::error title=cargo test (${{ matrix.name }})::$(printf '%s' "$report" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+          fi
+          exit "$status"
 
   deny:
     name: Licences and advisories
@@ -126,9 +151,9 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace xvfb libxkbcommon-x11-0 libgl1-mesa-dri libegl1 libfontconfig1-dev libxkbcommon-dev libwayland-dev
       - run: cargo build --workspace --locked
-      - run: scripts/no-network.sh target/debug/oxiguitar-cli
+      - run: scripts/no-network.sh target/debug/oxiguitar-cli target/debug/oxiguitar
 
   dco:
     name: Sign-off (DCO)

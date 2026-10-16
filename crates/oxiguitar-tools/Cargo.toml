@@ -1,0 +1,19 @@
+[package]
+name = "oxiguitar-tools"
+description = "Score tools for OxiGuitar's Tools menu: actions the user starts that change a score, such as inferring key signatures."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+oxiguitar-model.workspace = true
+
+[dev-dependencies]
+oxiguitar-formats.workspace = true
+
+[lints]
+workspace = true

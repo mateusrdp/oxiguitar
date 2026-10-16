@@ -5,8 +5,10 @@
 
 mod info;
 mod manifest;
+mod render;
 mod sha256;
 mod specimen;
+mod tools;
 
 use std::process::ExitCode;
 
@@ -21,6 +23,25 @@ Commands:
                              contents rather than its extension
   manifest <dir>...          Print a TOML manifest (name, format, size,
                              SHA-256) of every file in the folders
+  render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
+         [--layout page|vertical|horizontal|parchment] [--width PT]
+         [--paper a4|letter] [--tracks 1,2|all] [--staff-space PT]
+         [--notation 2=tab,3=both] [--no-dynamics] [--tool ID]...
+         [--quiet]
+                             Engrave a score: PNG pages PREFIX-1.png, … (N
+                             pixels per point, default 2) and/or a PDF.
+                             --layout picks the staff layout (default page;
+                             long sheets are cut into PNGs of at most 8192
+                             pixels); --width is the window width for the
+                             vertical layout; the PDF is always in pages;
+                             --tracks picks tracks (default: the first);
+                             --notation sets tracks' notation: std, tab or
+                             both (default: tab for fretted instruments);
+                             --no-dynamics hides dynamics markings;
+                             --tool runs a tool on the score first, as the
+                             app's Tools menu does; --quiet only reports
+                             errors
+  tools                      List the tools (the app's Tools menu)
   specimen [--png FILE] [--pdf FILE] [--scale N] [--dark]
                              Draw the render spike's test page into a PNG
                              (N pixels per point, default 2) and/or a PDF
@@ -36,7 +57,9 @@ fn main() -> ExitCode {
         Some("info") => info::run(rest),
         Some("detect") => info::detect(rest),
         Some("manifest") => manifest::run(rest),
+        Some("render") => render::run(rest),
         Some("specimen") => specimen::run(rest),
+        Some("tools") => tools::list(),
         Some("version" | "--version" | "-V") => {
             println!("oxiguitar-cli {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS

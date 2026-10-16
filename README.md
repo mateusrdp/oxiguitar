@@ -4,7 +4,7 @@
 
 **OxiGuitar** is a free, open-source guitar tablature and score viewer, editor and player for Windows, macOS and Linux, written entirely in Rust.
 
-It opens Guitar Pro (.gp, .gpx, .gp5), MuseScore (.mscz), MusicXML, ABC and MIDI files, shows them as standard notation and tablature, lets you edit them and plays them back. Its layout follows Guitar Pro 8 closely, so it feels familiar; every icon and piece of artwork is our own.
+It opens Guitar Pro files (.gp, .gpx, .gp5, and the older .gp3 and .gp4), shows them as standard notation and tablature, lets you edit them and plays them back. MuseScore, MusicXML, ABC and MIDI files are planned as plugins once the plugin system exists. Its layout follows Guitar Pro 8 closely, so it feels familiar; every icon and piece of artwork is our own.
 
 > **Status: early development (milestone M0, foundations).** There is nothing to play with yet beyond a command-line tool. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next.
 
@@ -35,27 +35,32 @@ Releases will come as a portable .exe for Windows; AppImage, .deb and .rpm for L
 You need Rust 1.97 or newer. On Debian sid everything comes from apt:
 
 ```sh
-sudo apt install git build-essential pkg-config rustc cargo rustfmt rust-clippy
+sudo apt install git build-essential pkg-config rustc cargo rustfmt rust-clippy \
+  libfontconfig1-dev libxkbcommon-dev libwayland-dev
 git clone https://github.com/mateusrdp/oxiguitar.git
 cd oxiguitar
 cargo build --release
 cargo test
 ```
 
-Elsewhere, install Rust from your system's packages or from [rustup.rs](https://rustup.rs). The desktop app (from milestone M1) also needs the system libraries for fonts, keyboard and windows; on Debian and Ubuntu:
+Elsewhere, install Rust from your system's packages or from [rustup.rs](https://rustup.rs). The last three packages are the system libraries the desktop app needs for fonts, keyboard and windows (the same names on Ubuntu). Audio, from milestone M3, adds `libasound2-dev`.
+
+Run the desktop app, optionally with a file to open:
 
 ```sh
-sudo apt install libfontconfig1-dev libxkbcommon-dev libwayland-dev
+cargo run --release -p oxiguitar-app -- path/to/your/song.gp
 ```
 
-Audio, from milestone M3, adds `libasound2-dev`.
+It opens Guitar Pro 3 to 8 files and shows them in four layouts (View → Layout), with a dark page, the track list (F8), the Tools menu and PDF export. On Linux, the Open and Export dialogs come from the desktop portal (`xdg-desktop-portal` with your desktop's backend, installed by default with GNOME and KDE). The binary is `target/release/oxiguitar` and needs no files beside it. On Wayland, desktops take an app's icon from its desktop entry rather than from the window; to give a build from source its icon and a menu entry, run `scripts/install-desktop-entry.sh` (it writes only to `~/.local/share`; `--uninstall` removes it).
 
-Try the command-line tool, which can already read Guitar Pro 3, 4 and 5 files and draw a test page of notation and tablature:
+Try the command-line tool, which can already read Guitar Pro 3 to 8 files (.gp3, .gp4, .gp5, .gpx, .gp) and engrave them into PNG pages and a PDF:
 
 ```sh
-cargo run --release -p oxiguitar-cli -- info fixtures/gp/oxiguitar-test-song.gp5
+cargo run --release -p oxiguitar-cli -- info fixtures/gp/oxiguitar-test-song.gp
 cargo run --release -p oxiguitar-cli -- info --bars path/to/your/song.gp5
-cargo run --release -p oxiguitar-cli -- specimen --png page.png --pdf page.pdf
+cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --png page --pdf song.pdf
+cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --tracks all --dark --pdf song-dark.pdf
+cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --tool infer-key-signatures --no-dynamics --pdf keys.pdf
 ```
 
 ## Testers wanted

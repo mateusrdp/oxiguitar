@@ -27,12 +27,44 @@ pub struct Track {
 }
 
 /// What a track sounds like through General MIDI.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Instrument {
     /// General MIDI program, 0 to 127 (25 is steel-string guitar).
     pub midi_program: u8,
     /// True for a drum kit (MIDI channel 10).
     pub percussion: bool,
+}
+
+impl Default for Instrument {
+    /// A steel-string guitar (program 25), as a new track in Guitar Pro is.
+    fn default() -> Self {
+        Instrument {
+            midi_program: 25,
+            percussion: false,
+        }
+    }
+}
+
+impl Instrument {
+    /// A fretted string instrument, by its General MIDI program: the
+    /// guitars (24–31), the fretted basses (32–34, 36–37; not fretless 35
+    /// or the synth basses), sitar (104) and banjo (105). Only these show
+    /// tablature unless the user asks for it (Mateus, 16 Oct 2026).
+    pub fn is_fretted(&self) -> bool {
+        !self.percussion && matches!(self.midi_program, 24..=34 | 36 | 37 | 104 | 105)
+    }
+
+    /// A bass: the bass programs (32–39), fretless and synth basses too.
+    pub fn is_bass(&self) -> bool {
+        !self.percussion && matches!(self.midi_program, 32..=39)
+    }
+
+    /// A keyboard played with two hands, shown on a grand staff: pianos and
+    /// electric pianos, harpsichord and clavinet (0–7), organs and
+    /// accordions (16–21, 23). Not harmonica (22).
+    pub fn is_keyboard(&self) -> bool {
+        !self.percussion && matches!(self.midi_program, 0..=7 | 16..=21 | 23)
+    }
 }
 
 /// Mixer settings for a track.
@@ -141,6 +173,28 @@ pub struct LyricLine {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn instrument_families() {
+        let gm = |p| Instrument {
+            midi_program: p,
+            percussion: false,
+        };
+        assert!(gm(25).is_fretted() && gm(33).is_fretted() && gm(105).is_fretted());
+        assert!(!gm(35).is_fretted(), "fretless bass");
+        assert!(!gm(40).is_fretted() && !gm(0).is_fretted() && !gm(38).is_fretted());
+        assert!(gm(35).is_bass() && gm(38).is_bass() && !gm(30).is_bass());
+        assert!(gm(0).is_keyboard() && gm(18).is_keyboard() && !gm(22).is_keyboard());
+        let drums = Instrument {
+            midi_program: 0,
+            percussion: true,
+        };
+        assert!(
+            Instrument::default().is_fretted(),
+            "a new track is a guitar"
+        );
+        assert!(!drums.is_keyboard() && !drums.is_fretted());
+    }
 
     #[test]
     fn pitch_with_capo() {

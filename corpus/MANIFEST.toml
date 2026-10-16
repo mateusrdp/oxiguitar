@@ -8,6 +8,10 @@
 #
 # To read every file and see what fails:
 #   cargo run --release -p oxiguitar-cli -- info corpus/files/tabs/* corpus/files/scores/*
+#
+# The corpus tests read every GPX and GP file and compare songs saved in two
+# formats; they run only when corpus/files/ is present:
+#   cargo test --release -p oxiguitar-formats --test corpus -- --nocapture
 
 [sets.tabs]
 received = 2026-10-15
