@@ -139,6 +139,9 @@ export component AppWindow inherits Window {
     in property <length> content-width;
     in property <length> content-height;
     in property <[TileItem]> tiles;
+    // Tiles from before a zoom or a new engraving, shown under the new ones
+    // until those cover the view (main.rs).
+    in property <[TileItem]> old-tiles;
     out property <length> view-x: -flick.content-x;
     out property <length> view-y: -flick.content-y;
     out property <length> view-width: flick.visible-width;
@@ -316,6 +319,13 @@ export component AppWindow inherits Window {
                     changed content-y => { root.canvas-changed(); }
                     changed visible-width => { root.canvas-changed(); }
                     changed visible-height => { root.canvas-changed(); }
+                    for t in root.old-tiles : Image {
+                        x: root.origin-x + t.x;
+                        y: root.origin-y + t.y;
+                        width: t.size;
+                        height: t.size;
+                        source: t.image;
+                    }
                     for t in root.tiles : Image {
                         x: root.origin-x + t.x;
                         y: root.origin-y + t.y;
