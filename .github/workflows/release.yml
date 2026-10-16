@@ -6,7 +6,9 @@
 #   it, with SHA256SUMS, to a draft release for him to check and publish.
 # - Started by hand (Actions → Release packages → Run workflow), or on a pull
 #   request that changes the packaging, it builds and tests the packages and
-#   keeps them under the run for 14 days, with a ~dev version.
+#   keeps them under the run for 14 days, with a ~dev version. Each package
+#   is uploaded unzipped (archive: false), so it downloads as the .deb,
+#   .rpm, .AppImage, .zip or .dmg itself.
 #
 # Every package is installed or opened and smoke-tested: the .deb in Debian
 # sid, the .rpm in Fedora, the AppImage on the runner, the .exe's resources,
@@ -63,7 +65,7 @@ jobs:
       - if: steps.about-cache.outputs.cache-hit != 'true'
         run: cargo install cargo-about --version "$CARGO_ABOUT_VERSION" --features cli --locked
       - run: scripts/package/licenses.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: third-party-licenses
           path: dist/THIRD-PARTY-LICENSES.html
@@ -91,7 +93,7 @@ jobs:
             libfontconfig1-dev libxkbcommon-dev libwayland-dev \
             rpm squashfs-tools xvfb xauth libxkbcommon-x11-0 libgl1-mesa-dri libegl1
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
           path: dist
@@ -137,22 +139,22 @@ jobs:
           test -x "$RUNNER_TEMP/squashfs-root/AppRun"
           # Without FUSE on the runner, the runtime unpacks and runs.
           APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a "$appimage" "$SAMPLE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: oxiguitar-deb-${{ matrix.arch }}
           path: dist/*.deb
+          archive: false
           retention-days: 14
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: oxiguitar-rpm-${{ matrix.arch }}
           path: dist/*.rpm
+          archive: false
           retention-days: 14
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: oxiguitar-appimage-${{ matrix.arch }}
           path: dist/*.AppImage
+          archive: false
           retention-days: 14
           if-no-files-found: error
 
@@ -173,7 +175,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
           path: dist
@@ -207,10 +209,10 @@ jobs:
           Copy-Item assets/fonts/noto-sans/OFL.txt "$dir/licenses/NotoSans-OFL.txt"
           Compress-Archive -Path $dir -DestinationPath "dist/$name.zip"
           Get-Item "dist/$name.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: oxiguitar-windows-${{ matrix.arch }}
           path: dist/*.zip
+          archive: false
           retention-days: 14
           if-no-files-found: error
 
@@ -235,7 +237,7 @@ jobs:
             target/aarch64-apple-darwin/release/oxiguitar \
             target/x86_64-apple-darwin/release/oxiguitar
           lipo -info dist/macos/oxiguitar
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
           path: dist
@@ -250,10 +252,10 @@ jobs:
           test -f "$app/Contents/Resources/OxiGuitar.icns"
           codesign --verify --verbose "$app"
           hdiutil detach "$mount"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: oxiguitar-macos-universal
           path: dist/*.dmg
+          archive: false
           retention-days: 14
           if-no-files-found: error
 
@@ -269,9 +271,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
-          pattern: oxiguitar-*
+          # Package artifacts are named after their files.
+          pattern: "*.{deb,rpm,AppImage,zip,dmg}"
           path: dist
           merge-multiple: true
       - name: Checksums and notes
