@@ -8,7 +8,6 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 ### Added
 
-- Drop a file on the window to open it, on Wayland, X11, Windows and macOS. Of several files dropped at once, the first opens. On Wayland, where winit and Slint report no drops yet, the app listens on the window's Wayland connection itself (ADR 0006, the app's one `unsafe` call).
 - Directions are engraved on their own line above the top staff: segno and coda signs (and their doubles) at the start of their bar; Fine, D.C., D.S. and their "al Coda", "al Double Coda" and "al Fine" forms, and "To Coda" with its sign, ending at the end of their bar.
 - The user manual, published on GitHub Pages (https://mateusrdp.github.io/oxiguitar/, source in `docs/manual/`, built with mdBook by the "Manual" workflow): installing, opening files, the four layouts, tracks and notation buttons, score and interface zoom, dark page and dynamics, Infer Key Signatures, PDF export, keyboard and mouse. On macOS, interface zoom now uses ⌘ like the menus' shortcuts.
 - Release packages (`.github/workflows/release.yml`, scripts in `scripts/package/`): a portable .exe in a zip for Windows, an AppImage, a .deb and an .rpm for Linux, each for x86_64 and ARM64, and a universal .dmg for macOS, none code-signed. A v* tag builds them into a draft release with SHA256SUMS; started by hand, they stay under the run for 14 days, each downloadable as the package file itself rather than a zip. Each package is installed and started in CI: the .deb on Debian sid, the .rpm on Fedora, the AppImage on Ubuntu. The .deb, .rpm and .dmg register the Guitar Pro file types OxiGuitar opens (.gp, .gpx, .gp5, .gp4, .gp3; UI-4) with the placeholder icon as the file icon; the .exe carries the icon and its name and version for Explorer and Task Manager. Every package includes THIRD-PARTY-LICENSES.html, generated from `Cargo.lock` with cargo-about.
@@ -71,6 +70,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - GUI-toolkit spike in Slint, iced and egui (`spikes/gui/`), built on every target by an advisory CI workflow. Decision record 0004 chooses Slint.
 - Licences of the crates planned for later milestones checked and recorded in CREDITS.md and ROADMAP.md.
 - Interface design rules (`docs/design/ui.md`) from the first review of the GUI spike. The Slint spike follows them: menus only on top, collapsible palette groups, palette icons centred on their ink, interface zoom with Ctrl + wheel and Ctrl + + / − / 0, a score-zoom slider and a dark page. View → Layout lists the four staff layouts to come in M1: Page, Vertical, Horizontal and Parchment.
+- Drop a file on the window to open it, on Windows, macOS and X11. Of several files dropped at once, the first opens. Not on Wayland yet: winit and Slint report no drops there (ADR 0006).
 
 ### Fixed
 

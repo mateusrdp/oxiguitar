@@ -28,15 +28,6 @@ slint = { version = "1.18", features = ["unstable-winit-030"] }
 # (pure Rust, no GTK), the native dialogs on Windows and macOS.
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal", "wayland"] }
 
-# File drops on Wayland (src/wayland_drop.rs), a stopgap until winit or
-# Slint report them: ADR 0006. The same crates and versions winit already
-# uses, so nothing new is built or linked; client_system talks through the
-# system's libwayland-client, which winit uses too. Remove both with the
-# module.
-[target.'cfg(all(unix, not(any(target_os = "macos", target_os = "ios", target_os = "android"))))'.dependencies]
-wayland-client = "0.31.15"
-wayland-backend = { version = "0.3.17", features = ["client_system"] }
-
 [dev-dependencies]
 # The speed budget's 300-bar, 8-track score (src/speed.rs).
 oxiguitar-testgen.workspace = true
@@ -46,8 +37,7 @@ slint-build = "1.18"
 
 # The workspace's lints, except that unsafe code is denied rather than
 # forbidden: the code Slint generates for ui/app.slint allows it locally,
-# which "forbid" would refuse. Our own code may not use unsafe, except the
-# one call in src/wayland_drop.rs (ADR 0006, CONTRIBUTING.md).
+# which "forbid" would refuse. Our own code still may not use unsafe.
 [lints.rust]
 unsafe_code = "deny"
 missing_docs = "warn"

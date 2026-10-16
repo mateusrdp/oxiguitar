@@ -3221,8 +3221,6 @@ dependencies = [
  "slint",
  "slint-build",
  "tiny-skia 0.12.0",
- "wayland-backend",
- "wayland-client",
 ]
 
 [[package]]

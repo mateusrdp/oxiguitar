@@ -19,6 +19,6 @@ It reads a file by its contents, so a file with the wrong extension still opens.
 
 MuseScore (.mscz, .mscx), MusicXML, ABC and MIDI files will be opened by format plugins in a later version. Until then the status line at the bottom left says so. It also explains what went wrong when a file cannot be read; click it to close it.
 
-If you drop several files on the window, the first one opens.
+Dragging a file onto the window works on Windows, macOS and Linux desktops running X11; on Wayland desktops (the default on GNOME and KDE) it does not work yet; open the file with File → Open or a double-click instead. If you drop several files, the first one opens.
 
 On Linux the Open dialog comes from your desktop through the XDG desktop portal, which GNOME and KDE install by default. Without it, the status line says so, and you can still open files from the command line.

@@ -31,20 +31,20 @@ You keep the copyright on what you contribute. Your name goes in [CREDITS.md](CR
 - **Rust only.** Every line we write is Rust and every dependency is a Rust crate. The only exceptions are the operating system's own libraries for windows, graphics and audio. C and C++ projects are references to read and port from, never libraries to link.
 - **Formatting and lint:** `cargo fmt --all` and `cargo clippy --workspace --all-targets -- -D warnings` must be clean.
 - **No panics on user input.** Readers return errors that name the file and the byte position or element where things went wrong (FMT-1). Reader crates deny `unwrap`, `expect`, `panic!` and unchecked indexing outside tests.
-- **No `unsafe`.** The workspace forbids it. If something truly needs it, open a discussion first. The exceptions so far are listed under [Unsafe code and stopgaps](#unsafe-code-and-stopgaps).
+- **No `unsafe`.** The workspace forbids it. If something truly needs it, open a discussion first.
 - **Document public items.** `missing_docs` is on.
 - **Minimum Rust version:** the rustc in Debian unstable, currently 1.97. Don't use newer language or library features; CI tests that version and the latest stable.
 - **Exact time.** Durations are exact fractions; never use floating point for musical time.
 - **Edits are commands.** Every change to a score goes through a reversible command, so undo and redo always work.
 - **Privacy.** No telemetry, analytics, crash uploads or background requests, ever. Network code may run only after the user asks for a download. CI enforces this (NET-5).
 
-## Unsafe code and stopgaps
+## Known platform gaps
 
-Every piece of `unsafe` code and every workaround waiting for an upstream fix is listed here, with the ADR that explains it and says how to remove it. Reviewers: check that a change to any of these keeps its safety comment true, and check each one when its upstream crates are upgraded.
+Features that don't work on one system because of a library we build on, with the ADR that explains why and what has to change. Reviewers: check this list whenever winit or Slint is upgraded, and when a pull request touches one of these features.
 
-| Where | What | Why, and when it goes | Upstream to watch |
-| --- | --- | --- | --- |
-| `crates/oxiguitar-app/src/wayland_drop.rs` | One `unsafe` call (`Backend::from_foreign_display`) to listen for file drops on winit's Wayland connection, polled every 100 ms | [ADR 0006](docs/adr/0006-wayland-file-drops.md): winit 0.30 and Slint 1.18 report no file drops on Wayland. Remove it when either does | winit's Wayland backend (`DroppedFile`), Slint's winit backend (OS drops). Test with `scripts/wayland-dnd-test/` |
+| Feature | Missing on | Why | Enable it when | ADR |
+| --- | --- | --- | --- | --- |
+| Drop a file on the window to open it | Wayland | winit 0.30 has no drag and drop on Wayland, and Slint 1.18 passes no OS drops on. A workaround would need `unsafe` code and polling, which we rejected | winit's Wayland backend emits `DroppedFile` (no code change needed), or Slint forwards OS drops. Test with `scripts/wayland-dnd-test/` | [0006](docs/adr/0006-wayland-file-drops.md) |
 
 ## File headers
 

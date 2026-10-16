@@ -1,6 +1,6 @@
 # Testing file drops on Wayland
 
-`src/wayland_drop.rs` in the app is a stopgap ([ADR 0006](../../docs/adr/0006-wayland-file-drops.md)). These tools check it, and later whatever replaces it, without a Wayland desktop: a nested compositor in Xvfb, a drag source that behaves like a file manager, and XTEST for the mouse. This is how it was tested on 17 Oct 2026.
+File drops don't work on Wayland yet: winit 0.30 and Slint 1.18 report none there ([ADR 0006](../../docs/adr/0006-wayland-file-drops.md)). These tools show whether a drop reaches the app on Wayland, without a Wayland desktop: a compositor nested in Xvfb, a drag source that behaves like a file manager, and XTEST for the mouse. Use them when a winit or Slint upgrade might add drops. A stopgap built in session 6 was tested with them on 17 Oct 2026 and then rejected (it needed `unsafe` code and polling), so the steps are known to work.
 
 ## What you need
 
@@ -33,6 +33,6 @@ source: send text/uri-list
 source: finished
 ```
 
-and OxiGuitar shows the song (`DISPLAY=:99 import -window root shot.png`). Without the stopgap, or with a target that refuses, the source prints `cancelled` instead.
+and OxiGuitar shows the song (`DISPLAY=:99 import -window root shot.png`). Today nothing in the app accepts a drop on Wayland: the source prints `action Value(DndAction(0x0))` and `drop performed`, but no `send text/uri-list` (smallvil sends no `cancelled` either), and the window stays as it was (checked 17 Oct 2026).
 
 Check the X11 path as well: run `oxiguitar` with `DISPLAY=:99` and no `WAYLAND_DISPLAY`, and drop with any XDND source.
