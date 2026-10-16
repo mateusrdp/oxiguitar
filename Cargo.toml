@@ -1,8 +1,9 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
-# Throwaway experiments with their own workspaces and lock files (see spikes/README.md).
-exclude = ["spikes"]
+# Throwaway experiments with their own workspaces and lock files (see
+# spikes/README.md), and the fuzz targets (nightly Rust, see fuzz/README.md).
+exclude = ["spikes", "fuzz"]
 
 [workspace.package]
 version = "0.0.0"

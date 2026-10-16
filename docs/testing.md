@@ -48,3 +48,9 @@ git status fixtures/reference
 Blessing writes every picture that differs at all, the stored scores, the index, and removes files that are no longer references. To add a reference, add it to `references()` (the test there keeps the count at fifty and every bar full) and bless.
 
 The references show what the engraver draws today, including what it does not draw yet: the segno, coda and D.S. directions in `sections-and-directions` are in the file but not on the page, and `dynamics` shows ppp and pp crowding each other (see `docs/design/engraving.md`). When those are fixed, the pictures change and are blessed again.
+
+## Fuzzing
+
+M1 asks for six hours of fuzzing per reader without a crash (lowered from 24 hours by Mateus on 16 October 2026). `fuzz/` holds the cargo-fuzz targets, one per reader (Guitar Pro 3–5, Guitar Pro 6, Guitar Pro 7/8, and the GPIF XML on its own) plus one for any file through format detection; `fuzz/README.md` says how to run them. Seeds come from the public fixtures only.
+
+CI's "Fuzz" workflow runs every target for four minutes on each pull request that touches a reader, and the long run when started by hand: each reader for six hours (by default), in two jobs of three hours on standard runners, at most four at a time. Fuzzing needs nightly Rust, so it lives outside the main workspace and its stable-only CI.
