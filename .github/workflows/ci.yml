@@ -107,7 +107,23 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.toolchain }}
-      - run: cargo test --workspace --all-features --locked
+      # Failing tests also become an annotation, so they can be read without
+      # downloading the job log. Bash on every runner, Windows included.
+      - name: cargo test
+        shell: bash
+        env:
+          CARGO_TERM_COLOR: never
+        run: |
+          set +e
+          cargo test --workspace --all-features --locked 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # The "failures:" report (panic messages), or else the end of the output.
+            report=$(sed -n '/^failures:$/,/^test result:/p' test.log | head -n 60)
+            [ -n "$report" ] || report=$(tail -n 40 test.log)
+            echo "::error title=cargo test (${{ matrix.name }})::$(printf '%s' "$report" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+          fi
+          exit "$status"
 
   deny:
     name: Licences and advisories
