@@ -111,7 +111,9 @@ fn draw(
         // The page is opaque, so premultiplied and plain colours agree.
         let rgb = pixmap
             .data()
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .flat_map(|p| [p[0], p[1], p[2]])
             .collect();
         out.push(Picture {
@@ -131,11 +133,13 @@ fn write_png(path: &Path, pic: &Picture) {
     // Grey pictures (most of them) take a third of the room.
     let grey = pic
         .rgb
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .all(|p| p[0] == p[1] && p[1] == p[2]);
     let data: Vec<u8> = if grey {
         enc.set_color(png::ColorType::Grayscale);
-        pic.rgb.chunks_exact(3).map(|p| p[0]).collect()
+        pic.rgb.as_chunks::<3>().0.iter().map(|p| p[0]).collect()
     } else {
         enc.set_color(png::ColorType::Rgb);
         pic.rgb.clone()
@@ -159,12 +163,16 @@ fn read_png(path: &Path) -> Result<Picture, String> {
     let rgb = match info.color_type {
         png::ColorType::Grayscale => bytes.iter().flat_map(|g| [*g, *g, *g]).collect(),
         png::ColorType::GrayscaleAlpha => bytes
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .flat_map(|p| [p[0], p[0], p[0]])
             .collect(),
         png::ColorType::Rgb => bytes.to_vec(),
         png::ColorType::Rgba => bytes
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .flat_map(|p| [p[0], p[1], p[2]])
             .collect(),
         other => {
@@ -187,7 +195,13 @@ fn compare(want: &Picture, got: &Picture) -> (usize, u8, Picture) {
     let mut changed = 0;
     let mut largest = 0;
     let mut rgb = Vec::with_capacity(got.rgb.len());
-    for (w, g) in want.rgb.chunks_exact(3).zip(got.rgb.chunks_exact(3)) {
+    for (w, g) in want
+        .rgb
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .zip(got.rgb.as_chunks::<3>().0.iter())
+    {
         let d = w
             .iter()
             .zip(g)
