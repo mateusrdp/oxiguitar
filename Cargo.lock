@@ -3280,8 +3280,13 @@ dependencies = [
 name = "oxiguitar-testgen"
 version = "0.0.0"
 dependencies = [
+ "oxiguitar-display",
  "oxiguitar-formats",
+ "oxiguitar-layout",
  "oxiguitar-model",
+ "oxiguitar-render",
+ "png",
+ "tiny-skia 0.12.0",
  "zip",
 ]
 
