@@ -75,7 +75,8 @@ Progress:
   - [ ] Effects (TAB-1: bends, slides, hammer-ons and pull-offs, palm mute, let ring, vibrato, harmonics, …), grace notes, lyrics, dynamics and articulations (NOT-3), slurs, chord diagrams in the header, overlap checks (VIEW-7)
 - [ ] Page, vertical, horizontal and parchment layouts; multi-track; score header
   - [x] Page layout, multi-track alignment, score header (16 Oct 2026)
-  - [ ] Vertical, horizontal and parchment layouts; track names at the start of systems
+  - [x] Track names at the start of systems (16 Oct 2026)
+  - [ ] Vertical, horizontal and parchment layouts
 - [ ] `oxiguitar-app` window (Slint) following docs/design/ui.md
 - [ ] PDF export
 - [ ] MuseScore, MusicXML and ABC readers; tab derivation
