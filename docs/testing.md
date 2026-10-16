@@ -54,3 +54,14 @@ The references show what the engraver draws today, including what it does not dr
 M1 asks for six hours of fuzzing per reader without a crash (lowered from 24 hours by Mateus on 16 October 2026). `fuzz/` holds the cargo-fuzz targets, one per reader (Guitar Pro 3–5, Guitar Pro 6, Guitar Pro 7/8, and the GPIF XML on its own) plus one for any file through format detection; `fuzz/README.md` says how to run them. Seeds come from the public fixtures only.
 
 CI's "Fuzz" workflow runs every target for four minutes on each pull request that touches a reader, and the long run when started by hand: each reader for six hours (by default), in two jobs of three hours on standard runners, at most four at a time. Fuzzing needs nightly Rust, so it lives outside the main workspace and its stable-only CI.
+
+The first six-hour run (16 October 2026, [run 38891529443](https://github.com/mateusrdp/oxiguitar/actions/runs/38891529443)) found nothing in any reader:
+
+| Reader (target) | Inputs tried | Coverage (edges) | Corpus kept |
+| --- | --- | --- | --- |
+| Guitar Pro 3–5 (`guitar_pro_3_5`) | 1,255 million | 2,539 | 1,534 |
+| Guitar Pro 6 (`guitar_pro_6`) | 335 million | 3,806 | 2,258 |
+| Guitar Pro 7/8 (`guitar_pro_7`) | 272 million | 4,300 | 1,320 |
+| GPIF XML (`gpif`) | 37 million | 4,482 | 2,506 |
+
+Each over two three-hour jobs on four cores. The final corpora are the run's artifacts ("fuzz-corpus … (final)", kept 30 days); a later run can start from them instead of the fixtures alone.

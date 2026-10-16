@@ -84,7 +84,7 @@ Progress:
 - [ ] Quality gates (see [docs/testing.md](docs/testing.md))
   - [x] Speed budget (16 Oct 2026): a generated 300-bar, 8-track score as long as a real Guitar Pro 7 file (16 MB of XML) opens to its first tiles in 0.18 s, or 0.23 s with every track shown; CI's "Speed budget" job holds release builds to one second. Reading GPIF is about twice as fast as before.
   - [x] Visual regression (16 Oct 2026): 50 generated reference scores in `fixtures/reference/`, each a Guitar Pro 7 file and its pictures, compared with a tolerance on every CI target
-  - [ ] Fuzzing: six hours per reader without a crash. Targets for every reader and a CI workflow (short runs on reader pull requests, the long run by hand) are in place (16 Oct 2026); the first six-hour run is under way
+  - [x] Fuzzing (16 Oct 2026): six hours per reader without a crash, hang or out-of-memory input ([run 38891529443](https://github.com/mateusrdp/oxiguitar/actions/runs/38891529443)): Guitar Pro 3–5 1.26 billion inputs, Guitar Pro 6 335 million, Guitar Pro 7/8 272 million, GPIF XML 37 million. Short runs on every pull request that touches a reader
 - [x] Release packages (16 Oct 2026): `release.yml` builds the .exe zip, AppImage, .deb, .rpm (x86_64 and ARM64) and universal .dmg, unsigned, on v* tags and by hand; the .deb, .rpm and .dmg register the Guitar Pro file types (UI-4)
 - [x] User manual (16 Oct 2026): `docs/manual/` (mdBook), published to GitHub Pages from main by the "Manual" workflow
 
