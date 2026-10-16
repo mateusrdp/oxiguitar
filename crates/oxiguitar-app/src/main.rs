@@ -43,6 +43,8 @@ mod ui {
 }
 use ui::{AppWindow, TileItem, ToolRow, TrackRow};
 
+/// The app id: the desktop entry's name and the Wayland app id.
+const APP_ID: &str = "io.github.mateusrdp.OxiGuitar";
 /// Interface zoom steps, as in web browsers.
 const UI_ZOOMS: &[f32] = &[0.5, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0];
 /// Pixels of smooth (touchpad) scrolling per interface-zoom step.
@@ -90,6 +92,10 @@ fn main() -> Result<(), slint::PlatformError> {
     slint::BackendSelector::new()
         .backend_name("winit".into())
         .select()?;
+    // On Wayland the compositor shows the icon of the desktop entry with
+    // this name (assets/linux/, installed by the packages or by
+    // scripts/install-desktop-entry.sh); on X11 it is the window's class.
+    slint::set_xdg_app_id(APP_ID)?;
     let ui = AppWindow::new()?;
     let tile_model = Rc::new(VecModel::<TileItem>::default());
     ui.set_tiles(ModelRc::from(tile_model.clone()));
@@ -169,6 +175,21 @@ fn main() -> Result<(), slint::PlatformError> {
         set_tracks(&a, tracks);
     });
     let a = app.clone();
+    ui.on_tab_toggled(move |i| {
+        let Some(ui) = a.borrow().ui.upgrade() else {
+            return;
+        };
+        // The tick has already flipped (two-way binding): record it.
+        let Some(row) = ui.get_tracks().row_data(i as usize) else {
+            return;
+        };
+        a.borrow_mut()
+            .settings
+            .tablature
+            .insert(i as usize, row.tab);
+        settings_changed(&a);
+    });
+    let a = app.clone();
     ui.on_track_solo(move |i| set_tracks(&a, vec![i as usize]));
     let a = app.clone();
     ui.on_multitrack_toggled(move || {
@@ -176,13 +197,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let s = a.borrow();
             (s.track_count, s.settings.tracks.clone())
         };
-        let all: Vec<usize> = (0..count).collect();
-        let next = if tracks == all {
-            tracks.into_iter().take(1).collect()
-        } else {
-            all
-        };
-        set_tracks(&a, next);
+        set_tracks(&a, multitrack_toggled(count, &tracks));
     });
     let a = app.clone();
     ui.on_tool_picked(move |i| {
@@ -317,6 +332,7 @@ fn handle(app: &Shared, event: Event) {
                 let mut s = app.borrow_mut();
                 s.track_count = tracks.len();
                 s.settings.tracks = vec![0];
+                s.settings.tablature.clear();
                 s.pdf_name = pdf_name;
                 s.folder = folder;
             }
@@ -327,6 +343,8 @@ fn handle(app: &Shared, event: Event) {
                     name: t.name.as_str().into(),
                     instrument: t.instrument.as_str().into(),
                     shown: i == 0,
+                    tab: t.default_tab,
+                    can_tab: t.can_tab,
                 })
                 .collect();
             ui.set_tracks(ModelRc::new(VecModel::from(rows)));
@@ -418,7 +436,6 @@ fn set_tracks(app: &Shared, tracks: Vec<usize>) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
-    let count = app.borrow().track_count;
     let model = ui.get_tracks();
     for i in 0..model.row_count() {
         if let Some(mut row) = model.row_data(i) {
@@ -426,9 +443,25 @@ fn set_tracks(app: &Shared, tracks: Vec<usize>) {
             model.set_row_data(i, row);
         }
     }
-    ui.set_multitrack(count > 1 && tracks.len() == count);
+    ui.set_multitrack(is_multitrack(&tracks));
     app.borrow_mut().settings.tracks = tracks;
     settings_changed(app);
+}
+
+/// View → Multitrack is ticked whenever more than one track is shown, however
+/// they were chosen (Mateus, 16 Oct 2026).
+fn is_multitrack(tracks: &[usize]) -> bool {
+    tracks.len() > 1
+}
+
+/// The tracks to show after View → Multitrack is clicked: from several
+/// tracks back to the first of them; from one track to all of them.
+fn multitrack_toggled(count: usize, tracks: &[usize]) -> Vec<usize> {
+    if is_multitrack(tracks) {
+        tracks.iter().copied().take(1).collect()
+    } else {
+        (0..count).collect()
+    }
 }
 
 /// The window's score area in points, for the Vertical layout.
@@ -788,6 +821,15 @@ mod tests {
             "Infer Key Signatures (the score has no bars)"
         );
         assert!(!rows[0].enabled);
+    }
+
+    #[test]
+    fn multitrack_follows_the_shown_tracks() {
+        assert!(!is_multitrack(&[2]));
+        assert!(is_multitrack(&[0, 2]));
+        assert_eq!(multitrack_toggled(4, &[2]), vec![0, 1, 2, 3]);
+        assert_eq!(multitrack_toggled(4, &[1, 3]), vec![1]);
+        assert_eq!(multitrack_toggled(4, &[0, 1, 2, 3]), vec![0]);
     }
 
     #[test]

@@ -51,7 +51,7 @@ Run the desktop app, optionally with a file to open:
 cargo run --release -p oxiguitar-app -- path/to/your/song.gp
 ```
 
-It opens Guitar Pro 3 to 8 files and shows them in four layouts (View → Layout), with a dark page, the track list (F8), the Tools menu and PDF export. On Linux, the Open and Export dialogs come from the desktop portal (`xdg-desktop-portal` with your desktop's backend, installed by default with GNOME and KDE). The binary is `target/release/oxiguitar` and needs no files beside it.
+It opens Guitar Pro 3 to 8 files and shows them in four layouts (View → Layout), with a dark page, the track list (F8), the Tools menu and PDF export. On Linux, the Open and Export dialogs come from the desktop portal (`xdg-desktop-portal` with your desktop's backend, installed by default with GNOME and KDE). The binary is `target/release/oxiguitar` and needs no files beside it. On Wayland, desktops take an app's icon from its desktop entry rather than from the window; to give a build from source its icon and a menu entry, run `scripts/install-desktop-entry.sh` (it writes only to `~/.local/share`; `--uninstall` removes it).
 
 Try the command-line tool, which can already read Guitar Pro 3 to 8 files (.gp3, .gp4, .gp5, .gpx, .gp) and engrave them into PNG pages and a PDF:
 

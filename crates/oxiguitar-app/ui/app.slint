@@ -20,6 +20,9 @@ export struct TrackRow {
     name: string,
     instrument: string,
     shown: bool,
+    // Tablature: shown, and whether the track has strings to tab at all.
+    tab: bool,
+    can-tab: bool,
 }
 
 export struct ToolRow {
@@ -74,6 +77,9 @@ component Pill inherits Rectangle {
 
 export component AppWindow inherits Window {
     title: "OxiGuitar";
+    // The window icon for X11, Windows and macOS. Wayland ignores it and
+    // takes the icon of the desktop entry named by the app id (main.rs).
+    icon: @image-url("../../../assets/icon/png/oxiguitar-256.png");
     preferred-width: 1280px;
     preferred-height: 800px;
     min-width: 400px;
@@ -97,6 +103,16 @@ export component AppWindow inherits Window {
     // View settings.
     in-out property <int> layout: 0;
     in-out property <int> paper: 0;
+    // One tick per menu item, kept in step by pick-layout and pick-paper.
+    // A checkable item flips its own tick when clicked, which would break
+    // a one-way binding such as "checked: layout == 0" for good, so every
+    // tick here is two-way and set from one place.
+    in-out property <bool> layout-0: true;
+    in-out property <bool> layout-1: false;
+    in-out property <bool> layout-2: false;
+    in-out property <bool> layout-3: false;
+    in-out property <bool> paper-0: true;
+    in-out property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
     in-out property <bool> dynamics: true;
     in-out property <bool> multitrack: false;
@@ -121,9 +137,25 @@ export component AppWindow inherits Window {
     callback zoom-moved(float);
     callback track-toggled(int);
     callback track-solo(int);
+    callback tab-toggled(int);
     callback multitrack-toggled();
     callback tool-picked(int);
     callback status-dismissed();
+
+    // Choose layout n (0 Page, 1 Vertical, 2 Horizontal, 3 Parchment): only
+    // its item stays ticked, even when it was clicked while already ticked.
+    public function pick-layout(n: int) {
+        root.layout = n;
+        root.layout-0 = n == 0;
+        root.layout-1 = n == 1;
+        root.layout-2 = n == 2;
+        root.layout-3 = n == 3;
+    }
+    public function pick-paper(n: int) {
+        root.paper = n;
+        root.paper-0 = n == 0;
+        root.paper-1 = n == 1;
+    }
 
     // Scroll the canvas by (dx, dy), within its bounds.
     public function scroll-by(dx: length, dy: length) {
@@ -143,8 +175,8 @@ export component AppWindow inherits Window {
             MenuItem { title: "Export PDF…"; enabled: root.has-score; activated => { root.export-pdf(); } }
             Menu {
                 title: "Paper Size";
-                MenuItem { title: "A4"; checkable: true; checked: root.paper == 0; activated => { root.paper = 0; root.settings-changed(); } }
-                MenuItem { title: "Letter"; checkable: true; checked: root.paper == 1; activated => { root.paper = 1; root.settings-changed(); } }
+                MenuItem { title: "A4"; checkable: true; checked <=> root.paper-0; activated => { root.pick-paper(0); root.settings-changed(); } }
+                MenuItem { title: "Letter"; checkable: true; checked <=> root.paper-1; activated => { root.pick-paper(1); root.settings-changed(); } }
             }
             MenuSeparator { }
             MenuItem { title: "Quit"; shortcut: @keys(Control + Q); activated => { root.quit(); } }
@@ -154,12 +186,12 @@ export component AppWindow inherits Window {
             // Staff layouts (VIEW-3), as in Guitar Pro.
             Menu {
                 title: "Layout";
-                MenuItem { title: "Page"; checkable: true; checked: root.layout == 0; activated => { root.layout = 0; root.settings-changed(); } }
-                MenuItem { title: "Vertical"; checkable: true; checked: root.layout == 1; activated => { root.layout = 1; root.settings-changed(); } }
-                MenuItem { title: "Horizontal"; checkable: true; checked: root.layout == 2; activated => { root.layout = 2; root.settings-changed(); } }
-                MenuItem { title: "Parchment"; checkable: true; checked: root.layout == 3; activated => { root.layout = 3; root.settings-changed(); } }
+                MenuItem { title: "Page"; checkable: true; checked <=> root.layout-0; activated => { root.pick-layout(0); root.settings-changed(); } }
+                MenuItem { title: "Vertical"; checkable: true; checked <=> root.layout-1; activated => { root.pick-layout(1); root.settings-changed(); } }
+                MenuItem { title: "Horizontal"; checkable: true; checked <=> root.layout-2; activated => { root.pick-layout(2); root.settings-changed(); } }
+                MenuItem { title: "Parchment"; checkable: true; checked <=> root.layout-3; activated => { root.pick-layout(3); root.settings-changed(); } }
             }
-            MenuItem { title: "Multitrack"; checkable: true; checked: root.multitrack; enabled: root.tracks.length > 1; activated => { root.multitrack-toggled(); } }
+            MenuItem { title: "Multitrack"; checkable: true; checked <=> root.multitrack; enabled: root.tracks.length > 1; activated => { root.multitrack-toggled(); } }
             MenuSeparator { }
             MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
@@ -332,7 +364,9 @@ export component AppWindow inherits Window {
                                 color: Palette.foreground.transparentize(0.4);
                             }
                             CheckBox {
-                                checked: track.shown;
+                                // Two-way, so the tick follows the model when
+                                // Multitrack or a click on a name changes it.
+                                checked <=> track.shown;
                                 toggled => { root.track-toggled(i); }
                             }
                             Rectangle {
@@ -353,9 +387,18 @@ export component AppWindow inherits Window {
                             }
                             Text {
                                 text: track.instrument;
+                                width: 90px;
                                 font-size: 12px;
                                 vertical-alignment: center;
                                 color: Palette.foreground.transparentize(0.3);
+                            }
+                            // Show this track's tablature. Only fretted
+                            // instruments start ticked; any track with
+                            // strings can be ticked (Mateus, 16 Oct 2026).
+                            if track.can-tab : CheckBox {
+                                text: "Tab";
+                                checked <=> track.tab;
+                                toggled => { root.tab-toggled(i); }
                             }
                             Rectangle { }
                         }

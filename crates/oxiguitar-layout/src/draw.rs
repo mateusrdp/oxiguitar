@@ -36,6 +36,7 @@ pub(crate) mod glyphs {
     pub(crate) const G_CLEF: G = G("gClef", '\u{E050}');
     pub(crate) const G_CLEF_8VB: G = G("gClef8vb", '\u{E052}');
     pub(crate) const F_CLEF: G = G("fClef", '\u{E062}');
+    pub(crate) const BRACE: G = G("brace", '\u{E000}');
     pub(crate) const F_CLEF_8VB: G = G("fClef8vb", '\u{E064}');
     pub(crate) const C_CLEF: G = G("cClef", '\u{E05C}');
     pub(crate) const PERCUSSION_CLEF: G = G("unpitchedPercussionClef1", '\u{E069}');

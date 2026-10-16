@@ -651,3 +651,73 @@ fn layouts_and_paper_have_names() {
     assert_eq!((letter.page_width, letter.page_height), (612.0, 792.0));
     assert_eq!(Paper::from_name("a4"), Some(Paper::A4));
 }
+
+/// Glyphs of the music font on the first page.
+fn glyphs_on_first_page(e: &Engraved) -> String {
+    e.pages[0]
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Glyphs(r) => Some(r.text.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// A keyboard track is shown on a grand staff, without tablature unless the
+/// user asks; only fretted instruments show tab by default (Mateus,
+/// 16 Oct 2026).
+#[test]
+fn keyboards_get_a_grand_staff_and_tab_only_when_asked() {
+    let (fonts, meta) = setup();
+    let (brace, g_clef, f_clef, tab_clef) = ('\u{E000}', '\u{E050}', '\u{E062}', '\u{E06D}');
+    let mut score = tune_in_g(8);
+    score.tracks[0].staves[0].tuning = Staff::standard_guitar_tuning();
+    // A low left hand under the tune.
+    for bar in &mut score.tracks[0].staves[0].bars {
+        if let Some(b) = bar.voices[0].beats.first_mut() {
+            b.notes.push(Note {
+                place: NotePlace::Pitched(Pitch(36)),
+                ..Note::fretted(1, 0)
+            });
+        }
+        bar.clef = oxiguitar_model::Clef::Treble;
+    }
+    score.tracks[0].instrument.midi_program = 0; // Acoustic Grand Piano
+
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("piano", &e, &fonts);
+    let g = glyphs_on_first_page(&e);
+    assert!(g.contains(brace), "a brace joins the two staves");
+    assert!(
+        g.contains(g_clef) && g.contains(f_clef),
+        "treble and bass clefs"
+    );
+    assert!(!g.contains(tab_clef), "no tablature for a piano by default");
+
+    let mut asked = Options::default();
+    asked.tablature.insert(0, true);
+    let e = engrave(&score, &fonts, &meta, &asked);
+    check("piano with tab", &e, &fonts);
+    assert!(
+        glyphs_on_first_page(&e).contains(tab_clef),
+        "tab when asked for"
+    );
+
+    // A fretless bass: notation only, unless asked.
+    score.tracks[0].instrument.midi_program = 35;
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    let g = glyphs_on_first_page(&e);
+    assert!(!g.contains(tab_clef) && !g.contains(brace));
+    // A guitar keeps its tab.
+    score.tracks[0].instrument.midi_program = 25;
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    assert!(glyphs_on_first_page(&e).contains(tab_clef));
+    let mut hidden = Options::default();
+    hidden.tablature.insert(0, false);
+    let e = engrave(&score, &fonts, &meta, &hidden);
+    assert!(
+        !glyphs_on_first_page(&e).contains(tab_clef),
+        "tab hidden when asked"
+    );
+}

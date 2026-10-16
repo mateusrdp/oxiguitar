@@ -5,6 +5,7 @@
 //! engraving, tools and PDF export. No window code here, so all of it is
 //! tested without a display.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use oxiguitar_display::smufl::Metadata;
@@ -24,6 +25,9 @@ pub(crate) struct Settings {
     pub(crate) dynamics: bool,
     /// Width of the score area in points, for the Vertical layout.
     pub(crate) screen_width: f32,
+    /// Tracks whose tablature the user has shown or hidden; the others
+    /// follow `oxiguitar_layout::default_tablature`.
+    pub(crate) tablature: BTreeMap<usize, bool>,
 }
 
 impl Default for Settings {
@@ -34,6 +38,7 @@ impl Default for Settings {
             tracks: vec![0],
             dynamics: true,
             screen_width: 800.0,
+            tablature: BTreeMap::new(),
         }
     }
 }
@@ -46,6 +51,7 @@ impl Settings {
             screen_width: self.screen_width,
             tracks: self.tracks.clone(),
             dynamics: self.dynamics,
+            tablature: self.tablature.clone(),
             ..Options::default().with_paper(self.paper)
         }
     }
@@ -56,6 +62,10 @@ impl Settings {
 pub(crate) struct TrackInfo {
     pub(crate) name: String,
     pub(crate) instrument: String,
+    /// The track has strings to tab (not drums, not a track without strings).
+    pub(crate) can_tab: bool,
+    /// Its tablature is shown unless the user decides otherwise.
+    pub(crate) default_tab: bool,
 }
 
 /// A Tools menu entry for the open score.
@@ -104,6 +114,8 @@ impl Document {
                         n => format!("{n} strings"),
                     }
                 },
+                can_tab: !t.instrument.percussion && t.staves.iter().any(|s| s.string_count() > 0),
+                default_tab: oxiguitar_layout::default_tablature(t),
             })
             .collect()
     }
@@ -254,6 +266,17 @@ mod tests {
         let err = Document::open(&junk).err().unwrap();
         assert!(err.starts_with("junk.gp: "), "{err}");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn only_fretted_tracks_default_to_tab() {
+        let doc = Document::open(&fixture("gp5")).unwrap();
+        for (info, track) in doc.tracks().iter().zip(&doc.score.tracks) {
+            assert_eq!(
+                info.default_tab,
+                track.instrument.is_fretted() && info.can_tab
+            );
+        }
     }
 
     #[test]
