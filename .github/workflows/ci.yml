@@ -151,9 +151,9 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace libfontconfig1-dev libxkbcommon-dev libwayland-dev
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace xvfb libgl1-mesa-dri libegl1 libfontconfig1-dev libxkbcommon-dev libwayland-dev
       - run: cargo build --workspace --locked
-      - run: scripts/no-network.sh target/debug/oxiguitar-cli
+      - run: scripts/no-network.sh target/debug/oxiguitar-cli target/debug/oxiguitar
 
   dco:
     name: Sign-off (DCO)

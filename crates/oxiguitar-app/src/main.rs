@@ -202,6 +202,17 @@ fn main() -> Result<(), slint::PlatformError> {
         app.borrow().worker.send(Request::Open(PathBuf::from(path)));
     }
 
+    // For automated checks (scripts/no-network.sh): quit after this many
+    // milliseconds.
+    if let Some(ms) = std::env::var("OXIGUITAR_EXIT_AFTER_MS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+    {
+        slint::Timer::single_shot(Duration::from_millis(ms), || {
+            let _ = slint::quit_event_loop();
+        });
+    }
+
     // Once the window has its size and scale.
     let a = app.clone();
     slint::Timer::single_shot(Duration::from_millis(50), move || {
