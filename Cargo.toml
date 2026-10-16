@@ -24,6 +24,11 @@ oxiguitar-render = { path = "crates/oxiguitar-render" }
 skrifa = "0.42"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Guitar Pro 7/8 files are ZIP archives. No default features: they build
+# the zstd C library. zlib-rs is a pure-Rust deflate.
+zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# XML for GPIF (Guitar Pro 6-8), and later MuseScore and MusicXML.
+quick-xml = "0.42"
 # Pixel output for the screen, PNG and visual regression tests.
 tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd", "png-format"] }
 # PDF output. No default features: we position every glyph ourselves and

@@ -24,9 +24,12 @@
 )]
 
 mod binary;
+mod container;
 mod detect;
 mod error;
 mod gp;
+mod gpif;
+mod xml;
 
 pub use detect::{Format, detect};
 pub use error::{ImportLog, LogEntry, ReadError, ReadErrorKind, Severity};
@@ -48,6 +51,10 @@ pub struct Imported {
 }
 
 /// Recognises the format of `data` from its contents and reads it.
+///
+/// Reads Guitar Pro 3, 4 and 5 (binary), Guitar Pro 6 (.gpx) and Guitar Pro
+/// 7 and 8 (.gp). Other recognised formats give
+/// [`ReadErrorKind::Unsupported`].
 pub fn read(data: &[u8]) -> Result<Imported, ReadError> {
     let format = detect(data).ok_or_else(|| ReadError::new(ReadErrorKind::UnknownFormat, None))?;
     match &format {
@@ -69,6 +76,19 @@ pub fn read(data: &[u8]) -> Result<Imported, ReadError> {
                 score: r.score,
                 log: r.log,
                 trailing_bytes: r.trailing_bytes,
+            })
+        }
+        Format::GuitarPro6 | Format::GuitarPro7Plus => {
+            let r = if format == Format::GuitarPro6 {
+                gpif::read_gpx(data)?
+            } else {
+                gpif::read_gp7(data)?
+            };
+            Ok(Imported {
+                format,
+                score: r.score,
+                log: r.log,
+                trailing_bytes: 0,
             })
         }
         other => Err(ReadError::new(

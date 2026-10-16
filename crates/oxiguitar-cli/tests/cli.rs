@@ -40,6 +40,42 @@ fn info_prints_the_structure_of_a_gp5_file() {
 }
 
 #[test]
+fn info_reads_gp7_and_gpx_files() {
+    for (file, format) in [
+        (
+            "oxiguitar-test-song.gp",
+            "Format:      Guitar Pro 7/8 (.gp)",
+        ),
+        (
+            "oxiguitar-test-song.gpx",
+            "Format:      Guitar Pro 6 (.gpx)",
+        ),
+    ] {
+        let out = cli()
+            .arg("info")
+            .arg("--bars")
+            .arg(fixture(file))
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "{file}");
+        let text = String::from_utf8(out.stdout).unwrap();
+        for expected in [
+            format,
+            "Title:       OxiGuitar Test Song",
+            "Time sigs:   4/4 ×2, 3/4 ×1",
+            "1. Guitar, 6 strings E2 A2 D3 G3 B3 E4, program 27, 2 voice(s), 13 notes, 1 chord diagram(s), lyrics",
+            "Bar check:   every bar matches its time signature",
+            "1  4/4  |: [A] \"Intro\" | t1: 6/6",
+        ] {
+            assert!(
+                text.contains(expected),
+                "{file}: missing {expected:?} in:\n{text}"
+            );
+        }
+    }
+}
+
+#[test]
 fn unreadable_files_fail_with_a_message() {
     let dir = std::env::temp_dir().join(format!("oxiguitar-cli-test-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();

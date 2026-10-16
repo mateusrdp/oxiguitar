@@ -13,8 +13,8 @@ mod effects;
 use oxiguitar_model::{
     Bar, Beat, BeatKind, ChordDiagram, Clef, Color, Direction, Duration, Dynamic, GraceKind,
     Instrument, KeyMode, KeySignature, LyricLine, Marker, MasterBar, Mix, Note, NotePlace,
-    NoteValue, Ratio, Score, ScoreInfo, Staff, TempoChange, TimeSignature, Track, TripletFeel,
-    Tuplet, Voice,
+    NoteValue, Pitch, Ratio, Score, ScoreInfo, Staff, TempoChange, TimeSignature, Track,
+    TripletFeel, Tuplet, Voice,
 };
 
 use crate::Format;
@@ -397,6 +397,7 @@ impl Reader<'_> {
         }
         if flags & 0x20 != 0 {
             mb.marker = Some(Marker {
+                letter: String::new(),
                 text: self.c.int_byte_size_string()?,
                 color: self.color()?,
             });
@@ -592,6 +593,20 @@ impl Reader<'_> {
             let voice = self.voice(ti, string_count, vi == 0, tempo)?;
             if vi == 0 || !voice.is_empty() {
                 bar.voices.push(voice);
+            }
+        }
+        if percussion {
+            // Guitar Pro 3–5 store drum notes as string and fret, the fret
+            // being the General MIDI drum. The model keeps them as pitches.
+            for note in bar
+                .voices
+                .iter_mut()
+                .flat_map(|v| &mut v.beats)
+                .flat_map(|b| &mut b.notes)
+            {
+                if let NotePlace::Fretted { fret, .. } = note.place {
+                    note.place = NotePlace::Pitched(Pitch(fret.min(127)));
+                }
             }
         }
         if self.major() == 5 {
