@@ -23,5 +23,4 @@ Milestone M0 (foundations) is complete. No version is tagged for it: the first r
 - Decision record 0005: the renderer draws one display list on the CPU for the screen and with krilla for PDF.
 - GUI-toolkit spike in Slint, iced and egui (`spikes/gui/`), built on every target by an advisory CI workflow. Decision record 0004 proposes Slint.
 - Licences of the crates planned for later milestones checked and recorded in CREDITS.md and ROADMAP.md.
-- Interface design rules (`docs/design/ui.md`) from the first review of the GUI spike. The Slint spike follows them: menus only on top, collapsible palette groups, palette icons centred on their ink, interface zoom with Ctrl + wheel and Ctrl + + / − / 0, a score-zoom slider, and light, dark and parchment pages.
-- `Theme::PARCHMENT`: a warm, paper-like page style.
+- Interface design rules (`docs/design/ui.md`) from the first review of the GUI spike. The Slint spike follows them: menus only on top, collapsible palette groups, palette icons centred on their ink, interface zoom with Ctrl + wheel and Ctrl + + / − / 0, a score-zoom slider and a dark page. View → Layout lists the four staff layouts to come in M1: Page, Vertical, Horizontal and Parchment.

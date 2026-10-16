@@ -21,9 +21,19 @@ There are two zooms, and they never share a control.
 
 Interface zoom follows browser steps (50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200 %) and multiplies the system's scale factor, so it stays right when the window moves to another monitor. It is caught before any widget sees it, so Ctrl + wheel over the score never scrolls it.
 
-## Page styles
+## View options
 
-View → Page offers **Light**, **Dark** and **Parchment**. Each is a colour theme of the display list (`Theme::LIGHT`, `DARK`, `PARCHMENT` in `oxiguitar-display`), so the PDF can use the same styles. Future page options (multitrack, page / vertical / horizontal layout, VIEW-3 and VIEW-4) go in the same menu.
+Everything about how the score is shown lives in the View menu:
+
+- **Layout** (VIEW-3, M1): how staves are laid out, as in Guitar Pro.
+  - **Page**: systems fill the page width, stack vertically and break into pages.
+  - **Vertical**: systems fill the window width and stack vertically, with no pages.
+  - **Horizontal**: one single long line, scrolling sideways.
+  - **Parchment**: one single long vertical column, with no page breaks.
+
+  These follow Mateus's description (16 October 2026); before building them in M1 we check each against the Guitar Pro 8 user guide, so the four behave as Guitar Pro users expect.
+- **Dark Page** (VIEW-8): light notation on a dark page. Page colours are themes of the display list (`Theme::LIGHT`, `Theme::DARK` in `oxiguitar-display`), so the PDF can use them too.
+- **Multitrack** (VIEW-4) and the panels (Palette, Tracks).
 
 ## Palette
 

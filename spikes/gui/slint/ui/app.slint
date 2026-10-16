@@ -169,11 +169,7 @@ export component AppWindow inherits Window {
     in-out property <int> find-requests: 0;
     in-out property <bool> effects-collapsed: false;
 
-    // Page style: 0 light, 1 dark, 2 parchment.
-    in-out property <int> page-style: 0;
-    in-out property <bool> page-light: true;
-    in-out property <bool> page-dark: false;
-    in-out property <bool> page-parchment: false;
+    in-out property <bool> dark-page: false;
 
     // Score zoom as log2 of the zoom factor: -2 is 25 %, 0 is 100 %, 2 is 400 %.
     in-out property <float> zoom-log: 0;
@@ -200,14 +196,6 @@ export component AppWindow inherits Window {
     callback canvas-changed();
     callback search-edited(string);
     callback quit();
-
-    function set-page(style: int) {
-        root.page-style = style;
-        root.page-light = style == 0;
-        root.page-dark = style == 1;
-        root.page-parchment = style == 2;
-        root.canvas-changed();
-    }
 
     MenuBar {
         Menu {
@@ -239,13 +227,16 @@ export component AppWindow inherits Window {
         }
         Menu {
             title: "View";
+            // Staff layouts (VIEW-3), with the layout engine in M1.
             Menu {
-                title: "Page";
-                MenuItem { title: "Light"; checkable: true; checked <=> root.page-light; activated => { root.set-page(0); } }
-                MenuItem { title: "Dark"; checkable: true; checked <=> root.page-dark; activated => { root.set-page(1); } }
-                MenuItem { title: "Parchment"; checkable: true; checked <=> root.page-parchment; activated => { root.set-page(2); } }
+                title: "Layout";
+                MenuItem { title: "Page"; checkable: true; checked: true; enabled: false; }
+                MenuItem { title: "Vertical"; checkable: true; enabled: false; }
+                MenuItem { title: "Horizontal"; checkable: true; enabled: false; }
+                MenuItem { title: "Parchment"; checkable: true; enabled: false; }
             }
             MenuItem { title: "Multitrack"; checkable: true; enabled: false; }
+            MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.canvas-changed(); } }
             MenuSeparator { }
             MenuItem { title: "Palette"; checkable: true; checked <=> root.show-palette; shortcut: @keys(F7); }
             MenuItem { title: "Tracks"; checkable: true; checked <=> root.show-tracks; shortcut: @keys(F8); }
@@ -330,7 +321,7 @@ export component AppWindow inherits Window {
 
                 // Score canvas: only the visible part of the page is rendered.
                 canvas := Rectangle {
-                    background: root.page-style == 1 ? #2a2b2e : root.page-style == 2 ? #d9cfb8 : #d8d8d8;
+                    background: root.dark-page ? #2a2b2e : #d8d8d8;
                     clip: true;
                     flick := Flickable {
                         content-width: root.page-width + 48px;

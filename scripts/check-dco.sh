@@ -11,8 +11,8 @@
 #   - committed by GitHub (noreply@github.com) with a Co-Authored-By trailer
 #     for noreply@anthropic.com: the squash merges of Claude's pull requests
 #     into develop, which GitHub attributes to the account that merged them.
-# The maintainer's approval of the pull request into main is the human
-# sign-off for them. See CONTRIBUTING.md.
+# The maintainer's review and merge of the pull request into main is the
+# human sign-off for them. See CONTRIBUTING.md.
 #
 # Usage: scripts/check-dco.sh BASE_SHA HEAD_SHA
 

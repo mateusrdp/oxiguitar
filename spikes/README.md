@@ -26,7 +26,7 @@ All three were built for the comparison in ADR 0004 and do the same things:
 The iced and egui spikes stay as they were for that comparison. **The Slint spike has since followed Mateus's review** (16 October 2026) and shows the rules in [docs/design/ui.md](../docs/design/ui.md):
 
 - Only menus along the top (File, Edit, View, Help); no title, status caption or zoom buttons in the window. Most File and Edit items are placeholders, greyed out.
-- View → Page: Light, Dark or Parchment. View → Palette (F7) and Tracks (F8) show or hide the panels; the splitters resize them.
+- View → Dark Page. View → Layout lists the four staff layouts (Page, Vertical, Horizontal, Parchment), greyed until M1. View → Palette (F7) and Tracks (F8) show or hide the panels; the splitters resize them.
 - Palette groups collapse and expand from their headings. Ctrl + K focuses the tool search.
 - Palette icons are drawn by our renderer and centred on their ink (`spike-common/src/icons.rs`; `cargo run -p spike-common --example icon_sheet -- icons.png` draws them all).
 - Interface zoom: Ctrl + mouse wheel, Ctrl + `+` / `-` / `0`. Score zoom: the slider at the bottom right of the canvas; click its percentage for 100 %.

@@ -61,8 +61,8 @@ Open every supported format and show it beautifully.
 - Readers for GP5 onwards and the other formats in the brief, with import logs; GP3 and GP4 if cheap. Guitar Pro readers first; MuseScore, MusicXML and ABC once more sample files arrive.
 - Engraving for standard notation, tablature and rhythm-on-tab, with the core effects drawn (VIEW-1, VIEW-2, VIEW-7, NOT-1 to NOT-4).
 - Tab derivation for files with only standard notation (TAB-3, TAB-4).
-- Page, vertical and horizontal views, multi-track display, zoom, score header (VIEW-3 to VIEW-6).
-- The desktop window (`oxiguitar-app`, Slint) following [docs/design/ui.md](docs/design/ui.md): menus only on top, collapsible palette groups, interface zoom by keys and wheel, score-zoom slider, light, dark and parchment pages (UI-7 to UI-10).
+- Page, vertical, horizontal and parchment layouts, multi-track display, zoom, score header (VIEW-3 to VIEW-6).
+- The desktop window (`oxiguitar-app`, Slint) following [docs/design/ui.md](docs/design/ui.md): menus only on top, collapsible palette groups, interface zoom by keys and wheel, score-zoom slider, dark page (UI-7 to UI-10).
 - PDF export (EXP-1). User manual on GitHub Pages. Release packages (release.yml).
 
 Done when: 98% of the GP5-and-later corpus opens without error, the rest with clear messages; 24 hours of fuzzing per reader without a crash; a 300-bar, 8-track file opens in under a second; visual regression tests cover 50 reference scores; Mateus has reviewed PDFs of 10 songs.
