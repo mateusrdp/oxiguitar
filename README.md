@@ -6,7 +6,7 @@
 
 It opens Guitar Pro files (.gp, .gpx, .gp5, and the older .gp3 and .gp4), shows them as standard notation and tablature, lets you edit them and plays them back. MuseScore, MusicXML, ABC and MIDI files are planned as plugins once the plugin system exists. Its layout follows Guitar Pro 8 closely, so it feels familiar; every icon and piece of artwork is our own.
 
-> **Status: early development (milestone M0, foundations).** There is nothing to play with yet beyond a command-line tool. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next.
+> **Status: early development (milestone M1, the viewer).** OxiGuitar opens and shows Guitar Pro files and exports them to PDF; editing and playback come in the next milestones. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next.
 
 ## Privacy
 
@@ -24,7 +24,12 @@ These promises cover OxiGuitar and the plugins we publish. Plugins written by ot
 | Linux | current distributions with glibc 2.39 or newer: Debian trixie and sid, Ubuntu 24.04+, Fedora 40+ | x86_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
-Releases will come as a portable .exe for Windows; AppImage, .deb and .rpm for Linux; and a .dmg for macOS. They are not code-signed yet, so the first launch shows a warning:
+Releases come as a portable .exe for Windows (in a zip); an AppImage, a .deb and an .rpm for Linux; and one .dmg for macOS. Each [release](https://github.com/mateusrdp/oxiguitar/releases) carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Guitar Pro file types (.gp, .gpx, .gp5, .gp4, .gp3), so double-clicking a file opens OxiGuitar; the portable .exe and the AppImage register nothing, and the user manual shows how to do it by hand.
+
+- **Debian, Ubuntu:** `sudo apt install ./oxiguitar_VERSION_amd64.deb` (or `_arm64.deb`).
+- **Fedora:** `sudo dnf install ./oxiguitar-VERSION-1.x86_64.rpm` (or `.aarch64.rpm`).
+
+None of the packages is code-signed yet, so the first launch shows a warning:
 
 - **Windows:** SmartScreen says "Windows protected your PC". Click **More info**, then **Run anyway**.
 - **macOS:** right-click (or Control-click) the app, choose **Open**, then **Open** again. On recent macOS versions you may instead need **System Settings → Privacy & Security → Open Anyway**.
@@ -51,7 +56,7 @@ Run the desktop app, optionally with a file to open:
 cargo run --release -p oxiguitar-app -- path/to/your/song.gp
 ```
 
-It opens Guitar Pro 3 to 8 files and shows them in four layouts (View → Layout), with a dark page, the track list (F8), the Tools menu and PDF export. On Linux, the Open and Export dialogs come from the desktop portal (`xdg-desktop-portal` with your desktop's backend, installed by default with GNOME and KDE). The binary is `target/release/oxiguitar` and needs no files beside it. On Wayland, desktops take an app's icon from its desktop entry rather than from the window; to give a build from source its icon and a menu entry, run `scripts/install-desktop-entry.sh` (it writes only to `~/.local/share`; `--uninstall` removes it).
+It opens Guitar Pro 3 to 8 files and shows them in four layouts (View → Layout), with a dark page, the track list (F8), the Tools menu and PDF export. On Linux, the Open and Export dialogs come from the desktop portal (`xdg-desktop-portal` with your desktop's backend, installed by default with GNOME and KDE). The binary is `target/release/oxiguitar` and needs no files beside it. On Wayland, desktops take an app's icon from its desktop entry rather than from the window; to give a build from source (or an AppImage) its icon, a menu entry and the Guitar Pro file types, run `scripts/install-desktop-entry.sh [path to the program]` (it writes only to `~/.local/share`; `--uninstall` removes it).
 
 Try the command-line tool, which can already read Guitar Pro 3 to 8 files (.gp3, .gp4, .gp5, .gpx, .gp) and engrave them into PNG pages and a PDF:
 
@@ -67,7 +72,7 @@ cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --tool infer
 
 The maintainer tests by hand on x86_64 Debian sid only. Everything else — **Windows, macOS, other Linux distributions, and any ARM64 machine** — is built and tested automatically, but nobody has clicked through it yet. If you can try test builds on one of those systems, please say hello in [Discussions](https://github.com/mateusrdp/oxiguitar/discussions) or open an issue with what you find.
 
-Test builds of every change on `develop` are under the [Actions](https://github.com/mateusrdp/oxiguitar/actions/workflows/builds.yml) tab, kept for 14 days (you need to be signed in to GitHub to download them).
+Test builds of every change on `develop` are under the [Actions](https://github.com/mateusrdp/oxiguitar/actions/workflows/builds.yml) tab, kept for 14 days (you need to be signed in to GitHub to download them). Packages of the latest state are made by hand under [Release packages](https://github.com/mateusrdp/oxiguitar/actions/workflows/release.yml), kept just as long.
 
 ## Contributing
 

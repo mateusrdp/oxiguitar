@@ -2,15 +2,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# Installs OxiGuitar's desktop entry and icons for the current user, so a
-# build from source gets its icon on Linux. On Wayland the compositor takes
+# Installs OxiGuitar's desktop entry, icons and Guitar Pro file type for the
+# current user, so a build from source (or an AppImage) gets its icon on
+# Linux and opens .gp files on a double click. On Wayland the compositor takes
 # the icon from the desktop entry whose name matches the window's app id
 # (io.github.mateusrdp.OxiGuitar), never from the window itself.
 #
-# Usage: scripts/install-desktop-entry.sh [path to the oxiguitar binary]
+# Usage: scripts/install-desktop-entry.sh [path to the oxiguitar binary or AppImage]
 #        scripts/install-desktop-entry.sh --uninstall
 # Default binary: target/release/oxiguitar. Writes only under ~/.local/share.
-# The .deb and .rpm packages will install the same files system-wide.
+# The .deb and .rpm packages install the same files system-wide.
 
 set -euo pipefail
 
@@ -25,8 +26,10 @@ if [[ "${1:-}" == "--uninstall" ]]; then
         rm -f "$data/icons/hicolor/${s}x${s}/apps/$id.png"
     done
     rm -f "$data/icons/hicolor/scalable/apps/$id.svg"
+    rm -f "$data/mime/packages/$id.xml"
+    command -v update-mime-database > /dev/null && update-mime-database "$data/mime" || true
     touch "$data/icons/hicolor" 2> /dev/null || true
-    echo "Removed OxiGuitar's desktop entry and icons from $data"
+    echo "Removed OxiGuitar's desktop entry, icons and file type from $data"
     exit 0
 fi
 
@@ -47,9 +50,12 @@ mkdir -p "$data/applications"
 sed "s|^Exec=oxiguitar |Exec=\"$bin\" |" "$root/assets/linux/$id.desktop" \
     > "$data/applications/$id.desktop"
 
+install -Dm644 "$root/assets/linux/$id.xml" "$data/mime/packages/$id.xml"
+command -v update-mime-database > /dev/null && update-mime-database "$data/mime" || true
+
 # Tell desktops something changed. No icon cache is written: a stale cache in
 # the user's own icon folder can hide icons that other programs add later.
 touch "$data/icons/hicolor"
 command -v update-desktop-database > /dev/null && update-desktop-database -q "$data/applications" || true
 
-echo "Installed OxiGuitar's desktop entry and icons in $data, starting $bin"
+echo "Installed OxiGuitar's desktop entry, icons and file type in $data, starting $bin"
