@@ -76,6 +76,14 @@ impl Sheets {
         out
     }
 
+    /// The areas around a view (in points) whose tiles are drawn ahead of
+    /// scrolling, and beyond which tiles are dropped: a quarter and one
+    /// whole view's size beyond its edges.
+    pub(crate) fn around(view: Rect) -> (Rect, Rect) {
+        let size = view.width.max(view.height);
+        (view.inflate(0.25 * size), view.inflate(size))
+    }
+
     /// The canvas area of tile (`col`, `row`) in points.
     pub(crate) fn tile_rect(col: u32, row: u32, scale: f32) -> Rect {
         let tile = TILE as f32 / scale;

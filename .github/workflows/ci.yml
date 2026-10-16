@@ -134,6 +134,38 @@ jobs:
           fi
           exit "$status"
 
+  # M1's speed budget: a 300-bar, 8-track file opens in under a second, from
+  # reading the file to the first tiles (crates/oxiguitar-app/src/speed.rs).
+  # Only optimised builds are held to it. Thin LTO and one codegen unit are
+  # turned off to build faster; that makes the check a little stricter.
+  speed:
+    name: Speed budget
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_PROFILE_RELEASE_LTO: "false"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
+      - name: cargo test --release (speed budget)
+        shell: bash
+        env:
+          CARGO_TERM_COLOR: never
+        run: |
+          set +e
+          cargo test --release --locked -p oxiguitar-app speed -- --nocapture 2>&1 | tee speed.log
+          status=${PIPESTATUS[0]}
+          # The times as notices on the run, and a failure as an error.
+          grep -E '^speed-budget' speed.log | while read -r line; do echo "::notice title=Speed budget::$line"; done
+          if [ "$status" -ne 0 ]; then
+            report=$(sed -n '/^failures:$/,/^test result:/p' speed.log | head -n 40)
+            [ -n "$report" ] || report=$(tail -n 30 speed.log)
+            echo "::error title=Speed budget::$(printf '%s' "$report" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+          fi
+          exit "$status"
+
   deny:
     name: Licences and advisories
     runs-on: ubuntu-24.04
@@ -171,7 +203,7 @@ jobs:
   ci-success:
     name: ci-success
     if: always()
-    needs: [fmt, lint, test, deny, no-network, dco]
+    needs: [fmt, lint, test, speed, deny, no-network, dco]
     runs-on: ubuntu-24.04
     steps:
       - name: Every job passed

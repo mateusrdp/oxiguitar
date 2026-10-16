@@ -1,0 +1,20 @@
+[package]
+name = "oxiguitar-testgen"
+description = "Generated test scores for OxiGuitar: a small text notation for music, written out as Guitar Pro 7 files, and the speed-budget score built from it. Test code only; never part of the app."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+zip.workspace = true
+
+[dev-dependencies]
+oxiguitar-formats.workspace = true
+oxiguitar-model.workspace = true
+
+[lints]
+workspace = true

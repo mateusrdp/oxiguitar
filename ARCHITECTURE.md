@@ -36,6 +36,8 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | `oxiguitar-play` | M3 | Score-to-event conversion, the synthesiser, the real-time audio thread. |
 | `oxiguitar-app` | M1 | The desktop window, binary `oxiguitar`, in Slint (ADR 0004), following [docs/design/ui.md](docs/design/ui.md). A worker thread reads, engraves and draws the score as tiles; the window only shows them, so it never waits on the music code. |
 
+| `oxiguitar-testgen` | M1 | Test code only: scores written in a short text notation and saved as Guitar Pro 7 files, for the speed budget and visual regression tests. See [docs/testing.md](docs/testing.md). |
+
 Crates marked with a later milestone do not exist yet. Throwaway experiments live in [spikes/](spikes/), outside the workspace.
 
 ## Design rules
