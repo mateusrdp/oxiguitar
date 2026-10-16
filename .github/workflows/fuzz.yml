@@ -1,0 +1,135 @@
+# Fuzzing of every file reader with cargo-fuzz (nightly Rust): a malformed
+# file may fail to open, but never crashes the reader (FMT-1). M1 asks for
+# six hours per reader without a crash. See fuzz/README.md.
+#
+# - On a pull request that touches a reader: a short run of every target.
+# - By hand (Actions → Fuzz → Run workflow): the long run. Each reader is
+#   fuzzed for the minutes given (360 by default) in two jobs of half each,
+#   the second continuing from the first one's corpus, because a job on a
+#   standard runner may take at most six hours. At most four fuzz jobs run
+#   at a time.
+#
+# Seeds come from the public fixtures only (fuzz/seeds.sh), never from the
+# private corpus. A crash fails the job; the input that crashed is kept as
+# the artifact "fuzz-crash <target>".
+name: Fuzz
+
+on:
+  pull_request:
+    paths:
+      - crates/oxiguitar-formats/**
+      - crates/oxiguitar-model/**
+      - fuzz/**
+      - fixtures/**
+      - .github/workflows/fuzz.yml
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: Minutes of fuzzing per reader, split over two jobs (at most 680)
+        required: true
+        default: "360"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  MINUTES: ${{ inputs.minutes }}
+
+jobs:
+  first:
+    name: Fuzz ${{ matrix.target }}${{ github.event_name == 'workflow_dispatch' && ' (1 of 2)' || '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        # The four readers; the any-file target (format detection, then any
+        # reader) runs on pull requests only.
+        target: ${{ fromJSON(github.event_name == 'pull_request' && '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","any_file"]' || '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif"]') }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Seconds per job
+        run: |
+          # Four minutes on a pull request; half the minutes asked for by hand.
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            seconds=240
+          else
+            case "$MINUTES" in ''|*[!0-9]*) echo "::error::minutes must be a number"; exit 1 ;; esac
+            seconds=$(( MINUTES * 30 ))
+          fi
+          if [ "$seconds" -gt 20400 ]; then
+            echo "::error::At most 680 minutes per reader (340 per job)."
+            exit 1
+          fi
+          echo "FUZZ_SECONDS=$seconds" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - run: cargo install cargo-fuzz --locked
+      - run: fuzz/seeds.sh
+      - name: Fuzz
+        run: fuzz/run.sh "${{ matrix.target }}" "$FUZZ_SECONDS"
+      - name: Keep the input that crashed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crash ${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          if-no-files-found: ignore
+      - name: Keep the corpus for the second half
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-corpus ${{ matrix.target }}
+          path: fuzz/corpus/${{ matrix.target }}/
+          retention-days: 14
+
+  second:
+    name: Fuzz ${{ matrix.target }} (2 of 2)
+    needs: first
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        target: [guitar_pro_3_5, guitar_pro_6, guitar_pro_7, gpif]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Seconds per job
+        run: echo "FUZZ_SECONDS=$(( MINUTES * 30 ))" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - run: cargo install cargo-fuzz --locked
+      - run: fuzz/seeds.sh
+      - name: Continue from the first half's corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: fuzz-corpus ${{ matrix.target }}
+          path: fuzz/corpus/${{ matrix.target }}/
+      - name: Fuzz
+        run: fuzz/run.sh "${{ matrix.target }}" "$FUZZ_SECONDS"
+      - name: Keep the input that crashed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crash ${{ matrix.target }} (2)
+          path: fuzz/artifacts/${{ matrix.target }}/
+          if-no-files-found: ignore
+      - name: Keep the final corpus
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-corpus ${{ matrix.target }} (final)
+          path: fuzz/corpus/${{ matrix.target }}/
+          retention-days: 30

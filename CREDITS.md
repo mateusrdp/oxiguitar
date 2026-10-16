@@ -40,6 +40,12 @@ Direct dependencies so far, all Rust (the desktop app also links the system's fo
 | [Slint](https://slint.dev) 1.18 | SixtyFPS GmbH and contributors | GPL-3.0-only (one of its three licences; the one we use) | The desktop window (ADR 0004). Because Slint is GPL-3.0-only, the distributed app is under GPL-3.0. Its dependencies include winit, femtovg, AccessKit and ksni (Unlicense) |
 | [rfd](https://github.com/PolyMeilex/rfd) 0.17 | Bartłomiej Maryńczak (PolyMeilex) and contributors | MIT | The system's Open and Save dialogs (the XDG desktop portal on Linux, no GTK) |
 
+Tools used only to test OxiGuitar, never part of what it ships:
+
+| Tool | Authors | License | Use |
+| --- | --- | --- | --- |
+| [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz) and [libfuzzer-sys](https://github.com/rust-fuzz/libfuzzer) 0.4 | The rust-fuzz project; libFuzzer by the LLVM project | MIT OR Apache-2.0; libFuzzer under the LLVM licence (NCSA) | Fuzzing the file readers (`fuzz/`) |
+
 Checked for later milestones (licences confirmed 15 October 2026, see ROADMAP.md):
 
 | Crate | Version checked | License | Note |
