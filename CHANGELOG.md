@@ -84,6 +84,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 - The track list has no show tick any more: a track's notation buttons show and hide it (both off hides it, either button shows it again), which saves room and leaves one control per job.
 - No View → Multitrack menu item either: showing a track's own buttons already shows it alongside the others, so the menu item did nothing the buttons didn't, for one more control to keep in sync.
+- With Dark Page, the canvas behind the page is a touch darker, so it reads as its own grey rather than matching the menus and track list, while staying lighter than those.
 - Guitar Pro 6–8 files open about twice as fast: the XML tree keeps every element in one list and borrows names and text from the file instead of copying them (`oxiguitar-cli info` on Seek and Destroy: 0.11 s instead of 0.26 s). The scores and import logs read from every GPX and GP file in the corpus are unchanged.
 - Guitar Pro 6–8 beats keep their dynamic as a marking (`BeatEffects::dynamic`) as well as giving it to their notes as velocity, so the engraver can tell a marking from a velocity.
 - Beat text at the end of a system no longer runs off the page; the page test now checks where each text ends, not only where it starts.

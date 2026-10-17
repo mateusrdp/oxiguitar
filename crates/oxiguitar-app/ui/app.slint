@@ -311,9 +311,13 @@ export component AppWindow inherits Window {
         }
 
         VerticalLayout {
-            // Score canvas: tiles drawn by the worker thread.
+            // Score canvas: tiles drawn by the worker thread. On Dark Page,
+            // a touch darker than before so it doesn't read as the same
+            // grey as the menus and track list, but still lighter than
+            // those (Mateus, 17 Oct 2026; Fluent's dark background is
+            // #1c1c1c, see docs/design/ui.md).
             canvas := Rectangle {
-                background: root.dark-page ? #2a2b2e : #d4d4d6;
+                background: root.dark-page ? #242528 : #d4d4d6;
                 clip: true;
                 flick := ScrollView {
                     content-width: max(self.visible-width, root.content-width + 48px);
