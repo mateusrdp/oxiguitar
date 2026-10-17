@@ -78,7 +78,7 @@ Progress:
   - [x] Page layout, multi-track alignment, score header (16 Oct 2026)
   - [x] Track names at the start of systems (16 Oct 2026)
   - [x] Vertical, horizontal and parchment layouts, checked against the Guitar Pro 8 user guide (16 Oct 2026)
-- [x] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu (16 Oct 2026): File → Open, tiled canvas on a worker thread, the four layouts, multitrack, Dark Page, score and interface zoom, track list, status line
+- [x] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu (16 Oct 2026): File → Open, tiled canvas on a worker thread, the four layouts, Dark Page, score and interface zoom, track list, status line
 - [x] `oxiguitar-tools`: the Tools menu's tools, one shape for all so plugins can add more (M5); first tool: Infer Key Signatures, with key changes (16 Oct 2026)
 - [x] PDF export of the shown tracks, A4 or Letter (16 Oct 2026)
 - [ ] Quality gates (see [docs/testing.md](docs/testing.md))

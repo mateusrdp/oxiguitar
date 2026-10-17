@@ -203,11 +203,6 @@ fn main() -> Result<(), slint::PlatformError> {
         sync_tracks(&a);
     });
     let a = app.clone();
-    ui.on_multitrack_toggled(move || {
-        a.borrow_mut().tracks.toggle_multitrack();
-        sync_tracks(&a);
-    });
-    let a = app.clone();
     ui.on_tool_picked(move |i| {
         a.borrow().worker.send(Request::ApplyTool(i as usize));
     });
@@ -368,7 +363,6 @@ fn handle(app: &Shared, event: Event) {
                 })
                 .collect();
             ui.set_tracks(ModelRc::new(VecModel::from(rows)));
-            ui.set_multitrack(false);
             // Room for the tracks, up to five rows; the splitter changes it.
             ui.set_tracks_height(28.0 * tracks.len().clamp(1, 5) as f32 + 12.0);
             set_tools(&ui, &tool_rows(&tools));
@@ -451,8 +445,7 @@ fn settings_changed(app: &Shared) {
     }
 }
 
-/// The track list changed: show its state in every row and in View →
-/// Multitrack, and engrave again.
+/// The track list changed: show its state in every row, and engrave again.
 fn sync_tracks(app: &Shared) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -469,7 +462,6 @@ fn sync_tracks(app: &Shared) {
                 model.set_row_data(i, row);
             }
         }
-        ui.set_multitrack(s.tracks.is_multitrack());
     }
     {
         let mut s = app.borrow_mut();

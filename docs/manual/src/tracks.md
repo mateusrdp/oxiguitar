@@ -3,8 +3,7 @@
 The track list along the bottom of the window shows every track of the song: its number, its name, its strings (or Drums) and its notation buttons. **View → Tracks** (F8) hides or shows the list; drag its top edge to make it taller or shorter.
 
 - **Click a name** to show that track alone.
-- **Click a hidden track's notation button** to show it with the others, lined up bar by bar in one score.
-- **View → Multitrack** is ticked whenever more than one track is shown. Choosing it goes back to the first of those tracks, or, with one track shown, shows them all.
+- **Click a hidden track's notation button** to show it with the others, lined up bar by bar in one score. There's no separate "show all" switch: showing each track you want is enough.
 - With several tracks, each system starts with the tracks' names.
 
 ## Notation buttons
