@@ -45,6 +45,17 @@ Features that don't work on one system because of a library we build on, with th
 | Feature | Missing on | Why | Enable it when | ADR |
 | --- | --- | --- | --- | --- |
 | Drop a file on the window to open it | Wayland | winit 0.30 has no drag and drop on Wayland, and Slint 1.18 passes no OS drops on. A workaround would need `unsafe` code and polling, which we rejected | winit's Wayland backend emits `DroppedFile` (no code change needed), or Slint forwards OS drops. Test with `scripts/wayland-dnd-test/` | [0006](docs/adr/0006-wayland-file-drops.md) |
+| Double-click a file in Finder (or Open With, or drop on the Dock icon) to open it | macOS | macOS sends these as Apple Events to the application delegate; winit 0.30 and Slint 1.18 report none, and a delegate of our own would need `unsafe` Objective-C glue, which we rejected | winit reports opened files on macOS and Slint passes the event on, or Slint offers an "open file" callback | [0007](docs/adr/0007-macos-open-document-events.md) |
+
+## Design principles
+
+These come from Mateus's decisions and apply to every pull request.
+
+- **No polling, ever** (Mateus, 17 and 18 Oct 2026). Nothing may wake up on a timer to check whether something happened: not a file, a queue, a socket or another library's state. Code reacts to events the operating system or a library delivers, or it waits on a channel, a condition or a file descriptor that wakes it. A one-shot timer for something that really is about time (a message that fades after ten seconds, a double-click window) is not polling. If the only way to learn about an event is to poll, the feature waits for upstream and the gap is documented, as ADRs 0006 and 0007 show.
+- **No hacks.** A workaround that races another library's event loop, or needs `unsafe` to borrow its internals, is not acceptable. Document the gap, say what upstream has to change, and list it under "Known platform gaps" above.
+- **As fast as it can be.** Start-up, opening a file and drawing are measured (`docs/testing.md`, "Speed budget"). Do work when it is needed, not up front, and off the UI thread.
+- **Elegant over clever.** Code is read far more often than written: prefer the plain, obvious shape that a new contributor can follow and maintain.
+- **Don't be too smart** (Mateus, 16 Oct 2026). Show what the file says; anything that changes it is an explicit action the user picks.
 
 ## File headers
 
