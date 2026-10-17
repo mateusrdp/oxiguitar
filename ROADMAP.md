@@ -2,20 +2,23 @@
 
 The milestones from the project brief, with live status. Requirement IDs (FMT-1, VIEW-3, …) refer to the brief's product requirements; decision records live in [docs/adr/](docs/adr/).
 
-v1.0, a full TuxGuitar replacement for reading, editing and playing, ships at the end of M3. From M4 on, the work closes the gap with Guitar Pro 8.
+v1.0, a full TuxGuitar replacement for reading, editing and playing, ships at the end of M4. From M5 on, the work closes the gap with Guitar Pro 8.
+
+On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so that every later milestone is built on it: the core reads, edits, writes, shows and drives playback, and everything else (every file format, every sound, every export, anything platform-specific) is a plugin. See [ADR 0008](docs/adr/0008-plugin-architecture.md) and [docs/design/plugins.md](docs/design/plugins.md). Milestones after M1 were renumbered.
 
 | Milestone | Release | Status |
 | --- | --- | --- |
 | M0 Foundations | — | **Done** (16 Oct 2026) |
-| M1 Viewer | v0.1 | **In progress** |
-| M2 Editor | v0.5 | Not started |
-| M3 MIDI player | **v1.0** | Not started |
-| M4 Guitar Pro 8 notation and editing parity | | Not started |
-| M5 Plugin system | | Not started |
-| M6 Realistic guitar through NAM (plugin) | | Not started |
-| M7 Guitar Pro RSE compatibility (plugin) | | Not started |
-| M8 Remaining Guitar Pro 8 features, hardware plugins | | Not started |
-| M9 Android and iPad companion | | Not started |
+| M1 Viewer | v0.1 | **Done** (17 Oct 2026; PR #40 to main and the v0.1.0 tag wait for Mateus) |
+| M2 Plugin system and window shell | v0.2 | **Next** (design proposed, ADR 0008) |
+| M3 Editor | v0.5 | Not started |
+| M4 Player | **v1.0** | Not started |
+| M5 Guitar Pro 8 notation and editing parity | | Not started |
+| M6 Format plugins: MusicXML, ABC, MuseScore, MIDI files | | Not started |
+| M7 Realistic guitar through NAM (plugin) | | Not started |
+| M8 Guitar Pro RSE compatibility (plugin) | | Not started |
+| M9 Realistic drums, hardware plugins, remaining Guitar Pro 8 features | | Not started |
+| M10 Android and iPad companion | | Not started |
 
 ## M0 — Foundations
 
@@ -58,7 +61,7 @@ Licences confirmed on 15 October 2026, from each package's own metadata and lice
 
 Open every Guitar Pro file and show it beautifully.
 
-- Readers for Guitar Pro 5 onwards (.gp5, .gpx, .gp), with import logs; GP3 and GP4 if cheap. The core reads and writes Guitar Pro formats only. MuseScore, MusicXML, ABC and MIDI files are recognised (FMT-6) and refused with a clear message naming the plugin they will need (decided 16 Oct 2026; see M5).
+- Readers for Guitar Pro 5 onwards (.gp5, .gpx, .gp), with import logs; GP3 and GP4 if cheap. The core reads and writes Guitar Pro formats only. MuseScore, MusicXML, ABC and MIDI files are recognised (FMT-6) and refused with a clear message naming the plugin they will need (decided 16 Oct 2026; now M6).
 - Engraving for standard notation, tablature and rhythm-on-tab, with the core effects drawn (VIEW-1, VIEW-2, VIEW-7, NOT-1 to NOT-4).
 - Page, vertical, horizontal and parchment layouts, multi-track display, zoom, score header (VIEW-3 to VIEW-6).
 - The desktop window (`oxiguitar-app`, Slint) following [docs/design/ui.md](docs/design/ui.md): menus only on top, collapsible palette groups, interface zoom by keys and wheel, score-zoom slider, dark page (UI-7 to UI-10).
@@ -79,7 +82,7 @@ Progress:
   - [x] Track names at the start of systems (16 Oct 2026)
   - [x] Vertical, horizontal and parchment layouts, checked against the Guitar Pro 8 user guide (16 Oct 2026)
 - [x] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu (16 Oct 2026): File → Open, tiled canvas on a worker thread, the four layouts, Dark Page, score and interface zoom, track list, status line
-- [x] `oxiguitar-tools`: the Tools menu's tools, one shape for all so plugins can add more (M5); first tool: Infer Key Signatures, with key changes (16 Oct 2026)
+- [x] `oxiguitar-tools`: the Tools menu's tools, one shape for all so plugins can add more (M2); first tool: Infer Key Signatures, with key changes (16 Oct 2026)
 - [x] PDF export of the shown tracks, A4 or Letter (16 Oct 2026)
 - [ ] Quality gates (see [docs/testing.md](docs/testing.md))
   - [x] Speed budget (16 Oct 2026): a generated 300-bar, 8-track score as long as a real Guitar Pro 7 file (16 MB of XML) opens to its first tiles in 0.18 s, or 0.23 s with every track shown; CI's "Speed budget" job holds release builds to one second. Reading GPIF is about twice as fast as before.
@@ -88,30 +91,46 @@ Progress:
 - [x] Release packages (16 Oct 2026): `release.yml` builds the .exe zip, AppImage, .deb, .rpm (x86_64 and ARM64) and universal .dmg, unsigned, on v* tags and by hand; the .deb, .rpm and .dmg register the Guitar Pro file types (UI-4)
 - [x] User manual (16 Oct 2026): `docs/manual/` (mdBook), published to GitHub Pages from main by the "Manual" workflow
 
-Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5, 3 GPX, 12 GP). Counted separately, for the format plugins after M5: 5 MuseScore and 1 MusicXML file; no ABC yet.
+Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5, 3 GPX, 12 GP). Counted separately, for the format plugins (M6): 5 MuseScore and 1 MusicXML file; no ABC yet.
 
-## M2 — Editor (v0.5)
+## M2 — Plugin system and window shell (v0.2)
 
-- M2a: note entry on tab and staff, the full core palette, 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition, tuplets of any grouping with a triplet shortcut and "Other…" (EDIT-1 to EDIT-10); writer for .gp, the default save format.
-- M2b: writer for .gp5, with loss warnings (FMT-3).
+Turn the viewer into a small core with plugins, and give the window the shape the later milestones fill in. Design: [docs/design/plugins.md](docs/design/plugins.md); open questions: [ADR 0008](docs/adr/0008-plugin-architecture.md).
+
+- [ ] The window shell (docs/design/ui.md): toolbar with sections, tabbed top, bottom, left and right areas that collapse and hide, the page on a dark canvas, a one-line footer that expands into the session's messages; player controls greyed out in the top area until an output plugin is installed; mouse wheel zooms the page, Ctrl + wheel the interface.
+- [ ] User folder, settings.json and the plugin folders, created on launch; the footer says when no output or no read/write plugin is installed and where to get them.
+- [ ] Mateus answers ADR 0008's questions; ADR 0008 accepted.
+- [ ] `oxiguitar-plugin-api` (the interface's messages), `oxiguitar-plugin` (the SDK for plugin authors, no `unsafe` for them), the host in `oxiguitar-host` (manifests read without loading, lazy loading, contributions registry, host services, services chosen per platform and environment).
+- [ ] Five format plugins from M1's readers: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp), each with its fixtures, corpus, fuzz and visual tests. The core holds no format code.
+- [ ] Plugins for PDF export and for Infer Key Signatures; `oxiguitar-cli` loads plugins like the app.
+- [ ] The plugin manager plugin: list, enable, disable, uninstall, install from a file, settings forms. `--safe-mode`.
+- [ ] Plugins built for all six targets in CI, attached to releases with SHA256SUMS; packages as decided (ADR 0008, question 7).
+- [ ] The plugin developer guide (`docs/plugins/`), with a template plugin, and the interface's contract test suite.
+- [ ] Debian checks for the core: manual pages for both binaries, lintian in CI (ADR 0008, question 5).
+
+Done when: the core with no plugins opens nothing and says which plugin a file needs; with our plugins, every M1 gate still passes (42 of 42 corpus files, the speed budget including plugin loading, the 50 visual references unchanged, six hours of fuzzing per reader); start-up reads 30 plugin manifests in under 10 ms; the plugin manager works on all three systems; the developer guide builds a working plugin from the template.
+
+## M3 — Editor (v0.5)
+
+- M3a: note entry on tab and staff, the full core palette (left area), the inspector (right area), 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition, tuplets of any grouping with a triplet shortcut and "Other…" (EDIT-1 to EDIT-10); the .gp writer, in the GP 7–8 format plugin (the default save format).
+- M3b: the .gp5 writer in the GP5 plugin, with loss warnings (FMT-3).
 
 Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; round-trip tests pass for every writable format; files we write open correctly in Guitar Pro 8; transposition works chromatically and diatonically.
 
-## M3 — MIDI player (v1.0)
+## M4 — Player (v1.0)
 
-- Score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); built-in SoundFont synthesiser (PLAY-1).
-- Transport, speed, follow cursor, mixer; looping, count-in, audible and visual metronome (PLAY-5, PLAY-6).
-- WAV export (PLAY-7). MIDI file import and export move to a format plugin after M5.
+- In the core: score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); the transport in the top area (play, play selection, stop, pause, rewind, count-in, loop, audible and visual metronome, PLAY-5); the follow cursor; the mixer (PLAY-6); the output choice.
+- As plugins: the MIDI instrument (a SoundFont synthesiser, PLAY-1, with downloads of better SoundFonts at the user's request, PLAY-8), audio-device plugins per system, WAV export (PLAY-7).
 
-Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes; golden-file tests cover event output; the practice tools work on every reference song.
+Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes; golden-file tests cover event output; the practice tools work on every reference song; with no instrument installed the transport is greyed out and the footer says where to get one.
 
 ## Later milestones
 
-- **M4** — the full Guitar Pro 8 notation set (TAB-2), its editing tools, stylesheets and design mode, per-note playback settings.
-- **M5** — plugin system (WebAssembly and native), plugin manager; the metronome becomes the reference plugin. Plugins can add tools to the Tools menu, in the shape of `oxiguitar-tools`. Then the format plugins, each reading and writing: MuseScore (.mscz, .mscx), MusicXML (.musicxml, .xml, .mxl), ABC and MIDI files, with tab derivation for staves without tablature (TAB-3, TAB-4). Their sample files are counted apart from the Guitar Pro corpus (decided 16 Oct 2026).
-- **M6** — a pure-Rust plucked-string model through Neural Amp Modeler and cabinet impulse responses, as a plugin.
-- **M7** — research spike and go/no-go on reading users' own Guitar Pro RSE soundbanks, as a plugin.
-- **M8** — audio tracks, advanced practice tools, line-in, PNG/SVG export, external MIDI devices.
-- **M9** — a simpler viewer and player for Android and iPad.
+- **M5** — the full Guitar Pro 8 notation set (TAB-2), its editing tools, stylesheets and design mode, per-note playback settings.
+- **M6** — format plugins, each reading and writing, one plugin per format: MusicXML (.musicxml, .xml, .mxl), ABC, MuseScore (.mscz, .mscx) and MIDI files, with tab derivation for staves without tablature (TAB-3, TAB-4). Their sample files are counted apart from the Guitar Pro corpus (decided 16 Oct 2026).
+- **M7** — a NAM instrument plugin: a clean guitar signal (a plucked-string model, or sampled DI notes if freely licensed ones exist) through Neural Amp Modeler and cabinet impulse responses. How the guitar signal is made is still open.
+- **M8** — research spike and go/no-go on reading users' own Guitar Pro RSE soundbanks, as an instrument plugin.
+- **M9** — a realistic drums instrument plugin (with a research spike on Singular Sound BeatBuddy content, used only from the user's own copy), audio tracks, advanced practice tools, line-in, PNG/SVG export, external MIDI devices.
+- **M10** — a simpler viewer and player for Android and iPad, on the same core, with its plugins built in.
 
 Unscheduled, late nice-to-have: screen-reader support (UI-11). Keyboard access is required from M1.
