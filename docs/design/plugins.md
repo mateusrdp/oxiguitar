@@ -156,6 +156,6 @@ NET-1 to NET-5 cover the core and our plugins. A native plugin can do anything t
 
 The core must pass Debian's acceptance criteria (Mateus, 18 Oct 2026). Checked so far:
 
-- **Licences**: DFSG-free throughout (GPL-3.0, MIT, Apache-2.0, OFL-1.1, Unlicense), enforced by cargo-deny.
+- **Licences**: DFSG-free throughout (GPL-3.0, MIT, Apache-2.0, OFL-1.1 and the like), enforced by cargo-deny.
 - **Policy**: binaries in `/usr/bin`, plugins in `/usr/lib/oxiguitar/plugins` (FHS allows a package's own directory under `/usr/lib`), no network at build or run time. Still to do: a manual page for each binary (`oxiguitar.1`, `oxiguitar-cli.1`; lintian requires them) and a lintian run in CI. The Maintainer field holds the GitHub issue tracker by decision (lintian flags it; a package in Debian's own archive would carry its Debian maintainer's address).
 - **Debian's own archive** (Proposed, question 5) would also need every crate we use packaged in Debian. Slint is on its way: `rust-i-slint-common` 1.17.1 is in unstable but not testing, and other Slint crates are in the NEW queue. The bundled fonts would have to come from Debian font packages where they exist (Noto Sans is `fonts-noto-core`; we found no Debian package for Bravura).
