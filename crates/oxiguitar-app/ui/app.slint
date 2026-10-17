@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-// The OxiGuitar window (M1, the viewer), following docs/design/ui.md:
-// menus only along the top, the score in the middle with its zoom slider
-// in the corner, the track list along the bottom (F8). The score is drawn
+// The OxiGuitar window, following docs/design/ui.md: the menus; a toolbar
+// of sections; four tabbed areas (top and bottom across the window, left
+// and right beside the page) that collapse to their tab strip and hide from
+// View → Panels; the page in the middle, on a dark canvas, with its zoom
+// slider in the corner; and a one-line footer of messages that expands.
+// The core's tabs and toolbar sections come from shell.rs, so plugins can
+// add theirs to the same lists (docs/design/plugins.md). The score is drawn
 // by our renderer on the worker thread and shown here as tiles.
 
-import { Slider, ScrollView, Palette } from "std-widgets.slint";
+import { Slider, ScrollView, Palette, ComboBox } from "std-widgets.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
 
 export struct TileItem {
@@ -25,6 +29,95 @@ export struct TrackRow {
     standard: bool,
     tablature: bool,
     can-tab: bool,
+}
+
+export struct ToolRow {
+    title: string,
+    enabled: bool,
+}
+
+export struct ToolbarItemRow {
+    id: string,
+    icon: image,
+    tip: string,
+    enabled: bool,
+    checkable: bool,
+    checked: bool,
+}
+
+export struct ToolbarSectionRow {
+    title: string,
+    items: [ToolbarItemRow],
+}
+
+// One area's tabs: their titles, the one showing (and its id, which picks
+// what is drawn inside), and whether the area is collapsed to its strip.
+export struct AreaState {
+    titles: [string],
+    active: int,
+    active-id: string,
+    collapsed: bool,
+}
+
+export struct FooterRow {
+    // 0 info, 1 warning, 2 error.
+    level: int,
+    text: string,
+}
+
+// The canvas behind the page: the same colour with or without Dark Page
+// (Mateus, 18 Oct 2026), a touch lighter than Fluent's darkest background
+// so the page area reads as its own surface.
+global Look {
+    out property <color> canvas: #242528;
+    out property <color> on-canvas: #ffffff80;
+    out property <color> warning: #d39a2c;
+    out property <color> error: #d9534f;
+}
+
+// A level's dot in the footer.
+component LevelDot inherits Rectangle {
+    in property <int> level;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background: root.level == 2 ? Look.error : root.level == 1 ? Look.warning : Palette.foreground.transparentize(0.5);
+}
+
+// A square icon button: our own SVG icons, tinted by the theme, greyed out
+// when disabled, highlighted when a toggle is on.
+component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> tip;
+    in property <bool> enabled: true;
+    in property <bool> checked;
+    callback clicked();
+
+    width: 30px;
+    height: 28px;
+    border-radius: 4px;
+    background: root.checked ? Palette.accent-background
+        : touch.has-hover && root.enabled ? Palette.control-background.darker(0.15) : transparent;
+    accessible-role: button;
+    accessible-label: root.tip;
+    accessible-enabled: root.enabled;
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+    Image {
+        source: root.icon;
+        width: 18px;
+        height: 18px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        colorize: root.checked ? Palette.accent-foreground
+            : root.enabled ? Palette.foreground.transparentize(0.1) : Palette.foreground.transparentize(0.7);
+    }
+    Tooltip {
+        text: @markdown("\{root.tip}");
+    }
 }
 
 // A notation button: a symbol drawn by our renderer and centred on its ink,
@@ -72,12 +165,8 @@ component NotationButton inherits Rectangle {
     }
 }
 
-export struct ToolRow {
-    title: string,
-    enabled: bool,
-}
-
-// A splitter bar: drag it to resize the panel next to it.
+// Splitter bars: drag one to resize the area next to it. A Splitter sits
+// above or below an area; a SideSplitter between the page and a side area.
 component Splitter inherits Rectangle {
     callback dragged(length);
     height: 4px;
@@ -89,6 +178,101 @@ component Splitter inherits Rectangle {
                 root.dragged(self.mouse-y - self.pressed-y);
             }
         }
+    }
+}
+
+component SideSplitter inherits Rectangle {
+    callback dragged(length);
+    width: 4px;
+    background: ta.has-hover || ta.pressed ? Palette.accent-background : Palette.border;
+    ta := TouchArea {
+        mouse-cursor: col-resize;
+        moved => {
+            if (self.pressed) {
+                root.dragged(self.mouse-x - self.pressed-x);
+            }
+        }
+    }
+}
+
+// An area's tab strip: the tab names (click one to open it; click the open
+// one to collapse or expand the area) and a chevron that does the same.
+component TabStrip inherits Rectangle {
+    in property <AreaState> state;
+    // Which way the chevron points when the area is open: "down" for the
+    // top area, "up" for the bottom one, "left" and "right" for the sides.
+    in property <image> chevron-open;
+    in property <image> chevron-closed;
+    callback tab-clicked(int);
+    callback chevron-clicked();
+
+    height: 26px;
+    background: Palette.alternate-background;
+    HorizontalLayout {
+        padding-left: 6px;
+        padding-right: 2px;
+        spacing: 2px;
+        for title[i] in root.state.titles : Rectangle {
+            width: label.preferred-width + 18px;
+            border-radius: 4px;
+            background: i == root.state.active && !root.state.collapsed ? Palette.control-background
+                : tab-touch.has-hover ? Palette.control-background.transparentize(0.5) : transparent;
+            label := Text {
+                text: title;
+                font-size: 12px;
+                font-weight: i == root.state.active ? 600 : 400;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+                color: Palette.foreground.transparentize(i == root.state.active ? 0 : 0.3);
+            }
+            tab-touch := TouchArea {
+                clicked => { root.tab-clicked(i); }
+            }
+        }
+        Rectangle { }
+        IconButton {
+            width: 24px;
+            height: 24px;
+            icon: root.state.collapsed ? root.chevron-closed : root.chevron-open;
+            tip: root.state.collapsed ? "Expand" : "Collapse";
+            clicked => { root.chevron-clicked(); }
+        }
+    }
+}
+
+// A side area collapsed: a thin strip with a chevron to open it again.
+component SideStrip inherits Rectangle {
+    in property <image> chevron;
+    in property <string> tip;
+    callback clicked();
+    width: 26px;
+    background: strip-touch.has-hover ? Palette.control-background : Palette.alternate-background;
+    // The whole strip opens the area, not only its chevron.
+    strip-touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    IconButton {
+        y: 2px;
+        width: 24px;
+        height: 24px;
+        icon: root.chevron;
+        tip: root.tip;
+        clicked => { root.clicked(); }
+    }
+}
+
+// What a tab shows before its feature exists.
+component Placeholder inherits Rectangle {
+    in property <string> text;
+    Text {
+        x: 12px;
+        width: parent.width - 24px;
+        text: root.text;
+        font-size: 12px;
+        wrap: word-wrap;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        color: Palette.foreground.transparentize(0.5);
     }
 }
 
@@ -146,6 +330,12 @@ export component AppWindow inherits Window {
     out property <length> view-y: -flick.content-y;
     out property <length> view-width: flick.visible-width;
     out property <length> view-height: flick.visible-height;
+    // Where the page's viewport sits in the window, for the mouse wheel
+    // (main.rs: the wheel zooms the page only over the page).
+    out property <length> canvas-left: canvas.absolute-position.x;
+    out property <length> canvas-top: canvas.absolute-position.y;
+    out property <length> canvas-width: canvas.width;
+    out property <length> canvas-height: canvas.height;
     // Pages are centred when narrower than the canvas.
     out property <length> origin-x: max(24px, (flick.visible-width - root.content-width) / 2);
     out property <length> origin-y: 24px;
@@ -165,16 +355,44 @@ export component AppWindow inherits Window {
     in-out property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
     in-out property <bool> dynamics: true;
-    in-out property <bool> show-tracks: true;
-    in-out property <length> tracks-height: 120px;
+
+    // The shell (shell.rs): the toolbar and the four areas, numbered
+    // 0 top, 1 bottom, 2 left, 3 right. The View menu's ticks show or hide
+    // them; collapsing and tabs go through tab-clicked and area-toggled.
+    in-out property <bool> toolbar-shown: true;
+    in-out property <bool> top-shown: true;
+    in-out property <bool> bottom-shown: true;
+    in-out property <bool> left-shown: true;
+    in-out property <bool> right-shown: true;
+    in property <[ToolbarSectionRow]> toolbar;
+    in property <AreaState> top-area;
+    in property <AreaState> bottom-area;
+    in property <AreaState> left-area;
+    in property <AreaState> right-area;
+    in-out property <length> top-height: 44px;
+    in-out property <length> bottom-height: 120px;
+    in-out property <length> left-width: 220px;
+    in-out property <length> right-width: 240px;
 
     in property <[TrackRow]> tracks;
     in property <[ToolRow]> tools;
 
+    // The player (top area). Off until an output plugin is installed.
+    in property <bool> player-available: false;
+    in property <[string]> outputs: ["No output plugin"];
+
     // Score zoom as log2 of the zoom factor: -2 is 25 %, 0 is 100 %, 2 is 400 %.
     in-out property <float> zoom-log: 0;
     in property <string> zoom-text: "100 %";
-    in property <string> status;
+
+    // The footer: the latest message, how many there are, and all of them
+    // (newest first) when expanded.
+    in property <string> footer-text;
+    in property <int> footer-level;
+    in property <int> footer-count;
+    in property <[FooterRow]> footer-rows;
+    in-out property <bool> footer-expanded: false;
+
     in property <[string]> shortcut-lines;
     in property <[string]> about-lines;
 
@@ -190,7 +408,10 @@ export component AppWindow inherits Window {
     in property <image> standard-icon;
     in property <image> tablature-icon;
     callback tool-picked(int);
-    callback status-dismissed();
+    callback toolbar-activated(string);
+    callback tab-clicked(int, int);
+    callback area-toggled(int);
+    callback panels-changed();
 
     // Choose layout n (0 Page, 1 Vertical, 2 Horizontal, 3 Parchment): only
     // its item stays ticked, even when it was clicked while already ticked.
@@ -245,7 +466,14 @@ export component AppWindow inherits Window {
             MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
             MenuSeparator { }
-            MenuItem { title: "Tracks"; checkable: true; checked <=> root.show-tracks; shortcut: @keys(F8); }
+            MenuItem { title: "Toolbar"; checkable: true; checked <=> root.toolbar-shown; }
+            Menu {
+                title: "Panels";
+                MenuItem { title: "Top"; checkable: true; checked <=> root.top-shown; activated => { root.panels-changed(); } }
+                MenuItem { title: "Bottom"; checkable: true; checked <=> root.bottom-shown; shortcut: @keys(F8); activated => { root.panels-changed(); } }
+                MenuItem { title: "Left"; checkable: true; checked <=> root.left-shown; shortcut: @keys(F7); activated => { root.panels-changed(); } }
+                MenuItem { title: "Right"; checkable: true; checked <=> root.right-shown; activated => { root.panels-changed(); } }
+            }
         }
         Menu {
             title: "Tools";
@@ -311,110 +539,242 @@ export component AppWindow inherits Window {
         }
 
         VerticalLayout {
-            // Score canvas: tiles drawn by the worker thread. On Dark Page,
-            // a touch darker than before so it doesn't read as the same
-            // grey as the menus and track list, but still lighter than
-            // those (Mateus, 17 Oct 2026; Fluent's dark background is
-            // #1c1c1c, see docs/design/ui.md).
-            canvas := Rectangle {
-                background: root.dark-page ? #242528 : #d4d4d6;
-                clip: true;
-                flick := ScrollView {
-                    content-width: max(self.visible-width, root.content-width + 48px);
-                    content-height: max(self.visible-height, root.content-height + 48px);
-                    changed content-x => { root.canvas-changed(); }
-                    changed content-y => { root.canvas-changed(); }
-                    changed visible-width => { root.canvas-changed(); }
-                    changed visible-height => { root.canvas-changed(); }
-                    for t in root.old-tiles : Image {
-                        x: root.origin-x + t.x;
-                        y: root.origin-y + t.y;
-                        width: t.size;
-                        height: t.size;
-                        source: t.image;
-                    }
-                    for t in root.tiles : Image {
-                        x: root.origin-x + t.x;
-                        y: root.origin-y + t.y;
-                        width: t.size;
-                        height: t.size;
-                        source: t.image;
-                        image-rendering: pixelated;
+            // The toolbar: the core's sections, then plugins' sections.
+            if root.toolbar-shown : Rectangle {
+                height: 36px;
+                background: Palette.alternate-background;
+                HorizontalLayout {
+                    padding-left: 6px;
+                    padding-right: 6px;
+                    spacing: 4px;
+                    alignment: start;
+                    for section[s] in root.toolbar : HorizontalLayout {
+                        spacing: 2px;
+                        padding-top: 4px;
+                        padding-bottom: 4px;
+                        if s > 0 : Rectangle {
+                            width: 9px;
+                            Rectangle { x: 4px; width: 1px; height: 70%; background: Palette.border; }
+                        }
+                        for item in section.items : IconButton {
+                            icon: item.icon;
+                            tip: item.tip;
+                            enabled: item.enabled && (item.id != "export-pdf" || root.has-score);
+                            checked: item.checkable && item.checked;
+                            clicked => { root.toolbar-activated(item.id); }
+                        }
                     }
                 }
+            }
+            if root.toolbar-shown : Rectangle { height: 1px; background: Palette.border; }
 
-                if !root.has-score : Text {
-                    text: "File → Open (Ctrl + O) to open a Guitar Pro file";
-                    font-size: 14px;
-                    color: root.dark-page ? #ffffff80 : #00000080;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-
-                // Status line, bottom left: errors and tool reports. Click to
-                // dismiss; it also goes away on its own.
-                if root.status != "" : Pill {
-                    x: 10px;
-                    y: parent.height - self.height - 10px;
-                    width: min(status-text.preferred-width + 24px, parent.width - 200px);
-                    status-text := Text {
-                        x: 12px;
-                        width: parent.width - 24px;
-                        text: root.status;
-                        font-size: 12px;
-                        overflow: elide;
-                        vertical-alignment: center;
-                        color: Palette.foreground;
+            // Top area: the player, then plugins' tabs.
+            if root.top-shown : TabStrip {
+                state: root.top-area;
+                chevron-open: @image-url("../../../assets/icons/ui/chevron-up.svg");
+                chevron-closed: @image-url("../../../assets/icons/ui/chevron-down.svg");
+                tab-clicked(i) => { root.tab-clicked(0, i); }
+                chevron-clicked => { root.area-toggled(0); }
+            }
+            if root.top-shown && !root.top-area.collapsed : Rectangle {
+                height: root.top-height;
+                background: Palette.alternate-background;
+                if root.top-area.active-id == "player" : HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    spacing: 2px;
+                    alignment: start;
+                    // Transport: rewind, play, play the selection, pause, stop.
+                    VerticalLayout {
+                        alignment: center;
+                        HorizontalLayout {
+                            spacing: 2px;
+                            IconButton { icon: @image-url("../../../assets/icons/ui/rewind.svg"); tip: "Rewind"; enabled: root.player-available; }
+                            IconButton { icon: @image-url("../../../assets/icons/ui/play.svg"); tip: "Play"; enabled: root.player-available; }
+                            IconButton { icon: @image-url("../../../assets/icons/ui/play-selection.svg"); tip: "Play Selection"; enabled: root.player-available; }
+                            IconButton { icon: @image-url("../../../assets/icons/ui/pause.svg"); tip: "Pause"; enabled: root.player-available; }
+                            IconButton { icon: @image-url("../../../assets/icons/ui/stop.svg"); tip: "Stop"; enabled: root.player-available; }
+                        }
                     }
-                    TouchArea {
-                        clicked => { root.status-dismissed(); }
+                    Rectangle { width: 13px; Rectangle { x: 6px; width: 1px; height: 60%; background: Palette.border; } }
+                    // Practice: count-in, loop, metronome.
+                    VerticalLayout {
+                        alignment: center;
+                        HorizontalLayout {
+                            spacing: 2px;
+                            IconButton { icon: @image-url("../../../assets/icons/ui/count-in.svg"); tip: "Count-In"; enabled: root.player-available; }
+                            IconButton { icon: @image-url("../../../assets/icons/ui/loop.svg"); tip: "Loop"; enabled: root.player-available; }
+                            IconButton { icon: @image-url("../../../assets/icons/ui/metronome.svg"); tip: "Metronome"; enabled: root.player-available; }
+                        }
                     }
-                }
-
-                // Score zoom, bottom right: 25 % to 400 % on a logarithmic
-                // scale, so 100 % sits in the middle. Clicking the
-                // percentage resets it to 100 %.
-                Pill {
-                    width: 168px;
-                    x: parent.width - self.width - 10px;
-                    y: parent.height - self.height - 10px;
-                    HorizontalLayout {
-                        padding-left: 10px;
-                        padding-right: 6px;
-                        spacing: 4px;
-                        Text {
-                            text: root.zoom-text;
-                            font-size: 11px;
-                            width: 38px;
-                            vertical-alignment: center;
-                            color: Palette.foreground.transparentize(0.2);
-                            TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => { root.zoom-log = 0; root.zoom-moved(0); }
+                    Rectangle { width: 13px; Rectangle { x: 6px; width: 1px; height: 60%; background: Palette.border; } }
+                    // Which output plugin plays the score.
+                    VerticalLayout {
+                        alignment: center;
+                        HorizontalLayout {
+                            spacing: 6px;
+                            Text {
+                                text: "Output";
+                                font-size: 12px;
+                                vertical-alignment: center;
+                                color: Palette.foreground.transparentize(root.player-available ? 0.2 : 0.6);
+                            }
+                            ComboBox {
+                                width: 200px;
+                                enabled: root.player-available;
+                                model: root.outputs;
                             }
                         }
-                        Slider {
-                            minimum: -2;
-                            maximum: 2;
-                            step: 0.01;
-                            value <=> root.zoom-log;
-                            changed(v) => { root.zoom-moved(v); }
+                    }
+                }
+                if root.top-area.active-id != "player" : Placeholder { text: "This tab belongs to a plugin."; }
+            }
+            if root.top-shown && !root.top-area.collapsed : Splitter {
+                dragged(d) => { root.top-height = clamp(root.top-height + d, 36px, 300px); }
+            }
+
+            HorizontalLayout {
+                // Left area: the palette (M3), then plugins' tabs.
+                if root.left-shown && root.left-area.collapsed : SideStrip {
+                    chevron: @image-url("../../../assets/icons/ui/chevron-right.svg");
+                    tip: "Expand";
+                    clicked => { root.area-toggled(2); }
+                }
+                if root.left-shown && !root.left-area.collapsed : VerticalLayout {
+                    width: root.left-width;
+                    TabStrip {
+                        state: root.left-area;
+                        chevron-open: @image-url("../../../assets/icons/ui/chevron-left.svg");
+                        chevron-closed: @image-url("../../../assets/icons/ui/chevron-right.svg");
+                        tab-clicked(i) => { root.tab-clicked(2, i); }
+                        chevron-clicked => { root.area-toggled(2); }
+                    }
+                    Rectangle {
+                        background: Palette.alternate-background;
+                        if root.left-area.active-id == "palette" : Placeholder { text: "The palette of notation and effect tools comes with the editor."; }
+                        if root.left-area.active-id != "palette" : Placeholder { text: "This tab belongs to a plugin."; }
+                    }
+                }
+                if root.left-shown && !root.left-area.collapsed : SideSplitter {
+                    dragged(d) => { root.left-width = clamp(root.left-width + d, 120px, 500px); }
+                }
+
+                // The page: tiles drawn by the worker thread, on the dark
+                // canvas whatever the page colour.
+                canvas := Rectangle {
+                    background: Look.canvas;
+                    clip: true;
+                    flick := ScrollView {
+                        content-width: max(self.visible-width, root.content-width + 48px);
+                        content-height: max(self.visible-height, root.content-height + 48px);
+                        changed content-x => { root.canvas-changed(); }
+                        changed content-y => { root.canvas-changed(); }
+                        changed visible-width => { root.canvas-changed(); }
+                        changed visible-height => { root.canvas-changed(); }
+                        for t in root.old-tiles : Image {
+                            x: root.origin-x + t.x;
+                            y: root.origin-y + t.y;
+                            width: t.size;
+                            height: t.size;
+                            source: t.image;
+                        }
+                        for t in root.tiles : Image {
+                            x: root.origin-x + t.x;
+                            y: root.origin-y + t.y;
+                            width: t.size;
+                            height: t.size;
+                            source: t.image;
+                            image-rendering: pixelated;
+                        }
+                    }
+
+                    if !root.has-score : Text {
+                        text: "File → Open (Ctrl + O) to open a Guitar Pro file";
+                        font-size: 14px;
+                        color: Look.on-canvas;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    // Score zoom, bottom right: 25 % to 400 % on a logarithmic
+                    // scale, so 100 % sits in the middle. Clicking the
+                    // percentage resets it to 100 %. The mouse wheel over the
+                    // page zooms too (main.rs).
+                    Pill {
+                        width: 168px;
+                        x: parent.width - self.width - 10px;
+                        y: parent.height - self.height - 10px;
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 6px;
+                            spacing: 4px;
+                            Text {
+                                text: root.zoom-text;
+                                font-size: 11px;
+                                width: 38px;
+                                vertical-alignment: center;
+                                color: Palette.foreground.transparentize(0.2);
+                                TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.zoom-log = 0; root.zoom-moved(0); }
+                                }
+                            }
+                            Slider {
+                                minimum: -2;
+                                maximum: 2;
+                                step: 0.01;
+                                value <=> root.zoom-log;
+                                changed(v) => { root.zoom-moved(v); }
+                            }
                         }
                     }
                 }
+
+                // Right area: the inspector (M3), then plugins' tabs.
+                if root.right-shown && !root.right-area.collapsed : SideSplitter {
+                    dragged(d) => { root.right-width = clamp(root.right-width - d, 120px, 500px); }
+                }
+                if root.right-shown && !root.right-area.collapsed : VerticalLayout {
+                    width: root.right-width;
+                    TabStrip {
+                        state: root.right-area;
+                        chevron-open: @image-url("../../../assets/icons/ui/chevron-right.svg");
+                        chevron-closed: @image-url("../../../assets/icons/ui/chevron-left.svg");
+                        tab-clicked(i) => { root.tab-clicked(3, i); }
+                        chevron-clicked => { root.area-toggled(3); }
+                    }
+                    Rectangle {
+                        background: Palette.alternate-background;
+                        if root.right-area.active-id == "inspector" : Placeholder { text: "The properties of the selected notes and bars come with the editor."; }
+                        if root.right-area.active-id != "inspector" : Placeholder { text: "This tab belongs to a plugin."; }
+                    }
+                }
+                if root.right-shown && root.right-area.collapsed : SideStrip {
+                    chevron: @image-url("../../../assets/icons/ui/chevron-left.svg");
+                    tip: "Expand";
+                    clicked => { root.area-toggled(3); }
+                }
             }
 
-            if root.show-tracks && root.has-score : Splitter {
-                dragged(d) => { root.tracks-height = clamp(root.tracks-height - d, 48px, 400px); }
+            // Bottom area: the track list and the mixer, then plugins' tabs.
+            if root.bottom-shown && !root.bottom-area.collapsed : Splitter {
+                dragged(d) => { root.bottom-height = clamp(root.bottom-height - d, 48px, 400px); }
             }
-
-            // Track list: each track's notation buttons show it (both off
-            // hides it); click a name to show that track alone. No show tick:
-            // the buttons do that (Mateus, 17 Oct 2026).
-            if root.show-tracks && root.has-score : Rectangle {
-                height: root.tracks-height;
+            if root.bottom-shown : TabStrip {
+                state: root.bottom-area;
+                chevron-open: @image-url("../../../assets/icons/ui/chevron-down.svg");
+                chevron-closed: @image-url("../../../assets/icons/ui/chevron-up.svg");
+                tab-clicked(i) => { root.tab-clicked(1, i); }
+                chevron-clicked => { root.area-toggled(1); }
+            }
+            if root.bottom-shown && !root.bottom-area.collapsed : Rectangle {
+                height: root.bottom-height;
                 background: Palette.alternate-background;
-                ScrollView {
+                if root.bottom-area.active-id == "tracks" && !root.has-score : Placeholder { text: "The tracks of the open score appear here."; }
+                // Track list: each track's notation buttons show it (both
+                // off hides it); click a name to show that track alone. No
+                // show tick: the buttons do that (Mateus, 17 Oct 2026).
+                if root.bottom-area.active-id == "tracks" && root.has-score : ScrollView {
                     VerticalLayout {
                         alignment: start;
                         padding-top: 4px;
@@ -470,6 +830,74 @@ export component AppWindow inherits Window {
                             Rectangle { }
                         }
                     }
+                }
+                if root.bottom-area.active-id == "mixer" : Placeholder { text: "Volume, pan, mute and solo for each track come with the player."; }
+                if root.bottom-area.active-id != "tracks" && root.bottom-area.active-id != "mixer" : Placeholder { text: "This tab belongs to a plugin."; }
+            }
+
+            // Footer: the latest message on one line; a click expands the
+            // whole list for this session, newest first.
+            Rectangle { height: 1px; background: Palette.border; }
+            Rectangle {
+                height: root.footer-expanded ? 160px : 24px;
+                background: Palette.alternate-background;
+                if !root.footer-expanded : HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    spacing: 8px;
+                    if root.footer-count > 0 : VerticalLayout {
+                        alignment: center;
+                        LevelDot { level: root.footer-level; }
+                    }
+                    Text {
+                        text: root.footer-text;
+                        font-size: 12px;
+                        overflow: elide;
+                        vertical-alignment: center;
+                        color: Palette.foreground.transparentize(0.15);
+                    }
+                    if root.footer-count > 1 : Text {
+                        text: root.footer-count + " messages";
+                        font-size: 11px;
+                        vertical-alignment: center;
+                        color: Palette.foreground.transparentize(0.5);
+                    }
+                }
+                if root.footer-expanded : ScrollView {
+                    VerticalLayout {
+                        alignment: start;
+                        padding: 6px;
+                        padding-left: 10px;
+                        spacing: 4px;
+                        for row in root.footer-rows : HorizontalLayout {
+                            spacing: 8px;
+                            VerticalLayout {
+                                alignment: start;
+                                padding-top: 5px;
+                                LevelDot { level: row.level; }
+                            }
+                            Text {
+                                text: row.text;
+                                font-size: 12px;
+                                wrap: word-wrap;
+                                color: Palette.foreground.transparentize(0.15);
+                            }
+                        }
+                    }
+                }
+                // Collapsed: the whole line is the button. Expanded: the
+                // chevron in the corner, so the list's scroll bar works.
+                if !root.footer-expanded : TouchArea {
+                    clicked => { root.footer-expanded = true; }
+                }
+                if root.footer-expanded : IconButton {
+                    x: parent.width - self.width - 18px;
+                    y: 4px;
+                    width: 24px;
+                    height: 24px;
+                    icon: @image-url("../../../assets/icons/ui/chevron-down.svg");
+                    tip: "Collapse";
+                    clicked => { root.footer-expanded = false; }
                 }
             }
         }

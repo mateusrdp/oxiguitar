@@ -1,6 +1,6 @@
 # Tools
 
-The **Tools** menu holds actions that change the open score. They only run when you choose them: OxiGuitar never changes a score on its own. A tool changes the score on screen, never the file on disk; open the file again to see it as saved. Each tool reports what it did in the status line at the bottom left.
+The **Tools** menu holds actions that change the open score. They only run when you choose them: OxiGuitar never changes a score on its own. A tool changes the score on screen, never the file on disk; open the file again to see it as saved. Each tool reports what it did in the line of messages at the bottom of the window.
 
 A tool that cannot run on the open score is greyed out, with the reason in brackets after its name.
 

@@ -5,7 +5,7 @@ The Tools menu holds actions the user starts that change the score. They live in
 ## Rules
 
 - **Nothing runs on its own.** Opening, showing and exporting a score use what the file says. A tool changes the score only when the user picks it from the menu (Mateus, 16 Oct 2026: "If the user didn't make it explicit, don't try to be too smart. Let the user decide.").
-- **One shape for every tool**, the `Tool` trait: an id (`infer-key-signatures`), a menu name, a one-sentence description for the tooltip and the manual, `availability` (the menu greys the entry out and shows the reason when the tool cannot run), and `apply`, a pure function from a score to a changed copy and a short report for the status line.
+- **One shape for every tool**, the `Tool` trait: an id (`infer-key-signatures`), a menu name, a one-sentence description for the tooltip and the manual, `availability` (the menu greys the entry out and shows the reason when the tool cannot run), and `apply`, a pure function from a score to a changed copy and a short report for the footer.
 - **Built for plugins.** Tools depend on the score model only and never on the window, so the plugin system (M5) can host tools of the same shape, and any built-in tool can move into a plugin unchanged.
 - **Undoable.** In the viewer (M1), a tool changes the open score; saving it needs the writers of M2. In the editor (M2), applying a tool is one command, undone in one step.
 

@@ -14,6 +14,21 @@ use oxiguitar_layout::{Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::Score;
 use oxiguitar_tools::Availability;
 
+/// The formats the core still reads by itself. In M2 each moves into its
+/// own format plugin (docs/design/plugins.md); until then the plugin host
+/// counts them, so the footer doesn't say nothing can open files.
+pub(crate) const BUILT_IN_READERS: &[&str] = &[
+    "Guitar Pro 3 (.gp3)",
+    "Guitar Pro 4 (.gp4)",
+    "Guitar Pro 5 (.gp5)",
+    "Guitar Pro 6 (.gpx)",
+    "Guitar Pro 7–8 (.gp)",
+];
+
+/// File → Open's filter: the extensions of the formats above, and Guitar
+/// Pro 1–2's (detected and refused with a message).
+pub(crate) const OPEN_EXTENSIONS: &[&str] = &["gp", "gpx", "gp5", "gp4", "gp3", "gtp"];
+
 /// How the score is shown: what the View menu and the track list set.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Settings {

@@ -23,6 +23,7 @@ oxiguitar-display = { path = "crates/oxiguitar-display" }
 oxiguitar-layout = { path = "crates/oxiguitar-layout" }
 oxiguitar-render = { path = "crates/oxiguitar-render" }
 oxiguitar-tools = { path = "crates/oxiguitar-tools" }
+oxiguitar-host = { path = "crates/oxiguitar-host" }
 oxiguitar-testgen = { path = "crates/oxiguitar-testgen" }
 # Fonts: skrifa reads outlines and metrics; keep it on the version krilla uses.
 skrifa = "0.42"

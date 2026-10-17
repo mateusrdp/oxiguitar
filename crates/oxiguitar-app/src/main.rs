@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The OxiGuitar desktop window (M1: the viewer).
+//! The OxiGuitar desktop window.
 //!
 //! The screen is declared in `ui/app.slint` (Slint, ADR 0004) and follows
-//! `docs/design/ui.md`. This file connects it to the worker thread
-//! ([`worker`]), which reads, engraves and draws the score as tiles
-//! ([`canvas`]), and handles interface zoom for the whole window.
+//! `docs/design/ui.md`: the toolbar and the four tabbed areas come from
+//! [`shell`], the footer's messages from [`footer`]. This file connects the
+//! window to the worker thread ([`worker`]), which reads, engraves and draws
+//! the score as tiles ([`canvas`]), and handles both zooms: the mouse wheel
+//! over the page zooms the page, Ctrl + wheel the whole interface.
+//!
+//! At start, the plugin host (`oxiguitar-host`) makes sure the user folder,
+//! settings.json and the plugin folder exist, and the footer says what is
+//! missing (docs/design/plugins.md).
 //!
 //! Usage: `oxiguitar [FILE]`. Nothing here touches the network.
 
@@ -14,7 +20,9 @@
 
 mod canvas;
 mod document;
+mod footer;
 mod icons;
+mod shell;
 #[cfg(test)]
 mod speed;
 mod tracks;
@@ -27,6 +35,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use oxiguitar_display::Rect;
+use oxiguitar_host::Level;
 use oxiguitar_layout::{Layout, Paper};
 use slint::winit_030::winit::event::{ElementState, MouseScrollDelta, WindowEvent as WinitEvent};
 use slint::winit_030::winit::keyboard::{Key, KeyCode, PhysicalKey};
@@ -38,6 +47,8 @@ use slint::{
 
 use crate::canvas::{Sheets, TILE};
 use crate::document::{Settings, ToolEntry};
+use crate::footer::{Footer, level_code};
+use crate::shell::{Shell, Side, item};
 use crate::tracks::Tracks;
 use crate::worker::{Event, Request, Worker};
 
@@ -46,7 +57,9 @@ mod ui {
     #![allow(missing_docs, unreachable_pub, clippy::all, clippy::todo)]
     slint::include_modules!();
 }
-use ui::{AppWindow, TileItem, ToolRow, TrackRow};
+use ui::{
+    AppWindow, AreaState, FooterRow, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
+};
 
 /// The app id: the desktop entry's name and the Wayland app id.
 const APP_ID: &str = "io.github.mateusrdp.OxiGuitar";
@@ -54,14 +67,16 @@ const APP_ID: &str = "io.github.mateusrdp.OxiGuitar";
 const UI_ZOOMS: &[f32] = &[0.5, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0];
 /// Size of the notation buttons' icons, in logical pixels.
 const NOTATION_ICON: f32 = 24.0;
-/// Pixels of smooth (touchpad) scrolling per interface-zoom step.
+/// Pixels of smooth (touchpad) scrolling per wheel notch, for both zooms.
 const PIXELS_PER_STEP: f64 = 60.0;
+/// Score zoom per wheel notch, in the slider's log2 units: 2^(1/8), about 9 %.
+const WHEEL_ZOOM_STEP: f32 = 0.125;
+/// Logical pixels scrolled per wheel notch with Shift held.
+const WHEEL_SCROLL: f32 = 40.0;
 /// Logical pixels per point at 100 % score zoom (96 dpi).
 const PX_PER_PT: f32 = 96.0 / 72.0;
 /// Room around the sheets on the canvas, in logical pixels (both sides).
 const CANVAS_PAD: f32 = 48.0;
-/// How long a status message stays.
-const STATUS_TIME: Duration = Duration::from_secs(10);
 
 struct App {
     ui: Weak<AppWindow>,
@@ -91,10 +106,17 @@ struct App {
     system_scale: f32,
     ui_zoom: f32,
     ctrl: bool,
+    shift: bool,
     wheel_pixels: f64,
+    /// Where the pointer is, in the window's physical pixels, for the wheel.
+    cursor: Option<(f64, f64)>,
     pdf_name: String,
     folder: Option<PathBuf>,
-    status_serial: u64,
+    /// The toolbar and the four areas, and the toolbar's icons by name.
+    shell: Shell,
+    icons: HashMap<String, Image>,
+    /// This session's messages.
+    footer: Footer,
     /// A dropped file is being opened; the rest of the same drop is ignored.
     drop_pending: bool,
 }
@@ -146,21 +168,28 @@ fn main() -> Result<(), slint::PlatformError> {
         system_scale: 1.0,
         ui_zoom: 1.0,
         ctrl: false,
+        shift: false,
         wheel_pixels: 0.0,
+        cursor: None,
         pdf_name: "score.pdf".to_owned(),
         folder: None,
-        status_serial: 0,
+        shell: Shell::default(),
+        icons: HashMap::new(),
+        footer: Footer::default(),
         drop_pending: false,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
 
     ui.set_shortcut_lines(lines(&[
-        "Ctrl + O: open a file;  Ctrl + Q: quit;  F8: show or hide the track list",
+        "Ctrl + O: open a file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
         "Escape or a click: close this note",
-        "Mouse wheel, arrow keys, Page Up / Page Down, Home / End: scroll the score",
-        "Score zoom: the slider at the bottom right of the score; click its percentage for 100 %",
+        "Mouse wheel over the page: zoom the page;  Shift + wheel: scroll it",
+        "Arrow keys, Page Up / Page Down, Home / End, the scroll bars: scroll the page",
+        "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
+        "Panels: click a tab's name to open it, the open tab's name (or the chevron) to collapse its panel",
+        "Footer: click it to see every message; the chevron folds it back",
         "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to show that track alone",
     ]));
     ui.set_about_lines(lines(&[
@@ -173,6 +202,32 @@ fn main() -> Result<(), slint::PlatformError> {
         "OxiGuitar never connects to the internet on its own and sends nothing anywhere.",
     ]));
     set_tools(&ui, &tool_rows(&default_tools()));
+
+    // The user folder, settings.json and the plugin folders (created when
+    // missing), and what the footer should say about them. A few small
+    // file operations, done before the window first shows.
+    let startup = oxiguitar_host::start(
+        oxiguitar_host::Folders::here(),
+        document::BUILT_IN_READERS
+            .iter()
+            .map(|r| (*r).to_owned())
+            .collect(),
+        Vec::new(),
+    );
+    ui.set_player_available(!startup.inventory.instruments.is_empty());
+    if !startup.inventory.instruments.is_empty() {
+        ui.set_outputs(ModelRc::new(VecModel::from(
+            startup
+                .inventory
+                .instruments
+                .iter()
+                .map(|n| SharedString::from(n.as_str()))
+                .collect::<Vec<_>>(),
+        )));
+    }
+    app.borrow_mut().footer.extend(startup.notices);
+    sync_footer(&app);
+    sync_shell(&app);
 
     let a = app.clone();
     ui.on_open_file(move || open_dialog(&a));
@@ -207,9 +262,39 @@ fn main() -> Result<(), slint::PlatformError> {
         a.borrow().worker.send(Request::ApplyTool(i as usize));
     });
     let a = app.clone();
-    ui.on_status_dismissed(move || {
-        if let Some(ui) = a.borrow().ui.upgrade() {
-            ui.set_status(SharedString::new());
+    ui.on_toolbar_activated(move |id| toolbar_activated(&a, id.as_str()));
+    let a = app.clone();
+    ui.on_tab_clicked(move |area, i| {
+        if let (Some(side), Ok(i)) = (Side::from_index(area), usize::try_from(i)) {
+            a.borrow_mut().shell.area_mut(side).click(i);
+            sync_areas(&a);
+        }
+    });
+    let a = app.clone();
+    ui.on_area_toggled(move |area| {
+        if let Some(side) = Side::from_index(area) {
+            {
+                let mut s = a.borrow_mut();
+                let area = s.shell.area_mut(side);
+                area.collapsed = !area.collapsed;
+            }
+            sync_areas(&a);
+        }
+    });
+    let a = app.clone();
+    ui.on_panels_changed(move || {
+        let Some(ui) = a.borrow().ui.upgrade() else {
+            return;
+        };
+        let shown = [
+            ui.get_top_shown(),
+            ui.get_bottom_shown(),
+            ui.get_left_shown(),
+            ui.get_right_shown(),
+        ];
+        let mut s = a.borrow_mut();
+        for (side, shown) in Side::ALL.into_iter().zip(shown) {
+            s.shell.area_mut(side).shown = shown;
         }
     });
 
@@ -299,24 +384,142 @@ fn set_tools(ui: &AppWindow, rows: &[ToolRow]) {
     ui.set_tools(ModelRc::new(VecModel::from(rows.to_vec())));
 }
 
-fn status(app: &Shared, message: String) {
-    let serial = {
-        let mut s = app.borrow_mut();
-        s.status_serial += 1;
-        s.status_serial
+/// A message for the footer.
+fn message(app: &Shared, level: Level, text: impl Into<String>) {
+    app.borrow_mut().footer.push(level, text);
+    sync_footer(app);
+}
+
+/// Shows the footer's latest message and, for the expanded footer, all of
+/// them, newest first.
+fn sync_footer(app: &Shared) {
+    let s = app.borrow();
+    let Some(ui) = s.ui.upgrade() else {
+        return;
     };
-    if let Some(ui) = app.borrow().ui.upgrade() {
-        ui.set_status(message.into());
+    let (level, text) = s
+        .footer
+        .latest()
+        .map_or((0, ""), |n| (level_code(n.level), n.text.as_str()));
+    ui.set_footer_level(level);
+    ui.set_footer_text(text.into());
+    ui.set_footer_count(s.footer.len() as i32);
+    let rows: Vec<FooterRow> = s
+        .footer
+        .newest_first()
+        .map(|n| FooterRow {
+            level: level_code(n.level),
+            text: n.text.as_str().into(),
+        })
+        .collect();
+    ui.set_footer_rows(ModelRc::new(VecModel::from(rows)));
+}
+
+/// The toolbar's icons, our own SVGs (assets/icons/ui/), tinted by the
+/// window. Plugins' icons will come from their manifests.
+fn ui_icon(name: &str) -> Image {
+    let svg: &[u8] = match name {
+        "open" => include_bytes!("../../../assets/icons/ui/open.svg"),
+        "save" => include_bytes!("../../../assets/icons/ui/save.svg"),
+        "export" => include_bytes!("../../../assets/icons/ui/export.svg"),
+        "undo" => include_bytes!("../../../assets/icons/ui/undo.svg"),
+        "redo" => include_bytes!("../../../assets/icons/ui/redo.svg"),
+        "dark-page" => include_bytes!("../../../assets/icons/ui/dark-page.svg"),
+        _ => return Image::default(),
+    };
+    Image::load_from_svg_data(svg).unwrap_or_default()
+}
+
+/// Shows the toolbar and the areas as the shell says.
+fn sync_shell(app: &Shared) {
+    sync_toolbar(app);
+    sync_areas(app);
+}
+
+fn sync_toolbar(app: &Shared) {
+    let mut s = app.borrow_mut();
+    let Some(ui) = s.ui.upgrade() else {
+        return;
+    };
+    let names: Vec<String> = s
+        .shell
+        .toolbar
+        .iter()
+        .flat_map(|sec| sec.items.iter().map(|i| i.icon.clone()))
+        .collect();
+    for name in names {
+        s.icons
+            .entry(name.clone())
+            .or_insert_with(|| ui_icon(&name));
     }
-    let a = app.clone();
-    slint::Timer::single_shot(STATUS_TIME, move || {
-        let s = a.borrow();
-        if s.status_serial == serial
-            && let Some(ui) = s.ui.upgrade()
-        {
-            ui.set_status(SharedString::new());
+    let sections: Vec<ToolbarSectionRow> = s
+        .shell
+        .toolbar
+        .iter()
+        .map(|sec| ToolbarSectionRow {
+            title: sec.title.as_str().into(),
+            items: ModelRc::new(VecModel::from(
+                sec.items
+                    .iter()
+                    .map(|i| ToolbarItemRow {
+                        id: i.id.as_str().into(),
+                        icon: s.icons.get(&i.icon).cloned().unwrap_or_default(),
+                        tip: i.tip.as_str().into(),
+                        enabled: i.enabled,
+                        checkable: i.checkable,
+                        checked: i.checked,
+                    })
+                    .collect::<Vec<_>>(),
+            )),
+        })
+        .collect();
+    ui.set_toolbar(ModelRc::new(VecModel::from(sections)));
+    ui.set_toolbar_shown(s.shell.toolbar_shown);
+}
+
+fn sync_areas(app: &Shared) {
+    let s = app.borrow();
+    let Some(ui) = s.ui.upgrade() else {
+        return;
+    };
+    let state = |side: Side| {
+        let area = s.shell.area(side);
+        AreaState {
+            titles: ModelRc::new(VecModel::from(
+                area.tabs
+                    .iter()
+                    .map(|t| SharedString::from(t.title.as_str()))
+                    .collect::<Vec<_>>(),
+            )),
+            active: area.active as i32,
+            active_id: area.active_id().into(),
+            collapsed: area.collapsed,
         }
-    });
+    };
+    ui.set_top_area(state(Side::Top));
+    ui.set_bottom_area(state(Side::Bottom));
+    ui.set_left_area(state(Side::Left));
+    ui.set_right_area(state(Side::Right));
+    ui.set_top_shown(s.shell.area(Side::Top).shown);
+    ui.set_bottom_shown(s.shell.area(Side::Bottom).shown);
+    ui.set_left_shown(s.shell.area(Side::Left).shown);
+    ui.set_right_shown(s.shell.area(Side::Right).shown);
+}
+
+/// A toolbar button was clicked.
+fn toolbar_activated(app: &Shared, id: &str) {
+    match id {
+        item::OPEN => open_dialog(app),
+        item::EXPORT_PDF => export_dialog(app),
+        item::DARK_PAGE => {
+            if let Some(ui) = app.borrow().ui.upgrade() {
+                ui.set_dark_page(!ui.get_dark_page());
+            }
+            settings_changed(app);
+        }
+        // Save, Undo and Redo come with the editor; they are greyed out.
+        _ => {}
+    }
 }
 
 /// Events from the worker, on the UI thread.
@@ -364,9 +567,21 @@ fn handle(app: &Shared, event: Event) {
                 .collect();
             ui.set_tracks(ModelRc::new(VecModel::from(rows)));
             // Room for the tracks, up to five rows; the splitter changes it.
-            ui.set_tracks_height(28.0 * tracks.len().clamp(1, 5) as f32 + 12.0);
+            ui.set_bottom_height(28.0 * tracks.len().clamp(1, 5) as f32 + 12.0);
+            {
+                let mut s = app.borrow_mut();
+                let bottom = s.shell.area_mut(Side::Bottom);
+                if bottom.active_id() != "tracks" {
+                    bottom.open("tracks");
+                }
+            }
+            sync_areas(app);
             set_tools(&ui, &tool_rows(&tools));
             ui.set_has_score(true);
+            app.borrow_mut()
+                .shell
+                .set_item(item::EXPORT_PDF, Some(true), None);
+            sync_toolbar(app);
             ui.invoke_scroll_to(0.0, 0.0);
             settings_changed(app);
         }
@@ -412,7 +627,7 @@ fn handle(app: &Shared, event: Event) {
             drop_old_tiles_when_covered(&s);
         }
         Event::Tools(tools) => set_tools(&ui, &tool_rows(&tools)),
-        Event::Status(message) => status(app, message),
+        Event::Message(level, text) => message(app, level, text),
     }
 }
 
@@ -433,6 +648,21 @@ fn settings_changed(app: &Shared) {
         .unwrap_or_default();
     s.settings.dynamics = ui.get_dynamics();
     s.settings.screen_width = screen_width(&ui, s.zoom);
+    // The toolbar's Dark Page button follows the menu's tick, and the
+    // other way round.
+    let dark = ui.get_dark_page();
+    let ticked = s
+        .shell
+        .toolbar
+        .iter()
+        .flat_map(|sec| &sec.items)
+        .any(|i| i.id == item::DARK_PAGE && i.checked);
+    if ticked != dark {
+        s.shell.set_item(item::DARK_PAGE, None, Some(dark));
+        drop(s);
+        sync_toolbar(app);
+        s = app.borrow_mut();
+    }
     if before.0 != s.settings.layout {
         ui.invoke_scroll_to(0.0, 0.0);
     }
@@ -606,11 +836,29 @@ fn drop_old_tiles_when_covered(s: &App) {
 
 /// The score-zoom slider moved: keep the middle of the view where it is.
 fn zoom_moved(app: &Shared, v: f32) {
+    // Snap to 100 % near the middle of the slider.
+    let v = if v.abs() < 0.06 { 0.0 } else { v };
+    set_zoom(app, v, None);
+}
+
+/// The mouse wheel turned over the page by `notches` (fractions from a
+/// touchpad): zoom, keeping the point under the pointer where it is.
+/// `(x, y)` is the pointer in the page's viewport, in logical pixels.
+fn wheel_zoom(app: &Shared, notches: f32, x: f32, y: f32) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
-    // Snap to 100 % near the middle of the slider.
-    let v = if v.abs() < 0.06 { 0.0 } else { v };
+    let v = (ui.get_zoom_log() + notches * WHEEL_ZOOM_STEP).clamp(-2.0, 2.0);
+    set_zoom(app, v, Some((x, y)));
+}
+
+/// Sets the score zoom to 2^`v`, keeping the canvas point at `anchor` (in
+/// the viewport, logical pixels; the middle of the view if `None`) where it
+/// is on screen.
+fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
     ui.set_zoom_log(v);
     let zoom = 2f32.powf(v).clamp(0.25, 4.0);
     let (old, layout) = {
@@ -621,9 +869,10 @@ fn zoom_moved(app: &Shared, v: f32) {
         return;
     }
     ui.set_zoom_text(format!("{:.0} %", zoom * 100.0).into());
+    let (ax, ay) = anchor.unwrap_or((ui.get_view_width() / 2.0, ui.get_view_height() / 2.0));
     let (cx, cy) = (
-        ui.get_view_x() + ui.get_view_width() / 2.0 - ui.get_origin_x(),
-        ui.get_view_y() + ui.get_view_height() / 2.0 - ui.get_origin_y(),
+        ui.get_view_x() + ax - ui.get_origin_x(),
+        ui.get_view_y() + ay - ui.get_origin_y(),
     );
     {
         let mut s = app.borrow_mut();
@@ -634,8 +883,8 @@ fn zoom_moved(app: &Shared, v: f32) {
     set_content_size(app, &ui);
     let k = zoom / old;
     ui.invoke_scroll_to(
-        cx * k + ui.get_origin_x() - ui.get_view_width() / 2.0,
-        cy * k + ui.get_origin_y() - ui.get_view_height() / 2.0,
+        cx * k + ui.get_origin_x() - ax,
+        cy * k + ui.get_origin_y() - ay,
     );
     if layout == Layout::Vertical {
         // Zooming a window-wide layout reflows it.
@@ -649,7 +898,7 @@ fn zoom_moved(app: &Shared, v: f32) {
 /// allows it, so the window keeps drawing.
 fn open_dialog(app: &Shared) {
     if let Some(problem) = no_dialogs() {
-        status(app, problem);
+        message(app, Level::Warning, problem);
         return;
     }
     let folder = app.borrow().folder.clone();
@@ -657,7 +906,7 @@ fn open_dialog(app: &Shared) {
     let pick = move || {
         let mut dialog = rfd::FileDialog::new()
             .set_title("Open")
-            .add_filter("Guitar Pro", &["gp", "gpx", "gp5", "gp4", "gp3", "gtp"])
+            .add_filter("Guitar Pro", document::OPEN_EXTENSIONS)
             .add_filter("All files", &["*"]);
         if let Some(f) = folder {
             dialog = dialog.set_directory(f);
@@ -672,7 +921,7 @@ fn open_dialog(app: &Shared) {
 /// File → Export PDF…: the shown tracks, in pages, on the chosen paper.
 fn export_dialog(app: &Shared) {
     if let Some(problem) = no_dialogs() {
-        status(app, problem);
+        message(app, Level::Warning, problem);
         return;
     }
     let (folder, name, settings, sender) = {
@@ -737,6 +986,9 @@ fn run_dialog(pick: impl FnOnce() + Send + 'static) {
 /// - Ctrl + wheel and Ctrl + + / − / 0 scale the whole interface, wherever
 ///   the pointer or the keyboard focus is, so the score never scrolls by
 ///   accident.
+/// - The wheel over the page zooms the page, around the pointer; with Shift
+///   it scrolls the page instead. Elsewhere (a list in a side area) the
+///   wheel scrolls as usual.
 /// - A file dropped on the window opens like File → Open.
 ///
 /// **Drops don't work on Wayland** (ADR 0006; CONTRIBUTING.md, "Known
@@ -774,6 +1026,15 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                 } else {
                     m.state().control_key()
                 };
+                s.shift = m.state().shift_key();
+                return EventResult::Propagate;
+            }
+            WinitEvent::CursorMoved { position, .. } => {
+                s.cursor = Some((position.x, position.y));
+                return EventResult::Propagate;
+            }
+            WinitEvent::CursorLeft { .. } => {
+                s.cursor = None;
                 return EventResult::Propagate;
             }
             WinitEvent::ScaleFactorChanged { scale_factor, .. } => {
@@ -782,25 +1043,45 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                 s.system_scale = *scale_factor as f32;
                 0
             }
-            // A score on one line that fits the window's height: the wheel
-            // scrolls along the line.
-            WinitEvent::MouseWheel { delta, .. }
-                if !s.ctrl && s.settings.layout == Layout::Horizontal =>
-            {
-                let Some(ui) = s.ui.upgrade() else {
+            // The wheel over the page: zoom it, or scroll it with Shift.
+            WinitEvent::MouseWheel { delta, .. } if !s.ctrl => {
+                let (Some(ui), Some((px, py))) = (s.ui.upgrade(), s.cursor) else {
                     return EventResult::Propagate;
                 };
-                let fits = ui.get_content_height() + CANVAS_PAD <= ui.get_view_height();
-                let dy = match delta {
-                    MouseScrollDelta::LineDelta(0.0, y) => *y * 40.0,
-                    MouseScrollDelta::PixelDelta(p) if p.x == 0.0 => p.y as f32,
-                    _ => return EventResult::Propagate,
-                };
-                if !fits {
+                let scale = f64::from(ui.window().scale_factor());
+                let (x, y) = (
+                    (px / scale) as f32 - ui.get_canvas_left(),
+                    (py / scale) as f32 - ui.get_canvas_top(),
+                );
+                let over_page = (0.0..ui.get_canvas_width()).contains(&x)
+                    && (0.0..ui.get_canvas_height()).contains(&y);
+                if !over_page {
                     return EventResult::Propagate;
                 }
+                let (dx, dy) = match delta {
+                    MouseScrollDelta::LineDelta(x, y) => (*x, *y),
+                    MouseScrollDelta::PixelDelta(p) => (
+                        (p.x / PIXELS_PER_STEP) as f32,
+                        (p.y / PIXELS_PER_STEP) as f32,
+                    ),
+                };
+                let shift = s.shift;
+                let layout = s.settings.layout;
                 drop(s);
-                ui.invoke_scroll_by(-dy, 0.0);
+                if shift {
+                    // A score on one line that fits the window's height
+                    // scrolls along the line.
+                    let along = layout == Layout::Horizontal
+                        && dx == 0.0
+                        && ui.get_content_height() + CANVAS_PAD <= ui.get_view_height();
+                    if along {
+                        ui.invoke_scroll_by(-dy * WHEEL_SCROLL, 0.0);
+                    } else {
+                        ui.invoke_scroll_by(-dx * WHEEL_SCROLL, -dy * WHEEL_SCROLL);
+                    }
+                } else if dy != 0.0 {
+                    wheel_zoom(&a, dy, x, y);
+                }
                 return EventResult::PreventDefault;
             }
             WinitEvent::MouseWheel { delta, .. } if s.ctrl => {
