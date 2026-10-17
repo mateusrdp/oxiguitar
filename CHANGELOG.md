@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- cargo-deny accepts RUSTSEC-2026-0370, 0371 and 0372 (zvariant, zvariant_derive and zbus_names are unmaintained since zbus 6 took them in, published 17 Oct 2026). They come in through zbus 5, which Slint 1.18's winit backend and AccessKit still use; revisit on the next Slint upgrade.
+
 ## [0.1.0] - 2026-10-17
 
 Milestone M1 (the viewer) is complete. This is OxiGuitar's first tagged release: open a Guitar Pro 3–8 file and view it in standard notation, tablature, or both.
