@@ -4,7 +4,9 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
-Milestone M0 (foundations) is complete and merged into `main` (16 October 2026). No version is tagged for it: the first release, v0.1, comes with the viewer at the end of M1. Work on M1 (the viewer) has started on `develop`.
+## [0.1.0] - 2026-10-17
+
+Milestone M1 (the viewer) is complete. This is OxiGuitar's first tagged release: open a Guitar Pro 3–8 file and view it in standard notation, tablature, or both.
 
 ### Added
 
