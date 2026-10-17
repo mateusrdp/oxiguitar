@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-License-Identifier: GPL-3.0-or-later
+  Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+  The Guitar Pro file types OxiGuitar opens (UI-4), for the shared MIME
+  database. Installed by the .deb and .rpm packages in
+  /usr/share/mime/packages/; the systems' own triggers rebuild the database.
+
+  The type name is TuxGuitar's, so both programs share one type and appear
+  together under "Open With". .gtp (Guitar Pro 1-2) is left out until
+  OxiGuitar reads it.
+-->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-gtp">
+    <comment>Guitar Pro file</comment>
+    <icon name="io.github.mateusrdp.OxiGuitar"/>
+    <!-- Guitar Pro 3-5: a length byte, then "FICHIER GUITAR PRO v3.00" and so on. -->
+    <magic priority="50">
+      <match type="string" offset="1" value="FICHIER GUITAR PRO v"/>
+    </magic>
+    <!-- Guitar Pro 6: .gpx is also GPS data, which is XML; ours starts with
+         BCFZ (compressed) or BCFS. -->
+    <magic priority="50">
+      <match type="string" offset="0" value="BCFZ"/>
+      <match type="string" offset="0" value="BCFS"/>
+    </magic>
+    <!-- Guitar Pro 7-8: .gp is also Gnuplot text; ours is a ZIP archive. -->
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.gp3"/>
+    <glob pattern="*.gp4"/>
+    <glob pattern="*.gp5"/>
+    <glob pattern="*.gpx"/>
+    <glob pattern="*.gp"/>
+  </mime-type>
+</mime-info>

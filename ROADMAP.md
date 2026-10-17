@@ -78,14 +78,15 @@ Progress:
   - [x] Page layout, multi-track alignment, score header (16 Oct 2026)
   - [x] Track names at the start of systems (16 Oct 2026)
   - [x] Vertical, horizontal and parchment layouts, checked against the Guitar Pro 8 user guide (16 Oct 2026)
-- [x] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu (16 Oct 2026): File → Open, tiled canvas on a worker thread, the four layouts, multitrack, Dark Page, score and interface zoom, track list, status line
+- [x] `oxiguitar-app` window (Slint) following docs/design/ui.md, with a View toggle for dynamics and the Tools menu (16 Oct 2026): File → Open, tiled canvas on a worker thread, the four layouts, Dark Page, score and interface zoom, track list, status line
 - [x] `oxiguitar-tools`: the Tools menu's tools, one shape for all so plugins can add more (M5); first tool: Infer Key Signatures, with key changes (16 Oct 2026)
 - [x] PDF export of the shown tracks, A4 or Letter (16 Oct 2026)
 - [ ] Quality gates (see [docs/testing.md](docs/testing.md))
   - [x] Speed budget (16 Oct 2026): a generated 300-bar, 8-track score as long as a real Guitar Pro 7 file (16 MB of XML) opens to its first tiles in 0.18 s, or 0.23 s with every track shown; CI's "Speed budget" job holds release builds to one second. Reading GPIF is about twice as fast as before.
   - [x] Visual regression (16 Oct 2026): 50 generated reference scores in `fixtures/reference/`, each a Guitar Pro 7 file and its pictures, compared with a tolerance on every CI target
-  - [ ] Fuzzing: six hours per reader without a crash. Targets for every reader and a CI workflow (short runs on reader pull requests, the long run by hand) are in place (16 Oct 2026); the first six-hour run is under way
-- [ ] User manual, release packages
+  - [x] Fuzzing (16 Oct 2026): six hours per reader without a crash, hang or out-of-memory input ([run 38891529443](https://github.com/mateusrdp/oxiguitar/actions/runs/38891529443)): Guitar Pro 3–5 1.26 billion inputs, Guitar Pro 6 335 million, Guitar Pro 7/8 272 million, GPIF XML 37 million. Short runs on every pull request that touches a reader
+- [x] Release packages (16 Oct 2026): `release.yml` builds the .exe zip, AppImage, .deb, .rpm (x86_64 and ARM64) and universal .dmg, unsigned, on v* tags and by hand; the .deb, .rpm and .dmg register the Guitar Pro file types (UI-4)
+- [x] User manual (16 Oct 2026): `docs/manual/` (mdBook), published to GitHub Pages from main by the "Manual" workflow
 
 Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5, 3 GPX, 12 GP). Counted separately, for the format plugins after M5: 5 MuseScore and 1 MusicXML file; no ABC yet.
 

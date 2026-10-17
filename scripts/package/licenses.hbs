@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OxiGuitar third-party licences</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+  pre { white-space: pre-wrap; background: #f4f4f4; padding: 0.75rem; font-size: 0.85rem; }
+  ul.used-by { columns: 2; }
+  @media (prefers-color-scheme: dark) { body { background: #1b1b1b; color: #ddd; } pre { background: #262626; } a { color: #8cb4ff; } }
+</style>
+</head>
+<body>
+<h1>Third-party licences</h1>
+<p>OxiGuitar is free software under the GNU General Public License, version 3 (see LICENSE).
+It is built from the Rust crates below, each under its own licence, and bundles two fonts.
+This file is generated from <code>Cargo.lock</code> for every release.</p>
+
+<h2>Fonts</h2>
+<ul>
+  <li><strong>Bravura</strong> 1.482, by Steinberg Media Technologies GmbH: SIL Open Font License 1.1 (Bravura-OFL.txt)</li>
+  <li><strong>Noto Sans</strong> 2.015, by the Noto Project Authors: SIL Open Font License 1.1 (NotoSans-OFL.txt)</li>
+</ul>
+
+<h2>Licences used by the crates</h2>
+<ul>
+{{#each overview}}
+  <li><a href="#{{id}}">{{name}}</a> ({{count}})</li>
+{{/each}}
+</ul>
+
+{{#each licenses}}
+<h3 id="{{id}}">{{name}}</h3>
+<p>Used by:</p>
+<ul class="used-by">
+{{#each used_by}}
+  <li><a href="{{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}}">{{crate.name}} {{crate.version}}</a></li>
+{{/each}}
+</ul>
+<pre>{{text}}</pre>
+{{/each}}
+</body>
+</html>

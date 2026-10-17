@@ -25,7 +25,7 @@ Each file ported or adapted from one of these starts with an SPDX header, the or
 
 ## Rust crates we depend on
 
-The authoritative list, with exact versions and licenses, is generated from `Cargo.lock` and shipped with every release as a third-party license file. CI runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) and fails on any license outside the allow-list in `deny.toml`.
+The authoritative list, with exact versions and licenses, is generated from `Cargo.lock` by [cargo-about](https://github.com/EmbarkStudios/cargo-about) (MIT OR Apache-2.0; `scripts/package/licenses.sh`) and shipped with every release package as THIRD-PARTY-LICENSES.html. CI runs [cargo-deny](https://github.com/EmbarkStudios/cargo-deny) and fails on any license outside the allow-list in `deny.toml`.
 
 Direct dependencies so far, all Rust (the desktop app also links the system's font, keyboard and window libraries):
 

@@ -70,6 +70,9 @@ pub(crate) mod glyphs {
     pub(crate) const GRACE_SLASH_UP: G = G("graceNoteSlashStemUp", '\u{E564}');
     pub(crate) const REPEAT_DOT: G = G("repeatDot", '\u{E044}');
     pub(crate) const NOTE_QUARTER_UP: G = G("noteQuarterUp", '\u{E1D5}');
+    pub(crate) const SEGNO: G = G("segno", '\u{E047}');
+    pub(crate) const CODA: G = G("coda", '\u{E048}');
+    pub(crate) const CODA_SQUARE: G = G("codaSquare", '\u{E049}');
     pub(crate) const FLAGS_UP: [G; 4] = [
         G("flag8thUp", '\u{E240}'),
         G("flag16thUp", '\u{E242}'),

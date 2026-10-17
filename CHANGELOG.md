@@ -4,13 +4,21 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
-Milestone M0 (foundations) is complete and merged into `main` (16 October 2026). No version is tagged for it: the first release, v0.1, comes with the viewer at the end of M1. Work on M1 (the viewer) has started on `develop`.
+## [0.1.0] - 2026-10-17
+
+Milestone M1 (the viewer) is complete. This is OxiGuitar's first tagged release: open a Guitar Pro 3–8 file and view it in standard notation, tablature, or both.
 
 ### Added
 
+- Neighbouring dynamics keep apart: like chord names, each marking stays under its beat and the music opens up so it ends before the next one (ppp and pp on quarter notes touched).
+- Release packages (`.github/workflows/release.yml`, scripts in `scripts/package/`): a portable .exe in a zip for Windows, an AppImage, a .deb and an .rpm for Linux, each for x86_64 and ARM64, and a universal .dmg for macOS, none code-signed. A v* tag builds them into a draft release with SHA256SUMS; started by hand, they stay under the run for 14 days. Each package is installed and started in CI: the .deb on Debian sid, the .rpm on Fedora, the AppImage on Ubuntu. The .deb, .rpm and .dmg register the Guitar Pro file types OxiGuitar opens (.gp, .gpx, .gp5, .gp4, .gp3; UI-4) with the placeholder icon as the file icon; the .exe carries the icon and its name and version for Explorer and Task Manager. Every package includes THIRD-PARTY-LICENSES.html, generated from `Cargo.lock` with cargo-about.
+- Directions are engraved on their own line above the top staff: segno and coda signs (and their doubles) at the start of their bar; Fine, D.C., D.S. and their "al Coda", "al Double Coda" and "al Fine" forms, and "To Coda" with its sign, ending at the end of their bar.
+- The user manual, published on GitHub Pages (https://mateusrdp.github.io/oxiguitar/, source in `docs/manual/`, built with mdBook by the "Manual" workflow): installing, opening files, the four layouts, tracks and notation buttons, score and interface zoom, dark page and dynamics, Infer Key Signatures, PDF export, keyboard and mouse. On macOS, interface zoom now uses ⌘ like the menus' shortcuts.
+- Release packages (`.github/workflows/release.yml`, scripts in `scripts/package/`): a portable .exe in a zip for Windows, an AppImage, a .deb and an .rpm for Linux, each for x86_64 and ARM64, and a universal .dmg for macOS, none code-signed. A v* tag builds them into a draft release with SHA256SUMS; started by hand, they stay under the run for 14 days, each downloadable as the package file itself rather than a zip. Each package is installed and started in CI: the .deb on Debian sid, the .rpm on Fedora, the AppImage on Ubuntu. The .deb, .rpm and .dmg register the Guitar Pro file types OxiGuitar opens (.gp, .gpx, .gp5, .gp4, .gp3; UI-4) with the placeholder icon as the file icon; the .exe carries the icon and its name and version for Explorer and Task Manager. Every package includes THIRD-PARTY-LICENSES.html, generated from `Cargo.lock` with cargo-about.
+- `scripts/install-desktop-entry.sh` also registers the Guitar Pro file types, and takes an AppImage as the program.
 - The speed budget (M1): a 300-bar, 8-track file opens in under a second, from reading the file to the first tiles. A test opens a generated score as dense and as long as a real Guitar Pro 7 file the way the window does (0.18 s, or 0.23 s with all eight tracks shown), and CI's "Speed budget" job holds release builds to it. See `docs/testing.md`.
 - `oxiguitar-testgen`: test scores written in a short text notation and saved as Guitar Pro 7 files, starting with the speed budget's eight-track band song. Test code only.
-- Fuzzing of every file reader (M1): cargo-fuzz targets for Guitar Pro 3–5, Guitar Pro 6, Guitar Pro 7 and 8, the GPIF XML, and any file through format detection (`fuzz/`), seeded from the public fixtures. The "Fuzz" workflow runs each for four minutes on pull requests that touch a reader, and for six hours per reader when started by hand. M1's target is six hours per reader without a crash (lowered from 24).
+- Fuzzing of every file reader (M1): cargo-fuzz targets for Guitar Pro 3–5, Guitar Pro 6, Guitar Pro 7 and 8, the GPIF XML, and any file through format detection (`fuzz/`), seeded from the public fixtures. The "Fuzz" workflow runs each for four minutes on pull requests that touch a reader, and for six hours per reader when started by hand. M1's target is six hours per reader without a crash (lowered from 24); the first run met it on 16 October 2026, with no crash, hang or out-of-memory input in any reader.
 - Visual regression tests (M1): fifty generated reference scores, kept in `fixtures/reference/` as Guitar Pro 7 files with the pictures they engrave to, read back through the reader, engraved and compared with a tolerance on every CI target. Failures leave the drawn picture and a picture of the differences, uploaded by CI. `OXIGUITAR_BLESS=1` writes new pictures after an intended change. See `docs/testing.md`.
 - `oxiguitar-formats` reads Guitar Pro 6 (.gpx) and Guitar Pro 7 and 8 (.gp) files: the BCFZ/BCFS and ZIP containers and the GPIF score inside, with an import log of anything not carried over yet. Which notation each track shows (standard, tablature) comes from the file. All 15 GPX and GP files in the test corpus open; alphaTab reads the same notes from every one of them, bar for bar.
 - Guitar Pro 6 tied notes with a stale fret take the fret of the note they continue; flat "bends" that Guitar Pro 7 writes on tied notes are dropped.
@@ -42,7 +50,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - Track names at the start of each system when several tracks are shown: full names on the first system, short names after, as in Guitar Pro's multitrack view.
 - The other three staff layouts (VIEW-3), checked against the Guitar Pro 8 user guide: **Vertical** (lines fill the window's width, one long sheet), **Horizontal** (every bar on one line) and **Parchment** (page-width lines with no page breaks, Guitar Pro 8's Page – Scroll). `oxiguitar-cli render --layout NAME [--width PT]`; long sheets are cut into PNGs of at most 8192 pixels.
 - Letter paper beside A4 (`--paper letter`). PDFs are always in pages, whatever the layout.
-- **The desktop app**, `oxiguitar` (crate `oxiguitar-app`, Slint), the first version of the viewer. File → Open (or `oxiguitar FILE`) opens any Guitar Pro 3–8 file; the score is drawn in tiles on a worker thread, so the window never waits. View → Layout (Page, Vertical, Horizontal, Parchment), Multitrack, Dark Page and Dynamics; the track list (F8) shows any set of tracks; the score-zoom slider (25–400 %) and interface zoom (Ctrl + wheel, Ctrl + + / − / 0); the Tools menu with Infer Key Signatures, greyed out with its reason when it cannot run; File → Export PDF… of the shown tracks on A4 or Letter (EXP-1); errors and tool reports in a status line. The system's own file dialogs (XDG desktop portal on Linux).
+- **The desktop app**, `oxiguitar` (crate `oxiguitar-app`, Slint), the first version of the viewer. File → Open (or `oxiguitar FILE`) opens any Guitar Pro 3–8 file; the score is drawn in tiles on a worker thread, so the window never waits. View → Layout (Page, Vertical, Horizontal, Parchment), Dark Page and Dynamics; the track list (F8) shows any set of tracks; the score-zoom slider (25–400 %) and interface zoom (Ctrl + wheel, Ctrl + + / − / 0); the Tools menu with Infer Key Signatures, greyed out with its reason when it cannot run; File → Export PDF… of the shown tracks on A4 or Letter (EXP-1); errors and tool reports in a status line. The system's own file dialogs (XDG desktop portal on Linux).
 - Test builds of the app for every system, beside the command-line tool.
 - Guitar Pro 3–5 tracks get the clef Guitar Pro gives them: bass clef for basses, treble at sounding pitch for keyboards and voices, treble 8vb for guitars (these formats store no clef).
 - Keyboard tracks (pianos, organs, …) are shown on a grand staff with a brace: right hand in the treble clef, left in the bass clef, split by hand range.
@@ -66,14 +74,19 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - GUI-toolkit spike in Slint, iced and egui (`spikes/gui/`), built on every target by an advisory CI workflow. Decision record 0004 chooses Slint.
 - Licences of the crates planned for later milestones checked and recorded in CREDITS.md and ROADMAP.md.
 - Interface design rules (`docs/design/ui.md`) from the first review of the GUI spike. The Slint spike follows them: menus only on top, collapsible palette groups, palette icons centred on their ink, interface zoom with Ctrl + wheel and Ctrl + + / − / 0, a score-zoom slider and a dark page. View → Layout lists the four staff layouts to come in M1: Page, Vertical, Horizontal and Parchment.
+- Drop a file on the window to open it, on Windows, macOS and X11. Of several files dropped at once, the first opens. Not on Wayland yet: winit and Slint report no drops there (ADR 0006).
 
 ### Fixed
 
+- Escape closes the Help notes (Keyboard and Mouse, About), as a click already did.
 - View → Layout and File → Paper Size tick only the current choice.
-- View → Multitrack follows the track list: ticked whenever more than one track is shown.
+- The score no longer blinks blank after a zoom, a new engraving (layout, tracks, paper, dynamics) or Dark Page: the old tiles, scaled to the new zoom, stay under the new ones until those cover the view.
 
 ### Changed
 
+- The track list has no show tick any more: a track's notation buttons show and hide it (both off hides it, either button shows it again), which saves room and leaves one control per job.
+- No View → Multitrack menu item either: showing a track's own buttons already shows it alongside the others, so the menu item did nothing the buttons didn't, for one more control to keep in sync.
+- With Dark Page, the canvas behind the page is a touch darker, so it reads as its own grey rather than matching the menus and track list, while staying lighter than those.
 - Guitar Pro 6–8 files open about twice as fast: the XML tree keeps every element in one list and borrows names and text from the file instead of copying them (`oxiguitar-cli info` on Seek and Destroy: 0.11 s instead of 0.26 s). The scores and import logs read from every GPX and GP file in the corpus are unchanged.
 - Guitar Pro 6–8 beats keep their dynamic as a marking (`BeatEffects::dynamic`) as well as giving it to their notes as velocity, so the engraver can tell a marking from a velocity.
 - Beat text at the end of a system no longer runs off the page; the page test now checks where each text ends, not only where it starts.

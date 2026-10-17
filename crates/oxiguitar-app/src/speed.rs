@@ -48,7 +48,8 @@ fn next(rx: &Receiver<Event>) -> Event {
 }
 
 /// Opens `path` as the window does and returns how long each step took.
-/// `all_tracks` shows every track (View → Multitrack) instead of the first.
+/// `all_tracks` shows every track, as the notation buttons would, instead
+/// of the first.
 fn open_like_the_window(path: &Path, all_tracks: bool) -> Times {
     let (tx, rx) = channel();
     let worker = Worker::start(move |e| {

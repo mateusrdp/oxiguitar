@@ -21,6 +21,8 @@ pub(crate) struct GridCol {
     pub(crate) tab_half: f32,
     /// Width of the widest chord name here, 0 if none.
     pub(crate) chord_w: f32,
+    /// Width of the dynamic marking here, 0 if none.
+    pub(crate) dynamic_w: f32,
     /// Half the widest lyric syllable here, 0 if none.
     pub(crate) lyric_half: f32,
     /// What the duration asks for, to the next moment.
@@ -51,6 +53,7 @@ impl BarGrid {
                             g.right = g.right.max(c.right);
                             g.tab_half = g.tab_half.max(c.tab_half);
                             g.chord_w = g.chord_w.max(c.chord_w);
+                            g.dynamic_w = g.dynamic_w.max(c.dynamic_w);
                             g.lyric_half = g.lyric_half.max(c.lyric_half);
                         }
                     }
@@ -62,6 +65,7 @@ impl BarGrid {
                             right: c.right,
                             tab_half: c.tab_half,
                             chord_w: c.chord_w,
+                            dynamic_w: c.dynamic_w,
                             lyric_half: c.lyric_half,
                             space: 0.0,
                         },
@@ -76,6 +80,7 @@ impl BarGrid {
                 right: 0.0,
                 tab_half: 0.0,
                 chord_w: 0.0,
+                dynamic_w: 0.0,
                 lyric_half: 0.0,
                 space: 0.0,
             });
@@ -102,7 +107,8 @@ impl BarGrid {
             };
             gaps.push(gap);
         }
-        make_room_for_chords(&cols, &mut gaps, sp);
+        make_room_for_left_aligned(&cols, &mut gaps, sp, |c| c.chord_w);
+        make_room_for_left_aligned(&cols, &mut gaps, sp, |c| c.dynamic_w);
         make_room_for_lyrics(&cols, &mut gaps, sp);
         let lead = cols.first().map_or(sp, |c| {
             (c.left + sp)
@@ -157,18 +163,23 @@ impl BarGrid {
     }
 }
 
-/// Chord names stay over their beat; they are never pushed sideways. The
-/// music opens up instead, so each name ends before the next one starts and
-/// the last one before the bar line. A name starts half a notehead left of
-/// its column; the extra room goes into the gap just before the next name
-/// (or the bar line).
-fn make_room_for_chords(cols: &[GridCol], gaps: &mut [f32], sp: f32) {
+/// Chord names and dynamics stay at their beat; they are never pushed
+/// sideways. The music opens up instead, so each mark ends before the next
+/// one of its kind starts, and the last one before the bar line. A mark
+/// starts half a notehead left of its column; the extra room goes into the
+/// gap just before the next mark (or the bar line).
+fn make_room_for_left_aligned(
+    cols: &[GridCol],
+    gaps: &mut [f32],
+    sp: f32,
+    width: impl Fn(&GridCol) -> f32,
+) {
     for i in 0..cols.len() {
-        let w = cols.get(i).map_or(0.0, |c| c.chord_w);
+        let w = cols.get(i).map_or(0.0, &width);
         if w <= 0.0 {
             continue;
         }
-        let next = (i + 1..cols.len()).find(|&j| cols.get(j).is_some_and(|c| c.chord_w > 0.0));
+        let next = (i + 1..cols.len()).find(|&j| cols.get(j).is_some_and(|c| width(c) > 0.0));
         let (need, end) = match next {
             Some(j) => (w + 0.5 * sp, j),
             None => (w - 0.3 * sp, cols.len()),
@@ -219,6 +230,7 @@ mod tests {
             right: 1.0,
             tab_half: 0.0,
             chord_w: 0.0,
+            dynamic_w: 0.0,
             lyric_half: 0.0,
             space,
         }
@@ -235,11 +247,16 @@ mod tests {
         // last gap until the second ends before the bar line (30 - 0.3 sp).
         let cols = vec![named(30.0), named(0.0), named(30.0)];
         let mut gaps = vec![10.0, 10.0, 10.0];
-        make_room_for_chords(&cols, &mut gaps, 5.0);
+        make_room_for_left_aligned(&cols, &mut gaps, 5.0, |c| c.chord_w);
         assert_eq!(gaps, vec![10.0, 22.5, 28.5]);
         // Without names nothing changes.
         let mut plain = vec![10.0, 10.0, 10.0];
-        make_room_for_chords(&[named(0.0), named(0.0), named(0.0)], &mut plain, 5.0);
+        make_room_for_left_aligned(
+            &[named(0.0), named(0.0), named(0.0)],
+            &mut plain,
+            5.0,
+            |c| c.chord_w,
+        );
         assert_eq!(plain, vec![10.0, 10.0, 10.0]);
     }
 

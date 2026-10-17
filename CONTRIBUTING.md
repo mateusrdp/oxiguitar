@@ -38,6 +38,14 @@ You keep the copyright on what you contribute. Your name goes in [CREDITS.md](CR
 - **Edits are commands.** Every change to a score goes through a reversible command, so undo and redo always work.
 - **Privacy.** No telemetry, analytics, crash uploads or background requests, ever. Network code may run only after the user asks for a download. CI enforces this (NET-5).
 
+## Known platform gaps
+
+Features that don't work on one system because of a library we build on, with the ADR that explains why and what has to change. Reviewers: check this list whenever winit or Slint is upgraded, and when a pull request touches one of these features.
+
+| Feature | Missing on | Why | Enable it when | ADR |
+| --- | --- | --- | --- | --- |
+| Drop a file on the window to open it | Wayland | winit 0.30 has no drag and drop on Wayland, and Slint 1.18 passes no OS drops on. A workaround would need `unsafe` code and polling, which we rejected | winit's Wayland backend emits `DroppedFile` (no code change needed), or Slint forwards OS drops. Test with `scripts/wayland-dnd-test/` | [0006](docs/adr/0006-wayland-file-drops.md) |
+
 ## File headers
 
 Every source file we write starts with:

@@ -1,7 +1,7 @@
 # Test builds for every target on each push to develop, kept 14 days under the
 # Actions tab so testers can try them: the desktop app (oxiguitar) and the
-# command-line tool (oxiguitar-cli). Packaging (AppImage, .deb, .rpm, .dmg,
-# .exe) arrives with release.yml.
+# command-line tool (oxiguitar-cli). The packages (AppImage, .deb, .rpm,
+# .dmg, .exe in a zip) are made by release.yml.
 name: Test builds
 
 on:

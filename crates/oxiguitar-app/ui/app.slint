@@ -6,7 +6,7 @@
 // in the corner, the track list along the bottom (F8). The score is drawn
 // by our renderer on the worker thread and shown here as tiles.
 
-import { CheckBox, Slider, ScrollView, Palette } from "std-widgets.slint";
+import { Slider, ScrollView, Palette } from "std-widgets.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
 
 export struct TileItem {
@@ -139,6 +139,9 @@ export component AppWindow inherits Window {
     in property <length> content-width;
     in property <length> content-height;
     in property <[TileItem]> tiles;
+    // Tiles from before a zoom or a new engraving, shown under the new ones
+    // until those cover the view (main.rs).
+    in property <[TileItem]> old-tiles;
     out property <length> view-x: -flick.content-x;
     out property <length> view-y: -flick.content-y;
     out property <length> view-width: flick.visible-width;
@@ -162,7 +165,6 @@ export component AppWindow inherits Window {
     in-out property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
     in-out property <bool> dynamics: true;
-    in-out property <bool> multitrack: false;
     in-out property <bool> show-tracks: true;
     in-out property <length> tracks-height: 120px;
 
@@ -182,13 +184,11 @@ export component AppWindow inherits Window {
     callback settings-changed();
     callback canvas-changed();
     callback zoom-moved(float);
-    callback track-toggled(int);
     callback track-solo(int);
     callback standard-clicked(int);
     callback tablature-clicked(int);
     in property <image> standard-icon;
     in property <image> tablature-icon;
-    callback multitrack-toggled();
     callback tool-picked(int);
     callback status-dismissed();
 
@@ -241,7 +241,6 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Horizontal"; checkable: true; checked <=> root.layout-2; activated => { root.pick-layout(2); root.settings-changed(); } }
                 MenuItem { title: "Parchment"; checkable: true; checked <=> root.layout-3; activated => { root.pick-layout(3); root.settings-changed(); } }
             }
-            MenuItem { title: "Multitrack"; checkable: true; checked <=> root.multitrack; enabled: root.tracks.length > 1; activated => { root.multitrack-toggled(); } }
             MenuSeparator { }
             MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
@@ -283,6 +282,12 @@ export component AppWindow inherits Window {
             if (event.modifiers.control || event.modifiers.alt) {
                 return reject;
             }
+            if (event.text == Key.Escape) {
+                // Closes the Help popups (a click anywhere does too).
+                shortcuts-popup.close();
+                about-popup.close();
+                return reject;
+            }
             if (event.text == Key.PageDown || event.text == " ") {
                 root.scroll-by(0, flick.visible-height * 0.9);
             } else if (event.text == Key.PageUp) {
@@ -306,9 +311,13 @@ export component AppWindow inherits Window {
         }
 
         VerticalLayout {
-            // Score canvas: tiles drawn by the worker thread.
+            // Score canvas: tiles drawn by the worker thread. On Dark Page,
+            // a touch darker than before so it doesn't read as the same
+            // grey as the menus and track list, but still lighter than
+            // those (Mateus, 17 Oct 2026; Fluent's dark background is
+            // #1c1c1c, see docs/design/ui.md).
             canvas := Rectangle {
-                background: root.dark-page ? #2a2b2e : #d4d4d6;
+                background: root.dark-page ? #242528 : #d4d4d6;
                 clip: true;
                 flick := ScrollView {
                     content-width: max(self.visible-width, root.content-width + 48px);
@@ -317,6 +326,13 @@ export component AppWindow inherits Window {
                     changed content-y => { root.canvas-changed(); }
                     changed visible-width => { root.canvas-changed(); }
                     changed visible-height => { root.canvas-changed(); }
+                    for t in root.old-tiles : Image {
+                        x: root.origin-x + t.x;
+                        y: root.origin-y + t.y;
+                        width: t.size;
+                        height: t.size;
+                        source: t.image;
+                    }
                     for t in root.tiles : Image {
                         x: root.origin-x + t.x;
                         y: root.origin-y + t.y;
@@ -392,8 +408,9 @@ export component AppWindow inherits Window {
                 dragged(d) => { root.tracks-height = clamp(root.tracks-height - d, 48px, 400px); }
             }
 
-            // Track list: tick tracks to show them together; click a name to
-            // show that track alone.
+            // Track list: each track's notation buttons show it (both off
+            // hides it); click a name to show that track alone. No show tick:
+            // the buttons do that (Mateus, 17 Oct 2026).
             if root.show-tracks && root.has-score : Rectangle {
                 height: root.tracks-height;
                 background: Palette.alternate-background;
@@ -412,12 +429,6 @@ export component AppWindow inherits Window {
                                 horizontal-alignment: right;
                                 font-size: 12px;
                                 color: Palette.foreground.transparentize(0.4);
-                            }
-                            CheckBox {
-                                // Two-way, so the tick follows the model when
-                                // Multitrack or a click on a name changes it.
-                                checked <=> track.shown;
-                                toggled => { root.track-toggled(i); }
                             }
                             Rectangle {
                                 width: 260px;
