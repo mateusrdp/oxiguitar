@@ -6,7 +6,7 @@ members = ["crates/*"]
 exclude = ["spikes", "fuzz"]
 
 [workspace.package]
-version = "0.0.0"
+version = "0.1.0"
 edition = "2024"
 # Follows the rustc in Debian unstable, so apt's toolchain always builds OxiGuitar.
 rust-version = "1.97"
