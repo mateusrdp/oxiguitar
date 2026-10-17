@@ -165,7 +165,6 @@ export component AppWindow inherits Window {
     in-out property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
     in-out property <bool> dynamics: true;
-    in-out property <bool> multitrack: false;
     in-out property <bool> show-tracks: true;
     in-out property <length> tracks-height: 120px;
 
@@ -190,7 +189,6 @@ export component AppWindow inherits Window {
     callback tablature-clicked(int);
     in property <image> standard-icon;
     in property <image> tablature-icon;
-    callback multitrack-toggled();
     callback tool-picked(int);
     callback status-dismissed();
 
@@ -243,7 +241,6 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Horizontal"; checkable: true; checked <=> root.layout-2; activated => { root.pick-layout(2); root.settings-changed(); } }
                 MenuItem { title: "Parchment"; checkable: true; checked <=> root.layout-3; activated => { root.pick-layout(3); root.settings-changed(); } }
             }
-            MenuItem { title: "Multitrack"; checkable: true; checked <=> root.multitrack; enabled: root.tracks.length > 1; activated => { root.multitrack-toggled(); } }
             MenuSeparator { }
             MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }

@@ -48,7 +48,7 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 - Track names at the start of each system when several tracks are shown: full names on the first system, short names after, as in Guitar Pro's multitrack view.
 - The other three staff layouts (VIEW-3), checked against the Guitar Pro 8 user guide: **Vertical** (lines fill the window's width, one long sheet), **Horizontal** (every bar on one line) and **Parchment** (page-width lines with no page breaks, Guitar Pro 8's Page – Scroll). `oxiguitar-cli render --layout NAME [--width PT]`; long sheets are cut into PNGs of at most 8192 pixels.
 - Letter paper beside A4 (`--paper letter`). PDFs are always in pages, whatever the layout.
-- **The desktop app**, `oxiguitar` (crate `oxiguitar-app`, Slint), the first version of the viewer. File → Open (or `oxiguitar FILE`) opens any Guitar Pro 3–8 file; the score is drawn in tiles on a worker thread, so the window never waits. View → Layout (Page, Vertical, Horizontal, Parchment), Multitrack, Dark Page and Dynamics; the track list (F8) shows any set of tracks; the score-zoom slider (25–400 %) and interface zoom (Ctrl + wheel, Ctrl + + / − / 0); the Tools menu with Infer Key Signatures, greyed out with its reason when it cannot run; File → Export PDF… of the shown tracks on A4 or Letter (EXP-1); errors and tool reports in a status line. The system's own file dialogs (XDG desktop portal on Linux).
+- **The desktop app**, `oxiguitar` (crate `oxiguitar-app`, Slint), the first version of the viewer. File → Open (or `oxiguitar FILE`) opens any Guitar Pro 3–8 file; the score is drawn in tiles on a worker thread, so the window never waits. View → Layout (Page, Vertical, Horizontal, Parchment), Dark Page and Dynamics; the track list (F8) shows any set of tracks; the score-zoom slider (25–400 %) and interface zoom (Ctrl + wheel, Ctrl + + / − / 0); the Tools menu with Infer Key Signatures, greyed out with its reason when it cannot run; File → Export PDF… of the shown tracks on A4 or Letter (EXP-1); errors and tool reports in a status line. The system's own file dialogs (XDG desktop portal on Linux).
 - Test builds of the app for every system, beside the command-line tool.
 - Guitar Pro 3–5 tracks get the clef Guitar Pro gives them: bass clef for basses, treble at sounding pitch for keyboards and voices, treble 8vb for guitars (these formats store no clef).
 - Keyboard tracks (pianos, organs, …) are shown on a grand staff with a brace: right hand in the treble clef, left in the bass clef, split by hand range.
@@ -78,12 +78,12 @@ Milestone M0 (foundations) is complete and merged into `main` (16 October 2026).
 
 - Escape closes the Help notes (Keyboard and Mouse, About), as a click already did.
 - View → Layout and File → Paper Size tick only the current choice.
-- View → Multitrack follows the track list: ticked whenever more than one track is shown.
 - The score no longer blinks blank after a zoom, a new engraving (layout, tracks, paper, dynamics) or Dark Page: the old tiles, scaled to the new zoom, stay under the new ones until those cover the view.
 
 ### Changed
 
 - The track list has no show tick any more: a track's notation buttons show and hide it (both off hides it, either button shows it again), which saves room and leaves one control per job.
+- No View → Multitrack menu item either: showing a track's own buttons already shows it alongside the others, so the menu item did nothing the buttons didn't, for one more control to keep in sync.
 - Guitar Pro 6–8 files open about twice as fast: the XML tree keeps every element in one list and borrows names and text from the file instead of copying them (`oxiguitar-cli info` on Seek and Destroy: 0.11 s instead of 0.26 s). The scores and import logs read from every GPX and GP file in the corpus are unchanged.
 - Guitar Pro 6–8 beats keep their dynamic as a marking (`BeatEffects::dynamic`) as well as giving it to their notes as velocity, so the engraver can tell a marking from a velocity.
 - Beat text at the end of a system no longer runs off the page; the page test now checks where each text ends, not only where it starts.

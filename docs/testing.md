@@ -14,7 +14,7 @@ How OxiGuitar is tested, and the quality gates M1 sets. `cargo test --workspace`
 M1 asks that a 300-bar, 8-track file opens in under a second. `crates/oxiguitar-app/src/speed.rs` holds it:
 
 - **The score** is `oxiguitar_testgen::band_song(300)`: lead, rhythm and acoustic guitars, bass, piano, strings, voice with lyrics and drums, every track playing in every bar (sixteenths in the lead's solos). It is written as Guitar Pro 7 writes real files, with every note's pitch three ways and the usual beat properties: about 16 MB of score XML, as long as a real file of that size would be (Seek and Destroy, 258 bars and 5 tracks, is 10 MB).
-- **What is timed** is what the window does: the worker reads the file, engraves it with the settings the window starts with, and draws the tiles the first view asks for (16 tiles of 512 pixels at a high-resolution screen's scale). The clock starts when the file is asked for and stops at the last tile. Once with the first track shown (how a file opens), once with all eight (View → Multitrack).
+- **What is timed** is what the window does: the worker reads the file, engraves it with the settings the window starts with, and draws the tiles the first view asks for (16 tiles of 512 pixels at a high-resolution screen's scale). The clock starts when the file is asked for and stops at the last tile. Once with the first track shown (how a file opens), once with all eight shown.
 - **The check** takes the best of three runs, since a busy machine can only make a run slower, and holds only optimised builds to the budget. A debug build runs the same steps once and prints its times.
 
 Run it with:
