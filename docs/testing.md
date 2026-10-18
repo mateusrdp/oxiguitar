@@ -78,4 +78,4 @@ The second six-hour run (18 October 2026, [run 39105892287](https://github.com/m
 | Guitar Pro 6 (`guitar_pro_6`) | 371 million | 3,803 | 2,229 |
 | Guitar Pro 7/8 (`guitar_pro_7`) | 229 million | 4,265 | 1,324 |
 | GPIF XML (`gpif`) | 58 million | 4,539 | 2,679 |
-| The plugins' `dispatch` (`plugin_dispatch`), first three hours | 34 million | 7,722 | 2,814 |
+| The plugins' `dispatch` (`plugin_dispatch`) | 65 million | 9,025 | 3,221 |

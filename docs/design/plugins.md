@@ -53,8 +53,8 @@ As built (slice 4):
 │ left area  │        (always on the dark canvas)         │ right area │
 │            │                                     [zoom] │            │
 ├────────────┴────────────────────────────────────────────┴────────────┤
-│ Tracks | Mixer | tab                                   bottom area ▾ │
-│  1 Guitar        6 strings  [𝄞][TAB]                                 │
+│ Tracks | tab                                           bottom area ▾ │
+│  1 Guitar        6 strings  [𝄞][TAB]  vol ──●── pan ◐  [M][S]       │
 ├──────────────────────────────────────────────────────────────────────┤
 │ ● No output plugin found: get one from github.com/mateusrdp/… (footer)│
 └──────────────────────────────────────────────────────────────────────┘

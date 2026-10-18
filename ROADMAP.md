@@ -104,11 +104,12 @@ Turn the viewer into a small core with plugins, and give the window the shape th
 - [x] A test plugin built as an `.oxp` and the contract suite (`oxiguitar-plugin-test`); 30 manifests read in about 1 ms.
 - [x] Five format plugins from M1's readers: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp), each with its fixtures, corpus, fuzz and visual tests. The core holds no format code and recognises no format itself; `oxiguitar-cli` loads plugins like the app (PR #51, 18 Oct 2026). Every M1 gate passes through the `.oxp` files: 42 of 42 corpus files; all 159 Guitar Pro files read byte for byte as develop's in-process reader read them; the 50 visual references unchanged; the speed budget with the plugin loaded (0.26 s and 0.32 s for the first runs); the contract on all five; NET-5 with the plugins installed; a fuzz target for the plugins' dispatch.
 - [x] ~~Plugins for PDF export and for Infer Key Signatures~~: dropped. Both stay in the core, PDF export as a feature of the viewer and Infer Key Signatures as a feature of the editor (Mateus, 18 Oct 2026).
-- [ ] Plugin tabs (standard widgets and a display-list canvas) and events pushed to plugins; the plugin manager in the core (Tools → Plugins: list, enable, disable); `--safe-mode`; the plugin folders in Help → About. Built in session 11 (interface 1.1 in #53, the window's tabs and score events, the manager); left to tick: Mateus's check on sid.
-- [ ] Plugins built for all six targets in CI, attached to releases with SHA256SUMS; two packages, `oxiguitar` (the core) and `oxiguitar-plugins-basic` (Suggested by the core); the AppImage, the Windows zip and the .dmg each beside a zip of the basic plugins.
+- [x] Plugin tabs (standard widgets and a display-list canvas) and events pushed to plugins; the plugin manager in the core (Tools → Plugins: list, enable, disable); `--safe-mode`; the plugin folders in Help → About. Built in session 11 (interface 1.1 in #53, the window's tabs and score events, the manager); left to tick: Mateus's check on sid.
+- [x] Plugins built for all six targets in CI, attached to releases with SHA256SUMS; two packages, `oxiguitar` (the core) and `oxiguitar-plugins-basic` (Suggested by the core); the AppImage, the Windows zip and the .dmg each beside a zip of the basic plugins.
 - [x] Two Linux builds of the core: Wayland (default) and X11 (deprecated), as separate packages and AppImages (session 11): each holds only its own display system's code (checked in CI), with no exception (Slint pinned to 1.17.1 for a Wayland-only clipboard, ADR 0009); both are packaged, installed and started in CI.
+- [ ] The window shows what's coming (Mateus, 19 Oct 2026; docs/design/ui.md): the left area holds the editor's palette, every tool as its icon in Guitar Pro 8's groups, greyed out until M3; the Mixer tab goes, and each Tracks row gains the mixer's controls (volume slider, pan knob, mute and solo icon toggles), greyed out until the player. For the people starting to follow the project, so the window shows where it is going.
 - [ ] The plugin developer guide (`docs/plugins/`), with a template plugin, and the interface's contract test suite.
-- [ ] Debian: manual pages for both binaries, lintian in CI, a `debian/` directory building both packages offline in a sid container, and an audit of every crate against Debian's archive (plugins.md, "Debian"). The goal is Debian main.
+- [x] Debian: manual pages for both binaries, lintian in CI, a `debian/` directory building both packages offline in a sid container, and an audit of every crate against Debian's archive (plugins.md, "Debian"). The goal is Debian main.
 
 Done when: the core with no plugins opens nothing and says so, and a file no installed plugin recognises is refused with a request for a feature (or for a bug report, when an installed plugin declares its extension); with our plugins, every M1 gate still passes (42 of 42 corpus files, the speed budget including plugin loading, the 50 visual references unchanged, six hours of fuzzing per reader); start-up reads 30 plugin manifests in under 10 ms; the plugin manager works on all three systems; the developer guide builds a working plugin from the template.
 
@@ -131,7 +132,7 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
      - the contract suite on all five.
    - CI stops using `--all-features`, since two plugin crates linked into one test binary would both export the entry symbol; the features it needs are named instead.
 2. ~~PDF export and Infer Key Signatures as plugins.~~ **Dropped** (Mateus, 18 Oct 2026): PDF export stays in the core as a feature of the viewer, and Infer Key Signatures as a feature of the editor. Other tools and other exports (PNG, SVG, WAV) are still plugins; the interface gains exporter and tool contributions when the first such plugin needs them. The versioned wire form of the display list comes with slice 3, for plugin tabs' canvases (ADR 0008, answer 8).
-3. **Plugin tabs and the plugin manager.** Built in session 11 (#52–#57, 18 Oct 2026); the one gate left is Mateus's check on sid.
+3. **Plugin tabs and the plugin manager.** Done (#52–#57, 18 Oct 2026); Mateus checked it on sid on 19 Oct 2026.
    - First the interface for tabs: standard widgets the core draws in its own style, plus a canvas the plugin draws with a versioned wire form of the display list and receives pointer events on. Then events pushed to plugins: score opened or changed, selection, playback position. No polling.
    - Then the plugin manager, **in the core** (Mateus, 18 Oct 2026; ADR 0008, "Amendments"): Tools → Plugins opens a separate, non-modal window listing every plugin file in the plugin folders (name, version, a tickbox to enable or disable it from the next start, its folder, loaded or not and why not). It copies, downloads, installs and removes nothing, draws no settings forms, and makes no distinction between our plugins and others'.
    - In the core: `--safe-mode` (no plugins at all) and the plugin folders in Help → About.
@@ -141,14 +142,16 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
    - `oxiguitar-app` features `wayland` (default) and `x11`, each enabling only Slint's `backend-winit-wayland` or `backend-winit-x11`; `display_system()` then follows the build.
    - Packages `oxiguitar` and `oxiguitar-x11` (which Provides, Conflicts with and Replaces `oxiguitar`), and two AppImages; the manual says the X11 build will be dropped.
    - CI checks that the Wayland build holds no X11 crate and the reverse, and runs the Wayland build's headless tests in the nested compositor (`scripts/wayland-dnd-test/`).
-5. **Packages and Debian.**
+5. **Packages and Debian.** Done (#59–#63, 19 Oct 2026).
    - Done: releases attach every plugin for all six targets (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp` …) with SHA256SUMS.
    - Done: `oxiguitar-plugins-basic` (.deb and .rpm, into `/usr/lib/oxiguitar/plugins/`), which the core Suggests; the AppImage, the Windows zip and the .dmg each come as two downloads, the core and a zip of the basic plugins (Mateus, 18 Oct 2026: no plugins inside the AppImage).
    - Done: the audit of every crate against Debian's archive, weekly (`docs/debian.md`; 19 Oct 2026: 276 of 424 at our version, 28 missing, chiefly Slint 1.17.1 itself and krilla).
    - Done: manual pages for `oxiguitar` and `oxiguitar-cli` (`assets/linux/man/`), in the .deb and .rpm; lintian from sid on every .deb in the release workflow, errors and warnings failing it (only the two tags about the issue-tracker contact suppressed).
    - Done: `debian/` (dh-cargo) building both packages offline in a sid container, lintian-clean, with Noto Sans from `fonts-noto-core` (`docs/debian.md`). Its crates come from a vendor component until Debian packages them all: chiefly Slint 1.17.1 and krilla, which the weekly audit follows.
+6. **The window shows what's coming** (Mateus, 19 Oct 2026). The editor's palette in the left area, greyed out, which then starts open; the Mixer tab removed and the mixer's controls in each Tracks row, greyed out. Gates: the visual and speed checks, headless screenshots of both themes, Mateus on sid.
+7. **The plugin developer guide** (`docs/plugins/`) and its template plugin, before v0.2 freezes interface 1.0.
 
-The plugin developer guide (`docs/plugins/`) and its template plugin come after slice 3, when the interface has every M2 contribution, and before v0.2 freezes interface 1.0.
+Then v0.2: the develop → main pull request, which Mateus merges and tags.
 
 ## M3 — Editor (v0.5)
 
@@ -159,7 +162,7 @@ Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; r
 
 ## M4 — Player (v1.0)
 
-- In the core: score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); the transport in the top area (play, play selection, stop, pause, rewind, count-in, loop, audible and visual metronome, PLAY-5); the follow cursor; the mixer (PLAY-6); the output choice.
+- In the core: score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); the transport in the top area (play, play selection, stop, pause, rewind, count-in, loop, audible and visual metronome, PLAY-5); the follow cursor; the mixer (PLAY-6), in each Tracks row rather than a tab of its own; the output choice.
 - As plugins: the MIDI instrument (a SoundFont synthesiser, PLAY-1, with downloads of better SoundFonts at the user's request, PLAY-8), audio-device plugins per system, WAV export (PLAY-7). Instruments declare the classes of instrument they play.
 - v1.0's minimum: the Guitar Pro 7+ format plugin reading and writing, and the basic MIDI player, in `oxiguitar-plugins-basic`.
 
