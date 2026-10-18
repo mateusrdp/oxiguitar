@@ -1,6 +1,6 @@
 # Architecture
 
-OxiGuitar is a small core and a set of plugins (decided 18 Oct 2026; [ADR 0008](docs/adr/0008-plugin-architecture.md), [docs/design/plugins.md](docs/design/plugins.md)). The core holds the score, shows and edits it, and drives the player's transport; file formats, sound, exports, tools and anything platform-specific are plugins, loaded only when used. Inside the core, one score model sits at the centre of a Cargo workspace; layout, editing, the plugin host and the GUI are separate crates around it, so the GUI can change without touching the music code, and the command-line tool can render and test files in CI without a window.
+OxiGuitar is a small core and a set of plugins (decided 18 Oct 2026; [ADR 0008](docs/adr/0008-plugin-architecture.md), [docs/design/plugins.md](docs/design/plugins.md)). The core holds the score, shows it (with PDF export) and edits it (with Infer Key Signatures), and drives the player's transport; file formats, sound, other exports and tools, and anything platform-specific are plugins, loaded only when used. The core recognises no file format itself: what it can open is what the installed plugins recognise (ADR 0008, "Amendments"). Inside the core, one score model sits at the centre of a Cargo workspace; layout, editing, the plugin host and the GUI are separate crates around it, so the GUI can change without touching the music code, and the command-line tool can render and test files in CI without a window.
 
 ```text
    THE CORE                                             PLUGINS (.oxp files, M2 on)
@@ -9,9 +9,9 @@ OxiGuitar is a small core and a set of plugins (decided 18 Oct 2026; [ADR 0008](
         |      |       |      \            |           formats: gp3 gp4 gp5 gpx gp
         |      |       |       \           |                    (later musicxml abc
         v      v       v        v           v                     mscz midi)
-   render  oxiguitar-edit  oxiguitar-host --------------> exporters: pdf png wav
-   (screen) (commands,     (folders, settings,            tools: infer-key-signatures
-     |       undo/redo)     manifests, loading,           instruments: midi nam rse drums
+   render  oxiguitar-edit  oxiguitar-host --------------> exporters: png svg wav
+   (screen, (commands,     (folders, settings,            tools (later)
+    PDF)     undo/redo)     manifests, loading,           instruments: midi nam rse drums
      v         |            services)  ^                  services: audio and midi devices,
    display <- layout       oxiguitar-play                           wayland drops ...
    (display    |           (events, transport,            plugin manager
@@ -30,7 +30,7 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | Crate | Status | Purpose |
 | --- | --- | --- |
 | `oxiguitar-model` | M0 | The score model: data types only, no I/O. Its `wire` feature converts to and from the score as it crosses the plugin interface. |
-| `oxiguitar-formats` | M0 | Format detection from contents (FMT-6), readers and writers, import logs (FMT-2). In M2 its readers move into one format plugin each; what they share stays here as a library the plugins use. |
+| `oxiguitar-formats` | M0 | Format detection from contents (FMT-6), readers and writers, import logs (FMT-2). In M2 its readers move into one format plugin each; what they share stays here as a library the plugins use, with one Cargo feature per reader, and the core stops depending on it. |
 | `oxiguitar-cli` | M0 | `info`, `render`, `tools`, later `convert` and test helpers. Used by CI. Loads plugins like the app from M2. |
 | `oxiguitar-host` | M2 | The plugin host: the user folder, settings.json (one copy shared by the app and the plugins), the plugin folders, reading manifests without loading code (`oxp.rs`, with `object`), loading plugins on first use and never unloading them (`loader.rs`, the host's one `unsafe` module, with `libloading`), and `Plugins`: formats by signature, instruments by class, services by conditions, priority, probe and settings. |
 | `oxiguitar-plugin-api` | M2 | The plugin interface: the C tables, the messages (postcard), the manifest (JSON in the `oxg_manifest` section), the score as plugins see it, format signatures, instrument classes. MIT OR Apache-2.0. |
@@ -40,8 +40,8 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | `oxiguitar-edit` | M3 | Edit commands, selection, undo and redo. |
 | `oxiguitar-display` | M0 | The display list (positioned glyph runs, lines, rectangles, paths, colour roles), the bundled fonts and SMuFL metadata (ADR 0005). |
 | `oxiguitar-layout` | M1 | Engraving: turns the model into a display list per page, or one long sheet, in four layouts. See [docs/design/engraving.md](docs/design/engraving.md). |
-| `oxiguitar-tools` | M1 | The Tools menu: actions the user starts that change a score, such as inferring key signatures. Model only, one shape per tool. Becomes a plugin in M2. See [docs/design/tools.md](docs/design/tools.md). |
-| `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. In M2 the PDF part moves into the PDF export plugin. |
+| `oxiguitar-tools` | M1 | The Tools menu's core tools: actions the user starts that change a score, such as inferring key signatures. Model only, one shape per tool. Stays in the core: Infer Key Signatures is a feature of the editor (18 Oct 2026). See [docs/design/tools.md](docs/design/tools.md). |
+| `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. PDF export stays in the core, a feature of the viewer (18 Oct 2026). |
 | `oxiguitar-play` | M4 | Score-to-event conversion, the transport, the mixer. The synthesiser and the audio device are plugins. |
 | `oxiguitar-app` | M1 | The desktop window, binary `oxiguitar`, in Slint (ADR 0004), following [docs/design/ui.md](docs/design/ui.md). A worker thread reads, engraves and draws the score as tiles; the window only shows them, so it never waits on the music code. |
 
