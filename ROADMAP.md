@@ -146,7 +146,7 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
    - Done: `oxiguitar-plugins-basic` (.deb and .rpm, into `/usr/lib/oxiguitar/plugins/`), which the core Suggests; the AppImage, the Windows zip and the .dmg each come as two downloads, the core and a zip of the basic plugins (Mateus, 18 Oct 2026: no plugins inside the AppImage).
    - Done: the audit of every crate against Debian's archive, weekly (`docs/debian.md`; 19 Oct 2026: 276 of 424 at our version, 28 missing, chiefly Slint 1.17.1 itself and krilla).
    - Done: manual pages for `oxiguitar` and `oxiguitar-cli` (`assets/linux/man/`), in the .deb and .rpm; lintian from sid on every .deb in the release workflow, errors and warnings failing it (only the two tags about the issue-tracker contact suppressed).
-   - The rest of the Debian work towards main: a `debian/` directory (dh-cargo) building both packages offline in a sid container, and `fonts-noto-core` instead of our Noto copy.
+   - Done: `debian/` (dh-cargo) building both packages offline in a sid container, lintian-clean, with Noto Sans from `fonts-noto-core` (`docs/debian.md`). Its crates come from a vendor component until Debian packages them all: chiefly Slint 1.17.1 and krilla, which the weekly audit follows.
 
 The plugin developer guide (`docs/plugins/`) and its template plugin come after slice 3, when the interface has every M2 contribution, and before v0.2 freezes interface 1.0.
 
