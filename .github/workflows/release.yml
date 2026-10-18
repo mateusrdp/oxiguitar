@@ -155,29 +155,20 @@ jobs:
             apt-get remove -y oxiguitar-x11 oxiguitar-plugins-basic
             test ! -e /usr/lib/oxiguitar
           ' "$SAMPLE"
-      # Debian's own package checker, from sid, on every .deb. Errors and
-      # warnings fail the release. Suppressed, and nothing else: the two
-      # tags about the contact being the issue tracker rather than an email
-      # (Mateus, 18 Oct 2026; scripts/package/linux.sh, "maintainer").
-      # Each error and warning also becomes an annotation on the check run.
+      # Debian's own package checker, from sid, on every .deb
+      # (scripts/package/lintian.sh). Errors and warnings fail the release,
+      # but for the two tags about the contact being the issue tracker
+      # rather than an email (Mateus, 18 Oct 2026; scripts/package/linux.sh,
+      # "maintainer").
       - name: Lintian
         run: |
-          status=0
-          docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euc '
+          docker run --rm -e GITHUB_ACTIONS -v "$PWD:/w" -w /w debian:sid bash -euc '
             apt-get update -qq
             DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends lintian > /dev/null
-            lintian --version
-            lintian --allow-root --display-info --pedantic --tag-display-limit 0 \
-              --fail-on error,warning \
-              --suppress-tags malformed-contact,bogus-mail-host-in-debian-changelog \
-              dist/*.deb > lintian.txt 2> lintian.err
-          ' || status=$?
-          cat lintian.txt lintian.err
-          grep -E '^[EW]: ' lintian.txt | sed 's/^/::error title=lintian::/' || true
-          if [[ "$status" -ne 0 ]] && ! grep -qE '^[EW]: ' lintian.txt; then
-            tail -n 5 lintian.err | sed 's/^/::error title=lintian failed::/'
-          fi
-          exit "$status"
+            scripts/package/lintian.sh \
+              --allow malformed-contact --allow bogus-mail-host-in-debian-changelog \
+              dist/*.deb
+          '
       - name: Test the .rpm packages on Fedora
         run: |
           docker run --rm -v "$PWD:/w" -w /w fedora:latest bash -euxc '
