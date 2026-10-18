@@ -8,11 +8,19 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 - ADR 0007: macOS "open document" events (a double-click in Finder, Open With, a drop on the Dock icon) wait for winit or Slint to report them, the same way Wayland drops do (ADR 0006); CONTRIBUTING.md lists it under "Known platform gaps". CONTRIBUTING.md gains "Design principles": no polling ever, no hacks, speed, elegance.
 - The .deb's Maintainer field points to the GitHub issue tracker by decision, never to a personal address.
+- The window takes its final shape (M2): a toolbar of sections under the menus (File: Open, Save, Export PDF; Edit: Undo, Redo: only what is clicked often), four tabbed areas around the page (top: Player; bottom: Tracks, Mixer; left: Palette; right: Inspector) that collapse to their tab strip, resize, and hide from View → Panels (F7 left, F8 bottom), and a footer line with the latest message that expands into every message of the session. The player's controls (rewind, play, play selection, pause, stop, count-in, loop, metronome) and its output choice are in the top area, greyed out until an output plugin is installed. Tabs that wait for the editor or the player show what they will hold. Our own icons, in `assets/icons/ui/`.
+- On launch the app makes sure its folders exist: on Linux, following the freedesktop XDG convention, `settings.json` (created as `{}`) in `~/.config/oxiguitar/` and the `plugins` folder in `~/.local/share/oxiguitar/`; on macOS both in `~/Library/Application Support/OxiGuitar/`, on Windows in `%APPDATA%\OxiGuitar\` (`OXIGUITAR_HOME` puts everything in one folder). It looks for plugin files (`.oxp`) in the user's and the system's plugin folders (or those `plugin_folders` lists in settings.json), and says in the footer when no output plugin, or no plugin that reads and writes files, is installed, with where to get them. New crate `oxiguitar-host`.
+- The View menu remembers its settings in settings.json (`view`: dark interface, dark page, dynamics, layout, paper). A new View → Dark Interface tick switches the window's own colours; the interface is dark by default and the page white.
+- Manual: "The window" and "Settings and plugins".
 
 ### Changed
 
 - cargo-deny accepts RUSTSEC-2026-0370, 0371 and 0372 (zvariant, zvariant_derive and zbus_names are unmaintained since zbus 6 took them in, published 17 Oct 2026). They come in through zbus 5, which Slint 1.18's winit backend and AccessKit still use; revisit on the next Slint upgrade.
 - The plan: the plugin system moves forward to M2, before the editor (Mateus, 18 Oct 2026). The core keeps reading, editing, writing, showing and the player's controls; every file format (one plugin each), sound, export, tool and platform-specific feature becomes a plugin. Design in `docs/design/plugins.md`, decision record ADR 0008 (accepted with Mateus's answers: native plugins, XDG folders on Linux, two Linux builds (Wayland, deprecated X11), packages `oxiguitar` and `oxiguitar-plugins-basic`, Debian main as the goal, instrument classes for output plugins, v1.0 = viewer, editor, player and plugins); ROADMAP.md and ARCHITECTURE.md renumbered and redrawn (M2 plugins and window shell, M3 editor, M4 player = v1.0, M5 Guitar Pro 8 parity, M6 format plugins, M7 NAM, M8 RSE, M9 drums and hardware, M10 mobile).
+- The mouse wheel over the page zooms the score, keeping the point under the pointer in place; Shift + wheel scrolls. Ctrl + wheel still zooms the whole interface, anywhere in the window.
+- The background around the page is always dark (`#242528`), with or without Dark Page.
+- Messages (errors, tool reports, exports) go to the footer instead of the status pill over the score, and stay until a newer one arrives.
+- The app no longer builds Slint's system-tray support (ksni), which it never used; `deny.toml` no longer needs the Unlicense.
 
 ### Fixed
 

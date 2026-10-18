@@ -16,6 +16,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::JoinHandle;
 
 use oxiguitar_display::{Rect, Theme};
+use oxiguitar_host::Level;
 use oxiguitar_render::Raster;
 
 use crate::canvas::Sheets;
@@ -68,8 +69,8 @@ pub(crate) enum Event {
     },
     /// The Tools menu changed (after a tool ran).
     Tools(Vec<ToolEntry>),
-    /// A message for the status line.
-    Status(String),
+    /// A message for the footer: an error, or a report such as a tool's.
+    Message(Level, String),
 }
 
 impl std::fmt::Debug for Event {
@@ -81,7 +82,7 @@ impl std::fmt::Debug for Event {
             }
             Event::Tile { col, row, .. } => write!(f, "Tile({col}, {row})"),
             Event::Tools(t) => write!(f, "Tools({})", t.len()),
-            Event::Status(s) => write!(f, "Status({s:?})"),
+            Event::Message(l, s) => write!(f, "Message({l:?}, {s:?})"),
         }
     }
 }
@@ -138,7 +139,7 @@ fn run(rx: &Receiver<Request>, sink: &dyn Fn(Event)) {
     let engraver = match Engraver::new() {
         Ok(e) => e,
         Err(e) => {
-            sink(Event::Status(e));
+            sink(Event::Message(Level::Error, e));
             return;
         }
     };
@@ -220,7 +221,7 @@ fn run(rx: &Receiver<Request>, sink: &dyn Fn(Event)) {
                 };
                 let report = doc.apply_tool(i);
                 sink(Event::Tools(doc.tools()));
-                sink(Event::Status(report));
+                sink(Event::Message(Level::Info, report));
                 engrave(&mut st, sink);
             }
             Request::ExportPdf(path, settings) => {
@@ -230,15 +231,18 @@ fn run(rx: &Receiver<Request>, sink: &dyn Fn(Event)) {
                 let name = file_name(&path);
                 let message = match st.engraver.pdf(doc, &settings) {
                     Ok((bytes, pages)) => match std::fs::write(&path, bytes) {
-                        Ok(()) => format!(
-                            "Exported {name}: {pages} page{}.",
-                            if pages == 1 { "" } else { "s" }
+                        Ok(()) => (
+                            Level::Info,
+                            format!(
+                                "Exported {name}: {pages} page{}.",
+                                if pages == 1 { "" } else { "s" }
+                            ),
                         ),
-                        Err(e) => format!("Could not write {name}: {e}."),
+                        Err(e) => (Level::Error, format!("Could not write {name}: {e}.")),
                     },
-                    Err(e) => format!("Could not export {name}: {e}."),
+                    Err(e) => (Level::Error, format!("Could not export {name}: {e}.")),
                 };
-                sink(Event::Status(message));
+                sink(Event::Message(message.0, message.1));
             }
         }
     }
@@ -255,7 +259,7 @@ fn open(st: &mut State, path: PathBuf, sink: &dyn Fn(Event)) {
             });
             st.doc = Some(doc);
         }
-        Err(e) => sink(Event::Status(e)),
+        Err(e) => sink(Event::Message(Level::Error, e)),
     }
 }
 
@@ -353,8 +357,8 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let pdf = dir.join("song.pdf");
         worker.send(Request::ExportPdf(pdf.clone(), Settings::default()));
-        let Event::Status(s) = next(&rx) else {
-            panic!("expected a status")
+        let Event::Message(Level::Info, s) = next(&rx) else {
+            panic!("expected a report")
         };
         assert_eq!(s, "Exported song.pdf: 1 page.");
         assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF"));
@@ -362,7 +366,7 @@ mod tests {
 
         worker.send(Request::ApplyTool(0));
         assert!(matches!(next(&rx), Event::Tools(_)));
-        assert!(matches!(next(&rx), Event::Status(_)));
+        assert!(matches!(next(&rx), Event::Message(Level::Info, _)));
         assert!(matches!(next(&rx), Event::Engraved { .. }));
         drop(worker);
     }
@@ -374,7 +378,7 @@ mod tests {
             let _ = tx.send(e);
         });
         worker.send(Request::Open(PathBuf::from("/no/such/song.gp")));
-        assert!(matches!(next(&rx), Event::Status(s) if s.contains("song.gp")));
+        assert!(matches!(next(&rx), Event::Message(Level::Error, s) if s.contains("song.gp")));
         worker.send(Request::Engrave(Settings::default()));
         worker.send(Request::Open(fixture()));
         assert!(matches!(next(&rx), Event::Opened { .. }));

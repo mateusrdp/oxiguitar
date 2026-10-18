@@ -20,10 +20,24 @@ oxiguitar-display.workspace = true
 oxiguitar-layout.workspace = true
 oxiguitar-render.workspace = true
 oxiguitar-tools.workspace = true
+oxiguitar-host.workspace = true
+serde_json.workspace = true
 tiny-skia.workspace = true
-# GUI (ADR 0004). unstable-winit-030: the window's raw events, for interface
-# zoom (Ctrl + wheel) before any widget sees them.
-slint = { version = "1.18", features = ["unstable-winit-030"] }
+# GUI (ADR 0004). unstable-winit-030: the window's raw events, for the
+# zooms (wheel and Ctrl + wheel) before any widget sees them. No default
+# features: those bring Slint's system-tray support (ksni, a D-Bus client),
+# which the app never uses, and the app carries no code it can't use
+# (docs/design/plugins.md). Both renderers stay: the software renderer is
+# Slint's fallback where OpenGL isn't available.
+slint = { version = "1.18", default-features = false, features = [
+    "std",
+    "compat-1-2",
+    "backend-winit",
+    "renderer-femtovg",
+    "renderer-software",
+    "accessibility",
+    "unstable-winit-030",
+] }
 # The system's own Open and Save dialogs: the XDG desktop portal on Linux
 # (pure Rust, no GTK), the native dialogs on Windows and macOS.
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal", "wayland"] }

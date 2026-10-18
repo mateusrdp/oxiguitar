@@ -9,4 +9,4 @@
 | **Horizontal** | Screen – Horizontal | The whole song on one long line, scrolling sideways |
 | **Parchment** | Page – Scroll | Systems as wide as the page, in one long column without page breaks |
 
-Scroll with the mouse wheel, the arrow keys, Page Up and Page Down, Space, Home and End. In the Horizontal layout the wheel scrolls along the line when the line fits the window's height.
+Scroll with Shift and the mouse wheel, the scroll bars, the arrow keys, Page Up and Page Down, Space, Home and End. In the Horizontal layout Shift and the wheel scroll along the line when the line fits the window's height. The wheel alone zooms the score ([Zoom](zoom.md)).
