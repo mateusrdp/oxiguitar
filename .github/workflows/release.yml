@@ -177,21 +177,41 @@ jobs:
             # Without FUSE on the runner, the runtime unpacks and runs.
             APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 $run "$appimage" "$SAMPLE"
           done
+      # With archive: false a step uploads exactly one file, so one step
+      # per package; each pattern matches one (versions start with a digit).
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.deb
+          path: dist/oxiguitar_*.deb
           archive: false
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.rpm
+          path: dist/oxiguitar-x11_*.deb
           archive: false
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.AppImage
+          path: dist/oxiguitar-[0-9]*.rpm
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/oxiguitar-x11-*.rpm
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-[0-9]*.AppImage
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-x11-*.AppImage
           archive: false
           retention-days: 14
           if-no-files-found: error

@@ -2,6 +2,7 @@
 
 - Status: accepted (revisit on every winit or Slint upgrade)
 - Date: 2026-10-17
+- Note (19 Oct 2026): written against Slint 1.18; the app is now pinned to Slint 1.17.1 ([ADR 0009](0009-wayland-first.md)), on the same winit 0.30.13.
 - Milestone: M1
 
 ## Context

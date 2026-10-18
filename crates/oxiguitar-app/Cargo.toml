@@ -42,7 +42,16 @@ tiny-skia.workspace = true
 # stay: the software renderer is Slint's fallback where OpenGL isn't
 # available. The windowing backend comes from the `wayland` or `x11`
 # feature below, never both in a release build.
-slint = { version = "1.18", default-features = false, features = [
+#
+# Pinned to 1.17.1, Debian unstable's Slint (Mateus, 19 Oct 2026: Wayland
+# first). Slint 1.18 replaced the clipboard of its Wayland backend
+# (copypasta → smithay-clipboard, on the window's own Wayland connection,
+# which works on every compositor) with arboard, which always carries X11
+# code and, where the compositor lacks the data-control protocol (GNOME),
+# reaches the clipboard through XWayland. Upgrade only to a Slint whose
+# Wayland build holds no X11 crate: scripts/check-display-crates.sh fails
+# otherwise.
+slint = { version = "=1.17.1", default-features = false, features = [
     "std",
     "compat-1-2",
     "renderer-femtovg",
@@ -52,9 +61,9 @@ slint = { version = "1.18", default-features = false, features = [
 # The window's raw events (the wheel and Ctrl + wheel before any widget sees
 # them, file drops): the crate `slint::winit_030` re-exports, taken directly
 # because Slint's `unstable-winit-030` feature turns on both Linux display
-# systems. Slint pins it to its own exact version, so the two never drift
-# apart. No features of its own: the build's feature picks the backend.
-i-slint-backend-winit = { version = "1.18", default-features = false }
+# systems. Pinned with Slint (Slint itself pins it to its own exact
+# version). No features of its own: the build's feature picks the backend.
+i-slint-backend-winit = { version = "=1.17.1", default-features = false }
 # The system's own Open and Save dialogs: the XDG desktop portal on Linux
 # (pure Rust, no GTK), the native dialogs on Windows and macOS. Its
 # `wayland` feature comes with the Wayland build.
@@ -67,7 +76,8 @@ oxiguitar-testgen.workspace = true
 oxiguitar-plugin-test.workspace = true
 
 [build-dependencies]
-slint-build = "1.18"
+# With Slint (see above).
+slint-build = "=1.17.1"
 
 # The workspace's lints, except that unsafe code is denied rather than
 # forbidden: the code Slint generates for ui/app.slint allows it locally,

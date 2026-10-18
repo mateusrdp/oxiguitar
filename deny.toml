@@ -4,6 +4,17 @@
 
 [graph]
 all-features = true
+# The six targets we build and ship. Without this list cargo-deny also counts
+# dependencies no build of ours compiles, such as rav1e's libfuzzer-sys, which
+# exists only under `cfg(fuzzing)`.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
 
 [advisories]
 version = 2
@@ -21,6 +32,13 @@ ignore = [
     { id = "RUSTSEC-2026-0370", reason = "zvariant merged into zbus 6; Slint 1.18 and AccessKit still use zbus 5" },
     { id = "RUSTSEC-2026-0371", reason = "zbus_names merged into zbus 6; Slint 1.18 and AccessKit still use zbus 5" },
     { id = "RUSTSEC-2026-0372", reason = "zvariant_derive merged into zbus 6; Slint 1.18 and AccessKit still use zbus 5" },
+    # Slint is pinned to 1.17.1 for a Wayland-only clipboard (ADR 0009). Its
+    # code generator (a build dependency, not in the program) takes the image
+    # crate with every format, whose AVIF encoder uses `paste`; its SVG
+    # support (resvg 0.47) uses `rustybuzz`. Both are unmaintained, not
+    # vulnerable. They go when the Slint pin moves.
+    { id = "RUSTSEC-2024-0436", reason = "paste, unmaintained; build time only, via Slint 1.17.1's code generator (ADR 0009)" },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz, unmaintained; via Slint 1.17.1's resvg 0.47 (ADR 0009)" },
 ]
 
 [licenses]

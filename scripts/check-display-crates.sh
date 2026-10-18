@@ -4,22 +4,16 @@
 #
 # The two Linux builds (docs/design/plugins.md): the Wayland build must hold
 # no X11 crate and the X11 build no Wayland crate, on every Linux target we
-# ship. Reads `cargo tree`; builds nothing.
-#
-# One exception, by necessity: the clipboard crate Slint's winit backend
-# uses (arboard) depends on x11rb on every Linux build. On Wayland it is the
-# clipboard's fallback through XWayland, where the compositor lacks the
-# data-control protocol (GNOME), so it is live code, not dead code; x11rb is
-# pure Rust and links no X11 library. It is allowed only through arboard.
+# ship. No exceptions: Wayland comes first, and only the X11 build carries
+# X11 code (Mateus, 19 Oct 2026). Reads `cargo tree`; builds nothing.
 #
 # Usage: scripts/check-display-crates.sh
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-x11='^(x11|x11-dl|x11rb|x11rb-protocol|x11-clipboard|xcb|tiny-xlib|as-raw-xcb-connection|glutin_glx_sys|xkbcommon-x11|winit-x11)$'
+x11='^(x11|x11-dl|x11rb|x11rb-protocol|x11-clipboard|xcb|tiny-xlib|as-raw-xcb-connection|glutin_glx_sys|xkbcommon-x11|winit-x11|arboard)$'
 wayland='^(wayland-.*|smithay-client-toolkit|smithay-clipboard|sctk-adwaita|calloop-wayland-source|wl-clipboard-rs)$'
-allowed_in_wayland='^(x11rb|x11rb-protocol)$'
 
 failed=0
 crates() {
@@ -32,24 +26,22 @@ for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
     wl_build="$(crates "$target" "")"
     x11_build="$(crates "$target" "--no-default-features --features x11")"
 
-    bad="$(grep -E "$x11" <<< "$wl_build" | grep -Ev "$allowed_in_wayland" || true)"
+    bad="$(grep -E "$x11" <<< "$wl_build" || true)"
     if [[ -n "$bad" ]]; then
         echo "::error title=Two Linux builds::the Wayland build for $target holds X11 crates: ${bad//$'\n'/, }"
         failed=1
-    fi
-    # The allowed X11 crates only through the clipboard.
-    if grep -qx x11rb <<< "$wl_build"; then
-        parents="$(cargo tree --locked -q -p oxiguitar-app -e normal --target "$target" -i x11rb --depth 1 --prefix none \
-            | sed -E 's/ v[0-9].*$//; s/ \(\*\)$//' | grep -vx x11rb | sort -u)"
-        if [[ "$parents" != "arboard" ]]; then
-            echo "::error title=Two Linux builds::in the Wayland build for $target, x11rb comes from more than the clipboard: ${parents//$'\n'/, }"
-            failed=1
-        fi
     fi
     grep -Eq "$wayland" <<< "$wl_build" || {
         echo "::error title=Two Linux builds::the Wayland build for $target holds no Wayland crate"
         failed=1
     }
+
+    # Keyboard maps are shared; their X11 part only in the X11 build.
+    if cargo tree --locked -q -p oxiguitar-app -e features --target "$target" -i xkbcommon-dl 2> /dev/null \
+        | grep -q 'xkbcommon-dl feature "x11"'; then
+        echo "::error title=Two Linux builds::the Wayland build for $target turns on xkbcommon-dl's X11 support"
+        failed=1
+    fi
 
     bad="$(grep -E "$wayland" <<< "$x11_build" || true)"
     if [[ -n "$bad" ]]; then

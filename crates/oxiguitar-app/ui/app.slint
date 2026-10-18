@@ -331,8 +331,8 @@ export component AppWindow inherits Window {
     // Tiles from before a zoom or a new engraving, shown under the new ones
     // until those cover the view (main.rs).
     in property <[TileItem]> old-tiles;
-    out property <length> view-x: -flick.content-x;
-    out property <length> view-y: -flick.content-y;
+    out property <length> view-x: -flick.viewport-x;
+    out property <length> view-y: -flick.viewport-y;
     out property <length> view-width: flick.visible-width;
     out property <length> view-height: flick.visible-height;
     // Where the page's viewport sits in the window, for the mouse wheel
@@ -342,8 +342,14 @@ export component AppWindow inherits Window {
     out property <length> canvas-width: canvas.width;
     out property <length> canvas-height: canvas.height;
     // Pages are centred when narrower than the canvas.
-    out property <length> origin-x: max(24px, (flick.visible-width - root.content-width) / 2);
-    out property <length> origin-y: 24px;
+    // Tiles sit on whole device pixels: at a fractional position Slint 1.17
+    // blends their edges with the canvas behind, a faint line between tiles.
+    // The origin is rounded, and the tiles are shifted by whatever fraction
+    // the scroll position has (after a zoom around the pointer, say).
+    out property <length> origin-x: round(max(24px, (flick.visible-width - root.content-width) / 2) / 1phx) * 1phx;
+    out property <length> origin-y: round(24px / 1phx) * 1phx;
+    property <length> snap-x: round(flick.viewport-x / 1phx) * 1phx - flick.viewport-x;
+    property <length> snap-y: round(flick.viewport-y / 1phx) * 1phx - flick.viewport-y;
 
     // View settings.
     in-out property <int> layout: 0;
@@ -459,13 +465,13 @@ export component AppWindow inherits Window {
 
     // Scroll the canvas by (dx, dy), within its bounds.
     public function scroll-by(dx: length, dy: length) {
-        flick.content-x = clamp(flick.content-x - dx, min(0px, flick.visible-width - flick.content-width), 0px);
-        flick.content-y = clamp(flick.content-y - dy, min(0px, flick.visible-height - flick.content-height), 0px);
+        flick.viewport-x = clamp(flick.viewport-x - dx, min(0px, flick.visible-width - flick.viewport-width), 0px);
+        flick.viewport-y = clamp(flick.viewport-y - dy, min(0px, flick.visible-height - flick.viewport-height), 0px);
     }
     // Put canvas pixel (x, y) at the top left of the view.
     public function scroll-to(x: length, y: length) {
-        flick.content-x = clamp(-x, min(0px, flick.visible-width - flick.content-width), 0px);
-        flick.content-y = clamp(-y, min(0px, flick.visible-height - flick.content-height), 0px);
+        flick.viewport-x = clamp(-x, min(0px, flick.visible-width - flick.viewport-width), 0px);
+        flick.viewport-y = clamp(-y, min(0px, flick.visible-height - flick.viewport-height), 0px);
     }
 
     MenuBar {
@@ -563,7 +569,7 @@ export component AppWindow inherits Window {
             } else if (event.text == Key.Home) {
                 root.scroll-to(0, 0);
             } else if (event.text == Key.End) {
-                root.scroll-to(flick.content-width, flick.content-height);
+                root.scroll-to(flick.viewport-width, flick.viewport-height);
             } else {
                 return reject;
             }
@@ -717,10 +723,10 @@ export component AppWindow inherits Window {
                     background: Look.canvas;
                     clip: true;
                     flick := ScrollView {
-                        content-width: max(self.visible-width, root.content-width + 48px);
-                        content-height: max(self.visible-height, root.content-height + 48px);
-                        changed content-x => { root.canvas-changed(); }
-                        changed content-y => { root.canvas-changed(); }
+                        viewport-width: max(self.visible-width, root.content-width + 48px);
+                        viewport-height: max(self.visible-height, root.content-height + 48px);
+                        changed viewport-x => { root.canvas-changed(); }
+                        changed viewport-y => { root.canvas-changed(); }
                         changed visible-width => { root.canvas-changed(); }
                         changed visible-height => { root.canvas-changed(); }
                         for t in root.old-tiles : Image {
@@ -731,8 +737,8 @@ export component AppWindow inherits Window {
                             source: t.image;
                         }
                         for t in root.tiles : Image {
-                            x: root.origin-x + t.x;
-                            y: root.origin-y + t.y;
+                            x: root.origin-x + root.snap-x + t.x;
+                            y: root.origin-y + root.snap-y + t.y;
                             width: t.size;
                             height: t.size;
                             source: t.image;
