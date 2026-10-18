@@ -51,6 +51,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Fixed
 
+- The third-party licence file shipped in every package (`THIRD-PARTY-LICENSES.html`) was made from the desktop app's crates alone, so it missed the crates only `oxiguitar-cli` and the plugins use (`zip`, `quick-xml` 0.42, `zlib-rs`, `typed-path`, `nix`). It now covers the whole workspace, which is exactly what the packages are built from, and carries the crates' NOTICE files, as the Apache License asks (today `subsetter`'s).
 - The speed-budget tests shared one temporary folder, and whichever finished first deleted it under the other: an occasional failure unrelated to speed. Each test now has its own folder.
 - Release builds: the draft-release job unpacked the Windows .zip packages into folders and failed on them (v0.1.0's first tag build). It now keeps every package as it was uploaded, checks that there are nine package files and that each zip holds oxiguitar.exe, and makes the checksums on every build, so a build by hand tests it too; only a tag creates the draft release.
 
