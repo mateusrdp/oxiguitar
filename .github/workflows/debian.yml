@@ -1,0 +1,44 @@
+# OxiGuitar and Debian's archive (ROADMAP, M2 slice 5): every crate the Linux
+# programs and the basic plugins are built from, against the librust-*-dev
+# packages Debian unstable has (scripts/debian/crate-audit.py). The report is
+# the run's summary and an artifact; it informs, it fails nothing. Weekly,
+# since Debian's archive moves on its own, and on every change to Cargo.lock.
+name: Debian
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - Cargo.lock
+      - scripts/debian/**
+      - .github/workflows/debian.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: debian-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  crates:
+    name: Crates against Debian
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python3 -I scripts/debian/crate-audit.py list > crates.tsv
+      - name: Check them against Debian sid
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euc '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3 > /dev/null
+            python3 -I scripts/debian/crate-audit.py check crates.tsv > debian-crates.md
+          '
+          cat debian-crates.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: debian-crates
+          path: debian-crates.md
