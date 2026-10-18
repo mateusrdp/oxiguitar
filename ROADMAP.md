@@ -121,7 +121,7 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
    - No catalogue and no detection in the core (Mateus, 18 Oct 2026): the formats the installed plugins recognise are what the app opens. With no plugin installed it opens nothing. A file no plugin recognises is refused: a bug report is asked for when an installed plugin declares the file's extension, a feature request otherwise (both at the issue tracker). Guitar Pro 1–2 files are refused that way too.
    - The app and `oxiguitar-cli` open files through `Plugins` (wire score → model); `BUILT_IN_READERS` goes away.
    - Development builds find the plugins in `target/lib/oxiguitar/plugins/`, the program's system plugin folder, via `scripts/build-plugins.sh`.
-   - Until slice 5 splits the packages, every package installs the five plugins in its system plugin folder, so develop's builds still open files.
+   - Until slice 5 split the packages, every package installed the five plugins in its system plugin folder.
    - Gates, all through the `.oxp` files:
      - the corpus (42 of 42), and the reader-change `cmp` check: `{:#?}` of score and log from develop's in-process reader against the plugin path, byte for byte, for every GP file;
      - the 50 visual references unchanged;
@@ -142,8 +142,8 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
    - Packages `oxiguitar` and `oxiguitar-x11` (which Provides, Conflicts with and Replaces `oxiguitar`), and two AppImages; the manual says the X11 build will be dropped.
    - CI checks that the Wayland build holds no X11 crate and the reverse, and runs the Wayland build's headless tests in the nested compositor (`scripts/wayland-dnd-test/`).
 5. **Packages and Debian.**
-   - Releases attach every plugin for all six targets (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp` …) with SHA256SUMS.
-   - `oxiguitar-plugins-basic` (.deb and .rpm, into `/usr/lib/oxiguitar/plugins/`), which the core Suggests; the AppImage, the Windows zip and the .dmg each come as two downloads, the core and a zip of the basic plugins (Mateus, 18 Oct 2026: no plugins inside the AppImage).
+   - Done: releases attach every plugin for all six targets (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp` …) with SHA256SUMS.
+   - Done: `oxiguitar-plugins-basic` (.deb and .rpm, into `/usr/lib/oxiguitar/plugins/`), which the core Suggests; the AppImage, the Windows zip and the .dmg each come as two downloads, the core and a zip of the basic plugins (Mateus, 18 Oct 2026: no plugins inside the AppImage).
    - The Debian work towards main: manual pages for `oxiguitar` and `oxiguitar-cli`, lintian in CI, a `debian/` directory (dh-cargo) building both packages offline in a sid container, the audit of every crate in `Cargo.lock` against Debian's archive, and `fonts-noto-core` instead of our Noto copy.
 
 The plugin developer guide (`docs/plugins/`) and its template plugin come after slice 3, when the interface has every M2 contribution, and before v0.2 freezes interface 1.0.
