@@ -4,6 +4,11 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- ADR 0007: macOS "open document" events (a double-click in Finder, Open With, a drop on the Dock icon) wait for winit or Slint to report them, the same way Wayland drops do (ADR 0006); CONTRIBUTING.md lists it under "Known platform gaps". CONTRIBUTING.md gains "Design principles": no polling ever, no hacks, speed, elegance.
+- The .deb's Maintainer field points to the GitHub issue tracker by decision, never to a personal address.
+
 ### Changed
 
 - cargo-deny accepts RUSTSEC-2026-0370, 0371 and 0372 (zvariant, zvariant_derive and zbus_names are unmaintained since zbus 6 took them in, published 17 Oct 2026). They come in through zbus 5, which Slint 1.18's winit backend and AccessKit still use; revisit on the next Slint upgrade.

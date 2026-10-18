@@ -123,6 +123,11 @@ build_deb() {
         echo "Package: oxiguitar"
         echo "Version: $version"
         echo "Architecture: $deb_arch"
+        # Contact is always the GitHub issue tracker, never a personal email
+        # (Mateus, 18 Oct 2026). Debian Policy 5.6.2 asks for an email
+        # address here, so lintian flags this; dpkg and apt accept it. A
+        # package in Debian's own archive would carry its Debian
+        # maintainer's address instead.
         echo "Maintainer: Mateus Rocha de Paula <https://github.com/mateusrdp/oxiguitar/issues>"
         echo "Installed-Size: $size"
         echo "Depends: ${linked:+$linked, }$deb_runtime"
