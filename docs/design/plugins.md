@@ -201,7 +201,9 @@ Part of the core, not a plugin (Mateus, 18 Oct 2026; ADR 0008, "Amendments"), so
 - Ticking or unticking writes `disabled` in settings.json and takes effect at the next start, since plugins are never unloaded; the window says so. A file that can't be used for another reason has no tickbox.
 - It makes no distinction between our plugins and anyone else's, and neither does the rest of the app (Mateus, 18 Oct 2026): we make promises only about what we distribute, in the README and the manual (NET-4).
 
-Two more things in the core help when a plugin misbehaves: `oxiguitar --safe-mode` starts with no plugins at all, and Help → About lists the plugin folders.
+Two more things in the core help when a plugin misbehaves: `oxiguitar --safe-mode` starts with no plugins at all (every manifest is still read, so the manager lists every file and can disable one; nothing is loaded, nothing opens, no tab or event), and Help → About lists the plugin folders in search order.
+
+As built in slice 3: `crates/oxiguitar-app/src/manager.rs` (the rows and the `disabled` list, unit-tested without a window) and `ui/plugin_manager.slint`; the host's `Plugins::discover_in_safe_mode` and `start_in_safe_mode`. A tick is refused, saying why, when settings.json couldn't be read at start, since it is then never written.
 
 ## Distribution
 

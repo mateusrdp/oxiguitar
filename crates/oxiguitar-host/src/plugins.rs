@@ -23,6 +23,9 @@
 //! Each candidate is asked whether it can work here (its probe) before it
 //! is chosen; the choice is kept for the rest of the session.
 //!
+//! In safe mode (`oxiguitar --safe-mode`) every manifest is still read, so
+//! the plugin manager can list them, but no plugin is used or loaded.
+//!
 //! Plugins with tabs (interface 1.1) are asked for their contents when the
 //! window shows the tab, and told when the user uses a widget. Events
 //! (score, selection, playback) are pushed to the plugins that subscribe
@@ -104,6 +107,8 @@ pub struct Plugins(Arc<Inner>);
 
 struct Inner {
     found: Vec<Found>,
+    /// Safe mode: no plugin is used.
+    safe: bool,
     env: Environment,
     settings: SharedSettings,
     core: Arc<dyn Core>,
@@ -273,6 +278,8 @@ pub enum Unrecognised {
         /// The file's extension, lowercase.
         extension: String,
     },
+    /// OxiGuitar was started in safe mode, with no plugins.
+    SafeMode,
     /// The plugin that declares the file's extension can't be used here.
     NotUsable {
         /// The plugin's name.
@@ -302,6 +309,10 @@ impl fmt::Display for Unrecognised {
             } => write!(
                 f,
                 "the {plugin} plugin opens .{extension} files but doesn't recognise this one. If it is a {format} file, please report a bug: {ISSUES_URL}"
+            ),
+            Unrecognised::SafeMode => write!(
+                f,
+                "OxiGuitar was started in safe mode, without plugins, so it can't open any file. Start it again without --safe-mode."
             ),
             Unrecognised::NotUsable {
                 plugin,
@@ -358,6 +369,28 @@ impl Plugins {
         display: &str,
         core: Arc<dyn Core>,
     ) -> Plugins {
+        Plugins::find(folders, settings, display, core, false)
+    }
+
+    /// Like [`Plugins::discover`], in safe mode: every manifest is read, so
+    /// [`Plugins::found`] lists every plugin file as usual, but no plugin is
+    /// used or loaded. Nothing can be opened and nobody hears an event.
+    pub fn discover_in_safe_mode(
+        folders: &[PathBuf],
+        settings: SharedSettings,
+        display: &str,
+        core: Arc<dyn Core>,
+    ) -> Plugins {
+        Plugins::find(folders, settings, display, core, true)
+    }
+
+    fn find(
+        folders: &[PathBuf],
+        settings: SharedSettings,
+        display: &str,
+        core: Arc<dyn Core>,
+        safe: bool,
+    ) -> Plugins {
         let env = Environment::current(display);
         let disabled: Vec<String> = match settings.get(DISABLED_KEY) {
             Some(Value::Array(ids)) => ids
@@ -399,6 +432,7 @@ impl Plugins {
         }
         Plugins(Arc::new(Inner {
             found,
+            safe,
             env,
             settings,
             core,
@@ -411,6 +445,11 @@ impl Plugins {
     /// Every plugin file found, in folder order and then by name.
     pub fn found(&self) -> &[Found] {
         &self.0.found
+    }
+
+    /// Whether this is safe mode: no plugin is used.
+    pub fn safe_mode(&self) -> bool {
+        self.0.safe
     }
 
     /// The system the plugins' conditions were checked against.
@@ -472,6 +511,9 @@ impl Plugins {
         data: &[u8],
         extension: Option<&str>,
     ) -> Result<FormatRef<'_>, Unrecognised> {
+        if self.0.safe {
+            return Err(Unrecognised::SafeMode);
+        }
         if let Some(format) = self.format_for(data) {
             return Ok(format);
         }
@@ -826,8 +868,13 @@ impl Plugins {
     }
 
     fn ready(&self) -> impl Iterator<Item = (usize, &Found, &Manifest)> {
-        self.0
-            .found
+        // In safe mode nothing is ready, so nothing is ever loaded.
+        let found = if self.0.safe {
+            &[][..]
+        } else {
+            &self.0.found[..]
+        };
+        found
             .iter()
             .enumerate()
             .filter_map(|(i, f)| f.ready().map(|m| (i, f, m)))
@@ -913,6 +960,12 @@ impl Plugins {
     fn loaded(&self, index: usize) -> Result<Loaded, Error> {
         let found = &self.0.found[index];
         let name = found.name();
+        if self.0.safe {
+            return Err(Error::new(
+                ErrorKind::Failed,
+                format!("{name} isn't used in safe mode"),
+            ));
+        }
         if found.ready().is_none() {
             return Err(Error::new(
                 ErrorKind::Failed,
@@ -1163,6 +1216,28 @@ mod tests {
         );
         assert!(plugins.load_all().is_empty());
         assert!(!found.is_loaded());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn safe_mode_lists_every_file_and_uses_none() {
+        let dir = scratch("plugins-safe");
+        std::fs::write(dir.join("junk.oxp"), b"not a library").unwrap();
+        let plugins = Plugins::discover_in_safe_mode(
+            std::slice::from_ref(&dir),
+            SharedSettings::default(),
+            "x11",
+            Arc::new(Unheard),
+        );
+        assert!(plugins.safe_mode());
+        assert_eq!(plugins.found().len(), 1);
+        assert_eq!(
+            plugins.recognise(b"anything", Some("gp5")).unwrap_err(),
+            Unrecognised::SafeMode
+        );
+        assert!(Unrecognised::SafeMode.to_string().contains("--safe-mode"));
+        assert!(plugins.tabs().is_empty() && plugins.load_all().is_empty());
+        assert!(!plain(std::slice::from_ref(&dir)).safe_mode());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

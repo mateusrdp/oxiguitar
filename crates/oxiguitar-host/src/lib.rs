@@ -76,7 +76,15 @@ pub fn display_system() -> &'static str {
 /// is [`display_system`]'s answer, and `core` answers plugins later (it
 /// shows their messages and tabs, and hands them the open score).
 pub fn start(folders: Option<Folders>, display: &str, core: Arc<dyn Core>) -> Startup {
-    begin(folders, display, core, true)
+    begin(folders, display, core, true, false)
+}
+
+/// Starts the host for the app in safe mode (`oxiguitar --safe-mode`): like
+/// [`start`], but no plugin is used or loaded. Every plugin file is still
+/// listed, for the plugin manager, and the footer says why nothing can be
+/// opened.
+pub fn start_in_safe_mode(folders: Option<Folders>, display: &str, core: Arc<dyn Core>) -> Startup {
+    begin(folders, display, core, true, true)
 }
 
 /// Starts the host for a program without a window (`oxiguitar-cli`): the
@@ -85,20 +93,31 @@ pub fn start(folders: Option<Folders>, display: &str, core: Arc<dyn Core>) -> St
 /// is wrong (an unreadable settings.json, a plugin file that can't be
 /// used), not what is missing.
 pub fn find(folders: Option<Folders>, display: &str, core: Arc<dyn Core>) -> Startup {
-    let mut s = begin(folders, display, core, false);
+    let mut s = begin(folders, display, core, false, false);
     s.notices.retain(|n| n.level >= Level::Warning);
     s
 }
 
-fn begin(folders: Option<Folders>, display: &str, core: Arc<dyn Core>, app: bool) -> Startup {
+fn begin(
+    folders: Option<Folders>,
+    display: &str,
+    core: Arc<dyn Core>,
+    app: bool,
+    safe: bool,
+) -> Startup {
     let mut notices = Vec::new();
+    let discover = if safe {
+        Plugins::discover_in_safe_mode
+    } else {
+        Plugins::discover
+    };
     let Some(folders) = folders else {
         notices.push(Notice::new(
             Level::Error,
             format!("No home folder: set HOME (or {HOME_VARIABLE}) so OxiGuitar can keep its settings and find plugins."),
         ));
         let settings = SharedSettings::default();
-        let plugins = Plugins::discover(&[], settings.clone(), display, core);
+        let plugins = discover(&[], settings.clone(), display, core);
         let inventory = Inventory::default();
         notices.extend(inventory.notices(std::path::Path::new(".")));
         return Startup {
@@ -151,11 +170,22 @@ fn begin(folders: Option<Folders>, display: &str, core: Arc<dyn Core>, app: bool
     let searched = snapshot
         .plugin_folders()
         .unwrap_or_else(|| folders.default_plugin_folders());
-    let plugins = Plugins::discover(&searched, settings.clone(), display, core);
-    notices.extend(plugin_notices(&plugins));
+    let plugins = discover(&searched, settings.clone(), display, core);
     let inventory = Inventory::of(searched, &plugins);
-    if app {
-        notices.extend(inventory.notices(&folders.user_plugins));
+    if safe {
+        notices.push(Notice::new(
+            Level::Warning,
+            format!(
+                "Safe mode: no plugins are used, so nothing can be opened or played. {} plugin file{} found (Tools → Plugins lists them). Start OxiGuitar without --safe-mode to use them.",
+                plugins.found().len(),
+                if plugins.found().len() == 1 { " was" } else { "s were" }
+            ),
+        ));
+    } else {
+        notices.extend(plugin_notices(&plugins));
+        if app {
+            notices.extend(inventory.notices(&folders.user_plugins));
+        }
     }
     Startup {
         folders: Some(folders),
@@ -239,6 +269,34 @@ mod tests {
         let s = find(folders(), "x11", Arc::new(Unheard));
         assert_eq!(s.notices.len(), 1);
         assert!(s.notices[0].text.contains("not valid JSON"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn safe_mode_says_so_and_nothing_else_about_plugins() {
+        let root = std::env::temp_dir().join(format!("oxiguitar-host-safe-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let home = root.join("og");
+        let folders = Folders::resolve(
+            System::Linux,
+            |n| (n == HOME_VARIABLE).then(|| OsString::from(&home)),
+            None,
+        );
+        let s = start_in_safe_mode(folders, "x11", Arc::new(Unheard));
+        assert!(s.plugins.safe_mode());
+        let last = s.notices.last().unwrap();
+        assert_eq!(last.level, Level::Warning);
+        assert!(
+            last.text.starts_with("Safe mode: no plugins are used"),
+            "{}",
+            last.text
+        );
+        assert!(last.text.contains("0 plugin files were found"));
+        assert!(
+            !s.notices
+                .iter()
+                .any(|n| n.text.starts_with("No read/write"))
+        );
         let _ = std::fs::remove_dir_all(&root);
     }
 
