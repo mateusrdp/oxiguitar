@@ -88,11 +88,14 @@ Add the project to [CREDITS.md](CREDITS.md) in the same pull request. Nothing ma
 
 ## Adding a file format
 
+Every format is its own plugin; the core recognises no format itself (docs/design/plugins.md). The Guitar Pro plugins in `plugins/gp3` … `plugins/gp` show the shape.
+
 1. Write down what you learn about the format in `docs/formats/<format>.md`.
-2. Teach `oxiguitar-formats` to recognise it from its contents (FMT-6) — never from the extension.
-3. Add a reader that fills the score model and records anything it cannot represent in the import log (FMT-2).
-4. Add small public fixtures and tests; run the private corpus locally if you have it.
+2. Add a reader to `oxiguitar-formats` behind a Cargo feature of its own, so its plugin carries only its code. It recognises the format from its contents (FMT-6), never from the extension, fills the score model, and records anything it cannot represent in the import log (FMT-2).
+3. Add the plugin: `plugins/NAME/`, a crate `oxiguitar-NAME-plugin` with the feature `oxp = []`, depending on `oxiguitar-formats` with only that reader's feature and `plugin`, and a `manifest.json` whose signatures recognise the format without loading the plugin (the host picks a plugin by them; the extensions only decide which report a refused file asks for). Add it to `OURS` in `crates/oxiguitar-plugin-test/src/lib.rs`; `scripts/build-plugins.sh` finds it by its folder.
+4. Add small public fixtures and tests; `cargo test -p oxiguitar-plugin-test --test ours` checks the plugin against the contract and the in-process reader. Run the private corpus locally if you have it.
 5. Writers come with round-trip tests (FMT-4) and loss warnings for lossy formats (FMT-3).
+6. A new fuzz target for the reader, and the plugin in `fuzz/fuzz_targets/plugin_dispatch.rs`.
 
 ## Adding an effect
 

@@ -1,0 +1,23 @@
+{
+  "interface": "1.0",
+  "id": "oxiguitar.gpx",
+  "name": "Guitar Pro 6",
+  "version": "0.1.0",
+  "description": "Reads Guitar Pro 6 files (.gpx).",
+  "authors": ["Mateus Rocha de Paula", "The OxiGuitar contributors"],
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/mateusrdp/oxiguitar",
+  "formats": [
+    {
+      "id": "gpx",
+      "name": "Guitar Pro 6",
+      "extensions": ["gpx"],
+      "read": true,
+      "write": false,
+      "signatures": [
+        { "at": 0, "text": "BCFZ" },
+        { "at": 0, "text": "BCFS" }
+      ]
+    }
+  ]
+}

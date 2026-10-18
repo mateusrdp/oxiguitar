@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! `info` and `detect`: print what a file contains.
+//! `info` and `detect`: print what a file contains, as the format plugins
+//! read it.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::path::Path;
 use std::process::ExitCode;
 
-use oxiguitar_formats::{Imported, Severity};
 use oxiguitar_model::{BeatKind, Score, Staff, Track};
+
+use crate::plugins::{Opened, extension_note, level_word};
 
 pub(crate) fn detect(args: &[String]) -> ExitCode {
     if args.is_empty() {
@@ -18,10 +19,13 @@ pub(crate) fn detect(args: &[String]) -> ExitCode {
     let mut ok = true;
     for path in args {
         match std::fs::read(path) {
-            Ok(data) => match oxiguitar_formats::detect(&data) {
-                Some(f) => println!("{path}: {f}{}", extension_note(path, f.usual_extension())),
-                None => {
-                    println!("{path}: unknown format");
+            Ok(data) => match crate::plugins::recognise(path, &data) {
+                Ok((format, extensions, plugin)) => println!(
+                    "{path}: {format}{}, read by the {plugin} plugin",
+                    extension_note(path, &extensions)
+                ),
+                Err(why) => {
+                    println!("{path}: {why}");
                     ok = false;
                 }
             },
@@ -57,8 +61,8 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
                 continue;
             }
         };
-        match oxiguitar_formats::read(&data) {
-            Ok(imported) => print!("{}", describe(path, &imported, bars)),
+        match crate::plugins::open(path, &data) {
+            Ok(opened) => print!("{}", describe(path, &opened, bars)),
             Err(e) => {
                 eprintln!("{path}: {e}");
                 ok = false;
@@ -81,28 +85,17 @@ fn marker_label(m: &oxiguitar_model::Marker) -> String {
     }
 }
 
-fn extension_note(path: &str, usual: &str) -> String {
-    let ext = Path::new(path)
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(str::to_ascii_lowercase);
-    match ext {
-        Some(e) if e == usual || (usual == "musicxml" && e == "xml") => String::new(),
-        Some(e) => format!(" (named .{e})"),
-        None => String::new(),
-    }
-}
-
 /// The full text `info` prints for one file.
-pub(crate) fn describe(path: &str, imported: &Imported, with_bars: bool) -> String {
-    let s = &imported.score;
+pub(crate) fn describe(path: &str, opened: &Opened, with_bars: bool) -> String {
+    let s = &opened.score;
     let mut out = String::new();
     let _ = writeln!(out, "File:        {path}");
     let _ = writeln!(
         out,
-        "Format:      {}{}",
-        imported.format,
-        extension_note(path, imported.format.usual_extension())
+        "Format:      {}{}, read by the {} plugin",
+        opened.format,
+        extension_note(path, &opened.extensions),
+        opened.plugin
     );
     let info = &s.info;
     for (label, value) in [
@@ -181,32 +174,18 @@ pub(crate) fn describe(path: &str, imported: &Imported, with_bars: bool) -> Stri
                 .join("; ")
         );
     }
-    if imported.trailing_bytes > 0 {
-        let _ = writeln!(
-            out,
-            "Trailing:    {} unread byte(s)",
-            imported.trailing_bytes
-        );
-    }
-    if imported.log.is_empty() {
+    if opened.log.is_empty() {
         let _ = writeln!(out, "Import log:  empty");
     } else {
         let _ = writeln!(out, "Import log:");
-        for e in imported.log.entries() {
-            let sev = match e.severity {
-                Severity::Info => "note",
-                Severity::Warning => "warning",
-            };
+        for e in &opened.log {
+            let sev = level_word(e.level);
             let times = if e.count > 1 {
                 format!(" ×{}", e.count)
             } else {
                 String::new()
             };
-            let _ = writeln!(
-                out,
-                "  {sev}: {}{times} (first: {})",
-                e.message, e.first_place
-            );
+            let _ = writeln!(out, "  {sev}: {}{times} (first: {})", e.message, e.place);
         }
     }
     if with_bars {

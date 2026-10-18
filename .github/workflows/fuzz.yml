@@ -19,6 +19,9 @@ on:
     paths:
       - crates/oxiguitar-formats/**
       - crates/oxiguitar-model/**
+      - crates/oxiguitar-plugin/**
+      - crates/oxiguitar-plugin-api/**
+      - plugins/**
       - fuzz/**
       - fixtures/**
       - .github/workflows/fuzz.yml
@@ -49,9 +52,9 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        # The four readers; the any-file target (format detection, then any
-        # reader) runs on pull requests only.
-        target: ${{ fromJSON(github.event_name == 'pull_request' && '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","any_file"]' || '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif"]') }}
+        # The four readers and the plugins' dispatch; the any-file target
+        # (format detection, then any reader) runs on pull requests only.
+        target: ${{ fromJSON(github.event_name == 'pull_request' && '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","any_file","plugin_dispatch"]' || '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","plugin_dispatch"]') }}
     steps:
       - uses: actions/checkout@v5
       - name: Seconds per job
@@ -101,7 +104,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        target: [guitar_pro_3_5, guitar_pro_6, guitar_pro_7, gpif]
+        target: [guitar_pro_3_5, guitar_pro_6, guitar_pro_7, gpif, plugin_dispatch]
     steps:
       - uses: actions/checkout@v5
       - name: Seconds per job

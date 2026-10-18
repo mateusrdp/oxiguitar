@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Any file, as the app opens one: format detection from the contents
-//! (FMT-6), then whichever reader it picks, including the refusals for
-//! formats a plugin will read. Seeds: every public fixture.
+//! Any file: format detection from the contents (FMT-6), then whichever
+//! reader it picks, including the refusals of formats no reader here
+//! reads. Seeds: every public fixture.
 
 #![no_main]
 

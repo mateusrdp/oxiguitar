@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The core reads Guitar Pro only. MuseScore, MusicXML, ABC and MIDI files
-//! are recognised and refused with a message that a format plugin will open
-//! them (decided 16 Oct 2026).
+//! Formats this crate recognises but doesn't read (MuseScore, MusicXML,
+//! ABC, MIDI; their plugins come in M6) are refused as unsupported, never
+//! misread.
 
 use oxiguitar_formats::{ReadErrorKind, read};
 
 #[test]
-fn plugin_formats_are_recognised_and_refused_clearly() {
+fn formats_without_a_reader_are_refused_clearly() {
     let musicxml = br#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="4.0"><part-list/></score-partwise>"#;
@@ -22,10 +22,9 @@ fn plugin_formats_are_recognised_and_refused_clearly() {
     ] {
         let e = read(data).expect_err(name);
         assert!(
-            matches!(e.kind, ReadErrorKind::NeedsPlugin(_)),
+            matches!(e.kind, ReadErrorKind::Unsupported(_)),
             "{name}: {e}"
         );
-        let text = e.to_string();
-        assert!(text.contains("format plugin"), "{name}: {text}");
+        assert!(e.to_string().contains("not supported"), "{name}: {e}");
     }
 }

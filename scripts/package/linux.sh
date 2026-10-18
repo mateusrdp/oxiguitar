@@ -11,6 +11,7 @@
 # Usage: scripts/package/linux.sh deb|rpm|appimage|all VERSION
 #   VERSION  the package version, from scripts/package/version.sh
 # Reads:  target/release/oxiguitar, target/release/oxiguitar-cli,
+#         target/lib/oxiguitar/plugins/*.oxp (scripts/build-plugins.sh),
 #         dist/THIRD-PARTY-LICENSES.html (scripts/package/licenses.sh)
 #         and, for the AppImage, $APPIMAGE_RUNTIME (the type 2 runtime for
 #         this architecture, from github.com/AppImage/type2-runtime).
@@ -65,6 +66,13 @@ rpm_recommends=(
 for f in oxiguitar oxiguitar-cli; do
     [[ -x "$bin/$f" ]] || { echo "missing $bin/$f: build it first" >&2; exit 1; }
 done
+# Our plugins, until the core and oxiguitar-plugins-basic are packaged
+# apart (ROADMAP.md, M2's packaging slice): scripts/build-plugins.sh.
+plugins="$root/target/lib/oxiguitar/plugins"
+compgen -G "$plugins/*.oxp" > /dev/null || {
+    echo "missing $plugins/*.oxp: run scripts/build-plugins.sh" >&2
+    exit 1
+}
 [[ -f "$dist/THIRD-PARTY-LICENSES.html" ]] || {
     echo "missing dist/THIRD-PARTY-LICENSES.html: run scripts/package/licenses.sh" >&2
     exit 1
@@ -75,6 +83,8 @@ stage() {
     local to="$1"
     install -Dm755 "$bin/oxiguitar" "$to/usr/bin/oxiguitar"
     install -Dm755 "$bin/oxiguitar-cli" "$to/usr/bin/oxiguitar-cli"
+    install -d "$to/usr/lib/oxiguitar/plugins"
+    install -m644 "$plugins"/*.oxp "$to/usr/lib/oxiguitar/plugins/"
     install -Dm644 "$root/assets/linux/$id.desktop" "$to/usr/share/applications/$id.desktop"
     install -Dm644 "$root/assets/linux/$id.xml" "$to/usr/share/mime/packages/$id.xml"
     for s in 16 24 32 48 64 128 256 512; do

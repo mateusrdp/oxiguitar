@@ -3221,10 +3221,10 @@ name = "oxiguitar-app"
 version = "0.1.0"
 dependencies = [
  "oxiguitar-display",
- "oxiguitar-formats",
  "oxiguitar-host",
  "oxiguitar-layout",
  "oxiguitar-model",
+ "oxiguitar-plugin-test",
  "oxiguitar-render",
  "oxiguitar-testgen",
  "oxiguitar-tools",
@@ -3240,9 +3240,10 @@ name = "oxiguitar-cli"
 version = "0.1.0"
 dependencies = [
  "oxiguitar-display",
- "oxiguitar-formats",
+ "oxiguitar-host",
  "oxiguitar-layout",
  "oxiguitar-model",
+ "oxiguitar-plugin-test",
  "oxiguitar-render",
  "oxiguitar-tools",
 ]
@@ -3261,9 +3262,55 @@ name = "oxiguitar-formats"
 version = "0.1.0"
 dependencies = [
  "oxiguitar-model",
+ "oxiguitar-plugin",
  "oxiguitar-plugin-api",
  "quick-xml 0.42.0",
  "zip",
+]
+
+[[package]]
+name = "oxiguitar-gp-plugin"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-formats",
+ "oxiguitar-plugin",
+ "serde_json",
+]
+
+[[package]]
+name = "oxiguitar-gp3-plugin"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-formats",
+ "oxiguitar-plugin",
+ "serde_json",
+]
+
+[[package]]
+name = "oxiguitar-gp4-plugin"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-formats",
+ "oxiguitar-plugin",
+ "serde_json",
+]
+
+[[package]]
+name = "oxiguitar-gp5-plugin"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-formats",
+ "oxiguitar-plugin",
+ "serde_json",
+]
+
+[[package]]
+name = "oxiguitar-gpx-plugin"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-formats",
+ "oxiguitar-plugin",
+ "serde_json",
 ]
 
 [[package]]
@@ -3313,7 +3360,9 @@ dependencies = [
 name = "oxiguitar-plugin-test"
 version = "0.1.0"
 dependencies = [
+ "oxiguitar-formats",
  "oxiguitar-host",
+ "oxiguitar-model",
  "serde_json",
 ]
 
@@ -3340,8 +3389,10 @@ version = "0.1.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-formats",
+ "oxiguitar-host",
  "oxiguitar-layout",
  "oxiguitar-model",
+ "oxiguitar-plugin-test",
  "oxiguitar-render",
  "png",
  "tiny-skia 0.12.0",

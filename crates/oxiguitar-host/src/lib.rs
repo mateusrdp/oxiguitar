@@ -27,11 +27,13 @@ mod settings;
 use std::sync::Arc;
 
 pub use folders::{Folders, HOME_VARIABLE, SETTINGS_FILE, System};
-pub use inventory::{Inventory, Level, Notice, PLUGIN_EXTENSION, PLUGINS_URL, plugin_notices};
+pub use inventory::{
+    ISSUES_URL, Inventory, Level, Notice, PLUGIN_EXTENSION, PLUGINS_URL, plugin_notices,
+};
 pub use oxiguitar_plugin_api as api;
 pub use plugins::{
     DISABLED_KEY, FormatRef, Found, InstrumentRef, Messages, Plugins, ReadScore, SERVICES_KEY,
-    ServiceRef, State, Unheard, WrittenFile,
+    ServiceRef, State, Unheard, Unrecognised, WrittenFile,
 };
 pub use settings::{Settings, SharedSettings};
 
@@ -69,16 +71,29 @@ pub fn display_system() -> &'static str {
 
 /// Starts the host for the app: makes sure the user folder, its plugin
 /// folder and settings.json exist (creating what is missing), reads the
-/// settings and every plugin's manifest, and loads no plugin.
-/// `built_in_readers` and `built_in_writers` name the formats the core
-/// still handles by itself; `display` is [`display_system`]'s answer, and
-/// `messages` shows what plugins say later.
-pub fn start(
+/// settings and every plugin's manifest, and loads no plugin. `display`
+/// is [`display_system`]'s answer, and `messages` shows what plugins say
+/// later.
+pub fn start(folders: Option<Folders>, display: &str, messages: Arc<dyn Messages>) -> Startup {
+    begin(folders, display, messages, true)
+}
+
+/// Starts the host for a program without a window (`oxiguitar-cli`): the
+/// same folders, settings.json and plugins as the app, read only. Nothing
+/// is created, settings are never saved, and the notices hold only what
+/// is wrong (an unreadable settings.json, a plugin file that can't be
+/// used), not what is missing.
+pub fn find(folders: Option<Folders>, display: &str, messages: Arc<dyn Messages>) -> Startup {
+    let mut s = begin(folders, display, messages, false);
+    s.notices.retain(|n| n.level >= Level::Warning);
+    s
+}
+
+fn begin(
     folders: Option<Folders>,
-    built_in_readers: Vec<String>,
-    built_in_writers: Vec<String>,
     display: &str,
     messages: Arc<dyn Messages>,
+    app: bool,
 ) -> Startup {
     let mut notices = Vec::new();
     let Some(folders) = folders else {
@@ -88,11 +103,7 @@ pub fn start(
         ));
         let settings = SharedSettings::default();
         let plugins = Plugins::discover(&[], settings.clone(), display, messages);
-        let inventory = Inventory {
-            built_in_readers,
-            built_in_writers,
-            ..Inventory::default()
-        };
+        let inventory = Inventory::default();
         notices.extend(inventory.notices(std::path::Path::new(".")));
         return Startup {
             folders: None,
@@ -102,7 +113,11 @@ pub fn start(
             notices,
         };
     };
-    match folders.ensure() {
+    match if app {
+        folders.ensure()
+    } else {
+        Ok(Vec::new())
+    } {
         Ok(created) if !created.is_empty() => notices.push(Notice::new(
             Level::Info,
             format!(
@@ -121,7 +136,7 @@ pub fn start(
         )),
     }
     let settings = match Settings::load(&folders.settings()) {
-        Ok(s) => SharedSettings::new(s, Some(folders.settings())),
+        Ok(s) => SharedSettings::new(s, app.then(|| folders.settings())),
         Err(e) => {
             notices.push(Notice::new(
                 Level::Error,
@@ -142,12 +157,10 @@ pub fn start(
         .unwrap_or_else(|| folders.default_plugin_folders());
     let plugins = Plugins::discover(&searched, settings.clone(), display, messages);
     notices.extend(plugin_notices(&plugins));
-    let inventory = Inventory {
-        built_in_readers,
-        built_in_writers,
-        ..Inventory::of(searched, &plugins)
-    };
-    notices.extend(inventory.notices(&folders.user_plugins));
+    let inventory = Inventory::of(searched, &plugins);
+    if app {
+        notices.extend(inventory.notices(&folders.user_plugins));
+    }
     Startup {
         folders: Some(folders),
         settings,
@@ -174,13 +187,7 @@ mod tests {
             |n| (n == HOME_VARIABLE).then(|| OsString::from(&home)),
             None,
         );
-        let s = start(
-            folders,
-            vec!["Guitar Pro 5".to_owned()],
-            Vec::new(),
-            "x11",
-            Arc::new(Unheard),
-        );
+        let s = start(folders, "x11", Arc::new(Unheard));
         assert!(home.join("plugins").is_dir());
         assert_eq!(
             std::fs::read_to_string(home.join(SETTINGS_FILE)).unwrap(),
@@ -188,9 +195,10 @@ mod tests {
         );
         assert_eq!(s.notices[0].level, Level::Info);
         assert!(s.notices[0].text.starts_with("Created "));
-        // Built-in readers: no read/write warning, only the missing output.
-        assert_eq!(s.notices.len(), 2);
-        assert!(s.notices[1].text.starts_with("No output plugin"));
+        // Nothing installed: nothing can be opened, and nothing played.
+        assert_eq!(s.notices.len(), 3);
+        assert!(s.notices[1].text.starts_with("No read/write plugins"));
+        assert!(s.notices[2].text.starts_with("No output plugin"));
         assert_eq!(s.inventory.folders, vec![home.join("plugins")]);
 
         // A second start creates nothing; a broken settings file is kept.
@@ -201,8 +209,6 @@ mod tests {
                 |n| (n == HOME_VARIABLE).then(|| OsString::from(&home)),
                 None,
             ),
-            Vec::new(),
-            Vec::new(),
             "x11",
             Arc::new(Unheard),
         );
@@ -217,8 +223,32 @@ mod tests {
     }
 
     #[test]
+    fn a_program_without_a_window_creates_nothing_and_saves_nothing() {
+        let root = std::env::temp_dir().join(format!("oxiguitar-host-find-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let home = root.join("og");
+        let folders = || {
+            Folders::resolve(
+                System::Linux,
+                |n| (n == HOME_VARIABLE).then(|| OsString::from(&home)),
+                None,
+            )
+        };
+        let s = find(folders(), "x11", Arc::new(Unheard));
+        assert!(!home.exists(), "nothing created");
+        assert!(s.notices.is_empty(), "{:?}", s.notices);
+        assert!(s.settings.path().is_none(), "never saved");
+        std::fs::create_dir_all(&home).unwrap();
+        std::fs::write(home.join(SETTINGS_FILE), "{ oops").unwrap();
+        let s = find(folders(), "x11", Arc::new(Unheard));
+        assert_eq!(s.notices.len(), 1);
+        assert!(s.notices[0].text.contains("not valid JSON"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn no_home_is_an_error_but_not_fatal() {
-        let s = start(None, Vec::new(), Vec::new(), "x11", Arc::new(Unheard));
+        let s = start(None, "x11", Arc::new(Unheard));
         assert_eq!(s.notices[0].level, Level::Error);
         assert!(s.folders.is_none());
     }

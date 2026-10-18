@@ -10,12 +10,18 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
-oxiguitar-model.workspace = true
-oxiguitar-formats.workspace = true
+# The score as format plugins hand it over (`wire`); the core reads no
+# format itself.
+oxiguitar-model = { workspace = true, features = ["wire"] }
+oxiguitar-host.workspace = true
 oxiguitar-display.workspace = true
 oxiguitar-layout.workspace = true
 oxiguitar-render.workspace = true
 oxiguitar-tools.workspace = true
+
+[dev-dependencies]
+# tests/cli.rs runs the program with our format plugins, built as .oxp files.
+oxiguitar-plugin-test.workspace = true
 
 [lints]
 workspace = true

@@ -2,11 +2,11 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! `oxiguitar-cli`: inspect, convert and test score files without a window.
+//! Files are read by the format plugins installed for the app.
 
 mod info;
-mod manifest;
+mod plugins;
 mod render;
-mod sha256;
 mod specimen;
 mod tools;
 
@@ -19,10 +19,9 @@ Commands:
   info [--bars] <file>...    Print the structure of each file: format, header,
                              bars, tracks and the import log. --bars adds a
                              line per bar and track.
-  detect <file>...           Print the format of each file, read from its
-                             contents rather than its extension
-  manifest <dir>...          Print a TOML manifest (name, format, size,
-                             SHA-256) of every file in the folders
+  detect <file>...           Print the format of each file and the plugin
+                             that reads it, recognised from its contents
+                             rather than its extension
   render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
          [--layout page|vertical|horizontal|parchment] [--width PT]
          [--paper a4|letter] [--tracks 1,2|all] [--staff-space PT]
@@ -48,6 +47,9 @@ Commands:
   version                    Print the version and exit
   help                       Print this help
 
+Files are read by the format plugins in the app's plugin folders (or those
+settings.json lists); nothing is created or changed there.
+
 Exit status: 0 if every file was read, 1 if any could not be, 2 on bad usage.";
 
 fn main() -> ExitCode {
@@ -56,7 +58,6 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("info") => info::run(rest),
         Some("detect") => info::detect(rest),
-        Some("manifest") => manifest::run(rest),
         Some("render") => render::run(rest),
         Some("specimen") => specimen::run(rest),
         Some("tools") => tools::list(),

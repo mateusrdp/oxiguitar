@@ -8,6 +8,7 @@
 //! documents in its `GpxFileSystem`; no code is copied. See
 //! `docs/formats/guitar-pro-6-8.md`.
 
+#[cfg(feature = "gp")]
 use std::io::Read as _;
 
 use crate::error::{ReadError, ReadErrorKind};
@@ -15,6 +16,7 @@ use crate::error::{ReadError, ReadErrorKind};
 /// The largest file we accept from inside a container. The largest GPIF in
 /// our corpus is 10 MB; anything near this limit is damage or a zip bomb.
 const MAX_INNER_FILE: usize = 128 * 1024 * 1024;
+#[cfg(feature = "gpx")]
 /// BCFS stores files in sectors of this size.
 const SECTOR: usize = 0x1000;
 
@@ -27,6 +29,7 @@ pub(crate) struct GpFiles {
     pub(crate) part_configuration: Option<Vec<u8>>,
 }
 
+#[cfg(feature = "gpx")]
 /// Unpacks a Guitar Pro 6 file: BCFZ (compressed) or BCFS (plain).
 pub(crate) fn gpx(data: &[u8]) -> Result<GpFiles, ReadError> {
     let fs = if data.starts_with(b"BCFZ") {
@@ -52,12 +55,14 @@ pub(crate) fn gpx(data: &[u8]) -> Result<GpFiles, ReadError> {
     Ok(out)
 }
 
+#[cfg(feature = "gpx")]
 /// Reads bits from the most significant bit of each byte down.
 struct Bits<'a> {
     data: &'a [u8],
     pos: usize,
 }
 
+#[cfg(feature = "gpx")]
 impl Bits<'_> {
     fn bit(&mut self) -> Option<u32> {
         let byte = *self.data.get(self.pos / 8)?;
@@ -77,6 +82,7 @@ impl Bits<'_> {
     }
 }
 
+#[cfg(feature = "gpx")]
 /// Decompresses BCFZ: a 4-byte tag, the uncompressed length (little-endian),
 /// then a bit stream of literal runs and back-references.
 pub(crate) fn bcfz_decompress(data: &[u8]) -> Result<Vec<u8>, ReadError> {
@@ -130,11 +136,13 @@ pub(crate) fn bcfz_decompress(data: &[u8]) -> Result<Vec<u8>, ReadError> {
     Ok(out)
 }
 
+#[cfg(feature = "gpx")]
 fn le_u32_at(data: &[u8], at: usize) -> Option<usize> {
     let b: [u8; 4] = data.get(at..at + 4)?.try_into().ok()?;
     usize::try_from(u32::from_le_bytes(b)).ok()
 }
 
+#[cfg(feature = "gpx")]
 /// Lists the files of a BCFS file system: "BCFS", then 4 KiB sectors. A sector
 /// that starts with the number 2 describes a file: its name, its size and the
 /// list of sectors holding its contents.
@@ -189,6 +197,7 @@ pub(crate) fn bcfs_files(data: &[u8]) -> Result<Vec<(String, Vec<u8>)>, ReadErro
     Ok(files)
 }
 
+#[cfg(feature = "gp")]
 /// Unpacks a Guitar Pro 7/8 file: a ZIP archive holding `Content/score.gpif`.
 pub(crate) fn gp7(data: &[u8]) -> Result<GpFiles, ReadError> {
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(data)).map_err(|e| {
@@ -206,6 +215,7 @@ pub(crate) fn gp7(data: &[u8]) -> Result<GpFiles, ReadError> {
     })
 }
 
+#[cfg(feature = "gp")]
 fn read_zip_entry(
     zip: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
     name: &str,
@@ -291,6 +301,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "gpx")]
     #[test]
     fn bcfz_literals_and_back_references() {
         let mut w = BitWriter::default();
@@ -326,6 +337,7 @@ mod tests {
         assert!(bcfz_decompress(b"BCFZ\x01").is_err());
     }
 
+    #[cfg(feature = "gpx")]
     #[test]
     fn bcfs_file_system() {
         let mut fs = vec![0u8; 3 * SECTOR];

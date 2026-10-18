@@ -5,7 +5,8 @@
 //! pictures stored beside them in `fixtures/reference/`.
 //!
 //! Each reference is a Guitar Pro 7 file made by `oxiguitar-testgen`,
-//! read back through the real reader, engraved with its options and drawn
+//! read back as the app reads it, through the Guitar Pro 7–8 format plugin
+//! built as the `gp.oxp` file we ship, engraved with its options and drawn
 //! at 1.5 pixels per point (108 dpi). The pictures are compared with a
 //! tolerance, not byte for byte, because anti-aliasing and floating point
 //! may differ a little between machines: a pixel counts as changed when
@@ -32,9 +33,12 @@ use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{FontSet, Theme};
+use oxiguitar_host::api::message::Level;
+use oxiguitar_host::{Plugins, SharedSettings, Unheard};
 use oxiguitar_layout::{Layout, engrave};
 use oxiguitar_render::{Raster, View};
 use oxiguitar_testgen::{Reference, references, to_gp, to_gpif};
@@ -48,6 +52,23 @@ const MAX_CHANGED: usize = 4;
 
 fn reference_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/reference")
+}
+
+/// Our format plugins, built once (a system loads a library file once per
+/// process, so every reference goes through this one host).
+fn plugins() -> &'static Plugins {
+    static PLUGINS: OnceLock<Plugins> = OnceLock::new();
+    PLUGINS.get_or_init(|| {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let folder = oxiguitar_plugin_test::build_ours(&workspace, !cfg!(debug_assertions))
+            .expect("our plugins build");
+        Plugins::discover(
+            &[folder],
+            SharedSettings::default(),
+            oxiguitar_host::display_system(),
+            Arc::new(Unheard),
+        )
+    })
 }
 
 fn diff_dir() -> PathBuf {
@@ -88,18 +109,24 @@ fn draw(
     meta: &Metadata,
 ) -> Result<Vec<Picture>, String> {
     let data = std::fs::read(file).map_err(|e| format!("cannot read {}: {e}", file.display()))?;
-    let imported = oxiguitar_formats::read(&data).map_err(|e| format!("does not open: {e}"))?;
-    let warnings: Vec<String> = imported
+    let plugins = plugins();
+    let format = plugins
+        .recognise(&data, Some("gp"))
+        .map_err(|e| format!("does not open: {e}"))?;
+    let read = plugins
+        .read(format, &data)
+        .map_err(|e| format!("does not open: {e}"))?;
+    let warnings: Vec<String> = read
         .log
-        .entries()
         .iter()
-        .filter(|e| e.severity == oxiguitar_formats::Severity::Warning)
-        .map(|e| format!("{} ({})", e.message, e.first_place))
+        .filter(|e| e.level >= Level::Warning)
+        .map(|e| format!("{} ({})", e.message, e.place))
         .collect();
     if !warnings.is_empty() {
         return Err(format!("the reader warns: {}", warnings.join("; ")));
     }
-    let engraved = engrave(&imported.score, fonts, meta, &r.options);
+    let score = oxiguitar_model::wire::from_wire(read.score)?;
+    let engraved = engrave(&score, fonts, meta, &r.options);
     let theme = if r.dark { Theme::DARK } else { Theme::LIGHT };
     let mut raster = Raster::new();
     let mut out = Vec::new();

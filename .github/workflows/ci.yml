@@ -56,6 +56,16 @@ jobs:
           cargo clippy --workspace --all-targets --all-features --locked \
             --message-format=short -- -D warnings 2>&1 \
             | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+      # Each format plugin is built with one reader of oxiguitar-formats, so
+      # each reader alone must build cleanly too.
+      - name: Clippy, each reader alone
+        run: |
+          set -o pipefail
+          for reader in gp3 gp4 gp5 gpx gp; do
+            cargo clippy -p oxiguitar-formats --no-default-features --features "$reader,plugin" --locked \
+              --message-format=short -- -D warnings 2>&1 \
+              | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+          done
       - name: Docs
         run: |
           set -o pipefail
@@ -118,13 +128,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       # Failing tests also become an annotation, so they can be read without
       # downloading the job log. Bash on every runner, Windows included.
+      # Default features only: with --all-features, every plugin crate would
+      # export the plugin entry symbol, and a binary linking two of them
+      # would not link. Tests that need our plugins build each one as its
+      # .oxp file (oxiguitar-plugin-test).
       - name: cargo test
         shell: bash
         env:
           CARGO_TERM_COLOR: never
         run: |
           set +e
-          cargo test --workspace --all-features --locked 2>&1 | tee test.log
+          cargo test --workspace --locked 2>&1 | tee test.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             # Each panic with the lines after it, then the "failures:" report,
@@ -202,6 +216,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace xvfb libxkbcommon-x11-0 libgl1-mesa-dri libegl1 libfontconfig1-dev libxkbcommon-dev libwayland-dev
       - run: cargo build --workspace --locked
+      # Our plugins, where the programs look for them (target/lib/oxiguitar/
+      # plugins/), so the session reads every fixture through them.
+      - run: scripts/build-plugins.sh --debug
       - run: scripts/no-network.sh target/debug/oxiguitar-cli target/debug/oxiguitar
 
   dco:

@@ -23,6 +23,8 @@ on:
     paths:
       - .github/workflows/release.yml
       - scripts/package/**
+      - scripts/build-plugins.sh
+      - plugins/**
       - about.toml
       - assets/linux/**
       - assets/macos/**
@@ -93,6 +95,9 @@ jobs:
             libfontconfig1-dev libxkbcommon-dev libwayland-dev \
             rpm squashfs-tools xvfb xauth libxkbcommon-x11-0 libgl1-mesa-dri libegl1
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      # Our plugins (target/lib/oxiguitar/plugins/), which every package
+      # installs until the core and the basic plugins are packaged apart.
+      - run: scripts/build-plugins.sh
       - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
@@ -114,6 +119,7 @@ jobs:
               shared-mime-info desktop-file-utils xvfb xauth libgl1-mesa-dri
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
             dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends):"
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             grep -q "application/x-gtp=io.github.mateusrdp.OxiGuitar.desktop" /usr/share/applications/mimeinfo.cache
@@ -127,6 +133,7 @@ jobs:
             dnf install -y shared-mime-info desktop-file-utils xorg-x11-server-Xvfb xorg-x11-xauth mesa-dri-drivers mesa-libEGL
             dnf install -y ./dist/oxiguitar-*.rpm
             rpm -q --requires oxiguitar
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
@@ -137,6 +144,8 @@ jobs:
           appimage="$(ls dist/OxiGuitar-*.AppImage)"
           (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
           test -x "$RUNNER_TEMP/squashfs-root/AppRun"
+          test "$(ls "$RUNNER_TEMP"/squashfs-root/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
+          "$RUNNER_TEMP/squashfs-root/usr/bin/oxiguitar-cli" info "$SAMPLE" > /dev/null
           # Without FUSE on the runner, the runtime unpacks and runs.
           APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a "$appimage" "$SAMPLE"
       - uses: actions/upload-artifact@v7
@@ -175,6 +184,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      # Our plugins, in plugins\ beside the programs (target/release/plugins).
+      - run: scripts/build-plugins.sh
+        shell: bash
       - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
@@ -200,8 +212,10 @@ jobs:
         run: |
           $name = "OxiGuitar-$env:VERSION-windows-${{ matrix.arch }}"
           $dir = "dist/$name"
-          New-Item -ItemType Directory -Force $dir, "$dir/licenses" | Out-Null
+          New-Item -ItemType Directory -Force $dir, "$dir/licenses", "$dir/plugins" | Out-Null
           Copy-Item target/release/oxiguitar.exe, target/release/oxiguitar-cli.exe $dir
+          Copy-Item target/release/plugins/*.oxp "$dir/plugins"
+          if ((Get-ChildItem "$dir/plugins/*.oxp").Count -ne 5) { throw 'the zip needs our five plugins' }
           Copy-Item README.md, CHANGELOG.md, CREDITS.md $dir
           Copy-Item LICENSE "$dir/LICENSE.txt"
           Copy-Item dist/THIRD-PARTY-LICENSES.html "$dir/licenses/"
@@ -237,6 +251,18 @@ jobs:
             target/aarch64-apple-darwin/release/oxiguitar \
             target/x86_64-apple-darwin/release/oxiguitar
           lipo -info dist/macos/oxiguitar
+      # Our plugins, each one universal file, for the app's Contents/PlugIns.
+      - run: |
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            scripts/build-plugins.sh --target "$target"
+          done
+          mkdir -p dist/macos/PlugIns
+          for plugin in target/aarch64-apple-darwin/PlugIns/*.oxp; do
+            name="$(basename "$plugin")"
+            lipo -create -output "dist/macos/PlugIns/$name" \
+              "$plugin" "target/x86_64-apple-darwin/PlugIns/$name"
+            lipo -info "dist/macos/PlugIns/$name"
+          done
       - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
@@ -249,6 +275,10 @@ jobs:
           app="$mount/OxiGuitar.app"
           plutil -p "$app/Contents/Info.plist" | grep -E "CFBundleIdentifier|CFBundleShortVersionString|gp5"
           lipo -info "$app/Contents/MacOS/oxiguitar" | grep -q "x86_64 arm64"
+          test "$(ls "$app"/Contents/PlugIns/*.oxp | wc -l)" -eq 5
+          for plugin in "$app"/Contents/PlugIns/*.oxp; do
+            lipo -info "$plugin" | grep -q "x86_64 arm64"
+          done
           test -f "$app/Contents/Resources/OxiGuitar.icns"
           codesign --verify --verbose "$app"
           hdiutil detach "$mount"

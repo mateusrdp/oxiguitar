@@ -94,6 +94,39 @@ pub fn build(
     Ok(oxp)
 }
 
+/// Our own plugins, shipped with OxiGuitar: each crate's package name and
+/// its file's name (`NAME.oxp`). Each lives in `plugins/NAME/` as
+/// `oxiguitar-NAME-plugin`; `plugins/test` is never shipped.
+pub const OURS: &[(&str, &str)] = &[
+    ("oxiguitar-gp3-plugin", "gp3"),
+    ("oxiguitar-gp4-plugin", "gp4"),
+    ("oxiguitar-gp5-plugin", "gp5"),
+    ("oxiguitar-gpx-plugin", "gpx"),
+    ("oxiguitar-gp-plugin", "gp"),
+];
+
+/// Builds every plugin of [`OURS`], each on its own so it carries only its
+/// own code (built together, Cargo would give each the features of all),
+/// and puts the files in the workspace's `target/oxp/ours-debug/` or
+/// `ours-release/`, replacing what was there. Returns that folder, a plugin
+/// folder for tests.
+pub fn build_ours(workspace: &Path, release: bool) -> Result<PathBuf, String> {
+    let folder = workspace.join("target").join("oxp").join(if release {
+        "ours-release"
+    } else {
+        "ours-debug"
+    });
+    std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
+    for (package, name) in OURS {
+        let built = build(workspace, package, name, release)?;
+        let to = folder.join(format!("{name}.oxp"));
+        // A new file: a program that loaded the old one keeps its own.
+        let _ = std::fs::remove_file(&to);
+        std::fs::copy(&built, &to).map_err(|e| format!("{}: {e}", to.display()))?;
+    }
+    Ok(folder)
+}
+
 /// The outcome of [`check`]: each check's description, passed or with
 /// what went wrong.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

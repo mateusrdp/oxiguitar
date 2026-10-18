@@ -101,12 +101,12 @@ As built in `oxiguitar-host` (`Plugins`):
 
 ### Writing a plugin (until the developer guide)
 
-The developer guide (`docs/plugins/`) comes with the template plugin later in M2. Until then, `plugins/test` is the example:
+The developer guide (`docs/plugins/`) comes with the template plugin later in M2. Until then, `plugins/test` is the example of every part of the interface, and our Guitar Pro plugins (`plugins/gp3` … `plugins/gp`) of a format plugin as we ship it:
 
 1. A library crate with a Cargo feature `oxp = []`, depending on `oxiguitar-plugin`, its lints denying `unsafe_code` (not forbidding it, so `export_plugin!` can allow its two attributes).
 2. `manifest.json` beside its `Cargo.toml` (`oxiguitar_plugin_api::manifest` describes the keys); its `version` must equal the crate's.
 3. A type implementing `Plugin` (`start`, and `reader`, `writer` or `service` for each contribution), the traits for each contribution, and `oxiguitar_plugin::export_plugin!(TheType);` in `lib.rs`. `cargo test` then checks the manifest against the code.
-4. `oxiguitar-plugin-test --build PACKAGE NAME` builds `target/oxp/NAME.oxp` and checks it against the interface.
+4. `oxiguitar-plugin-test --build PACKAGE NAME` builds `target/oxp/NAME.oxp` and checks it against the interface. `scripts/build-plugins.sh` builds every plugin of ours, each on its own, into the folder a build from source looks in (`target/lib/oxiguitar/plugins/` on Linux).
 
 ### The options considered
 
@@ -191,11 +191,12 @@ So that a disabled plugin manager can't lock a user out, the core keeps two thin
 - Each release attaches every plugin for every target (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp`, …) to the same GitHub release, with SHA256SUMS.
 - **Two packages** (Mateus, 18 Oct 2026): `oxiguitar`, the core alone, and `oxiguitar-plugins-basic`, the plugins we write and recommend, installed into `/usr/lib/oxiguitar/plugins/`. `oxiguitar` lists `oxiguitar-plugins-basic` under **Suggests** (apt doesn't install suggested packages by default, so the core really ships alone). Both must meet Debian's criteria for its archive. The basic set: the Guitar Pro format plugins (3, 4, 5, 6, 7–8), the plugin manager, the MIDI instrument and the audio-device plugins for Linux. The .rpm splits the same way (`Suggests:`); the AppImage, the Windows zip and the .dmg come in two downloads each, the core and a zip of the basic plugins (Mateus, 18 Oct 2026: no plugins inside the AppImage), the plugins unpacked into the user's plugin folder by hand or by the plugin manager.
 - With the core alone, the footer says that nothing can be opened or played yet and where to get plugins.
+- Until the packages split (M2's packaging slice), every package installs our Guitar Pro plugins in the program's system plugin folder: `/usr/lib/oxiguitar/plugins/` in the .deb and .rpm (and inside the AppImage), `plugins\` in the Windows zip, `Contents/PlugIns/` in the .app.
 - Anyone can host plugins anywhere. The core names none: its footer points to our releases page when nothing can be opened or played.
 
 ## Testing
 
-- **Each plugin tests itself** as an ordinary Rust library: readers keep their fixture, corpus, round-trip and fuzz tests, moved with them.
+- **Each plugin tests itself** as an ordinary Rust library, and **through its file**: tested together in one workspace, Cargo gives every plugin the features of all, so what holds only for a plugin built alone (that it carries and reads only its own format) is checked on its `.oxp` file. The readers' fixture, corpus and fuzz tests stay with the reader code in `oxiguitar-formats`; `oxiguitar-plugin-test`'s `ours` test reads every fixture, reference and corpus file through the five Guitar Pro plugins' files and compares the result with the in-process reader, and the `plugin_dispatch` fuzz target covers the plugins' side of the interface.
 - **The interface has a contract suite** (`oxiguitar-plugin-test`) that builds a plugin as an `.oxp` and checks it through the host: the manifest reads without loading, it starts, a contribution it doesn't have is "not found", damaged input (nothing, zeros, its signature alone) and an empty score never crash it, every service answers its probe. The instrument checks (nothing allocated, locked or waited for on the audio thread) come with the instrument interface (M4). The test plugin (`plugins/test`) runs every part of the interface end to end: reading and writing with their logs, errors with offsets, a caught panic, the choice of services (conditions, priority, probe, a pin), instruments by class, settings, footer messages, a plugin calling a service through the host, duplicates, disabled and damaged files.
 - **The core is tested with no plugins** (it opens nothing and says why), with test plugins, and with ours.
 - The existing gates stay: the speed budget now includes reading the manifests and loading the format plugin (target: the 300-bar file still opens in under a second, and start-up with 30 plugins installed costs under 10 ms of manifest reading); visual references must not change when the readers move into plugins; NET-5 runs with our plugins installed.

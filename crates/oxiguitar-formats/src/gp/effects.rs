@@ -41,8 +41,8 @@ impl Reader<'_> {
     pub(super) fn beat_effects(&mut self, fx: &mut BeatEffects) -> Result<BeatNoteEffects> {
         let mut notes = BeatNoteEffects::default();
         let flags1 = self.c.u8()?;
-        let flags2 = if self.major() >= 4 { self.c.u8()? } else { 0 };
-        if self.major() == 3 {
+        let flags2 = if self.since_v4() { self.c.u8()? } else { 0 };
+        if self.is(3) {
             notes.vibrato = flags1 & 0x01 != 0;
             if flags1 & 0x04 != 0 {
                 notes.harmonic = Some(Harmonic::Natural);
@@ -61,7 +61,7 @@ impl Reader<'_> {
                 3 => Some(BeatTechnique::Pop),
                 _ => None,
             };
-            if self.major() == 3 {
+            if self.is(3) {
                 // Guitar Pro 3 follows with a whammy-bar dip depth, or an
                 // unused int for tap/slap/pop.
                 let value = self.c.i32()?;
@@ -92,7 +92,7 @@ impl Reader<'_> {
             let a = self.c.i8()?;
             let b = self.c.i8()?;
             // Version 5 swapped the order of the up and down speeds.
-            let (down, up) = if self.major() == 5 { (b, a) } else { (a, b) };
+            let (down, up) = if self.is(5) { (b, a) } else { (a, b) };
             fx.stroke = if up > 0 {
                 Some(Stroke {
                     direction: StrokeDirection::Up,
@@ -148,7 +148,7 @@ impl Reader<'_> {
         string: u8,
     ) -> Result<Option<PendingGrace>> {
         let flags1 = self.c.u8()?;
-        let flags2 = if self.major() >= 4 { self.c.u8()? } else { 0 };
+        let flags2 = if self.since_v4() { self.c.u8()? } else { 0 };
         let mut grace = None;
         if flags1 & 0x01 != 0 {
             note.effects.bend = Some(self.bend()?);
@@ -158,7 +158,7 @@ impl Reader<'_> {
         }
         let fx_hammer = flags1 & 0x02 != 0;
         let fx_let_ring = flags1 & 0x08 != 0;
-        if self.major() == 3 && flags1 & 0x04 != 0 {
+        if self.is(3) && flags1 & 0x04 != 0 {
             note.effects.slides.push(Slide::Shift);
         }
         if flags2 & 0x04 != 0 {
@@ -201,7 +201,7 @@ impl Reader<'_> {
         let fret = self.c.i8()?;
         let dynamic = dynamic_from_gp(self.c.i8()?);
         let (transition, duration, flags);
-        if self.major() == 5 {
+        if self.is(5) {
             transition = self.c.i8()?;
             duration = self.c.u8()?;
             flags = self.c.u8()?;
@@ -230,7 +230,7 @@ impl Reader<'_> {
     }
 
     fn slides(&mut self) -> Result<Vec<Slide>> {
-        if self.major() == 5 {
+        if self.is(5) {
             let flags = self.c.u8()?;
             let all = [
                 (0x01, Slide::Shift),
@@ -299,7 +299,7 @@ impl Reader<'_> {
                     frets.push(self.c.i32()?);
                 }
             }
-        } else if self.major() == 3 {
+        } else if self.is(3) {
             // sharp (1), blank (3), root, type, extension, bass, tonality (ints), add (1)
             self.c.skip(1 + 3 + 5 * 4 + 1)?;
             chord.name = self.c.byte_size_string(22)?;

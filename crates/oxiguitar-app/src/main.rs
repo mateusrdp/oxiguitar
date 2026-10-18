@@ -26,6 +26,10 @@ mod prefs;
 mod shell;
 #[cfg(test)]
 mod speed;
+#[cfg(test)]
+mod test_support;
+#[cfg(test)]
+use test_support::test_plugins;
 mod tracks;
 mod worker;
 
@@ -115,6 +119,9 @@ struct App {
     cursor: Option<(f64, f64)>,
     pdf_name: String,
     folder: Option<PathBuf>,
+    /// The extensions of the formats the installed plugins read, for
+    /// File → Open's filter.
+    open_extensions: Vec<String>,
     /// The toolbar and the four areas, and the toolbar's icons by name.
     shell: Shell,
     icons: HashMap<String, Image>,
@@ -165,7 +172,19 @@ fn main() -> Result<(), slint::PlatformError> {
     let old_tile_model = Rc::new(VecModel::<TileItem>::default());
     ui.set_old_tiles(ModelRc::from(old_tile_model.clone()));
 
-    let worker = Worker::start(|event| {
+    // The user folder, settings.json and the plugin folders (created when
+    // missing), every plugin's manifest (no plugin is loaded), and what the
+    // footer should say about them. A few small file operations, done
+    // before the window first shows. Files are opened only through the
+    // plugins found here.
+    let startup = oxiguitar_host::start(
+        oxiguitar_host::Folders::here(),
+        oxiguitar_host::display_system(),
+        Arc::new(ToFooter),
+    );
+    let open_extensions = startup.plugins.read_extensions();
+
+    let worker = Worker::start(startup.plugins.clone(), |event| {
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(app) = APP.with(|a| a.borrow().clone()) {
                 handle(&app, event);
@@ -195,6 +214,7 @@ fn main() -> Result<(), slint::PlatformError> {
         cursor: None,
         pdf_name: "score.pdf".to_owned(),
         folder: None,
+        open_extensions,
         shell: Shell::default(),
         icons: HashMap::new(),
         footer: Footer::default(),
@@ -227,20 +247,6 @@ fn main() -> Result<(), slint::PlatformError> {
     ]));
     set_tools(&ui, &tool_rows(&default_tools()));
 
-    // The user folder, settings.json and the plugin folders (created when
-    // missing), every plugin's manifest (no plugin is loaded), and what the
-    // footer should say about them. A few small file operations, done
-    // before the window first shows.
-    let startup = oxiguitar_host::start(
-        oxiguitar_host::Folders::here(),
-        document::BUILT_IN_READERS
-            .iter()
-            .map(|r| (*r).to_owned())
-            .collect(),
-        Vec::new(),
-        oxiguitar_host::display_system(),
-        Arc::new(ToFooter),
-    );
     ui.set_player_available(!startup.inventory.instruments.is_empty());
     if !startup.inventory.instruments.is_empty() {
         ui.set_outputs(ModelRc::new(VecModel::from(
@@ -945,12 +951,16 @@ fn open_dialog(app: &Shared) {
         return;
     }
     let folder = app.borrow().folder.clone();
+    let extensions = app.borrow().open_extensions.clone();
     let sender = app.borrow().worker.sender();
     let pick = move || {
-        let mut dialog = rfd::FileDialog::new()
-            .set_title("Open")
-            .add_filter("Guitar Pro", document::OPEN_EXTENSIONS)
-            .add_filter("All files", &["*"]);
+        let mut dialog = rfd::FileDialog::new().set_title("Open");
+        // The formats the installed plugins read; with none, the dialog
+        // still opens, and the footer says why nothing can be read.
+        if !extensions.is_empty() {
+            dialog = dialog.add_filter("Scores", &extensions);
+        }
+        dialog = dialog.add_filter("All files", &["*"]);
         if let Some(f) = folder {
             dialog = dialog.set_directory(f);
         }

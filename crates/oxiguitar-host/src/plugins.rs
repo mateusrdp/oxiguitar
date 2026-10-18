@@ -46,7 +46,7 @@ use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::signature::Sniff;
 use serde_json::Value;
 
-use crate::inventory::{Level, plugin_files};
+use crate::inventory::{ISSUES_URL, Level, PLUGINS_URL, plugin_files};
 use crate::loader::{self, Loaded};
 use crate::oxp;
 use crate::settings::SharedSettings;
@@ -183,6 +183,69 @@ pub struct ServiceRef<'a> {
     /// The service, as its manifest declares it.
     pub spec: &'a ServiceSpec,
 }
+
+/// Why no plugin opens a file ([`Plugins::recognise`]). Its text is a
+/// sentence for the footer, to follow the file's name.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Unrecognised {
+    /// No plugin that reads files is installed.
+    NoReaders,
+    /// No installed plugin recognises the file, and none declares its
+    /// extension: a feature request.
+    Unknown,
+    /// A usable plugin declares the file's extension but doesn't recognise
+    /// it: a bug report.
+    NotRecognised {
+        /// The plugin's name.
+        plugin: String,
+        /// The format's name.
+        format: String,
+        /// The file's extension, lowercase.
+        extension: String,
+    },
+    /// The plugin that declares the file's extension can't be used here.
+    NotUsable {
+        /// The plugin's name.
+        plugin: String,
+        /// The file's extension, lowercase.
+        extension: String,
+        /// Why it can't be used.
+        why: String,
+    },
+}
+
+impl fmt::Display for Unrecognised {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Unrecognised::NoReaders => write!(
+                f,
+                "no plugin that opens files is installed. Download plugins from {PLUGINS_URL} and put them in your plugins folder."
+            ),
+            Unrecognised::Unknown => write!(
+                f,
+                "no installed plugin recognises this file. To ask for a plugin that opens it, please open a feature request: {ISSUES_URL}"
+            ),
+            Unrecognised::NotRecognised {
+                plugin,
+                format,
+                extension,
+            } => write!(
+                f,
+                "the {plugin} plugin opens .{extension} files but doesn't recognise this one. If it is a {format} file, please report a bug: {ISSUES_URL}"
+            ),
+            Unrecognised::NotUsable {
+                plugin,
+                extension,
+                why,
+            } => write!(
+                f,
+                "the {plugin} plugin, which opens .{extension} files, can't be used: {why}."
+            ),
+        }
+    }
+}
+
+impl std::error::Error for Unrecognised {}
 
 /// What a format plugin read.
 #[derive(Clone, Debug, PartialEq)]
@@ -324,6 +387,77 @@ impl Plugins {
                 index,
             })
         })
+    }
+
+    /// The format of `data`, a whole file, or why no plugin opens it. The
+    /// installed plugins' formats are all the core can open: it recognises
+    /// nothing itself (Mateus, 18 Oct 2026). `extension` is the file's
+    /// extension, if it has one; it never decides the format, only which
+    /// report the refusal asks for.
+    pub fn recognise(
+        &self,
+        data: &[u8],
+        extension: Option<&str>,
+    ) -> Result<FormatRef<'_>, Unrecognised> {
+        if let Some(format) = self.format_for(data) {
+            return Ok(format);
+        }
+        let claims = |m: &Manifest| {
+            let ext = extension?;
+            m.formats
+                .iter()
+                .filter(|f| f.read)
+                .find(|f| f.extensions.iter().any(|e| e.eq_ignore_ascii_case(ext)))
+                .map(|f| (f.name.clone(), ext.to_ascii_lowercase()))
+        };
+        if let Some((found, (format, extension))) = self
+            .ready()
+            .find_map(|(_, found, m)| claims(m).map(|c| (found, c)))
+        {
+            return Err(Unrecognised::NotRecognised {
+                plugin: found.name(),
+                format,
+                extension,
+            });
+        }
+        let idle = self
+            .0
+            .found
+            .iter()
+            .find_map(|found| match (&found.state, &found.manifest) {
+                (State::Disabled | State::Unusable(_), Some(m)) => claims(m).map(|c| (found, c)),
+                _ => None,
+            });
+        if let Some((found, (_, extension))) = idle {
+            return Err(Unrecognised::NotUsable {
+                plugin: found.name(),
+                extension,
+                why: match &found.state {
+                    State::Unusable(why) => why.clone(),
+                    _ => format!("it is disabled in {}", crate::SETTINGS_FILE),
+                },
+            });
+        }
+        if self.readers().is_empty() {
+            Err(Unrecognised::NoReaders)
+        } else {
+            Err(Unrecognised::Unknown)
+        }
+    }
+
+    /// The extensions of every format the usable plugins read, without the
+    /// dot, lowercase, each once: File → Open's filter.
+    pub fn read_extensions(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for format in self.readers() {
+            for e in &format.spec.extensions {
+                let e = e.to_ascii_lowercase();
+                if !out.contains(&e) {
+                    out.push(e);
+                }
+            }
+        }
+        out
     }
 
     /// Reads `data` with the plugin that owns `format`, loading it first if

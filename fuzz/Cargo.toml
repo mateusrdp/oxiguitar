@@ -14,6 +14,15 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 oxiguitar-formats = { path = "../crates/oxiguitar-formats" }
+# The plugin_dispatch target: our format plugins as libraries, the SDK's
+# dispatch and the score's way back into the model.
+oxiguitar-plugin = { path = "../crates/oxiguitar-plugin" }
+oxiguitar-model = { path = "../crates/oxiguitar-model", features = ["wire"] }
+oxiguitar-gp3-plugin = { path = "../plugins/gp3" }
+oxiguitar-gp4-plugin = { path = "../plugins/gp4" }
+oxiguitar-gp5-plugin = { path = "../plugins/gp5" }
+oxiguitar-gpx-plugin = { path = "../plugins/gpx" }
+oxiguitar-gp-plugin = { path = "../plugins/gp" }
 # The GPIF target packs its input into a .gp archive.
 zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
@@ -55,6 +64,13 @@ bench = false
 [[bin]]
 name = "any_file"
 path = "fuzz_targets/any_file.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "plugin_dispatch"
+path = "fuzz_targets/plugin_dispatch.rs"
 test = false
 doc = false
 bench = false

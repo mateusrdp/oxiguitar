@@ -7,6 +7,7 @@
 #
 # Usage: scripts/package/macos.sh VERSION
 # Reads:  dist/macos/oxiguitar (universal, from lipo),
+#         dist/macos/PlugIns/*.oxp (our plugins, universal, from lipo),
 #         dist/THIRD-PARTY-LICENSES.html
 # Writes: dist/OxiGuitar-VERSION-macos-universal.dmg
 #
@@ -28,6 +29,10 @@ plain="${version%%~*}"
 app="$work/dmg/OxiGuitar.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 install -m755 "$dist/macos/oxiguitar" "$app/Contents/MacOS/oxiguitar"
+# Our plugins (universal files), until the core and the basic plugins come
+# as two downloads (ROADMAP.md, M2's packaging slice).
+mkdir -p "$app/Contents/PlugIns"
+install -m644 "$dist"/macos/PlugIns/*.oxp "$app/Contents/PlugIns/"
 sed "s/@VERSION@/$plain/g" "$root/assets/macos/Info.plist" > "$app/Contents/Info.plist"
 plutil -lint "$app/Contents/Info.plist"
 printf 'APPL????' > "$app/Contents/PkgInfo"
@@ -50,6 +55,10 @@ cp "$root/CHANGELOG.md" "$root/CREDITS.md" "$dist/THIRD-PARTY-LICENSES.html" "$r
 cp "$root/assets/fonts/bravura/OFL.txt" "$res/Bravura-OFL.txt"
 cp "$root/assets/fonts/noto-sans/OFL.txt" "$res/NotoSans-OFL.txt"
 
+# Nested code first (the plugins), then the app around it.
+for plugin in "$app"/Contents/PlugIns/*.oxp; do
+    codesign --force --sign - "$plugin"
+done
 codesign --force --deep --sign - "$app"
 codesign --verify --verbose "$app"
 

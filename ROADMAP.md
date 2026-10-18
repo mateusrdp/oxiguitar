@@ -102,7 +102,7 @@ Turn the viewer into a small core with plugins, and give the window the shape th
 - [x] Mateus answers ADR 0008's questions; ADR 0008 accepted (18 Oct 2026).
 - [x] `oxiguitar-plugin-api` (the interface's messages), `oxiguitar-plugin` (the SDK for plugin authors, no `unsafe` for them), the host in `oxiguitar-host` (manifests read without loading, lazy loading, contributions registry, host services, services chosen per platform and environment). PRs #48 and #49.
 - [x] A test plugin built as an `.oxp` and the contract suite (`oxiguitar-plugin-test`); 30 manifests read in about 1 ms.
-- [ ] Five format plugins from M1's readers: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp), each with its fixtures, corpus, fuzz and visual tests. The core holds no format code and recognises no format itself; `oxiguitar-cli` loads plugins like the app.
+- [x] Five format plugins from M1's readers: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp), each with its fixtures, corpus, fuzz and visual tests. The core holds no format code and recognises no format itself; `oxiguitar-cli` loads plugins like the app (PR #51, 18 Oct 2026). Every M1 gate passes through the `.oxp` files: 42 of 42 corpus files; all 159 Guitar Pro files read byte for byte as develop's in-process reader read them; the 50 visual references unchanged; the speed budget with the plugin loaded (0.26 s and 0.32 s for the first runs); the contract on all five; NET-5 with the plugins installed; a fuzz target for the plugins' dispatch.
 - [x] ~~Plugins for PDF export and for Infer Key Signatures~~: dropped. Both stay in the core, PDF export as a feature of the viewer and Infer Key Signatures as a feature of the editor (Mateus, 18 Oct 2026).
 - [ ] The plugin manager plugin: list, enable, disable, uninstall, install from a file, settings forms. `--safe-mode`.
 - [ ] Plugins built for all six targets in CI, attached to releases with SHA256SUMS; two packages, `oxiguitar` (the core) and `oxiguitar-plugins-basic` (Suggested by the core); the AppImage, the Windows zip and the .dmg each beside a zip of the basic plugins.
@@ -116,7 +116,7 @@ Done when: the core with no plugins opens nothing and says so, and a file no ins
 
 Each slice is one or more pull requests into develop, with the same gates as M1. Mateus set the order.
 
-1. **The five Guitar Pro readers as format plugins.**
+1. **The five Guitar Pro readers as format plugins.** Done (PR #51); the six-hour fuzzing run per reader by hand is the one gate left.
    - `plugins/gp3`, `gp4`, `gp5`, `gpx` and `gp` (ids `oxiguitar.gp3` …, files `gp3.oxp` …). Each is a thin crate over `oxiguitar-formats`, which keeps the shared reader code and gains one Cargo feature per reader, so each plugin carries only its own. Manifests carry today's detection as signatures: `FICHIER GUITAR PRO v3/v4/v5` at offset 1, `BCFZ`/`BCFS` at 0, the ZIP member `Content/score.gpif`.
    - No catalogue and no detection in the core (Mateus, 18 Oct 2026): the formats the installed plugins recognise are what the app opens. With no plugin installed it opens nothing. A file no plugin recognises is refused: a bug report is asked for when an installed plugin declares the file's extension, a feature request otherwise (both at the issue tracker). Guitar Pro 1–2 files are refused that way too.
    - The app and `oxiguitar-cli` open files through `Plugins` (wire score → model); `BUILT_IN_READERS` goes away.
