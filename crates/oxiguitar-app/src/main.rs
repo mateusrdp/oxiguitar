@@ -17,7 +17,12 @@
 //! contents and draws their canvases, and the worker tells the plugins
 //! that subscribe when a score is opened or changed.
 //!
-//! Usage: `oxiguitar [FILE]`. Nothing here touches the network.
+//! Tools → Plugins opens the plugin manager ([`manager`]), and
+//! `--safe-mode` starts with no plugins at all; Help → About lists the
+//! plugin folders.
+//!
+//! Usage: `oxiguitar [--safe-mode] [FILE]`. Nothing here touches the
+//! network.
 
 #![windows_subsystem = "windows"]
 
@@ -25,6 +30,7 @@ mod canvas;
 mod document;
 mod footer;
 mod icons;
+mod manager;
 mod plugin_tabs;
 mod prefs;
 mod shell;
@@ -72,8 +78,8 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, FooterRow, PluginRow, PluginWidget, TileItem, ToolRow, ToolbarItemRow,
-    ToolbarSectionRow, TrackRow,
+    AppWindow, AreaState, FooterRow, ManagerRow, PluginManagerWindow, PluginRow, PluginWidget,
+    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -146,6 +152,10 @@ struct App {
     tab_thread: Option<TabThread>,
     plugin_tabs: HashMap<TabId, PluginTabState>,
     plugin_views: [PluginView; 4],
+    /// Every plugin file found, for the plugin manager, and its window
+    /// once opened (hidden, not dropped, when closed).
+    plugins: oxiguitar_host::Plugins,
+    manager: Option<PluginManagerWindow>,
 }
 
 /// A plugin tab's last contents (or why it can't be shown) and its
@@ -232,14 +242,24 @@ fn main() -> Result<(), slint::PlatformError> {
     // footer should say about them. A few small file operations, done
     // before the window first shows. Files are opened only through the
     // plugins found here.
+    let args = Args::parse(std::env::args_os().skip(1));
     let open_score = OpenScore::default();
-    let startup = oxiguitar_host::start(
-        oxiguitar_host::Folders::here(),
-        oxiguitar_host::display_system(),
-        Arc::new(WindowCore {
-            open: open_score.clone(),
-        }),
-    );
+    let core = Arc::new(WindowCore {
+        open: open_score.clone(),
+    });
+    let startup = if args.safe_mode {
+        oxiguitar_host::start_in_safe_mode(
+            oxiguitar_host::Folders::here(),
+            oxiguitar_host::display_system(),
+            core,
+        )
+    } else {
+        oxiguitar_host::start(
+            oxiguitar_host::Folders::here(),
+            oxiguitar_host::display_system(),
+            core,
+        )
+    };
     let open_extensions = startup.plugins.read_extensions();
     let mut shell = Shell::default();
     plugin_tabs::add_to(&mut shell, &startup.plugins);
@@ -294,6 +314,8 @@ fn main() -> Result<(), slint::PlatformError> {
         tab_thread,
         plugin_tabs: HashMap::new(),
         plugin_views: Default::default(),
+        plugins: startup.plugins.clone(),
+        manager: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
 
@@ -308,16 +330,19 @@ fn main() -> Result<(), slint::PlatformError> {
         "Panels: click a tab's name to open it, the open tab's name (or the chevron) to collapse its panel",
         "Footer: click it to see every message; the chevron folds it back",
         "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to show that track alone",
+        "Tools → Plugins: every plugin file, and a tickbox to enable or disable each from the next start;  oxiguitar --safe-mode starts without any plugin",
     ]));
-    ui.set_about_lines(lines(&[
-        &format!(
+    let mut about = vec![
+        format!(
             "Guitar tablature and score viewer, editor and player. Version {}.",
             env!("CARGO_PKG_VERSION")
         ),
-        "Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors. Licensed under the GNU GPL, version 3 or later.",
-        "Music font: Bravura (Steinberg, SIL OFL 1.1). Text font: Noto Sans (SIL OFL 1.1). GUI: Slint (GPL-3.0).",
-        "OxiGuitar never connects to the internet on its own and sends nothing anywhere.",
-    ]));
+        "Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors. Licensed under the GNU GPL, version 3 or later.".to_owned(),
+        "Music font: Bravura (Steinberg, SIL OFL 1.1). Text font: Noto Sans (SIL OFL 1.1). GUI: Slint (GPL-3.0).".to_owned(),
+        "OxiGuitar never connects to the internet on its own and sends nothing anywhere.".to_owned(),
+    ];
+    about.extend(about_folders(&startup.inventory.folders, args.safe_mode));
+    ui.set_about_lines(lines(&about.iter().map(String::as_str).collect::<Vec<_>>()));
     set_tools(&ui, &tool_rows(&default_tools()));
 
     ui.set_player_available(!startup.inventory.instruments.is_empty());
@@ -415,11 +440,20 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     install_plugin_tab_callbacks(&ui, &app);
+    let a = app.clone();
+    ui.on_open_plugin_manager(move || open_plugin_manager(&a));
+    // Closing the main window ends the program, even with the plugin
+    // manager's window open (the event loop would otherwise wait for the
+    // last window).
+    ui.window().on_close_requested(|| {
+        let _ = slint::quit_event_loop();
+        slint::CloseRequestResponse::HideWindow
+    });
     install_window_events(&ui, &app);
 
     // A file named on the command line (or by the system's file manager).
-    if let Some(path) = std::env::args_os().nth(1) {
-        app.borrow().worker.send(Request::Open(PathBuf::from(path)));
+    if let Some(path) = args.file {
+        app.borrow().worker.send(Request::Open(path));
     }
 
     // For automated checks (scripts/no-network.sh): quit after this many
@@ -1064,6 +1098,134 @@ fn install_plugin_tab_callbacks(ui: &AppWindow, app: &Shared) {
     ui.on_plugin_canvas_room(move |area, id, w, h| canvas_room(&a, area, &id, w, h));
 }
 
+/// The command line: `oxiguitar [--safe-mode] [FILE]`.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Args {
+    /// Start with no plugins at all.
+    safe_mode: bool,
+    /// The file to open.
+    file: Option<PathBuf>,
+}
+
+impl Args {
+    fn parse(args: impl IntoIterator<Item = std::ffi::OsString>) -> Args {
+        let mut out = Args::default();
+        for arg in args {
+            if arg == "--safe-mode" {
+                out.safe_mode = true;
+            } else if out.file.is_none() {
+                out.file = Some(PathBuf::from(arg));
+            }
+        }
+        out
+    }
+}
+
+/// Help → About's lines about the plugin folders, so a user can find a
+/// plugin file even when no plugin manager can be opened.
+fn about_folders(folders: &[PathBuf], safe_mode: bool) -> Vec<String> {
+    let mut out = vec![if folders.is_empty() {
+        "Plugin folders: none.".to_owned()
+    } else {
+        "Plugin folders, searched in this order:".to_owned()
+    }];
+    out.extend(folders.iter().map(|f| format!("    {}", f.display())));
+    if safe_mode {
+        out.push("Started in safe mode: no plugin is used.".to_owned());
+    }
+    out
+}
+
+/// Tools → Plugins: the plugin manager's window, made the first time and
+/// shown again (in front) after that. It doesn't block the main window.
+fn open_plugin_manager(app: &Shared) {
+    let existing = app
+        .borrow()
+        .manager
+        .as_ref()
+        .map(ComponentHandle::clone_strong);
+    let window = match existing {
+        Some(w) => w,
+        None => {
+            let Ok(w) = PluginManagerWindow::new() else {
+                message(
+                    app,
+                    Level::Error,
+                    "The plugin manager's window couldn't be opened.",
+                );
+                return;
+            };
+            let a = app.clone();
+            w.on_toggled(move |i, on| manager_toggled(&a, i, on));
+            let weak = w.as_weak();
+            w.on_close_clicked(move || {
+                if let Some(w) = weak.upgrade() {
+                    let _ = w.hide();
+                }
+            });
+            app.borrow_mut().manager = Some(w.clone_strong());
+            w
+        }
+    };
+    {
+        let s = app.borrow();
+        window.set_dark_interface(s.prefs.dark_interface);
+        window.set_safe_mode(s.plugins.safe_mode());
+        let can_save = s.stored.path().is_some();
+        window.set_can_save(can_save);
+        window.set_problem(if can_save {
+            SharedString::new()
+        } else {
+            SharedString::from(format!(
+                "{} couldn't be read when OxiGuitar started, so plugins can't be enabled or disabled now: correct it (or remove it) and start OxiGuitar again.",
+                oxiguitar_host::SETTINGS_FILE
+            ))
+        });
+    }
+    sync_manager(app);
+    let _ = window.show();
+}
+
+/// The manager's rows, as settings.json stands now.
+fn sync_manager(app: &Shared) {
+    let s = app.borrow();
+    let Some(window) = &s.manager else {
+        return;
+    };
+    let rows: Vec<ManagerRow> = manager::rows(&s.plugins, &manager::disabled(&s.stored))
+        .into_iter()
+        .map(|r| ManagerRow {
+            name: r.name.into(),
+            version: r.version.into(),
+            file: r.file.into(),
+            folder: r.folder.into(),
+            state: r.state.into(),
+            can_toggle: r.id.is_some(),
+            enabled: r.enabled,
+        })
+        .collect();
+    window.set_rows(ModelRc::new(VecModel::from(rows)));
+}
+
+/// A tickbox in the manager: enable or disable that plugin from the next
+/// start.
+fn manager_toggled(app: &Shared, index: i32, on: bool) {
+    let result = {
+        let s = app.borrow();
+        let id = usize::try_from(index)
+            .ok()
+            .and_then(|i| manager::rows(&s.plugins, &[]).into_iter().nth(i))
+            .and_then(|r| r.id);
+        id.map(|id| manager::set_enabled(&s.stored, &id, on))
+    };
+    if let Some(Err(e)) = result
+        && let Some(w) = &app.borrow().manager
+    {
+        w.set_problem(e.into());
+    }
+    sync_manager(app);
+}
+
 /// Puts the View menu's settings on the window.
 fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
     ui.set_dark_interface(p.dark_interface);
@@ -1233,6 +1395,9 @@ fn settings_changed(app: &Shared) {
     }
     if let Some(tabs) = &s.tab_thread {
         tabs.send(plugin_tabs::Request::Dark(prefs.dark_interface));
+    }
+    if let Some(m) = &s.manager {
+        m.set_dark_interface(prefs.dark_interface);
     }
     // Dark Page only needs new tiles; everything else a new engraving.
     s.paint += 1;
@@ -1769,6 +1934,43 @@ mod tests {
             "Infer Key Signatures (the score has no bars)"
         );
         assert!(!rows[0].enabled);
+    }
+
+    #[test]
+    fn the_command_line_takes_safe_mode_and_a_file_in_any_order() {
+        let parse = |a: &[&str]| Args::parse(a.iter().map(std::ffi::OsString::from));
+        assert_eq!(parse(&[]), Args::default());
+        assert_eq!(
+            parse(&["--safe-mode", "a.gp"]),
+            Args {
+                safe_mode: true,
+                file: Some("a.gp".into())
+            }
+        );
+        assert_eq!(
+            parse(&["a.gp", "--safe-mode", "b.gp"]).file,
+            Some("a.gp".into())
+        );
+        assert!(parse(&["a.gp", "--safe-mode"]).safe_mode);
+    }
+
+    #[test]
+    fn about_lists_the_plugin_folders() {
+        let folders = [
+            PathBuf::from("/home/me/.local/share/oxiguitar/plugins"),
+            PathBuf::from("/usr/lib/oxiguitar/plugins"),
+        ];
+        let lines = about_folders(&folders, false);
+        assert_eq!(lines[0], "Plugin folders, searched in this order:");
+        assert!(lines[2].ends_with("/usr/lib/oxiguitar/plugins"));
+        assert_eq!(lines.len(), 3);
+        assert_eq!(
+            about_folders(&[], true),
+            [
+                "Plugin folders: none.",
+                "Started in safe mode: no plugin is used."
+            ]
+        );
     }
 
     #[test]

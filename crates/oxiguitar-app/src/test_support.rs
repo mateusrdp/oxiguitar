@@ -66,16 +66,30 @@ impl oxiguitar_host::Core for Recorder {
     }
 }
 
+/// The test plugin's `.oxp` file, built once for the whole test program:
+/// building writes the file afresh, so tests building it at the same time
+/// would link or copy a file half written.
+pub(crate) fn test_oxp() -> &'static Path {
+    static BUILT: OnceLock<std::path::PathBuf> = OnceLock::new();
+    BUILT.get_or_init(|| {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        oxiguitar_plugin_test::build(
+            &workspace,
+            "oxiguitar-test-plugin",
+            "test",
+            !cfg!(debug_assertions),
+        )
+        .expect("the test plugin builds")
+    })
+}
+
 /// The [`TabHost`], built on first use.
 pub(crate) fn tab_host() -> &'static TabHost {
     static HOST: OnceLock<TabHost> = OnceLock::new();
     HOST.get_or_init(|| {
         let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let release = !cfg!(debug_assertions);
         let ours = ours();
-        let test =
-            oxiguitar_plugin_test::build(&workspace, "oxiguitar-test-plugin", "test", release)
-                .expect("the test plugin builds");
+        let test = test_oxp();
         let folder = workspace.join("target").join("oxp").join("app-tabs");
         let _ = std::fs::remove_dir_all(&folder);
         std::fs::create_dir_all(&folder).expect("a folder for the copies");

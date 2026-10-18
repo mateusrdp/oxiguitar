@@ -12,6 +12,8 @@
 
 import { Slider, ScrollView, Palette, ComboBox } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
+// The plugin manager's own window (Tools → Plugins).
+export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
 
 export struct TileItem {
@@ -418,6 +420,7 @@ export component AppWindow inherits Window {
     callback tool-picked(int);
     callback toolbar-activated(string);
     callback tab-clicked(int, int);
+    callback open-plugin-manager();
     // Plugins' tabs (plugin_tab.slint), by area number (0 top, 1 bottom,
     // 2 left, 3 right): their rows, or a message instead; what the user does
     // to their widgets; a canvas's room.
@@ -509,6 +512,8 @@ export component AppWindow inherits Window {
                 enabled: root.has-score && tool.enabled;
                 activated => { root.tool-picked(i); }
             }
+            MenuSeparator {}
+            MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
         }
         Menu {
             title: "Help";

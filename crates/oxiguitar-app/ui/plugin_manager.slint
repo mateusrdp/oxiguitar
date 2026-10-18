@@ -1,0 +1,133 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+// The plugin manager (Tools → Plugins; docs/design/plugins.md, "The plugin
+// manager"): a separate, non-modal window listing every plugin file in the
+// plugin folders, with a tickbox to enable or disable each from the next
+// start. It copies, installs and removes nothing. The rows come from
+// manager.rs.
+
+import { Button, CheckBox, ScrollView, Palette } from "std-widgets.slint";
+
+export struct ManagerRow {
+    name: string,
+    version: string,
+    file: string,
+    folder: string,
+    state: string,
+    // A tickbox only for files that can be enabled or disabled.
+    can-toggle: bool,
+    enabled: bool,
+}
+
+export component PluginManagerWindow inherits Window {
+    title: "Plugins";
+    icon: @image-url("../../../assets/icon/png/oxiguitar-256.png");
+    preferred-width: 820px;
+    preferred-height: 460px;
+    min-width: 480px;
+    min-height: 240px;
+    default-font-family: "Noto Sans";
+
+    in property <bool> dark-interface: true;
+    init => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
+    changed dark-interface => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
+
+    in property <[ManagerRow]> rows;
+    in property <bool> safe-mode;
+    // Why a tick couldn't be saved, if it couldn't.
+    in property <string> problem;
+    // False when settings.json can't be written: no tickbox can change.
+    in property <bool> can-save: true;
+    callback toggled(int, bool);
+    callback close-clicked();
+
+    background: Palette.background;
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+        Text {
+            text: "Every plugin file in the plugin folders. A change takes effect the next time OxiGuitar starts.";
+            font-size: 12px;
+            wrap: word-wrap;
+            color: Palette.foreground.transparentize(0.25);
+        }
+        if root.safe-mode : Text {
+            text: "OxiGuitar was started in safe mode: no plugin is used this time.";
+            font-size: 12px;
+            wrap: word-wrap;
+            color: Palette.foreground;
+        }
+        Rectangle {
+            vertical-stretch: 1;
+            border-width: 1px;
+            border-color: Palette.border;
+            border-radius: 4px;
+            ScrollView {
+                VerticalLayout {
+                    alignment: start;
+                    if root.rows.length == 0 : Text {
+                        x: 12px;
+                        height: 40px;
+                        text: "No plugin files were found.";
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        color: Palette.foreground.transparentize(0.4);
+                    }
+                    for row[i] in root.rows : Rectangle {
+                        background: Math.mod(i, 2) == 1 ? Palette.alternate-background : transparent;
+                        HorizontalLayout {
+                            padding: 8px;
+                            spacing: 10px;
+                            Rectangle {
+                                width: 24px;
+                                if row.can-toggle : CheckBox {
+                                    y: 0;
+                                    checked: row.enabled;
+                                    enabled: root.can-save;
+                                    accessible-label: (row.enabled ? "Disable " : "Enable ") + row.name;
+                                    toggled => { root.toggled(i, self.checked); }
+                                }
+                            }
+                            VerticalLayout {
+                                spacing: 2px;
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    alignment: start;
+                                    Text { text: row.name; font-size: 13px; font-weight: 600; color: Palette.foreground; }
+                                    Text { text: row.version; font-size: 12px; vertical-alignment: center; color: Palette.foreground.transparentize(0.35); }
+                                }
+                                Text {
+                                    text: row.state;
+                                    font-size: 12px;
+                                    wrap: word-wrap;
+                                    color: Palette.foreground.transparentize(0.15);
+                                }
+                                Text {
+                                    text: row.folder + " · " + row.file;
+                                    font-size: 11px;
+                                    wrap: word-wrap;
+                                    color: Palette.foreground.transparentize(0.45);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if root.problem != "" : Text {
+            text: root.problem;
+            font-size: 12px;
+            wrap: word-wrap;
+            color: #e5a50a;
+        }
+        HorizontalLayout {
+            alignment: end;
+            Button {
+                text: "Close";
+                clicked => { root.close-clicked(); }
+            }
+        }
+    }
+}
