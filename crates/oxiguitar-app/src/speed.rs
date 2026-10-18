@@ -111,9 +111,10 @@ fn open_like_the_window(path: &Path, all_tracks: bool) -> Times {
     }
 }
 
-/// The band song, written once per test run.
+/// The band song, written once per test. Each test has its own folder:
+/// tests run in parallel, and each removes its folder when it is done.
 fn score_file(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("oxiguitar-speed-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("oxiguitar-speed-{}-{name}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temporary folder");
     let path = dir.join(name);
     let song = oxiguitar_testgen::band_song(300);
