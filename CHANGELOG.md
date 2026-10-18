@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Fixed
+
+- Release builds: the draft-release job unpacked the Windows .zip packages into folders and failed on them (v0.1.0's first tag build). It now keeps every package as it was uploaded, checks that there are nine package files and that each zip holds oxiguitar.exe, and makes the checksums on every build, so a build by hand tests it too; only a tag creates the draft release.
+
 ## [0.1.0] - 2026-10-17
 
 Milestone M1 (the viewer) is complete. This is OxiGuitar's first tagged release: open a Guitar Pro 3–8 file and view it in standard notation, tablature, or both.
