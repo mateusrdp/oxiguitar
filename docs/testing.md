@@ -69,3 +69,13 @@ The first six-hour run (16 October 2026, [run 38891529443](https://github.com/ma
 | GPIF XML (`gpif`) | 37 million | 4,482 | 2,506 |
 
 Each over two three-hour jobs on four cores. The final corpora are the run's artifacts ("fuzz-corpus … (final)", kept 30 days); a later run can start from them instead of the fixtures alone.
+
+The second six-hour run (18 October 2026, [run 39105892287](https://github.com/mateusrdp/oxiguitar/actions/runs/39105892287), on develop f23cc11) fuzzed the readers once they had become the format plugins' code (M2 slice 1). It found no crash, hang or out-of-memory input:
+
+| Reader (target) | Inputs tried | Coverage (edges) | Corpus kept |
+| --- | --- | --- | --- |
+| Guitar Pro 3–5 (`guitar_pro_3_5`) | 1,514 million | 2,547 | 1,529 |
+| Guitar Pro 6 (`guitar_pro_6`) | 371 million | 3,803 | 2,229 |
+| Guitar Pro 7/8 (`guitar_pro_7`) | 229 million | 4,265 | 1,324 |
+| GPIF XML (`gpif`) | 58 million | 4,539 | 2,679 |
+| The plugins' `dispatch` (`plugin_dispatch`), first three hours | 34 million | 7,722 | 2,814 |
