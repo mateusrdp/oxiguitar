@@ -32,9 +32,11 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | `oxiguitar-model` | M0 | The score model: data types only, no I/O. Its `wire` feature converts to and from the score as it crosses the plugin interface. |
 | `oxiguitar-formats` | M0 | Format detection from contents (FMT-6), readers and writers, import logs (FMT-2). In M2 its readers move into one format plugin each; what they share stays here as a library the plugins use. |
 | `oxiguitar-cli` | M0 | `info`, `render`, `tools`, later `convert` and test helpers. Used by CI. Loads plugins like the app from M2. |
-| `oxiguitar-host` | M2 | The plugin host: the user folder, settings.json, the plugin folders, reading manifests without loading code, loading plugins on first use, and choosing a service implementation per platform and environment. |
+| `oxiguitar-host` | M2 | The plugin host: the user folder, settings.json (one copy shared by the app and the plugins), the plugin folders, reading manifests without loading code (`oxp.rs`, with `object`), loading plugins on first use and never unloading them (`loader.rs`, the host's one `unsafe` module, with `libloading`), and `Plugins`: formats by signature, instruments by class, services by conditions, priority, probe and settings. |
 | `oxiguitar-plugin-api` | M2 | The plugin interface: the C tables, the messages (postcard), the manifest (JSON in the `oxg_manifest` section), the score as plugins see it, format signatures, instrument classes. MIT OR Apache-2.0. |
-| `oxiguitar-plugin` | M2 | The SDK plugin authors use: traits and `export_plugin!`, safe Rust only. MIT OR Apache-2.0. |
+| `oxiguitar-plugin` | M2 | The SDK plugin authors use: traits and `export_plugin!`, safe Rust only (the export glue in `src/glue.rs` is the SDK's one `unsafe` module). MIT OR Apache-2.0. |
+| `oxiguitar-plugin-test` | M2 | The plugin contract suite: builds a plugin crate as an `.oxp` file and checks it against the interface through the host; also a program for plugin authors. Test-only. |
+| `plugins/test` (`oxiguitar-test-plugin`) | M2 | A plugin that exercises every part of the interface, built as `test.oxp` by the contract tests. Never shipped. Our real plugins will live beside it in `plugins/`. |
 | `oxiguitar-edit` | M3 | Edit commands, selection, undo and redo. |
 | `oxiguitar-display` | M0 | The display list (positioned glyph runs, lines, rectangles, paths, colour roles), the bundled fonts and SMuFL metadata (ADR 0005). |
 | `oxiguitar-layout` | M1 | Engraving: turns the model into a display list per page, or one long sheet, in four layouts. See [docs/design/engraving.md](docs/design/engraving.md). |

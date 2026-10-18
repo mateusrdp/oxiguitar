@@ -1,0 +1,31 @@
+[package]
+name = "oxiguitar-plugin"
+description = "The SDK for OxiGuitar plugins: implement a few traits, call export_plugin!, and build a .oxp file. No unsafe code to write."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Permissive, so plugins built with it may use any GPL-compatible licence
+# (Mateus, 18 Oct 2026).
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+oxiguitar-plugin-api.workspace = true
+serde_json.workspace = true
+
+# The export glue (src/glue.rs) is the one module here with `unsafe` code,
+# so the crate denies it (which a module can allow) rather than forbidding it.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+print_stderr = "allow"
+undocumented_unsafe_blocks = "warn"

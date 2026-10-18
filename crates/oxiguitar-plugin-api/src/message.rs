@@ -18,6 +18,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::Blob;
+use crate::abi::Status;
 use crate::score::Score;
 
 /// Encodes a message.
@@ -50,6 +51,39 @@ impl fmt::Display for DecodeError {
 }
 
 impl std::error::Error for DecodeError {}
+
+/// What a call's answer means, from its [`Status`]: the answer message's
+/// bytes on success, the error otherwise. A panic, a malformed request or
+/// a plugin that wasn't started become [`ErrorKind::Failed`] errors whose
+/// message says so.
+pub fn outcome(status: Status, answer: &[u8]) -> Result<&[u8], Error> {
+    let text = || String::from_utf8_lossy(answer).into_owned();
+    match status {
+        Status::OK => Ok(answer),
+        Status::FAILED => Err(decode::<Error>(answer).unwrap_or_else(|e| {
+            Error::new(
+                ErrorKind::Failed,
+                format!("an error came back unreadable ({e})"),
+            )
+        })),
+        Status::PANICKED => Err(Error::new(
+            ErrorKind::Failed,
+            format!("it crashed (a panic: {})", text()),
+        )),
+        Status::MALFORMED => Err(Error::new(
+            ErrorKind::Failed,
+            format!("it couldn't read the request ({})", text()),
+        )),
+        Status::NOT_STARTED => Err(Error::new(
+            ErrorKind::Failed,
+            "it was called before it started",
+        )),
+        Status(other) => Err(Error::new(
+            ErrorKind::Failed,
+            format!("it answered with the unknown status {other}"),
+        )),
+    }
+}
 
 /// What the host asks a plugin.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -118,6 +152,21 @@ pub enum Answer<'a> {
     Probe(Availability),
     /// A service method's output.
     Service(#[serde(borrow)] Blob<'a>),
+}
+
+impl Answer<'_> {
+    /// A copy that owns all its bytes.
+    pub fn into_owned(self) -> Answer<'static> {
+        match self {
+            Answer::Read { score, log } => Answer::Read { score, log },
+            Answer::Written { data, losses } => Answer::Written {
+                data: data.into_owned(),
+                losses,
+            },
+            Answer::Probe(a) => Answer::Probe(a),
+            Answer::Service(b) => Answer::Service(b.into_owned()),
+        }
+    }
 }
 
 /// Whether a service can work here.
@@ -259,6 +308,17 @@ pub enum HostAnswer<'a> {
     Service(#[serde(borrow)] Blob<'a>),
 }
 
+impl HostAnswer<'_> {
+    /// A copy that owns all its bytes.
+    pub fn into_owned(self) -> HostAnswer<'static> {
+        match self {
+            HostAnswer::Done => HostAnswer::Done,
+            HostAnswer::Settings(s) => HostAnswer::Settings(s),
+            HostAnswer::Service(b) => HostAnswer::Service(b.into_owned()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -292,6 +352,20 @@ mod tests {
         bytes.push(0);
         assert!(decode::<HostRequest<'_>>(&bytes).is_err());
         assert!(decode::<HostRequest<'_>>(&[200]).is_err());
+    }
+
+    #[test]
+    fn outcomes() {
+        assert_eq!(outcome(Status::OK, b"x"), Ok(&b"x"[..]));
+        let e = Error::not_found("no format \"x\"");
+        assert_eq!(outcome(Status::FAILED, &encode(&e).unwrap()), Err(e));
+        let crash = outcome(Status::PANICKED, b"index out of bounds").unwrap_err();
+        assert_eq!(crash.message, "it crashed (a panic: index out of bounds)");
+        assert_eq!(
+            outcome(Status::FAILED, &[0xff]).unwrap_err().kind,
+            ErrorKind::Failed
+        );
+        assert!(outcome(Status(77), b"").unwrap_err().message.contains("77"));
     }
 
     /// The encoding of each enum's variants is its position. This test

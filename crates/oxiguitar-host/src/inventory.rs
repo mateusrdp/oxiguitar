@@ -4,12 +4,14 @@
 //! What the plugin folders hold, and what that means for the user.
 //!
 //! A plugin is one `.oxp` file (docs/design/plugins.md, "Plugin files").
-//! Until the plugin interface exists (M2), the host only finds the files:
-//! it reads none of them and loads none. The readers of M1 are still built
-//! into the core until they move into plugins, so the caller says which
-//! formats the core can read and write by itself.
+//! The inventory is what the plugins' manifests say the program can do,
+//! without loading any plugin. The readers of M1 are still built into the
+//! core until they move into plugins, so the caller says which formats the
+//! core can read and write by itself.
 
 use std::path::{Path, PathBuf};
+
+use crate::plugins::{Plugins, State, file_name};
 
 /// A plugin file's extension, without the dot.
 pub const PLUGIN_EXTENSION: &str = "oxp";
@@ -58,7 +60,7 @@ pub struct Inventory {
     pub built_in_readers: Vec<String>,
     /// Formats written without a plugin.
     pub built_in_writers: Vec<String>,
-    /// Formats read through plugins (none until plugins can be loaded).
+    /// Formats read through plugins.
     pub plugin_readers: Vec<String>,
     /// Formats written through plugins.
     pub plugin_writers: Vec<String>,
@@ -67,14 +69,24 @@ pub struct Inventory {
 }
 
 impl Inventory {
-    /// Looks through `folders` for plugin files. Folders that don't exist
-    /// are skipped: a system folder is there only once a package installs
-    /// it.
-    pub fn scan(folders: Vec<PathBuf>) -> Inventory {
-        let files = folders.iter().flat_map(|f| plugin_files(f)).collect();
+    /// What `plugins`, found in `folders`, can do: the names of the
+    /// formats they read and write ("Guitar Pro 5 (.gp5)") and of their
+    /// instruments.
+    pub fn of(folders: Vec<PathBuf>, plugins: &Plugins) -> Inventory {
+        let format = |f: crate::plugins::FormatRef<'_>| match f.spec.extensions.first() {
+            Some(ext) => format!("{} (.{ext})", f.spec.name),
+            None => f.spec.name.clone(),
+        };
         Inventory {
             folders,
-            files,
+            files: plugins.found().iter().map(|f| f.path.clone()).collect(),
+            plugin_readers: plugins.readers().into_iter().map(format).collect(),
+            plugin_writers: plugins.writers().into_iter().map(format).collect(),
+            instruments: plugins
+                .instruments()
+                .into_iter()
+                .map(|i| i.spec.name.clone())
+                .collect(),
             ..Inventory::default()
         }
     }
@@ -101,22 +113,6 @@ impl Inventory {
     /// messages tell the user to put plugins in.
     pub fn notices(&self, user_plugins: &Path) -> Vec<Notice> {
         let mut out = Vec::new();
-        if !self.files.is_empty() {
-            let n = self.files.len();
-            out.push(Notice::new(
-                Level::Info,
-                format!(
-                    "Found {n} plugin file{} ({}). This version can't load plugins yet; loading arrives with the plugin system (M2).",
-                    if n == 1 { "" } else { "s" },
-                    self.files
-                        .iter()
-                        .filter_map(|p| p.file_name())
-                        .map(|n| n.to_string_lossy())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ),
-            ));
-        }
         let get = format!(
             "Download plugins from {PLUGINS_URL} and put them in {}.",
             user_plugins.display()
@@ -146,9 +142,57 @@ impl Inventory {
     }
 }
 
+/// The footer's messages about the plugin files themselves: which plugins
+/// are there, and which files aren't used and why.
+pub fn plugin_notices(plugins: &Plugins) -> Vec<Notice> {
+    let mut out = Vec::new();
+    let ready: Vec<String> = plugins
+        .found()
+        .iter()
+        .filter(|f| f.state == State::Ready)
+        .filter_map(|f| f.manifest.as_ref())
+        .map(|m| format!("{} {}", m.name, m.version))
+        .collect();
+    if !ready.is_empty() {
+        out.push(Notice::new(
+            Level::Info,
+            format!("Plugins: {}.", ready.join(", ")),
+        ));
+    }
+    for f in plugins.found() {
+        let file = file_name(&f.path);
+        match &f.state {
+            State::Ready => {}
+            State::Disabled => out.push(Notice::new(
+                Level::Info,
+                format!("{} is disabled in settings.json.", f.name()),
+            )),
+            State::Replaced(by) => out.push(Notice::new(
+                Level::Info,
+                format!(
+                    "{} isn't used: {} holds the same plugin, {}, at a higher or equal version.",
+                    f.path.display(),
+                    by.display(),
+                    f.name()
+                ),
+            )),
+            State::Unusable(why) => out.push(Notice::new(
+                Level::Warning,
+                format!(
+                    "The plugin file {file} can't be used: {why}. It is in {}.",
+                    f.path
+                        .parent()
+                        .map_or_else(String::new, |p| p.display().to_string())
+                ),
+            )),
+        }
+    }
+    out
+}
+
 /// The plugin files directly in `folder`, by name. Unreadable folders give
 /// none: a missing system folder is normal.
-fn plugin_files(folder: &Path) -> Vec<PathBuf> {
+pub(crate) fn plugin_files(folder: &Path) -> Vec<PathBuf> {
     let Ok(entries) = std::fs::read_dir(folder) else {
         return Vec::new();
     };
@@ -171,7 +215,7 @@ mod tests {
     use crate::folders::tests::scratch;
 
     #[test]
-    fn scan_finds_plugin_files_only() {
+    fn only_plugin_files_are_found() {
         let root = scratch("scan");
         let (a, b) = (root.join("a"), root.join("b"));
         std::fs::create_dir_all(&a).unwrap();
@@ -181,11 +225,37 @@ mod tests {
         }
         std::fs::create_dir_all(a.join("folder.oxp")).unwrap();
         std::fs::write(b.join("pdf.oxp"), b"").unwrap();
-        let inv = Inventory::scan(vec![a.clone(), root.join("missing"), b.clone()]);
+        assert_eq!(
+            plugin_files(&a),
+            vec![a.join("MIDI.OXP"), a.join("gp5.oxp")]
+        );
+        assert!(plugin_files(&root.join("missing")).is_empty());
+        let plugins = Plugins::discover(
+            &[a.clone(), root.join("missing"), b.clone()],
+            crate::SharedSettings::default(),
+            "x11",
+            std::sync::Arc::new(crate::Unheard),
+        );
+        let inv = Inventory::of(vec![a.clone(), b.clone()], &plugins);
+        let abs = |p: PathBuf| std::path::absolute(&p).unwrap();
         assert_eq!(
             inv.files,
-            vec![a.join("MIDI.OXP"), a.join("gp5.oxp"), b.join("pdf.oxp")]
+            vec![
+                abs(a.join("MIDI.OXP")),
+                abs(a.join("gp5.oxp")),
+                abs(b.join("pdf.oxp"))
+            ]
         );
+        // Empty files aren't plugins: each is named, none is used.
+        let notices = plugin_notices(&plugins);
+        assert_eq!(notices.len(), 3);
+        assert!(notices.iter().all(|n| n.level == Level::Warning));
+        assert!(
+            notices[0]
+                .text
+                .starts_with("The plugin file MIDI.OXP can't be used: ")
+        );
+        assert!(inv.plugin_readers.is_empty());
         let _ = std::fs::remove_dir_all(&root);
     }
 
@@ -221,17 +291,5 @@ mod tests {
         let n = readers_only.notices(Path::new("p"));
         assert_eq!(n.len(), 1);
         assert!(n[0].text.starts_with("No plugin that reads files"));
-    }
-
-    #[test]
-    fn found_files_are_named() {
-        let inv = Inventory {
-            files: vec![PathBuf::from("/p/gp5.oxp")],
-            built_in_readers: vec!["Guitar Pro 5".to_owned()],
-            ..Inventory::default()
-        };
-        let n = inv.notices(Path::new("/p"));
-        assert_eq!(n[0].level, Level::Info);
-        assert!(n[0].text.contains("1 plugin file (gp5.oxp)"));
     }
 }

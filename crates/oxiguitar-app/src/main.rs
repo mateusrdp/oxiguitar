@@ -33,6 +33,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Duration;
 
 use oxiguitar_display::Rect;
@@ -119,10 +120,9 @@ struct App {
     icons: HashMap<String, Image>,
     /// This session's messages.
     footer: Footer,
-    /// settings.json as read at start, the file it came from (`None` if
-    /// there is no home folder), and the View settings last written to it.
-    stored: oxiguitar_host::Settings,
-    settings_file: Option<PathBuf>,
+    /// settings.json, shared with the plugins (saved only when it could be
+    /// read at start), and the View settings last written to it.
+    stored: oxiguitar_host::SharedSettings,
     prefs: ViewPrefs,
     /// A dropped file is being opened; the rest of the same drop is ignored.
     drop_pending: bool,
@@ -133,6 +133,21 @@ type Shared = Rc<RefCell<App>>;
 thread_local! {
     /// The app, for events arriving from the worker thread.
     static APP: RefCell<Option<Shared>> = const { RefCell::new(None) };
+}
+
+/// Plugins' footer messages. They may come from any thread (a plugin runs
+/// on the thread that called it), so each is handed to the event loop.
+struct ToFooter;
+
+impl oxiguitar_host::Messages for ToFooter {
+    fn notify(&self, level: Level, text: String) {
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                app.borrow_mut().footer.push(level, text);
+                sync_footer(&app);
+            }
+        });
+    }
 }
 
 fn main() -> Result<(), slint::PlatformError> {
@@ -183,8 +198,7 @@ fn main() -> Result<(), slint::PlatformError> {
         shell: Shell::default(),
         icons: HashMap::new(),
         footer: Footer::default(),
-        stored: oxiguitar_host::Settings::default(),
-        settings_file: None,
+        stored: oxiguitar_host::SharedSettings::default(),
         prefs: ViewPrefs::default(),
         drop_pending: false,
     }));
@@ -214,8 +228,9 @@ fn main() -> Result<(), slint::PlatformError> {
     set_tools(&ui, &tool_rows(&default_tools()));
 
     // The user folder, settings.json and the plugin folders (created when
-    // missing), and what the footer should say about them. A few small
-    // file operations, done before the window first shows.
+    // missing), every plugin's manifest (no plugin is loaded), and what the
+    // footer should say about them. A few small file operations, done
+    // before the window first shows.
     let startup = oxiguitar_host::start(
         oxiguitar_host::Folders::here(),
         document::BUILT_IN_READERS
@@ -223,6 +238,8 @@ fn main() -> Result<(), slint::PlatformError> {
             .map(|r| (*r).to_owned())
             .collect(),
         Vec::new(),
+        oxiguitar_host::display_system(),
+        Arc::new(ToFooter),
     );
     ui.set_player_available(!startup.inventory.instruments.is_empty());
     if !startup.inventory.instruments.is_empty() {
@@ -237,12 +254,11 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     // The View menu as the user left it (a dark interface and a white page
     // the first time).
-    let prefs = ViewPrefs::from_value(startup.settings.get(prefs::KEY));
+    let prefs = ViewPrefs::from_value(startup.settings.get(prefs::KEY).as_ref());
     apply_prefs(&ui, prefs);
     {
         let mut s = app.borrow_mut();
         s.footer.extend(startup.notices);
-        s.settings_file = startup.folders.as_ref().map(|f| f.settings());
         s.stored = startup.settings;
         s.prefs = prefs;
     }
@@ -682,11 +698,8 @@ fn settings_changed(app: &Shared) {
     };
     if prefs != s.prefs {
         s.prefs = prefs;
-        let value = prefs.to_value(s.stored.get(prefs::KEY));
-        s.stored.set(prefs::KEY, value);
-        if let Some(path) = s.settings_file.clone()
-            && let Err(e) = s.stored.save(&path)
-        {
+        let value = prefs.to_value(s.stored.get(prefs::KEY).as_ref());
+        if let Err(e) = s.stored.set(prefs::KEY, value) {
             s.footer.push(Level::Error, e);
             drop(s);
             sync_footer(app);

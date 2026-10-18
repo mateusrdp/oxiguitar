@@ -3,43 +3,82 @@
 
 //! The OxiGuitar core's plugin host (docs/design/plugins.md).
 //!
-//! Today it knows where things live and what is there: the user folder
-//! with settings.json, the plugin folders, and the plugin files in them
-//! ([`Folders`], [`Settings`], [`Inventory`]). Reading plugin manifests,
-//! loading plugins on first use and choosing services come with the plugin
-//! interface in M2 (ADR 0008).
+//! - Where things live: the user folder with settings.json and the plugin
+//!   folders ([`Folders`], [`Settings`], [`SharedSettings`]).
+//! - The plugins: their manifests, read at start without loading any code;
+//!   each plugin loaded the first time one of its contributions is used and
+//!   never unloaded; formats picked by their signatures, instruments by the
+//!   classes they play, services by conditions, priority and settings
+//!   ([`Plugins`]).
+//! - What that means for the user: the footer's notices at start
+//!   ([`Inventory`], [`start`]).
 //!
-//! Nothing here touches the network, and nothing runs on a timer.
+//! The loader (`loader.rs`) is the only module with `unsafe` code; the SDK's
+//! export glue is its counterpart in plugins. Nothing here touches the
+//! network, and nothing runs on a timer.
 
 mod folders;
 mod inventory;
+mod loader;
+mod oxp;
+mod plugins;
 mod settings;
 
+use std::sync::Arc;
+
 pub use folders::{Folders, HOME_VARIABLE, SETTINGS_FILE, System};
-pub use inventory::{Inventory, Level, Notice, PLUGIN_EXTENSION, PLUGINS_URL};
-pub use settings::Settings;
+pub use inventory::{Inventory, Level, Notice, PLUGIN_EXTENSION, PLUGINS_URL, plugin_notices};
+pub use oxiguitar_plugin_api as api;
+pub use plugins::{
+    DISABLED_KEY, FormatRef, Found, InstrumentRef, Messages, Plugins, ReadScore, SERVICES_KEY,
+    ServiceRef, State, Unheard, WrittenFile,
+};
+pub use settings::{Settings, SharedSettings};
 
 /// What the app found when it started.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Startup {
     /// OxiGuitar's folders; `None` if the system names no home folder.
     pub folders: Option<Folders>,
-    /// The settings read from settings.json (empty if it couldn't be read).
-    pub settings: Settings,
-    /// The plugin folders' contents and what the core can do.
+    /// settings.json, shared by the app and the plugins (empty, and never
+    /// saved, if it couldn't be read).
+    pub settings: SharedSettings,
+    /// The plugins found, none of them loaded yet.
+    pub plugins: Plugins,
+    /// What the core can do with them.
     pub inventory: Inventory,
     /// Messages for the footer, least important first.
     pub notices: Vec<Notice>,
 }
 
+/// The display system this program draws with, as plugins' conditions name
+/// it: `windows`, `macos`, or on Linux `wayland` or `x11`. Until the two
+/// Linux builds (docs/design/plugins.md) each fix their own, Linux follows
+/// the windowing library's rule: Wayland when `WAYLAND_DISPLAY` is set.
+pub fn display_system() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_vendor = "apple") {
+        "macos"
+    } else if std::env::var_os("WAYLAND_DISPLAY").is_some_and(|d| !d.is_empty()) {
+        "wayland"
+    } else {
+        "x11"
+    }
+}
+
 /// Starts the host for the app: makes sure the user folder, its plugin
 /// folder and settings.json exist (creating what is missing), reads the
-/// settings and looks through the plugin folders. `built_in_readers` and
-/// `built_in_writers` name the formats the core still handles by itself.
+/// settings and every plugin's manifest, and loads no plugin.
+/// `built_in_readers` and `built_in_writers` name the formats the core
+/// still handles by itself; `display` is [`display_system`]'s answer, and
+/// `messages` shows what plugins say later.
 pub fn start(
     folders: Option<Folders>,
     built_in_readers: Vec<String>,
     built_in_writers: Vec<String>,
+    display: &str,
+    messages: Arc<dyn Messages>,
 ) -> Startup {
     let mut notices = Vec::new();
     let Some(folders) = folders else {
@@ -47,6 +86,8 @@ pub fn start(
             Level::Error,
             format!("No home folder: set HOME (or {HOME_VARIABLE}) so OxiGuitar can keep its settings and find plugins."),
         ));
+        let settings = SharedSettings::default();
+        let plugins = Plugins::discover(&[], settings.clone(), display, messages);
         let inventory = Inventory {
             built_in_readers,
             built_in_writers,
@@ -55,7 +96,8 @@ pub fn start(
         notices.extend(inventory.notices(std::path::Path::new(".")));
         return Startup {
             folders: None,
-            settings: Settings::default(),
+            settings,
+            plugins,
             inventory,
             notices,
         };
@@ -79,33 +121,37 @@ pub fn start(
         )),
     }
     let settings = match Settings::load(&folders.settings()) {
-        Ok(s) => s,
+        Ok(s) => SharedSettings::new(s, Some(folders.settings())),
         Err(e) => {
             notices.push(Notice::new(
                 Level::Error,
-                format!("{e} The file was left as it is; default settings are used."),
+                format!("{e} The file was left as it is; default settings are used and changes aren't saved."),
             ));
-            Settings::default()
+            SharedSettings::default()
         }
     };
+    let snapshot = settings.snapshot();
     notices.extend(
-        settings
+        snapshot
             .problems()
             .into_iter()
             .map(|p| Notice::new(Level::Warning, p)),
     );
-    let searched = settings
+    let searched = snapshot
         .plugin_folders()
         .unwrap_or_else(|| folders.default_plugin_folders());
+    let plugins = Plugins::discover(&searched, settings.clone(), display, messages);
+    notices.extend(plugin_notices(&plugins));
     let inventory = Inventory {
         built_in_readers,
         built_in_writers,
-        ..Inventory::scan(searched)
+        ..Inventory::of(searched, &plugins)
     };
     notices.extend(inventory.notices(&folders.user_plugins));
     Startup {
         folders: Some(folders),
         settings,
+        plugins,
         inventory,
         notices,
     }
@@ -128,7 +174,13 @@ mod tests {
             |n| (n == HOME_VARIABLE).then(|| OsString::from(&home)),
             None,
         );
-        let s = start(folders, vec!["Guitar Pro 5".to_owned()], Vec::new());
+        let s = start(
+            folders,
+            vec!["Guitar Pro 5".to_owned()],
+            Vec::new(),
+            "x11",
+            Arc::new(Unheard),
+        );
         assert!(home.join("plugins").is_dir());
         assert_eq!(
             std::fs::read_to_string(home.join(SETTINGS_FILE)).unwrap(),
@@ -151,6 +203,8 @@ mod tests {
             ),
             Vec::new(),
             Vec::new(),
+            "x11",
+            Arc::new(Unheard),
         );
         assert_eq!(again.notices[0].level, Level::Error);
         assert!(again.notices[0].text.contains("not valid JSON"));
@@ -164,7 +218,7 @@ mod tests {
 
     #[test]
     fn no_home_is_an_error_but_not_fatal() {
-        let s = start(None, Vec::new(), Vec::new());
+        let s = start(None, Vec::new(), Vec::new(), "x11", Arc::new(Unheard));
         assert_eq!(s.notices[0].level, Level::Error);
         assert!(s.folders.is_none());
     }

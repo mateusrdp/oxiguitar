@@ -100,7 +100,8 @@ Turn the viewer into a small core with plugins, and give the window the shape th
 - [ ] The window shell (docs/design/ui.md): toolbar with sections, tabbed top, bottom, left and right areas that collapse and hide, the page on a dark canvas, a one-line footer that expands into the session's messages; player controls greyed out in the top area until an output plugin is installed; mouse wheel zooms the page, Ctrl + wheel the interface.
 - [ ] User folder, settings.json and the plugin folders (XDG on Linux), created on launch; the footer says when no output or no read/write plugin is installed and where to get them.
 - [x] Mateus answers ADR 0008's questions; ADR 0008 accepted (18 Oct 2026).
-- [ ] `oxiguitar-plugin-api` (the interface's messages), `oxiguitar-plugin` (the SDK for plugin authors, no `unsafe` for them), the host in `oxiguitar-host` (manifests read without loading, lazy loading, contributions registry, host services, services chosen per platform and environment).
+- [x] `oxiguitar-plugin-api` (the interface's messages), `oxiguitar-plugin` (the SDK for plugin authors, no `unsafe` for them), the host in `oxiguitar-host` (manifests read without loading, lazy loading, contributions registry, host services, services chosen per platform and environment). PRs #48 and #49.
+- [x] A test plugin built as an `.oxp` and the contract suite (`oxiguitar-plugin-test`); 30 manifests read in about 1 ms.
 - [ ] Five format plugins from M1's readers: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp), each with its fixtures, corpus, fuzz and visual tests. The core holds no format code.
 - [ ] Plugins for PDF export and for Infer Key Signatures; `oxiguitar-cli` loads plugins like the app.
 - [ ] The plugin manager plugin: list, enable, disable, uninstall, install from a file, settings forms. `--safe-mode`.

@@ -81,8 +81,31 @@ A plugin is **one native library file** (accepted, 18 Oct 2026) with a small, ve
 - The host hands each plugin a table of **host services** at start: send a footer message, read and write its own settings, ask for the score (whole, a track, the selection, a range of bars), submit an edit (always as an undoable command, never by changing the score directly), ask the user to approve a download (NET-2), redraw its tab.
 - The **SDK** (`oxiguitar-plugin`) wraps all of this in safe Rust: a plugin implements traits (`FormatReader`, `FormatWriter`, `Instrument`, `Tool`, `Exporter`, `Panel`, …) and calls one `export_plugin!` macro. Plugin authors write no `unsafe`.
 - **Licences**: the interface (`oxiguitar-plugin-api`) and the SDK (`oxiguitar-plugin`) are **MIT OR Apache-2.0** (Mateus, 18 Oct 2026), so a plugin, which compiles the SDK into itself, may use any GPL-compatible licence. The core stays GPL-3.0-or-later, and our own plugins are GPL-3.0-or-later like it. A plugin that is not GPL-compatible isn't possible in practice: it runs inside the app, which includes Slint under its GPL-3.0-only option.
-- **Where the `unsafe` is.** Loading a native library and calling through function pointers is `unsafe` in Rust by nature; no plugin system with native code can avoid it. It would live in exactly two small modules, the host's loader and the SDK's export glue, reviewed line by line and covered by an interface test suite. The rest of the workspace keeps `unsafe_code = "forbid"`. Mateus accepted this (18 Oct 2026): it is the price of native plugins, not a workaround around another library.
+- **Where the `unsafe` is.** Loading a native library and calling through function pointers is `unsafe` in Rust by nature; no plugin system with native code can avoid it. It lives in exactly two small modules, the host's loader (`crates/oxiguitar-host/src/loader.rs`) and the SDK's export glue (`crates/oxiguitar-plugin/src/glue.rs`, plus the two attributes `export_plugin!` generates: the manifest's section and the entry symbol), reviewed line by line, every block with a `// SAFETY:` comment, and covered by the contract suite on every system CI tests. Their crates, and plugin crates, deny `unsafe_code` and allow it only there (a crate that forbids it can't allow it in one module); the rest of the workspace keeps `unsafe_code = "forbid"`, and a test fails if `unsafe` is allowed anywhere else. Mateus accepted this (18 Oct 2026): it is the price of native plugins, not a workaround around another library.
 - **The same plugin can be built in.** A plugin crate builds both as a `.oxp` and as an ordinary Rust library. The mobile apps link their plugins in (iOS forbids loading downloaded code), and our own tests use plugins as libraries without going through the interface.
+
+### How the host loads and chooses
+
+As built in `oxiguitar-host` (`Plugins`):
+
+- **At start**, every `.oxp` file directly in the plugin folders is examined, in folder order and then by name, and nothing is loaded. A file is usable when its manifest reads and is valid, it is a library for this system and processor (one universal Mach-O file holds both of the Mac's), its interface is 1.x with a minor version this host has, its conditions (system, processor, display system) hold, and settings.json doesn't list its id under `disabled`. The footer names the plugins found, and every file that can't be used and why.
+- **One file per plugin id**: the highest version is used; on a tie, the file in the earlier folder, then the earlier name. The others are reported as replaced.
+- **Loaded on first use, never unloaded.** The host loads a plugin when a contribution of it is first used, checks that its table carries the same manifest as its file's section and was built for an interface the host has, and starts it once. A plugin that fails to start says so in the footer and is never called again. A plugin asking for its own contributions while it starts gets an error instead of waiting forever.
+- **Formats**: a file's format is found from the signatures in the manifests, without loading anything; the first usable plugin (in folder order) with a matching signature reads it.
+- **Instruments**: the player offers a track the instruments whose classes include the track's (`InstrumentClass::of(program, percussion)`).
+- **Services**: for an interface, the candidates are the services of usable plugins whose own conditions hold. settings.json may pin one, as `"services": {"INTERFACE": "PLUGIN-ID/SERVICE-ID"}`; otherwise the highest `priority` comes first, then plugin order. Each candidate's probe is asked in turn whether it works here (loading its plugin), and the first that says yes is used for the rest of the session. A pin that can't run here is skipped, and said so if nothing else works.
+- **Host services**: a plugin's footer messages carry its name; its settings are the object under its id in settings.json, saved at once through the one copy of settings.json the app also uses; it may call only the service interfaces its manifest lists under `requires`.
+- **Errors and panics**: a plugin's error crosses with its kind, offset and context; a panic is caught in the plugin, reported as "it crashed (a panic: …)", and the plugin stays usable. (A plugin built with `panic = "abort"` takes the program down instead.)
+- **Threads**: any call may come from any thread. A program has one `Plugins`: the system loads a library file once per process, so a second host over the same file would find the plugin already started.
+
+### Writing a plugin (until the developer guide)
+
+The developer guide (`docs/plugins/`) comes with the template plugin later in M2. Until then, `plugins/test` is the example:
+
+1. A library crate with a Cargo feature `oxp = []`, depending on `oxiguitar-plugin`, its lints denying `unsafe_code` (not forbidding it, so `export_plugin!` can allow its two attributes).
+2. `manifest.json` beside its `Cargo.toml` (`oxiguitar_plugin_api::manifest` describes the keys); its `version` must equal the crate's.
+3. A type implementing `Plugin` (`start`, and `reader`, `writer` or `service` for each contribution), the traits for each contribution, and `oxiguitar_plugin::export_plugin!(TheType);` in `lib.rs`. `cargo test` then checks the manifest against the code.
+4. `oxiguitar-plugin-test --build PACKAGE NAME` builds `target/oxp/NAME.oxp` and checks it against the interface.
 
 ### The options considered
 
@@ -152,7 +175,7 @@ On launch the app makes sure its user folder, `settings.json` (empty, `{}`) and 
 - On Linux the folders follow the freedesktop [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/) convention, like the rest of the desktop (Mateus, 18 Oct 2026): settings under the config home, plugins and their data under the data home. Relative or empty `XDG_*` values are ignored, as the specification says.
 - The environment variable `OXIGUITAR_HOME` puts everything in one folder instead (`settings.json`, `plugins/`, `data/`): for tests and for a portable copy on a USB stick.
 - `settings.json` key `plugin_folders` (a list of paths) replaces the default list. Folders are searched in order; when two folders hold the same plugin id, the higher version wins, and the earlier folder on a tie.
-- Other keys, written by the core and the plugin manager: `disabled` (plugin ids), `services` (a pinned implementation per interface), `instruments` (default and per track), and one object per plugin id for its own settings. Unknown keys are kept as they are.
+- Other keys, written by the core and the plugin manager: `disabled` (plugin ids), `services` (a pinned implementation per interface, `{"audio-device": "PLUGIN-ID/SERVICE-ID"}`), `instruments` (default and per track), and one object per plugin id for its own settings. Unknown keys are kept as they are. The app and every plugin write through one shared copy, so none overwrites another's keys; a settings.json that couldn't be read at start is never written.
 - A plugin that keeps data (a downloaded SoundFont) gets its own folder: `$XDG_DATA_HOME/oxiguitar/data/<plugin id>/` on Linux, `data/<plugin id>/` in the user folder elsewhere.
 
 ## The plugin manager
@@ -172,7 +195,7 @@ So that a disabled plugin manager can't lock a user out, the core keeps two thin
 ## Testing
 
 - **Each plugin tests itself** as an ordinary Rust library: readers keep their fixture, corpus, round-trip and fuzz tests, moved with them.
-- **The interface has a contract suite** (`oxiguitar-plugin-test`) that loads a built `.oxp` and checks it: manifest readable without loading, every declared contribution answers, errors cross the boundary as messages, nothing panics across it, instruments allocate nothing on the audio thread.
+- **The interface has a contract suite** (`oxiguitar-plugin-test`) that builds a plugin as an `.oxp` and checks it through the host: the manifest reads without loading, it starts, a contribution it doesn't have is "not found", damaged input (nothing, zeros, its signature alone) and an empty score never crash it, every service answers its probe. The instrument checks (nothing allocated, locked or waited for on the audio thread) come with the instrument interface (M4). The test plugin (`plugins/test`) runs every part of the interface end to end: reading and writing with their logs, errors with offsets, a caught panic, the choice of services (conditions, priority, probe, a pin), instruments by class, settings, footer messages, a plugin calling a service through the host, duplicates, disabled and damaged files.
 - **The core is tested with no plugins** (it opens nothing and says why), with test plugins, and with ours.
 - The existing gates stay: the speed budget now includes reading the manifests and loading the format plugin (target: the 300-bar file still opens in under a second, and start-up with 30 plugins installed costs under 10 ms of manifest reading); visual references must not change when the readers move into plugins; NET-5 runs with our plugins installed.
 - CI path filters build and test only the plugins a pull request touches, plus the contract suite.

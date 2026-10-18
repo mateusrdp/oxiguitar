@@ -1,0 +1,34 @@
+[package]
+name = "oxiguitar-test-plugin"
+description = "A plugin for testing the plugin interface: a small text format, test services and an instrument declaration. Never shipped."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+# An ordinary library for tests, and the .oxp file when built with
+# `--features oxp --crate-type cdylib` (oxiguitar-plugin-test does that).
+crate-type = ["lib"]
+
+[features]
+oxp = []
+
+[dependencies]
+oxiguitar-plugin.workspace = true
+
+# Plugins deny `unsafe` rather than forbid it: `export_plugin!` allows it on
+# the two attributes it generates, and nowhere else.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
