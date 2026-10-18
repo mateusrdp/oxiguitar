@@ -127,10 +127,15 @@ jobs:
           cargo test --workspace --all-features --locked 2>&1 | tee test.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            # The "failures:" report (panic messages), or else the end of the output.
-            report=$(sed -n '/^failures:$/,/^test result:/p' test.log | head -n 60)
+            # Each panic with the lines after it, then the "failures:" report,
+            # or else the end of the output.
+            report=$( (grep -E -A6 'panicked at|^error: test failed|signal: ' test.log; sed -n '/^failures:$/,/^test result:/p' test.log) | head -n 80)
             [ -n "$report" ] || report=$(tail -n 40 test.log)
-            echo "::error title=cargo test (${{ matrix.name }})::$(printf '%s' "$report" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            # Encoded with bash itself: macOS's BSD sed can't join lines.
+            report=${report//'%'/'%25'}
+            report=${report//$'\r'/'%0D'}
+            report=${report//$'\n'/'%0A'}
+            echo "::error title=cargo test (${{ matrix.name }})::$report"
           fi
           exit "$status"
       # A visual-regression failure leaves what was drawn and a picture of
@@ -143,7 +148,9 @@ jobs:
           if-no-files-found: ignore
 
   # M1's speed budget: a 300-bar, 8-track file opens in under a second, from
-  # reading the file to the first tiles (crates/oxiguitar-app/src/speed.rs).
+  # reading the file to the first tiles (crates/oxiguitar-app/src/speed.rs);
+  # and M2's: 30 plugin manifests are read in under 10 ms at start
+  # (crates/oxiguitar-plugin-test/tests/contract.rs).
   # Only optimised builds are held to it. Thin LTO and one codegen unit are
   # turned off to build faster; that makes the check a little stricter.
   speed:
@@ -165,6 +172,8 @@ jobs:
           set +e
           cargo test --release --locked -p oxiguitar-app speed -- --nocapture 2>&1 | tee speed.log
           status=${PIPESTATUS[0]}
+          cargo test --release --locked -p oxiguitar-plugin-test --test contract speed_budget -- --nocapture 2>&1 | tee -a speed.log
+          [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
           # The times as notices on the run, and a failure as an error.
           grep -E '^speed-budget' speed.log | while read -r line; do echo "::notice title=Speed budget::$line"; done
           if [ "$status" -ne 0 ]; then

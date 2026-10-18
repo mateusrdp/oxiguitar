@@ -97,10 +97,11 @@ Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5
 
 Turn the viewer into a small core with plugins, and give the window the shape the later milestones fill in. Design: [docs/design/plugins.md](docs/design/plugins.md); decision: [ADR 0008](docs/adr/0008-plugin-architecture.md) (accepted 18 Oct 2026).
 
-- [ ] The window shell (docs/design/ui.md): toolbar with sections, tabbed top, bottom, left and right areas that collapse and hide, the page on a dark canvas, a one-line footer that expands into the session's messages; player controls greyed out in the top area until an output plugin is installed; mouse wheel zooms the page, Ctrl + wheel the interface.
-- [ ] User folder, settings.json and the plugin folders (XDG on Linux), created on launch; the footer says when no output or no read/write plugin is installed and where to get them.
+- [x] The window shell (docs/design/ui.md, PR #43): toolbar with sections, tabbed top, bottom, left and right areas that collapse and hide, the page on a dark canvas, a one-line footer that expands into the session's messages; player controls greyed out in the top area until an output plugin is installed; mouse wheel zooms the page, Ctrl + wheel the interface.
+- [x] User folder, settings.json and the plugin folders (XDG on Linux), created on launch (PR #43); the footer says when no output or no read/write plugin is installed and where to get them.
 - [x] Mateus answers ADR 0008's questions; ADR 0008 accepted (18 Oct 2026).
-- [ ] `oxiguitar-plugin-api` (the interface's messages), `oxiguitar-plugin` (the SDK for plugin authors, no `unsafe` for them), the host in `oxiguitar-host` (manifests read without loading, lazy loading, contributions registry, host services, services chosen per platform and environment).
+- [x] `oxiguitar-plugin-api` (the interface's messages), `oxiguitar-plugin` (the SDK for plugin authors, no `unsafe` for them), the host in `oxiguitar-host` (manifests read without loading, lazy loading, contributions registry, host services, services chosen per platform and environment). PRs #48 and #49.
+- [x] A test plugin built as an `.oxp` and the contract suite (`oxiguitar-plugin-test`); 30 manifests read in about 1 ms.
 - [ ] Five format plugins from M1's readers: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp), each with its fixtures, corpus, fuzz and visual tests. The core holds no format code.
 - [ ] Plugins for PDF export and for Infer Key Signatures; `oxiguitar-cli` loads plugins like the app.
 - [ ] The plugin manager plugin: list, enable, disable, uninstall, install from a file, settings forms. `--safe-mode`.
@@ -110,6 +111,48 @@ Turn the viewer into a small core with plugins, and give the window the shape th
 - [ ] Debian: manual pages for both binaries, lintian in CI, a `debian/` directory building both packages offline in a sid container, and an audit of every crate against Debian's archive (plugins.md, "Debian"). The goal is Debian main.
 
 Done when: the core with no plugins opens nothing and says which plugin a file needs; with our plugins, every M1 gate still passes (42 of 42 corpus files, the speed budget including plugin loading, the 50 visual references unchanged, six hours of fuzzing per reader); start-up reads 30 plugin manifests in under 10 ms; the plugin manager works on all three systems; the developer guide builds a working plugin from the template.
+
+### M2's remaining slices, in order (planned 18 Oct 2026)
+
+Each slice is one or more pull requests into develop, with the same gates as M1. Mateus set the order.
+
+1. **The five Guitar Pro readers as format plugins.**
+   - `plugins/gp3`, `gp4`, `gp5`, `gpx` and `gp` (ids `oxiguitar.gp3` …, files `gp3.oxp` …). Each is a thin crate over `oxiguitar-formats`, which keeps the shared reader code and gains one Cargo feature per reader, so each plugin carries only its own. Manifests carry today's detection as signatures: `FICHIER GUITAR PRO v3/v4/v5` at offset 1, `BCFZ`/`BCFS` at 0, the ZIP member `Content/score.gpif`.
+   - The core's catalogue of our plugins: names, signatures and where to get them, no code. With no plugin installed, the core says which plugin a file needs. Guitar Pro 1–2 are still recognised and refused with a message.
+   - The app and `oxiguitar-cli` open files through `Plugins` (wire score → model); `BUILT_IN_READERS` goes away.
+   - Development builds find the plugins in `target/lib/oxiguitar/plugins/`, the program's system plugin folder, via `scripts/build-plugins.sh`.
+   - Until slice 5 splits the packages, every package installs the five plugins in its system plugin folder, so develop's builds still open files.
+   - Gates, all through the `.oxp` files:
+     - the corpus (42 of 42), and the reader-change `cmp` check: `{:#?}` of score and log from develop's in-process reader against the plugin path, byte for byte, for every GP file;
+     - the 50 visual references unchanged;
+     - the speed budget including loading the plugin (300 bars under 1 s; 30 manifests under 10 ms);
+     - fuzzing: today's targets keep fuzzing the reader code, a new one fuzzes the plugin's `dispatch` (wire conversion included), and the 6-hour run per reader by hand;
+     - NET-5 with the plugins installed;
+     - the contract suite on all five.
+   - CI stops using `--all-features`, since two plugin crates linked into one test binary would both export the entry symbol; the features it needs are named instead.
+2. **PDF export and Infer Key Signatures as plugins.**
+   - The interface gains exporters and tools (manifest keys `exporters` and `tools`; requests `Export` and `ApplyTool` with their answers, added at the end of the enums).
+   - The core still engraves; an exporter receives the engraved pages as a versioned wire form of the display list. That is the same form plugin tabs' canvases will use (ADR 0008, answer 8).
+   - The PDF plugin keeps krilla and the fonts. Infer Key Signatures moves out of `oxiguitar-tools`, whose `Tool` shape becomes the interface's.
+   - `oxiguitar-cli render --pdf` and `--tool` go through the plugins.
+   - Gates: the 10 PDFs Mateus reviewed render identically (page pictures compared), and the tools' corpus results are unchanged (Cliffs of Dover 1♯, Angra four keys, Seek and Destroy stays C).
+3. **The plugin manager.**
+   - First the interface for tabs (standard widgets plus a display-list canvas) and events pushed to plugins (no polling), with host services for the plugin list.
+   - Then the manager itself: list (ours or third-party, folder, loaded or not, why not), enable and disable from the next start, uninstall from writable folders, install a picked `.oxp`, and settings forms from each plugin's settings schema.
+   - In the core: `--safe-mode` and the plugin folders in Help → About.
+   - Gate: it works on all three systems (headless on Linux; contract tests everywhere; Mateus on sid).
+4. **Two Linux builds.**
+   - `oxiguitar-app` features `wayland` (default) and `x11`, each enabling only Slint's `backend-winit-wayland` or `backend-winit-x11`; `display_system()` then follows the build.
+   - Packages `oxiguitar` and `oxiguitar-x11` (which Provides, Conflicts with and Replaces `oxiguitar`), and two AppImages; the manual says the X11 build will be dropped.
+   - CI checks that the Wayland build holds no X11 crate and the reverse, and runs the Wayland build's headless tests in the nested compositor (`scripts/wayland-dnd-test/`).
+5. **Packages and Debian.**
+   - Releases attach every plugin for all six targets (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp` …) with SHA256SUMS.
+   - `oxiguitar-plugins-basic` (.deb and .rpm, into `/usr/lib/oxiguitar/plugins/`), which the core Suggests; the Windows zip and the .dmg come as two downloads.
+   - The Debian work towards main: manual pages for `oxiguitar` and `oxiguitar-cli`, lintian in CI, a `debian/` directory (dh-cargo) building both packages offline in a sid container, the audit of every crate in `Cargo.lock` against Debian's archive, and `fonts-noto-core` instead of our Noto copy.
+
+Open for Mateus (before slice 5): an AppImage is one file that runs anywhere, so should it carry the basic plugins inside it, or come as a core AppImage plus the plugins as separate files, like the Windows zip and the .dmg?
+
+The plugin developer guide (`docs/plugins/`) and its template plugin come after slice 3, when the interface has every M2 contribution, and before v0.2 freezes interface 1.0.
 
 ## M3 — Editor (v0.5)
 

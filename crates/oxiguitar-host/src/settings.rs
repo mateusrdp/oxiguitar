@@ -15,6 +15,7 @@
 //! menu's under `view`) through [`Settings::set`] and [`Settings::save`].
 
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use serde_json::{Map, Value};
 
@@ -108,6 +109,59 @@ impl Settings {
     }
 }
 
+/// settings.json as the whole program shares it. The core, the app's
+/// preferences and every plugin's own settings go through this one copy,
+/// so no writer overwrites another's keys. Cloning shares it.
+#[derive(Clone, Debug, Default)]
+pub struct SharedSettings {
+    values: Arc<Mutex<Settings>>,
+    path: Option<PathBuf>,
+}
+
+impl SharedSettings {
+    /// Settings read from `path`, which [`SharedSettings::set`] saves to.
+    /// `None` keeps them in memory only: no home folder, or a settings.json
+    /// that couldn't be read, which is then left as it is.
+    pub fn new(settings: Settings, path: Option<PathBuf>) -> SharedSettings {
+        SharedSettings {
+            values: Arc::new(Mutex::new(settings)),
+            path,
+        }
+    }
+
+    /// A value by key.
+    pub fn get(&self, key: &str) -> Option<Value> {
+        self.lock().get(key).cloned()
+    }
+
+    /// The settings as they are now.
+    pub fn snapshot(&self) -> Settings {
+        self.lock().clone()
+    }
+
+    /// Sets a key's value and saves settings.json (when there is one to
+    /// save to). The error is one sentence for the footer.
+    pub fn set(&self, key: &str, value: Value) -> Result<(), String> {
+        let mut settings = self.lock();
+        settings.set(key, value);
+        match &self.path {
+            Some(path) => settings.save(path),
+            None => Ok(()),
+        }
+    }
+
+    /// The file the settings are saved to.
+    pub fn path(&self) -> Option<&Path> {
+        self.path.as_deref()
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, Settings> {
+        // Every change is one insert, so a panic elsewhere can't leave the
+        // settings half changed.
+        self.values.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,6 +202,33 @@ mod tests {
             Some(&serde_json::json!({"dark_page": false}))
         );
         assert!(!dir.join("settings.json.tmp").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn shared_settings_save_every_writer_s_keys() {
+        let dir = crate::folders::tests::scratch("shared");
+        let path = dir.join("settings.json");
+        let shared = SharedSettings::new(Settings::default(), Some(path.clone()));
+        let other = shared.clone();
+        shared
+            .set("view", serde_json::json!({"dark_page": true}))
+            .unwrap();
+        other
+            .set("oxiguitar.gp5", serde_json::json!({"x": 1}))
+            .unwrap();
+        let back = Settings::load(&path).unwrap();
+        assert_eq!(
+            back.get("view"),
+            Some(&serde_json::json!({"dark_page": true}))
+        );
+        assert_eq!(
+            back.get("oxiguitar.gp5"),
+            Some(&serde_json::json!({"x": 1}))
+        );
+        let memory = SharedSettings::new(Settings::default(), None);
+        memory.set("a", Value::Bool(true)).unwrap();
+        assert_eq!(memory.get("a"), Some(Value::Bool(true)));
         let _ = std::fs::remove_dir_all(&dir);
     }
 

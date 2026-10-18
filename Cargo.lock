@@ -3150,6 +3150,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "object"
+version = "0.37.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff76201f031d8863c38aa7f905eca4f53abbfa15f609db4277d44cd8938f33fe"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3261,6 +3270,9 @@ dependencies = [
 name = "oxiguitar-host"
 version = "0.1.0"
 dependencies = [
+ "libloading",
+ "object",
+ "oxiguitar-plugin-api",
  "serde_json",
 ]
 
@@ -3281,11 +3293,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxiguitar-plugin"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-plugin-api",
+ "serde_json",
+]
+
+[[package]]
 name = "oxiguitar-plugin-api"
 version = "0.1.0"
 dependencies = [
  "postcard",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oxiguitar-plugin-test"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-host",
  "serde_json",
 ]
 
@@ -3297,6 +3325,13 @@ dependencies = [
  "oxiguitar-display",
  "skrifa 0.42.1",
  "tiny-skia 0.12.0",
+]
+
+[[package]]
+name = "oxiguitar-test-plugin"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-plugin",
 ]
 
 [[package]]

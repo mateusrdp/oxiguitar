@@ -1,0 +1,233 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+//! Loading a plugin's code and calling it: the C side of the host.
+//!
+//! This module and the SDK's export glue are the only places in OxiGuitar
+//! with `unsafe` code (docs/design/plugins.md, "Where the `unsafe` is").
+//! Every `unsafe` block says why it is sound. What the loader relies on is
+//! the plugin's side of the contract in `oxiguitar_plugin_api::abi`:
+//!
+//! - the entry symbol has the type `EntryV1` and returns a table that lives
+//!   as long as the library is loaded;
+//! - the table's functions may be called from any thread, at once;
+//! - a callee copies nothing out of a sink after it returns, and every
+//!   pointer it is given is used only during the call.
+//!
+//! Everything else is checked: a missing symbol, a null or misaligned
+//! table, a table too small for this version, a manifest that differs from
+//! the file's manifest section, a plugin built for a later interface.
+//!
+//! A library is never unloaded: unloading native code safely is unreliable
+//! (thread-local destructors, threads the plugin started), so every loaded
+//! library, its table and the host table it was given live until the
+//! process ends.
+
+#![allow(unsafe_code)]
+
+use std::ffi::c_void;
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::path::Path;
+
+use oxiguitar_plugin_api::abi::{
+    EntryV1, HOST_TABLE_V1_SIZE, HostTableV1, PLUGIN_TABLE_V1_SIZE, PluginTableV1, RawBytes,
+    RawSink, Status,
+};
+
+/// What the host answers a plugin's requests with: encoded
+/// `HostRequest` in, a status and the answer's bytes out.
+pub(crate) type HostCalls = dyn Fn(&[u8]) -> (Status, Vec<u8>) + Send + Sync;
+
+/// A loaded plugin: its table, valid until the process ends.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Loaded {
+    table: &'static PluginTableV1,
+}
+
+// SAFETY: the table is never written once the plugin returned it, and the
+// interface lets its functions be called from any thread, at once. Its one
+// raw pointer, `manifest`, points into the library's read-only manifest
+// section.
+unsafe impl Send for Loaded {}
+// SAFETY: as for `Send`.
+unsafe impl Sync for Loaded {}
+
+/// The entry symbol's name, with the terminating zero `libloading` wants.
+const ENTRY: &[u8] = b"oxiguitar_plugin_v1\0";
+
+/// Loads the plugin library at `path`, checks its table against `manifest`
+/// (the bytes of its manifest section) and starts it, handing it a host
+/// table whose requests `host` answers. The error is one sentence for the
+/// user, without the plugin's name.
+///
+/// Loading runs the library's own initialisation code, and from then on the
+/// plugin can do anything the user can: a plugin file is trusted like the
+/// program itself (docs/design/plugins.md, "Privacy and trust").
+pub(crate) fn load(path: &Path, manifest: &[u8], host: Box<HostCalls>) -> Result<Loaded, String> {
+    // SAFETY: loading a library runs its initialisers, which Rust can't
+    // check. The plugin folders hold code the user installed and trusts
+    // like OxiGuitar itself (NET-4); nothing on our side can make this
+    // safer, and the plugin is loaded only after its manifest was read.
+    let library = unsafe { libloading::Library::new(path) }
+        .map_err(|e| format!("it couldn't be loaded ({e})"))?;
+    // Never unloaded: the library lives until the process ends, and with it
+    // every pointer into it.
+    let library: &'static libloading::Library = Box::leak(Box::new(library));
+    // SAFETY: the interface gives the entry symbol the type `EntryV1`. A
+    // library exporting this name with another type breaks the interface;
+    // nothing can detect that from outside. The symbol stays valid because
+    // the library is never unloaded.
+    let entry: EntryV1 = unsafe { library.get::<EntryV1>(ENTRY) }
+        .map(|symbol| *symbol)
+        .map_err(|_| "it has no oxiguitar_plugin_v1 entry: it was built for another interface version, or isn't an OxiGuitar plugin".to_owned())?;
+    // SAFETY: `entry` is the plugin's entry function, loaded just above and
+    // valid for the rest of the process; it takes no arguments.
+    let table = unsafe { entry() };
+    if table.is_null() || !table.is_aligned() {
+        return Err("its entry returned no table".into());
+    }
+    // SAFETY: `table` is non-null and aligned, and the interface says it
+    // points to a table that lives as long as the library, which is for
+    // the rest of the process. `size` is the first field of every version
+    // of the `repr(C)` table and is read alone, before any other field.
+    let size = unsafe { (*table).size };
+    if size < PLUGIN_TABLE_V1_SIZE {
+        return Err(format!(
+            "its table is {size} bytes, smaller than interface 1.0's {PLUGIN_TABLE_V1_SIZE}"
+        ));
+    }
+    // SAFETY: as above, and the table holds at least every field of
+    // `PluginTableV1` (checked just above). It is never written by either
+    // side once returned.
+    let table: &'static PluginTableV1 = unsafe { &*table };
+    if table.manifest.len > oxiguitar_plugin_api::MAX_MANIFEST_LEN {
+        return Err("its table's manifest is too large (the file is damaged)".into());
+    }
+    // SAFETY: the table's `manifest` points into the library's manifest
+    // section, which lives as long as the library, that is, forever; its
+    // length is a manifest's at most (checked just above).
+    let carried = unsafe { slice(table.manifest) };
+    let end = carried.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
+    if &carried[..end] != manifest {
+        return Err(
+            "its table's manifest differs from the manifest in its file (the file is damaged)"
+                .into(),
+        );
+    }
+    let host_minor = oxiguitar_plugin_api::INTERFACE.1;
+    if table.interface_minor > host_minor {
+        return Err(format!(
+            "it needs interface 1.{}, and this OxiGuitar has 1.{host_minor}: update OxiGuitar",
+            table.interface_minor
+        ));
+    }
+
+    // The host's table and what answers it, for the rest of the process.
+    // The box is boxed again because `ctx` is a thin pointer and a
+    // `&HostCalls` is not.
+    #[allow(clippy::borrowed_box)]
+    let host: &'static Box<HostCalls> = Box::leak(Box::new(host));
+    let host_table: &'static HostTableV1 = Box::leak(Box::new(HostTableV1 {
+        size: HOST_TABLE_V1_SIZE,
+        interface_minor: host_minor,
+        ctx: std::ptr::from_ref::<Box<HostCalls>>(host).cast(),
+        call: host_call,
+    }));
+    let mut answer: Vec<u8> = Vec::new();
+    let mut sink = RawSink {
+        ctx: (&raw mut answer).cast(),
+        write: collect,
+    };
+    // SAFETY: `start` is the plugin's, valid for the rest of the process.
+    // `host_table` is leaked, so valid for the rest of the process as the
+    // interface requires; `sink` and `answer` live until after the call and
+    // nothing else touches them meanwhile.
+    let status = unsafe { (table.start)(host_table, &raw mut sink) };
+    oxiguitar_plugin_api::message::outcome(status, &answer)
+        .map_err(|e| format!("it didn't start: {}", e.message))?;
+    Ok(Loaded { table })
+}
+
+impl Loaded {
+    /// Sends an encoded `Request` and returns the status and the answer's
+    /// bytes.
+    pub(crate) fn call(&self, request: &[u8]) -> (Status, Vec<u8>) {
+        let mut answer: Vec<u8> = Vec::new();
+        let mut sink = RawSink {
+            ctx: (&raw mut answer).cast(),
+            write: collect,
+        };
+        // SAFETY: the table's `call` is valid for the rest of the process
+        // (`load`). `request`, `sink` and `answer` live until after the
+        // call returns and nothing else touches `answer` meanwhile; the
+        // plugin may be called from any thread (the interface's contract).
+        let status = unsafe { (self.table.call)(RawBytes::of(request), &raw mut sink) };
+        (status, answer)
+    }
+}
+
+/// `HostTableV1::call`: answers a plugin's request with the `HostCalls`
+/// behind `ctx`.
+///
+/// # Safety
+///
+/// `ctx` is the `ctx` of a host table made by [`load`]; `request` is valid
+/// for this call; `answer` is null or points to a sink valid for this call.
+unsafe extern "C" fn host_call(
+    ctx: *const c_void,
+    request: RawBytes,
+    answer: *mut RawSink,
+) -> Status {
+    if ctx.is_null() {
+        return Status::NOT_STARTED;
+    }
+    // SAFETY: `ctx` was made by `load` from a leaked `Box<HostCalls>`, which
+    // lives for the rest of the process and is only ever read.
+    let host = unsafe { &*ctx.cast::<Box<HostCalls>>() };
+    // SAFETY: `request` is valid for this call (this function's contract).
+    let request = unsafe { slice(request) };
+    let (status, bytes) = match catch_unwind(AssertUnwindSafe(|| host(request))) {
+        Ok(answered) => answered,
+        Err(_) => (Status::PANICKED, b"the host failed answering it".to_vec()),
+    };
+    if !answer.is_null() {
+        // SAFETY: `answer` is non-null and valid for this call (this
+        // function's contract); its `write` copies `bytes` before it
+        // returns, and `bytes` outlives the call.
+        unsafe {
+            let sink = &*answer;
+            (sink.write)(sink.ctx, RawBytes::of(&bytes));
+        }
+    }
+    status
+}
+
+/// A sink's `write` that appends to the `Vec<u8>` behind `ctx`.
+///
+/// # Safety
+///
+/// `ctx` points to a `Vec<u8>` no one else uses during the call, and
+/// `bytes` is valid for the call.
+unsafe extern "C" fn collect(ctx: *mut c_void, bytes: RawBytes) {
+    // SAFETY: `ctx` is the `Vec<u8>` that `load` or `Loaded::call` set up,
+    // alive and otherwise untouched for the call (this function's
+    // contract).
+    let answer = unsafe { &mut *ctx.cast::<Vec<u8>>() };
+    // SAFETY: `bytes` is valid for this call (this function's contract).
+    answer.extend_from_slice(unsafe { slice(bytes) });
+}
+
+/// The bytes `raw` points to.
+///
+/// # Safety
+///
+/// `raw` is valid for the returned lifetime: `len` bytes readable from
+/// `ptr`, unless `len` is 0.
+unsafe fn slice<'a>(raw: RawBytes) -> &'a [u8] {
+    if raw.len == 0 || raw.ptr.is_null() {
+        return &[];
+    }
+    // SAFETY: `ptr` is non-null and `len` bytes from it are readable for
+    // `'a` (this function's contract); `u8` has no alignment requirement.
+    unsafe { std::slice::from_raw_parts(raw.ptr, raw.len) }
+}
