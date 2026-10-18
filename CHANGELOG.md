@@ -12,6 +12,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 ### Changed
 
 - cargo-deny accepts RUSTSEC-2026-0370, 0371 and 0372 (zvariant, zvariant_derive and zbus_names are unmaintained since zbus 6 took them in, published 17 Oct 2026). They come in through zbus 5, which Slint 1.18's winit backend and AccessKit still use; revisit on the next Slint upgrade.
+- The plan: the plugin system moves forward to M2, before the editor (Mateus, 18 Oct 2026). The core keeps reading, editing, writing, showing and the player's controls; every file format (one plugin each), sound, export, tool and platform-specific feature becomes a plugin. Design in `docs/design/plugins.md`, decision record ADR 0008 (accepted with Mateus's answers: native plugins, XDG folders on Linux, two Linux builds (Wayland, deprecated X11), packages `oxiguitar` and `oxiguitar-plugins-basic`, Debian main as the goal, instrument classes for output plugins, v1.0 = viewer, editor, player and plugins); ROADMAP.md and ARCHITECTURE.md renumbered and redrawn (M2 plugins and window shell, M3 editor, M4 player = v1.0, M5 Guitar Pro 8 parity, M6 format plugins, M7 NAM, M8 RSE, M9 drums and hardware, M10 mobile).
 
 ## [0.1.0] - 2026-10-17
 

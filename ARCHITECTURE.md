@@ -1,39 +1,45 @@
 # Architecture
 
-OxiGuitar is a Cargo workspace. One score model sits at the centre; readers and writers, layout, playback and the GUI are separate crates around it. The GUI can change without touching the music code, and a command-line tool can convert, render and test files in CI without a window.
+OxiGuitar is a small core and a set of plugins (decided 18 Oct 2026; [ADR 0008](docs/adr/0008-plugin-architecture.md), [docs/design/plugins.md](docs/design/plugins.md)). The core holds the score, shows and edits it, and drives the player's transport; file formats, sound, exports, tools and anything platform-specific are plugins, loaded only when used. Inside the core, one score model sits at the centre of a Cargo workspace; layout, editing, the plugin host and the GUI are separate crates around it, so the GUI can change without touching the music code, and the command-line tool can render and test files in CI without a window.
 
 ```text
-                 oxiguitar-app (GUI shell, Slint)   oxiguitar-cli (no window)
-                     |        |        \              |        |
-                     v        v         v             v        v
-          oxiguitar-render  oxiguitar-play   oxiguitar-edit  oxiguitar-formats
-          (pixels, PDF)     (events, synth)  (commands,      (detect, read,
-                |                 |           undo/redo)      write, import log)
-                v                 |               |               |
-          oxiguitar-display <- oxiguitar-layout   |               |
-          (display list,       (engraving)        |               |
-           fonts, SMuFL)           |              |               |
-                                   \______________|_______________/
-                                                  v
-                                           oxiguitar-model
-                              Score > Track > Staff > Bar > Voice > Beat > Note
+   THE CORE                                             PLUGINS (.oxp files, M2 on)
+                                                        loaded on first use
+   oxiguitar-app (window shell, Slint)  oxiguitar-cli
+        |      |       |      \            |           formats: gp3 gp4 gp5 gpx gp
+        |      |       |       \           |                    (later musicxml abc
+        v      v       v        v           v                     mscz midi)
+   render  oxiguitar-edit  oxiguitar-host --------------> exporters: pdf png wav
+   (screen) (commands,     (folders, settings,            tools: infer-key-signatures
+     |       undo/redo)     manifests, loading,           instruments: midi nam rse drums
+     v         |            services)  ^                  services: audio and midi devices,
+   display <- layout       oxiguitar-play                           wayland drops ...
+   (display    |           (events, transport,            plugin manager
+    list,      |            mixer)                          ^
+    fonts)     |              |        |                    | oxiguitar-plugin (SDK)
+               \______________|________|____________________| oxiguitar-plugin-api
+                              v                               (messages)
+                       oxiguitar-model
+           Score > Track > Staff > Bar > Voice > Beat > Note
 ```
 
-Arrows show which crate calls which. Every crate reads or writes the shared model, so a new file format or output touches one box.
+Arrows show which crate calls which. Every crate reads or writes the shared model, and plugins see it only through the plugin interface's messages, so the model can change without breaking them.
 
 ## Crates
 
 | Crate | Status | Purpose |
 | --- | --- | --- |
 | `oxiguitar-model` | M0 | The score model: data types only, no I/O. |
-| `oxiguitar-formats` | M0 | Format detection from contents (FMT-6), readers and writers, import logs (FMT-2). |
-| `oxiguitar-cli` | M0 | `info`, later `convert`, `render` and test helpers. Used by CI. |
-| `oxiguitar-edit` | M2 | Edit commands, selection, undo and redo. |
+| `oxiguitar-formats` | M0 | Format detection from contents (FMT-6), readers and writers, import logs (FMT-2). In M2 its readers move into one format plugin each; what they share stays here as a library the plugins use. |
+| `oxiguitar-cli` | M0 | `info`, `render`, `tools`, later `convert` and test helpers. Used by CI. Loads plugins like the app from M2. |
+| `oxiguitar-host` | M2 | The plugin host: the user folder, settings.json, the plugin folders, reading manifests without loading code, loading plugins on first use, and choosing a service implementation per platform and environment. |
+| `oxiguitar-plugin-api`, `oxiguitar-plugin` | M2 | The plugin interface's messages, and the SDK plugin authors use (safe Rust only). |
+| `oxiguitar-edit` | M3 | Edit commands, selection, undo and redo. |
 | `oxiguitar-display` | M0 | The display list (positioned glyph runs, lines, rectangles, paths, colour roles), the bundled fonts and SMuFL metadata (ADR 0005). |
 | `oxiguitar-layout` | M1 | Engraving: turns the model into a display list per page, or one long sheet, in four layouts. See [docs/design/engraving.md](docs/design/engraving.md). |
-| `oxiguitar-tools` | M1 | The Tools menu: actions the user starts that change a score, such as inferring key signatures. Model only, one shape per tool, so plugins can add tools from M5. See [docs/design/tools.md](docs/design/tools.md). |
-| `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. |
-| `oxiguitar-play` | M3 | Score-to-event conversion, the synthesiser, the real-time audio thread. |
+| `oxiguitar-tools` | M1 | The Tools menu: actions the user starts that change a score, such as inferring key signatures. Model only, one shape per tool. Becomes a plugin in M2. See [docs/design/tools.md](docs/design/tools.md). |
+| `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. In M2 the PDF part moves into the PDF export plugin. |
+| `oxiguitar-play` | M4 | Score-to-event conversion, the transport, the mixer. The synthesiser and the audio device are plugins. |
 | `oxiguitar-app` | M1 | The desktop window, binary `oxiguitar`, in Slint (ADR 0004), following [docs/design/ui.md](docs/design/ui.md). A worker thread reads, engraves and draws the score as tiles; the window only shows them, so it never waits on the music code. |
 
 | `oxiguitar-testgen` | M1 | Test code only: scores written in a short text notation and saved as Guitar Pro 7 files, for the speed budget and visual regression tests. See [docs/testing.md](docs/testing.md). |
@@ -47,10 +53,11 @@ Crates marked with a later milestone do not exist yet. Throwaway experiments liv
 - **Edits are commands.** Every change is a reversible command object, which gives unlimited undo and redo.
 - **Layout produces a display list.** The engraving engine outputs positioned glyphs and lines. Screen, PDF, SVG and PNG all draw the same list, so what you see is what you export.
 - **Real-time audio never waits.** The audio thread allocates no memory and takes no locks; it receives events through lock-free queues.
-- **Small core, optional plugins.** From M5 on, the metronome, NAM, RSE and anything needing special hardware are plugins.
+- **Small core, everything else a plugin** (from M2). The core never carries or loads code it cannot use on the machine it runs on; it compiles per target, and a plugin's code loads only when one of its contributions is used.
 - **Thin GUI.** All logic lives in toolkit-free crates, because Rust GUI toolkits change fast.
 - **Untrusted input.** Files come from anywhere. Readers never panic, never allocate without bounds checks, and report errors with the file and position.
 - **No network** except downloads the user starts (NET-1, NET-2). CI enforces this.
+- **No polling.** Code reacts to events or waits on something that wakes it; see CONTRIBUTING.md, "Design principles".
 
 ## Where decisions are recorded
 
