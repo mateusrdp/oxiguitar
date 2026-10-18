@@ -116,7 +116,7 @@ Done when: the core with no plugins opens nothing and says so, and a file no ins
 
 Each slice is one or more pull requests into develop, with the same gates as M1. Mateus set the order.
 
-1. **The five Guitar Pro readers as format plugins.** Done (PR #51); the six-hour fuzzing run per reader by hand is the one gate left.
+1. **The five Guitar Pro readers as format plugins.** Done (PR #51), every gate met: the six-hour fuzzing run per reader found nothing (run 39105892287, `docs/testing.md`).
    - `plugins/gp3`, `gp4`, `gp5`, `gpx` and `gp` (ids `oxiguitar.gp3` …, files `gp3.oxp` …). Each is a thin crate over `oxiguitar-formats`, which keeps the shared reader code and gains one Cargo feature per reader, so each plugin carries only its own. Manifests carry today's detection as signatures: `FICHIER GUITAR PRO v3/v4/v5` at offset 1, `BCFZ`/`BCFS` at 0, the ZIP member `Content/score.gpif`.
    - No catalogue and no detection in the core (Mateus, 18 Oct 2026): the formats the installed plugins recognise are what the app opens. With no plugin installed it opens nothing. A file no plugin recognises is refused: a bug report is asked for when an installed plugin declares the file's extension, a feature request otherwise (both at the issue tracker). Guitar Pro 1–2 files are refused that way too.
    - The app and `oxiguitar-cli` open files through `Plugins` (wire score → model); `BUILT_IN_READERS` goes away.
@@ -131,7 +131,7 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
      - the contract suite on all five.
    - CI stops using `--all-features`, since two plugin crates linked into one test binary would both export the entry symbol; the features it needs are named instead.
 2. ~~PDF export and Infer Key Signatures as plugins.~~ **Dropped** (Mateus, 18 Oct 2026): PDF export stays in the core as a feature of the viewer, and Infer Key Signatures as a feature of the editor. Other tools and other exports (PNG, SVG, WAV) are still plugins; the interface gains exporter and tool contributions when the first such plugin needs them. The versioned wire form of the display list comes with slice 3, for plugin tabs' canvases (ADR 0008, answer 8).
-3. **Plugin tabs and the plugin manager.**
+3. **Plugin tabs and the plugin manager.** Built in session 11 (#52–#57, 18 Oct 2026); the one gate left is Mateus's check on sid.
    - First the interface for tabs: standard widgets the core draws in its own style, plus a canvas the plugin draws with a versioned wire form of the display list and receives pointer events on. Then events pushed to plugins: score opened or changed, selection, playback position. No polling.
    - Then the plugin manager, **in the core** (Mateus, 18 Oct 2026; ADR 0008, "Amendments"): Tools → Plugins opens a separate, non-modal window listing every plugin file in the plugin folders (name, version, a tickbox to enable or disable it from the next start, its folder, loaded or not and why not). It copies, downloads, installs and removes nothing, draws no settings forms, and makes no distinction between our plugins and others'.
    - In the core: `--safe-mode` (no plugins at all) and the plugin folders in Help → About.
