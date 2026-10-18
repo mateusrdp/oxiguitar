@@ -29,6 +29,8 @@ mod note;
 mod ratio;
 mod score;
 mod track;
+#[cfg(feature = "wire")]
+pub mod wire;
 
 pub use bar::{
     Bar, Beat, BeatEffects, BeatKind, BeatTechnique, Clef, GraceKind, Stroke, StrokeDirection,

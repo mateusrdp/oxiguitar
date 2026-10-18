@@ -17,6 +17,9 @@ quick-xml.workspace = true
 [dev-dependencies]
 # Test support writes .gp fixtures.
 zip.workspace = true
+# tests/wire.rs: scores cross the plugin interface without loss.
+oxiguitar-model = { workspace = true, features = ["wire"] }
+oxiguitar-plugin-api.workspace = true
 
 [lints]
 workspace = true

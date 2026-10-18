@@ -36,6 +36,7 @@ Direct dependencies so far, all Rust (the desktop app also links the system's fo
 | [skrifa](https://github.com/googlefonts/fontations) 0.42 | Google (fontations) | MIT OR Apache-2.0 | Font outlines and metrics |
 | [serde](https://serde.rs), [serde_json](https://github.com/serde-rs/json) | David Tolnay, Erick Tryzelaar | MIT OR Apache-2.0 | Reading the SMuFL metadata file |
 | [zip](https://github.com/zip-rs/zip2) 9 | Mathijs van de Nes, Marli Frost, Ryan Levick, Chris Hennick and contributors | MIT | Guitar Pro 7/8 archives (later .mscz). No default features (they compile the zstd C library); deflate through flate2 with the pure-Rust [zlib-rs](https://github.com/trifectatechfoundation/zlib-rs) (Zlib) |
+| [postcard](https://github.com/jamesmunns/postcard) 1.1 | James Munns and contributors | MIT OR Apache-2.0 | Encoding the plugin interface's messages |
 | [quick-xml](https://github.com/tafia/quick-xml) 0.42 | Johann Tuffe, Mingun and contributors | MIT | GPIF (Guitar Pro 6–8); later MusicXML and .mscx |
 | [Slint](https://slint.dev) 1.18 | SixtyFPS GmbH and contributors | GPL-3.0-only (one of its three licences; the one we use) | The desktop window (ADR 0004). Because Slint is GPL-3.0-only, the distributed app is under GPL-3.0. Its dependencies include winit, femtovg and AccessKit; we build it without its system-tray support |
 | [rfd](https://github.com/PolyMeilex/rfd) 0.17 | Bartłomiej Maryńczak (PolyMeilex) and contributors | MIT | The system's Open and Save dialogs (the XDG desktop portal on Linux, no GTK) |
