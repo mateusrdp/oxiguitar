@@ -78,9 +78,11 @@ impl Folders {
     ) -> Option<Folders> {
         let set = |name: &str| env(name).filter(|v| !v.is_empty()).map(PathBuf::from);
         // The XDG specification: a relative path in these variables is
-        // invalid and must be ignored.
+        // invalid and must be ignored. "Absolute" here means starting at
+        // the root, `/`, whichever system runs the check (a test resolving
+        // Linux folders on Windows, where /cfg has no drive letter).
         let xdg = |name: &str, fallback: &str| -> Option<PathBuf> {
-            match set(name).filter(|p| p.is_absolute()) {
+            match set(name).filter(|p| p.has_root()) {
                 Some(dir) => Some(dir),
                 None => Some(set("HOME")?.join(fallback)),
             }
