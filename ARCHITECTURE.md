@@ -5,7 +5,8 @@ OxiGuitar is a small core and a set of plugins (decided 18 Oct 2026; [ADR 0008](
 ```text
    THE CORE                                             PLUGINS (.oxp files, M2 on)
                                                         loaded on first use
-   oxiguitar-app (window shell, Slint)  oxiguitar-cli
+   oxiguitar-app (window shell, plugin  oxiguitar-cli
+                 manager, Slint)
         |      |       |      \            |           formats: gp3 gp4 gp5 gpx gp
         |      |       |       \           |                    (later musicxml abc
         v      v       v        v           v                     mscz midi)
@@ -14,7 +15,7 @@ OxiGuitar is a small core and a set of plugins (decided 18 Oct 2026; [ADR 0008](
     PDF)     undo/redo)     manifests, loading,           instruments: midi nam rse drums
      v         |            services)  ^                  services: audio and midi devices,
    display <- layout       oxiguitar-play                           wayland drops ...
-   (display    |           (events, transport,            plugin manager
+   (display    |           (events, transport,            tabs
     list,      |            mixer)                          ^
     fonts)     |              |        |                    | oxiguitar-plugin (SDK)
                \______________|________|____________________| oxiguitar-plugin-api

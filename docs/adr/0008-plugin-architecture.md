@@ -1,6 +1,6 @@
 # 0008 — A small core; formats, sound, exports and platform code as plugins
 
-- Status: accepted (18 Oct 2026, with Mateus's answers below); amended twice on 18 Oct 2026 (see "Amendments")
+- Status: accepted (18 Oct 2026, with Mateus's answers below); amended three times on 18 Oct 2026 (see "Amendments")
 - Date: 2026-10-18
 - Milestone: M2 (moved forward from M5)
 
@@ -23,7 +23,7 @@ Until now the plan had the plugin system at M5, after the editor, the player and
 The design in [docs/design/plugins.md](../design/plugins.md):
 
 1. **Plugins are native libraries**, one `.oxp` file per plugin and target, with a versioned C interface that passes messages as bytes (audio as raw buffers), and a manifest in a named section that the host reads without loading the code. Code loads on first use and is never unloaded during a session.
-2. **The core** keeps the model, editing with undo, engraving and the four layouts on screen, the window shell, the player's transport and event timeline, the mixer, settings, the plugin host and a catalogue of our own plugins. Formats, exports, tools, instruments, audio and MIDI devices, the plugin manager and platform-gap fillers are plugins. (Amended: PDF export and Infer Key Signatures stay in the core, and the core has no catalogue; see "Amendments".)
+2. **The core** keeps the model, editing with undo, engraving and the four layouts on screen, the window shell, the player's transport and event timeline, the mixer, settings, the plugin host and a catalogue of our own plugins. Formats, exports, tools, instruments, audio and MIDI devices, the plugin manager and platform-gap fillers are plugins. (Amended: PDF export, Infer Key Signatures and the plugin manager stay in the core, and the core has no catalogue; see "Amendments".)
 3. **The plugin system becomes M2**, before the editor. The readers of M1 move into five format plugins with their tests, and the M1 quality gates must still pass through them.
 
 ## Options for the plugin format
@@ -51,7 +51,7 @@ Native libraries, WebAssembly components, both kinds, separate processes, and sc
 - `oxiguitar-formats` becomes shared reader code used by the format plugins; `oxiguitar-cli` loads plugins like the app. (`oxiguitar-tools` and PDF export stay in the core: "Amendments".)
 - Linux gets two builds of the core (Wayland, and a deprecated X11 one) and two packages (`oxiguitar`, `oxiguitar-plugins-basic`), each meant for Debian's archive.
 - The brief's FMT-5 ("the core reads and writes Guitar Pro formats only"), PLAY-1 ("a built-in SoundFont synthesiser") and UI-7 ("no toolbar row") change accordingly.
-- A plugin can crash the app; the plugin manager and the manual say which plugins are ours.
+- A plugin can crash the app; the README and the manual say that OxiGuitar's privacy promises cover only the app and the plugins we publish. (Amended: the app makes no distinction between our plugins and others'; see "Amendments".)
 - Revisit if a third-party plugin ecosystem needs sandboxing: WebAssembly can be added as a second kind behind the same SDK traits.
 
 ## Amendments
@@ -76,3 +76,14 @@ Before slice 1 was built, Mateus decided how the core recognises a file:
 - **A file no installed plugin recognises is refused**, and the message says so. If an installed plugin declares the file's extension (a `.gp5` file the Guitar Pro 5 plugin doesn't recognise), it asks the user to open a bug report; otherwise, a feature request. Both go to the GitHub issue tracker.
 
 This replaces "a catalogue of our own plugins" in item 2 of the decision, and the M1 rule that MuseScore, MusicXML, ABC and MIDI files are recognised and refused with a message naming the plugin they will need (16 Oct 2026). Guitar Pro 1–2 files, which no plugin reads, are refused like any other file no plugin recognises. Text formats (MusicXML, ABC, MuseScore's .mscx), which today's byte and ZIP-member signatures can't recognise reliably, will need a richer way for their plugins to identify them when those plugins come (M6).
+
+### The plugin manager is part of the core (Mateus, 18 Oct 2026, session 11)
+
+Before slice 3 was built, Mateus narrowed the plugin manager and moved it into the core:
+
+- **It is part of the core, not a plugin.** A manager that is a plugin could be disabled from its own list, and `--safe-mode` (no plugins at all) would not bring it back.
+- **It only lists, enables and disables.** It reads what is in the plugin folders (the user's and the system's) and never copies, downloads, installs or removes anything there. Installing means putting an `.oxp` file in a plugin folder by hand or through a package; removing means deleting it. There are no settings forms drawn from a schema: a plugin with settings shows them in its own tab.
+- **It opens only from the menus**, Tools → Plugins, as a separate, non-modal window: every plugin file found, with its name, version and a tickbox to enable or disable it from the next start, its folder, and whether it is loaded or why it can't be used.
+- **The app makes no distinction between our plugins and anyone else's**, in the manager or anywhere else. We distribute only our own plugins and make promises only about what we distribute (the README and the manual say so), not about whatever a user downloads elsewhere. Nothing in the core could prove a plugin is ours anyway: there is no signing and no catalogue.
+
+Consequences: the interface gains no plugin windows, plugin menu entries or host service for the plugin list in M2, since no plugin needs them. Slice 3's interface work is plugin tabs (standard widgets and a display-list canvas with pointer events) and events pushed to plugins. `--safe-mode` and the plugin folders in Help → About stay in the core.

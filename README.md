@@ -14,7 +14,7 @@ OxiGuitar never uploads anything. No telemetry, no analytics, no automatic crash
 
 A CI test runs OxiGuitar under a system-call tracer and fails if it ever tries to open a network connection.
 
-These promises cover OxiGuitar and the plugins we publish. Plugins written by other people may behave differently; the plugin manager will say so plainly.
+These promises cover OxiGuitar and the plugins we publish, and nothing else: we make no promises about plugins you get from anywhere else.
 
 ## Supported systems
 
