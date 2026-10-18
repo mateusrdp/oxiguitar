@@ -144,6 +144,7 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
 5. **Packages and Debian.**
    - Done: releases attach every plugin for all six targets (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp` …) with SHA256SUMS.
    - Done: `oxiguitar-plugins-basic` (.deb and .rpm, into `/usr/lib/oxiguitar/plugins/`), which the core Suggests; the AppImage, the Windows zip and the .dmg each come as two downloads, the core and a zip of the basic plugins (Mateus, 18 Oct 2026: no plugins inside the AppImage).
+   - Done: the audit of every crate against Debian's archive, weekly (`docs/debian.md`; 19 Oct 2026: 276 of 424 at our version, 28 missing, chiefly Slint 1.17.1 itself and krilla).
    - The Debian work towards main: manual pages for `oxiguitar` and `oxiguitar-cli`, lintian in CI, a `debian/` directory (dh-cargo) building both packages offline in a sid container, the audit of every crate in `Cargo.lock` against Debian's archive, and `fonts-noto-core` instead of our Noto copy.
 
 The plugin developer guide (`docs/plugins/`) and its template plugin come after slice 3, when the interface has every M2 contribution, and before v0.2 freezes interface 1.0.
