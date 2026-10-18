@@ -19,6 +19,11 @@ whether Debian has it and at which version.
         per crate, with what Debian has. Reads apt's package lists only
         (apt-cache dumpavail).
 
+    crate-audit.py annotate report.md
+        In GitHub Actions: the report as notices on the check run, so it
+        can be read on the pull request and through the API as well as in
+        the run's summary.
+
 Status, per crate:
     same        Debian has this exact version.
     newer       Debian has a newer version of the same semver series
@@ -163,12 +168,30 @@ def check(path):
         print("| " + " | ".join(r) + " |")
 
 
+def annotate(path):
+    # GitHub keeps at most 10 notices per step, each of a few thousand
+    # characters: the report in that many pieces, cut at row ends.
+    lines = open(path, encoding="utf-8").read().splitlines()
+    pieces, piece = [], ""
+    for line in lines:
+        if len(piece) + len(line) > 3500:
+            pieces.append(piece)
+            piece = ""
+        piece += line + "\n"
+    pieces.append(piece)
+    for i, text in enumerate(pieces[:10], 1):
+        text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        print(f"::notice title=Crates against Debian ({i} of {len(pieces)})::{text}")
+
+
 def main():
     if len(sys.argv) == 2 and sys.argv[1] == "list":
         os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
         list_crates()
     elif len(sys.argv) == 3 and sys.argv[1] == "check":
         check(sys.argv[2])
+    elif len(sys.argv) == 3 and sys.argv[1] == "annotate":
+        annotate(sys.argv[2])
     else:
         sys.exit(__doc__)
 

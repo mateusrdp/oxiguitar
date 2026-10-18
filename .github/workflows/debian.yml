@@ -1,8 +1,9 @@
 # OxiGuitar and Debian's archive (ROADMAP, M2 slice 5): every crate the Linux
 # programs and the basic plugins are built from, against the librust-*-dev
 # packages Debian unstable has (scripts/debian/crate-audit.py). The report is
-# the run's summary and an artifact; it informs, it fails nothing. Weekly,
-# since Debian's archive moves on its own, and on every change to Cargo.lock.
+# the run's summary, notices on the check run and an artifact; it informs,
+# it fails nothing. Weekly, since Debian's archive moves on its own, and on
+# every change to Cargo.lock.
 name: Debian
 
 on:
@@ -38,6 +39,7 @@ jobs:
             python3 -I scripts/debian/crate-audit.py check crates.tsv > debian-crates.md
           '
           cat debian-crates.md >> "$GITHUB_STEP_SUMMARY"
+          python3 -I scripts/debian/crate-audit.py annotate debian-crates.md
       - uses: actions/upload-artifact@v7
         with:
           name: debian-crates
