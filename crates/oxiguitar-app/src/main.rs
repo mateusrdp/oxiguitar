@@ -79,6 +79,12 @@ struct App {
     paint: u64,
     tiles: HashMap<(u32, u32), Image>,
     tile_model: Rc<VecModel<TileItem>>,
+    /// Tiles from before the last zoom, engraving or repaint, scaled to the
+    /// current zoom and drawn under the new ones until those cover the
+    /// view, so the canvas never goes blank in between.
+    old_tile_model: Rc<VecModel<TileItem>>,
+    /// The tiles the view itself shows (without the margin drawn ahead).
+    visible: Vec<(u32, u32)>,
     /// Score zoom, 0.25 to 4.
     zoom: f32,
     /// Scale factor the system gives the window, and our interface zoom.
@@ -89,6 +95,8 @@ struct App {
     pdf_name: String,
     folder: Option<PathBuf>,
     status_serial: u64,
+    /// A dropped file is being opened; the rest of the same drop is ignored.
+    drop_pending: bool,
 }
 
 type Shared = Rc<RefCell<App>>;
@@ -110,6 +118,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let ui = AppWindow::new()?;
     let tile_model = Rc::new(VecModel::<TileItem>::default());
     ui.set_tiles(ModelRc::from(tile_model.clone()));
+    let old_tile_model = Rc::new(VecModel::<TileItem>::default());
+    ui.set_old_tiles(ModelRc::from(old_tile_model.clone()));
 
     let worker = Worker::start(|event| {
         let _ = slint::invoke_from_event_loop(move || {
@@ -130,6 +140,8 @@ fn main() -> Result<(), slint::PlatformError> {
         paint: 0,
         tiles: HashMap::new(),
         tile_model,
+        old_tile_model,
+        visible: Vec::new(),
         zoom: 1.0,
         system_scale: 1.0,
         ui_zoom: 1.0,
@@ -138,16 +150,18 @@ fn main() -> Result<(), slint::PlatformError> {
         pdf_name: "score.pdf".to_owned(),
         folder: None,
         status_serial: 0,
+        drop_pending: false,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
 
     ui.set_shortcut_lines(lines(&[
         "Ctrl + O: open a file;  Ctrl + Q: quit;  F8: show or hide the track list",
+        "Escape or a click: close this note",
         "Mouse wheel, arrow keys, Page Up / Page Down, Home / End: scroll the score",
         "Score zoom: the slider at the bottom right of the score; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
-        "Track list: tick tracks to show them together; click a name to show that track alone",
+        "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to show that track alone",
     ]));
     ui.set_about_lines(lines(&[
         &format!(
@@ -174,18 +188,6 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_zoom_moved(move |v| zoom_moved(&a, v));
     let a = app.clone();
-    ui.on_track_toggled(move |i| {
-        // The tick has already flipped (two-way binding): follow it.
-        let on = a
-            .borrow()
-            .ui
-            .upgrade()
-            .and_then(|ui| ui.get_tracks().row_data(i as usize))
-            .is_some_and(|r| r.shown);
-        a.borrow_mut().tracks.set_shown(i as usize, on);
-        sync_tracks(&a);
-    });
-    let a = app.clone();
     ui.on_standard_clicked(move |i| {
         a.borrow_mut().tracks.toggle_standard(i as usize);
         sync_tracks(&a);
@@ -201,11 +203,6 @@ fn main() -> Result<(), slint::PlatformError> {
         sync_tracks(&a);
     });
     let a = app.clone();
-    ui.on_multitrack_toggled(move || {
-        a.borrow_mut().tracks.toggle_multitrack();
-        sync_tracks(&a);
-    });
-    let a = app.clone();
     ui.on_tool_picked(move |i| {
         a.borrow().worker.send(Request::ApplyTool(i as usize));
     });
@@ -216,7 +213,7 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-    install_interface_zoom(&ui, &app);
+    install_window_events(&ui, &app);
 
     // A file named on the command line (or by the system's file manager).
     if let Some(path) = std::env::args_os().nth(1) {
@@ -345,6 +342,10 @@ fn handle(app: &Shared, event: Event) {
                 s.settings.notation = s.tracks.notation();
                 s.pdf_name = pdf_name;
                 s.folder = folder;
+                // Another song: nothing of the last one stays on screen.
+                s.tiles.clear();
+                s.tile_model.clear();
+                s.old_tile_model.clear();
             }
             let rows: Vec<TrackRow> = tracks
                 .iter()
@@ -362,7 +363,6 @@ fn handle(app: &Shared, event: Event) {
                 })
                 .collect();
             ui.set_tracks(ModelRc::new(VecModel::from(rows)));
-            ui.set_multitrack(false);
             // Room for the tracks, up to five rows; the splitter changes it.
             ui.set_tracks_height(28.0 * tracks.len().clamp(1, 5) as f32 + 12.0);
             set_tools(&ui, &tool_rows(&tools));
@@ -378,8 +378,7 @@ fn handle(app: &Shared, event: Event) {
                     lists: Vec::new(),
                     rects: sheets,
                 };
-                s.tiles.clear();
-                s.tile_model.clear();
+                retire_tiles(&mut s, 1.0);
             }
             set_content_size(app, &ui);
             canvas_changed(app);
@@ -410,6 +409,7 @@ fn handle(app: &Shared, event: Event) {
                 y: row as f32 * size,
                 size,
             });
+            drop_old_tiles_when_covered(&s);
         }
         Event::Tools(tools) => set_tools(&ui, &tool_rows(&tools)),
         Event::Status(message) => status(app, message),
@@ -438,16 +438,14 @@ fn settings_changed(app: &Shared) {
     }
     // Dark Page only needs new tiles; everything else a new engraving.
     s.paint += 1;
-    s.tiles.clear();
-    s.tile_model.clear();
+    retire_tiles(&mut s, 1.0);
     if s.track_count > 0 {
         let settings = s.settings.clone();
         s.worker.send(Request::Engrave(settings));
     }
 }
 
-/// The track list changed: show its state in every row and in View →
-/// Multitrack, and engrave again.
+/// The track list changed: show its state in every row, and engrave again.
 fn sync_tracks(app: &Shared) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -464,7 +462,6 @@ fn sync_tracks(app: &Shared) {
                 model.set_row_data(i, row);
             }
         }
-        ui.set_multitrack(s.tracks.is_multitrack());
     }
     {
         let mut s = app.borrow_mut();
@@ -541,6 +538,8 @@ fn canvas_changed(app: &Shared) {
     );
     // Draw a little beyond the view, keep more than that.
     let (near, keep) = Sheets::around(view);
+    s.visible = s.sheets.tiles_for(view, device);
+    drop_old_tiles_when_covered(&s);
     let wanted = s.sheets.tiles_for(near, device);
     let kept = s.sheets.tiles_for(keep, device);
     let before = s.tiles.len();
@@ -575,6 +574,36 @@ fn canvas_changed(app: &Shared) {
     }
 }
 
+/// Most old tiles kept at once: enough for a few screens, so dragging the
+/// zoom slider cannot pile them up.
+const MAX_OLD_TILES: usize = 96;
+
+/// The tiles on screen no longer match the score (zoom, engraving, page
+/// colour, scale): they move to the layer underneath, scaled by `k` around
+/// the canvas origin, and new tiles are drawn over them.
+fn retire_tiles(s: &mut App, k: f32) {
+    let scaled = |t: TileItem| TileItem {
+        x: t.x * k,
+        y: t.y * k,
+        size: t.size * k,
+        ..t
+    };
+    let mut items: Vec<TileItem> = s.old_tile_model.iter().map(scaled).collect();
+    items.extend(s.tile_model.iter().map(scaled));
+    let extra = items.len().saturating_sub(MAX_OLD_TILES);
+    items.drain(..extra);
+    s.old_tile_model.set_vec(items);
+    s.tiles.clear();
+    s.tile_model.clear();
+}
+
+/// Once every tile the view shows has arrived, the old layer goes.
+fn drop_old_tiles_when_covered(s: &App) {
+    if s.old_tile_model.row_count() > 0 && s.visible.iter().all(|k| s.tiles.contains_key(k)) {
+        s.old_tile_model.clear();
+    }
+}
+
 /// The score-zoom slider moved: keep the middle of the view where it is.
 fn zoom_moved(app: &Shared, v: f32) {
     let Some(ui) = app.borrow().ui.upgrade() else {
@@ -600,8 +629,7 @@ fn zoom_moved(app: &Shared, v: f32) {
         let mut s = app.borrow_mut();
         s.zoom = zoom;
         s.paint += 1;
-        s.tiles.clear();
-        s.tile_model.clear();
+        retire_tiles(&mut s, zoom / old);
     }
     set_content_size(app, &ui);
     let k = zoom / old;
@@ -704,16 +732,48 @@ fn run_dialog(pick: impl FnOnce() + Send + 'static) {
     }
 }
 
-/// Ctrl + wheel and Ctrl + + / − / 0 scale the whole interface, wherever the
-/// pointer or the keyboard focus is. The winit event filter sees them before
-/// any widget, so the score never scrolls by accident.
-fn install_interface_zoom(ui: &AppWindow, app: &Shared) {
+/// The window's raw events, before any widget sees them:
+///
+/// - Ctrl + wheel and Ctrl + + / − / 0 scale the whole interface, wherever
+///   the pointer or the keyboard focus is, so the score never scrolls by
+///   accident.
+/// - A file dropped on the window opens like File → Open.
+///
+/// **Drops don't work on Wayland** (ADR 0006; CONTRIBUTING.md, "Known
+/// platform gaps"). winit 0.30 sends `DroppedFile` on Windows, macOS and
+/// X11 only: its Wayland backend has no drag and drop, and Slint 1.18
+/// passes no operating-system drops on. Listening ourselves would need our
+/// own `wl_data_device` on winit's connection, through an `unsafe` raw
+/// pointer and with no way to wake on its events but polling, which we
+/// rejected. Drops will work on Wayland with no change here once the winit
+/// in our Slint version emits `DroppedFile` on Wayland; or switch to Slint's
+/// own event if Slint starts forwarding OS drops. Check either with
+/// `scripts/wayland-dnd-test/`.
+fn install_window_events(ui: &AppWindow, app: &Shared) {
     let a = app.clone();
     ui.window().on_winit_window_event(move |_, event| {
         let mut s = a.borrow_mut();
         let step = match event {
+            WinitEvent::DroppedFile(path) => {
+                // Several files dropped at once arrive one by one: open the
+                // first, as File → Open opens one file.
+                if !s.drop_pending {
+                    s.drop_pending = true;
+                    s.worker.send(Request::Open(path.clone()));
+                    let a = a.clone();
+                    slint::Timer::single_shot(Duration::from_millis(100), move || {
+                        a.borrow_mut().drop_pending = false;
+                    });
+                }
+                return EventResult::PreventDefault;
+            }
             WinitEvent::ModifiersChanged(m) => {
-                s.ctrl = m.state().control_key();
+                // ⌘ on macOS, as Slint maps the menus' Control shortcuts.
+                s.ctrl = if cfg!(target_os = "macos") {
+                    m.state().super_key()
+                } else {
+                    m.state().control_key()
+                };
                 return EventResult::Propagate;
             }
             WinitEvent::ScaleFactorChanged { scale_factor, .. } => {
@@ -811,8 +871,8 @@ fn install_interface_zoom(ui: &AppWindow, app: &Shared) {
             {
                 let mut s = a.borrow_mut();
                 s.paint += 1;
-                s.tiles.clear();
-                s.tile_model.clear();
+                // Tiles sit in logical pixels, which still fit the score.
+                retire_tiles(&mut s, 1.0);
             }
             canvas_changed(&a);
         });

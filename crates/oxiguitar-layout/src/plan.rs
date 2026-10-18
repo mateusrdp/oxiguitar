@@ -150,6 +150,9 @@ pub(crate) struct ColPlan {
     pub(crate) tab_half: f32,
     /// Width of the widest chord name over this column, 0 if none.
     pub(crate) chord_w: f32,
+    /// Width of the dynamic marking under this column, 0 if none (set once
+    /// the markings shown are chosen).
+    pub(crate) dynamic_w: f32,
     /// Half the widest lyric syllable under this column, 0 if none (set
     /// once lyrics are placed).
     pub(crate) lyric_half: f32,
@@ -524,6 +527,7 @@ impl Planner<'_> {
             right,
             tab_half,
             chord_w,
+            dynamic_w: 0.0,
             lyric_half: 0.0,
         }
     }

@@ -12,7 +12,7 @@
 use std::collections::HashMap;
 
 use oxiguitar_display::{DisplayList, Paint, Path, Point, Rect};
-use oxiguitar_model::{BeatKind, Clef, GraceKind, NoteValue, Ratio, Score, Tuplet};
+use oxiguitar_model::{BeatKind, Clef, Direction, GraceKind, NoteValue, Ratio, Score, Tuplet};
 
 use crate::draw::{G, Painter, accidental_glyph, glyphs};
 use crate::effects;
@@ -66,6 +66,7 @@ struct Lines {
     ending: Option<f32>,
     chord: Option<f32>,
     text: Option<f32>,
+    direction: Option<f32>,
     tempo: Option<f32>,
     marker: Option<f32>,
 }
@@ -183,6 +184,7 @@ pub(crate) fn system(
         .any(|mb| mb.alternate_endings != 0 || mb.repeat_end.is_some_and(|n| n > 2));
     let has_tempo = spec.first == 0 || mbs.iter().any(|mb| !mb.tempo_changes.is_empty());
     let has_marker = mbs.iter().any(|mb| mb.marker.is_some());
+    let has_direction = mbs.iter().any(|mb| !mb.directions.is_empty());
     let mut bands = Vec::new();
     let mut cursor = 0.0;
     for (vi, v) in views.iter().enumerate() {
@@ -252,6 +254,7 @@ pub(crate) fn system(
         let ending = line(first && has_endings, 2.6 * sp);
         let chord = line(chords, 2.8 * sp);
         let text = line(text, 2.4 * sp);
+        let direction = line(first && has_direction, 3.2 * sp);
         let tempo = line(first && has_tempo, 3.2 * sp);
         let marker = line(first && has_marker, 3.6 * sp);
         let top = cursor + stack;
@@ -260,6 +263,7 @@ pub(crate) fn system(
             ending: up(ending),
             chord: up(chord),
             text: up(text),
+            direction: up(direction),
             tempo: up(tempo),
             marker: up(marker),
         };
@@ -1457,6 +1461,52 @@ impl Ctx<'_> {
         }
     }
 
+    /// Navigation marks over a bar: segno and coda signs at its start,
+    /// fine, jumps (D.C., D.S.) and "To Coda" ending at its end.
+    fn directions(&self, list: &mut DisplayList, directions: &[Direction], bx: &BarX, base: f32) {
+        let p = self.p;
+        let sp = self.sp();
+        let sign_height = 2.4 * sp;
+        // Each sign scaled to the same height, its bottom on the baseline.
+        let scale = |g: G| {
+            let (up, down) = p.height(g);
+            sign_height / (up + down).max(f32::EPSILON)
+        };
+        let sign_width = |g: G| p.width(g) * scale(g);
+        let sign = |list: &mut DisplayList, g: G, x: f32| -> f32 {
+            let k = scale(g);
+            p.glyph_scaled(list, g, k, x, base - p.height(g).1 * k, Paint::Ink);
+            sign_width(g)
+        };
+        let size = 1.9 * sp;
+        // Clear of the bar lines, so a jump ending one bar and a sign
+        // starting the next read as two marks.
+        let gap = 0.7 * sp;
+        let mut left = bx.start + gap;
+        let mut right = bx.end - gap;
+        for &d in directions {
+            let (text, signs) = direction_mark(d);
+            match text {
+                None => {
+                    for &g in signs {
+                        left += sign(list, g, left) + 0.2 * sp;
+                    }
+                    left += 0.4 * sp;
+                }
+                Some(text) => {
+                    let signs_w: f32 = signs.iter().map(|&g| 0.4 * sp + sign_width(g)).sum();
+                    let x = right - signs_w - p.text_width(text, size);
+                    let mut cx = x + p.text(list, text, size, x, base, Paint::Ink);
+                    for &g in signs {
+                        cx += 0.4 * sp;
+                        cx += sign(list, g, cx);
+                    }
+                    right = x - sp;
+                }
+            }
+        }
+    }
+
     /// Chord names and text over the beats; on the top view, also sections,
     /// tempo and volta brackets.
     fn marks(
@@ -1518,6 +1568,9 @@ impl Ctx<'_> {
             if !m.text.is_empty() {
                 p.text(list, &m.text, size, x, base, Paint::Ink);
             }
+        }
+        if let Some(base) = lines.direction {
+            self.directions(list, &mb.directions, bx, base);
         }
         if let Some(base) = lines.tempo {
             let mut marks: Vec<(Ratio, f64)> = mb
@@ -1785,6 +1838,36 @@ fn key_signature_steps_for(fifths: i8, clef: Clef) -> Vec<(i32, i8)> {
         },
         clef,
     )
+}
+
+/// How a direction is drawn: a sign at the start of its bar, or text (with
+/// a sign after it, for "To Coda") ending at the bar's end.
+fn direction_mark(d: Direction) -> (Option<&'static str>, &'static [G]) {
+    use Direction::*;
+    const SEGNO: &[G] = &[glyphs::SEGNO];
+    const CODA: &[G] = &[glyphs::CODA];
+    const DOUBLE_CODA: &[G] = &[glyphs::CODA_SQUARE];
+    match d {
+        Segno => (None, SEGNO),
+        SegnoSegno => (None, &[glyphs::SEGNO, glyphs::SEGNO]),
+        Coda => (None, CODA),
+        DoubleCoda => (None, DOUBLE_CODA),
+        Fine => (Some("Fine"), &[]),
+        ToCoda => (Some("To Coda"), CODA),
+        ToDoubleCoda => (Some("To Coda"), DOUBLE_CODA),
+        DaCapo => (Some("D.C."), &[]),
+        DaCapoAlCoda => (Some("D.C. al Coda"), &[]),
+        DaCapoAlDoubleCoda => (Some("D.C. al Double Coda"), &[]),
+        DaCapoAlFine => (Some("D.C. al Fine"), &[]),
+        DalSegno => (Some("D.S."), &[]),
+        DalSegnoAlCoda => (Some("D.S. al Coda"), &[]),
+        DalSegnoAlDoubleCoda => (Some("D.S. al Double Coda"), &[]),
+        DalSegnoAlFine => (Some("D.S. al Fine"), &[]),
+        DalSegnoSegno => (Some("D.S.S."), &[]),
+        DalSegnoSegnoAlCoda => (Some("D.S.S. al Coda"), &[]),
+        DalSegnoSegnoAlDoubleCoda => (Some("D.S.S. al Double Coda"), &[]),
+        DalSegnoSegnoAlFine => (Some("D.S.S. al Fine"), &[]),
+    }
 }
 
 /// The tempo in force when bar `index` starts.

@@ -14,7 +14,7 @@ How OxiGuitar is tested, and the quality gates M1 sets. `cargo test --workspace`
 M1 asks that a 300-bar, 8-track file opens in under a second. `crates/oxiguitar-app/src/speed.rs` holds it:
 
 - **The score** is `oxiguitar_testgen::band_song(300)`: lead, rhythm and acoustic guitars, bass, piano, strings, voice with lyrics and drums, every track playing in every bar (sixteenths in the lead's solos). It is written as Guitar Pro 7 writes real files, with every note's pitch three ways and the usual beat properties: about 16 MB of score XML, as long as a real file of that size would be (Seek and Destroy, 258 bars and 5 tracks, is 10 MB).
-- **What is timed** is what the window does: the worker reads the file, engraves it with the settings the window starts with, and draws the tiles the first view asks for (16 tiles of 512 pixels at a high-resolution screen's scale). The clock starts when the file is asked for and stops at the last tile. Once with the first track shown (how a file opens), once with all eight (View → Multitrack).
+- **What is timed** is what the window does: the worker reads the file, engraves it with the settings the window starts with, and draws the tiles the first view asks for (16 tiles of 512 pixels at a high-resolution screen's scale). The clock starts when the file is asked for and stops at the last tile. Once with the first track shown (how a file opens), once with all eight shown.
 - **The check** takes the best of three runs, since a busy machine can only make a run slower, and holds only optimised builds to the budget. A debug build runs the same steps once and prints its times.
 
 Run it with:
@@ -47,10 +47,21 @@ git status fixtures/reference
 
 Blessing writes every picture that differs at all, the stored scores, the index, and removes files that are no longer references. To add a reference, add it to `references()` (the test there keeps the count at fifty and every bar full) and bless.
 
-The references show what the engraver draws today, including what it does not draw yet: the segno, coda and D.S. directions in `sections-and-directions` are in the file but not on the page, and `dynamics` shows ppp and pp crowding each other (see `docs/design/engraving.md`). When those are fixed, the pictures change and are blessed again.
+The references show what the engraver draws today. When an engraving change is intended, the pictures it touches change and are blessed again; the ones that showed gaps (directions in `sections-and-directions`, ppp and pp crowding in `dynamics`) were blessed that way in session 6.
 
 ## Fuzzing
 
 M1 asks for six hours of fuzzing per reader without a crash (lowered from 24 hours by Mateus on 16 October 2026). `fuzz/` holds the cargo-fuzz targets, one per reader (Guitar Pro 3–5, Guitar Pro 6, Guitar Pro 7/8, and the GPIF XML on its own) plus one for any file through format detection; `fuzz/README.md` says how to run them. Seeds come from the public fixtures only.
 
 CI's "Fuzz" workflow runs every target for four minutes on each pull request that touches a reader, and the long run when started by hand: each reader for six hours (by default), in two jobs of three hours on standard runners, at most four at a time. Fuzzing needs nightly Rust, so it lives outside the main workspace and its stable-only CI.
+
+The first six-hour run (16 October 2026, [run 38891529443](https://github.com/mateusrdp/oxiguitar/actions/runs/38891529443)) found nothing in any reader:
+
+| Reader (target) | Inputs tried | Coverage (edges) | Corpus kept |
+| --- | --- | --- | --- |
+| Guitar Pro 3–5 (`guitar_pro_3_5`) | 1,255 million | 2,539 | 1,534 |
+| Guitar Pro 6 (`guitar_pro_6`) | 335 million | 3,806 | 2,258 |
+| Guitar Pro 7/8 (`guitar_pro_7`) | 272 million | 4,300 | 1,320 |
+| GPIF XML (`gpif`) | 37 million | 4,482 | 2,506 |
+
+Each over two three-hour jobs on four cores. The final corpora are the run's artifacts ("fuzz-corpus … (final)", kept 30 days); a later run can start from them instead of the fixtures alone.

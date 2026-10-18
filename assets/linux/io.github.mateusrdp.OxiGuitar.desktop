@@ -7,5 +7,6 @@ Exec=oxiguitar %f
 Icon=io.github.mateusrdp.OxiGuitar
 Terminal=false
 Categories=AudioVideo;Audio;Music;
+MimeType=application/x-gtp;
 Keywords=guitar;tab;tablature;score;notation;Guitar Pro;
 StartupWMClass=io.github.mateusrdp.OxiGuitar

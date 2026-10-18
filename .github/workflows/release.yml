@@ -1,0 +1,297 @@
+# Release packages: a portable .exe in a zip (Windows x86_64 and ARM64), an
+# AppImage, a .deb and an .rpm (Linux x86_64 and ARM64) and a universal .dmg
+# (macOS), none of them code-signed.
+#
+# - A pushed v* tag (only Mateus creates them) builds everything and attaches
+#   it, with SHA256SUMS, to a draft release for him to check and publish.
+# - Started by hand (Actions → Release packages → Run workflow), or on a pull
+#   request that changes the packaging, it builds and tests the packages and
+#   keeps them under the run for 14 days, with a ~dev version. Each package
+#   is uploaded unzipped (archive: false), so it downloads as the .deb,
+#   .rpm, .AppImage, .zip or .dmg itself.
+#
+# Every package is installed or opened and smoke-tested: the .deb in Debian
+# sid, the .rpm in Fedora, the AppImage on the runner, the .exe's resources,
+# the .dmg's bundle. Packaging scripts: scripts/package/.
+name: Release packages
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - scripts/package/**
+      - about.toml
+      - assets/linux/**
+      - assets/macos/**
+      - assets/icon/**
+      - crates/oxiguitar-app/build.rs
+      - crates/oxiguitar-app/build/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_ABOUT_VERSION: 0.9.2
+  # A public test file, opened by every smoke test.
+  SAMPLE: fixtures/gp/oxiguitar-test-song.gp
+
+jobs:
+  meta:
+    name: Version and licences
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: version
+        run: |
+          version="$(scripts/package/version.sh)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Package version: $version" >> "$GITHUB_STEP_SUMMARY"
+      - uses: dtolnay/rust-toolchain@stable
+      - id: about-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-about
+          key: cargo-about-${{ env.CARGO_ABOUT_VERSION }}-${{ runner.os }}
+      - if: steps.about-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-about --version "$CARGO_ABOUT_VERSION" --features cli --locked
+      - run: scripts/package/licenses.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: third-party-licenses
+          path: dist/THIRD-PARTY-LICENSES.html
+          if-no-files-found: error
+
+  linux:
+    name: Linux (${{ matrix.arch }})
+    needs: meta
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: ubuntu-24.04 }
+          - { arch: aarch64, os: ubuntu-24.04-arm }
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libfontconfig1-dev libxkbcommon-dev libwayland-dev \
+            rpm squashfs-tools xvfb xauth libxkbcommon-x11-0 libgl1-mesa-dri libegl1
+      - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      - uses: actions/download-artifact@v8
+        with:
+          name: third-party-licenses
+          path: dist
+      - name: AppImage runtime
+        run: |
+          # The static type 2 runtime (needs no libfuse2 on the user's system).
+          curl -fsSL -o "$RUNNER_TEMP/runtime" \
+            "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-${{ matrix.arch }}"
+          sha256sum "$RUNNER_TEMP/runtime"
+          echo "APPIMAGE_RUNTIME=$RUNNER_TEMP/runtime" >> "$GITHUB_ENV"
+      - run: scripts/package/linux.sh all "$VERSION"
+      - name: Test the .deb on Debian sid
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euxc '
+            apt-get update
+            # The databases first, so the package triggers rebuild them.
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              shared-mime-info desktop-file-utils xvfb xauth libgl1-mesa-dri
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
+            dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends):"
+            oxiguitar-cli info "$0" > /dev/null
+            grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
+            grep -q "application/x-gtp=io.github.mateusrdp.OxiGuitar.desktop" /usr/share/applications/mimeinfo.cache
+            desktop-file-validate /usr/share/applications/io.github.mateusrdp.OxiGuitar.desktop
+            OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
+            apt-get remove -y oxiguitar
+          ' "$SAMPLE"
+      - name: Test the .rpm on Fedora
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w fedora:latest bash -euxc '
+            dnf install -y shared-mime-info desktop-file-utils xorg-x11-server-Xvfb xorg-x11-xauth mesa-dri-drivers mesa-libEGL
+            dnf install -y ./dist/oxiguitar-*.rpm
+            rpm -q --requires oxiguitar
+            oxiguitar-cli info "$0" > /dev/null
+            grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
+            OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
+            dnf remove -y oxiguitar
+          ' "$SAMPLE"
+      - name: Test the AppImage
+        run: |
+          appimage="$(ls dist/OxiGuitar-*.AppImage)"
+          (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
+          test -x "$RUNNER_TEMP/squashfs-root/AppRun"
+          # Without FUSE on the runner, the runtime unpacks and runs.
+          APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a "$appimage" "$SAMPLE"
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*.deb
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*.rpm
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*.AppImage
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+  windows:
+    name: Windows (${{ matrix.arch }})
+    needs: meta
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: windows-2025 }
+          - { arch: arm64, os: windows-11-arm }
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      - uses: actions/download-artifact@v8
+        with:
+          name: third-party-licenses
+          path: dist
+      - name: Check the program's resources
+        shell: pwsh
+        run: |
+          # The icon and version information are linked in by build.rs.
+          $info = (Get-Item target/release/oxiguitar.exe).VersionInfo
+          $info | Format-List FileDescription, ProductName, FileVersion, LegalCopyright
+          if ($info.FileDescription -ne 'OxiGuitar') { throw 'oxiguitar.exe has no version information' }
+          Add-Type -AssemblyName System.Drawing
+          $icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path target/release/oxiguitar.exe))
+          $bmp = $icon.ToBitmap()
+          $c = $bmp.GetPixel([int]($bmp.Width / 2), [int]($bmp.Height / 2))
+          "Icon $($bmp.Width)x$($bmp.Height), centre pixel $c"
+          # The pick is green: the default program icon has no green centre.
+          if ($c.G -le $c.R -or $c.G -le $c.B) { throw 'oxiguitar.exe does not carry the OxiGuitar icon' }
+          ./target/release/oxiguitar-cli.exe info $env:SAMPLE | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'oxiguitar-cli failed' }
+      - name: Package
+        shell: pwsh
+        run: |
+          $name = "OxiGuitar-$env:VERSION-windows-${{ matrix.arch }}"
+          $dir = "dist/$name"
+          New-Item -ItemType Directory -Force $dir, "$dir/licenses" | Out-Null
+          Copy-Item target/release/oxiguitar.exe, target/release/oxiguitar-cli.exe $dir
+          Copy-Item README.md, CHANGELOG.md, CREDITS.md $dir
+          Copy-Item LICENSE "$dir/LICENSE.txt"
+          Copy-Item dist/THIRD-PARTY-LICENSES.html "$dir/licenses/"
+          Copy-Item assets/fonts/bravura/OFL.txt "$dir/licenses/Bravura-OFL.txt"
+          Copy-Item assets/fonts/noto-sans/OFL.txt "$dir/licenses/NotoSans-OFL.txt"
+          Compress-Archive -Path $dir -DestinationPath "dist/$name.zip"
+          Get-Item "dist/$name.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*.zip
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+  macos:
+    name: macOS (universal)
+    needs: meta
+    runs-on: macos-15
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            cargo build --release --locked -p oxiguitar-app --target "$target"
+          done
+          mkdir -p dist/macos
+          lipo -create -output dist/macos/oxiguitar \
+            target/aarch64-apple-darwin/release/oxiguitar \
+            target/x86_64-apple-darwin/release/oxiguitar
+          lipo -info dist/macos/oxiguitar
+      - uses: actions/download-artifact@v8
+        with:
+          name: third-party-licenses
+          path: dist
+      - run: scripts/package/macos.sh "$VERSION"
+      - name: Test the .dmg
+        run: |
+          mount="$(mktemp -d)"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount" dist/OxiGuitar-*.dmg
+          app="$mount/OxiGuitar.app"
+          plutil -p "$app/Contents/Info.plist" | grep -E "CFBundleIdentifier|CFBundleShortVersionString|gp5"
+          lipo -info "$app/Contents/MacOS/oxiguitar" | grep -q "x86_64 arm64"
+          test -f "$app/Contents/Resources/OxiGuitar.icns"
+          codesign --verify --verbose "$app"
+          hdiutil detach "$mount"
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*.dmg
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    if: github.ref_type == 'tag'
+    needs: [meta, linux, windows, macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v8
+        with:
+          # Package artifacts are named after their files.
+          pattern: "*.{deb,rpm,AppImage,zip,dmg}"
+          path: dist
+          merge-multiple: true
+      - name: Checksums and notes
+        run: |
+          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
+          # The version's section of CHANGELOG.md, without its heading.
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            on && /^## / { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "CHANGELOG.md has no section \"## [$VERSION]\"" >&2
+            exit 1
+          fi
+      - run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --draft --verify-tag \
+            --title "OxiGuitar $VERSION" \
+            --notes-file notes.md

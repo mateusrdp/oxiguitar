@@ -3208,7 +3208,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-app"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-formats",
@@ -3225,7 +3225,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-cli"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-formats",
@@ -3237,7 +3237,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-display"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3246,7 +3246,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-formats"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "oxiguitar-model",
  "quick-xml 0.42.0",
@@ -3255,7 +3255,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-layout"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-formats",
@@ -3264,11 +3264,11 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-model"
-version = "0.0.0"
+version = "0.1.0"
 
 [[package]]
 name = "oxiguitar-render"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "krilla",
  "oxiguitar-display",
@@ -3278,7 +3278,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-testgen"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-formats",
@@ -3292,7 +3292,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-tools"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-model",
