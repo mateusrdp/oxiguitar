@@ -4,7 +4,7 @@ OxiGuitar has two zooms.
 
 **Score zoom** enlarges the score only, from 25 % to 400 %:
 
-- Turn the **mouse wheel over the score**. The point under the pointer stays where it is. Hold **Shift** to scroll the score with the wheel instead.
+- Hold **Shift** and turn the **mouse wheel over the score**. The point under the pointer stays where it is. The wheel alone scrolls the score.
 - Or drag the slider in the bottom-right corner of the score. 100 % is in the middle of the slider and the knob snaps to it; the middle of the view stays in place. Click the percentage to go back to 100 %.
 
 **Interface zoom** enlarges the whole window, menus and track list included. It has no control on screen:

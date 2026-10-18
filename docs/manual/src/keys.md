@@ -9,8 +9,8 @@
 | Ctrl + Q | Quit |
 | F1 | Keyboard and mouse help |
 | F7 / F8 | Show or hide the left / bottom panel (View → Panels) |
-| Mouse wheel over the score | Zoom the score, around the pointer |
-| Shift + mouse wheel | Scroll the score (along the line in the Horizontal layout) |
+| Mouse wheel over the score | Scroll the score (along the line in the Horizontal layout) |
+| Shift + mouse wheel over the score | Zoom the score, around the pointer |
 | Arrow keys, Page Up, Page Down, Space, the scroll bars | Scroll the score |
 | Home, End | Go to the start or the end of the score |
 | Ctrl + mouse wheel | Zoom the interface in or out |

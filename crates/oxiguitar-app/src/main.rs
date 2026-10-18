@@ -7,8 +7,9 @@
 //! `docs/design/ui.md`: the toolbar and the four tabbed areas come from
 //! [`shell`], the footer's messages from [`footer`]. This file connects the
 //! window to the worker thread ([`worker`]), which reads, engraves and draws
-//! the score as tiles ([`canvas`]), and handles both zooms: the mouse wheel
-//! over the page zooms the page, Ctrl + wheel the whole interface.
+//! the score as tiles ([`canvas`]), and handles the wheel: over the page it
+//! scrolls the page and, with Shift, zooms it; Ctrl + wheel zooms the whole
+//! interface.
 //!
 //! At start, the plugin host (`oxiguitar-host`) makes sure the user folder,
 //! settings.json and the plugin folder exist, and the footer says what is
@@ -92,7 +93,7 @@ const NOTATION_ICON: f32 = 24.0;
 const PIXELS_PER_STEP: f64 = 60.0;
 /// Score zoom per wheel notch, in the slider's log2 units: 2^(1/8), about 9 %.
 const WHEEL_ZOOM_STEP: f32 = 0.125;
-/// Logical pixels scrolled per wheel notch with Shift held.
+/// Logical pixels the page scrolls per wheel notch.
 const WHEEL_SCROLL: f32 = 40.0;
 /// Logical pixels per point at 100 % score zoom (96 dpi).
 const PX_PER_PT: f32 = 96.0 / 72.0;
@@ -322,7 +323,7 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.set_shortcut_lines(lines(&[
         "Ctrl + O: open a file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
         "Escape or a click: close this note",
-        "Mouse wheel over the page: zoom the page;  Shift + wheel: scroll it",
+        "Mouse wheel over the page: scroll it;  Shift + wheel: zoom the page around the pointer",
         "Arrow keys, Page Up / Page Down, Home / End, the scroll bars: scroll the page",
         "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
@@ -1742,9 +1743,10 @@ fn run_dialog(pick: impl FnOnce() + Send + 'static) {
 /// - Ctrl + wheel and Ctrl + + / − / 0 scale the whole interface, wherever
 ///   the pointer or the keyboard focus is, so the score never scrolls by
 ///   accident.
-/// - The wheel over the page zooms the page, around the pointer; with Shift
-///   it scrolls the page instead. Elsewhere (a list in a side area) the
-///   wheel scrolls as usual.
+/// - The wheel over the page scrolls it (along the line when a Horizontal
+///   score fits the window's height); with Shift it zooms the page around
+///   the pointer (Mateus, 18 Oct 2026). Elsewhere (a list in a side area)
+///   the wheel scrolls as usual.
 /// - A file dropped on the window opens like File → Open.
 ///
 /// **Drops don't work on Wayland** (ADR 0006; CONTRIBUTING.md, "Known
@@ -1799,7 +1801,7 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                 s.system_scale = *scale_factor as f32;
                 0
             }
-            // The wheel over the page: zoom it, or scroll it with Shift.
+            // The wheel over the page: scroll it, or zoom it with Shift.
             WinitEvent::MouseWheel { delta, .. } if !s.ctrl => {
                 let (Some(ui), Some((px, py))) = (s.ui.upgrade(), s.cursor) else {
                     return EventResult::Propagate;
@@ -1825,6 +1827,13 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                 let layout = s.settings.layout;
                 drop(s);
                 if shift {
+                    // macOS (and some Linux setups) turn Shift + wheel into a
+                    // sideways scroll: zoom by whichever way it turned.
+                    let notches = if dy != 0.0 { dy } else { dx };
+                    if notches != 0.0 {
+                        wheel_zoom(&a, notches, x, y);
+                    }
+                } else {
                     // A score on one line that fits the window's height
                     // scrolls along the line.
                     let along = layout == Layout::Horizontal
@@ -1835,8 +1844,6 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                     } else {
                         ui.invoke_scroll_by(-dx * WHEEL_SCROLL, -dy * WHEEL_SCROLL);
                     }
-                } else if dy != 0.0 {
-                    wheel_zoom(&a, dy, x, y);
                 }
                 return EventResult::PreventDefault;
             }
