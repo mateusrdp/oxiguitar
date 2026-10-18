@@ -10,6 +10,9 @@
 //! - `plugin_folders`: a list of folders to search for plugins, in order.
 //!   It replaces the default list (the user's plugin folder, then the
 //!   system's).
+//!
+//! The app keeps its own preferences under keys of its own (the View
+//! menu's under `view`) through [`Settings::set`] and [`Settings::save`].
 
 use std::path::{Path, PathBuf};
 
@@ -82,6 +85,27 @@ impl Settings {
     pub fn get(&self, key: &str) -> Option<&Value> {
         self.values.get(key)
     }
+
+    /// Sets a key's value, leaving every other key as it was.
+    pub fn set(&mut self, key: &str, value: Value) {
+        self.values.insert(key.to_owned(), value);
+    }
+
+    /// Writes the settings to `path`, readable and indented. The new text
+    /// goes to a temporary file beside it that then replaces the old one,
+    /// so a crash or a full disk never leaves half a settings file.
+    pub fn save(&self, path: &Path) -> Result<(), String> {
+        let mut text = serde_json::to_string_pretty(&self.values)
+            .map_err(|e| format!("Cannot write {}: {e}.", path.display()))?;
+        text.push('\n');
+        let tmp = path.with_extension("json.tmp");
+        std::fs::write(&tmp, text)
+            .and_then(|()| std::fs::rename(&tmp, path))
+            .map_err(|e| {
+                let _ = std::fs::remove_file(&tmp);
+                format!("Cannot write {}: {e}.", path.display())
+            })
+    }
 }
 
 #[cfg(test)]
@@ -107,6 +131,24 @@ mod tests {
         let wrong = Settings::parse(r#"{"plugin_folders": "/opt/og"}"#).unwrap();
         assert_eq!(wrong.plugin_folders(), None);
         assert_eq!(wrong.problems().len(), 1);
+    }
+
+    #[test]
+    fn saving_keeps_keys_it_does_not_know() {
+        let dir = crate::folders::tests::scratch("save");
+        let path = dir.join("settings.json");
+        std::fs::write(&path, r#"{"theirs": [1, 2], "view": {"old": true}}"#).unwrap();
+        let mut s = Settings::load(&path).unwrap();
+        s.set("view", serde_json::json!({"dark_page": false}));
+        s.save(&path).unwrap();
+        let again = Settings::load(&path).unwrap();
+        assert_eq!(again.get("theirs"), Some(&serde_json::json!([1, 2])));
+        assert_eq!(
+            again.get("view"),
+            Some(&serde_json::json!({"dark_page": false}))
+        );
+        assert!(!dir.join("settings.json.tmp").exists());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

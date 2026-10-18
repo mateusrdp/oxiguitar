@@ -21,6 +21,7 @@ oxiguitar-layout.workspace = true
 oxiguitar-render.workspace = true
 oxiguitar-tools.workspace = true
 oxiguitar-host.workspace = true
+serde_json.workspace = true
 tiny-skia.workspace = true
 # GUI (ADR 0004). unstable-winit-030: the window's raw events, for the
 # zooms (wheel and Ctrl + wheel) before any widget sees them. No default

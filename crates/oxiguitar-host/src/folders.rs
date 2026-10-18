@@ -39,11 +39,18 @@ impl System {
 }
 
 /// OxiGuitar's folders on this machine.
+///
+/// On Linux they follow the freedesktop XDG Base Directory convention
+/// (decided 18 Oct 2026): settings under the config home, plugins and
+/// their data under the data home. On macOS and Windows, and with
+/// `OXIGUITAR_HOME`, one folder holds all three.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Folders {
-    /// The user folder: settings.json and the user's plugins live here.
-    pub user: PathBuf,
-    /// The user's plugin folder, inside the user folder.
+    /// Where settings.json lives.
+    pub config: PathBuf,
+    /// Where the user's plugins and the plugins' own data live.
+    pub data: PathBuf,
+    /// The user's plugin folder, `plugins` inside the data folder.
     pub user_plugins: PathBuf,
     /// System plugin folders, which packages install into. OxiGuitar only
     /// reads them; it never creates or writes them.
@@ -70,15 +77,32 @@ impl Folders {
         exe: Option<&Path>,
     ) -> Option<Folders> {
         let set = |name: &str| env(name).filter(|v| !v.is_empty()).map(PathBuf::from);
-        let user = match set(HOME_VARIABLE) {
-            Some(dir) => dir,
+        // The XDG specification: a relative path in these variables is
+        // invalid and must be ignored.
+        let xdg = |name: &str, fallback: &str| -> Option<PathBuf> {
+            match set(name).filter(|p| p.is_absolute()) {
+                Some(dir) => Some(dir),
+                None => Some(set("HOME")?.join(fallback)),
+            }
+        };
+        let (config, data) = match set(HOME_VARIABLE) {
+            Some(dir) => (dir.clone(), dir),
             None => match system {
-                System::Linux => set("HOME")?.join(".oxiguitar"),
-                System::MacOs => set("HOME")?
-                    .join("Library")
-                    .join("Application Support")
-                    .join("OxiGuitar"),
-                System::Windows => set("APPDATA")?.join("OxiGuitar"),
+                System::Linux => (
+                    xdg("XDG_CONFIG_HOME", ".config")?.join("oxiguitar"),
+                    xdg("XDG_DATA_HOME", ".local/share")?.join("oxiguitar"),
+                ),
+                System::MacOs => {
+                    let dir = set("HOME")?
+                        .join("Library")
+                        .join("Application Support")
+                        .join("OxiGuitar");
+                    (dir.clone(), dir)
+                }
+                System::Windows => {
+                    let dir = set("APPDATA")?.join("OxiGuitar");
+                    (dir.clone(), dir)
+                }
             },
         };
         let bin = exe.and_then(Path::parent);
@@ -104,15 +128,16 @@ impl Folders {
             System::Windows => bin.map(|b| b.join("plugins")).into_iter().collect(),
         };
         Some(Folders {
-            user_plugins: user.join("plugins"),
-            user,
+            user_plugins: data.join("plugins"),
+            config,
+            data,
             system_plugins,
         })
     }
 
     /// The settings file.
     pub fn settings(&self) -> PathBuf {
-        self.user.join(SETTINGS_FILE)
+        self.config.join(SETTINGS_FILE)
     }
 
     /// Where plugins are looked for, in order, unless settings.json lists
@@ -123,12 +148,13 @@ impl Folders {
             .collect()
     }
 
-    /// Makes sure the user folder, its plugin folder and settings.json
-    /// exist, creating what is missing (settings.json as an empty JSON
-    /// object). Returns what was created; existing files are never touched.
+    /// Makes sure the settings folder, the user's plugin folder and
+    /// settings.json exist, creating what is missing (settings.json as an
+    /// empty JSON object). Returns what was created; existing files are
+    /// never touched.
     pub fn ensure(&self) -> std::io::Result<Vec<PathBuf>> {
         let mut created = Vec::new();
-        for dir in [&self.user, &self.user_plugins] {
+        for dir in [&self.config, &self.user_plugins] {
             if !dir.is_dir() {
                 std::fs::create_dir_all(dir)?;
                 created.push(dir.clone());
@@ -166,27 +192,45 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn linux_uses_a_dot_folder_and_the_lib_beside_the_program() {
+    fn linux_follows_xdg_and_finds_the_lib_beside_the_program() {
         let f = Folders::resolve(
             System::Linux,
             env(&[("HOME", "/home/mat")]),
             Some(Path::new("/usr/bin/oxiguitar")),
         )
         .unwrap();
-        assert_eq!(f.user, PathBuf::from("/home/mat/.oxiguitar"));
-        assert_eq!(
-            f.user_plugins,
-            PathBuf::from("/home/mat/.oxiguitar/plugins")
-        );
+        assert_eq!(f.config, PathBuf::from("/home/mat/.config/oxiguitar"));
         assert_eq!(
             f.settings(),
-            PathBuf::from("/home/mat/.oxiguitar/settings.json")
+            PathBuf::from("/home/mat/.config/oxiguitar/settings.json")
+        );
+        assert_eq!(f.data, PathBuf::from("/home/mat/.local/share/oxiguitar"));
+        assert_eq!(
+            f.user_plugins,
+            PathBuf::from("/home/mat/.local/share/oxiguitar/plugins")
         );
         assert_eq!(
             f.system_plugins,
             vec![PathBuf::from("/usr/lib/oxiguitar/plugins")]
         );
         assert_eq!(f.default_plugin_folders()[0], f.user_plugins);
+    }
+
+    #[test]
+    fn xdg_variables_are_used_when_absolute() {
+        let f = Folders::resolve(
+            System::Linux,
+            env(&[
+                ("HOME", "/home/mat"),
+                ("XDG_CONFIG_HOME", "/cfg"),
+                ("XDG_DATA_HOME", "relative/share"),
+            ]),
+            None,
+        )
+        .unwrap();
+        assert_eq!(f.config, PathBuf::from("/cfg/oxiguitar"));
+        // A relative value is invalid by the specification: ignored.
+        assert_eq!(f.data, PathBuf::from("/home/mat/.local/share/oxiguitar"));
     }
 
     #[test]
@@ -199,10 +243,8 @@ pub(crate) mod tests {
             )),
         )
         .unwrap();
-        assert_eq!(
-            mac.user,
-            PathBuf::from("/Users/mat/Library/Application Support/OxiGuitar")
-        );
+        let support = PathBuf::from("/Users/mat/Library/Application Support/OxiGuitar");
+        assert_eq!((&mac.config, &mac.data), (&support, &support));
         assert_eq!(
             mac.system_plugins[0],
             PathBuf::from("/Applications/OxiGuitar.app/Contents/PlugIns")
@@ -214,7 +256,7 @@ pub(crate) mod tests {
         )
         .unwrap();
         assert_eq!(
-            win.user,
+            win.config,
             PathBuf::from("C:/Users/mat/AppData/Roaming/OxiGuitar")
         );
         assert_eq!(
@@ -224,14 +266,19 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn the_variable_replaces_the_user_folder() {
+    fn the_variable_puts_everything_in_one_folder() {
         let f = Folders::resolve(
             System::Linux,
-            env(&[("HOME", "/home/mat"), (HOME_VARIABLE, "/media/usb/og")]),
+            env(&[
+                ("HOME", "/home/mat"),
+                ("XDG_CONFIG_HOME", "/cfg"),
+                (HOME_VARIABLE, "/media/usb/og"),
+            ]),
             None,
         )
         .unwrap();
-        assert_eq!(f.user, PathBuf::from("/media/usb/og"));
+        assert_eq!(f.config, PathBuf::from("/media/usb/og"));
+        assert_eq!(f.user_plugins, PathBuf::from("/media/usb/og/plugins"));
         assert!(f.system_plugins.is_empty());
         assert!(Folders::resolve(System::Linux, env(&[]), None).is_none());
     }

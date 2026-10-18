@@ -192,13 +192,17 @@ mod tests {
     #[test]
     fn nothing_installed_warns_about_files_and_output() {
         let inv = Inventory::default();
-        let notices = inv.notices(Path::new("/home/mat/.oxiguitar/plugins"));
+        let notices = inv.notices(Path::new("/home/mat/.local/share/oxiguitar/plugins"));
         assert_eq!(notices.len(), 2);
         assert!(notices.iter().all(|n| n.level == Level::Warning));
         assert!(notices[0].text.starts_with("No read/write plugins"));
         assert!(notices[1].text.starts_with("No output plugin"));
         assert!(notices[1].text.contains(PLUGINS_URL));
-        assert!(notices[1].text.contains("/home/mat/.oxiguitar/plugins"));
+        assert!(
+            notices[1]
+                .text
+                .contains("/home/mat/.local/share/oxiguitar/plugins")
+        );
     }
 
     #[test]

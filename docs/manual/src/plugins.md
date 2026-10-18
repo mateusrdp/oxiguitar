@@ -4,15 +4,17 @@ OxiGuitar is a small program that does more with plugins: one plugin for each fi
 
 ## Where OxiGuitar keeps things
 
-When it starts, OxiGuitar makes sure its own folder, a `settings.json` file and a `plugins` folder exist, and creates any that are missing. It never changes anything else.
+When it starts, OxiGuitar makes sure its settings folder, a `settings.json` file and your `plugins` folder exist (on Linux in the usual freedesktop places), and creates any that are missing. It never changes anything else.
 
-| System | OxiGuitar's folder | Your plugins | Plugins installed with the program |
+| System | Settings (`settings.json`) | Your plugins | Plugins installed with the program |
 | --- | --- | --- | --- |
-| Linux | `~/.oxiguitar/` | `~/.oxiguitar/plugins/` | `/usr/lib/oxiguitar/plugins/` |
+| Linux | `~/.config/oxiguitar/` | `~/.local/share/oxiguitar/plugins/` | `/usr/lib/oxiguitar/plugins/` |
 | macOS | `~/Library/Application Support/OxiGuitar/` | its `plugins` folder | inside the app, `Contents/PlugIns/` |
 | Windows | `%APPDATA%\OxiGuitar\` | its `plugins` folder | a `plugins` folder beside `oxiguitar.exe` |
 
-To keep everything somewhere else, for example on a USB stick, start OxiGuitar with the environment variable `OXIGUITAR_HOME` set to that folder.
+To keep everything somewhere else, for example on a USB stick, start OxiGuitar with the environment variable `OXIGUITAR_HOME` set to that folder: settings and plugins then both live there.
+
+OxiGuitar also keeps the View menu's choices in `settings.json`, under `view`.
 
 ## settings.json
 

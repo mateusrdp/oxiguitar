@@ -131,11 +131,6 @@ impl ToolbarItem {
             checked: false,
         }
     }
-
-    fn toggle(mut self) -> ToolbarItem {
-        self.checkable = true;
-        self
-    }
 }
 
 /// A titled group of toolbar buttons.
@@ -162,11 +157,12 @@ pub(crate) mod item {
     pub(crate) const EXPORT_PDF: &str = "export-pdf";
     pub(crate) const UNDO: &str = "undo";
     pub(crate) const REDO: &str = "redo";
-    pub(crate) const DARK_PAGE: &str = "dark-page";
 }
 
 impl Default for Shell {
-    /// The core's toolbar and tabs. The player and the track list start
+    /// The core's toolbar and tabs. The toolbar holds only what is clicked
+    /// often; settings made once (Dark Page, the layout) live in the View
+    /// menu (Mateus, 18 Oct 2026). The player and the track list start
     /// open; the side areas, which hold placeholders until the editor
     /// (M3), start collapsed so the page keeps its room.
     fn default() -> Shell {
@@ -193,13 +189,6 @@ impl Default for Shell {
                     vec![
                         ToolbarItem::new(item::UNDO, "undo", "Undo (comes with the editor)", false),
                         ToolbarItem::new(item::REDO, "redo", "Redo (comes with the editor)", false),
-                    ],
-                ),
-                section(
-                    "view",
-                    "View",
-                    vec![
-                        ToolbarItem::new(item::DARK_PAGE, "dark-page", "Dark Page", true).toggle(),
                     ],
                 ),
             ],
@@ -252,7 +241,7 @@ mod tests {
         assert!(shell.area(Side::Left).collapsed && shell.area(Side::Right).collapsed);
         assert!(!shell.area(Side::Top).collapsed);
         let ids: Vec<&str> = shell.toolbar.iter().map(|s| s.id.as_str()).collect();
-        assert_eq!(ids, ["file", "edit", "view"]);
+        assert_eq!(ids, ["file", "edit"]);
         assert_eq!(Side::from_index(3), Some(Side::Right));
         assert_eq!(Side::from_index(4), None);
         assert_eq!(Side::from_index(-1), None);
@@ -278,13 +267,11 @@ mod tests {
     fn toolbar_items_change_in_place() {
         let mut shell = Shell::default();
         shell.set_item(item::EXPORT_PDF, Some(true), None);
-        shell.set_item(item::DARK_PAGE, None, Some(true));
         let all: Vec<&ToolbarItem> = shell.toolbar.iter().flat_map(|s| &s.items).collect();
         assert!(all.iter().any(|i| i.id == item::EXPORT_PDF && i.enabled));
-        assert!(
-            all.iter()
-                .any(|i| i.id == item::DARK_PAGE && i.checked && i.checkable)
-        );
         assert!(all.iter().any(|i| i.id == item::UNDO && !i.enabled));
+        // Settings made once stay in the View menu, not the toolbar.
+        assert!(all.iter().all(|i| i.id != "dark-page"));
+        assert_eq!(shell.toolbar.len(), 2);
     }
 }

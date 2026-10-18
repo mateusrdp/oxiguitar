@@ -3199,6 +3199,7 @@ dependencies = [
  "oxiguitar-testgen",
  "oxiguitar-tools",
  "rfd",
+ "serde_json",
  "slint",
  "slint-build",
  "tiny-skia 0.12.0",

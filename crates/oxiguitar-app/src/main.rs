@@ -22,6 +22,7 @@ mod canvas;
 mod document;
 mod footer;
 mod icons;
+mod prefs;
 mod shell;
 #[cfg(test)]
 mod speed;
@@ -48,6 +49,7 @@ use slint::{
 use crate::canvas::{Sheets, TILE};
 use crate::document::{Settings, ToolEntry};
 use crate::footer::{Footer, level_code};
+use crate::prefs::ViewPrefs;
 use crate::shell::{Shell, Side, item};
 use crate::tracks::Tracks;
 use crate::worker::{Event, Request, Worker};
@@ -117,6 +119,11 @@ struct App {
     icons: HashMap<String, Image>,
     /// This session's messages.
     footer: Footer,
+    /// settings.json as read at start, the file it came from (`None` if
+    /// there is no home folder), and the View settings last written to it.
+    stored: oxiguitar_host::Settings,
+    settings_file: Option<PathBuf>,
+    prefs: ViewPrefs,
     /// A dropped file is being opened; the rest of the same drop is ignored.
     drop_pending: bool,
 }
@@ -176,6 +183,9 @@ fn main() -> Result<(), slint::PlatformError> {
         shell: Shell::default(),
         icons: HashMap::new(),
         footer: Footer::default(),
+        stored: oxiguitar_host::Settings::default(),
+        settings_file: None,
+        prefs: ViewPrefs::default(),
         drop_pending: false,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
@@ -225,7 +235,18 @@ fn main() -> Result<(), slint::PlatformError> {
                 .collect::<Vec<_>>(),
         )));
     }
-    app.borrow_mut().footer.extend(startup.notices);
+    // The View menu as the user left it (a dark interface and a white page
+    // the first time).
+    let prefs = ViewPrefs::from_value(startup.settings.get(prefs::KEY));
+    apply_prefs(&ui, prefs);
+    {
+        let mut s = app.borrow_mut();
+        s.footer.extend(startup.notices);
+        s.settings_file = startup.folders.as_ref().map(|f| f.settings());
+        s.stored = startup.settings;
+        s.prefs = prefs;
+    }
+    settings_changed(&app);
     sync_footer(&app);
     sync_shell(&app);
 
@@ -424,7 +445,6 @@ fn ui_icon(name: &str) -> Image {
         "export" => include_bytes!("../../../assets/icons/ui/export.svg"),
         "undo" => include_bytes!("../../../assets/icons/ui/undo.svg"),
         "redo" => include_bytes!("../../../assets/icons/ui/redo.svg"),
-        "dark-page" => include_bytes!("../../../assets/icons/ui/dark-page.svg"),
         _ => return Image::default(),
     };
     Image::load_from_svg_data(svg).unwrap_or_default()
@@ -506,17 +526,21 @@ fn sync_areas(app: &Shared) {
     ui.set_right_shown(s.shell.area(Side::Right).shown);
 }
 
+/// Puts the View menu's settings on the window.
+fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
+    ui.set_dark_interface(p.dark_interface);
+    ui.set_dark_page(p.dark_page);
+    ui.set_dynamics(p.dynamics);
+    let index = |found: Option<usize>| found.unwrap_or(0) as i32;
+    ui.invoke_pick_layout(index(Layout::ALL.iter().position(|l| *l == p.layout)));
+    ui.invoke_pick_paper(index(Paper::ALL.iter().position(|q| *q == p.paper)));
+}
+
 /// A toolbar button was clicked.
 fn toolbar_activated(app: &Shared, id: &str) {
     match id {
         item::OPEN => open_dialog(app),
         item::EXPORT_PDF => export_dialog(app),
-        item::DARK_PAGE => {
-            if let Some(ui) = app.borrow().ui.upgrade() {
-                ui.set_dark_page(!ui.get_dark_page());
-            }
-            settings_changed(app);
-        }
         // Save, Undo and Redo come with the editor; they are greyed out.
         _ => {}
     }
@@ -648,20 +672,26 @@ fn settings_changed(app: &Shared) {
         .unwrap_or_default();
     s.settings.dynamics = ui.get_dynamics();
     s.settings.screen_width = screen_width(&ui, s.zoom);
-    // The toolbar's Dark Page button follows the menu's tick, and the
-    // other way round.
-    let dark = ui.get_dark_page();
-    let ticked = s
-        .shell
-        .toolbar
-        .iter()
-        .flat_map(|sec| &sec.items)
-        .any(|i| i.id == item::DARK_PAGE && i.checked);
-    if ticked != dark {
-        s.shell.set_item(item::DARK_PAGE, None, Some(dark));
-        drop(s);
-        sync_toolbar(app);
-        s = app.borrow_mut();
+    // Remember the View menu for next time, when it changed.
+    let prefs = ViewPrefs {
+        dark_interface: ui.get_dark_interface(),
+        dark_page: ui.get_dark_page(),
+        dynamics: s.settings.dynamics,
+        layout: s.settings.layout,
+        paper: s.settings.paper,
+    };
+    if prefs != s.prefs {
+        s.prefs = prefs;
+        let value = prefs.to_value(s.stored.get(prefs::KEY));
+        s.stored.set(prefs::KEY, value);
+        if let Some(path) = s.settings_file.clone()
+            && let Err(e) = s.stored.save(&path)
+        {
+            s.footer.push(Level::Error, e);
+            drop(s);
+            sync_footer(app);
+            s = app.borrow_mut();
+        }
     }
     if before.0 != s.settings.layout {
         ui.invoke_scroll_to(0.0, 0.0);

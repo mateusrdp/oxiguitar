@@ -354,6 +354,11 @@ export component AppWindow inherits Window {
     in-out property <bool> paper-0: true;
     in-out property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
+    // The window's own colours: dark by default with a white page (Mateus,
+    // 18 Oct 2026); main.rs restores the user's choice from settings.json.
+    in-out property <bool> dark-interface: true;
+    init => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
+    changed dark-interface => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
     in-out property <bool> dynamics: true;
 
     // The shell (shell.rs): the toolbar and the four areas, numbered
@@ -463,6 +468,7 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Parchment"; checkable: true; checked <=> root.layout-3; activated => { root.pick-layout(3); root.settings-changed(); } }
             }
             MenuSeparator { }
+            MenuItem { title: "Dark Interface"; checkable: true; checked <=> root.dark-interface; activated => { root.settings-changed(); } }
             MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
             MenuSeparator { }
