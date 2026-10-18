@@ -6,6 +6,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Fixed
 
+- The speed-budget tests shared one temporary folder, and whichever finished first deleted it under the other: an occasional failure unrelated to speed. Each test now has its own folder.
+- cargo-deny accepts RUSTSEC-2026-0370, 0371 and 0372 (zvariant, zvariant_derive and zbus_names, unmaintained since zbus 6 took them in, published 17 Oct 2026), which come in through Slint 1.18 and AccessKit.
 - Release builds: the draft-release job unpacked the Windows .zip packages into folders and failed on them (v0.1.0's first tag build). It now keeps every package as it was uploaded, checks that there are nine package files and that each zip holds oxiguitar.exe, and makes the checksums on every build, so a build by hand tests it too; only a tag creates the draft release.
 
 ## [0.1.0] - 2026-10-17
