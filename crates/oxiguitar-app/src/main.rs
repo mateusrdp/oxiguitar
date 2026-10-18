@@ -12,7 +12,10 @@
 //!
 //! At start, the plugin host (`oxiguitar-host`) makes sure the user folder,
 //! settings.json and the plugin folder exist, and the footer says what is
-//! missing (docs/design/plugins.md).
+//! missing (docs/design/plugins.md). Plugins' tabs join the four areas
+//! ([`plugin_tabs`]): a thread of their own asks the plugins for their
+//! contents and draws their canvases, and the worker tells the plugins
+//! that subscribe when a score is opened or changed.
 //!
 //! Usage: `oxiguitar [FILE]`. Nothing here touches the network.
 
@@ -22,6 +25,7 @@ mod canvas;
 mod document;
 mod footer;
 mod icons;
+mod plugin_tabs;
 mod prefs;
 mod shell;
 #[cfg(test)]
@@ -41,7 +45,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use oxiguitar_display::Rect;
-use oxiguitar_host::Level;
+use oxiguitar_host::api::display::Point as CanvasPoint;
+use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
+use oxiguitar_host::{Level, TabId};
 use oxiguitar_layout::{Layout, Paper};
 use slint::winit_030::winit::event::{ElementState, MouseScrollDelta, WindowEvent as WinitEvent};
 use slint::winit_030::winit::keyboard::{Key, KeyCode, PhysicalKey};
@@ -52,8 +58,9 @@ use slint::{
 };
 
 use crate::canvas::{Sheets, TILE};
-use crate::document::{Settings, ToolEntry};
+use crate::document::{OpenScore, Settings, ToolEntry};
 use crate::footer::{Footer, level_code};
+use crate::plugin_tabs::TabThread;
 use crate::prefs::ViewPrefs;
 use crate::shell::{Shell, Side, item};
 use crate::tracks::Tracks;
@@ -65,7 +72,8 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, FooterRow, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    AppWindow, AreaState, FooterRow, PluginRow, PluginWidget, TileItem, ToolRow, ToolbarItemRow,
+    ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -133,6 +141,36 @@ struct App {
     prefs: ViewPrefs,
     /// A dropped file is being opened; the rest of the same drop is ignored.
     drop_pending: bool,
+    /// The thread that asks plugins for their tabs and draws their
+    /// canvases; what it last answered for each tab; what each area shows.
+    tab_thread: Option<TabThread>,
+    plugin_tabs: HashMap<TabId, PluginTabState>,
+    plugin_views: [PluginView; 4],
+}
+
+/// A plugin tab's last contents (or why it can't be shown) and its
+/// canvases as drawn.
+#[derive(Default)]
+struct PluginTabState {
+    content: Option<Result<TabContent, String>>,
+    canvases: HashMap<String, Image>,
+    /// The plugin asked for the tab to be redrawn while it was hidden.
+    stale: bool,
+    /// The last error put in the footer, so it is said once.
+    told: Option<String>,
+    /// Each canvas's room, in logical pixels, for when the scale changes.
+    rooms: HashMap<String, (f32, f32)>,
+}
+
+/// What an area shows of a plugin tab: the tab, the contents its models
+/// hold, and the models (kept, and changed in place where the rows keep
+/// their shape, so a canvas being dragged on is never rebuilt).
+#[derive(Default)]
+struct PluginView {
+    tab: Option<TabId>,
+    content: Option<TabContent>,
+    rows: Rc<VecModel<PluginRow>>,
+    row_models: Vec<Rc<VecModel<PluginWidget>>>,
 }
 
 type Shared = Rc<RefCell<App>>;
@@ -142,11 +180,15 @@ thread_local! {
     static APP: RefCell<Option<Shared>> = const { RefCell::new(None) };
 }
 
-/// Plugins' footer messages. They may come from any thread (a plugin runs
-/// on the thread that called it), so each is handed to the event loop.
-struct ToFooter;
+/// What the window does for plugins: shows their footer messages, shows
+/// their tabs again when they ask, and hands them the open score. Requests
+/// may come from any thread (a plugin runs on the thread that called it),
+/// so the first two are handed to the event loop.
+struct WindowCore {
+    open: OpenScore,
+}
 
-impl oxiguitar_host::Core for ToFooter {
+impl oxiguitar_host::Core for WindowCore {
     fn notify(&self, level: Level, text: String) {
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(app) = APP.with(|a| a.borrow().clone()) {
@@ -154,6 +196,19 @@ impl oxiguitar_host::Core for ToFooter {
                 sync_footer(&app);
             }
         });
+    }
+
+    fn redraw(&self, tab: &TabId) {
+        let tab = tab.clone();
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                plugin_tab_changed(&app, tab);
+            }
+        });
+    }
+
+    fn score(&self) -> Option<oxiguitar_host::api::score::Score> {
+        self.open.wire()
     }
 }
 
@@ -177,14 +232,29 @@ fn main() -> Result<(), slint::PlatformError> {
     // footer should say about them. A few small file operations, done
     // before the window first shows. Files are opened only through the
     // plugins found here.
+    let open_score = OpenScore::default();
     let startup = oxiguitar_host::start(
         oxiguitar_host::Folders::here(),
         oxiguitar_host::display_system(),
-        Arc::new(ToFooter),
+        Arc::new(WindowCore {
+            open: open_score.clone(),
+        }),
     );
     let open_extensions = startup.plugins.read_extensions();
+    let mut shell = Shell::default();
+    plugin_tabs::add_to(&mut shell, &startup.plugins);
+    // Only when a plugin has tabs.
+    let tab_thread = (!startup.plugins.tabs().is_empty()).then(|| {
+        TabThread::start(startup.plugins.clone(), true, |answer| {
+            let _ = slint::invoke_from_event_loop(move || {
+                if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                    plugin_answer(&app, answer);
+                }
+            });
+        })
+    });
 
-    let worker = Worker::start(startup.plugins.clone(), |event| {
+    let worker = Worker::start(startup.plugins.clone(), open_score, |event| {
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(app) = APP.with(|a| a.borrow().clone()) {
                 handle(&app, event);
@@ -215,12 +285,15 @@ fn main() -> Result<(), slint::PlatformError> {
         pdf_name: "score.pdf".to_owned(),
         folder: None,
         open_extensions,
-        shell: Shell::default(),
+        shell,
         icons: HashMap::new(),
         footer: Footer::default(),
         stored: oxiguitar_host::SharedSettings::default(),
         prefs: ViewPrefs::default(),
         drop_pending: false,
+        tab_thread,
+        plugin_tabs: HashMap::new(),
+        plugin_views: Default::default(),
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
 
@@ -341,6 +414,7 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    install_plugin_tab_callbacks(&ui, &app);
     install_window_events(&ui, &app);
 
     // A file named on the command line (or by the system's file manager).
@@ -536,6 +610,7 @@ fn sync_areas(app: &Shared) {
             active: area.active as i32,
             active_id: area.active_id().into(),
             collapsed: area.collapsed,
+            plugin: plugin_tabs::tab_of(area.active_id()).is_some(),
         }
     };
     ui.set_top_area(state(Side::Top));
@@ -546,6 +621,447 @@ fn sync_areas(app: &Shared) {
     ui.set_bottom_shown(s.shell.area(Side::Bottom).shown);
     ui.set_left_shown(s.shell.area(Side::Left).shown);
     ui.set_right_shown(s.shell.area(Side::Right).shown);
+    drop(s);
+    for side in Side::ALL {
+        show_plugin_tab(app, side);
+    }
+}
+
+/// The plugin tab area `side` shows, if it shows one: its tab is open and
+/// the area is neither collapsed nor hidden.
+fn plugin_tab_on_screen(s: &App, side: Side) -> Option<TabId> {
+    let area = s.shell.area(side);
+    if !area.shown || area.collapsed {
+        return None;
+    }
+    plugin_tabs::tab_of(area.active_id())
+}
+
+/// Shows area `side`'s plugin tab, asking its plugin for the contents when
+/// there are none yet or the plugin asked for a redraw while it was hidden.
+fn show_plugin_tab(app: &Shared, side: Side) {
+    let Some(tab) = plugin_tab_on_screen(&app.borrow(), side) else {
+        let mut s = app.borrow_mut();
+        let view = &mut s.plugin_views[side.index()];
+        view.tab = None;
+        view.content = None;
+        return;
+    };
+    {
+        let mut s = app.borrow_mut();
+        let state = s.plugin_tabs.entry(tab.clone()).or_default();
+        let ask = state.content.is_none() || state.stale;
+        state.stale = false;
+        if ask && let Some(thread) = &s.tab_thread {
+            thread.send(plugin_tabs::Request::Content(tab.clone()));
+        }
+    }
+    refresh_plugin_view(app, side, &tab);
+}
+
+/// The plugin asked for its tab to be shown again.
+fn plugin_tab_changed(app: &Shared, tab: TabId) {
+    let on_screen = Side::ALL
+        .iter()
+        .any(|&side| plugin_tab_on_screen(&app.borrow(), side).as_ref() == Some(&tab));
+    let mut s = app.borrow_mut();
+    if on_screen {
+        if let Some(thread) = &s.tab_thread {
+            thread.send(plugin_tabs::Request::Content(tab));
+        }
+    } else {
+        s.plugin_tabs.entry(tab).or_default().stale = true;
+    }
+}
+
+/// What the tab thread answered.
+fn plugin_answer(app: &Shared, answer: plugin_tabs::Answer) {
+    let tab = match answer {
+        plugin_tabs::Answer::Content {
+            tab,
+            content,
+            canvases,
+        } => {
+            let mut told = None;
+            {
+                let mut s = app.borrow_mut();
+                let state = s.plugin_tabs.entry(tab.clone()).or_default();
+                for drawn in canvases {
+                    state
+                        .canvases
+                        .insert(drawn.widget.clone(), drawn_image(&drawn));
+                }
+                if let Err(why) = &content
+                    && state.told.as_ref() != Some(why)
+                {
+                    state.told = Some(why.clone());
+                    told = Some(why.clone());
+                }
+                state.content = Some(content);
+            }
+            if let Some(why) = told {
+                message(app, Level::Warning, why);
+            }
+            tab
+        }
+        plugin_tabs::Answer::Canvas { tab, drawn } => {
+            let mut s = app.borrow_mut();
+            s.plugin_tabs
+                .entry(tab.clone())
+                .or_default()
+                .canvases
+                .insert(drawn.widget.clone(), drawn_image(&drawn));
+            tab
+        }
+    };
+    for side in Side::ALL {
+        if plugin_tab_on_screen(&app.borrow(), side).as_ref() == Some(&tab) {
+            refresh_plugin_view(app, side, &tab);
+        }
+    }
+}
+
+fn drawn_image(drawn: &plugin_tabs::Drawn) -> Image {
+    let buf =
+        SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&drawn.rgba, drawn.width, drawn.height);
+    Image::from_rgba8_premultiplied(buf)
+}
+
+/// One plugin widget, as the window's `PluginTab` shows it.
+fn plugin_widget(w: &Widget, canvases: &HashMap<String, Image>) -> PluginWidget {
+    let mut out = PluginWidget {
+        enabled: true,
+        ..PluginWidget::default()
+    };
+    match w {
+        Widget::Label { text, muted } => {
+            out.kind = "label".into();
+            out.text = text.as_str().into();
+            out.muted = *muted;
+        }
+        Widget::Button { id, text, enabled } => {
+            out.kind = "button".into();
+            out.id = id.as_str().into();
+            out.text = text.as_str().into();
+            out.enabled = *enabled;
+        }
+        Widget::Toggle {
+            id,
+            text,
+            on,
+            enabled,
+        } => {
+            out.kind = "toggle".into();
+            out.id = id.as_str().into();
+            out.text = text.as_str().into();
+            out.on = *on;
+            out.enabled = *enabled;
+        }
+        Widget::Slider {
+            id,
+            value,
+            min,
+            max,
+            enabled,
+        } => {
+            out.kind = "slider".into();
+            out.id = id.as_str().into();
+            out.value = *value;
+            out.minimum = *min;
+            out.maximum = *max;
+            out.enabled = *enabled;
+        }
+        Widget::Field {
+            id,
+            text,
+            placeholder,
+            enabled,
+        } => {
+            out.kind = "field".into();
+            out.id = id.as_str().into();
+            out.text = text.as_str().into();
+            out.text2 = placeholder.as_str().into();
+            out.enabled = *enabled;
+        }
+        Widget::Choice {
+            id,
+            options,
+            selected,
+            enabled,
+        } => {
+            out.kind = "choice".into();
+            out.id = id.as_str().into();
+            out.options = ModelRc::new(VecModel::from(
+                options
+                    .iter()
+                    .map(|o| SharedString::from(o.as_str()))
+                    .collect::<Vec<_>>(),
+            ));
+            out.selected = *selected as i32;
+            out.enabled = *enabled;
+        }
+        Widget::List {
+            id,
+            items,
+            selected,
+        } => {
+            out.kind = "list".into();
+            out.id = id.as_str().into();
+            out.items = ModelRc::new(VecModel::from(
+                items
+                    .iter()
+                    .map(|i| slint::StandardListViewItem::from(i.as_str()))
+                    .collect::<Vec<_>>(),
+            ));
+            out.selected = selected.map_or(-1, |s| s as i32);
+        }
+        Widget::Canvas(c) => {
+            out.kind = "canvas".into();
+            out.id = c.id.as_str().into();
+            out.canvas = canvases.get(&c.id).cloned().unwrap_or_default();
+            out.canvas_width = c.width;
+            out.canvas_height = c.height;
+        }
+    }
+    out
+}
+
+/// The kind and id of each widget of a row: rows of the same shape are
+/// changed in place.
+fn row_shape(
+    row: &oxiguitar_host::api::tab::Row,
+) -> Vec<(std::mem::Discriminant<Widget>, Option<&str>)> {
+    row.widgets
+        .iter()
+        .map(|w| (std::mem::discriminant(w), w.id()))
+        .collect()
+}
+
+/// Puts tab `tab`'s contents in area `side`. Rows of the same shape as
+/// before are changed in place (a row holding a canvas widget by widget,
+/// so a drag on it carries on); other rows are made anew, so every widget
+/// shows exactly what the plugin says.
+fn refresh_plugin_view(app: &Shared, side: Side, tab: &TabId) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let mut guard = app.borrow_mut();
+    let s = &mut *guard;
+    let state = s.plugin_tabs.entry(tab.clone()).or_default();
+    let view = &mut s.plugin_views[side.index()];
+    let content = match &state.content {
+        None => {
+            set_plugin_area(&ui, side, None, "Asking the plugin…");
+            view.tab = None;
+            view.content = None;
+            return;
+        }
+        Some(Err(why)) => {
+            set_plugin_area(&ui, side, None, why);
+            view.tab = None;
+            view.content = None;
+            return;
+        }
+        Some(Ok(content)) => content,
+    };
+    let canvases = &state.canvases;
+    let widgets = |row: &oxiguitar_host::api::tab::Row| -> Vec<PluginWidget> {
+        row.widgets
+            .iter()
+            .map(|w| plugin_widget(w, canvases))
+            .collect()
+    };
+    let stretch = |row: &oxiguitar_host::api::tab::Row| {
+        row.widgets
+            .iter()
+            .any(|w| matches!(w, Widget::Canvas(_) | Widget::List { .. }))
+    };
+    let same_shape = view.tab.as_ref() == Some(tab)
+        && view.content.as_ref().is_some_and(|old| {
+            old.rows.len() == content.rows.len()
+                && old
+                    .rows
+                    .iter()
+                    .zip(&content.rows)
+                    .all(|(a, b)| row_shape(a) == row_shape(b))
+        });
+    if same_shape {
+        let old = view.content.take().unwrap_or_default();
+        for (i, (before, now)) in old.rows.iter().zip(&content.rows).enumerate() {
+            let has_canvas = now.widgets.iter().any(|w| matches!(w, Widget::Canvas(_)));
+            if has_canvas {
+                // Widget by widget: the canvas's image may be new even when
+                // its contents aren't.
+                let model = &view.row_models[i];
+                for (j, w) in widgets(now).into_iter().enumerate() {
+                    if model.row_data(j).as_ref() != Some(&w) {
+                        model.set_row_data(j, w);
+                    }
+                }
+            } else if before != now {
+                let model = Rc::new(VecModel::from(widgets(now)));
+                view.rows.set_row_data(
+                    i,
+                    PluginRow {
+                        widgets: ModelRc::from(model.clone()),
+                        stretch: stretch(now),
+                    },
+                );
+                view.row_models[i] = model;
+            }
+        }
+    } else {
+        view.row_models = content
+            .rows
+            .iter()
+            .map(|r| Rc::new(VecModel::from(widgets(r))))
+            .collect();
+        view.rows = Rc::new(VecModel::from(
+            content
+                .rows
+                .iter()
+                .zip(&view.row_models)
+                .map(|(r, m)| PluginRow {
+                    widgets: ModelRc::from(m.clone()),
+                    stretch: stretch(r),
+                })
+                .collect::<Vec<_>>(),
+        ));
+        set_plugin_area(&ui, side, Some(ModelRc::from(view.rows.clone())), "");
+    }
+    view.tab = Some(tab.clone());
+    view.content = Some(content.clone());
+}
+
+/// Area `side`'s plugin tab: its rows, or a message instead.
+fn set_plugin_area(ui: &AppWindow, side: Side, rows: Option<ModelRc<PluginRow>>, message: &str) {
+    let rows = rows.unwrap_or_default();
+    let message = SharedString::from(message);
+    match side {
+        Side::Top => {
+            ui.set_top_plugin_rows(rows);
+            ui.set_top_plugin_message(message);
+        }
+        Side::Bottom => {
+            ui.set_bottom_plugin_rows(rows);
+            ui.set_bottom_plugin_message(message);
+        }
+        Side::Left => {
+            ui.set_left_plugin_rows(rows);
+            ui.set_left_plugin_message(message);
+        }
+        Side::Right => {
+            ui.set_right_plugin_rows(rows);
+            ui.set_right_plugin_message(message);
+        }
+    }
+}
+
+/// Sends what the user did to the plugin tab area `area` (the window's
+/// area number) shows.
+fn plugin_event(app: &Shared, area: i32, widget: &str, event: TabEvent) {
+    let s = app.borrow();
+    let Some(tab) = Side::from_index(area).and_then(|side| plugin_tab_on_screen(&s, side)) else {
+        return;
+    };
+    if let Some(thread) = &s.tab_thread {
+        thread.send(plugin_tabs::Request::Event {
+            tab,
+            widget: widget.to_owned(),
+            event,
+        });
+    }
+}
+
+/// A canvas's room changed, in logical pixels: it is drawn again for the
+/// device pixels it now covers.
+fn canvas_room(app: &Shared, area: i32, widget: &str, width: f32, height: f32) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let scale = ui.window().scale_factor();
+    let mut s = app.borrow_mut();
+    let Some(tab) = Side::from_index(area).and_then(|side| plugin_tab_on_screen(&s, side)) else {
+        return;
+    };
+    s.plugin_tabs
+        .entry(tab.clone())
+        .or_default()
+        .rooms
+        .insert(widget.to_owned(), (width, height));
+    if let Some(thread) = &s.tab_thread {
+        thread.send(plugin_tabs::Request::Size {
+            tab,
+            widget: widget.to_owned(),
+            room: device_room(width, height, scale),
+        });
+    }
+}
+
+fn device_room(width: f32, height: f32, scale: f32) -> (u32, u32) {
+    (
+        (width * scale).round().max(1.0) as u32,
+        (height * scale).round().max(1.0) as u32,
+    )
+}
+
+/// The window's scale changed: every canvas is drawn again for its device
+/// pixels.
+fn resend_canvas_rooms(app: &Shared, scale: f32) {
+    let s = app.borrow();
+    let Some(thread) = &s.tab_thread else {
+        return;
+    };
+    for (tab, state) in &s.plugin_tabs {
+        for (widget, (w, h)) in &state.rooms {
+            thread.send(plugin_tabs::Request::Size {
+                tab: tab.clone(),
+                widget: widget.clone(),
+                room: device_room(*w, *h, scale),
+            });
+        }
+    }
+}
+
+/// The callbacks of every area's `PluginTab`.
+fn install_plugin_tab_callbacks(ui: &AppWindow, app: &Shared) {
+    let a = app.clone();
+    ui.on_plugin_clicked(move |area, id| plugin_event(&a, area, &id, TabEvent::Clicked));
+    let a = app.clone();
+    ui.on_plugin_toggled(move |area, id, on| plugin_event(&a, area, &id, TabEvent::Toggled(on)));
+    let a = app.clone();
+    ui.on_plugin_slid(move |area, id, v| plugin_event(&a, area, &id, TabEvent::Slid(v)));
+    let a = app.clone();
+    ui.on_plugin_edited(move |area, id, text| {
+        plugin_event(&a, area, &id, TabEvent::Edited(text.to_string()));
+    });
+    let a = app.clone();
+    ui.on_plugin_chosen(move |area, id, i| {
+        if let Ok(i) = u32::try_from(i) {
+            plugin_event(&a, area, &id, TabEvent::Chosen(i));
+        }
+    });
+    let a = app.clone();
+    ui.on_plugin_pointer(move |area, id, kind, x, y, button| {
+        let kind = match kind {
+            0 => PointerKind::Down,
+            1 => PointerKind::Up,
+            _ => PointerKind::Drag,
+        };
+        let button = match button {
+            1 => PointerButton::Secondary,
+            2 => PointerButton::Middle,
+            _ => PointerButton::Primary,
+        };
+        let pointer = Pointer {
+            kind,
+            at: CanvasPoint::new(x, y),
+            button,
+        };
+        plugin_event(&a, area, &id, TabEvent::Pointer(pointer));
+    });
+    let a = app.clone();
+    ui.on_plugin_canvas_room(move |area, id, w, h| canvas_room(&a, area, &id, w, h));
 }
 
 /// Puts the View menu's settings on the window.
@@ -714,6 +1230,9 @@ fn settings_changed(app: &Shared) {
     }
     if before.0 != s.settings.layout {
         ui.invoke_scroll_to(0.0, 0.0);
+    }
+    if let Some(tabs) = &s.tab_thread {
+        tabs.send(plugin_tabs::Request::Dark(prefs.dark_interface));
     }
     // Dark Page only needs new tiles; everything else a new engraving.
     s.paint += 1;
@@ -1201,7 +1720,9 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                     physical.height as f32 / scale,
                 ),
             });
-            // Tiles are drawn for device pixels: draw them again.
+            // Tiles and plugins' canvases are drawn for device pixels: draw
+            // them again.
+            resend_canvas_rooms(&a, scale);
             {
                 let mut s = a.borrow_mut();
                 s.paint += 1;

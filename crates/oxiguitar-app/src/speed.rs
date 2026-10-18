@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 use oxiguitar_display::Rect;
 
 use crate::canvas::Sheets;
-use crate::document::Settings;
+use crate::document::{OpenScore, Settings};
 use crate::tracks::Tracks;
 use crate::worker::{Event, Request, Worker};
 
@@ -57,9 +57,13 @@ fn next(rx: &Receiver<Event>) -> Event {
 /// of the first.
 fn open_like_the_window(path: &Path, all_tracks: bool) -> Times {
     let (tx, rx) = channel();
-    let worker = Worker::start(crate::test_plugins().clone(), move |e| {
-        let _ = tx.send(e);
-    });
+    let worker = Worker::start(
+        crate::test_plugins().clone(),
+        OpenScore::default(),
+        move |e| {
+            let _ = tx.send(e);
+        },
+    );
     let start = Instant::now();
     worker.send(Request::Open(path.to_owned()));
     let tracks = match next(&rx) {

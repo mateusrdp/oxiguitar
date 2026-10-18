@@ -17,7 +17,8 @@ path = "src/main.rs"
 # The score as format plugins hand it over (`wire`); the core reads no
 # format itself.
 oxiguitar-model = { workspace = true, features = ["wire"] }
-oxiguitar-display.workspace = true
+# Plugin canvases as display lists (`wire`).
+oxiguitar-display = { workspace = true, features = ["wire"] }
 oxiguitar-layout.workspace = true
 oxiguitar-render.workspace = true
 oxiguitar-tools.workspace = true
