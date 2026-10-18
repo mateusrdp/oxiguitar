@@ -6,6 +6,10 @@
 //! system's, and a tickbox to enable or disable each from the next start.
 //! No window code here, so it is unit-tested.
 //!
+//! A plugin can't be unloaded while OxiGuitar runs (its code may have
+//! threads running or have handed the host pointers into itself; ADR 0008),
+//! so every change waits for the next start, and the manager says so.
+//!
 //! It only reads the folders and writes `disabled` in settings.json: it
 //! never copies, downloads, installs or removes a file, and draws no
 //! settings forms. It makes no distinction between our plugins and anyone
@@ -32,6 +36,15 @@ pub(crate) struct Row {
     pub(crate) id: Option<String>,
     /// Enabled in settings.json now, which takes effect at the next start.
     pub(crate) enabled: bool,
+    /// The tick differs from how this session started: a restart applies it.
+    pub(crate) changed: bool,
+    /// Loaded now.
+    pub(crate) loaded: bool,
+}
+
+/// Whether any change waits for OxiGuitar to start again.
+pub(crate) fn restart_needed(rows: &[Row]) -> bool {
+    rows.iter().any(|r| r.changed)
 }
 
 /// The ids settings.json lists under `disabled` now.
@@ -83,12 +96,16 @@ fn row(f: &Found, safe: bool, disabled: &[String]) -> Row {
     // A change made in this session waits for the next start: plugins are
     // never unloaded.
     let was_enabled = !matches!(f.state, State::Disabled);
-    if toggles && enabled != was_enabled {
-        state.push_str(if enabled {
-            " Enabled from the next start."
-        } else {
-            " Disabled from the next start."
-        });
+    let changed = toggles && enabled != was_enabled;
+    if changed {
+        state = match (enabled, f.is_loaded()) {
+            (false, true) => {
+                "Loaded: it stays in use until OxiGuitar restarts, and is disabled from then on."
+                    .to_owned()
+            }
+            (false, false) => format!("{state} Disabled when OxiGuitar restarts."),
+            (true, _) => format!("{state} Enabled when OxiGuitar restarts."),
+        };
     }
     Row {
         name: f.name(),
@@ -101,6 +118,8 @@ fn row(f: &Found, safe: bool, disabled: &[String]) -> Row {
         state,
         id: if toggles { id } else { None },
         enabled,
+        changed,
+        loaded: f.is_loaded(),
     }
 }
 
@@ -229,7 +248,7 @@ mod tests {
         assert!(!now[0].enabled);
         assert_eq!(
             now[0].state,
-            "Not loaded yet: it loads when it is first needed. Disabled from the next start."
+            "Not loaded yet: it loads when it is first needed. Disabled when OxiGuitar restarts."
         );
 
         // Started again: disabled. Ticked again: enabled from the next start.
@@ -244,9 +263,43 @@ mod tests {
         assert_eq!(disabled(&shared), ["someone.else"]);
         assert_eq!(
             rows(&plugins, &disabled(&shared))[0].state,
-            "Disabled. Enabled from the next start."
+            "Disabled. Enabled when OxiGuitar restarts."
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_loaded_plugin_stays_in_use_until_a_restart_and_the_manager_says_so() {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let dir = workspace.join("target").join("oxp").join("manager-loaded");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // A copy of its own: this test loads it.
+        std::fs::copy(crate::test_support::test_oxp(), dir.join("test.oxp")).unwrap();
+        let shared = settings("{}", &dir.join("settings.json"));
+        let plugins = Plugins::discover(
+            std::slice::from_ref(&dir),
+            shared.clone(),
+            "x11",
+            Arc::new(Unheard),
+        );
+        assert!(plugins.load_all().is_empty());
+        let now = || rows(&plugins, &disabled(&shared));
+        assert_eq!(now()[0].state, "Loaded.");
+        assert!(!restart_needed(&now()));
+
+        set_enabled(&shared, "oxiguitar.test", false).unwrap();
+        let after = now();
+        assert!(after[0].loaded && after[0].changed && !after[0].enabled);
+        assert_eq!(
+            after[0].state,
+            "Loaded: it stays in use until OxiGuitar restarts, and is disabled from then on."
+        );
+        assert!(restart_needed(&after));
+        // Ticked again: nothing waits for a restart any more.
+        set_enabled(&shared, "oxiguitar.test", true).unwrap();
+        assert!(!restart_needed(&now()));
+        assert_eq!(now()[0].state, "Loaded.");
     }
 
     #[test]
