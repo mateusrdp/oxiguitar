@@ -69,12 +69,19 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get build-dep -y --no-install-recommends ./oxiguitar-*/
           '
           docker commit sid-build oxiguitar-sid-build
+      # On failure, the log's last lines become an annotation.
       - name: Build with no network
         run: |
-          docker run --rm --network none -v "$PWD/build:/build" oxiguitar-sid-build bash -euxc '
+          status=0
+          docker run --rm --network none -v "$PWD/build:/build" oxiguitar-sid-build bash -euc '
             cd /build/oxiguitar-*/
-            dpkg-buildpackage -us -uc -j"$(nproc)"
-          '
+            dpkg-buildpackage -us -uc -j"$(nproc)" > ../build.log 2>&1
+          ' || status=$?
+          tail -n 200 build/build.log
+          if [[ "$status" -ne 0 ]]; then
+            echo "::error title=dpkg-buildpackage failed::$(grep -v '^ *\(Compiling\|Running\|Fresh\) ' build/build.log | tail -n 40 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit "$status"
+          fi
           ls -l build
       # scripts/package/lintian.sh: errors and warnings fail, but for the
       # two tags about the contact being the issue tracker
