@@ -47,7 +47,7 @@ Both messages say where to download plugins: [the releases page](https://github.
 - **Not used**: another file holds the same plugin at a higher or equal version, and that one is used.
 - **Can't be used**, and why: the file is damaged, it is for another system, it needs a newer OxiGuitar, or its own conditions don't hold here (a plugin only for Wayland, say).
 
-The tickbox beside a plugin enables or disables it. The change takes effect the next time OxiGuitar starts, since a plugin that is loaded stays loaded until the program ends; the plugin's line says what will change. OxiGuitar keeps the list in `settings.json`, under `disabled`.
+The tickbox beside a plugin enables or disables it. The change takes effect the next time OxiGuitar starts: a plugin can't be unloaded while the program runs, so one you untick while it is in use stays in use until you restart. The plugin's line says what will change, and the window reminds you to restart OxiGuitar while a change is waiting. OxiGuitar keeps the list in `settings.json`, under `disabled`.
 
 The plugin manager only lists plugins and switches them on and off. It never downloads, copies, installs or removes anything. To install a plugin, put its `.oxp` file in your plugins folder (see above), or install a package that puts it in the program's folder. To remove one, delete its file.
 

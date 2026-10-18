@@ -39,6 +39,9 @@ export component PluginManagerWindow inherits Window {
     in property <string> problem;
     // False when settings.json can't be written: no tickbox can change.
     in property <bool> can-save: true;
+    // A tick differs from how this session started: only a restart applies
+    // it (plugins can't be unloaded while OxiGuitar runs).
+    in property <bool> restart-needed;
     callback toggled(int, bool);
     callback close-clicked();
 
@@ -123,7 +126,17 @@ export component PluginManagerWindow inherits Window {
             color: #e5a50a;
         }
         HorizontalLayout {
-            alignment: end;
+            spacing: 12px;
+            if root.restart-needed : Text {
+                horizontal-stretch: 1;
+                text: "Restart OxiGuitar to apply these changes: a plugin can't be unloaded while OxiGuitar runs.";
+                font-size: 12px;
+                font-weight: 600;
+                wrap: word-wrap;
+                vertical-alignment: center;
+                color: Palette.foreground;
+            }
+            if !root.restart-needed : Rectangle { horizontal-stretch: 1; }
             Button {
                 text: "Close";
                 clicked => { root.close-clicked(); }

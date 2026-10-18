@@ -1192,7 +1192,9 @@ fn sync_manager(app: &Shared) {
     let Some(window) = &s.manager else {
         return;
     };
-    let rows: Vec<ManagerRow> = manager::rows(&s.plugins, &manager::disabled(&s.stored))
+    let rows = manager::rows(&s.plugins, &manager::disabled(&s.stored));
+    window.set_restart_needed(manager::restart_needed(&rows));
+    let rows: Vec<ManagerRow> = rows
         .into_iter()
         .map(|r| ManagerRow {
             name: r.name.into(),
@@ -1208,20 +1210,37 @@ fn sync_manager(app: &Shared) {
 }
 
 /// A tickbox in the manager: enable or disable that plugin from the next
-/// start.
+/// start. A loaded plugin can't be unloaded, so unticking one also says in
+/// the footer that it stays in use until OxiGuitar restarts.
 fn manager_toggled(app: &Shared, index: i32, on: bool) {
-    let result = {
+    let (result, row) = {
         let s = app.borrow();
-        let id = usize::try_from(index)
+        let row = usize::try_from(index)
             .ok()
-            .and_then(|i| manager::rows(&s.plugins, &[]).into_iter().nth(i))
-            .and_then(|r| r.id);
-        id.map(|id| manager::set_enabled(&s.stored, &id, on))
+            .and_then(|i| manager::rows(&s.plugins, &[]).into_iter().nth(i));
+        let result = row
+            .as_ref()
+            .and_then(|r| r.id.as_ref())
+            .map(|id| manager::set_enabled(&s.stored, id, on));
+        (result, row)
     };
-    if let Some(Err(e)) = result
-        && let Some(w) = &app.borrow().manager
-    {
-        w.set_problem(e.into());
+    match result {
+        Some(Err(e)) => {
+            if let Some(w) = &app.borrow().manager {
+                w.set_problem(e.into());
+            }
+        }
+        Some(Ok(())) if !on && row.as_ref().is_some_and(|r| r.loaded) => {
+            let name = row.map(|r| r.name).unwrap_or_default();
+            message(
+                app,
+                Level::Info,
+                format!(
+                    "{name} stays in use until you restart OxiGuitar: a loaded plugin can't be unloaded while it runs."
+                ),
+            );
+        }
+        _ => {}
     }
     sync_manager(app);
 }
