@@ -12,15 +12,24 @@ use std::sync::{Arc, OnceLock};
 
 use oxiguitar_host::{Plugins, SharedSettings, Unheard};
 
+/// The folder holding our plugins' `.oxp` files, built once for the whole
+/// test program: building replaces the files, which Windows refuses while
+/// a host has them loaded.
+fn ours() -> &'static Path {
+    static BUILT: OnceLock<std::path::PathBuf> = OnceLock::new();
+    BUILT.get_or_init(|| {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        oxiguitar_plugin_test::build_ours(&workspace, !cfg!(debug_assertions))
+            .expect("our plugins build")
+    })
+}
+
 /// The host over our plugins, built on first use.
 pub(crate) fn test_plugins() -> &'static Plugins {
     static PLUGINS: OnceLock<Plugins> = OnceLock::new();
     PLUGINS.get_or_init(|| {
-        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let folder = oxiguitar_plugin_test::build_ours(&workspace, !cfg!(debug_assertions))
-            .expect("our plugins build");
         Plugins::discover(
-            &[folder],
+            &[ours().to_owned()],
             SharedSettings::default(),
             oxiguitar_host::display_system(),
             Arc::new(Unheard),
@@ -63,8 +72,7 @@ pub(crate) fn tab_host() -> &'static TabHost {
     HOST.get_or_init(|| {
         let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let release = !cfg!(debug_assertions);
-        let ours =
-            oxiguitar_plugin_test::build_ours(&workspace, release).expect("our plugins build");
+        let ours = ours();
         let test =
             oxiguitar_plugin_test::build(&workspace, "oxiguitar-test-plugin", "test", release)
                 .expect("the test plugin builds");
