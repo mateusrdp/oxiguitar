@@ -261,7 +261,9 @@ jobs:
 
   release:
     name: Draft release
-    if: github.ref_type == 'tag'
+    # Collecting the packages and their checksums runs on every build, so a
+    # build by hand tests it before a tag relies on it; only a v* tag goes on
+    # to create the draft release.
     needs: [meta, linux, windows, macos]
     runs-on: ubuntu-24.04
     permissions:
@@ -273,13 +275,39 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v8
         with:
-          # Package artifacts are named after their files.
+          # Package artifacts are named after their files and uploaded
+          # unzipped (archive: false). skip-decompress keeps them as they
+          # are: without it the action unpacks anything that is a zip, so
+          # the Windows .zip packages arrived as folders (v0.1.0's first
+          # tag build, 18 Oct 2026).
           pattern: "*.{deb,rpm,AppImage,zip,dmg}"
           path: dist
           merge-multiple: true
-      - name: Checksums and notes
+          skip-decompress: true
+      - name: Check the packages
         run: |
-          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
+          # Exactly the nine packages, each a file: a .deb, an .rpm and an
+          # AppImage for each Linux architecture, a zip for each Windows
+          # architecture and the universal .dmg.
+          find dist -mindepth 1 -maxdepth 1 -printf '%y %s %f\n' | sort -k3
+          if find dist -mindepth 1 -maxdepth 1 ! -type f | grep -q .; then
+            echo "::error::dist/ holds something that is not a file" >&2
+            exit 1
+          fi
+          count="$(find dist -mindepth 1 -maxdepth 1 -type f | wc -l)"
+          if [ "$count" -ne 9 ]; then
+            echo "::error::expected 9 packages in dist/, found $count" >&2
+            exit 1
+          fi
+          for f in dist/*.zip; do
+            unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
+            unzip -l "$f" | grep -q 'oxiguitar.exe' || { echo "::error::$f has no oxiguitar.exe" >&2; exit 1; }
+          done
+      - name: Checksums
+        run: (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
+      - name: Release notes
+        if: github.ref_type == 'tag'
+        run: |
           # The version's section of CHANGELOG.md, without its heading.
           awk -v v="$VERSION" '
             index($0, "## [" v "]") == 1 { on = 1; next }
@@ -290,7 +318,9 @@ jobs:
             echo "CHANGELOG.md has no section \"## [$VERSION]\"" >&2
             exit 1
           fi
-      - run: |
+      - name: Create the draft release
+        if: github.ref_type == 'tag'
+        run: |
           gh release create "$GITHUB_REF_NAME" dist/* \
             --draft --verify-tag \
             --title "OxiGuitar $VERSION" \
