@@ -187,6 +187,7 @@ build_rpm() {
         echo "%license /usr/share/licenses/oxiguitar/LICENSE"
         echo "/usr/bin/oxiguitar"
         echo "/usr/bin/oxiguitar-cli"
+        echo "/usr/lib/oxiguitar"
         echo "/usr/share/applications/$id.desktop"
         echo "/usr/share/mime/packages/$id.xml"
         echo "/usr/share/icons/hicolor/*/apps/$id.*"
