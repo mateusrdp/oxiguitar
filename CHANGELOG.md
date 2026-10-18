@@ -6,6 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- The test builds (Actions → Test builds) carry the test plugin apart, `oxiguitar-test-plugin-<system>`, with a README saying where to put it, for trying plugin tabs and events by hand.
 - `debian/`: both packages, `oxiguitar` and `oxiguitar-plugins-basic`, built the way Debian builds them (dh-cargo, `dpkg-buildpackage`, `-dbgsym` packages), in sid with no network, by the Debian workflow, which also runs lintian on them and installs them into a clean sid. The source is `scripts/debian/source.sh`'s: HEAD without our Noto Sans, which comes from `fonts-noto-core` (`Built-Using`), plus the crates in a vendor component until Debian has them all (`docs/debian.md`).
 - Manual pages for `oxiguitar` and `oxiguitar-cli` (`assets/linux/man/`), installed by the .deb and .rpm. Each .deb gains a Debian-format `changelog.gz` and `md5sums`, and the release workflow runs lintian from Debian sid on every .deb (`scripts/package/lintian.sh`): errors and warnings fail the release, but for the two tags about the contact being the issue tracker.
 - The crates against Debian (`scripts/debian/crate-audit.py`, the Debian workflow): every crate the Linux programs and the basic plugins are built from, both builds and both processors, checked against the `librust-*-dev` packages of Debian unstable, weekly and on every change to `Cargo.lock`. The report is the run's summary; it fails nothing.

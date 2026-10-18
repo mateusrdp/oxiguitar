@@ -59,6 +59,32 @@ jobs:
             target/release/plugins/*.oxp
           retention-days: 14
           if-no-files-found: error
+      # The test plugin (plugins/test, never shipped), apart, for trying
+      # plugin tabs and events by hand: two tabs with every widget and a
+      # canvas. Not beside the others, so a test build doesn't load it
+      # unless the tester puts it in their plugin folder.
+      - name: The test plugin
+        shell: bash
+        run: |
+          cargo run --locked --release -p oxiguitar-plugin-test -- --build oxiguitar-test-plugin test --release
+          mkdir -p test-plugin
+          cp target/oxp/test.oxp test-plugin/
+          cat > test-plugin/README.txt <<'TXT'
+          The OxiGuitar test plugin: tabs "panel" (bottom area: every widget and
+          a canvas) and "side" (right area), and every kind of event. Never
+          shipped; for trying plugin tabs by hand.
+
+          Put test.oxp in your plugin folder and start OxiGuitar:
+            Linux    ~/.local/share/oxiguitar/plugins/
+            Windows  %APPDATA%\OxiGuitar\plugins\
+          Remove it, or untick it in Tools > Plugins, when done.
+          TXT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oxiguitar-test-plugin-${{ matrix.name }}
+          path: test-plugin/
+          retention-days: 14
+          if-no-files-found: error
 
   macos:
     name: Build (macos-universal)
