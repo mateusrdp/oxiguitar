@@ -6,6 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- Two Linux builds (M2 slice 4): the Wayland build, the default and the main one, as the packages `oxiguitar` and `OxiGuitar-….AppImage`, and the X11 build, deprecated from the start, as `oxiguitar-x11` (which Provides, Conflicts with and Replaces `oxiguitar`) and `OxiGuitar-x11-….AppImage`. Each carries only its own display system's code (`oxiguitar-app` features `wayland` and `x11`; CI checks it with `scripts/check-display-crates.sh`). Wayland comes first (Mateus, 19 Oct 2026; ADR 0009): Slint is pinned to 1.17.1, Debian unstable's, because Slint 1.18's clipboard always carries X11 code and goes through XWayland on GNOME, while 1.17.1 uses the window's own Wayland connection; the Wayland build holds no X11 crate at all. A build started in a session it can't use says which build to install instead. Plugins' display conditions follow the build. NET-5 and the package tests start the Wayland build in a headless Weston (`scripts/package/in-wayland.sh`).
 - The plugin manager says plainly when a restart is needed: a plugin can't be unloaded while OxiGuitar runs, so a plugin unticked while in use is marked as staying in use until OxiGuitar restarts, the window shows "Restart OxiGuitar to apply these changes" while any change waits, and the footer says it too.
 - The plugin manager (M2 slice 3), part of the program: **Tools → Plugins…** opens a window of its own listing every plugin file in the plugin folders, with its name, version, folder and file, and what became of it (loaded, not loaded yet, disabled, not used because another file holds the same plugin, or why it can't be used). A tickbox enables or disables each plugin from the next start, written to `disabled` in settings.json. It only lists and switches: it never downloads, copies, installs or removes a file. `oxiguitar --safe-mode` starts with no plugin used at all, while the manager still lists them, and Help → About lists the plugin folders in the order they are searched.
 - Plugins' tabs in the window (M2 slice 3): each plugin tab joins the panel its manifest names, after OxiGuitar's own, and shows the plugin's widgets drawn with the window's own buttons, tickboxes, sliders, fields, drop-downs and lists, and its canvases drawn by our renderer at the screen's pixel density, as large as the room allows, following Dark Interface. A thread of their own asks the plugins and draws the canvases, so the window never waits for a plugin, and drags a plugin hasn't answered yet are merged. The app tells plugins when a score is opened or changed (a tool), and hands the open score to plugins that ask, shared rather than copied.
@@ -27,6 +28,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 - Manual: "The window" and "Settings and plugins".
 
 ### Changed
+
+- The score's tiles sit on whole device pixels, so no faint line shows between them (it did with Slint 1.17 when the page or the scroll position fell between two pixels).
 
 - Over the page, the mouse wheel now scrolls and Shift + wheel zooms the score around the pointer (Mateus, 18 Oct 2026; it was the other way round). Ctrl + wheel still zooms the interface.
 

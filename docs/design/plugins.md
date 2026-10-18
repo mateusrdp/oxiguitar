@@ -27,8 +27,15 @@ The core compiles per target, so a Windows build holds no Linux code. On Linux t
 
 | Build | Linux packages | Notes |
 | --- | --- | --- |
-| Wayland | `oxiguitar` (.deb, .rpm), `OxiGuitar-VERSION-x86_64.AppImage` | The default. Headless tests run it in a nested compositor (`scripts/wayland-dnd-test/` has the recipe). |
+| Wayland | `oxiguitar` (.deb, .rpm), `OxiGuitar-VERSION-x86_64.AppImage` | The default. Headless tests run it in a private headless Weston (`scripts/package/in-wayland.sh`; NET-5 and the package tests). |
 | X11 (deprecated) | `oxiguitar-x11`, which Provides, Conflicts with and Replaces `oxiguitar`; `OxiGuitar-x11-VERSION-x86_64.AppImage` | Same program, X11 backend only. Its window says nothing different; the manual says it will be dropped. |
+
+As built (slice 4):
+
+- `oxiguitar-app` has the features `wayland` (default: `slint/backend-winit-wayland`, `rfd/wayland`) and `x11` (`slint/backend-winit-x11`); a build with neither doesn't compile. Slint's own `unstable-winit-030` feature would turn on both display systems, so the app takes the raw window events (the wheel, Ctrl + wheel, file drops) from `i-slint-backend-winit` directly: the crate `slint::winit_030` re-exports, with no features of its own, at the exact version Slint pins.
+- The app tells the host its build's display system for plugins' conditions (`wayland` or `x11`), instead of guessing from the environment. A build started in a session it can't use (the Wayland build without a Wayland compositor, the X11 build without an X server) says which build to install instead, and exits.
+- **Wayland first** (Mateus, 19 Oct 2026; [ADR 0009](../adr/0009-wayland-first.md)): the Wayland build takes the Wayland path, and workarounds belong to the X11 build until it is dropped. So Slint is pinned to 1.17.1: Slint 1.18's clipboard (arboard) always carries X11 code and goes through XWayland on GNOME, while 1.17.1 uses smithay-clipboard on the window's own Wayland connection. The Wayland build holds no X11 crate at all.
+- `scripts/check-display-crates.sh` (CI's "Lint and docs") fails if the Wayland build holds any X11 crate (or turns on the keyboard maps' X11 support) or the X11 build any Wayland crate, on x86_64 and ARM64. CI also lints the X11 build, runs NET-5 on both builds (the Wayland one in a headless Weston, the X11 one under Xvfb), and the release workflow packages, installs and starts both (in Debian sid, Fedora and as AppImages; installing `oxiguitar-x11` replaces `oxiguitar`).
 
 ## The window
 

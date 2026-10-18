@@ -8,26 +8,41 @@
 # dpkg-shlibdeps are there; rpmbuild comes from the "rpm" package, the
 # AppImage needs squashfs-tools and the AppImage runtime, see below).
 #
-# Usage: scripts/package/linux.sh deb|rpm|appimage|all VERSION
+# Usage: scripts/package/linux.sh deb|rpm|appimage|all VERSION [wayland|x11]
 #   VERSION  the package version, from scripts/package/version.sh
-# Reads:  target/release/oxiguitar, target/release/oxiguitar-cli,
+#   wayland  the Wayland build (the default): packages `oxiguitar`
+#   x11      the X11 build, deprecated: packages `oxiguitar-x11`, which
+#            Provide, Conflict with and Replace `oxiguitar`
+#            (docs/design/plugins.md, the two Linux builds)
+# Reads:  target/release/oxiguitar (the Wayland build) or
+#         target/x11/release/oxiguitar (the X11 build, built with
+#         `--no-default-features --features x11 --target-dir target/x11`),
+#         target/release/oxiguitar-cli,
 #         target/lib/oxiguitar/plugins/*.oxp (scripts/build-plugins.sh),
 #         dist/THIRD-PARTY-LICENSES.html (scripts/package/licenses.sh)
 #         and, for the AppImage, $APPIMAGE_RUNTIME (the type 2 runtime for
 #         this architecture, from github.com/AppImage/type2-runtime).
 # Writes: dist/oxiguitar_VERSION_ARCH.deb, dist/oxiguitar-VERSION-1.ARCH.rpm,
-#         dist/OxiGuitar-VERSION-ARCH.AppImage
+#         dist/OxiGuitar-VERSION-ARCH.AppImage; for the X11 build
+#         dist/oxiguitar-x11_…deb, dist/oxiguitar-x11-…rpm and
+#         dist/OxiGuitar-x11-VERSION-ARCH.AppImage
 #
 # Only the .deb and the .rpm register the Guitar Pro file types (UI-4); the
 # AppImage registers nothing (the manual shows how to do it by hand).
 
 set -euo pipefail
 
-what="${1:?usage: linux.sh deb|rpm|appimage|all VERSION}"
-version="${2:?usage: linux.sh deb|rpm|appimage|all VERSION}"
+what="${1:?usage: linux.sh deb|rpm|appimage|all VERSION [wayland|x11]}"
+version="${2:?usage: linux.sh deb|rpm|appimage|all VERSION [wayland|x11]}"
+build="${3:-wayland}"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 id="io.github.mateusrdp.OxiGuitar"
 bin="$root/target/release"
+case "$build" in
+    wayland) app="$root/target/release/oxiguitar"; package=oxiguitar; appimage_name=OxiGuitar ;;
+    x11) app="$root/target/x11/release/oxiguitar"; package=oxiguitar-x11; appimage_name=OxiGuitar-x11 ;;
+    *) echo "unknown build $build: wayland or x11" >&2; exit 1 ;;
+esac
 dist="$root/dist"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -45,26 +60,44 @@ description="OxiGuitar opens Guitar Pro files (.gp, .gpx, .gp5, .gp4, .gp3) and
 shows them as standard notation and tablature in four layouts, with any
 set of tracks together, and exports them to PDF. Editing and playback
 follow in later versions. No telemetry: it never uploads anything."
+if [[ "$build" == x11 ]]; then
+    summary="$summary (X11 build, deprecated)"
+    description="$description
+
+This is the X11 build, for desktops that still run an X server. It is
+deprecated and will be dropped; desktops with Wayland should install the
+package oxiguitar instead."
+fi
 
 # Libraries the program loads at run time rather than links, so the
-# packaging tools cannot find them (checked with grep -ao 'lib.*\.so' on the
-# binary): Wayland, keyboard maps and EGL are needed; X11, GLX and D-Bus only
-# in X11 sessions and for some desktop services. The file dialogs go through
+# packaging tools cannot find them (checked with grep -ao 'lib.*\.so' on
+# each binary; the optimiser can split a name, as with libEGL.so.1). The
+# Wayland build needs Wayland, keyboard maps and EGL, and no X11 library
+# (the clipboard's XWayland fallback is pure Rust); the X11 build needs
+# Xlib and its extensions, keyboard maps and EGL, and GLX where EGL falls
+# short. D-Bus serves some desktop services; the file dialogs go through
 # the XDG desktop portal.
-deb_runtime="libwayland-client0, libwayland-egl1, libxkbcommon0, libegl1"
-deb_recommends="libxkbcommon-x11-0, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrender1, libgl1, libdbus-1-3, xdg-desktop-portal"
-rpm_runtime=(
-    "libwayland-client.so.0()(64bit)" "libwayland-egl.so.1()(64bit)"
-    "libxkbcommon.so.0()(64bit)" "libEGL.so.1()(64bit)"
-)
-rpm_recommends=(
-    "libxkbcommon-x11.so.0()(64bit)" "libX11.so.6()(64bit)" "libX11-xcb.so.1()(64bit)"
-    "libXcursor.so.1()(64bit)" "libXi.so.6()(64bit)" "libXrender.so.1()(64bit)"
-    "libGL.so.1()(64bit)" "libdbus-1.so.3()(64bit)" "xdg-desktop-portal"
-)
+if [[ "$build" == wayland ]]; then
+    deb_runtime="libwayland-client0, libwayland-egl1, libxkbcommon0, libegl1"
+    deb_recommends="libdbus-1-3, xdg-desktop-portal"
+    rpm_runtime=(
+        "libwayland-client.so.0()(64bit)" "libwayland-egl.so.1()(64bit)"
+        "libxkbcommon.so.0()(64bit)" "libEGL.so.1()(64bit)"
+    )
+    rpm_recommends=("libdbus-1.so.3()(64bit)" "xdg-desktop-portal")
+else
+    deb_runtime="libxkbcommon0, libxkbcommon-x11-0, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrender1, libegl1"
+    deb_recommends="libgl1, libdbus-1-3, xdg-desktop-portal"
+    rpm_runtime=(
+        "libxkbcommon.so.0()(64bit)" "libxkbcommon-x11.so.0()(64bit)"
+        "libX11.so.6()(64bit)" "libX11-xcb.so.1()(64bit)" "libXcursor.so.1()(64bit)"
+        "libXi.so.6()(64bit)" "libXrender.so.1()(64bit)" "libEGL.so.1()(64bit)"
+    )
+    rpm_recommends=("libGL.so.1()(64bit)" "libdbus-1.so.3()(64bit)" "xdg-desktop-portal")
+fi
 
-for f in oxiguitar oxiguitar-cli; do
-    [[ -x "$bin/$f" ]] || { echo "missing $bin/$f: build it first" >&2; exit 1; }
+for f in "$app" "$bin/oxiguitar-cli"; do
+    [[ -x "$f" ]] || { echo "missing $f: build it first" >&2; exit 1; }
 done
 # Our plugins, until the core and oxiguitar-plugins-basic are packaged
 # apart (ROADMAP.md, M2's packaging slice): scripts/build-plugins.sh.
@@ -81,7 +114,7 @@ compgen -G "$plugins/*.oxp" > /dev/null || {
 # The files every package installs, under a /usr prefix.
 stage() {
     local to="$1"
-    install -Dm755 "$bin/oxiguitar" "$to/usr/bin/oxiguitar"
+    install -Dm755 "$app" "$to/usr/bin/oxiguitar"
     install -Dm755 "$bin/oxiguitar-cli" "$to/usr/bin/oxiguitar-cli"
     install -d "$to/usr/lib/oxiguitar/plugins"
     install -m644 "$plugins"/*.oxp "$to/usr/lib/oxiguitar/plugins/"
@@ -93,7 +126,7 @@ stage() {
     done
     install -Dm644 "$root/assets/icon/oxiguitar-placeholder.svg" \
         "$to/usr/share/icons/hicolor/scalable/apps/$id.svg"
-    local doc="$to/usr/share/doc/oxiguitar"
+    local doc="$to/usr/share/doc/$package"
     install -Dm644 "$root/README.md" "$doc/README.md"
     install -Dm644 "$root/CHANGELOG.md" "$doc/CHANGELOG.md"
     install -Dm644 "$root/CREDITS.md" "$doc/CREDITS.md"
@@ -116,8 +149,8 @@ build_deb() {
         echo "License: GPL-3.0-or-later"
         echo " The distributed program is under GPL-3.0 (Slint is GPL-3.0-only)."
         echo " On Debian systems the full licence is in /usr/share/common-licenses/GPL-3."
-        echo " Third-party licences: /usr/share/doc/oxiguitar/THIRD-PARTY-LICENSES.html"
-    } > "$tree/usr/share/doc/oxiguitar/copyright"
+        echo " Third-party licences: /usr/share/doc/$package/THIRD-PARTY-LICENSES.html"
+    } > "$tree/usr/share/doc/$package/copyright"
 
     # Linked libraries, as dpkg-shlibdeps finds them (it wants a debian/
     # folder to stand in).
@@ -130,7 +163,7 @@ build_deb() {
     size="$(du -sk --exclude=DEBIAN "$tree" | cut -f1)"
     mkdir -p "$tree/DEBIAN"
     {
-        echo "Package: oxiguitar"
+        echo "Package: $package"
         echo "Version: $version"
         echo "Architecture: $deb_arch"
         # Contact is always the GitHub issue tracker, never a personal email
@@ -142,6 +175,12 @@ build_deb() {
         echo "Installed-Size: $size"
         echo "Depends: ${linked:+$linked, }$deb_runtime"
         echo "Recommends: $deb_recommends"
+        if [[ "$build" == x11 ]]; then
+            # The same program for another display system: one or the other.
+            echo "Provides: oxiguitar"
+            echo "Conflicts: oxiguitar"
+            echo "Replaces: oxiguitar"
+        fi
         echo "Section: sound"
         echo "Priority: optional"
         echo "Homepage: https://github.com/mateusrdp/oxiguitar"
@@ -151,7 +190,7 @@ build_deb() {
     } > "$tree/DEBIAN/control"
     # The mime, desktop and icon databases are rebuilt by the triggers of
     # shared-mime-info, desktop-file-utils and the icon themes: no scripts.
-    local out="$dist/oxiguitar_${version}_${deb_arch}.deb"
+    local out="$dist/${package}_${version}_${deb_arch}.deb"
     dpkg-deb --root-owner-group -Zxz --build "$tree" "$out"
     dpkg-deb --info "$out"
     echo "Built $out"
@@ -160,10 +199,10 @@ build_deb() {
 build_rpm() {
     local tree="$work/rpm-root"
     stage "$tree"
-    install -Dm644 "$root/LICENSE" "$tree/usr/share/licenses/oxiguitar/LICENSE"
-    local spec="$work/oxiguitar.spec"
+    install -Dm644 "$root/LICENSE" "$tree/usr/share/licenses/$package/LICENSE"
+    local spec="$work/$package.spec"
     {
-        echo "Name: oxiguitar"
+        echo "Name: $package"
         # rpm versions may not contain '-'; '~' sorts before the release.
         echo "Version: ${version//-/.}"
         echo "Release: 1"
@@ -172,6 +211,10 @@ build_rpm() {
         echo "URL: https://github.com/mateusrdp/oxiguitar"
         for r in "${rpm_runtime[@]}"; do echo "Requires: $r"; done
         for r in "${rpm_recommends[@]}"; do echo "Recommends: $r"; done
+        if [[ "$build" == x11 ]]; then
+            echo "Provides: oxiguitar = ${version//-/.}"
+            echo "Conflicts: oxiguitar"
+        fi
         # The binaries are built and stripped by Cargo.
         echo "%global debug_package %{nil}"
         echo "%global __os_install_post %{nil}"
@@ -184,14 +227,14 @@ build_rpm() {
         echo "cp -a '$tree/.' %{buildroot}/"
         echo
         echo "%files"
-        echo "%license /usr/share/licenses/oxiguitar/LICENSE"
+        echo "%license /usr/share/licenses/$package/LICENSE"
         echo "/usr/bin/oxiguitar"
         echo "/usr/bin/oxiguitar-cli"
         echo "/usr/lib/oxiguitar"
         echo "/usr/share/applications/$id.desktop"
         echo "/usr/share/mime/packages/$id.xml"
         echo "/usr/share/icons/hicolor/*/apps/$id.*"
-        echo "%doc /usr/share/doc/oxiguitar"
+        echo "%doc /usr/share/doc/$package"
     } > "$spec"
     # Fedora's shared-mime-info and desktop-file-utils rebuild their
     # databases with file triggers, so the package needs no scriptlets.
@@ -221,7 +264,7 @@ build_appimage() {
     cp "$root/assets/icon/png/oxiguitar-256.png" "$dir/.DirIcon"
     ln -s usr/bin/oxiguitar "$dir/AppRun"
     mksquashfs "$dir" "$work/image.squashfs" -root-owned -noappend -comp zstd -quiet
-    local out="$dist/OxiGuitar-$version-$arch.AppImage"
+    local out="$dist/$appimage_name-$version-$arch.AppImage"
     cat "$runtime" "$work/image.squashfs" > "$out"
     chmod 755 "$out"
     echo "Built $out"

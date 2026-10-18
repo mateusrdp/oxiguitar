@@ -28,6 +28,7 @@ Releases come as a portable .exe for Windows (in a zip); an AppImage, a .deb and
 
 - **Debian, Ubuntu:** `sudo apt install ./oxiguitar_VERSION_amd64.deb` (or `_arm64.deb`).
 - **Fedora:** `sudo dnf install ./oxiguitar-VERSION-1.x86_64.rpm` (or `.aarch64.rpm`).
+- **Linux on X11:** the packages above are the Wayland build, for today's desktops. A desktop without Wayland needs the X11 build: `oxiguitar-x11_….deb`, `oxiguitar-x11-….rpm` or `OxiGuitar-x11-….AppImage`. It is deprecated and will be dropped. Each build carries only its own display system's code, and installing one package replaces the other.
 
 None of the packages is code-signed yet, so the first launch shows a warning:
 
@@ -58,6 +59,8 @@ Run the desktop app, optionally with a file to open:
 ```sh
 cargo run --release -p oxiguitar-app -- path/to/your/song.gp
 ```
+
+That is the Wayland build, the default. On a desktop with only an X server, build the X11 one instead: `cargo run --release -p oxiguitar-app --no-default-features --features x11 -- song.gp`. Each build carries only its own display system's code, and says which build you need if it can't find its session.
 
 It opens Guitar Pro 3 to 8 files and shows them in four layouts (View → Layout), with a dark page, the track list (F8), the Tools menu and PDF export. On Linux, the Open and Export dialogs come from the desktop portal (`xdg-desktop-portal` with your desktop's backend, installed by default with GNOME and KDE). The binary is `target/release/oxiguitar`; it finds the plugins in `target/lib/oxiguitar/plugins/`, and in your own plugin folder ([Settings and plugins](https://mateusrdp.github.io/oxiguitar/plugins.html)). On Wayland, desktops take an app's icon from its desktop entry rather than from the window; to give a build from source (or an AppImage) its icon, a menu entry and the Guitar Pro file types, run `scripts/install-desktop-entry.sh [path to the program]` (it writes only to `~/.local/share`; `--uninstall` removes it).
 

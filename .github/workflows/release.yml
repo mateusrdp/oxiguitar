@@ -1,6 +1,7 @@
 # Release packages: a portable .exe in a zip (Windows x86_64 and ARM64), an
-# AppImage, a .deb and an .rpm (Linux x86_64 and ARM64) and a universal .dmg
-# (macOS), none of them code-signed.
+# AppImage, a .deb and an .rpm of each Linux build (Wayland: oxiguitar; X11,
+# deprecated: oxiguitar-x11; x86_64 and ARM64) and a universal .dmg (macOS),
+# none of them code-signed.
 #
 # - A pushed v* tag (only Mateus creates them) builds everything and attaches
 #   it, with SHA256SUMS, to a draft release for him to check and publish.
@@ -30,6 +31,7 @@ on:
       - assets/macos/**
       - assets/icon/**
       - crates/oxiguitar-app/build.rs
+      - crates/oxiguitar-app/Cargo.toml
       - crates/oxiguitar-app/build/**
 
 permissions:
@@ -93,8 +95,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libfontconfig1-dev libxkbcommon-dev libwayland-dev \
-            rpm squashfs-tools xvfb xauth libxkbcommon-x11-0 libgl1-mesa-dri libegl1
+            rpm squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
+      # The two Linux builds of the app (docs/design/plugins.md): the
+      # Wayland one, the default, and the deprecated X11 one in a target
+      # folder of its own.
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      - run: cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
       # Our plugins (target/lib/oxiguitar/plugins/), which every package
       # installs until the core and the basic plugins are packaged apart.
       - run: scripts/build-plugins.sh
@@ -109,14 +115,18 @@ jobs:
             "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-${{ matrix.arch }}"
           sha256sum "$RUNNER_TEMP/runtime"
           echo "APPIMAGE_RUNTIME=$RUNNER_TEMP/runtime" >> "$GITHUB_ENV"
-      - run: scripts/package/linux.sh all "$VERSION"
-      - name: Test the .deb on Debian sid
+      - run: scripts/package/linux.sh all "$VERSION" wayland
+      - run: scripts/package/linux.sh all "$VERSION" x11
+      # Each package is started in its own kind of session: the Wayland build
+      # in a headless Weston (scripts/package/in-wayland.sh), the X11 build
+      # under Xvfb. Installing oxiguitar-x11 replaces oxiguitar.
+      - name: Test the .deb packages on Debian sid
         run: |
           docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euxc '
             apt-get update
             # The databases first, so the package triggers rebuild them.
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-              shared-mime-info desktop-file-utils xvfb xauth libgl1-mesa-dri
+              shared-mime-info desktop-file-utils xvfb xauth weston libgl1-mesa-dri
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
             dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends):"
             test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
@@ -124,45 +134,84 @@ jobs:
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             grep -q "application/x-gtp=io.github.mateusrdp.OxiGuitar.desktop" /usr/share/applications/mimeinfo.cache
             desktop-file-validate /usr/share/applications/io.github.mateusrdp.OxiGuitar.desktop
+            OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar "$0"
+            # The X11 build takes its place.
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-x11_*.deb
+            ! dpkg -s oxiguitar 2> /dev/null | grep -q "^Status: install ok installed"
+            dpkg -s oxiguitar-x11 | grep -E "^(Version|Depends|Recommends|Provides|Conflicts|Replaces):"
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
-            apt-get remove -y oxiguitar
+            apt-get remove -y oxiguitar-x11
           ' "$SAMPLE"
-      - name: Test the .rpm on Fedora
+      - name: Test the .rpm packages on Fedora
         run: |
           docker run --rm -v "$PWD:/w" -w /w fedora:latest bash -euxc '
-            dnf install -y shared-mime-info desktop-file-utils xorg-x11-server-Xvfb xorg-x11-xauth mesa-dri-drivers mesa-libEGL
-            dnf install -y ./dist/oxiguitar-*.rpm
+            dnf install -y shared-mime-info desktop-file-utils xorg-x11-server-Xvfb xorg-x11-xauth weston mesa-dri-drivers mesa-libEGL
+            dnf install -y $(ls ./dist/oxiguitar-*.rpm | grep -v oxiguitar-x11)
             rpm -q --requires oxiguitar
             test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
-            OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
+            OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar "$0"
             dnf remove -y oxiguitar
+            dnf install -y ./dist/oxiguitar-x11-*.rpm
+            rpm -q --provides oxiguitar-x11 | grep -q "^oxiguitar = "
+            OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
+            dnf remove -y oxiguitar-x11
           ' "$SAMPLE"
-      - name: Test the AppImage
+      - name: Test the AppImages
         run: |
-          appimage="$(ls dist/OxiGuitar-*.AppImage)"
-          (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
-          test -x "$RUNNER_TEMP/squashfs-root/AppRun"
-          test "$(ls "$RUNNER_TEMP"/squashfs-root/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
-          "$RUNNER_TEMP/squashfs-root/usr/bin/oxiguitar-cli" info "$SAMPLE" > /dev/null
-          # Without FUSE on the runner, the runtime unpacks and runs.
-          APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a "$appimage" "$SAMPLE"
+          for build in wayland x11; do
+            if [ "$build" = wayland ]; then
+              appimage="$(ls dist/OxiGuitar-*.AppImage | grep -v OxiGuitar-x11)"
+              run="scripts/package/in-wayland.sh"
+            else
+              appimage="$(ls dist/OxiGuitar-x11-*.AppImage)"
+              run="xvfb-run -a"
+            fi
+            rm -rf "$RUNNER_TEMP/squashfs-root"
+            (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
+            test -x "$RUNNER_TEMP/squashfs-root/AppRun"
+            test "$(ls "$RUNNER_TEMP"/squashfs-root/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
+            "$RUNNER_TEMP/squashfs-root/usr/bin/oxiguitar-cli" info "$SAMPLE" > /dev/null
+            # Without FUSE on the runner, the runtime unpacks and runs.
+            APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 $run "$appimage" "$SAMPLE"
+          done
+      # With archive: false a step uploads exactly one file, so one step
+      # per package; each pattern matches one (versions start with a digit).
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.deb
+          path: dist/oxiguitar_*.deb
           archive: false
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.rpm
+          path: dist/oxiguitar-x11_*.deb
           archive: false
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.AppImage
+          path: dist/oxiguitar-[0-9]*.rpm
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/oxiguitar-x11-*.rpm
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-[0-9]*.AppImage
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-x11-*.AppImage
           archive: false
           retention-days: 14
           if-no-files-found: error
@@ -316,17 +365,18 @@ jobs:
           skip-decompress: true
       - name: Check the packages
         run: |
-          # Exactly the nine packages, each a file: a .deb, an .rpm and an
-          # AppImage for each Linux architecture, a zip for each Windows
-          # architecture and the universal .dmg.
+          # Exactly the fifteen packages, each a file: a .deb, an .rpm and
+          # an AppImage of each Linux build (Wayland, X11) for each Linux
+          # architecture, a zip for each Windows architecture and the
+          # universal .dmg.
           find dist -mindepth 1 -maxdepth 1 -printf '%y %s %f\n' | sort -k3
           if find dist -mindepth 1 -maxdepth 1 ! -type f | grep -q .; then
             echo "::error::dist/ holds something that is not a file" >&2
             exit 1
           fi
           count="$(find dist -mindepth 1 -maxdepth 1 -type f | wc -l)"
-          if [ "$count" -ne 9 ]; then
-            echo "::error::expected 9 packages in dist/, found $count" >&2
+          if [ "$count" -ne 15 ]; then
+            echo "::error::expected 15 packages in dist/, found $count" >&2
             exit 1
           fi
           for f in dist/*.zip; do

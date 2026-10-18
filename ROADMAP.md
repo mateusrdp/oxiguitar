@@ -106,7 +106,7 @@ Turn the viewer into a small core with plugins, and give the window the shape th
 - [x] ~~Plugins for PDF export and for Infer Key Signatures~~: dropped. Both stay in the core, PDF export as a feature of the viewer and Infer Key Signatures as a feature of the editor (Mateus, 18 Oct 2026).
 - [ ] Plugin tabs (standard widgets and a display-list canvas) and events pushed to plugins; the plugin manager in the core (Tools → Plugins: list, enable, disable); `--safe-mode`; the plugin folders in Help → About. Built in session 11 (interface 1.1 in #53, the window's tabs and score events, the manager); left to tick: Mateus's check on sid.
 - [ ] Plugins built for all six targets in CI, attached to releases with SHA256SUMS; two packages, `oxiguitar` (the core) and `oxiguitar-plugins-basic` (Suggested by the core); the AppImage, the Windows zip and the .dmg each beside a zip of the basic plugins.
-- [ ] Two Linux builds of the core: Wayland (default) and X11 (deprecated), as separate packages and AppImages.
+- [x] Two Linux builds of the core: Wayland (default) and X11 (deprecated), as separate packages and AppImages (session 11): each holds only its own display system's code (checked in CI), with no exception (Slint pinned to 1.17.1 for a Wayland-only clipboard, ADR 0009); both are packaged, installed and started in CI.
 - [ ] The plugin developer guide (`docs/plugins/`), with a template plugin, and the interface's contract test suite.
 - [ ] Debian: manual pages for both binaries, lintian in CI, a `debian/` directory building both packages offline in a sid container, and an audit of every crate against Debian's archive (plugins.md, "Debian"). The goal is Debian main.
 
@@ -137,7 +137,7 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
    - In the core: `--safe-mode` (no plugins at all) and the plugin folders in Help → About.
    - Interface additions only at the ends of enums and tables, as minor versions.
    - Gates: the contract suite covers tabs, widgets, canvas and events; the manager works on all three systems (headless on Linux; contract tests everywhere; Mateus on sid); every existing gate stays green; no new `unsafe`; no polling.
-4. **Two Linux builds.**
+4. **Two Linux builds.** Built in session 11 (18 Oct 2026). Slint's `unstable-winit-030` turns on both display systems, so the app takes `i-slint-backend-winit` directly; Wayland first (Mateus, 19 Oct 2026): Slint is pinned to 1.17.1, whose Wayland clipboard uses the window's own connection, so the Wayland build holds no X11 crate (ADR 0009).
    - `oxiguitar-app` features `wayland` (default) and `x11`, each enabling only Slint's `backend-winit-wayland` or `backend-winit-x11`; `display_system()` then follows the build.
    - Packages `oxiguitar` and `oxiguitar-x11` (which Provides, Conflicts with and Replaces `oxiguitar`), and two AppImages; the manual says the X11 build will be dropped.
    - CI checks that the Wayland build holds no X11 crate and the reverse, and runs the Wayland build's headless tests in the nested compositor (`scripts/wayland-dnd-test/`).

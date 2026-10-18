@@ -40,7 +40,7 @@ Direct dependencies so far, all Rust (the desktop app also links the system's fo
 | [object](https://github.com/gimli-rs/object) 0.37 | The gimli-rs developers | Apache-2.0 OR MIT | Reading a plugin's manifest section without loading the plugin |
 | [libloading](https://github.com/nagisa/rust_libloading) 0.8 | Simonas Kazlauskas | ISC | Loading plugins |
 | [quick-xml](https://github.com/tafia/quick-xml) 0.42 | Johann Tuffe, Mingun and contributors | MIT | GPIF (Guitar Pro 6–8); later MusicXML and .mscx |
-| [Slint](https://slint.dev) 1.18 | SixtyFPS GmbH and contributors | GPL-3.0-only (one of its three licences; the one we use) | The desktop window (ADR 0004). Because Slint is GPL-3.0-only, the distributed app is under GPL-3.0. Its dependencies include winit, femtovg and AccessKit; we build it without its system-tray support |
+| [Slint](https://slint.dev) 1.17 | SixtyFPS GmbH and contributors | GPL-3.0-only (one of its three licences; the one we use) | The desktop window (ADR 0004). Because Slint is GPL-3.0-only, the distributed app is under GPL-3.0. Its dependencies include winit, femtovg and AccessKit; we build it without its system-tray support |
 | [rfd](https://github.com/PolyMeilex/rfd) 0.17 | Bartłomiej Maryńczak (PolyMeilex) and contributors | MIT | The system's Open and Save dialogs (the XDG desktop portal on Linux, no GTK) |
 
 Tools used only to test OxiGuitar, never part of what it ships:

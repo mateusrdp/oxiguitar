@@ -38,6 +38,12 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      # Linux has two builds of the app (docs/design/plugins.md): oxiguitar
+      # is the Wayland one, oxiguitar-x11 the deprecated X11 one.
+      - if: runner.os == 'Linux'
+        run: |
+          cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
+          cp target/x11/release/oxiguitar target/release/oxiguitar-x11
       # Our plugins where the programs look for them: lib/oxiguitar/plugins/
       # beside bin's parent on Linux, plugins\ beside the .exe on Windows.
       - run: scripts/build-plugins.sh
@@ -47,6 +53,7 @@ jobs:
           name: oxiguitar-${{ matrix.name }}
           path: |
             target/release/oxiguitar${{ matrix.exe }}
+            target/release/oxiguitar-x11
             target/release/oxiguitar-cli${{ matrix.exe }}
             target/lib/oxiguitar/plugins/*.oxp
             target/release/plugins/*.oxp
