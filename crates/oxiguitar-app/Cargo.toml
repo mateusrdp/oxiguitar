@@ -14,8 +14,9 @@ name = "oxiguitar"
 path = "src/main.rs"
 
 [dependencies]
-oxiguitar-model.workspace = true
-oxiguitar-formats.workspace = true
+# The score as format plugins hand it over (`wire`); the core reads no
+# format itself.
+oxiguitar-model = { workspace = true, features = ["wire"] }
 oxiguitar-display.workspace = true
 oxiguitar-layout.workspace = true
 oxiguitar-render.workspace = true
@@ -45,6 +46,8 @@ rfd = { version = "0.17", default-features = false, features = ["xdg-portal", "w
 [dev-dependencies]
 # The speed budget's 300-bar, 8-track score (src/speed.rs).
 oxiguitar-testgen.workspace = true
+# Our format plugins, built as .oxp files for the tests (src/test_support.rs).
+oxiguitar-plugin-test.workspace = true
 
 [build-dependencies]
 slint-build = "1.18"

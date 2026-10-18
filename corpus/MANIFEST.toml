@@ -3,15 +3,19 @@
 #
 # To check you have the same files: put the two sets in corpus/files/tabs and
 # corpus/files/scores, then run
-#   cargo run --release -p oxiguitar-cli -- manifest corpus/files/tabs corpus/files/scores
+#   cargo run --release -p oxiguitar-formats --example corpus_manifest -- corpus/files/tabs corpus/files/scores
 # and compare the output with the [[file]] entries below.
 #
-# To read every file and see what fails:
+# To read every file through our format plugins and see what fails (after
+# scripts/build-plugins.sh):
 #   cargo run --release -p oxiguitar-cli -- info corpus/files/tabs/* corpus/files/scores/*
 #
 # The corpus tests read every GPX and GP file and compare songs saved in two
-# formats; they run only when corpus/files/ is present:
+# formats, and read every Guitar Pro file through the plugins' .oxp files
+# exactly as in-process (42 of 42 Guitar Pro 5 and later); they run only
+# when corpus/files/ is present:
 #   cargo test --release -p oxiguitar-formats --test corpus -- --nocapture
+#   cargo test --release -p oxiguitar-plugin-test --test ours -- --nocapture
 
 [sets.tabs]
 received = 2026-10-15

@@ -10,24 +10,10 @@ use std::path::{Path, PathBuf};
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet, Theme};
+use oxiguitar_host::Plugins;
 use oxiguitar_layout::{Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::Score;
 use oxiguitar_tools::Availability;
-
-/// The formats the core still reads by itself. In M2 each moves into its
-/// own format plugin (docs/design/plugins.md); until then the plugin host
-/// counts them, so the footer doesn't say nothing can open files.
-pub(crate) const BUILT_IN_READERS: &[&str] = &[
-    "Guitar Pro 3 (.gp3)",
-    "Guitar Pro 4 (.gp4)",
-    "Guitar Pro 5 (.gp5)",
-    "Guitar Pro 6 (.gpx)",
-    "Guitar Pro 7–8 (.gp)",
-];
-
-/// File → Open's filter: the extensions of the formats above, and Guitar
-/// Pro 1–2's (detected and refused with a message).
-pub(crate) const OPEN_EXTENSIONS: &[&str] = &["gp", "gpx", "gp5", "gp4", "gp3", "gtp"];
 
 /// How the score is shown: what the View menu and the track list set.
 #[derive(Clone, Debug, PartialEq)]
@@ -97,14 +83,25 @@ pub(crate) struct Document {
 }
 
 impl Document {
-    /// Reads a score file. The error is a sentence for the status line.
-    pub(crate) fn open(path: &Path) -> Result<Document, String> {
+    /// Reads a score file with the format plugin that recognises it (the
+    /// core reads no format itself). The error is a sentence for the footer.
+    pub(crate) fn open(path: &Path, plugins: &Plugins) -> Result<Document, String> {
         let name = file_name(path);
         let data = std::fs::read(path).map_err(|e| format!("Cannot open {name}: {e}."))?;
-        let imported = oxiguitar_formats::read(&data).map_err(|e| format!("{name}: {e}"))?;
+        let extension = path.extension().and_then(|e| e.to_str());
+        let format = plugins
+            .recognise(&data, extension)
+            .map_err(|why| format!("{name}: {why}"))?;
+        let plugin = format.plugin.name();
+        let read = plugins
+            .read(format, &data)
+            .map_err(|e| format!("{name}: {e}"))?;
+        let score = oxiguitar_model::wire::from_wire(read.score).map_err(|e| {
+            format!("{name}: the {plugin} plugin gave a score this OxiGuitar can't hold ({e}).")
+        })?;
         Ok(Document {
             path: path.to_owned(),
-            score: imported.score,
+            score,
         })
     }
 
@@ -240,9 +237,13 @@ mod tests {
             .join(format!("oxiguitar-test-song.{ext}"))
     }
 
+    fn open(path: &Path) -> Result<Document, String> {
+        Document::open(path, crate::test_plugins())
+    }
+
     #[test]
     fn opens_engraves_and_exports() {
-        let doc = Document::open(&fixture("gp")).unwrap();
+        let doc = open(&fixture("gp")).unwrap();
         assert!(!doc.tracks().is_empty());
         assert_eq!(doc.pdf_name(), "oxiguitar-test-song.pdf");
         let e = Engraver::new().unwrap();
@@ -269,22 +270,41 @@ mod tests {
 
     #[test]
     fn errors_are_sentences() {
-        let missing = Document::open(Path::new("/no/such/file.gp5"))
-            .err()
-            .unwrap();
+        let missing = open(Path::new("/no/such/file.gp5")).err().unwrap();
         assert!(missing.starts_with("Cannot open file.gp5"), "{missing}");
         let dir = std::env::temp_dir().join(format!("oxiguitar-app-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let junk = dir.join("junk.gp");
         std::fs::write(&junk, b"not a score").unwrap();
-        let err = Document::open(&junk).err().unwrap();
-        assert!(err.starts_with("junk.gp: "), "{err}");
+        let err = open(&junk).err().unwrap();
+        assert!(
+            err.starts_with(
+                "junk.gp: the Guitar Pro 7–8 plugin opens .gp files but doesn't recognise this one"
+            ),
+            "{err}"
+        );
+        let text = dir.join("notes.txt");
+        std::fs::write(&text, b"not a score").unwrap();
+        let err = open(&text).err().unwrap();
+        assert!(
+            err.starts_with("notes.txt: no installed plugin recognises this file"),
+            "{err}"
+        );
+        let broken = dir.join("broken.gp5");
+        let mut data = std::fs::read(fixture("gp5")).unwrap();
+        data.truncate(200);
+        std::fs::write(&broken, data).unwrap();
+        let err = open(&broken).err().unwrap();
+        assert!(
+            err.starts_with("broken.gp5: the file ends too early"),
+            "{err}"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn only_fretted_tracks_default_to_tab() {
-        let doc = Document::open(&fixture("gp5")).unwrap();
+        let doc = open(&fixture("gp5")).unwrap();
         for (info, track) in doc.tracks().iter().zip(&doc.score.tracks) {
             assert_eq!(
                 info.default_notation.tablature,
@@ -296,7 +316,7 @@ mod tests {
 
     #[test]
     fn tools_menu_and_apply() {
-        let mut doc = Document::open(&fixture("gp5")).unwrap();
+        let mut doc = open(&fixture("gp5")).unwrap();
         let tools = doc.tools();
         assert_eq!(tools.len(), oxiguitar_tools::all().len());
         let report = doc.apply_tool(0);

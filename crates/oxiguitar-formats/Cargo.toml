@@ -9,10 +9,27 @@ authors.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+# One feature per reader, so each format plugin carries only its own reader
+# (docs/design/plugins.md). Everything by default, for tests and tools.
+[features]
+default = ["gp3", "gp4", "gp5", "gpx", "gp", "plugin"]
+# Guitar Pro 3, 4 and 5 share one binary reader; each version's own code is
+# built only with its feature.
+gp3 = []
+gp4 = []
+gp5 = []
+# Guitar Pro 6 (.gpx) and 7–8 (.gp) share the GPIF (XML) reader.
+gpx = ["dep:quick-xml"]
+gp = ["dep:quick-xml", "dep:zip"]
+# What a format plugin needs: the read score and its log as they cross the
+# plugin interface (`plugin` module).
+plugin = ["dep:oxiguitar-plugin", "oxiguitar-model/wire"]
+
 [dependencies]
 oxiguitar-model.workspace = true
-zip.workspace = true
-quick-xml.workspace = true
+zip = { workspace = true, optional = true }
+quick-xml = { workspace = true, optional = true }
+oxiguitar-plugin = { workspace = true, optional = true }
 
 [dev-dependencies]
 # Test support writes .gp fixtures.

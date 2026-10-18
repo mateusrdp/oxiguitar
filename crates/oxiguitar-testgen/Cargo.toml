@@ -15,7 +15,11 @@ zip.workspace = true
 
 [dev-dependencies]
 oxiguitar-formats.workspace = true
-oxiguitar-model.workspace = true
+oxiguitar-model = { workspace = true, features = ["wire"] }
+# tests/visual.rs reads the references through our format plugin, as the
+# app does.
+oxiguitar-host.workspace = true
+oxiguitar-plugin-test.workspace = true
 oxiguitar-display.workspace = true
 oxiguitar-render.workspace = true
 tiny-skia.workspace = true

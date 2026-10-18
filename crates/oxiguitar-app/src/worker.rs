@@ -16,7 +16,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::JoinHandle;
 
 use oxiguitar_display::{Rect, Theme};
-use oxiguitar_host::Level;
+use oxiguitar_host::{Level, Plugins};
 use oxiguitar_render::Raster;
 
 use crate::canvas::Sheets;
@@ -94,12 +94,13 @@ pub(crate) struct Worker {
 }
 
 impl Worker {
-    /// Starts the worker; `sink` receives its events, on the worker thread.
-    pub(crate) fn start(sink: impl Fn(Event) + Send + 'static) -> Worker {
+    /// Starts the worker, which opens files through `plugins`; `sink`
+    /// receives its events, on the worker thread.
+    pub(crate) fn start(plugins: Plugins, sink: impl Fn(Event) + Send + 'static) -> Worker {
         let (requests, rx) = channel();
         let thread = std::thread::Builder::new()
             .name("oxiguitar-worker".to_owned())
-            .spawn(move || run(&rx, &sink))
+            .spawn(move || run(&rx, plugins, &sink))
             .ok();
         Worker { requests, thread }
     }
@@ -127,6 +128,7 @@ impl Drop for Worker {
 }
 
 struct State {
+    plugins: Plugins,
     engraver: Engraver,
     doc: Option<Document>,
     settings: Settings,
@@ -135,7 +137,7 @@ struct State {
     raster: Raster,
 }
 
-fn run(rx: &Receiver<Request>, sink: &dyn Fn(Event)) {
+fn run(rx: &Receiver<Request>, plugins: Plugins, sink: &dyn Fn(Event)) {
     let engraver = match Engraver::new() {
         Ok(e) => e,
         Err(e) => {
@@ -144,6 +146,7 @@ fn run(rx: &Receiver<Request>, sink: &dyn Fn(Event)) {
         }
     };
     let mut st = State {
+        plugins,
         engraver,
         doc: None,
         settings: Settings::default(),
@@ -249,7 +252,7 @@ fn run(rx: &Receiver<Request>, sink: &dyn Fn(Event)) {
 }
 
 fn open(st: &mut State, path: PathBuf, sink: &dyn Fn(Event)) {
-    match Document::open(&path) {
+    match Document::open(&path, &st.plugins) {
         Ok(doc) => {
             sink(Event::Opened {
                 tracks: doc.tracks(),
@@ -297,7 +300,7 @@ mod tests {
     #[test]
     fn open_engrave_draw_and_export() {
         let (tx, rx) = channel();
-        let worker = Worker::start(move |e| {
+        let worker = Worker::start(crate::test_plugins().clone(), move |e| {
             let _ = tx.send(e);
         });
         worker.send(Request::Open(fixture()));
@@ -374,7 +377,7 @@ mod tests {
     #[test]
     fn a_bad_file_reports_and_keeps_going() {
         let (tx, rx) = channel();
-        let worker = Worker::start(move |e| {
+        let worker = Worker::start(crate::test_plugins().clone(), move |e| {
             let _ = tx.send(e);
         });
         worker.send(Request::Open(PathBuf::from("/no/such/song.gp")));

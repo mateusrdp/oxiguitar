@@ -5,9 +5,8 @@
 //!
 //! A plugin is one `.oxp` file (docs/design/plugins.md, "Plugin files").
 //! The inventory is what the plugins' manifests say the program can do,
-//! without loading any plugin. The readers of M1 are still built into the
-//! core until they move into plugins, so the caller says which formats the
-//! core can read and write by itself.
+//! without loading any plugin. The core reads and writes no format by
+//! itself.
 
 use std::path::{Path, PathBuf};
 
@@ -18,6 +17,10 @@ pub const PLUGIN_EXTENSION: &str = "oxp";
 
 /// Where our own plugins are published.
 pub const PLUGINS_URL: &str = "https://github.com/mateusrdp/oxiguitar/releases";
+
+/// Where to report a bug or ask for a feature, such as a plugin for a
+/// format nobody opens yet.
+pub const ISSUES_URL: &str = "https://github.com/mateusrdp/oxiguitar/issues/new";
 
 /// How much a notice matters.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -56,10 +59,6 @@ pub struct Inventory {
     pub folders: Vec<PathBuf>,
     /// Plugin files found, in folder order and then by name.
     pub files: Vec<PathBuf>,
-    /// Formats read without a plugin (M1's readers, until they move out).
-    pub built_in_readers: Vec<String>,
-    /// Formats written without a plugin.
-    pub built_in_writers: Vec<String>,
     /// Formats read through plugins.
     pub plugin_readers: Vec<String>,
     /// Formats written through plugins.
@@ -87,24 +86,17 @@ impl Inventory {
                 .into_iter()
                 .map(|i| i.spec.name.clone())
                 .collect(),
-            ..Inventory::default()
         }
     }
 
     /// Every format OxiGuitar can open.
     pub fn readers(&self) -> impl Iterator<Item = &str> {
-        self.built_in_readers
-            .iter()
-            .chain(&self.plugin_readers)
-            .map(String::as_str)
+        self.plugin_readers.iter().map(String::as_str)
     }
 
     /// Every format OxiGuitar can save.
     pub fn writers(&self) -> impl Iterator<Item = &str> {
-        self.built_in_writers
-            .iter()
-            .chain(&self.plugin_writers)
-            .map(String::as_str)
+        self.plugin_writers.iter().map(String::as_str)
     }
 
     /// The footer's messages about plugins at start, least important first,
@@ -276,19 +268,19 @@ mod tests {
     }
 
     #[test]
-    fn built_in_readers_count_until_they_move_into_plugins() {
+    fn readers_and_an_output_need_no_notice() {
         let inv = Inventory {
-            built_in_readers: vec!["Guitar Pro 5".to_owned()],
+            plugin_readers: vec!["Guitar Pro 5 (.gp5)".to_owned()],
             instruments: vec!["MIDI".to_owned()],
             ..Inventory::default()
         };
         assert!(inv.notices(Path::new("p")).is_empty());
-        let readers_only = Inventory {
+        let writers_only = Inventory {
             plugin_writers: vec!["Guitar Pro 7–8".to_owned()],
             instruments: vec!["MIDI".to_owned()],
             ..Inventory::default()
         };
-        let n = readers_only.notices(Path::new("p"));
+        let n = writers_only.notices(Path::new("p"));
         assert_eq!(n.len(), 1);
         assert!(n[0].text.starts_with("No plugin that reads files"));
     }

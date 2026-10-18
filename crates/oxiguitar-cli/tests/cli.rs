@@ -3,11 +3,33 @@
 
 //! End-to-end tests of `oxiguitar-cli` on the public fixtures.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
+
+/// A home of its own (`OXIGUITAR_HOME`) whose plugin folder holds our
+/// format plugins, built once: the program reads files only through them.
+fn home() -> &'static Path {
+    static HOME: OnceLock<PathBuf> = OnceLock::new();
+    HOME.get_or_init(|| {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let built =
+            oxiguitar_plugin_test::build_ours(&workspace, false).expect("our plugins build");
+        let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-home");
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(home.join("plugins")).unwrap();
+        for (_, name) in oxiguitar_plugin_test::OURS {
+            let file = format!("{name}.oxp");
+            std::fs::copy(built.join(&file), home.join("plugins").join(&file)).unwrap();
+        }
+        home
+    })
+}
 
 fn cli() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_oxiguitar-cli"))
+    let mut c = Command::new(env!("CARGO_BIN_EXE_oxiguitar-cli"));
+    c.env("OXIGUITAR_HOME", home());
+    c
 }
 
 fn fixture(name: &str) -> PathBuf {
@@ -27,7 +49,7 @@ fn info_prints_the_structure_of_a_gp5_file() {
     assert!(out.status.success());
     let text = String::from_utf8(out.stdout).unwrap();
     for expected in [
-        "Format:      Guitar Pro 5.10 (.gp5)",
+        "Format:      Guitar Pro 5, read by the Guitar Pro 5 plugin",
         "Title:       OxiGuitar Test Song",
         "Bars:        3",
         "Time sigs:   4/4 ×2, 3/4 ×1",
@@ -44,11 +66,11 @@ fn info_reads_gp7_and_gpx_files() {
     for (file, format) in [
         (
             "oxiguitar-test-song.gp",
-            "Format:      Guitar Pro 7/8 (.gp)",
+            "Format:      Guitar Pro 7–8, read by the Guitar Pro 7–8 plugin",
         ),
         (
             "oxiguitar-test-song.gpx",
-            "Format:      Guitar Pro 6 (.gpx)",
+            "Format:      Guitar Pro 6, read by the Guitar Pro 6 plugin",
         ),
     ] {
         let out = cli()
@@ -84,10 +106,23 @@ fn unreadable_files_fail_with_a_message() {
     let out = cli().arg("info").arg(&junk).output().unwrap();
     assert_eq!(out.status.code(), Some(1));
     let err = String::from_utf8(out.stderr).unwrap();
+    // A plugin declares .gp5 but doesn't recognise it: a bug report.
     assert!(
-        err.contains("not-a-song.gp5: not a file format OxiGuitar knows"),
+        err.contains("not-a-song.gp5: the Guitar Pro 5 plugin opens .gp5 files but doesn't recognise this one"),
         "{err}"
     );
+    assert!(err.contains("report a bug"), "{err}");
+    // Nothing declares .txt: a feature request.
+    let text = dir.join("notes.txt");
+    std::fs::write(&text, b"this is not a guitar pro file").unwrap();
+    let out = cli().arg("info").arg(&text).output().unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    let err = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        err.contains("notes.txt: no installed plugin recognises this file"),
+        "{err}"
+    );
+    assert!(err.contains("feature request"), "{err}");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -100,10 +135,30 @@ fn detect_reports_misleading_extensions() {
     let out = cli().arg("detect").arg(&renamed).output().unwrap();
     let text = String::from_utf8(out.stdout).unwrap();
     assert!(
-        text.contains("Guitar Pro 5.10 (.gp5) (named .gp3)"),
+        text.contains("Guitar Pro 5 (named .gp3), read by the Guitar Pro 5 plugin"),
         "{text}"
     );
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn without_plugins_nothing_opens() {
+    let empty = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-empty-home");
+    std::fs::create_dir_all(&empty).unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_oxiguitar-cli"))
+        .env("OXIGUITAR_HOME", &empty)
+        .arg("info")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    let text = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        text.contains("no plugin that opens files is installed"),
+        "{text}"
+    );
+    // Nothing was created in the home folder: the program only reads it.
+    assert_eq!(std::fs::read_dir(&empty).unwrap().count(), 0);
 }
 
 #[test]

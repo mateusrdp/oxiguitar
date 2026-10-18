@@ -10,6 +10,11 @@
 //! song from `oxiguitar-testgen`, written as dense and as verbose as Guitar
 //! Pro 7 writes real files (about 16 MB of score XML).
 //!
+//! The file is read by the Guitar Pro 7–8 format plugin, built as the
+//! `.oxp` file we ship (`test_support`): the plugin is loaded during the
+//! first run of whichever test opens a file first, so each test holds its
+//! first run, as well as its best, to the budget.
+//!
 //! Only optimised builds are held to the budget: `cargo test --release -p
 //! oxiguitar-app speed -- --nocapture` (CI's "Speed budget" job). A debug
 //! build runs the same steps and prints its times.
@@ -52,7 +57,7 @@ fn next(rx: &Receiver<Event>) -> Event {
 /// of the first.
 fn open_like_the_window(path: &Path, all_tracks: bool) -> Times {
     let (tx, rx) = channel();
-    let worker = Worker::start(move |e| {
+    let worker = Worker::start(crate::test_plugins().clone(), move |e| {
         let _ = tx.send(e);
     });
     let start = Instant::now();
@@ -136,22 +141,26 @@ fn check(name: &str, all_tracks: bool) {
         .min_by_key(|t| t.tiles)
         .copied()
         .expect("at least one run");
+    let first = runs[0];
     println!(
-        "{name}: read {:?}, engraved {:?}, {} tiles {:?} (best of {})",
+        "{name}: read {:?}, engraved {:?}, {} tiles {:?} (best of {}); first run {:?}",
         best.opened,
         best.engraved,
         best.tile_count,
         best.tiles,
-        runs.len()
+        runs.len(),
+        first.tiles
     );
     if cfg!(debug_assertions) {
         println!("  debug build: the budget of {BUDGET:?} is checked in release builds only");
     } else {
-        assert!(
-            best.tiles < BUDGET,
-            "{name}: opening took {:?}, over the budget of {BUDGET:?}",
-            best.tiles
-        );
+        for (what, t) in [("best run", best), ("first run", first)] {
+            assert!(
+                t.tiles < BUDGET,
+                "{name}: opening took {:?} ({what}), over the budget of {BUDGET:?}",
+                t.tiles
+            );
+        }
     }
 }
 

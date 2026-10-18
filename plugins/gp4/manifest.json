@@ -1,0 +1,30 @@
+{
+  "interface": "1.0",
+  "id": "oxiguitar.gp4",
+  "name": "Guitar Pro 4",
+  "version": "0.1.0",
+  "description": "Reads Guitar Pro 4 files (.gp4).",
+  "authors": ["Mateus Rocha de Paula", "The OxiGuitar contributors"],
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/mateusrdp/oxiguitar",
+  "formats": [
+    {
+      "id": "gp4",
+      "name": "Guitar Pro 4",
+      "extensions": ["gp4"],
+      "read": true,
+      "write": false,
+      "signatures": [
+        { "at": 1, "text": "FICHIER GUITAR PRO v4" },
+        { "at": 1, "text": "FICHIER GUITAR PRO L4" },
+        { "at": 1, "text": "FICHIER GUITAR PRO 4" },
+        { "at": 1, "text": "FICHIER GUITARE PRO v4" },
+        { "at": 1, "text": "FICHIER GUITARE PRO L4" },
+        { "at": 1, "text": "FICHIER GUITARE PRO 4" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO v4" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO L4" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO 4" }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Settings and plugins
 
-OxiGuitar is a small program that does more with plugins: one plugin for each file format, plugins that play the score, plugins that export it. Plugins are single files ending in `.oxp`. The plugin system is being built now; this version finds plugin files but cannot load them yet, and it still reads Guitar Pro files by itself.
+OxiGuitar is a small program that does more with plugins: one plugin for each file format, plugins that play the score, plugins that export it in other formats than PDF. Plugins are single files ending in `.oxp`. The plugin system is being built now; this version finds plugin files but cannot load them yet, and it still reads Guitar Pro files by itself.
 
 ## Where OxiGuitar keeps things
 
@@ -33,7 +33,7 @@ This list replaces the usual folders. If the file isn't valid JSON, OxiGuitar sa
 At start, the line at the bottom of the window says what is missing:
 
 - **No output plugin is installed, so the player is off.** The player's buttons stay greyed out until a plugin that makes sound is installed.
-- **No read/write plugins are installed.** OxiGuitar can open and save files only through format plugins. (This version still reads Guitar Pro files without them.)
+- **No read/write plugins are installed.** OxiGuitar can open and save files only through format plugins, so nothing can be opened. The packages install our Guitar Pro plugins in the program's own plugin folder; this message means they are missing there, or the folder isn't searched (see `plugin_folders` above).
 
 Both messages say where to download plugins: [the releases page](https://github.com/mateusrdp/oxiguitar/releases). Put the files in your plugins folder.
 

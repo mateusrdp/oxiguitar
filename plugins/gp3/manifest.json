@@ -1,0 +1,30 @@
+{
+  "interface": "1.0",
+  "id": "oxiguitar.gp3",
+  "name": "Guitar Pro 3",
+  "version": "0.1.0",
+  "description": "Reads Guitar Pro 3 files (.gp3).",
+  "authors": ["Mateus Rocha de Paula", "The OxiGuitar contributors"],
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/mateusrdp/oxiguitar",
+  "formats": [
+    {
+      "id": "gp3",
+      "name": "Guitar Pro 3",
+      "extensions": ["gp3"],
+      "read": true,
+      "write": false,
+      "signatures": [
+        { "at": 1, "text": "FICHIER GUITAR PRO v3" },
+        { "at": 1, "text": "FICHIER GUITAR PRO L3" },
+        { "at": 1, "text": "FICHIER GUITAR PRO 3" },
+        { "at": 1, "text": "FICHIER GUITARE PRO v3" },
+        { "at": 1, "text": "FICHIER GUITARE PRO L3" },
+        { "at": 1, "text": "FICHIER GUITARE PRO 3" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO v3" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO L3" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO 3" }
+      ]
+    }
+  ]
+}
