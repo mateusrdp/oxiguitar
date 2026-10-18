@@ -170,10 +170,13 @@ jobs:
             lintian --allow-root --display-info --pedantic --tag-display-limit 0 \
               --fail-on error,warning \
               --suppress-tags malformed-contact,bogus-mail-host-in-debian-changelog \
-              dist/*.deb > lintian.txt
+              dist/*.deb > lintian.txt 2> lintian.err
           ' || status=$?
-          cat lintian.txt
+          cat lintian.txt lintian.err
           grep -E '^[EW]: ' lintian.txt | sed 's/^/::error title=lintian::/' || true
+          if [[ "$status" -ne 0 ]] && ! grep -qE '^[EW]: ' lintian.txt; then
+            tail -n 5 lintian.err | sed 's/^/::error title=lintian failed::/'
+          fi
           exit "$status"
       - name: Test the .rpm packages on Fedora
         run: |
