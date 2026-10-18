@@ -51,7 +51,7 @@ Native libraries, WebAssembly components, both kinds, separate processes, and sc
 - `oxiguitar-formats` becomes shared reader code used by the format plugins; `oxiguitar-cli` loads plugins like the app. (`oxiguitar-tools` and PDF export stay in the core: "Amendments".)
 - Linux gets two builds of the core (Wayland, and a deprecated X11 one) and two packages (`oxiguitar`, `oxiguitar-plugins-basic`), each meant for Debian's archive.
 - The brief's FMT-5 ("the core reads and writes Guitar Pro formats only"), PLAY-1 ("a built-in SoundFont synthesiser") and UI-7 ("no toolbar row") change accordingly.
-- A plugin can crash the app; the manual and the plugin manager say that OxiGuitar's privacy promises cover only the app and the plugins we publish. (Amended: the manager doesn't mark plugins as ours or third-party; see "Amendments".)
+- A plugin can crash the app; the README and the manual say that OxiGuitar's privacy promises cover only the app and the plugins we publish. (Amended: the app makes no distinction between our plugins and others'; see "Amendments".)
 - Revisit if a third-party plugin ecosystem needs sandboxing: WebAssembly can be added as a second kind behind the same SDK traits.
 
 ## Amendments
@@ -84,6 +84,6 @@ Before slice 3 was built, Mateus narrowed the plugin manager and moved it into t
 - **It is part of the core, not a plugin.** A manager that is a plugin could be disabled from its own list, and `--safe-mode` (no plugins at all) would not bring it back.
 - **It only lists, enables and disables.** It reads what is in the plugin folders (the user's and the system's) and never copies, downloads, installs or removes anything there. Installing means putting an `.oxp` file in a plugin folder by hand or through a package; removing means deleting it. There are no settings forms drawn from a schema: a plugin with settings shows them in its own tab.
 - **It opens only from the menus**, Tools → Plugins, as a separate, non-modal window: every plugin file found, with its name, version and a tickbox to enable or disable it from the next start, its folder, and whether it is loaded or why it can't be used.
-- **It makes no distinction between our plugins and anyone else's.** Nothing in the core could prove a plugin is ours (there is no signing and no catalogue); the window says once, under the list, that OxiGuitar's privacy promises cover only the app and the plugins we publish.
+- **The app makes no distinction between our plugins and anyone else's**, in the manager or anywhere else. We distribute only our own plugins and make promises only about what we distribute (the README and the manual say so), not about whatever a user downloads elsewhere. Nothing in the core could prove a plugin is ours anyway: there is no signing and no catalogue.
 
 Consequences: the interface gains no plugin windows, plugin menu entries or host service for the plugin list in M2, since no plugin needs them. Slice 3's interface work is plugin tabs (standard widgets and a display-list canvas with pointer events) and events pushed to plugins. `--safe-mode` and the plugin folders in Help → About stay in the core.

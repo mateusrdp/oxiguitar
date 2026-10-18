@@ -186,7 +186,7 @@ Part of the core, not a plugin (Mateus, 18 Oct 2026; ADR 0008, "Amendments"), so
 - It reads what is in the plugin folders, the user's and the system's (or those `plugin_folders` lists), and nothing else. It never copies, downloads, installs or removes a file. Installing a plugin means putting its `.oxp` file in a plugin folder, by hand or with a package; removing it means deleting the file.
 - One row per plugin file found: its name, its version, a tickbox to enable or disable it, its folder, and its state: loaded, not loaded yet (plugins load on first use), replaced by another file of the same plugin, or why it can't be used (damaged, another system's, a newer interface, its conditions don't hold).
 - Ticking or unticking writes `disabled` in settings.json and takes effect at the next start, since plugins are never unloaded; the window says so. A file that can't be used for another reason has no tickbox.
-- It makes no distinction between our plugins and anyone else's. Under the list it says once that OxiGuitar's privacy promises cover only the app and the plugins we publish (NET-4).
+- It makes no distinction between our plugins and anyone else's, and neither does the rest of the app (Mateus, 18 Oct 2026): we make promises only about what we distribute, in the README and the manual (NET-4).
 
 Two more things in the core help when a plugin misbehaves: `oxiguitar --safe-mode` starts with no plugins at all, and Help → About lists the plugin folders.
 
@@ -209,7 +209,7 @@ Two more things in the core help when a plugin misbehaves: `oxiguitar --safe-mod
 
 ## Privacy and trust
 
-NET-1 to NET-5 cover the core and our plugins. A native plugin can do anything the user can, so the manual and the plugin manager say plainly that the promises cover only the app and the plugins we publish (NET-4). Our plugins download only when the user asks, through the core's consent dialog.
+NET-1 to NET-5 cover the core and our plugins. A native plugin can do anything the user can, so the README and the manual say plainly that the promises cover only the app and the plugins we publish (NET-4). The app itself makes no distinction between our plugins and others' (Mateus, 18 Oct 2026). Our plugins download only when the user asks, through the core's consent dialog.
 
 ## Debian
 
