@@ -18,6 +18,11 @@
 //!   breaking plugins.
 //! - [`signature`] and [`class`]: how the host picks a format plugin for a
 //!   file and an instrument plugin for a track, from the manifest alone.
+//! - [`tab`] and [`display`]: plugin tabs, made of standard widgets the
+//!   core draws and a canvas the plugin draws (interface 1.1).
+//! - [`event`]: what the core pushes to plugins as it happens: the score
+//!   opened or changed, the selection, the playback position (interface
+//!   1.1).
 //!
 //! Plugin authors don't use this crate directly: the SDK, `oxiguitar-plugin`,
 //! wraps it in safe Rust. This crate holds no `unsafe` code; the tables'
@@ -36,8 +41,11 @@
 //!   with its own size), new manifest keys. Nothing that exists changes. A
 //!   plugin states the minor version it was built for; the host sends it
 //!   only what that minor version knows.
-//! - Until OxiGuitar 0.2 is released, version 1.0 is still being designed
-//!   and may change. From 0.2 on it is frozen.
+//! - Until OxiGuitar 0.2 is released, the interface is still being
+//!   designed and may change. From 0.2 on it is frozen.
+//! - 1.0: formats, instruments (declared), services, footer messages and
+//!   settings. 1.1: tabs, the canvas's display list, pushed events, the
+//!   open score.
 //!
 //! # Licence
 //!
@@ -46,10 +54,13 @@
 
 pub mod abi;
 pub mod class;
+pub mod display;
+pub mod event;
 pub mod manifest;
 pub mod message;
 pub mod score;
 pub mod signature;
+pub mod tab;
 
 mod blob;
 
@@ -57,7 +68,7 @@ pub use blob::Blob;
 pub use message::{DecodeError, decode, encode};
 
 /// The interface version this crate describes: (major, minor).
-pub const INTERFACE: (u32, u32) = (1, 0);
+pub const INTERFACE: (u32, u32) = (1, 1);
 
 /// The symbol a plugin exports. It returns a pointer to the plugin's
 /// [`abi::PluginTableV1`].

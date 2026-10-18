@@ -11,7 +11,13 @@
 //! compatible. New variants go at the end of each enum.
 //!
 //! Contributions are named by the ids in the plugin's manifest: a format's
-//! `id`, a service's `interface` and `id`.
+//! `id`, a service's `interface` and `id`, a tab's `id`.
+//!
+//! Interface 1.1 added tabs ([`Request::Tab`], [`Request::TabEvent`],
+//! [`HostRequest::Redraw`]) and pushed events ([`Request::Event`],
+//! [`HostRequest::Score`]). The host sends them only to plugins whose
+//! manifest asks for interface 1.1 or later and declares the tab or the
+//! event kind.
 
 use std::fmt;
 
@@ -19,7 +25,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::Blob;
 use crate::abi::Status;
+use crate::event::Event;
 use crate::score::Score;
+use crate::tab::{TabContent, TabEvent};
 
 /// Encodes a message.
 pub fn encode<T: Serialize + ?Sized>(message: &T) -> Result<Vec<u8>, DecodeError> {
@@ -128,6 +136,25 @@ pub enum Request<'a> {
         #[serde(borrow)]
         input: Blob<'a>,
     },
+    /// What the tab `tab` (an id from the manifest) shows now. Answered with
+    /// [`Answer::Tab`]. Since interface 1.1.
+    Tab {
+        /// The tab's id.
+        tab: String,
+    },
+    /// The user used the widget `widget` of the tab `tab`. Answered with
+    /// [`Answer::Tab`], the tab's contents after it. Since interface 1.1.
+    TabEvent {
+        /// The tab's id.
+        tab: String,
+        /// The widget's id.
+        widget: String,
+        /// What the user did.
+        event: TabEvent,
+    },
+    /// Something the plugin subscribed to happened. Answered with
+    /// [`Answer::Done`]. Since interface 1.1.
+    Event(Event),
 }
 
 /// A plugin's answer to a [`Request`].
@@ -152,6 +179,10 @@ pub enum Answer<'a> {
     Probe(Availability),
     /// A service method's output.
     Service(#[serde(borrow)] Blob<'a>),
+    /// What a tab shows. Since interface 1.1.
+    Tab(Box<TabContent>),
+    /// Done. Since interface 1.1.
+    Done,
 }
 
 impl Answer<'_> {
@@ -165,6 +196,8 @@ impl Answer<'_> {
             },
             Answer::Probe(a) => Answer::Probe(a),
             Answer::Service(b) => Answer::Service(b.into_owned()),
+            Answer::Tab(t) => Answer::Tab(t),
+            Answer::Done => Answer::Done,
         }
     }
 }
@@ -295,6 +328,16 @@ pub enum HostRequest<'a> {
         #[serde(borrow)]
         input: Blob<'a>,
     },
+    /// Show the tab `tab` (an id from the manifest) again: the host asks
+    /// for its contents ([`Request::Tab`]) when it is next on screen.
+    /// Answered with [`HostAnswer::Done`]. Since interface 1.1.
+    Redraw {
+        /// The tab's id.
+        tab: String,
+    },
+    /// The open score, as plugins see it. Answered with
+    /// [`HostAnswer::Score`]. Since interface 1.1.
+    Score,
 }
 
 /// The host's answer to a [`HostRequest`].
@@ -306,6 +349,8 @@ pub enum HostAnswer<'a> {
     Settings(String),
     /// A service method's output.
     Service(#[serde(borrow)] Blob<'a>),
+    /// The open score, or `None` when none is open. Since interface 1.1.
+    Score(Option<Box<Score>>),
 }
 
 impl HostAnswer<'_> {
@@ -315,6 +360,7 @@ impl HostAnswer<'_> {
             HostAnswer::Done => HostAnswer::Done,
             HostAnswer::Settings(s) => HostAnswer::Settings(s),
             HostAnswer::Service(b) => HostAnswer::Service(b.into_owned()),
+            HostAnswer::Score(s) => HostAnswer::Score(s),
         }
     }
 }
@@ -390,5 +436,26 @@ mod tests {
         );
         assert_eq!(first(encode(&ErrorKind::Failed).unwrap()), 4);
         assert_eq!(first(encode(&Level::Error).unwrap()), 2);
+
+        // Interface 1.1, at the end of each enum.
+        assert_eq!(first(encode(&Request::Tab { tab: "t".into() }).unwrap()), 4);
+        let event = Request::TabEvent {
+            tab: "t".into(),
+            widget: "w".into(),
+            event: TabEvent::Clicked,
+        };
+        assert_eq!(first(encode(&event).unwrap()), 5);
+        assert_eq!(
+            first(encode(&Request::Event(Event::ScoreClosed)).unwrap()),
+            6
+        );
+        assert_eq!(first(encode(&Answer::Tab(Box::default())).unwrap()), 4);
+        assert_eq!(first(encode(&Answer::Done).unwrap()), 5);
+        assert_eq!(
+            first(encode(&HostRequest::Redraw { tab: "t".into() }).unwrap()),
+            4
+        );
+        assert_eq!(first(encode(&HostRequest::Score).unwrap()), 5);
+        assert_eq!(first(encode(&HostAnswer::Score(None)).unwrap()), 3);
     }
 }

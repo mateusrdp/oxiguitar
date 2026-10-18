@@ -28,9 +28,9 @@
 //! }
 //! ```
 //!
-//! Later minor versions add keys for tools, exporters, tabs, toolbar
-//! sections, settings and events (docs/design/plugins.md, "What plugins
-//! contribute").
+//! Interface 1.1 added `tabs` and `events`. Later minor versions add keys
+//! for tools, exporters and toolbar sections when plugins need them
+//! (docs/design/plugins.md, "What plugins contribute").
 
 use std::cmp::Ordering;
 use std::fmt;
@@ -39,7 +39,9 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::class::InstrumentClass;
+use crate::event::EventKind;
 use crate::signature::{Signature, Sniff};
+use crate::tab::TabSpec;
 
 /// A plugin's manifest.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -82,6 +84,12 @@ pub struct Manifest {
     /// The services it implements.
     #[serde(default)]
     pub services: Vec<ServiceSpec>,
+    /// The tabs it adds to the window's areas. Since interface 1.1.
+    #[serde(default)]
+    pub tabs: Vec<TabSpec>,
+    /// The kinds of event it wants pushed to it. Since interface 1.1.
+    #[serde(default)]
+    pub events: Vec<EventKind>,
 }
 
 impl Manifest {
@@ -183,7 +191,43 @@ impl Manifest {
                 out.push(format!("requires {r:?}: not a valid interface name"));
             }
         }
+        let mut tabs: Vec<&str> = Vec::new();
+        for t in &self.tabs {
+            if !is_id(&t.id) || tabs.contains(&t.id.as_str()) {
+                out.push(format!("tab {:?}: not a valid or unique id", t.id));
+            }
+            tabs.push(&t.id);
+            if t.title.trim().is_empty() {
+                out.push(format!("tab {:?}: the title is empty", t.id));
+            }
+        }
+        let since_1_1 = InterfaceVersion { major: 1, minor: 1 };
+        if self.interface < since_1_1 {
+            if !self.tabs.is_empty() {
+                out.push(format!(
+                    "tabs need interface {since_1_1}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if !self.events.is_empty() {
+                out.push(format!(
+                    "events need interface {since_1_1}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+        }
         out
+    }
+
+    /// Whether the plugin knows interface 1.1 (tabs, events, the score)
+    /// and later minor versions up to `minor`.
+    pub fn knows_minor(&self, minor: u32) -> bool {
+        self.interface.minor >= minor
+    }
+
+    /// Whether the plugin wants events of `kind`.
+    pub fn wants(&self, kind: EventKind) -> bool {
+        self.knows_minor(1) && self.events.contains(&kind)
     }
 
     /// The first format this plugin reads whose signatures match `file`.
@@ -506,6 +550,19 @@ mod tests {
         );
         assert!(err(&GP5.replace("[\"gp5\"]", "[\".gp5\"]")).contains("extension"));
         assert!(err(&GP5.replace("\"read\": true,", "")).contains("neither"));
+        let tabbed = GP5.replace(
+            "\"formats\"",
+            "\"tabs\": [{\"id\": \"t\", \"title\": \"T\", \"area\": \"left\"}], \"events\": [\"score\"], \"formats\"",
+        );
+        assert!(err(&tabbed).contains("tabs need interface 1.1"));
+        let m = Manifest::parse(tabbed.replace("\"1.0\"", "\"1.1\"").as_bytes()).unwrap();
+        assert!(m.wants(EventKind::Score) && !m.wants(EventKind::Playback));
+        assert!(
+            err(&tabbed
+                .replace("\"1.0\"", "\"1.1\"")
+                .replace("\"T\"", "\" \""))
+            .contains("title")
+        );
         let big = vec![b' '; crate::MAX_MANIFEST_LEN + 1];
         assert!(Manifest::parse(&big).unwrap_err().contains("more than"));
     }

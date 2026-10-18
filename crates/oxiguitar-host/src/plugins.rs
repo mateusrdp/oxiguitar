@@ -23,6 +23,12 @@
 //! Each candidate is asked whether it can work here (its probe) before it
 //! is chosen; the choice is kept for the rest of the session.
 //!
+//! Plugins with tabs (interface 1.1) are asked for their contents when the
+//! window shows the tab, and told when the user uses a widget. Events
+//! (score, selection, playback) are pushed to the plugins that subscribe
+//! to them, in order, on a thread of their own that sleeps until there is
+//! something to deliver.
+//!
 //! Nothing here polls or runs on a timer: everything happens when it is
 //! asked for.
 
@@ -35,6 +41,7 @@ use std::sync::{Arc, Mutex, OnceLock, PoisonError, Weak};
 use oxiguitar_plugin_api::Blob;
 use oxiguitar_plugin_api::abi::Status;
 use oxiguitar_plugin_api::class::InstrumentClass;
+use oxiguitar_plugin_api::event::{Event, EventKind};
 use oxiguitar_plugin_api::manifest::{
     Environment, FormatSpec, InstrumentSpec, Manifest, ServiceSpec,
 };
@@ -44,7 +51,10 @@ use oxiguitar_plugin_api::message::{
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::signature::Sniff;
+use oxiguitar_plugin_api::tab::{TabContent, TabEvent, TabSpec};
 use serde_json::Value;
+
+use crate::events::Queue;
 
 use crate::inventory::{ISSUES_URL, Level, PLUGINS_URL, plugin_files};
 use crate::loader::{self, Loaded};
@@ -57,18 +67,33 @@ pub const DISABLED_KEY: &str = "disabled";
 /// The settings.json key pinning a service per interface.
 pub const SERVICES_KEY: &str = "services";
 
-/// Where plugins' footer messages go. Called from whichever thread the
-/// plugin was called on.
-pub trait Messages: Send + Sync {
+/// What the rest of the core does for plugins: shows their messages,
+/// shows their tabs again when they ask, and hands them the open score.
+/// Called from whichever thread the plugin was called on.
+pub trait Core: Send + Sync {
     /// Shows `text` in the footer. `text` starts with the plugin's name.
     fn notify(&self, level: Level, text: String);
+
+    /// The plugin's tab `tab` has changed: ask for its contents
+    /// ([`Plugins::tab_content`]) when it is next on screen. The default
+    /// does nothing, for programs without a window.
+    fn redraw(&self, tab: &TabId) {
+        let _ = tab;
+    }
+
+    /// The open score, as plugins see it, or `None` when none is open. The
+    /// default has none.
+    fn score(&self) -> Option<Score> {
+        None
+    }
 }
 
-/// Messages nobody sees: for tests and tools without a footer.
+/// A core without a window: messages go nowhere, and no score is open.
+/// For tests and tools without a footer.
 #[derive(Debug, Default)]
 pub struct Unheard;
 
-impl Messages for Unheard {
+impl Core for Unheard {
     fn notify(&self, _level: Level, _text: String) {}
 }
 
@@ -81,9 +106,20 @@ struct Inner {
     found: Vec<Found>,
     env: Environment,
     settings: SharedSettings,
-    messages: Arc<dyn Messages>,
+    core: Arc<dyn Core>,
     /// The service chosen per interface, or why there is none.
     chosen: Mutex<HashMap<String, Choice>>,
+    /// Events waiting to be delivered.
+    events: Arc<Queue>,
+    /// The plugins that have failed an event: told once in the footer.
+    failed_events: Mutex<Vec<usize>>,
+}
+
+impl Drop for Inner {
+    fn drop(&mut self) {
+        // Ends the delivery thread, which holds the host only weakly.
+        self.events.close();
+    }
 }
 
 /// A chosen service (the plugin's index and the service's id), or why
@@ -184,6 +220,40 @@ pub struct ServiceRef<'a> {
     pub spec: &'a ServiceSpec,
 }
 
+/// A plugin's tab, by the plugin's id and the tab's.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TabId {
+    /// The plugin's id.
+    pub plugin: String,
+    /// The tab's id, from the plugin's manifest.
+    pub tab: String,
+}
+
+/// A tab a plugin adds to the window.
+#[derive(Clone, Copy, Debug)]
+pub struct TabRef<'a> {
+    /// The plugin.
+    pub plugin: &'a Found,
+    /// The tab, as its manifest declares it.
+    pub spec: &'a TabSpec,
+    index: usize,
+}
+
+impl TabRef<'_> {
+    /// The tab's id.
+    pub fn id(&self) -> TabId {
+        TabId {
+            plugin: self
+                .plugin
+                .manifest
+                .as_ref()
+                .map(|m| m.id.clone())
+                .unwrap_or_default(),
+            tab: self.spec.id.clone(),
+        }
+    }
+}
+
 /// Why no plugin opens a file ([`Plugins::recognise`]). Its text is a
 /// sentence for the footer, to follow the file's name.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -276,7 +346,8 @@ impl Plugins {
     /// without loading any plugin. `display` names the display system the
     /// core runs on (`wayland`, `x11`, `windows`, `macos`), for plugins'
     /// conditions. `settings` holds `disabled` and `services`, and every
-    /// plugin's own settings; `messages` shows plugins' footer messages.
+    /// plugin's own settings; `core` shows plugins' footer messages and
+    /// tabs and hands them the open score.
     ///
     /// A program has one `Plugins`: the system loads a library file once
     /// per process, so a second `Plugins` starting the same file gets the
@@ -285,7 +356,7 @@ impl Plugins {
         folders: &[PathBuf],
         settings: SharedSettings,
         display: &str,
-        messages: Arc<dyn Messages>,
+        core: Arc<dyn Core>,
     ) -> Plugins {
         let env = Environment::current(display);
         let disabled: Vec<String> = match settings.get(DISABLED_KEY) {
@@ -330,8 +401,10 @@ impl Plugins {
             found,
             env,
             settings,
-            messages,
+            core,
             chosen: Mutex::new(HashMap::new()),
+            events: Arc::new(Queue::default()),
+            failed_events: Mutex::new(Vec::new()),
         }))
     }
 
@@ -577,8 +650,170 @@ impl Plugins {
         self.request(index, request)
     }
 
-    /// Loads every ready plugin that isn't loaded yet; for the plugin
-    /// manager and the contract tests. The errors name each plugin that
+    /// Every tab the ready plugins add, in plugin order. Only plugins built
+    /// for interface 1.1 or later have tabs.
+    pub fn tabs(&self) -> Vec<TabRef<'_>> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(1))
+            .flat_map(|(index, plugin, m)| {
+                m.tabs.iter().map(move |spec| TabRef {
+                    plugin,
+                    spec,
+                    index,
+                })
+            })
+            .collect()
+    }
+
+    /// The tab `id`, if a ready plugin adds it.
+    pub fn tab(&self, id: &TabId) -> Option<TabRef<'_>> {
+        self.tabs().into_iter().find(|t| {
+            t.spec.id == id.tab
+                && t.plugin
+                    .manifest
+                    .as_ref()
+                    .is_some_and(|m| m.id == id.plugin)
+        })
+    }
+
+    /// What the tab `id` shows now, from its plugin (loaded first if
+    /// needed). Contents the core can't show are an error that says why.
+    pub fn tab_content(&self, id: &TabId) -> Result<TabContent, Error> {
+        let tab = self.find_tab(id)?;
+        self.tab_answer(
+            tab,
+            &Request::Tab {
+                tab: id.tab.clone(),
+            },
+        )
+    }
+
+    /// Tells the tab's plugin that the user used its widget `widget`, and
+    /// returns the tab's contents after it.
+    pub fn tab_event(
+        &self,
+        id: &TabId,
+        widget: &str,
+        event: TabEvent,
+    ) -> Result<TabContent, Error> {
+        let tab = self.find_tab(id)?;
+        self.tab_answer(
+            tab,
+            &Request::TabEvent {
+                tab: id.tab.clone(),
+                widget: widget.to_owned(),
+                event,
+            },
+        )
+    }
+
+    fn find_tab(&self, id: &TabId) -> Result<TabRef<'_>, Error> {
+        self.tab(id).ok_or_else(|| {
+            Error::not_found(format!(
+                "no usable plugin {:?} has a tab {:?}",
+                id.plugin, id.tab
+            ))
+        })
+    }
+
+    fn tab_answer(&self, tab: TabRef<'_>, request: &Request<'_>) -> Result<TabContent, Error> {
+        match self.request(tab.index, request)? {
+            Answer::Tab(content) => match content.problems().into_iter().next() {
+                None => Ok(*content),
+                Some(problem) => Err(Error::new(
+                    ErrorKind::Invalid,
+                    format!(
+                        "{}: the tab {} can't be shown ({problem})",
+                        tab.plugin.name(),
+                        tab.spec.title
+                    ),
+                )),
+            },
+            other => Err(self.unexpected(tab.index, &other)),
+        }
+    }
+
+    /// Whether any ready plugin subscribes to events of `kind`, so the core
+    /// can skip preparing events nobody hears.
+    pub fn wants(&self, kind: EventKind) -> bool {
+        self.ready().any(|(_, _, m)| m.wants(kind))
+    }
+
+    /// Pushes `event` to every ready plugin that subscribes to its kind,
+    /// loading each one the first time. Returns at once: events are
+    /// delivered in order, one at a time, on a thread of their own that is
+    /// started with the first event anyone wants and sleeps until the next.
+    /// A plugin that is slow to answer gets the latest selection, playback
+    /// position and score revision rather than every one in between.
+    pub fn push(&self, event: Event) {
+        if !self.wants(event.kind()) {
+            return;
+        }
+        if self.0.events.push(event) {
+            let host = Arc::downgrade(&self.0);
+            let queue = Arc::clone(&self.0.events);
+            let started = std::thread::Builder::new()
+                .name("oxiguitar-plugin-events".to_owned())
+                .spawn(move || {
+                    while let Some(event) = queue.next() {
+                        if let Some(inner) = host.upgrade() {
+                            Plugins(inner).deliver(&event);
+                        }
+                        queue.done();
+                    }
+                });
+            if let Err(e) = started {
+                self.0.events.close();
+                self.0.core.notify(
+                    Level::Error,
+                    format!("Plugins can't be told what happens: {e}."),
+                );
+            }
+        }
+    }
+
+    /// Waits until every event pushed so far has been delivered: for tests,
+    /// and for a program that wants its plugins told before it ends. Never
+    /// call it from a plugin's own event handler.
+    pub fn wait_for_events(&self) {
+        self.0.events.wait_idle();
+    }
+
+    fn deliver(&self, event: &Event) {
+        let kind = event.kind();
+        let subscribers: Vec<usize> = self
+            .ready()
+            .filter(|(_, _, m)| m.wants(kind))
+            .map(|(index, _, _)| index)
+            .collect();
+        for index in subscribers {
+            let answered = self.request(index, &Request::Event(event.clone()));
+            let error = match answered {
+                Ok(Answer::Done) => continue,
+                Ok(other) => self.unexpected(index, &other),
+                Err(e) => e,
+            };
+            let mut failed = self
+                .0
+                .failed_events
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            if !failed.contains(&index) {
+                failed.push(index);
+                let name = self.0.found[index].name();
+                let text = error
+                    .message
+                    .strip_prefix(&format!("{name}: "))
+                    .unwrap_or(&error.message);
+                self.0
+                    .core
+                    .notify(Level::Warning, format!("{name}: {text}"));
+            }
+        }
+    }
+
+    /// Loads every ready plugin that isn't loaded yet; for the contract
+    /// tests. The errors name each plugin that
     /// couldn't start.
     pub fn load_all(&self) -> Vec<String> {
         self.ready()
@@ -699,7 +934,7 @@ impl Plugins {
                         loader::load(&found.path, &found.manifest_bytes, self.host_calls(index));
                     STARTING.with(|s| s.borrow_mut().retain(|&i| i != index));
                     if let Err(e) = &result {
-                        self.0.messages.notify(Level::Error, format!("{name}: {e}"));
+                        self.0.core.notify(Level::Error, format!("{name}: {e}"));
                     }
                     result
                 })
@@ -733,6 +968,8 @@ impl Plugins {
             Answer::Written { .. } => "a file",
             Answer::Probe(_) => "a probe",
             Answer::Service(_) => "a service's output",
+            Answer::Tab(_) => "a tab's contents",
+            Answer::Done => "\"done\"",
         };
         Error::new(
             ErrorKind::Failed,
@@ -773,10 +1010,25 @@ impl Plugins {
         let answered: Result<HostAnswer<'_>, Error> = match request {
             HostRequest::Notify { level, text } => {
                 self.0
-                    .messages
+                    .core
                     .notify(level.into(), format!("{}: {text}", manifest.name));
                 Ok(HostAnswer::Done)
             }
+            HostRequest::Redraw { tab } => {
+                if manifest.knows_minor(1) && manifest.tabs.iter().any(|t| t.id == tab) {
+                    self.0.core.redraw(&TabId {
+                        plugin: manifest.id.clone(),
+                        tab,
+                    });
+                    Ok(HostAnswer::Done)
+                } else {
+                    Err(Error::not_found(format!(
+                        "{} has no tab {tab:?} in its manifest",
+                        manifest.name
+                    )))
+                }
+            }
+            HostRequest::Score => Ok(HostAnswer::Score(self.0.core.score().map(Box::new))),
             HostRequest::Settings => {
                 let mine = match self.0.settings.get(&manifest.id) {
                     Some(v @ Value::Object(_)) => v,

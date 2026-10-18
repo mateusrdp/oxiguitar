@@ -8,8 +8,8 @@
 //! 1. writes its manifest as `manifest.json` beside its `Cargo.toml`
 //!    ([`api::manifest`] describes the keys);
 //! 2. implements [`Plugin`], handing out a [`FormatReader`],
-//!    [`FormatWriter`] or [`Service`] for each contribution its manifest
-//!    declares;
+//!    [`FormatWriter`], [`Service`] or [`Tab`] for each contribution its
+//!    manifest declares, and handling the [`Event`]s it subscribes to;
 //! 3. calls [`export_plugin!`] once, in its `lib.rs`;
 //! 4. has a Cargo feature named `oxp` (`oxp = []`), which the `.oxp` build
 //!    turns on.
@@ -56,8 +56,13 @@
 //! `panic = "unwind"`).
 
 pub use oxiguitar_plugin_api as api;
+pub use oxiguitar_plugin_api::display;
+pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection};
 pub use oxiguitar_plugin_api::message::{Availability, Error, ErrorKind, Level, LogEntry};
 pub use oxiguitar_plugin_api::score;
+pub use oxiguitar_plugin_api::tab::{
+    Canvas, Pointer, PointerButton, PointerKind, Row, TabContent, TabEvent, Widget,
+};
 
 use std::sync::Arc;
 
@@ -94,6 +99,36 @@ pub trait Plugin: Send + Sync + 'static {
     fn service(&self, interface: &str, id: &str) -> Option<&dyn Service> {
         let _ = (interface, id);
         None
+    }
+
+    /// The tab `id` (an id from the manifest's `tabs`).
+    fn tab(&self, id: &str) -> Option<&dyn Tab> {
+        let _ = id;
+        None
+    }
+
+    /// Something the manifest's `events` subscribe to happened. Called on
+    /// any thread, as it happens; keep it short, and call
+    /// [`Host::redraw`] for a tab that should show it. The default does
+    /// nothing.
+    fn event(&self, event: &Event) {
+        let _ = event;
+    }
+}
+
+/// A tab in one of the window's areas (docs/design/plugins.md, "What
+/// plugins contribute"): standard widgets the core draws, and a canvas the
+/// plugin draws.
+pub trait Tab: Send + Sync {
+    /// What the tab shows now. The core asks when the tab is shown, after
+    /// every [`Tab::on`], and after [`Host::redraw`].
+    fn content(&self) -> TabContent;
+
+    /// The user used the widget `widget` (its id). The tab's contents are
+    /// asked for again afterwards. The default does nothing.
+    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
+        let _ = (widget, event);
+        Ok(())
     }
 }
 
@@ -181,7 +216,23 @@ pub fn dispatch(plugin: &dyn Plugin, request: Request<'_>) -> Result<Answer<'sta
                 service.call(&method, input.as_slice())?,
             )))
         }
+        Request::Tab { tab } => Ok(Answer::Tab(Box::new(find_tab(plugin, &tab)?.content()))),
+        Request::TabEvent { tab, widget, event } => {
+            let tab = find_tab(plugin, &tab)?;
+            tab.on(&widget, event)?;
+            Ok(Answer::Tab(Box::new(tab.content())))
+        }
+        Request::Event(event) => {
+            plugin.event(&event);
+            Ok(Answer::Done)
+        }
     }
+}
+
+fn find_tab<'p>(plugin: &'p dyn Plugin, id: &str) -> Result<&'p dyn Tab, Error> {
+    plugin
+        .tab(id)
+        .ok_or_else(|| Error::not_found(format!("this plugin has no tab {id:?}")))
 }
 
 fn find_service<'p>(
@@ -279,6 +330,22 @@ impl Host {
             other => Err(unexpected(&other)),
         }
     }
+
+    /// Asks the core to show the tab `tab` (an id from the manifest) again:
+    /// it asks for [`Tab::content`] when the tab is next on screen. A
+    /// request that can't be made is dropped.
+    pub fn redraw(&self, tab: &str) {
+        let _ = self.0.request(HostRequest::Redraw { tab: tab.into() });
+    }
+
+    /// The open score, or `None` when none is open: what a plugin asks for
+    /// after [`Event::ScoreOpened`] or [`Event::ScoreChanged`].
+    pub fn score(&self) -> Result<Option<score::Score>, Error> {
+        match self.0.request(HostRequest::Score)? {
+            HostAnswer::Score(score) => Ok(score.map(|s| *s)),
+            other => Err(unexpected(&other)),
+        }
+    }
 }
 
 fn unexpected(answer: &HostAnswer<'_>) -> Error {
@@ -293,8 +360,11 @@ struct Detached;
 impl HostServices for Detached {
     fn request(&self, request: HostRequest<'_>) -> Result<HostAnswer<'static>, Error> {
         match request {
-            HostRequest::Notify { .. } | HostRequest::SetSettings { .. } => Ok(HostAnswer::Done),
+            HostRequest::Notify { .. }
+            | HostRequest::SetSettings { .. }
+            | HostRequest::Redraw { .. } => Ok(HostAnswer::Done),
             HostRequest::Settings => Ok(HostAnswer::Settings("{}".into())),
+            HostRequest::Score => Ok(HostAnswer::Score(None)),
             HostRequest::Service { interface, .. } => Err(Error::not_found(format!(
                 "no service of {interface:?} (a detached host has none)"
             ))),
@@ -355,6 +425,16 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
                 "service {:?} of {:?} is declared, but not implemented",
                 s.id, s.interface
             ));
+        }
+    }
+    for t in &manifest.tabs {
+        match plugin.tab(&t.id) {
+            None => out.push(format!("tab {:?} is declared, but not implemented", t.id)),
+            Some(tab) => {
+                for p in tab.content().problems() {
+                    out.push(format!("tab {:?}: {p}", t.id));
+                }
+            }
         }
     }
     out
@@ -548,7 +628,97 @@ mod tests {
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
         let later = ECHO.replace("\"1.0\"", "\"1.9\"");
-        assert!(check::<Echo>(&later, "0.1.0")[0].contains("this SDK is 1.0"));
+        assert!(check::<Echo>(&later, "0.1.0")[0].contains("this SDK is 1.1"));
+    }
+
+    /// A tab counting its button's clicks, and events.
+    struct Counter(std::sync::atomic::AtomicU32);
+
+    impl Plugin for Counter {
+        fn start(_host: Host) -> Result<Counter, Error> {
+            Ok(Counter(0.into()))
+        }
+
+        fn tab(&self, id: &str) -> Option<&dyn Tab> {
+            (id == "count").then_some(self as &dyn Tab)
+        }
+
+        fn event(&self, _event: &Event) {
+            self.0.fetch_add(10, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    impl Tab for Counter {
+        fn content(&self) -> TabContent {
+            let n = self.0.load(std::sync::atomic::Ordering::Relaxed);
+            TabContent {
+                rows: vec![Row {
+                    widgets: vec![Widget::Button {
+                        id: "more".into(),
+                        text: n.to_string(),
+                        enabled: true,
+                    }],
+                }],
+            }
+        }
+
+        fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
+            match (widget, event) {
+                ("more", TabEvent::Clicked) => {
+                    self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    Ok(())
+                }
+                _ => Err(Error::not_found(widget)),
+            }
+        }
+    }
+
+    fn text_of(answer: Answer<'_>) -> String {
+        match answer {
+            Answer::Tab(t) => match &t.rows[0].widgets[0] {
+                Widget::Button { text, .. } => text.clone(),
+                other => panic!("{other:?}"),
+            },
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn tabs_answer_with_their_contents_and_events_reach_the_plugin() {
+        let counter = Counter::start(Host::detached()).unwrap();
+        let tab = |tab: &str| dispatch(&counter, Request::Tab { tab: tab.into() });
+        assert_eq!(text_of(tab("count").unwrap()), "0");
+        assert_eq!(tab("other").unwrap_err().kind, ErrorKind::NotFound);
+        let click = Request::TabEvent {
+            tab: "count".into(),
+            widget: "more".into(),
+            event: TabEvent::Clicked,
+        };
+        assert_eq!(text_of(dispatch(&counter, click).unwrap()), "1");
+        let wrong = Request::TabEvent {
+            tab: "count".into(),
+            widget: "less".into(),
+            event: TabEvent::Clicked,
+        };
+        assert_eq!(
+            dispatch(&counter, wrong).unwrap_err().kind,
+            ErrorKind::NotFound
+        );
+        let event = Request::Event(Event::ScoreOpened { revision: 1 });
+        assert_eq!(dispatch(&counter, event), Ok(Answer::Done));
+        assert_eq!(text_of(tab("count").unwrap()), "11");
+
+        let manifest = r#"{
+            "interface": "1.1", "id": "test.counter", "name": "Counter", "version": "0.1.0",
+            "tabs": [{"id": "count", "title": "Count", "area": "bottom"}],
+            "events": ["score"]
+        }"#;
+        assert_eq!(check::<Counter>(manifest, "0.1.0"), Vec::<String>::new());
+        let missing = manifest.replace("\"id\": \"count\"", "\"id\": \"other\"");
+        assert_eq!(
+            check::<Counter>(&missing, "0.1.0"),
+            vec!["tab \"other\" is declared, but not implemented"]
+        );
     }
 
     #[test]
@@ -559,5 +729,7 @@ mod tests {
         assert!(host.set_settings(&serde_json::Map::new()).is_ok());
         let e = host.call_service("audio-device", "open", b"").unwrap_err();
         assert_eq!(e.kind, ErrorKind::NotFound);
+        host.redraw("count");
+        assert_eq!(host.score(), Ok(None));
     }
 }

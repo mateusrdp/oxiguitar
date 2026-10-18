@@ -17,6 +17,7 @@
 //! export glue is its counterpart in plugins. Nothing here touches the
 //! network, and nothing runs on a timer.
 
+mod events;
 mod folders;
 mod inventory;
 mod loader;
@@ -32,8 +33,8 @@ pub use inventory::{
 };
 pub use oxiguitar_plugin_api as api;
 pub use plugins::{
-    DISABLED_KEY, FormatRef, Found, InstrumentRef, Messages, Plugins, ReadScore, SERVICES_KEY,
-    ServiceRef, State, Unheard, Unrecognised, WrittenFile,
+    Core, DISABLED_KEY, FormatRef, Found, InstrumentRef, Plugins, ReadScore, SERVICES_KEY,
+    ServiceRef, State, TabId, TabRef, Unheard, Unrecognised, WrittenFile,
 };
 pub use settings::{Settings, SharedSettings};
 
@@ -72,10 +73,10 @@ pub fn display_system() -> &'static str {
 /// Starts the host for the app: makes sure the user folder, its plugin
 /// folder and settings.json exist (creating what is missing), reads the
 /// settings and every plugin's manifest, and loads no plugin. `display`
-/// is [`display_system`]'s answer, and `messages` shows what plugins say
-/// later.
-pub fn start(folders: Option<Folders>, display: &str, messages: Arc<dyn Messages>) -> Startup {
-    begin(folders, display, messages, true)
+/// is [`display_system`]'s answer, and `core` answers plugins later (it
+/// shows their messages and tabs, and hands them the open score).
+pub fn start(folders: Option<Folders>, display: &str, core: Arc<dyn Core>) -> Startup {
+    begin(folders, display, core, true)
 }
 
 /// Starts the host for a program without a window (`oxiguitar-cli`): the
@@ -83,18 +84,13 @@ pub fn start(folders: Option<Folders>, display: &str, messages: Arc<dyn Messages
 /// is created, settings are never saved, and the notices hold only what
 /// is wrong (an unreadable settings.json, a plugin file that can't be
 /// used), not what is missing.
-pub fn find(folders: Option<Folders>, display: &str, messages: Arc<dyn Messages>) -> Startup {
-    let mut s = begin(folders, display, messages, false);
+pub fn find(folders: Option<Folders>, display: &str, core: Arc<dyn Core>) -> Startup {
+    let mut s = begin(folders, display, core, false);
     s.notices.retain(|n| n.level >= Level::Warning);
     s
 }
 
-fn begin(
-    folders: Option<Folders>,
-    display: &str,
-    messages: Arc<dyn Messages>,
-    app: bool,
-) -> Startup {
+fn begin(folders: Option<Folders>, display: &str, core: Arc<dyn Core>, app: bool) -> Startup {
     let mut notices = Vec::new();
     let Some(folders) = folders else {
         notices.push(Notice::new(
@@ -102,7 +98,7 @@ fn begin(
             format!("No home folder: set HOME (or {HOME_VARIABLE}) so OxiGuitar can keep its settings and find plugins."),
         ));
         let settings = SharedSettings::default();
-        let plugins = Plugins::discover(&[], settings.clone(), display, messages);
+        let plugins = Plugins::discover(&[], settings.clone(), display, core);
         let inventory = Inventory::default();
         notices.extend(inventory.notices(std::path::Path::new(".")));
         return Startup {
@@ -155,7 +151,7 @@ fn begin(
     let searched = snapshot
         .plugin_folders()
         .unwrap_or_else(|| folders.default_plugin_folders());
-    let plugins = Plugins::discover(&searched, settings.clone(), display, messages);
+    let plugins = Plugins::discover(&searched, settings.clone(), display, core);
     notices.extend(plugin_notices(&plugins));
     let inventory = Inventory::of(searched, &plugins);
     if app {

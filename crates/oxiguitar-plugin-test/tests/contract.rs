@@ -13,9 +13,14 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use oxiguitar_host::api::class::InstrumentClass;
+use oxiguitar_host::api::display::{Item, Paint, Point};
+use oxiguitar_host::api::event::{Event, EventKind, Playback, Position, Selection};
 use oxiguitar_host::api::message::ErrorKind;
 use oxiguitar_host::api::score::{Score, ScoreInfo, Track};
-use oxiguitar_host::{Level, Messages, Plugins, Settings, SharedSettings, State};
+use oxiguitar_host::api::tab::{
+    Area, Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget,
+};
+use oxiguitar_host::{Core, Level, Plugins, Settings, SharedSettings, State, TabId};
 
 /// The test plugin, built once for all the tests here.
 fn test_oxp() -> &'static Path {
@@ -55,12 +60,26 @@ fn make_folder(name: &str, copies: &[&str], link: bool) -> PathBuf {
     dir
 }
 
+/// The rest of the core, as plugins see it: what they said, which tabs
+/// asked to be redrawn, and a score that is open.
 #[derive(Default)]
-struct Heard(Mutex<Vec<(Level, String)>>);
+struct Heard(
+    Mutex<Vec<(Level, String)>>,
+    Mutex<Vec<TabId>>,
+    Option<Score>,
+);
 
-impl Messages for Heard {
+impl Core for Heard {
     fn notify(&self, level: Level, text: String) {
         self.0.lock().unwrap().push((level, text));
+    }
+
+    fn redraw(&self, tab: &TabId) {
+        self.1.lock().unwrap().push(tab.clone());
+    }
+
+    fn score(&self) -> Option<Score> {
+        self.2.clone()
     }
 }
 
@@ -74,7 +93,10 @@ fn discover(folders: &[PathBuf], settings: SharedSettings) -> (Plugins, Arc<Hear
 fn the_test_plugin_passes_the_contract() {
     let report = oxiguitar_plugin_test::check(test_oxp());
     assert!(report.ok(), "failed: {:#?}", report.failed);
-    assert_eq!(report.passed.len(), 11, "{:#?}", report.passed);
+    // 11 for formats and services; 2 tabs; 10 uses of the panel's widgets
+    // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
+    // of event.
+    assert_eq!(report.passed.len(), 11 + 2 + 10 + 3, "{:#?}", report.passed);
     assert!(report.messages.is_empty(), "{:?}", report.messages);
 }
 
@@ -311,5 +333,277 @@ fn speed_budget_thirty_manifests() {
     assert!(
         took.as_secs_f64() * 1000.0 < budget,
         "30 manifests took {took:?}, over {budget} ms"
+    );
+}
+
+fn panel() -> TabId {
+    TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: "panel".into(),
+    }
+}
+
+fn label(content: &TabContent, row: usize, at: usize) -> &str {
+    match &content.rows[row].widgets[at] {
+        Widget::Label { text, .. } => text,
+        other => panic!("not a label: {other:?}"),
+    }
+}
+
+#[test]
+fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
+    let dir = folder("tabs", &["test.oxp"]);
+    let (plugins, heard) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    // Listed, with their areas, before the plugin is loaded.
+    let tabs: Vec<(String, String, Area)> = plugins
+        .tabs()
+        .iter()
+        .map(|t| (t.spec.id.clone(), t.spec.title.clone(), t.spec.area))
+        .collect();
+    assert_eq!(
+        tabs,
+        [
+            ("panel".into(), "Test".into(), Area::Bottom),
+            ("side".into(), "Test side".into(), Area::Right),
+        ]
+    );
+    assert!(!plugins.found()[0].is_loaded());
+
+    // Shown: the plugin loads and answers with its widgets.
+    let content = plugins.tab_content(&panel()).unwrap();
+    assert!(plugins.found()[0].is_loaded());
+    assert_eq!(label(&content, 0, 0), "Clicks: 0");
+    let kinds: Vec<&str> = content
+        .rows
+        .iter()
+        .flat_map(|r| &r.widgets)
+        .map(|w| match w {
+            Widget::Label { .. } => "label",
+            Widget::Button { .. } => "button",
+            Widget::Toggle { .. } => "toggle",
+            Widget::Slider { .. } => "slider",
+            Widget::Field { .. } => "field",
+            Widget::Choice { .. } => "choice",
+            Widget::List { .. } => "list",
+            Widget::Canvas(_) => "canvas",
+        })
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            "label", "button", "button", "toggle", "slider", "field", "choice", "list", "canvas",
+            "label", "label"
+        ]
+    );
+
+    // Every widget's event reaches the plugin, which answers with its new
+    // contents.
+    let after = |widget: &str, event: TabEvent| plugins.tab_event(&panel(), widget, event).unwrap();
+    assert_eq!(label(&after("click", TabEvent::Clicked), 0, 0), "Clicks: 1");
+    let c = after("toggle", TabEvent::Toggled(true));
+    assert!(matches!(
+        c.widget("toggle"),
+        Some(Widget::Toggle { on: true, .. })
+    ));
+    let c = after("slider", TabEvent::Slid(7.5));
+    assert!(matches!(c.widget("slider"), Some(Widget::Slider { value, .. }) if *value == 7.5));
+    let c = after("field", TabEvent::Edited("Lá".into()));
+    assert!(matches!(c.widget("field"), Some(Widget::Field { text, .. }) if text == "Lá"));
+    let c = after("choice", TabEvent::Chosen(2));
+    assert!(matches!(
+        c.widget("choice"),
+        Some(Widget::Choice { selected: 2, .. })
+    ));
+    let c = after("list", TabEvent::Chosen(1));
+    assert!(matches!(
+        c.widget("list"),
+        Some(Widget::List {
+            selected: Some(1),
+            ..
+        })
+    ));
+
+    // The canvas: pointer events in its own units, and its display list
+    // back.
+    for kind in [PointerKind::Down, PointerKind::Drag] {
+        let c = after(
+            "canvas",
+            TabEvent::Pointer(Pointer {
+                kind,
+                at: Point::new(30.0, 20.0),
+                button: PointerButton::Primary,
+            }),
+        );
+        let Some(Widget::Canvas(canvas)) = c.widget("canvas") else {
+            panic!("no canvas");
+        };
+        assert_eq!(
+            (canvas.width, canvas.height),
+            oxiguitar_test_plugin_canvas()
+        );
+        assert!(canvas.items.contains(&Item::Rect {
+            at: Point::new(28.0, 18.0),
+            width: 4.0,
+            height: 4.0,
+            paint: Paint::Accent,
+        }));
+        assert!(
+            canvas
+                .items
+                .iter()
+                .any(|i| matches!(i, Item::Text { text, .. } if *text == format!("{kind:?}")))
+        );
+    }
+
+    // The plugin's own refusal, in its words; a tab nobody has.
+    let e = plugins
+        .tab_event(&panel(), "click", TabEvent::Toggled(true))
+        .unwrap_err();
+    assert_eq!(e.kind, ErrorKind::Invalid);
+    assert!(e.message.contains("doesn't take"), "{e}");
+    let nobody = TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: "nothing".into(),
+    };
+    assert_eq!(
+        plugins.tab_content(&nobody).unwrap_err().kind,
+        ErrorKind::NotFound
+    );
+
+    // The other tab, in another area.
+    let side = plugins.tabs()[1].id();
+    assert_eq!(
+        label(&plugins.tab_content(&side).unwrap(), 0, 0),
+        "The test plugin's other tab."
+    );
+
+    // Contents the core can't show are refused, saying why; the plugin and
+    // its other tab carry on.
+    plugins.call_service("test-echo", "break", b"").unwrap();
+    let e = plugins.tab_content(&panel()).unwrap_err();
+    assert_eq!(e.kind, ErrorKind::Invalid);
+    assert!(
+        e.message
+            .starts_with("Test plugin: the tab Test can't be shown (")
+            && e.message.contains("used twice"),
+        "{e}"
+    );
+    assert!(plugins.tab_content(&side).is_ok());
+    assert!(heard.0.lock().unwrap().is_empty());
+}
+
+/// The test plugin's canvas size, from its source.
+fn oxiguitar_test_plugin_canvas() -> (f32, f32) {
+    (100.0, 50.0)
+}
+
+#[test]
+fn events_are_pushed_in_order_and_the_plugin_asks_for_the_score() {
+    let dir = folder("events", &["test.oxp"]);
+    let heard = Arc::new(Heard(
+        Mutex::default(),
+        Mutex::default(),
+        Some(Score {
+            info: ScoreInfo {
+                title: "Água de Beber".into(),
+                ..ScoreInfo::default()
+            },
+            ..Score::default()
+        }),
+    ));
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        heard.clone(),
+    );
+    assert!(plugins.wants(EventKind::Score));
+    assert!(plugins.wants(EventKind::Selection) && plugins.wants(EventKind::Playback));
+    assert!(!plugins.found()[0].is_loaded());
+
+    // The first event loads the plugin; a score being opened makes it ask
+    // for its tab to be redrawn.
+    plugins.push(Event::ScoreOpened { revision: 1 });
+    plugins.wait_for_events();
+    assert!(plugins.found()[0].is_loaded());
+    assert_eq!(*heard.1.lock().unwrap(), [panel()]);
+
+    let selection = Event::Selection(Some(Selection {
+        track: 0,
+        from: Position { bar: 1, beat: 0 },
+        to: Position { bar: 2, beat: 3 },
+    }));
+    plugins.push(selection.clone());
+    plugins.push(Event::ScoreChanged { revision: 2 });
+    plugins.push(Event::ScoreClosed);
+    plugins.wait_for_events();
+    let events = |plugins: &Plugins| -> Vec<String> {
+        String::from_utf8(plugins.call_service("test-echo", "events", b"").unwrap())
+            .unwrap()
+            .lines()
+            .map(str::to_owned)
+            .collect()
+    };
+    assert_eq!(
+        events(&plugins),
+        [
+            format!("{:?}", Event::ScoreOpened { revision: 1 }),
+            format!("{selection:?}"),
+            format!("{:?}", Event::ScoreChanged { revision: 2 }),
+            format!("{:?}", Event::ScoreClosed),
+        ]
+    );
+
+    // Playback positions: never more than were pushed, in order, the last
+    // one always delivered (a slow plugin gets the latest, not a backlog).
+    let playing = |bar| {
+        Event::Playback(Playback {
+            playing: true,
+            at: Position { bar, beat: 0 },
+            seconds: f64::from(bar) * 2.0,
+        })
+    };
+    for bar in 0..200 {
+        plugins.push(playing(bar));
+    }
+    plugins.wait_for_events();
+    let all = events(&plugins);
+    let positions = &all[4..];
+    assert!(!positions.is_empty() && positions.len() <= 200);
+    assert_eq!(positions.last().unwrap(), &format!("{:?}", playing(199)));
+    let bars: Vec<u32> = positions
+        .iter()
+        .map(|p| {
+            (0..200)
+                .find(|&b| *p == format!("{:?}", playing(b)))
+                .unwrap()
+        })
+        .collect();
+    assert!(bars.windows(2).all(|w| w[0] < w[1]), "{bars:?}");
+
+    // The plugin asks for the open score when it needs it.
+    let c = plugins
+        .tab_event(&panel(), "score", TabEvent::Clicked)
+        .unwrap();
+    assert_eq!(label(&c, 3, 0), "Score: Água de Beber");
+    assert!(heard.0.lock().unwrap().is_empty());
+}
+
+#[test]
+fn disabled_plugins_hear_no_events_and_add_no_tabs() {
+    let dir = folder("events-disabled", &["test.oxp"]);
+    let disabled = SharedSettings::new(
+        Settings::parse(r#"{"disabled": ["oxiguitar.test"]}"#).unwrap(),
+        None,
+    );
+    let (plugins, _) = discover(std::slice::from_ref(&dir), disabled);
+    assert!(plugins.tabs().is_empty());
+    assert!(!plugins.wants(EventKind::Score));
+    plugins.push(Event::ScoreOpened { revision: 1 });
+    plugins.wait_for_events();
+    assert!(!plugins.found()[0].is_loaded());
+    assert_eq!(
+        plugins.tab_content(&panel()).unwrap_err().kind,
+        ErrorKind::NotFound
     );
 }
