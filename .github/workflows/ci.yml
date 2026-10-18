@@ -131,7 +131,11 @@ jobs:
             # or else the end of the output.
             report=$( (grep -E -A6 'panicked at|^error: test failed|signal: ' test.log; sed -n '/^failures:$/,/^test result:/p' test.log) | head -n 80)
             [ -n "$report" ] || report=$(tail -n 40 test.log)
-            echo "::error title=cargo test (${{ matrix.name }})::$(printf '%s' "$report" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            # Encoded with bash itself: macOS's BSD sed can't join lines.
+            report=${report//'%'/'%25'}
+            report=${report//$'\r'/'%0D'}
+            report=${report//$'\n'/'%0A'}
+            echo "::error title=cargo test (${{ matrix.name }})::$report"
           fi
           exit "$status"
       # A visual-regression failure leaves what was drawn and a picture of

@@ -171,20 +171,19 @@ mod tests {
     #[test]
     fn files_that_are_not_plugins_say_why() {
         let dir = scratch("oxp");
+        let says = |path: &Path, what: &str| {
+            let e = read_manifest(path).unwrap_err();
+            assert!(e.contains(what), "{}: {e}", path.display());
+        };
         let text = dir.join("notes.oxp");
         std::fs::write(&text, b"just some text, not a library").unwrap();
-        assert!(read_manifest(&text).unwrap_err().contains("not a plugin"));
+        says(&text, "not a plugin");
         let empty = dir.join("empty.oxp");
         std::fs::write(&empty, b"").unwrap();
         assert!(read_manifest(&empty).is_err());
-        assert!(
-            read_manifest(&dir.join("missing.oxp"))
-                .unwrap_err()
-                .contains("can't be read")
-        );
-        // A library, but not a plugin: this test program itself.
-        let me = std::env::current_exe().unwrap();
-        assert!(read_manifest(&me).unwrap_err().contains("no manifest"));
+        says(&dir.join("missing.oxp"), "can't be read");
+        // A library format, but not a plugin: this test program itself.
+        says(&std::env::current_exe().unwrap(), "no manifest");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

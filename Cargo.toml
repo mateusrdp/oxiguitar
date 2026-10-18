@@ -30,8 +30,10 @@ oxiguitar-plugin = { path = "crates/oxiguitar-plugin" }
 oxiguitar-plugin-test = { path = "crates/oxiguitar-plugin-test" }
 oxiguitar-test-plugin = { path = "plugins/test" }
 # Reading plugin manifests without loading the plugin. 0.37 is the version
-# Debian has (rust-object 0.37.3).
-object = { version = "0.37", default-features = false, features = ["read_core", "elf", "macho", "pe", "std"] }
+# Debian has (rust-object 0.37.3). `unaligned`: without it object insists on
+# its structures' natural alignment and rejects real Mach-O files ("Invalid
+# Mach-O number of sections"; found on macOS CI, session 9).
+object = { version = "0.37", default-features = false, features = ["read_core", "elf", "macho", "pe", "std", "unaligned"] }
 # Loading plugins (already in the tree through Slint and winit).
 libloading = "0.8"
 # Fonts: skrifa reads outlines and metrics; keep it on the version krilla uses.
