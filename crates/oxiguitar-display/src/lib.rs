@@ -15,11 +15,15 @@
 //!   engraving defaults, glyph bounding boxes and anchors.
 //! - [`specimen`]: a hand-placed guitar excerpt used by the render spike, the
 //!   GUI spikes and the renderer tests until real layout arrives in M1.
+//! - `wire` (feature `wire`): what a plugin draws on its tab's canvas, as a
+//!   display list the core's renderers draw.
 
 pub mod fonts;
 pub mod list;
 pub mod smufl;
 pub mod specimen;
+#[cfg(feature = "wire")]
+pub mod wire;
 
 pub use fonts::{FontId, FontSet};
 pub use list::{

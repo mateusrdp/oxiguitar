@@ -19,6 +19,8 @@ on:
     paths:
       - crates/oxiguitar-formats/**
       - crates/oxiguitar-model/**
+      - crates/oxiguitar-display/**
+      - crates/oxiguitar-render/**
       - crates/oxiguitar-plugin/**
       - crates/oxiguitar-plugin-api/**
       - plugins/**
@@ -53,8 +55,9 @@ jobs:
       max-parallel: 4
       matrix:
         # The four readers and the plugins' dispatch; the any-file target
-        # (format detection, then any reader) runs on pull requests only.
-        target: ${{ fromJSON(github.event_name == 'pull_request' && '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","any_file","plugin_dispatch"]' || '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","plugin_dispatch"]') }}
+        # (format detection, then any reader) and plugin tabs' answers run
+        # on pull requests only.
+        target: ${{ fromJSON(github.event_name == 'pull_request' && '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","any_file","plugin_dispatch","plugin_tab"]' || '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","plugin_dispatch"]') }}
     steps:
       - uses: actions/checkout@v5
       - name: Seconds per job

@@ -146,7 +146,7 @@ thread_local! {
 /// on the thread that called it), so each is handed to the event loop.
 struct ToFooter;
 
-impl oxiguitar_host::Messages for ToFooter {
+impl oxiguitar_host::Core for ToFooter {
     fn notify(&self, level: Level, text: String) {
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(app) = APP.with(|a| a.borrow().clone()) {

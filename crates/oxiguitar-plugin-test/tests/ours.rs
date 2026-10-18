@@ -280,3 +280,16 @@ fn a_disabled_plugin_and_no_plugin_at_all() {
     assert!(e.to_string().contains(oxiguitar_host::PLUGINS_URL), "{e}");
     assert!(none.read_extensions().is_empty());
 }
+
+#[test]
+fn format_plugins_add_no_tabs_and_hear_no_events() {
+    use oxiguitar_host::api::event::{Event, EventKind};
+    let plugins = plugins();
+    assert!(plugins.tabs().is_empty());
+    for kind in [EventKind::Score, EventKind::Selection, EventKind::Playback] {
+        assert!(!plugins.wants(kind));
+    }
+    // Pushed anyway: nobody is told, and nothing waits.
+    plugins.push(Event::ScoreClosed);
+    plugins.wait_for_events();
+}

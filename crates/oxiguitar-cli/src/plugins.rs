@@ -9,7 +9,7 @@ use std::path::Path;
 use std::sync::{Arc, OnceLock};
 
 use oxiguitar_host::api::message::{Level as PluginLevel, LogEntry};
-use oxiguitar_host::{Level, Messages, Plugins};
+use oxiguitar_host::{Core, Level, Plugins};
 use oxiguitar_model::Score;
 
 /// A file read by a format plugin.
@@ -29,7 +29,7 @@ pub(crate) struct Opened {
 /// Plugins' messages go to the standard error.
 struct Stderr;
 
-impl Messages for Stderr {
+impl Core for Stderr {
     fn notify(&self, _level: Level, text: String) {
         eprintln!("{text}");
     }

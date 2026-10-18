@@ -14,7 +14,12 @@
 //! - every format it reads answers damaged input (nothing, zeros, its own
 //!   signature alone) with an error or a score, never a crash;
 //! - every format it writes answers an empty score;
-//! - every service it declares answers its probe.
+//! - every service it declares answers its probe;
+//! - every tab it adds (interface 1.1) shows contents the core can draw,
+//!   and a plausible use of each widget (a click, a tick, the slider's
+//!   lowest value, an empty field, the first option, a press, drag and
+//!   release in the middle of a canvas) answers with contents it can draw;
+//! - every kind of event it subscribes to is delivered without an error.
 //!
 //! Checks for instruments (no allocation, locks or waiting on the audio
 //! thread) come with the instrument interface (M4).
@@ -27,9 +32,12 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use oxiguitar_host::api::Blob;
+use oxiguitar_host::api::display::Point;
+use oxiguitar_host::api::event::{Event, EventKind, Playback, Position};
 use oxiguitar_host::api::message::{Answer, Error, Request};
 use oxiguitar_host::api::score::Score;
-use oxiguitar_host::{Level, Messages, Plugins, SharedSettings, State};
+use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
+use oxiguitar_host::{Core, Level, Plugins, SharedSettings, State};
 
 /// Builds the plugin crate `package` of the workspace at `workspace` as
 /// `NAME.oxp` (with its `oxp` feature, as a `cdylib`), in the workspace's
@@ -160,7 +168,7 @@ impl Report {
 #[derive(Default)]
 struct Kept(Mutex<Vec<String>>);
 
-impl Messages for Kept {
+impl Core for Kept {
     fn notify(&self, level: Level, text: String) {
         if let Ok(mut kept) = self.0.lock() {
             kept.push(format!("{level:?}: {text}"));
@@ -312,9 +320,107 @@ pub fn check(oxp: &Path) -> Report {
             },
         );
     }
+    for tab in plugins.tabs() {
+        let id = tab.id();
+        let content = plugins.tab_content(&id);
+        report.check(
+            format!("tab {}: its contents can be shown", id.tab),
+            content.as_ref().map(drop).map_err(|e| e.message.clone()),
+        );
+        let Ok(content) = content else { continue };
+        for (widget, event) in plausible_events(&content) {
+            let answer = plugins.tab_event(&id, &widget, event.clone());
+            report.check(
+                format!(
+                    "tab {}: {event:?} on {widget} answers with contents it can show",
+                    id.tab
+                ),
+                match answer {
+                    Ok(_) => Ok(()),
+                    Err(e) if e.message.contains("can't be shown") => Err(e.message),
+                    Err(e) => not_a_crash(&e),
+                },
+            );
+        }
+    }
+    let events = [
+        (EventKind::Score, Event::ScoreOpened { revision: 1 }),
+        (EventKind::Selection, Event::Selection(None)),
+        (
+            EventKind::Playback,
+            Event::Playback(Playback {
+                playing: false,
+                at: Position::default(),
+                seconds: 0.0,
+            }),
+        ),
+    ];
+    for (kind, event) in events.into_iter().filter(|(k, _)| manifest.wants(*k)) {
+        let warnings = |kept: &Kept| {
+            kept.0
+                .lock()
+                .map(|m| m.iter().filter(|t| !t.starts_with("Info")).count())
+                .unwrap_or(0)
+        };
+        let before = warnings(&kept);
+        plugins.push(event);
+        plugins.wait_for_events();
+        report.check(
+            format!("events of kind {kind:?} are taken"),
+            if warnings(&kept) == before {
+                Ok(())
+            } else {
+                Err(kept
+                    .0
+                    .lock()
+                    .ok()
+                    .and_then(|m| m.last().cloned())
+                    .unwrap_or_default())
+            },
+        );
+    }
     report.messages = kept.0.lock().map(|m| m.clone()).unwrap_or_default();
     let _ = std::fs::remove_dir_all(&folder);
     report
+}
+
+/// One thing a user could do to each widget of `content`: a click, a tick,
+/// the slider's lowest value, an empty field, the first option, and a
+/// press, drag and release in the middle of a canvas.
+fn plausible_events(content: &TabContent) -> Vec<(String, TabEvent)> {
+    let mut out = Vec::new();
+    for widget in content.rows.iter().flat_map(|r| &r.widgets) {
+        let Some(id) = widget.id().map(str::to_owned) else {
+            continue;
+        };
+        match widget {
+            Widget::Button { .. } => out.push((id, TabEvent::Clicked)),
+            Widget::Toggle { on, .. } => out.push((id, TabEvent::Toggled(!on))),
+            Widget::Slider { min, .. } => out.push((id, TabEvent::Slid(*min))),
+            Widget::Field { .. } => out.push((id, TabEvent::Edited(String::new()))),
+            Widget::Choice { options, .. } if !options.is_empty() => {
+                out.push((id, TabEvent::Chosen(0)));
+            }
+            Widget::List { items, .. } if !items.is_empty() => {
+                out.push((id, TabEvent::Chosen(0)));
+            }
+            Widget::Canvas(c) => {
+                let at = Point::new(c.width / 2.0, c.height / 2.0);
+                for kind in [PointerKind::Down, PointerKind::Drag, PointerKind::Up] {
+                    out.push((
+                        id.clone(),
+                        TabEvent::Pointer(Pointer {
+                            kind,
+                            at,
+                            button: PointerButton::Primary,
+                        }),
+                    ));
+                }
+            }
+            _ => {}
+        }
+    }
+    out
 }
 
 static COUNT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);

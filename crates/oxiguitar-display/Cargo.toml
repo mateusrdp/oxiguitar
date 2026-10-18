@@ -9,10 +9,16 @@ authors.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[features]
+# Plugin canvases: their display list (oxiguitar-plugin-api's `display`) as
+# the core's own.
+wire = ["dep:oxiguitar-plugin-api"]
+
 [dependencies]
 skrifa.workspace = true
 serde = { workspace = true }
 serde_json.workspace = true
+oxiguitar-plugin-api = { workspace = true, optional = true }
 
 [lints]
 workspace = true

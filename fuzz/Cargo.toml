@@ -18,6 +18,8 @@ oxiguitar-formats = { path = "../crates/oxiguitar-formats" }
 # dispatch and the score's way back into the model.
 oxiguitar-plugin = { path = "../crates/oxiguitar-plugin" }
 oxiguitar-model = { path = "../crates/oxiguitar-model", features = ["wire"] }
+oxiguitar-display = { path = "../crates/oxiguitar-display", features = ["wire"] }
+oxiguitar-render = { path = "../crates/oxiguitar-render" }
 oxiguitar-gp3-plugin = { path = "../plugins/gp3" }
 oxiguitar-gp4-plugin = { path = "../plugins/gp4" }
 oxiguitar-gp5-plugin = { path = "../plugins/gp5" }
@@ -71,6 +73,13 @@ bench = false
 [[bin]]
 name = "plugin_dispatch"
 path = "fuzz_targets/plugin_dispatch.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "plugin_tab"
+path = "fuzz_targets/plugin_tab.rs"
 test = false
 doc = false
 bench = false
