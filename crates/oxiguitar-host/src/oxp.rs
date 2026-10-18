@@ -18,7 +18,7 @@ use std::path::Path;
 
 use object::read::ReadCache;
 use object::read::macho::{FatArch, MachOFatFile32, MachOFatFile64};
-use object::{Architecture, BinaryFormat, FileKind, Object, ObjectSection, ReadRef};
+use object::{Architecture, BinaryFormat, FileKind, Object, ObjectSection, ObjectSegment, ReadRef};
 use oxiguitar_plugin_api::manifest::Manifest;
 use oxiguitar_plugin_api::{MANIFEST_SECTION, MAX_MANIFEST_LEN, PE_MANIFEST_SECTION};
 
@@ -75,7 +75,24 @@ fn from_fat<A: FatArch>(cache: &ReadCache<File>, arches: &[A]) -> Result<Vec<u8>
 /// The manifest section of one library, after checking the library is for
 /// this system and processor.
 fn section<'a, R: ReadRef<'a>>(data: R) -> Result<Vec<u8>, String> {
+    let length = data.len().unwrap_or(0);
     let file = object::File::parse(data).map_err(damaged)?;
+    // A file cut short can still have whole headers (Mach-O and PE put them
+    // first): every segment must lie inside the file, or it would fail to
+    // load later.
+    let end = file
+        .segments()
+        .map(|s| {
+            let (offset, size) = s.file_range();
+            offset.saturating_add(size)
+        })
+        .max()
+        .unwrap_or(0);
+    if end > length {
+        return Err(format!(
+            "it is cut short ({length} bytes of {end}): the file is damaged"
+        ));
+    }
     let (format, section_name) = match file.format() {
         BinaryFormat::Elf => ("a Linux or Android library", MANIFEST_SECTION),
         BinaryFormat::Pe => ("a Windows library", PE_MANIFEST_SECTION),

@@ -279,11 +279,14 @@ fn a_damaged_plugin_file_is_reported_and_never_loaded() {
     let bytes = std::fs::read(test_oxp()).unwrap();
     std::fs::write(dir.join("half.oxp"), &bytes[..bytes.len() / 2]).unwrap();
     let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    // ELF puts its section table last, Mach-O and PE their headers first:
+    // either way the host sees the file is cut short.
     assert!(
-        matches!(&plugins.found()[0].state, State::Unusable(_)),
+        matches!(&plugins.found()[0].state, State::Unusable(why) if why.contains("cut short") || why.contains("damaged")),
         "{:?}",
         plugins.found()[0]
     );
+    assert!(plugins.load_all().is_empty());
     assert!(!plugins.found()[0].is_loaded());
 }
 
