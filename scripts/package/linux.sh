@@ -136,6 +136,10 @@ stage() {
     done
     install -Dm644 "$root/assets/icon/oxiguitar-placeholder.svg" \
         "$to/usr/share/icons/hicolor/scalable/apps/$id.svg"
+    install -d "$to/usr/share/man/man1"
+    for page in oxiguitar oxiguitar-cli; do
+        gzip -9n -c "$root/assets/linux/man/$page.1" > "$to/usr/share/man/man1/$page.1.gz"
+    done
     local doc="$to/usr/share/doc/$package"
     install -Dm644 "$root/README.md" "$doc/README.md"
     install -Dm644 "$root/CHANGELOG.md" "$doc/CHANGELOG.md"
@@ -143,6 +147,36 @@ stage() {
     install -Dm644 "$dist/THIRD-PARTY-LICENSES.html" "$doc/THIRD-PARTY-LICENSES.html"
     install -Dm644 "$root/assets/fonts/bravura/OFL.txt" "$doc/fonts/Bravura-OFL.txt"
     install -Dm644 "$root/assets/fonts/noto-sans/OFL.txt" "$doc/fonts/NotoSans-OFL.txt"
+}
+
+# The contact in the packages' Maintainer field and changelog: always the
+# GitHub issue tracker, never a personal email (Mateus, 18 Oct 2026).
+# Debian Policy 5.6.2 asks for an email address, so lintian reports
+# malformed-contact and bogus-mail-host-in-debian-changelog (release.yml
+# suppresses those two tags, and only those); dpkg and apt
+# accept it. A package in Debian's own archive carries its Debian
+# maintainer's address instead (debian/).
+maintainer="Mateus Rocha de Paula <https://github.com/mateusrdp/oxiguitar/issues>"
+
+# What every .deb needs beside its files: doc/PACKAGE/changelog.gz in
+# Debian's format (one entry for this version, pointing to the full
+# changelog), dated by the last commit so a rebuild gives the same bytes,
+# and DEBIAN/md5sums.
+deb_extras() {
+    local tree="$1" name="$2" full="$3"
+    local when
+    when="$(date -u -R -d "@${SOURCE_DATE_EPOCH:-$(git -C "$root" log -1 --format=%ct)}")"
+    {
+        echo "$name ($version) unstable; urgency=medium"
+        echo
+        echo "  * OxiGuitar $version. Every change is listed in"
+        echo "    $full."
+        echo
+        echo " -- $maintainer  $when"
+    } | gzip -9n > "$tree/usr/share/doc/$name/changelog.gz"
+    mkdir -p "$tree/DEBIAN"
+    (cd "$tree" && find . -path ./DEBIAN -prune -o -type f -printf '%P\0' \
+        | LC_ALL=C sort -z | xargs -0 md5sum) > "$tree/DEBIAN/md5sums"
 }
 
 build_deb() {
@@ -161,6 +195,7 @@ build_deb() {
         echo " On Debian systems the full licence is in /usr/share/common-licenses/GPL-3."
         echo " Third-party licences: /usr/share/doc/$package/THIRD-PARTY-LICENSES.html"
     } > "$tree/usr/share/doc/$package/copyright"
+    deb_extras "$tree" "$package" "CHANGELOG.md, beside this file"
 
     # Linked libraries, as dpkg-shlibdeps finds them (it wants a debian/
     # folder to stand in).
@@ -176,12 +211,7 @@ build_deb() {
         echo "Package: $package"
         echo "Version: $version"
         echo "Architecture: $deb_arch"
-        # Contact is always the GitHub issue tracker, never a personal email
-        # (Mateus, 18 Oct 2026). Debian Policy 5.6.2 asks for an email
-        # address here, so lintian flags this; dpkg and apt accept it. A
-        # package in Debian's own archive would carry its Debian
-        # maintainer's address instead.
-        echo "Maintainer: Mateus Rocha de Paula <https://github.com/mateusrdp/oxiguitar/issues>"
+        echo "Maintainer: $maintainer"
         echo "Installed-Size: $size"
         echo "Depends: ${linked:+$linked, }$deb_runtime"
         echo "Recommends: $deb_recommends"
@@ -247,6 +277,8 @@ build_rpm() {
         echo "/usr/share/applications/$id.desktop"
         echo "/usr/share/mime/packages/$id.xml"
         echo "/usr/share/icons/hicolor/*/apps/$id.*"
+        echo "/usr/share/man/man1/oxiguitar.1.gz"
+        echo "/usr/share/man/man1/oxiguitar-cli.1.gz"
         echo "%doc /usr/share/doc/$package"
     } > "$spec"
     # Fedora's shared-mime-info and desktop-file-utils rebuild their
@@ -310,6 +342,7 @@ files. OxiGuitar alone opens no file; it finds these in
         echo " On Debian systems the full licence is in /usr/share/common-licenses/GPL-3."
         echo " Third-party licences: /usr/share/doc/$name/THIRD-PARTY-LICENSES.html"
     } > "$doc/copyright"
+    deb_extras "$tree" "$name" "CHANGELOG.md, in the package oxiguitar"
     mkdir -p "$work/plugin-shlibs/debian"
     touch "$work/plugin-shlibs/debian/control"
     local args=()
@@ -318,13 +351,12 @@ files. OxiGuitar alone opens no file; it finds these in
     linked="$(cd "$work/plugin-shlibs" && dpkg-shlibdeps -O "${args[@]}" 2> /dev/null \
         | sed -n 's/^shlibs:Depends=//p')"
     local size
-    size="$(du -sk "$tree" | cut -f1)"
-    mkdir -p "$tree/DEBIAN"
+    size="$(du -sk --exclude=DEBIAN "$tree" | cut -f1)"
     {
         echo "Package: $name"
         echo "Version: $version"
         echo "Architecture: $deb_arch"
-        echo "Maintainer: Mateus Rocha de Paula <https://github.com/mateusrdp/oxiguitar/issues>"
+        echo "Maintainer: $maintainer"
         echo "Installed-Size: $size"
         if [[ -n "$linked" ]]; then echo "Depends: $linked"; fi
         echo "Enhances: oxiguitar, oxiguitar-x11"
