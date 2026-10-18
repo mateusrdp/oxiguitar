@@ -2,7 +2,7 @@
 
 The milestones from the project brief, with live status. Requirement IDs (FMT-1, VIEW-3, …) refer to the brief's product requirements; decision records live in [docs/adr/](docs/adr/).
 
-v1.0, a full TuxGuitar replacement for reading, editing and playing, ships at the end of M4. From M5 on, the work closes the gap with Guitar Pro 8.
+v1.0 ships at the end of M4: the viewer, the editor, the player and the plugin system, with at least the Guitar Pro 7+ format plugin (reading and writing) and a basic MIDI player (Mateus, 18 Oct 2026). From M5 on, the work closes the gap with Guitar Pro 8.
 
 On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so that every later milestone is built on it: the core reads, edits, writes, shows and drives playback, and everything else (every file format, every sound, every export, anything platform-specific) is a plugin. See [ADR 0008](docs/adr/0008-plugin-architecture.md) and [docs/design/plugins.md](docs/design/plugins.md). Milestones after M1 were renumbered.
 
@@ -10,7 +10,7 @@ On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so tha
 | --- | --- | --- |
 | M0 Foundations | — | **Done** (16 Oct 2026) |
 | M1 Viewer | v0.1 | **Done** (17 Oct 2026; PR #40 to main and the v0.1.0 tag wait for Mateus) |
-| M2 Plugin system and window shell | v0.2 | **Next** (design proposed, ADR 0008) |
+| M2 Plugin system and window shell | v0.2 | **In progress** (design accepted, ADR 0008) |
 | M3 Editor | v0.5 | Not started |
 | M4 Player | **v1.0** | Not started |
 | M5 Guitar Pro 8 notation and editing parity | | Not started |
@@ -95,18 +95,19 @@ Corpus status (16 Oct 2026): Guitar Pro 5 and later, 42 of 42 files open (27 GP5
 
 ## M2 — Plugin system and window shell (v0.2)
 
-Turn the viewer into a small core with plugins, and give the window the shape the later milestones fill in. Design: [docs/design/plugins.md](docs/design/plugins.md); open questions: [ADR 0008](docs/adr/0008-plugin-architecture.md).
+Turn the viewer into a small core with plugins, and give the window the shape the later milestones fill in. Design: [docs/design/plugins.md](docs/design/plugins.md); decision: [ADR 0008](docs/adr/0008-plugin-architecture.md) (accepted 18 Oct 2026).
 
 - [ ] The window shell (docs/design/ui.md): toolbar with sections, tabbed top, bottom, left and right areas that collapse and hide, the page on a dark canvas, a one-line footer that expands into the session's messages; player controls greyed out in the top area until an output plugin is installed; mouse wheel zooms the page, Ctrl + wheel the interface.
-- [ ] User folder, settings.json and the plugin folders, created on launch; the footer says when no output or no read/write plugin is installed and where to get them.
-- [ ] Mateus answers ADR 0008's questions; ADR 0008 accepted.
+- [ ] User folder, settings.json and the plugin folders (XDG on Linux), created on launch; the footer says when no output or no read/write plugin is installed and where to get them.
+- [x] Mateus answers ADR 0008's questions; ADR 0008 accepted (18 Oct 2026).
 - [ ] `oxiguitar-plugin-api` (the interface's messages), `oxiguitar-plugin` (the SDK for plugin authors, no `unsafe` for them), the host in `oxiguitar-host` (manifests read without loading, lazy loading, contributions registry, host services, services chosen per platform and environment).
 - [ ] Five format plugins from M1's readers: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp), each with its fixtures, corpus, fuzz and visual tests. The core holds no format code.
 - [ ] Plugins for PDF export and for Infer Key Signatures; `oxiguitar-cli` loads plugins like the app.
 - [ ] The plugin manager plugin: list, enable, disable, uninstall, install from a file, settings forms. `--safe-mode`.
-- [ ] Plugins built for all six targets in CI, attached to releases with SHA256SUMS; packages as decided (ADR 0008, question 7).
+- [ ] Plugins built for all six targets in CI, attached to releases with SHA256SUMS; two packages, `oxiguitar` (the core) and `oxiguitar-plugins-basic` (Suggested by the core).
+- [ ] Two Linux builds of the core: Wayland (default) and X11 (deprecated), as separate packages and AppImages.
 - [ ] The plugin developer guide (`docs/plugins/`), with a template plugin, and the interface's contract test suite.
-- [ ] Debian checks for the core: manual pages for both binaries, lintian in CI (ADR 0008, question 5).
+- [ ] Debian: manual pages for both binaries, lintian in CI, a `debian/` directory building both packages offline in a sid container, and an audit of every crate against Debian's archive (plugins.md, "Debian"). The goal is Debian main.
 
 Done when: the core with no plugins opens nothing and says which plugin a file needs; with our plugins, every M1 gate still passes (42 of 42 corpus files, the speed budget including plugin loading, the 50 visual references unchanged, six hours of fuzzing per reader); start-up reads 30 plugin manifests in under 10 ms; the plugin manager works on all three systems; the developer guide builds a working plugin from the template.
 
@@ -120,7 +121,8 @@ Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; r
 ## M4 — Player (v1.0)
 
 - In the core: score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); the transport in the top area (play, play selection, stop, pause, rewind, count-in, loop, audible and visual metronome, PLAY-5); the follow cursor; the mixer (PLAY-6); the output choice.
-- As plugins: the MIDI instrument (a SoundFont synthesiser, PLAY-1, with downloads of better SoundFonts at the user's request, PLAY-8), audio-device plugins per system, WAV export (PLAY-7).
+- As plugins: the MIDI instrument (a SoundFont synthesiser, PLAY-1, with downloads of better SoundFonts at the user's request, PLAY-8), audio-device plugins per system, WAV export (PLAY-7). Instruments declare the classes of instrument they play.
+- v1.0's minimum: the Guitar Pro 7+ format plugin reading and writing, and the basic MIDI player, in `oxiguitar-plugins-basic`.
 
 Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes; golden-file tests cover event output; the practice tools work on every reference song; with no instrument installed the transport is greyed out and the footer says where to get one.
 

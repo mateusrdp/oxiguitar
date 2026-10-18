@@ -2,7 +2,7 @@
 
 OxiGuitar is a small core and a set of plugins. The core opens nothing, plays nothing and exports nothing by itself: it holds the score, shows it, edits it, and drives the player's transport. Every file format, every sound, every export and every feature that depends on a platform or environment is a plugin (Mateus, 18 Oct 2026).
 
-This document is the design. Parts marked **Proposed** wait for Mateus's answers to the questions in ADR 0008 ([docs/adr/0008-plugin-architecture.md](../adr/0008-plugin-architecture.md)); the rest is decided. The plugin developer guide (how to write one, step by step) is written with the SDK in M2 and lives in the user manual's sister book, `docs/plugins/`.
+This document is the design, accepted by Mateus on 18 Oct 2026 with his answers to the questions in ADR 0008 ([docs/adr/0008-plugin-architecture.md](../adr/0008-plugin-architecture.md)). The plugin developer guide (how to write one, step by step) is written with the SDK in M2 and lives in the user manual's sister book, `docs/plugins/`.
 
 ## Why
 
@@ -16,14 +16,19 @@ This document is the design. Parts marked **Proposed** wait for Mateus's answers
 | Core | Plugins |
 | --- | --- |
 | The score model, edit commands, undo and redo, selection | Every file format, reading and writing: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp); later MusicXML, ABC, MuseScore, MIDI files |
-| Engraving and the four layouts, drawn on screen **(Proposed: core, because nobody can edit what they cannot see)** | Exports: PDF, PNG, SVG, WAV |
+| Engraving and the four layouts, drawn on screen (nobody can edit what they cannot see) | Exports: PDF, PNG, SVG, WAV |
 | The window shell: menus, toolbar, the four tabbed areas, the page, the footer | The Tools menu's tools (Infer Key Signatures moves out of the core) |
 | The player's transport: play, play selection, stop, pause, rewind, count-in, loop, metronome; the cursor; turning the score into timed events (repeats, jumps, tempo, effects) | Sound: the MIDI synthesiser, NAM guitar, RSE banks, realistic drums |
-| **(Proposed)** The mixer: per-track volume, pan, mute and solo, and playback speed | Audio devices (PipeWire, ALSA, CoreAudio, WASAPI) and MIDI devices |
+| The mixer: per-track volume, pan, mute and solo, and playback speed (instruments from several plugins are mixed here) | Audio devices (PipeWire, ALSA, CoreAudio, WASAPI) and MIDI devices |
 | settings.json, the plugin folders, the plugin host | The plugin manager |
 | A built-in catalogue of our own plugins (names, file signatures, where to get them), so the core can say *which* plugin a file needs | Platform gaps we may fill one day: Wayland drops (ADR 0006), macOS open-document events (ADR 0007) |
 
-The core still compiles per target (a Windows build holds no Linux code). The one exception to "no code that can't be used" is the windowing toolkit: Slint and winit carry both X11 and Wayland backends in the Linux binary and choose one at start. Splitting them would mean shipping two Linux builds of the core. **(Proposed: accept this exception.)**
+The core compiles per target, so a Windows build holds no Linux code. On Linux the windowing toolkit would carry both X11 and Wayland in one binary, so **there are two Linux builds of the core** (Mateus, 18 Oct 2026): a Wayland build, the main one, and an X11 build for desktops that still need it. X11 is deprecated from the start, as the desktops are leaving it, and the X11 build will be dropped. Each build enables only its own Slint and winit backend (`backend-winit-wayland` or `backend-winit-x11`), through a Cargo feature of `oxiguitar-app` (`wayland`, the default, or `x11`).
+
+| Build | Linux packages | Notes |
+| --- | --- | --- |
+| Wayland | `oxiguitar` (.deb, .rpm), `OxiGuitar-VERSION-x86_64.AppImage` | The default. Headless tests run it in a nested compositor (`scripts/wayland-dnd-test/` has the recipe). |
+| X11 (deprecated) | `oxiguitar-x11`, which Provides, Conflicts with and Replaces `oxiguitar`; `OxiGuitar-x11-VERSION-x86_64.AppImage` | Same program, X11 backend only. Its window says nothing different; the manual says it will be dropped. |
 
 ## The window
 
@@ -58,7 +63,7 @@ Before M2 the containers exist with placeholders (Palette and Inspector say what
 
 ## Plugin files
 
-**Proposed** (ADR 0008, question 1): a plugin is **one native library file** with a small, versioned C interface, built per target, with its manifest in a named data section.
+A plugin is **one native library file** (accepted, 18 Oct 2026) with a small, versioned C interface, built per target, with its manifest in a named data section.
 
 - **One file**, named `NAME.oxp` ("OxiGuitar plugin"), for example `gp5.oxp`. Inside it is an ordinary shared library for one target: ELF on Linux, PE on Windows, Mach-O on macOS (one universal file for Intel and Apple Silicon). Downloads carry the target in their name (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp`); the user can drop it in a plugin folder as it is. Icons, strings and small data are compiled into the file. Large data a plugin downloads at the user's request (SoundFonts, NAM models) goes in that plugin's data folder, not in the plugin file.
 - **No unpacking.** The operating system maps the file into memory when it is loaded; nothing is copied, unzipped or compiled at start.
@@ -73,12 +78,12 @@ Before M2 the containers exist with placeholders (Palette and Inspector say what
 - **Audio crosses as raw sample buffers**, with no encoding and no allocation, so instruments run at full native speed on the audio thread.
 - The host hands each plugin a table of **host services** at start: send a footer message, read and write its own settings, ask for the score (whole, a track, the selection, a range of bars), submit an edit (always as an undoable command, never by changing the score directly), ask the user to approve a download (NET-2), redraw its tab.
 - The **SDK** (`oxiguitar-plugin`) wraps all of this in safe Rust: a plugin implements traits (`FormatReader`, `FormatWriter`, `Instrument`, `Tool`, `Exporter`, `Panel`, …) and calls one `export_plugin!` macro. Plugin authors write no `unsafe`.
-- **Where the `unsafe` is.** Loading a native library and calling through function pointers is `unsafe` in Rust by nature; no plugin system with native code can avoid it. It would live in exactly two small modules, the host's loader and the SDK's export glue, reviewed line by line and covered by an interface test suite. The rest of the workspace keeps `unsafe_code = "forbid"`. **(Proposed: Mateus to accept or reject this; see the alternatives below.)**
+- **Where the `unsafe` is.** Loading a native library and calling through function pointers is `unsafe` in Rust by nature; no plugin system with native code can avoid it. It would live in exactly two small modules, the host's loader and the SDK's export glue, reviewed line by line and covered by an interface test suite. The rest of the workspace keeps `unsafe_code = "forbid"`. Mateus accepted this (18 Oct 2026): it is the price of native plugins, not a workaround around another library.
 - **The same plugin can be built in.** A plugin crate builds both as a `.oxp` and as an ordinary Rust library. The mobile apps link their plugins in (iOS forbids loading downloaded code), and our own tests use plugins as libraries without going through the interface.
 
 ### The options considered
 
-| | Native library (proposed) | WebAssembly component (wasmtime) | Both kinds | Separate processes | Scripts (Lua, Rhai) |
+| | Native library (chosen) | WebAssembly component (wasmtime) | Both kinds | Separate processes | Scripts (Lua, Rhai) |
 | --- | --- | --- | --- | --- | --- |
 | One file per plugin | Yes, per target | Yes, one for every target | Yes | One executable per target | Yes |
 | Load time | mmap, microseconds; manifest read without loading | Compiling a module takes 10s–100s of ms; cached precompiled copies make later starts fast, at the cost of disk | Both | A process start, milliseconds | Parse at load |
@@ -98,16 +103,34 @@ A manifest lists everything a plugin adds, so the window can show its menu entri
 | Contribution | What it is | Loaded when |
 | --- | --- | --- |
 | **Format** | Reads and/or writes one file format: name, extensions, and content signatures (bytes at an offset, a ZIP member name) so the core picks it without loading anything (FMT-6). Reading returns a score and its import log (FMT-2); writing returns bytes and a list of what the format loses (FMT-3). | A file of that format is opened or saved |
-| **Instrument** (output) | Turns the player's timed events into sound for the tracks given to it: MIDI synthesiser, NAM guitar, RSE, drums. **(Proposed: chosen per track, with one default.)** | Play is pressed |
+| **Instrument** (output) | Turns the player's timed events into sound for the tracks given to it: MIDI synthesiser, NAM guitar, RSE, drums. Each track chooses its instrument, with one default for the rest. The manifest says which **instrument classes** it plays (below); without the field it plays everything. | Play is pressed |
 | **Service** | One implementation of an interface the core or another plugin defines, so the right code is chosen per platform or environment: an audio device (PipeWire, ALSA, CoreAudio, WASAPI), a MIDI device, Wayland drops. Each declares its conditions; settings can pin a choice; otherwise the first available wins, by priority. | First use |
 | **Tool** | A Tools menu entry, the `oxiguitar-tools` shape: id, name, availability with a reason, apply → a changed score as one undoable command and a report. | Picked from the menu |
 | **Exporter** | File → Export entries: PDF, PNG, SVG, WAV. | Picked |
-| **Tab** | A tab in the top, bottom, left or right area, with a title and an icon. Its contents are a tree of standard widgets (buttons, toggles, sliders, lists, text, fields) that the core draws in its own style, plus, if needed, a canvas the plugin draws with OxiGuitar's display list (a fretboard, a meter) and receives pointer events on. **(Proposed; the alternative is plugins shipping Slint markup run by Slint's interpreter.)** | The tab is first shown |
+| **Tab** | A tab in the top, bottom, left or right area, with a title and an icon. Its contents are a tree of standard widgets (buttons, toggles, sliders, lists, text, fields) that the core draws in its own style, plus, if needed, a canvas the plugin draws with OxiGuitar's display list (a fretboard, a meter) and receives pointer events on. Chosen over Slint markup run by Slint's interpreter: no compiler in the core, one look, and it works the same on mobile (Mateus: whatever is fast, easy and elegant, 18 Oct 2026). | The tab is first shown |
 | **Toolbar section** | A titled group of icon buttons, toggles and drop-downs in the toolbar. Icons are vector paths in the manifest, tinted by the core. | An item is used |
 | **Settings** | A schema of the plugin's settings (names, types, defaults, ranges), from which the plugin manager draws a settings form. | Never needs code |
 | **Events** | What the plugin wants to hear about: score opened or changed, selection changed, playback position. Events are pushed to it as they happen; nothing polls. | When the event first fires |
 
 The **player** works like this: the core turns the score into a timeline of events (notes with every effect, tempo, the metronome's clicks and count-in) and runs the transport. Each instrument renders its tracks' events into sample buffers on the audio thread, the core mixes them (volume, pan, mute, solo), and the audio-device service sends the mix to the system. MIDI output to hardware is an instrument that sends MIDI instead of samples. With no instrument installed, the transport is greyed out. The rules of real-time audio (no allocation, no locks, no waiting on the audio thread) bind instrument plugins too, and the SDK's test suite checks them.
+
+### Instrument classes
+
+An instrument plugin declares what it can play, so the player offers it only for tracks it suits; a plugin that says nothing plays everything (Mateus, 18 Oct 2026). The manifest has two optional lists, `plays` and `does_not_play`, of classes from this fixed set, which the core derives from each track's instrument (General MIDI program, percussion flag and strings):
+
+| Class | Tracks |
+| --- | --- |
+| `fretted` | Guitars and basses with frets, banjo, mandolin, ukulele (GM 24–34, 36, 37, 104–107) |
+| `fretless` | Fretless bass and other stringed tracks without frets (GM 35) |
+| `bowed` | Violin, viola, cello, contrabass, string ensembles (GM 40–45, 48–51) |
+| `keyboard` | Pianos, organs, chromatic percussion such as vibraphone (GM 0–23) |
+| `voice` | Choirs and voices (GM 52–54) |
+| `winds` | Brass, reeds and pipes (GM 56–79) |
+| `synth` | Synth leads, pads and effects (GM 80–103) |
+| `drums` | Percussion tracks (the drum-kit flag, MIDI channel 10) |
+| `other` | Anything else |
+
+`plays` lists what the plugin covers (absent = everything); `does_not_play` removes classes from that. A realistic-drums plugin says `plays: ["drums"]`; the MIDI synthesiser says nothing. A track whose chosen instrument no longer exists falls back to the default, with a footer message.
 
 **Plugins can depend on plugins.** A plugin can define a service interface for others: the NAM plugin, for example, needs a clean guitar signal, which a "guitar DI" service provides (a plucked-string model today, sampled DI notes later). The manifest says what a plugin `provides` and `requires`.
 
@@ -117,15 +140,15 @@ On launch the app makes sure its user folder, `settings.json` (empty, `{}`) and 
 
 | System | User folder (settings.json) | User plugins | System plugins |
 | --- | --- | --- | --- |
-| Linux | `~/.oxiguitar/` | `~/.oxiguitar/plugins/` | `/usr/lib/oxiguitar/plugins/` (found next to the program: `<bin>/../lib/oxiguitar/plugins/`, which also covers `/usr/local`, the AppImage and a build from source) |
+| Linux | `$XDG_CONFIG_HOME/oxiguitar/` (default `~/.config/oxiguitar/`) | `$XDG_DATA_HOME/oxiguitar/plugins/` (default `~/.local/share/oxiguitar/plugins/`) | `/usr/lib/oxiguitar/plugins/` (found next to the program: `<bin>/../lib/oxiguitar/plugins/`, which also covers `/usr/local`, the AppImage and a build from source) |
 | macOS | `~/Library/Application Support/OxiGuitar/` | `…/OxiGuitar/plugins/` | `OxiGuitar.app/Contents/PlugIns/`, then `/Library/Application Support/OxiGuitar/plugins/` |
 | Windows | `%APPDATA%\OxiGuitar\` | `%APPDATA%\OxiGuitar\plugins\` | `plugins\` beside `oxiguitar.exe` (the portable zip) |
 
-- The environment variable `OXIGUITAR_HOME` replaces the user folder (tests, a portable copy on a USB stick).
-- **Proposed** (question 6): on Linux, the freedesktop convention would be `~/.config/oxiguitar/settings.json` and `~/.local/share/oxiguitar/plugins/`. Mateus asked for `~/.oxiguitar/`, which is what the app does today.
+- On Linux the folders follow the freedesktop [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/) convention, like the rest of the desktop (Mateus, 18 Oct 2026): settings under the config home, plugins and their data under the data home. Relative or empty `XDG_*` values are ignored, as the specification says.
+- The environment variable `OXIGUITAR_HOME` puts everything in one folder instead (`settings.json`, `plugins/`, `data/`): for tests and for a portable copy on a USB stick.
 - `settings.json` key `plugin_folders` (a list of paths) replaces the default list. Folders are searched in order; when two folders hold the same plugin id, the higher version wins, and the earlier folder on a tie.
 - Other keys, written by the core and the plugin manager: `disabled` (plugin ids), `services` (a pinned implementation per interface), `instruments` (default and per track), and one object per plugin id for its own settings. Unknown keys are kept as they are.
-- A plugin that keeps data (a downloaded SoundFont) gets its own folder, `<user folder>/data/<plugin id>/`.
+- A plugin that keeps data (a downloaded SoundFont) gets its own folder: `$XDG_DATA_HOME/oxiguitar/data/<plugin id>/` on Linux, `data/<plugin id>/` in the user folder elsewhere.
 
 ## The plugin manager
 
@@ -137,7 +160,8 @@ So that a disabled plugin manager can't lock a user out, the core keeps two thin
 
 - **Our plugins live in this repository**, under `plugins/`, one crate each, so a change to the interface and the plugins that use it land in one pull request while the interface is young. They may move to their own repository once the interface reaches 1.0.
 - Each release attaches every plugin for every target (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp`, …) to the same GitHub release, with SHA256SUMS.
-- **Proposed** (question 7): the Linux packages split into `oxiguitar` (the core, as Mateus asked) and `oxiguitar-plugins` (our plugins, into `/usr/lib/oxiguitar/plugins/`), which `oxiguitar` *Recommends*, so `apt install oxiguitar` gives a working app while the core package stays the core alone. The .dmg and the Windows zip would carry the plugins in their plugin folders the same way.
+- **Two packages** (Mateus, 18 Oct 2026): `oxiguitar`, the core alone, and `oxiguitar-plugins-basic`, the plugins we write and recommend, installed into `/usr/lib/oxiguitar/plugins/`. `oxiguitar` lists `oxiguitar-plugins-basic` under **Suggests** (apt doesn't install suggested packages by default, so the core really ships alone). Both must meet Debian's criteria for its archive. The basic set: the Guitar Pro format plugins (3, 4, 5, 6, 7–8), PDF export, Infer Key Signatures, the plugin manager, the MIDI instrument and the audio-device plugins for Linux. The .rpm splits the same way (`Suggests:`); the Windows zip and the .dmg come in two downloads, the core and the basic plugins, the plugins unpacked into the user's plugin folder by hand or by the plugin manager.
+- With the core alone, the footer says that nothing can be opened or played yet and where to get plugins.
 - Anyone can host plugins anywhere. The core's catalogue names only ours.
 
 ## Testing
@@ -154,8 +178,17 @@ NET-1 to NET-5 cover the core and our plugins. A native plugin can do anything t
 
 ## Debian
 
-The core must pass Debian's acceptance criteria (Mateus, 18 Oct 2026). Checked so far:
+Goal (Mateus, 18 Oct 2026): `oxiguitar` and `oxiguitar-plugins-basic` hosted in Debian's own archive, in **main**, as MuseScore and TuxGuitar are (TuxGuitar is in unstable as `1.6.6+dfsg1-3`). Main is the right area: everything we use is DFSG-free. Debian's other areas don't help with what is hard here: **non-free** is for software whose *licence* isn't free and **contrib** for free software that needs non-free software, while our obstacle is packaging work, not licences.
 
-- **Licences**: DFSG-free throughout (GPL-3.0, MIT, Apache-2.0, OFL-1.1 and the like), enforced by cargo-deny.
-- **Policy**: binaries in `/usr/bin`, plugins in `/usr/lib/oxiguitar/plugins` (FHS allows a package's own directory under `/usr/lib`), no network at build or run time. Still to do: a manual page for each binary (`oxiguitar.1`, `oxiguitar-cli.1`; lintian requires them) and a lintian run in CI. The Maintainer field holds the GitHub issue tracker by decision (lintian flags it; a package in Debian's own archive would carry its Debian maintainer's address).
-- **Debian's own archive** (Proposed, question 5) would also need every crate we use packaged in Debian. Slint is on its way: `rust-i-slint-common` 1.17.1 is in unstable but not testing, and other Slint crates are in the NEW queue. The bundled fonts would have to come from Debian font packages where they exist (Noto Sans is `fonts-noto-core`; we found no Debian package for Bravura).
+What Debian's archive needs, and where we stand:
+
+| Need | Where we stand | Work |
+| --- | --- | --- |
+| DFSG-free licences for every file | Yes: GPL-3.0, MIT, Apache-2.0, OFL-1.1 and the like, enforced by cargo-deny | Keep it; a `debian/copyright` listing every crate's licence, generated like THIRD-PARTY-LICENSES.html |
+| Build from source with Debian's own tools, offline | Our MSRV follows Debian unstable's rustc (1.97); builds need no network | A `debian/` directory (debhelper and `dh-cargo`) building both packages; a CI job building it in a Debian sid container with the network off |
+| **Every Rust crate we use packaged in Debian** (`librust-*-dev`), at versions Debian has, or a justified copy in our source | The hard part. Slint is on its way (`rust-i-slint-common` 1.17.1 in unstable, other Slint crates in the NEW queue) | An audit of every crate in `Cargo.lock` against Debian; package the missing ones with the Debian Rust team (its `debcargo` tooling), or narrow our dependencies |
+| No copies of things Debian already ships | We bundle Bravura and Noto Sans | Use `fonts-noto-core` instead of our Noto copy in the Debian build; Bravura has no Debian package we found, so we package it (with its sources) or ship it with its OFL licence |
+| Debian Policy and a lintian-clean package | Paths follow the FHS (`/usr/bin`, `/usr/lib/oxiguitar/plugins`) | Manual pages for `oxiguitar` and `oxiguitar-cli`; lintian in CI |
+| A Maintainer with a working email, and a Debian Developer to sponsor uploads | Our own .deb names the GitHub issue tracker (by decision); Debian requires an email address of a person or a team there | Find a sponsor (mentors.debian.net, a request for sponsorship, or a team such as Debian Multimedia); the Maintainer becomes that team's list or a project address, not Mateus's own email |
+
+Our GitHub release .deb can keep shipping in the meantime; the Debian archive's packages would be built from the same source by Debian.
