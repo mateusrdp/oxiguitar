@@ -104,7 +104,7 @@ Turn the viewer into a small core with plugins, and give the window the shape th
 - [x] A test plugin built as an `.oxp` and the contract suite (`oxiguitar-plugin-test`); 30 manifests read in about 1 ms.
 - [x] Five format plugins from M1's readers: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp), each with its fixtures, corpus, fuzz and visual tests. The core holds no format code and recognises no format itself; `oxiguitar-cli` loads plugins like the app (PR #51, 18 Oct 2026). Every M1 gate passes through the `.oxp` files: 42 of 42 corpus files; all 159 Guitar Pro files read byte for byte as develop's in-process reader read them; the 50 visual references unchanged; the speed budget with the plugin loaded (0.26 s and 0.32 s for the first runs); the contract on all five; NET-5 with the plugins installed; a fuzz target for the plugins' dispatch.
 - [x] ~~Plugins for PDF export and for Infer Key Signatures~~: dropped. Both stay in the core, PDF export as a feature of the viewer and Infer Key Signatures as a feature of the editor (Mateus, 18 Oct 2026).
-- [ ] The plugin manager plugin: list, enable, disable, uninstall, install from a file, settings forms. `--safe-mode`.
+- [ ] Plugin tabs (standard widgets and a display-list canvas) and events pushed to plugins; the plugin manager in the core (Tools → Plugins: list, enable, disable); `--safe-mode`; the plugin folders in Help → About.
 - [ ] Plugins built for all six targets in CI, attached to releases with SHA256SUMS; two packages, `oxiguitar` (the core) and `oxiguitar-plugins-basic` (Suggested by the core); the AppImage, the Windows zip and the .dmg each beside a zip of the basic plugins.
 - [ ] Two Linux builds of the core: Wayland (default) and X11 (deprecated), as separate packages and AppImages.
 - [ ] The plugin developer guide (`docs/plugins/`), with a template plugin, and the interface's contract test suite.
@@ -131,11 +131,12 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
      - the contract suite on all five.
    - CI stops using `--all-features`, since two plugin crates linked into one test binary would both export the entry symbol; the features it needs are named instead.
 2. ~~PDF export and Infer Key Signatures as plugins.~~ **Dropped** (Mateus, 18 Oct 2026): PDF export stays in the core as a feature of the viewer, and Infer Key Signatures as a feature of the editor. Other tools and other exports (PNG, SVG, WAV) are still plugins; the interface gains exporter and tool contributions when the first such plugin needs them. The versioned wire form of the display list comes with slice 3, for plugin tabs' canvases (ADR 0008, answer 8).
-3. **The plugin manager.**
-   - First the interface for tabs (standard widgets plus a display-list canvas) and events pushed to plugins (no polling), with host services for the plugin list.
-   - Then the manager itself: list (ours or third-party, folder, loaded or not, why not), enable and disable from the next start, uninstall from writable folders, install a picked `.oxp`, and settings forms from each plugin's settings schema.
-   - In the core: `--safe-mode` and the plugin folders in Help → About.
-   - Gate: it works on all three systems (headless on Linux; contract tests everywhere; Mateus on sid).
+3. **Plugin tabs and the plugin manager.**
+   - First the interface for tabs: standard widgets the core draws in its own style, plus a canvas the plugin draws with a versioned wire form of the display list and receives pointer events on. Then events pushed to plugins: score opened or changed, selection, playback position. No polling.
+   - Then the plugin manager, **in the core** (Mateus, 18 Oct 2026; ADR 0008, "Amendments"): Tools → Plugins opens a separate, non-modal window listing every plugin file in the plugin folders (name, version, a tickbox to enable or disable it from the next start, its folder, loaded or not and why not). It copies, downloads, installs and removes nothing, draws no settings forms, and makes no distinction between our plugins and others'.
+   - In the core: `--safe-mode` (no plugins at all) and the plugin folders in Help → About.
+   - Interface additions only at the ends of enums and tables, as minor versions.
+   - Gates: the contract suite covers tabs, widgets, canvas and events; the manager works on all three systems (headless on Linux; contract tests everywhere; Mateus on sid); every existing gate stays green; no new `unsafe`; no polling.
 4. **Two Linux builds.**
    - `oxiguitar-app` features `wayland` (default) and `x11`, each enabling only Slint's `backend-winit-wayland` or `backend-winit-x11`; `display_system()` then follows the build.
    - Packages `oxiguitar` and `oxiguitar-x11` (which Provides, Conflicts with and Replaces `oxiguitar`), and two AppImages; the manual says the X11 build will be dropped.
