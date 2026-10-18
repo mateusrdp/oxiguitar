@@ -25,4 +25,14 @@ What stands in the way, by where it comes from:
   - `quick-xml` 0.42 (GPIF): sid has 0.38.
   - Already in sid at our version: `object` 0.37.3, `libloading`, `postcard`, `serde`, `rfd`, `png`, `tiny-skia` 0.12.
 
-So `debian/` can't build from Debian's crates alone until Debian packages Slint 1.17.1, krilla and its writers, and the newer `zip` and `quick-xml`. The weekly audit shows the gap closing.
+So `debian/` can't build from Debian's crates alone (it builds from a vendor component for now; below) until Debian packages Slint 1.17.1, krilla and its writers, and the newer `zip` and `quick-xml`. The weekly audit shows the gap closing.
+
+## The packaging: `debian/`
+
+`debian/` builds both packages, `oxiguitar` (the Wayland build) and `oxiguitar-plugins-basic`, the way Debian builds them: `dpkg-buildpackage` from a source package, through dh-cargo's cargo wrapper, with Debian's compiler flags, `-dbgsym` packages and no network. The Debian workflow does that in sid on every change to the packaging or to `Cargo.lock`, runs lintian on the source and the packages (errors and warnings fail it), and installs them into a clean sid: the core alone opens nothing, with the plugins it opens every fixture, and the window starts under Weston.
+
+- **The source** comes from `scripts/debian/source.sh`, as version `0.1.0+ds-1` (`+ds`: repacked). The orig tarball is HEAD's tree without `debian/` and without our copy of Noto Sans (`Files-Excluded` in `debian/copyright`).
+- **Noto Sans comes from `fonts-noto-core`.** `debian/rules` links Debian's `NotoSans-Regular.ttf` where ours was, and the programs embed it when they are built (`Built-Using: fonts-noto`). Bravura stays ours (Mateus, 18 Oct 2026). Debian's Noto Sans is older (2.004 against our 2.015), so text in the Debian build may sit a little differently from our references; the visual-regression tests run upstream, with ours.
+- **The crates come from `vendor/` for now**, the `orig-vendor` component tarball: `cargo vendor` of `Cargo.lock`, with no prebuilt binaries (the Windows crates' import libraries, test DLLs, WebAssembly objects, a minified web worker) and without pdf-writer's example ICC profile, which doesn't allow changes. Each crate keeps its package checksum, as Cargo.lock pins it. The NOTICE files of the vendored crates are installed with `oxiguitar`. When Debian has every crate (the audit above), `prepare-debian` links Debian's registry instead (`--link-from-system`), `Build-Depends` names the `librust-*-dev` packages, and the vendor component goes.
+- **The contact** is the issue tracker by decision (Mateus, 18 Oct 2026), in `Maintainer` and in `debian/changelog`. Debian needs an email address of a Debian maintainer there; lintian's two tags about it are suppressed in CI, and the first upload's `Closes:` (initial-upload-closes-no-bugs) waits for an ITP bug.
+- **Not yet:** the X11 build (`oxiguitar-x11`), deprecated, isn't in `debian/`.

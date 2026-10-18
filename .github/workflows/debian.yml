@@ -1,9 +1,13 @@
-# OxiGuitar and Debian's archive (ROADMAP, M2 slice 5): every crate the Linux
-# programs and the basic plugins are built from, against the librust-*-dev
-# packages Debian unstable has (scripts/debian/crate-audit.py). The report is
-# the run's summary, notices on the check run and an artifact; it informs,
-# it fails nothing. Weekly, since Debian's archive moves on its own, and on
-# every change to Cargo.lock.
+# OxiGuitar and Debian's archive (ROADMAP, M2 slice 5; docs/debian.md).
+# Weekly, since Debian moves on its own, and on every change to Cargo.lock
+# or the packaging.
+#
+# crates: every crate the Linux programs and the basic plugins are built
+# from, against the librust-*-dev packages Debian unstable has
+# (scripts/debian/crate-audit.py). The report is the run's summary, notices
+# on the check run and an artifact; it informs, it fails nothing.
+#
+# packages: debian/ builds both packages in sid with no network.
 name: Debian
 
 on:
@@ -13,6 +17,7 @@ on:
   pull_request:
     paths:
       - Cargo.lock
+      - debian/**
       - scripts/debian/**
       - .github/workflows/debian.yml
 
@@ -44,3 +49,67 @@ jobs:
         with:
           name: debian-crates
           path: debian-crates.md
+
+  # debian/: the Debian source made from HEAD (scripts/debian/source.sh), its
+  # build dependencies installed from sid, then dpkg-buildpackage with no
+  # network at all, lintian on the source and both packages, and the
+  # packages installed into a clean sid.
+  packages:
+    name: Debian packages, built offline in sid
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg-dev
+      - run: scripts/debian/source.sh build
+      - name: Build dependencies from sid
+        run: |
+          docker run --name sid-build -v "$PWD/build:/build" -w /build debian:sid bash -euxc '
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get build-dep -y --no-install-recommends ./oxiguitar-*/
+          '
+          docker commit sid-build oxiguitar-sid-build
+      - name: Build with no network
+        run: |
+          docker run --rm --network none -v "$PWD/build:/build" oxiguitar-sid-build bash -euxc '
+            cd /build/oxiguitar-*/
+            dpkg-buildpackage -us -uc -j"$(nproc)"
+          '
+          ls -l build
+      # scripts/package/lintian.sh: errors and warnings fail, but for the
+      # two tags about the contact being the issue tracker
+      # (scripts/package/linux.sh, "maintainer") and the one asking the
+      # first upload to close its ITP bug, which isn't filed yet.
+      - name: Lintian
+        run: |
+          docker run --rm -e GITHUB_ACTIONS -v "$PWD:/w" -w /w debian:sid bash -euc '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends lintian > /dev/null
+            cd build
+            ../scripts/package/lintian.sh \
+              --allow malformed-contact --allow bogus-mail-host-in-debian-changelog \
+              --allow initial-upload-closes-no-bugs \
+              ./*.changes
+          '
+      - name: Install them into a clean sid
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euxc '
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              shared-mime-info desktop-file-utils weston libgl1-mesa-dri man-db
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar_*.deb
+            ! oxiguitar-cli info fixtures/gp/oxiguitar-test-song.gp 2> /dev/null
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar-plugins-basic_*.deb
+            for f in fixtures/gp/*; do oxiguitar-cli info "$f" > /dev/null; done
+            man -w oxiguitar oxiguitar-cli
+            OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar fixtures/gp/oxiguitar-test-song.gp
+          '
+      - uses: actions/upload-artifact@v7
+        with:
+          name: debian-packages
+          path: |
+            build/*.deb
+            build/*.dsc
+            build/*.debian.tar.xz
+            build/*.buildinfo
+            build/*.changes

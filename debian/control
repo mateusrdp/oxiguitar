@@ -1,0 +1,58 @@
+Source: oxiguitar
+Section: sound
+Priority: optional
+Maintainer: Mateus Rocha de Paula <https://github.com/mateusrdp/oxiguitar/issues>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-cargo,
+ cargo (>= 1.97),
+ rustc (>= 1.97),
+ python3:native,
+ pkgconf,
+ libfontconfig-dev,
+ libxkbcommon-dev,
+ libwayland-dev,
+ fonts-noto-core,
+Standards-Version: 4.7.2
+Homepage: https://github.com/mateusrdp/oxiguitar
+Vcs-Git: https://github.com/mateusrdp/oxiguitar.git
+Vcs-Browser: https://github.com/mateusrdp/oxiguitar
+
+Package: oxiguitar
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ libwayland-client0,
+ libwayland-egl1,
+ libxkbcommon0,
+ libegl1,
+Recommends:
+ libdbus-1-3,
+ xdg-desktop-portal,
+Suggests:
+ oxiguitar-plugins-basic,
+Built-Using:
+ ${oxiguitar:Built-Using},
+Description: guitar tablature and score viewer
+ OxiGuitar opens Guitar Pro files (.gp, .gpx, .gp5, .gp4, .gp3) and
+ shows them as standard notation and tablature in four layouts, with any
+ set of tracks together, and exports them to PDF. Editing and playback
+ follow in later versions. No telemetry: it never uploads anything.
+ .
+ OxiGuitar reads files only through format plugins; the package
+ oxiguitar-plugins-basic holds those for Guitar Pro files.
+
+Package: oxiguitar-plugins-basic
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Enhances:
+ oxiguitar,
+Description: Guitar Pro format plugins for OxiGuitar
+ The plugins the OxiGuitar project writes and recommends: one for each
+ Guitar Pro format (3, 4, 5, 6 and 7-8), so OxiGuitar can open those
+ files. OxiGuitar alone opens no file; it finds these in
+ /usr/lib/oxiguitar/plugins.

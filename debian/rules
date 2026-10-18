@@ -1,0 +1,101 @@
+#!/usr/bin/make -f
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+#
+# oxiguitar (the Wayland build) and oxiguitar-plugins-basic, built offline.
+# The crates come from vendor/, the orig-vendor component
+# (scripts/debian/source.sh), until Debian packages them all
+# (docs/debian.md); then prepare-debian takes --link-from-system instead,
+# the Build-Depends list the librust packages, and vendor/ goes.
+
+include /usr/share/dpkg/pkg-info.mk
+include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/buildflags.mk
+include /usr/share/rustc/architecture.mk
+export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+export DEB_HOST_RUST_TYPE DEB_HOST_GNU_TYPE
+
+# dh-cargo's wrapper (/usr/share/cargo/bin/cargo) gives cargo Debian's
+# flags once prepare-debian has written debian/cargo_home/config.
+export CARGO_HOME = $(CURDIR)/debian/cargo_home
+export DEB_CARGO_CRATE = oxiguitar_$(DEB_VERSION_UPSTREAM)
+# Upstream strips its release builds; dh_strip makes the -dbgsym
+# packages, so it gets them whole.
+export CARGO_PROFILE_RELEASE_STRIP = false
+CARGO = /usr/share/cargo/bin/cargo
+
+release = target/$(DEB_HOST_RUST_TYPE)/release
+# The programs look for the system plugin folder beside themselves
+# (crates/oxiguitar-host/src/folders.rs): <bin>/../lib/oxiguitar/plugins.
+plugin_folder = target/$(DEB_HOST_RUST_TYPE)/lib/oxiguitar/plugins
+plugins = $(filter-out test,$(notdir $(wildcard plugins/*)))
+noto = /usr/share/fonts/truetype/noto/NotoSans-Regular.ttf
+app_id = io.github.mateusrdp.OxiGuitar
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	# Debian's Noto Sans in place of the copy the orig tarball leaves out:
+	# the programs embed it when they are built (Built-Using). A copy
+	# there means this isn't the orig tarball's tree.
+	@if [ -f assets/fonts/noto-sans/NotoSans-Regular.ttf ] && [ ! -L assets/fonts/noto-sans/NotoSans-Regular.ttf ]; then \
+		echo "debian/rules: upstream's Noto Sans is here; build from the orig tarballs (scripts/debian/source.sh)" >&2; exit 1; \
+	fi
+	ln -sfT $(noto) assets/fonts/noto-sans/NotoSans-Regular.ttf
+	$(CARGO) prepare-debian vendor
+
+override_dh_auto_build:
+	$(CARGO) build --release -p oxiguitar-app -p oxiguitar-cli
+	# Each plugin on its own, as scripts/build-plugins.sh does: built
+	# together, every plugin would carry every reader.
+	set -e; for p in $(plugins); do \
+		CARGO_TARGET_DIR=target/oxp $(CARGO) rustc --release \
+			-p oxiguitar-$$p-plugin --features oxp --crate-type cdylib; \
+		install -Dm644 target/oxp/$(DEB_HOST_RUST_TYPE)/release/liboxiguitar_$${p}_plugin.so \
+			$(plugin_folder)/$$p.oxp; \
+	done
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS) $(DEB_BUILD_PROFILES)))
+	# Every format through its plugin, then a PDF with Debian's font.
+	set -e; home=$$(mktemp -d); \
+	for f in fixtures/gp/*; do \
+		OXIGUITAR_HOME=$$home $(release)/oxiguitar-cli info $$f > /dev/null; \
+		OXIGUITAR_HOME=$$home $(release)/oxiguitar-cli detect $$f; \
+	done; \
+	OXIGUITAR_HOME=$$home $(release)/oxiguitar-cli render fixtures/gp/oxiguitar-test-song.gp \
+		--tracks all --pdf $$home/song.pdf --png $$home/song --quiet; \
+	test -s $$home/song.pdf; test -s $$home/song-1.png; \
+	rm -rf $$home
+endif
+
+override_dh_auto_install:
+	install -Dm755 $(release)/oxiguitar debian/oxiguitar/usr/bin/oxiguitar
+	install -Dm755 $(release)/oxiguitar-cli debian/oxiguitar/usr/bin/oxiguitar-cli
+	install -d debian/oxiguitar-plugins-basic/usr/lib/oxiguitar/plugins
+	install -m644 $(plugin_folder)/*.oxp debian/oxiguitar-plugins-basic/usr/lib/oxiguitar/plugins/
+	set -e; for s in 16 24 32 48 64 128 256 512; do \
+		install -Dm644 assets/icon/png/oxiguitar-$$s.png \
+			debian/oxiguitar/usr/share/icons/hicolor/$${s}x$${s}/apps/$(app_id).png; \
+	done
+	install -Dm644 assets/icon/oxiguitar-placeholder.svg \
+		debian/oxiguitar/usr/share/icons/hicolor/scalable/apps/$(app_id).svg
+	install -Dm644 assets/linux/$(app_id).desktop debian/oxiguitar/usr/share/applications/$(app_id).desktop
+	install -Dm644 assets/linux/$(app_id).xml debian/oxiguitar/usr/share/mime/packages/$(app_id).xml
+	# The NOTICE files of the vendored crates, as the Apache licence asks.
+	install -d debian/oxiguitar/usr/share/doc/oxiguitar
+	set -e; for f in vendor/*/NOTICE; do \
+		printf '%s\n\n' "== $$(basename $$(dirname $$f)) =="; cat $$f; printf '\n'; \
+	done > debian/oxiguitar/usr/share/doc/oxiguitar/NOTICE
+
+override_dh_installchangelogs:
+	dh_installchangelogs CHANGELOG.md
+
+override_dh_gencontrol:
+	dh_gencontrol -- -Voxiguitar:Built-Using="$$(dpkg-query -f '$${source:Package} (= $${source:Version})' -W fonts-noto-core)"
+
+override_dh_auto_clean:
+	rm -rf debian/cargo_home target
+	# The link to Debian's font; the orig tarball has no file there.
+	[ ! -L assets/fonts/noto-sans/NotoSans-Regular.ttf ] || rm assets/fonts/noto-sans/NotoSans-Regular.ttf
