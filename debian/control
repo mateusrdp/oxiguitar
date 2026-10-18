@@ -1,7 +1,7 @@
 Source: oxiguitar
 Section: sound
 Priority: optional
-Maintainer: Mateus Rocha de Paula <https://github.com/mateusrdp/oxiguitar/issues>
+Maintainer: OxiGuitar <maintainer@oxiguitar.invalid>
 Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
