@@ -12,6 +12,18 @@ Download the package for your system from the [releases page](https://github.com
 
 Linux needs glibc 2.39 or newer: Debian trixie or sid, Ubuntu 24.04, Fedora 40 or later. The .deb and .rpm also install `oxiguitar-cli`, a command-line tool that prints a file's contents and engraves it to PNG and PDF (`oxiguitar-cli --help`).
 
+### Wayland and X11
+
+The Linux packages above are the **Wayland build**, for today's desktops (GNOME, KDE Plasma and most others run Wayland). A desktop that still runs only an X server needs the **X11 build** instead:
+
+| System | Package | Install |
+| --- | --- | --- |
+| Debian, Ubuntu | `oxiguitar-x11_VERSION_amd64.deb` or `_arm64.deb` | `sudo apt install ./oxiguitar-x11_*.deb` |
+| Fedora | `oxiguitar-x11-VERSION-1.x86_64.rpm` or `.aarch64.rpm` | `sudo dnf install ./oxiguitar-x11-*.rpm` |
+| Any Linux | `OxiGuitar-x11-VERSION-x86_64.AppImage` or `-aarch64` | `chmod +x OxiGuitar-x11-*.AppImage`, then run it |
+
+It is the same program, and each build carries only its own display system's code. Installing one package replaces the other. If you start the wrong one, it says which build you need. **The X11 build is deprecated** and will be dropped once desktops have left X11.
+
 ## The first launch
 
 The packages are not code-signed yet, so the system warns the first time:

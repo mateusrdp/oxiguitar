@@ -27,6 +27,10 @@
 
 #![windows_subsystem = "windows"]
 
+// The windowing backend comes from one of these features (Cargo.toml).
+#[cfg(not(any(feature = "wayland", feature = "x11")))]
+compile_error!("build oxiguitar-app with the `wayland` feature (the default) or `x11`");
+
 mod canvas;
 mod document;
 mod footer;
@@ -51,14 +55,16 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
+use i_slint_backend_winit::winit::event::{
+    ElementState, MouseScrollDelta, WindowEvent as WinitEvent,
+};
+use i_slint_backend_winit::winit::keyboard::{Key, KeyCode, PhysicalKey};
+use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
 use oxiguitar_display::Rect;
 use oxiguitar_host::api::display::Point as CanvasPoint;
 use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
 use oxiguitar_host::{Level, TabId};
 use oxiguitar_layout::{Layout, Paper};
-use slint::winit_030::winit::event::{ElementState, MouseScrollDelta, WindowEvent as WinitEvent};
-use slint::winit_030::winit::keyboard::{Key, KeyCode, PhysicalKey};
-use slint::winit_030::{EventResult, WinitWindowAccessor};
 use slint::{
     ComponentHandle, Image, Model, ModelRc, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel,
     Weak,
@@ -223,11 +229,50 @@ impl oxiguitar_host::Core for WindowCore {
     }
 }
 
+/// The display system this build draws with, as plugins' conditions name
+/// it. Each Linux build has its own (docs/design/plugins.md); a build with
+/// both features, for development, follows the host's rule.
+fn display_system() -> &'static str {
+    let linux = cfg!(not(any(target_os = "windows", target_vendor = "apple")));
+    match (linux, cfg!(feature = "wayland"), cfg!(feature = "x11")) {
+        (true, true, false) => "wayland",
+        (true, false, true) => "x11",
+        _ => oxiguitar_host::display_system(),
+    }
+}
+
+/// What to tell someone whose session this build can't draw in: the
+/// Wayland build without a Wayland compositor, the X11 build without an X
+/// server. `None` for builds that try both, and outside Linux.
+fn wrong_build_hint(display: &str) -> Option<&'static str> {
+    if !cfg!(not(any(target_os = "windows", target_vendor = "apple")))
+        || (cfg!(feature = "wayland") && cfg!(feature = "x11"))
+    {
+        return None;
+    }
+    match display {
+        "wayland" => Some(
+            "This is OxiGuitar's Wayland build, and it found no Wayland session (is WAYLAND_DISPLAY set?). On an X11 desktop, install the X11 build instead: the package oxiguitar-x11, or the OxiGuitar-x11 AppImage.",
+        ),
+        "x11" => Some(
+            "This is OxiGuitar's X11 build, and it found no X server (is DISPLAY set?). On a Wayland desktop, install the Wayland build instead: the package oxiguitar, or the OxiGuitar AppImage.",
+        ),
+        _ => None,
+    }
+}
+
 fn main() -> Result<(), slint::PlatformError> {
     // The winit backend gives us the window's raw events for interface zoom.
-    slint::BackendSelector::new()
+    // It draws with this build's display system only.
+    if let Err(e) = slint::BackendSelector::new()
         .backend_name("winit".into())
-        .select()?;
+        .select()
+    {
+        if let Some(hint) = wrong_build_hint(display_system()) {
+            eprintln!("{hint}");
+        }
+        return Err(e);
+    }
     // On Wayland the compositor shows the icon of the desktop entry with
     // this name (assets/linux/, installed by the packages or by
     // scripts/install-desktop-entry.sh); on X11 it is the window's class.
@@ -249,17 +294,9 @@ fn main() -> Result<(), slint::PlatformError> {
         open: open_score.clone(),
     });
     let startup = if args.safe_mode {
-        oxiguitar_host::start_in_safe_mode(
-            oxiguitar_host::Folders::here(),
-            oxiguitar_host::display_system(),
-            core,
-        )
+        oxiguitar_host::start_in_safe_mode(oxiguitar_host::Folders::here(), display_system(), core)
     } else {
-        oxiguitar_host::start(
-            oxiguitar_host::Folders::here(),
-            oxiguitar_host::display_system(),
-            core,
-        )
+        oxiguitar_host::start(oxiguitar_host::Folders::here(), display_system(), core)
     };
     let open_extensions = startup.plugins.read_extensions();
     let mut shell = Shell::default();
@@ -1997,6 +2034,27 @@ mod tests {
                 "Started in safe mode: no plugin is used."
             ]
         );
+    }
+
+    #[test]
+    fn each_linux_build_names_its_own_display_system() {
+        let linux = cfg!(not(any(target_os = "windows", target_vendor = "apple")));
+        let one = cfg!(feature = "wayland") != cfg!(feature = "x11");
+        if linux && one {
+            let own = if cfg!(feature = "wayland") {
+                "wayland"
+            } else {
+                "x11"
+            };
+            assert_eq!(display_system(), own);
+            assert!(wrong_build_hint(own).unwrap().contains(&format!(
+                "OxiGuitar's {} build",
+                if own == "x11" { "X11" } else { "Wayland" }
+            )));
+        } else {
+            assert_eq!(display_system(), oxiguitar_host::display_system());
+            assert!(wrong_build_hint("wayland").is_none());
+        }
     }
 
     #[test]
