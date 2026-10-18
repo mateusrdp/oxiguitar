@@ -16,13 +16,14 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::JoinHandle;
 
 use oxiguitar_display::{Rect, Theme};
+use oxiguitar_host::api::event::Event as PluginEvent;
 use oxiguitar_host::{Level, Plugins};
 use oxiguitar_render::Raster;
 
 use crate::canvas::Sheets;
 #[cfg(test)]
 use crate::canvas::TILE;
-use crate::document::{Document, Engraver, Settings, ToolEntry, TrackInfo, file_name};
+use crate::document::{Document, Engraver, OpenScore, Settings, ToolEntry, TrackInfo, file_name};
 
 /// What the window asks of the worker.
 #[derive(Debug)]
@@ -94,13 +95,19 @@ pub(crate) struct Worker {
 }
 
 impl Worker {
-    /// Starts the worker, which opens files through `plugins`; `sink`
+    /// Starts the worker, which opens files through `plugins`, keeps
+    /// `open` up to date for plugins that ask for the score, and tells the
+    /// plugins that subscribe when a score is opened or changed; `sink`
     /// receives its events, on the worker thread.
-    pub(crate) fn start(plugins: Plugins, sink: impl Fn(Event) + Send + 'static) -> Worker {
+    pub(crate) fn start(
+        plugins: Plugins,
+        open: OpenScore,
+        sink: impl Fn(Event) + Send + 'static,
+    ) -> Worker {
         let (requests, rx) = channel();
         let thread = std::thread::Builder::new()
             .name("oxiguitar-worker".to_owned())
-            .spawn(move || run(&rx, plugins, &sink))
+            .spawn(move || run(&rx, plugins, open, &sink))
             .ok();
         Worker { requests, thread }
     }
@@ -131,13 +138,17 @@ struct State {
     plugins: Plugins,
     engraver: Engraver,
     doc: Option<Document>,
+    /// The score plugins may ask for, and its revision: a number that
+    /// changes with every score opened or changed this session.
+    open: OpenScore,
+    revision: u64,
     settings: Settings,
     sheets: Sheets,
     engraving: u64,
     raster: Raster,
 }
 
-fn run(rx: &Receiver<Request>, plugins: Plugins, sink: &dyn Fn(Event)) {
+fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &dyn Fn(Event)) {
     let engraver = match Engraver::new() {
         Ok(e) => e,
         Err(e) => {
@@ -149,6 +160,8 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, sink: &dyn Fn(Event)) {
         plugins,
         engraver,
         doc: None,
+        open: open_score,
+        revision: 0,
         settings: Settings::default(),
         sheets: Sheets::default(),
         engraving: 0,
@@ -222,7 +235,14 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, sink: &dyn Fn(Event)) {
                 let Some(doc) = st.doc.as_mut() else {
                     continue;
                 };
-                let report = doc.apply_tool(i);
+                let (report, changed) = doc.apply_tool(i);
+                if changed {
+                    st.open.set(Some(doc.score.clone()));
+                    st.revision += 1;
+                    st.plugins.push(PluginEvent::ScoreChanged {
+                        revision: st.revision,
+                    });
+                }
                 sink(Event::Tools(doc.tools()));
                 sink(Event::Message(Level::Info, report));
                 engrave(&mut st, sink);
@@ -254,6 +274,12 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, sink: &dyn Fn(Event)) {
 fn open(st: &mut State, path: PathBuf, sink: &dyn Fn(Event)) {
     match Document::open(&path, &st.plugins) {
         Ok(doc) => {
+            // Plugins hear of it as the window does (pushing never waits).
+            st.open.set(Some(doc.score.clone()));
+            st.revision += 1;
+            st.plugins.push(PluginEvent::ScoreOpened {
+                revision: st.revision,
+            });
             sink(Event::Opened {
                 tracks: doc.tracks(),
                 tools: doc.tools(),
@@ -298,11 +324,54 @@ mod tests {
     }
 
     #[test]
-    fn open_engrave_draw_and_export() {
+    fn opening_a_score_tells_the_plugins_that_listen_and_they_can_read_it() {
+        use oxiguitar_host::api::tab::{TabEvent, Widget};
+        let host = crate::test_support::tab_host();
         let (tx, rx) = channel();
-        let worker = Worker::start(crate::test_plugins().clone(), move |e| {
+        let worker = Worker::start(host.plugins.clone(), host.open.clone(), move |e| {
             let _ = tx.send(e);
         });
+        worker.send(Request::Open(fixture()));
+        assert!(matches!(next(&rx), Event::Opened { .. }));
+        host.plugins.wait_for_events();
+        let events = String::from_utf8(
+            host.plugins
+                .call_service("test-echo", "events", b"")
+                .unwrap(),
+        )
+        .unwrap();
+        assert!(events.contains("ScoreOpened"), "{events}");
+        // The test plugin asks for its tab to be redrawn after a score
+        // opens, and reads the open score when its button is clicked.
+        assert!(
+            host.redraws
+                .lock()
+                .unwrap()
+                .contains(&crate::test_support::panel())
+        );
+        let title = host.open.wire().expect("a score is open").info.title;
+        let content = host
+            .plugins
+            .tab_event(&crate::test_support::panel(), "score", TabEvent::Clicked)
+            .unwrap();
+        assert!(
+            content.rows.iter().flat_map(|r| &r.widgets).any(
+                |w| matches!(w, Widget::Label { text, .. } if *text == format!("Score: {title}"))
+            ),
+            "{content:?}"
+        );
+    }
+
+    #[test]
+    fn open_engrave_draw_and_export() {
+        let (tx, rx) = channel();
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
         worker.send(Request::Open(fixture()));
         let Event::Opened { tracks, tools, .. } = next(&rx) else {
             panic!("expected Opened")
@@ -377,9 +446,13 @@ mod tests {
     #[test]
     fn a_bad_file_reports_and_keeps_going() {
         let (tx, rx) = channel();
-        let worker = Worker::start(crate::test_plugins().clone(), move |e| {
-            let _ = tx.send(e);
-        });
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
         worker.send(Request::Open(PathBuf::from("/no/such/song.gp")));
         assert!(matches!(next(&rx), Event::Message(Level::Error, s) if s.contains("song.gp")));
         worker.send(Request::Engrave(Settings::default()));

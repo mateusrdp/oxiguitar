@@ -11,6 +11,7 @@
 // by our renderer on the worker thread and shown here as tiles.
 
 import { Slider, ScrollView, Palette, ComboBox } from "std-widgets.slint";
+import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
 
 export struct TileItem {
@@ -57,6 +58,8 @@ export struct AreaState {
     active: int,
     active-id: string,
     collapsed: bool,
+    // The open tab is a plugin's.
+    plugin: bool,
 }
 
 export struct FooterRow {
@@ -415,6 +418,24 @@ export component AppWindow inherits Window {
     callback tool-picked(int);
     callback toolbar-activated(string);
     callback tab-clicked(int, int);
+    // Plugins' tabs (plugin_tab.slint), by area number (0 top, 1 bottom,
+    // 2 left, 3 right): their rows, or a message instead; what the user does
+    // to their widgets; a canvas's room.
+    in property <[PluginRow]> top-plugin-rows;
+    in property <string> top-plugin-message;
+    in property <[PluginRow]> bottom-plugin-rows;
+    in property <string> bottom-plugin-message;
+    in property <[PluginRow]> left-plugin-rows;
+    in property <string> left-plugin-message;
+    in property <[PluginRow]> right-plugin-rows;
+    in property <string> right-plugin-message;
+    callback plugin-clicked(int, string);
+    callback plugin-toggled(int, string, bool);
+    callback plugin-slid(int, string, float);
+    callback plugin-edited(int, string, string);
+    callback plugin-chosen(int, string, int);
+    callback plugin-pointer(int, string, int, float, float, int);
+    callback plugin-canvas-room(int, string, float, float);
     callback area-toggled(int);
     callback panels-changed();
 
@@ -633,7 +654,17 @@ export component AppWindow inherits Window {
                         }
                     }
                 }
-                if root.top-area.active-id != "player" : Placeholder { text: "This tab belongs to a plugin."; }
+                if root.top-area.plugin : PluginTab {
+                    rows: root.top-plugin-rows;
+                    message: root.top-plugin-message;
+                    clicked(id) => { root.plugin-clicked(0, id); }
+                    toggled(id, on) => { root.plugin-toggled(0, id, on); }
+                    slid(id, v) => { root.plugin-slid(0, id, v); }
+                    edited(id, text) => { root.plugin-edited(0, id, text); }
+                    chosen(id, i) => { root.plugin-chosen(0, id, i); }
+                    pointer(id, k, x, y, b) => { root.plugin-pointer(0, id, k, x, y, b); }
+                    canvas-room(id, w, h) => { root.plugin-canvas-room(0, id, w / 1px, h / 1px); }
+                }
             }
             if root.top-shown && !root.top-area.collapsed : Splitter {
                 dragged(d) => { root.top-height = clamp(root.top-height + d, 36px, 300px); }
@@ -658,7 +689,17 @@ export component AppWindow inherits Window {
                     Rectangle {
                         background: Palette.alternate-background;
                         if root.left-area.active-id == "palette" : Placeholder { text: "The palette of notation and effect tools comes with the editor."; }
-                        if root.left-area.active-id != "palette" : Placeholder { text: "This tab belongs to a plugin."; }
+                        if root.left-area.plugin : PluginTab {
+                    rows: root.left-plugin-rows;
+                    message: root.left-plugin-message;
+                    clicked(id) => { root.plugin-clicked(2, id); }
+                    toggled(id, on) => { root.plugin-toggled(2, id, on); }
+                    slid(id, v) => { root.plugin-slid(2, id, v); }
+                    edited(id, text) => { root.plugin-edited(2, id, text); }
+                    chosen(id, i) => { root.plugin-chosen(2, id, i); }
+                    pointer(id, k, x, y, b) => { root.plugin-pointer(2, id, k, x, y, b); }
+                    canvas-room(id, w, h) => { root.plugin-canvas-room(2, id, w / 1px, h / 1px); }
+                }
                     }
                 }
                 if root.left-shown && !root.left-area.collapsed : SideSplitter {
@@ -752,7 +793,17 @@ export component AppWindow inherits Window {
                     Rectangle {
                         background: Palette.alternate-background;
                         if root.right-area.active-id == "inspector" : Placeholder { text: "The properties of the selected notes and bars come with the editor."; }
-                        if root.right-area.active-id != "inspector" : Placeholder { text: "This tab belongs to a plugin."; }
+                        if root.right-area.plugin : PluginTab {
+                    rows: root.right-plugin-rows;
+                    message: root.right-plugin-message;
+                    clicked(id) => { root.plugin-clicked(3, id); }
+                    toggled(id, on) => { root.plugin-toggled(3, id, on); }
+                    slid(id, v) => { root.plugin-slid(3, id, v); }
+                    edited(id, text) => { root.plugin-edited(3, id, text); }
+                    chosen(id, i) => { root.plugin-chosen(3, id, i); }
+                    pointer(id, k, x, y, b) => { root.plugin-pointer(3, id, k, x, y, b); }
+                    canvas-room(id, w, h) => { root.plugin-canvas-room(3, id, w / 1px, h / 1px); }
+                }
                     }
                 }
                 if root.right-shown && root.right-area.collapsed : SideStrip {
@@ -838,7 +889,17 @@ export component AppWindow inherits Window {
                     }
                 }
                 if root.bottom-area.active-id == "mixer" : Placeholder { text: "Volume, pan, mute and solo for each track come with the player."; }
-                if root.bottom-area.active-id != "tracks" && root.bottom-area.active-id != "mixer" : Placeholder { text: "This tab belongs to a plugin."; }
+                if root.bottom-area.plugin : PluginTab {
+                    rows: root.bottom-plugin-rows;
+                    message: root.bottom-plugin-message;
+                    clicked(id) => { root.plugin-clicked(1, id); }
+                    toggled(id, on) => { root.plugin-toggled(1, id, on); }
+                    slid(id, v) => { root.plugin-slid(1, id, v); }
+                    edited(id, text) => { root.plugin-edited(1, id, text); }
+                    chosen(id, i) => { root.plugin-chosen(1, id, i); }
+                    pointer(id, k, x, y, b) => { root.plugin-pointer(1, id, k, x, y, b); }
+                    canvas-room(id, w, h) => { root.plugin-canvas-room(1, id, w / 1px, h / 1px); }
+                }
             }
 
             // Footer: the latest message on one line; a click expands the

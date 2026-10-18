@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet, Theme};
@@ -76,10 +77,33 @@ pub(crate) struct ToolEntry {
     pub(crate) unavailable: Option<String>,
 }
 
-/// An open score.
+/// An open score. The score is shared (never copied) with plugins that ask
+/// for it ([`OpenScore`]).
 pub(crate) struct Document {
     pub(crate) path: PathBuf,
-    pub(crate) score: Score,
+    pub(crate) score: Arc<Score>,
+}
+
+/// The open score as plugins may ask for it, from any thread: set by the
+/// worker when a score is opened or changed. Converted to the plugins' form
+/// only when one asks.
+#[derive(Clone, Default)]
+pub(crate) struct OpenScore(Arc<Mutex<Option<Arc<Score>>>>);
+
+impl OpenScore {
+    pub(crate) fn set(&self, score: Option<Arc<Score>>) {
+        *self.0.lock().unwrap_or_else(PoisonError::into_inner) = score;
+    }
+
+    /// The open score, as plugins see it.
+    pub(crate) fn wire(&self) -> Option<oxiguitar_host::api::score::Score> {
+        let score = self
+            .0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        score.map(|s| oxiguitar_model::wire::to_wire(&s))
+    }
 }
 
 impl Document {
@@ -101,7 +125,7 @@ impl Document {
         })?;
         Ok(Document {
             path: path.to_owned(),
-            score,
+            score: Arc::new(score),
         })
     }
 
@@ -145,17 +169,18 @@ impl Document {
             .collect()
     }
 
-    /// Applies the Tools menu's tool number `index`; returns its report.
-    /// The file on disk is not touched.
-    pub(crate) fn apply_tool(&mut self, index: usize) -> String {
+    /// Applies the Tools menu's tool number `index`; returns its report,
+    /// and whether it changed the score. The file on disk is not touched.
+    pub(crate) fn apply_tool(&mut self, index: usize) -> (String, bool) {
         let Some(tool) = oxiguitar_tools::all().get(index) else {
-            return String::new();
+            return (String::new(), false);
         };
         let outcome = tool.apply(&self.score);
-        if let Some(changed) = outcome.score {
-            self.score = changed;
+        let changed = outcome.score.is_some();
+        if let Some(score) = outcome.score {
+            self.score = Arc::new(score);
         }
-        format!("{}: {}", tool.name(), outcome.report)
+        (format!("{}: {}", tool.name(), outcome.report), changed)
     }
 
     /// The title for PDF metadata: the score's, or the file's name.
@@ -319,8 +344,12 @@ mod tests {
         let mut doc = open(&fixture("gp5")).unwrap();
         let tools = doc.tools();
         assert_eq!(tools.len(), oxiguitar_tools::all().len());
-        let report = doc.apply_tool(0);
+        let before = doc.score.clone();
+        let (report, changed) = doc.apply_tool(0);
         assert!(report.starts_with("Infer Key Signatures: "), "{report}");
-        assert_eq!(doc.apply_tool(99), "");
+        // Changed or not, a score shared before is never changed under
+        // whoever holds it.
+        assert_eq!(changed, !Arc::ptr_eq(&before, &doc.score));
+        assert_eq!(doc.apply_tool(99), (String::new(), false));
     }
 }

@@ -13,4 +13,4 @@ From top to bottom:
 
 Each panel has tabs. Click a tab's name to show it; click the name of the tab that is already showing, or the chevron at the end of the tab strip, to fold the panel away to its strip, and again to bring it back. A folded side panel is a thin strip: click it to open it. Drag the edge between a panel and the score to resize it.
 
-**View → Panels** hides or shows each panel altogether (F7 for the left one, F8 for the bottom one). Plugins will be able to add tabs to any panel.
+**View → Panels** hides or shows each panel altogether (F7 for the left one, F8 for the bottom one). Plugins can add tabs to any panel. They appear after OxiGuitar's own tabs, with the plugin's name for them, and look like the rest of the window: the plugin decides what is in them (buttons, tickboxes, sliders, lists, drawings), and OxiGuitar draws it in its own style and colours. A plugin's tab may take a moment the first time it opens, while the plugin loads.

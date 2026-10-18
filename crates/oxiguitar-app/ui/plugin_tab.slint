@@ -1,0 +1,185 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+// A plugin's tab (docs/design/plugins.md, "Tabs and events"): rows of
+// standard widgets, drawn with the window's own widgets and colours, and
+// canvases the plugin draws, shown as large as the room allows with their
+// proportions. What the user does goes to main.rs through the callbacks,
+// which send it to the plugin; nothing here changes the plugin's state.
+
+import { Button, CheckBox, Slider, LineEdit, ComboBox, StandardListView, Palette } from "std-widgets.slint";
+
+export struct PluginWidget {
+    // label, button, toggle, slider, field, choice, list or canvas.
+    kind: string,
+    id: string,
+    text: string,
+    // Labels: dimmer, for secondary text. Fields: the placeholder is `text2`.
+    muted: bool,
+    text2: string,
+    on: bool,
+    enabled: bool,
+    value: float,
+    minimum: float,
+    maximum: float,
+    options: [string],
+    items: [StandardListViewItem],
+    selected: int,
+    // Canvases: the drawing, and the canvas's size in its own units.
+    canvas: image,
+    canvas-width: float,
+    canvas-height: float,
+}
+
+export struct PluginRow {
+    widgets: [PluginWidget],
+    // A row holding a canvas or a list takes the room left.
+    stretch: bool,
+}
+
+component PluginWidgetView inherits HorizontalLayout {
+    in property <PluginWidget> w;
+    callback clicked(string);
+    callback toggled(string, bool);
+    callback slid(string, float);
+    callback edited(string, string);
+    callback chosen(string, int);
+    callback pointer(string, int, float, float, int);
+    callback canvas-room(string, length, length);
+    horizontal-stretch: w.kind == "canvas" || w.kind == "list" || w.kind == "field" ? 1 : 0;
+
+    if w.kind == "label" : Text {
+        text: w.text;
+        font-size: 12px;
+        vertical-alignment: center;
+        color: Palette.foreground.transparentize(w.muted ? 0.45 : 0.1);
+    }
+    if w.kind == "button" : Button {
+        text: w.text;
+        enabled: w.enabled;
+        clicked => { root.clicked(w.id); }
+    }
+    if w.kind == "toggle" : CheckBox {
+        text: w.text;
+        checked: w.on;
+        enabled: w.enabled;
+        toggled => { root.toggled(w.id, self.checked); }
+    }
+    if w.kind == "slider" : Slider {
+        min-width: 120px;
+        minimum: w.minimum;
+        maximum: w.maximum;
+        value: w.value;
+        enabled: w.enabled;
+        released(v) => { root.slid(w.id, v); }
+    }
+    if w.kind == "field" : LineEdit {
+        min-width: 120px;
+        text: w.text;
+        placeholder-text: w.text2;
+        enabled: w.enabled;
+        accepted(t) => { root.edited(w.id, t); }
+    }
+    if w.kind == "choice" : ComboBox {
+        min-width: 100px;
+        model: w.options;
+        current-index: w.selected;
+        enabled: w.enabled;
+        selected => { root.chosen(w.id, self.current-index); }
+    }
+    if w.kind == "list" : StandardListView {
+        // Room for about three lines; longer lists scroll.
+        min-height: 84px;
+        min-width: 100px;
+        model: w.items;
+        current-item: w.selected;
+        current-item-changed(i) => { root.chosen(w.id, i); }
+    }
+    if w.kind == "canvas" : room := Rectangle {
+        min-height: 24px;
+        min-width: 24px;
+        // Canvas units to logical pixels, keeping the proportions.
+        property <float> scale: min(self.width / 1px / w.canvas-width, self.height / 1px / w.canvas-height);
+        property <int> button;
+        init => { root.canvas-room(w.id, self.width, self.height); }
+        changed width => { root.canvas-room(w.id, self.width, self.height); }
+        changed height => { root.canvas-room(w.id, self.width, self.height); }
+        drawing := Image {
+            width: w.canvas-width * room.scale * 1px;
+            height: w.canvas-height * room.scale * 1px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            source: w.canvas;
+            image-fit: fill;
+        }
+        TouchArea {
+            x: drawing.x;
+            y: drawing.y;
+            width: drawing.width;
+            height: drawing.height;
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down || e.kind == PointerEventKind.up) {
+                    if (e.kind == PointerEventKind.down) {
+                        room.button = e.button == PointerEventButton.right ? 1
+                            : e.button == PointerEventButton.middle ? 2 : 0;
+                    }
+                    root.pointer(w.id, e.kind == PointerEventKind.down ? 0 : 1,
+                        self.mouse-x / 1px / room.scale, self.mouse-y / 1px / room.scale, room.button);
+                }
+            }
+            moved => {
+                if (self.pressed) {
+                    root.pointer(w.id, 2, self.mouse-x / 1px / room.scale, self.mouse-y / 1px / room.scale, room.button);
+                }
+            }
+        }
+    }
+}
+
+export component PluginTab inherits Rectangle {
+    in property <[PluginRow]> rows;
+    // Shown instead of the rows: while the plugin is asked, or why its tab
+    // can't be shown.
+    in property <string> message;
+    callback clicked(string);
+    callback toggled(string, bool);
+    callback slid(string, float);
+    callback edited(string, string);
+    callback chosen(string, int);
+    // The pointer on a canvas: down (0), up (1) or a drag (2), where in the
+    // canvas's units, and which button (0 main, 1 right, 2 middle).
+    callback pointer(string, int, float, float, int);
+    // A canvas's room, in logical pixels.
+    callback canvas-room(string, length, length);
+
+    if root.message != "" : Text {
+        x: 12px;
+        width: parent.width - 24px;
+        text: root.message;
+        font-size: 12px;
+        wrap: word-wrap;
+        vertical-alignment: center;
+        color: Palette.foreground.transparentize(0.4);
+    }
+    if root.message == "" : VerticalLayout {
+        padding: 6px;
+        spacing: 6px;
+        for row in root.rows : HorizontalLayout {
+            spacing: 8px;
+            alignment: row.stretch ? stretch : start;
+            vertical-stretch: row.stretch ? 1 : 0;
+            for w in row.widgets : PluginWidgetView {
+                w: w;
+                clicked(id) => { root.clicked(id); }
+                toggled(id, on) => { root.toggled(id, on); }
+                slid(id, v) => { root.slid(id, v); }
+                edited(id, t) => { root.edited(id, t); }
+                chosen(id, i) => { root.chosen(id, i); }
+                pointer(id, k, x, y, b) => { root.pointer(id, k, x, y, b); }
+                canvas-room(id, wd, ht) => { root.canvas-room(id, wd, ht); }
+            }
+        }
+        // Rows that don't stretch stay at the top.
+        Rectangle { vertical-stretch: 0.001; }
+    }
+}
