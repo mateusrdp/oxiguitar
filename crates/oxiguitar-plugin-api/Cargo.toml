@@ -1,0 +1,20 @@
+[package]
+name = "oxiguitar-plugin-api"
+description = "The OxiGuitar plugin interface: the C tables, the messages that cross them, the manifest and the score as plugins see it."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Permissive, unlike the rest of the workspace, so that plugins built on it
+# may use any GPL-compatible licence (Mateus, 18 Oct 2026).
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+postcard.workspace = true
+
+[lints]
+workspace = true

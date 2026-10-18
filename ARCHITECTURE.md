@@ -29,11 +29,12 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 
 | Crate | Status | Purpose |
 | --- | --- | --- |
-| `oxiguitar-model` | M0 | The score model: data types only, no I/O. |
+| `oxiguitar-model` | M0 | The score model: data types only, no I/O. Its `wire` feature converts to and from the score as it crosses the plugin interface. |
 | `oxiguitar-formats` | M0 | Format detection from contents (FMT-6), readers and writers, import logs (FMT-2). In M2 its readers move into one format plugin each; what they share stays here as a library the plugins use. |
 | `oxiguitar-cli` | M0 | `info`, `render`, `tools`, later `convert` and test helpers. Used by CI. Loads plugins like the app from M2. |
 | `oxiguitar-host` | M2 | The plugin host: the user folder, settings.json, the plugin folders, reading manifests without loading code, loading plugins on first use, and choosing a service implementation per platform and environment. |
-| `oxiguitar-plugin-api`, `oxiguitar-plugin` | M2 | The plugin interface's messages, and the SDK plugin authors use (safe Rust only). |
+| `oxiguitar-plugin-api` | M2 | The plugin interface: the C tables, the messages (postcard), the manifest (JSON in the `oxg_manifest` section), the score as plugins see it, format signatures, instrument classes. MIT OR Apache-2.0. |
+| `oxiguitar-plugin` | M2 | The SDK plugin authors use: traits and `export_plugin!`, safe Rust only. MIT OR Apache-2.0. |
 | `oxiguitar-edit` | M3 | Edit commands, selection, undo and redo. |
 | `oxiguitar-display` | M0 | The display list (positioned glyph runs, lines, rectangles, paths, colour roles), the bundled fonts and SMuFL metadata (ADR 0005). |
 | `oxiguitar-layout` | M1 | Engraving: turns the model into a display list per page, or one long sheet, in four layouts. See [docs/design/engraving.md](docs/design/engraving.md). |

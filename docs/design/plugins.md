@@ -67,17 +67,20 @@ A plugin is **one native library file** (accepted, 18 Oct 2026) with a small, ve
 
 - **One file**, named `NAME.oxp` ("OxiGuitar plugin"), for example `gp5.oxp`. Inside it is an ordinary shared library for one target: ELF on Linux, PE on Windows, Mach-O on macOS (one universal file for Intel and Apple Silicon). Downloads carry the target in their name (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp`); the user can drop it in a plugin folder as it is. Icons, strings and small data are compiled into the file. Large data a plugin downloads at the user's request (SoundFonts, NAM models) goes in that plugin's data folder, not in the plugin file.
 - **No unpacking.** The operating system maps the file into memory when it is loaded; nothing is copied, unzipped or compiled at start.
-- **Manifest without loading.** Each plugin carries a manifest in a section named `oxg_manifest` (12 characters, so it fits Mach-O's 16-character limit). The host reads it with the `object` crate, which parses the file's headers and reads only that section, without running any of the plugin's code. Reading a manifest takes well under a millisecond.
+- **Manifest without loading.** Each plugin carries a manifest, JSON text, in a section named `oxg_manifest` (in the `__DATA` segment on macOS; on Windows `oxgmanif`, because section names in PE executables and libraries hold at most eight characters). The author writes it as `manifest.json` beside the plugin's `Cargo.toml`, and the SDK's `export_plugin!` puts the file's bytes in the section. The host reads it with the `object` crate, which parses the file's headers and reads only that section, without running any of the plugin's code. Reading a manifest takes well under a millisecond. Keys a host doesn't know are ignored, so a newer plugin's manifest still reads in an older host; the SDK's checks reject unknown keys when the plugin is built, so typing mistakes are caught there.
 - **Loaded only when needed.** At start the host reads manifests only. A plugin's code is loaded the first time one of its contributions is used: opening a .gp5 file loads the GP5 plugin; pressing Play loads the chosen output; showing a tab loads the plugin that owns it. A plugin whose conditions don't hold (a Wayland-only plugin under X11, say) is never loaded at all.
 - **Never unloaded in a session.** Unloading native code safely is unreliable (thread-local destructors, threads a plugin started). Disabling a plugin takes effect at the next start; the plugin manager says so.
 
 ### The interface
 
 - One exported symbol, `oxiguitar_plugin_v1`, returns a table of `extern "C"` functions. The `v1` is the interface's major version: a host refuses a plugin built for another major version, with a footer message naming the plugin and the version it needs.
-- Calls pass **messages as bytes**, encoded with a stable, versioned schema (`oxiguitar-plugin-api`, serde + postcard). The score crosses as a message too, so the model's in-memory layout is never part of the interface and can keep changing.
+- Calls pass **messages as bytes**, encoded with a stable, versioned schema (`oxiguitar-plugin-api`, serde + postcard). Answers come back through a "sink" the caller provides: the callee hands it bytes and the caller copies them, so memory is never freed on the other side of the interface and the two sides may use different allocators.
+- **The score crosses as its own types**, `oxiguitar_plugin_api::score`, which mirror the model field for field but belong to the interface (version 1, its encoding pinned by a test). The core converts between the two (`oxiguitar-model`'s `wire` feature; every fixture, reference and corpus file crosses without loss). So the model can keep changing as the editor grows; a change that plugins must see goes into a new version of the wire score, beside version 1.
+- **Versions**: the interface's major version is in the entry symbol's name and the manifest; a minor version only adds (new messages, new variants at the end of an enum, new fields at the end of a C table, new manifest keys), and the host sends a plugin only what its minor version knows. Version 1.0 freezes with the OxiGuitar 0.2 release; until then it may still change.
 - **Audio crosses as raw sample buffers**, with no encoding and no allocation, so instruments run at full native speed on the audio thread.
 - The host hands each plugin a table of **host services** at start: send a footer message, read and write its own settings, ask for the score (whole, a track, the selection, a range of bars), submit an edit (always as an undoable command, never by changing the score directly), ask the user to approve a download (NET-2), redraw its tab.
 - The **SDK** (`oxiguitar-plugin`) wraps all of this in safe Rust: a plugin implements traits (`FormatReader`, `FormatWriter`, `Instrument`, `Tool`, `Exporter`, `Panel`, …) and calls one `export_plugin!` macro. Plugin authors write no `unsafe`.
+- **Licences**: the interface (`oxiguitar-plugin-api`) and the SDK (`oxiguitar-plugin`) are **MIT OR Apache-2.0** (Mateus, 18 Oct 2026), so a plugin, which compiles the SDK into itself, may use any GPL-compatible licence. The core stays GPL-3.0-or-later, and our own plugins are GPL-3.0-or-later like it. A plugin that is not GPL-compatible isn't possible in practice: it runs inside the app, which includes Slint under its GPL-3.0-only option.
 - **Where the `unsafe` is.** Loading a native library and calling through function pointers is `unsafe` in Rust by nature; no plugin system with native code can avoid it. It would live in exactly two small modules, the host's loader and the SDK's export glue, reviewed line by line and covered by an interface test suite. The rest of the workspace keeps `unsafe_code = "forbid"`. Mateus accepted this (18 Oct 2026): it is the price of native plugins, not a workaround around another library.
 - **The same plugin can be built in.** A plugin crate builds both as a `.oxp` and as an ordinary Rust library. The mobile apps link their plugins in (iOS forbids loading downloaded code), and our own tests use plugins as libraries without going through the interface.
 
@@ -120,15 +123,17 @@ An instrument plugin declares what it can play, so the player offers it only for
 
 | Class | Tracks |
 | --- | --- |
-| `fretted` | Guitars and basses with frets, banjo, mandolin, ukulele (GM 24–34, 36, 37, 104–107) |
-| `fretless` | Fretless bass and other stringed tracks without frets (GM 35) |
-| `bowed` | Violin, viola, cello, contrabass, string ensembles (GM 40–45, 48–51) |
+| `fretted` | Guitars and basses with frets, banjo, sitar (GM 24–34, 36, 37, 104, 105; the same set the engraver treats as fretted) |
+| `fretless` | Fretless bass and stringed instruments without frets: shamisen, koto (GM 35, 106, 107) |
+| `bowed` | Violin, viola, cello, contrabass, string ensembles, fiddle (GM 40–45, 48–51, 110) |
 | `keyboard` | Pianos, organs, chromatic percussion such as vibraphone (GM 0–23) |
 | `voice` | Choirs and voices (GM 52–54) |
-| `winds` | Brass, reeds and pipes (GM 56–79) |
-| `synth` | Synth leads, pads and effects (GM 80–103) |
+| `winds` | Brass, reeds and pipes, bagpipe, shanai (GM 56–79, 109, 111) |
+| `synth` | Synth basses, leads, pads and effects (GM 38, 39, 80–103) |
 | `drums` | Percussion tracks (the drum-kit flag, MIDI channel 10) |
-| `other` | Anything else |
+| `other` | Harp, timpani, orchestra hit, kalimba, percussive and sound effects (GM 46, 47, 55, 108, 112–127) |
+
+Every one of the 128 programs falls in exactly one class (`oxiguitar_plugin_api::class`, tested).
 
 `plays` lists what the plugin covers (absent = everything); `does_not_play` removes classes from that. A realistic-drums plugin says `plays: ["drums"]`; the MIDI synthesiser says nothing. A track whose chosen instrument no longer exists falls back to the default, with a footer message.
 

@@ -66,6 +66,8 @@ Every source file we write starts with:
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 ```
 
+The plugin interface and the SDK (`crates/oxiguitar-plugin-api`, `crates/oxiguitar-plugin`) are the exception: they are MIT OR Apache-2.0, so that plugins built on them may use any GPL-compatible licence, and their files start with `// SPDX-License-Identifier: MIT OR Apache-2.0`. Code from the GPL crates must never be copied into them.
+
 A file ported or adapted from another project keeps that project's license and copyright, and says where it came from:
 
 ```rust
