@@ -5,8 +5,9 @@
 | Keys and mouse | Does |
 | --- | --- |
 | Ctrl + O | Open a file |
+| Ctrl + S / Ctrl + Shift + S | Save / save as another file ([Saving files](saving.md)) |
 | Drop a file on the window | Open it (not yet on Wayland) |
-| Ctrl + Q | Quit |
+| Ctrl + Q | Quit (asking first about changes not saved) |
 | F1 | Keyboard and mouse help |
 | F7 / F8 | Show or hide the left / bottom panel (View → Panels) |
 | Mouse wheel over the score | Scroll the score (along the line in the Horizontal layout) |

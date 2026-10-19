@@ -5,6 +5,7 @@
 - [Installing](installing.md)
 - [The window](window.md)
 - [Opening files](opening.md)
+- [Saving files](saving.md)
 - [Layouts](layouts.md)
 - [Tracks and notation](tracks.md)
 - [Editing](editing.md)

@@ -191,7 +191,7 @@ impl Default for Shell {
                     "File",
                     vec![
                         ToolbarItem::new(item::OPEN, "open", "Open… (Ctrl + O)", true),
-                        ToolbarItem::new(item::SAVE, "save", "Save (comes with the editor)", false),
+                        ToolbarItem::new(item::SAVE, "save", "Save (Ctrl + S)", false),
                         ToolbarItem::new(item::EXPORT_PDF, "export", "Export PDF…", false),
                     ],
                 ),
@@ -199,8 +199,8 @@ impl Default for Shell {
                     "edit",
                     "Edit",
                     vec![
-                        ToolbarItem::new(item::UNDO, "undo", "Undo (comes with the editor)", false),
-                        ToolbarItem::new(item::REDO, "redo", "Redo (comes with the editor)", false),
+                        ToolbarItem::new(item::UNDO, "undo", "Undo (Ctrl + Z)", false),
+                        ToolbarItem::new(item::REDO, "redo", "Redo (Ctrl + Y)", false),
                     ],
                 ),
             ],
