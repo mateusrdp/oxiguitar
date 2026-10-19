@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- The palette leaves out Guitar Pro 8's Automation group, its Timer and its Inverted Stem Direction: OxiGuitar draws stems by voice only, odd voices up and even voices down (Mateus, 19 Oct 2026). 125 tools remain, in five groups.
+
 ## [0.2.0] - 2026-10-19
 
 Milestone M2 (the plugin system and the window shell) is complete. OxiGuitar is now a small core with plugins: every file format is a plugin, and the program alone opens nothing, so install the basic plugins beside it (the user manual's "Installing"). Plugin interface 1 is frozen from this release: plugins built for it keep loading in later versions. Writing your own plugin: the plugin developer guide (https://mateusrdp.github.io/oxiguitar/plugin-guide/), its template, and the SDK (`oxiguitar-plugin`, taken from this repository at the tag `v0.2.0`). The window shows where the editor and the player are going: the editor's palette and each track's mixer, greyed out until they arrive.

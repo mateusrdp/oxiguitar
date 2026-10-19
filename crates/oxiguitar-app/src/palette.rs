@@ -8,7 +8,9 @@
 //! The groups and their tools follow Guitar Pro 8's editing palette, in its
 //! order, as its user guide lists them (guitar-pro.com/docs/gp8, "Editing
 //! Palette Symbols", checked 19 Oct 2026): the voice and mode buttons at its
-//! top, then the bar, note, effect, notation and automation symbols. The
+//! top, then the bar, note, effect and notation symbols, less the automation
+//! group, Timer and Inverted Stem Direction (Mateus, 19 Oct 2026: stems go by
+//! voice only, odd voices up and even voices down). The
 //! names are the guide's; every icon is our own drawing (UI-3), made with
 //! our renderer from Bravura's symbols, the interface font, lines and
 //! curves (`icons.rs`). Shortcuts come with the editor, checked against the
@@ -437,18 +439,12 @@ pub(crate) const GROUPS: &[Group] = &[
             tool("chord", "Chord", Face::Drawn(chord)),
             tool("slash", "Slash", Face::Drawn(slash)),
             tool("barre", "Extended Barre", Face::Drawn(barre)),
-            tool("timer", "Timer", Face::Drawn(timer)),
             tool("text", "Text", Face::Text("Aa")),
             tool("section", "Section", Face::Drawn(section)),
             tool(
                 "stems-auto",
                 "Automatic Stem Direction",
                 Face::Drawn(stems_auto),
-            ),
-            tool(
-                "stems-invert",
-                "Inverted Stem Direction",
-                Face::Drawn(stems_inverted),
             ),
             tool("beams-auto", "Automatic Beaming", Face::Drawn(beams_auto)),
             tool("beams-force", "Force Beaming", Face::Drawn(beams_force)),
@@ -459,28 +455,6 @@ pub(crate) const GROUPS: &[Group] = &[
                 Face::Drawn(beams_break_secondary),
             ),
             tool("tuplet-groups", "Force Groups", Face::Drawn(force_groups)),
-        ],
-    },
-    Group {
-        title: "Automation",
-        tools: &[
-            tool("tempo", "Tempo Automation", Face::Drawn(tempo)),
-            tool(
-                "master-volume",
-                "Master Track Volume Automation",
-                Face::Drawn(master_volume),
-            ),
-            tool(
-                "master-pan",
-                "Master Track Pan Automation",
-                Face::Drawn(master_pan),
-            ),
-            tool(
-                "track-volume",
-                "Track Volume Automation",
-                Face::Drawn(track_volume),
-            ),
-            tool("track-pan", "Track Pan Automation", Face::Drawn(track_pan)),
         ],
     },
 ];
@@ -1128,13 +1102,6 @@ fn barre(p: &mut Pen<'_>) {
     p.line(end, y - LINE / 2.0, end, y + 0.8 * S, LINE);
 }
 
-fn timer(p: &mut Pen<'_>) {
-    p.circle(0.0, 0.0, 1.6 * S, LINE);
-    p.rect(-0.35 * S, -2.35 * S, 0.7 * S, 0.5 * S);
-    p.line(0.0, 0.0, 0.0, -1.05 * S, LINE);
-    p.line(0.0, 0.0, 0.75 * S, 0.45 * S, LINE);
-}
-
 fn section(p: &mut Pen<'_>) {
     let side = 2.6 * S;
     p.frame(0.0, 0.0, side, side, LINE * 0.9);
@@ -1145,13 +1112,6 @@ fn stems_auto(p: &mut Pen<'_>) {
     // Stems follow the notes: up from the low one, down from the high one.
     note_up(p, 0.0, 1.0 * S, 3.0 * S);
     note_down(p, 1.9 * S, -S, 3.0 * S);
-}
-
-fn stems_inverted(p: &mut Pen<'_>) {
-    note_down(p, 0.0, -S, 3.0 * S);
-    let x = 2.3 * S;
-    arrow(p, x, 0.0, x, -2.4 * S);
-    arrow(p, x, -0.6 * S, x, 1.8 * S);
 }
 
 fn beams_auto(p: &mut Pen<'_>) {
@@ -1183,23 +1143,6 @@ fn force_groups(p: &mut Pen<'_>) {
     three(p, stem_x(4.0 * gap), -3.6 * S, 0.75);
 }
 
-// Automation: what is controlled, over the controlled value as a line with
-// points.
-
-/// The envelope under a symbol, from x = 0.
-fn envelope(p: &mut Pen<'_>) {
-    let pts = [
-        (0.0, 2.6 * S),
-        (1.1 * S, 2.6 * S),
-        (2.1 * S, 1.2 * S),
-        (3.4 * S, 1.2 * S),
-    ];
-    p.polyline(&pts, 0.18 * S);
-    for (px, py) in pts {
-        p.circle(px, py, 0.32 * S, 0.0);
-    }
-}
-
 /// A loudspeaker facing right, centred on `y`, `k` times its size.
 pub(crate) fn speaker(p: &mut Pen<'_>, x: f32, y: f32, k: f32) {
     let s = S * k;
@@ -1211,45 +1154,6 @@ pub(crate) fn speaker(p: &mut Pen<'_>, x: f32, y: f32, k: f32) {
         .line_to(x + 0.6 * s, y + 0.5 * s)
         .close();
     p.fill(cone);
-}
-
-/// Left and right with a point between, centred on `x`: pan.
-fn balance(p: &mut Pen<'_>, x: f32, y: f32) {
-    p.text_centred("L", x - 1.15 * S, y + 0.55 * S, 1.5 * S);
-    p.text_centred("R", x + 1.15 * S, y + 0.55 * S, 1.5 * S);
-    p.circle(x, y, 0.3 * S, 0.0);
-}
-
-/// The master track's mark, right of a symbol.
-fn master(p: &mut Pen<'_>, x: f32) {
-    p.text("M", x, -0.1 * S, 1.3 * S);
-}
-
-fn tempo(p: &mut Pen<'_>) {
-    p.sym_scaled(NOTE_QUARTER, 1.2 * S, 0.0, 0.7);
-    envelope(p);
-}
-
-fn track_volume(p: &mut Pen<'_>) {
-    speaker(p, 0.9 * S, -0.5 * S, 0.8);
-    envelope(p);
-}
-
-fn master_volume(p: &mut Pen<'_>) {
-    speaker(p, 0.5 * S, -0.5 * S, 0.8);
-    master(p, 2.1 * S);
-    envelope(p);
-}
-
-fn track_pan(p: &mut Pen<'_>) {
-    balance(p, 1.7 * S, -0.4 * S);
-    envelope(p);
-}
-
-fn master_pan(p: &mut Pen<'_>) {
-    balance(p, 1.3 * S, -0.4 * S);
-    master(p, 3.0 * S);
-    envelope(p);
 }
 
 #[cfg(test)]
@@ -1267,18 +1171,12 @@ mod tests {
         let titles: Vec<&str> = GROUPS.iter().map(|g| g.title).collect();
         assert_eq!(
             titles,
-            [
-                "Voices and modes",
-                "Bar",
-                "Note",
-                "Effects",
-                "Notation",
-                "Automation"
-            ]
+            ["Voices and modes", "Bar", "Note", "Effects", "Notation"]
         );
-        // As many tools as the GP8 guide lists for each group.
+        // As many tools as the GP8 guide lists for each group, less the
+        // automation group, Timer and Inverted Stem Direction.
         let counts: Vec<usize> = GROUPS.iter().map(|g| g.tools.len()).collect();
-        assert_eq!(counts, [8, 16, 34, 56, 13, 5]);
+        assert_eq!(counts, [8, 16, 34, 56, 11]);
         let mut ids: Vec<&str> = tools().map(|(_, t)| t.id).collect();
         ids.sort_unstable();
         ids.dedup();

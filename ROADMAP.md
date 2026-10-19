@@ -11,7 +11,7 @@ On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so tha
 | M0 Foundations | — | **Done** (16 Oct 2026) |
 | M1 Viewer | v0.1 | **Done** (17 Oct 2026; v0.1.0 published as a pre-release, 18 Oct 2026) |
 | M2 Plugin system and window shell | v0.2 | **Done** (19 Oct 2026; v0.2.0 published as a pre-release, 19 Oct 2026) |
-| M3 Editor | v0.5 | Planning (19 Oct 2026) |
+| M3 Editor | v0.5 | Slice 1 of 7 (plan approved 19 Oct 2026) |
 | M4 Player | **v1.0** | Not started |
 | M5 Guitar Pro 8 notation and editing parity | | Not started |
 | M6 Format plugins: MusicXML, ABC, MuseScore, MIDI files | | Not started |
@@ -161,12 +161,28 @@ Then v0.2: released. Mateus merged the develop → main pull request (#72) and t
 
 ## M3 — Editor (v0.5)
 
-- M3a: note entry on tab and staff, the full core palette (left area), the inspector (right area), 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition, tuplets of any grouping with a triplet shortcut and "Other…" (EDIT-1 to EDIT-10); the .gp writer, in the GP 7–8 format plugin (the default save format).
-- M3b: the .gp5 writer in the GP5 plugin, with loss warnings (FMT-3).
-- Bars that don't add up (Mateus, 19 Oct 2026): the editor checks a bar's beats against its time signature every time an edit adds, removes or changes a beat. Such bars are allowed, shown and played (with whatever adjustment playback needs), only marked as wrong: the bar drawn in red, or highlighted. Nothing is checked or marked before the editor.
-- The track dialog (Mateus, 19 Oct 2026): clicking a track opens a modal dialog to change its name and, for stringed instruments, the number of strings and the tuning: a drop-down of documented popular tunings (E Standard, Drop D, Open G, …) and "Other", a field that takes notes such as `EADGBE`, validated as notes and against the number of strings. Tunings are named that compactly wherever they show. (Clicking a track's name today shows that track alone; that moves elsewhere when the dialog comes.)
+Edit everything TuxGuitar edits, save it as .gp (the default) or .gp5, and release that as v0.5: the first release Linux users can write tabs with, where until now they had TuxGuitar or Wine (Mateus, 19 Oct 2026). The plan was proposed and approved on 19 Oct 2026; the parity checklist is [docs/design/editor.md](docs/design/editor.md).
 
-Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; round-trip tests pass for every writable format; files we write open correctly in Guitar Pro 8; transposition works chromatically and diatonically.
+- The editor's tools: note entry on tab and staff, the palette's TAB-1 and EDIT tools (left area), the inspector (right area), 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition, tuplets of any grouping with a triplet shortcut and "Other…" (EDIT-1 to EDIT-10). Guitar Pro 8-only tools stay greyed until M5. The Automation group, Timer and Inverted Stem Direction leave the palette: stems go by voice only, odd voices up and even voices down (Mateus, 19 Oct 2026).
+- The .gp writer, in the GP 7–8 format plugin, the default save format; the .gp5 writer in the GP5 plugin, with loss warnings (FMT-3).
+- Bars that don't add up (Mateus, 19 Oct 2026): checked against their time signature, every bar when a file opens and then only the bars an edit touches (speed first). Such bars are allowed, shown and played (with whatever adjustment playback needs, M4), only marked: drawn in red on screen, never in a PDF; the footer says how many and where the first is; Tools → Next Bar That Doesn't Add Up walks through them.
+- Tracks (Mateus, 19 Oct 2026): a click on a row selects the track; a track is shown when its TAB or standard-notation button is on. Right-click on a row: Properties (also Edit → Track Properties…), Transpose…, and Delete, which asks first. The track dialog: the name, instrument and capo and, for stringed instruments, the number of strings (3 to 10) and the tuning as a key and a pattern (Standard, Drop, Open, Other); Other keeps the key and takes any note for each string, checked only as a note and against the number of strings. Tunings are named that compactly wherever they show (E Standard, Drop D, or the notes).
+- Saving (Mateus, 19 Oct 2026): a file is saved in its own format unless that format would lose something, and then as .gp. Re-saving writes only what the model holds; the losses dialog names the rest, including what the opened file had that OxiGuitar couldn't keep. Our .gp claims no particular Guitar Pro version ("7", the oldest that reads it); the manual lists the versions tested.
+- Plugin interface 1.2: the score v2 (free time first, with lists of extensions that only grow at their end), a selection event with voice, string and several tracks, and edits submitted by plugins as undoable commands, with plugin tools in the Tools menu. Frozen with v0.5.
+
+Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; round-trip tests pass for every writable format (FMT-4); files we write open correctly in Guitar Pro (Mateus, with Guitar Pro 7.6, at every slice that writes; the Guitar Pro 8 demo only if 8 itself is needed); transposition works chromatically and diatonically; a key typed in the 300-bar, 8-track file updates the page within 100 ms.
+
+### M3's slices, in order (approved 19 Oct 2026)
+
+Each slice is one or more pull requests into develop, with every gate green, a test build dispatched on its branch and direct artifact links for Mateus. From slice 2 on, every slice that writes files ends with Mateus's check in Guitar Pro 7.6.
+
+1. **Caret, selection, undo machinery and the bar check.** A toolkit-free crate, `oxiguitar-edit`: the caret (track, staff, voice, bar, beat, string), selections, edit commands and an unlimited undo/redo history that keeps copies of only what each command touched. The engraver's map of where each beat and string sits. In the window: a click on the page or the arrow keys move a caret drawn above the tiles (no tile is redrawn); Shift extends a selection; the Edit menu (Undo, Redo); selection events reach plugins. A click on a track row selects it. Bars that don't add up, as above. The palette loses the Automation group, Timer and Inverted Stem Direction. The parity checklist (docs/design/editor.md), for Mateus's approval.
+2. **Interface 1.2 and the .gp writer.** As above; Save and Save As, the unsaved-changes question, the losses dialog (FMT-2 and FMT-3), Infer Key Signatures as one undoable command, `oxiguitar-cli convert`. Gates: round trips, MuseScore 4 and alphaTab opening what we write, a fuzz target for the writer, the contract suite on 1.2.
+3. **Note entry.** Frets on the tab, pitches on the staff, durations, rests, dots, ties, voices 1–4, insert and delete, File → New; Guitar Pro 8's shortcuts. Gates: the typing budget (100 ms), random command sequences undone to the original, every command saved and read back equal.
+4. **Bars, structure, copy and paste, tuplets** (EDIT-6, EDIT-7, EDIT-10), inside OxiGuitar only.
+5. **Tracks, the track dialog and transposition** (EDIT-4, EDIT-8), from the track's right-click menu.
+6. **Effects, the inspector and the rest of the palette**: every TAB-1 effect, chord diagrams, lyrics, text; the palette's search field.
+7. **The .gp5 writer, then v0.5**: every loss declared; the checklist ticked; the manual's editing chapters; the develop → main PR and v0.5.
 
 ## M4 — Player (v1.0)
 
