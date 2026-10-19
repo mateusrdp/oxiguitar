@@ -1,0 +1,27 @@
+{
+  "interface": "1.1",
+  "id": "yourname.example",
+  "name": "Example",
+  "version": "0.1.0",
+  "description": "Opens Example tab files (.extab), shows a fretboard tuned like the open score, and names notes for other plugins.",
+  "authors": ["Your Name"],
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://example.org/your-plugin",
+  "formats": [
+    {
+      "id": "extab",
+      "name": "Example tab",
+      "extensions": ["extab"],
+      "read": true,
+      "write": true,
+      "signatures": [{ "at": 0, "text": "EXAMPLE TAB" }]
+    }
+  ],
+  "services": [
+    { "interface": "note-names", "id": "example", "name": "Example note names" }
+  ],
+  "tabs": [
+    { "id": "fretboard", "title": "Fretboard", "area": "bottom" }
+  ],
+  "events": ["score"]
+}

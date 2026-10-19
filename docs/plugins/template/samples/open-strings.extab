@@ -1,0 +1,10 @@
+EXAMPLE TAB
+title: Open Strings
+artist: The OxiGuitar contributors
+tempo: 96
+# One bar per line: eight eighth notes, each a string and a fret (string 1
+# is the highest), several joined by + for a chord, or - for a rest.
+6:0 5:0 4:0 3:0 2:0 1:0 2:0 3:0
+6:3 5:2 4:0 3:0 4:0 2:0+1:3 - -
+5:0 4:2 3:2 2:1 3:2 4:2 5:0 -
+6:0+5:2+4:2+3:1+2:0+1:0 - - 1:0
