@@ -41,8 +41,8 @@
 //!   with its own size), new manifest keys. Nothing that exists changes. A
 //!   plugin states the minor version it was built for; the host sends it
 //!   only what that minor version knows.
-//! - Until OxiGuitar 0.2 is released, the interface is still being
-//!   designed and may change. From 0.2 on it is frozen.
+//! - Interface 1 is frozen from OxiGuitar 0.2: what it holds never
+//!   changes, and later versions only add.
 //! - 1.0: formats, instruments (declared), services, footer messages and
 //!   settings. 1.1: tabs, the canvas's display list, pushed events, the
 //!   open score.

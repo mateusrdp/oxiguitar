@@ -2,7 +2,7 @@
   "interface": "1.0",
   "id": "oxiguitar.gp5",
   "name": "Guitar Pro 5",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Reads Guitar Pro 5 files (.gp5).",
   "authors": ["Mateus Rocha de Paula", "The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",
