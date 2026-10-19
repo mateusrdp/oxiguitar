@@ -259,6 +259,11 @@ impl Editing {
         true
     }
 
+    /// The caret's voice, from 0, for the palette's voice buttons.
+    pub(crate) fn voice(&self) -> Option<usize> {
+        self.caret.map(|c| c.voice)
+    }
+
     /// The track selected in the track list: the caret's.
     pub(crate) fn track(&self) -> Option<usize> {
         self.caret.map(|c| c.track)

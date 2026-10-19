@@ -4,7 +4,7 @@ M3 makes OxiGuitar an editor: everything TuxGuitar edits, saved as .gp (the defa
 
 ## The TuxGuitar parity checklist
 
-What TuxGuitar 1.6 lets a user edit, read from its menus and dialogs (helge17/tuxguitar, `desktop/TuxGuitar/src/app/tuxguitar/app/view/menu/impl/`, checked 19 Oct 2026), next to the brief's requirements (EDIT-1 to EDIT-10, TAB-1). An item is ticked when it can be entered from the palette or a menu and by its shortcut, changed, deleted, undone and redone, is drawn, and survives saving as .gp and .gp5 (or is listed as a .gp5 loss) and reading back. Mateus approves the list before it is ticked.
+What TuxGuitar 1.6 lets a user edit, read from its menus and dialogs (helge17/tuxguitar, `desktop/TuxGuitar/src/app/tuxguitar/app/view/menu/impl/`, checked 19 Oct 2026), next to the brief's requirements (EDIT-1 to EDIT-10, TAB-1). An item is ticked when it can be entered from the palette or a menu and by its shortcut, changed, deleted, undone and redone, is drawn, and survives saving as .gp and .gp5 (or is listed as a .gp5 loss) and reading back. Mateus approved the list on 19 Oct 2026 ("looks good for now"); it can grow.
 
 Where OxiGuitar goes past TuxGuitar (four voices to its two, any tuplet to its list), the brief's requirement is the item.
 
@@ -80,5 +80,7 @@ Decided by Mateus on 19 Oct 2026 unless said otherwise.
 - **Transposition** has three ways in (Mateus, 19 Oct 2026), so no task needs a selection made first: right-click on a track's row → Transpose… (that track), right-click on a selection → Transpose… (the selection, on its track), Tools → Transpose… (every track).
 - **Tracks:** a click on a row selects the track; a track is shown when its TAB or standard-notation button is on. Right-click on a row: Properties (also Edit → Track Properties…), Transpose…, Delete (which asks first).
 - **Tunings** are named compactly wherever they show (E Standard, Drop D, Open G, or the notes, low to high: `D A D G A D`). In the track dialog the tuning is a key and a pattern: Standard, Drop, Open with the root on the lowest string (Open D, Open E, Open C), Open with the fifth on the lowest string (Open G, Open A), or Other. Other keeps the key and takes any note for each string, checked only as a note and against the number of strings, never against the key.
+- **The caret's voice** shows on the palette's voice buttons, highlighted (Mateus, 19 Oct 2026).
+- **Ctrl + Up / Ctrl + Down** move among the shown tracks; with a single track shown, the previous or next track of the song takes its place, as in Guitar Pro's single-track view (Mateus, 19 Oct 2026).
 - **The clipboard** is OxiGuitar's own: copying and pasting work inside OxiGuitar, not with other programs.
 - **Undo** is unlimited (EDIT-5) and keeps copies of only what each command changed.

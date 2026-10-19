@@ -120,6 +120,15 @@ impl Tracks {
         );
     }
 
+    /// Shows track `i` in place of the only one shown: Ctrl + Up and
+    /// Ctrl + Down with a single track on the page, as in Guitar Pro's
+    /// single-track view (Mateus, 19 Oct 2026).
+    pub(crate) fn switch_to(&mut self, i: usize) {
+        if i < self.len() && self.shown.len() == 1 {
+            self.shown = vec![i];
+        }
+    }
+
     fn apply(&mut self, i: usize, n: Notation) {
         if !n.any() {
             self.hide(i);
@@ -285,6 +294,16 @@ mod tests {
         // on the only shown track, so that click is refused.
         assert!(t.row(0).shown, "both off on the only track is refused");
         assert!(t.row(0).tablature && !t.row(0).standard);
+    }
+
+    #[test]
+    fn ctrl_up_and_down_switch_a_single_track() {
+        let mut t = guitar_piano_drums();
+        t.switch_to(2);
+        assert_eq!(t.shown(), vec![2]);
+        t.toggle_standard(0);
+        t.switch_to(1);
+        assert_eq!(t.shown(), vec![0, 2], "only with one track shown");
     }
 
     #[test]

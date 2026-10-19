@@ -60,6 +60,8 @@ export struct PaletteToolRow {
     icon: image,
     tip: string,
     enabled: bool,
+    // On (the caret's voice, for the voice buttons).
+    checked: bool,
 }
 
 export struct PaletteGroupRow {
@@ -294,12 +296,17 @@ component PaletteButton inherits Rectangle {
     in property <image> icon;
     in property <string> tip;
     in property <bool> enabled;
+    in property <bool> checked;
     callback clicked();
 
     width: 32px;
     height: 32px;
     border-radius: 4px;
-    background: touch.has-hover && root.enabled ? Palette.control-background : transparent;
+    background: root.checked ? Look.accent.transparentize(0.6)
+        : touch.has-hover && root.enabled ? Palette.control-background : transparent;
+    border-width: root.checked ? 1px : 0;
+    border-color: Look.accent;
+    accessible-checked: root.checked;
     accessible-role: button;
     accessible-label: root.tip;
     accessible-enabled: root.enabled;
@@ -327,6 +334,7 @@ component PaletteView inherits ScrollView {
     in property <image> chevron-open;
     in property <image> chevron-closed;
     callback group-clicked(int);
+    callback tool-clicked(string);
     property <length> cell: 34px;
     property <int> columns: max(1, floor((self.visible-width - 12px) / root.cell));
 
@@ -370,6 +378,8 @@ component PaletteView inherits ScrollView {
                     icon: tool.icon;
                     tip: tool.tip;
                     enabled: tool.enabled;
+                    checked: tool.checked;
+                    clicked => { root.tool-clicked(tool.id); }
                 }
             }
         }
@@ -667,6 +677,7 @@ export component AppWindow inherits Window {
     in property <[ToolRow]> tools;
     in property <[PaletteGroupRow]> palette-groups;
     callback palette-group-clicked(int);
+    callback palette-tool-clicked(string);
 
     // The player (top area). Off until an output plugin is installed.
     in property <bool> player-available: false;
@@ -1021,6 +1032,7 @@ export component AppWindow inherits Window {
                             chevron-open: @image-url("../../../assets/icons/ui/chevron-down.svg");
                             chevron-closed: @image-url("../../../assets/icons/ui/chevron-right.svg");
                             group-clicked(g) => { root.palette-group-clicked(g); }
+                            tool-clicked(id) => { root.palette-tool-clicked(id); }
                         }
                         if root.left-area.plugin : PluginTab {
                     rows: root.left-plugin-rows;
