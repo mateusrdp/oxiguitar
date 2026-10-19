@@ -14,7 +14,7 @@ use std::time::Instant;
 
 use oxiguitar_host::api::class::InstrumentClass;
 use oxiguitar_host::api::display::{Item, Paint, Point};
-use oxiguitar_host::api::event::{Event, EventKind, Playback, Position, Selection};
+use oxiguitar_host::api::event::{Event, EventKind, Playback, Position, Selection, Selection2};
 use oxiguitar_host::api::message::ErrorKind;
 use oxiguitar_host::api::score::{Score, ScoreInfo, Track};
 use oxiguitar_host::api::tab::{
@@ -116,8 +116,13 @@ fn the_test_plugin_passes_the_contract() {
     assert!(report.ok(), "failed: {:#?}", report.failed);
     // 11 for formats and services; 2 tabs; 10 uses of the panel's widgets
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
-    // of event.
-    assert_eq!(report.passed.len(), 11 + 2 + 10 + 3, "{:#?}", report.passed);
+    // of event, the selection in both its forms; 1 tool.
+    assert_eq!(
+        report.passed.len(),
+        11 + 2 + 10 + 4 + 1,
+        "{:#?}",
+        report.passed
+    );
     assert!(report.messages.is_empty(), "{:?}", report.messages);
 }
 
@@ -147,14 +152,14 @@ fn the_manifest_is_read_without_loading_and_the_code_on_first_use() {
     assert_eq!(read.log[0].message, "lines after the title are ignored");
 
     // Writing, with what the format loses.
-    let score = Score {
+    let score = oxiguitar_host::api::score2::Score2::from_v1(Score {
         info: ScoreInfo {
             title: "Flor de Lis".into(),
             ..ScoreInfo::default()
         },
         tracks: vec![Track::default()],
-        ..read.score
-    };
+        ..read.score.to_v1()
+    });
     let written = plugins.write(format, &score).unwrap();
     assert_eq!(written.data, b"OXGTEST\nFlor de Lis\n");
     assert_eq!(
@@ -665,8 +670,17 @@ fn events_are_pushed_in_order_and_the_plugin_asks_for_the_score() {
     assert!(plugins.found()[0].is_loaded());
     assert_eq!(*heard.1.lock().unwrap(), [panel()]);
 
-    let selection = Event::Selection(Some(Selection {
+    // The test plugin is built for interface 1.2: it hears the editor's
+    // selection, not 1.1's.
+    plugins.push(Event::Selection(Some(Selection {
         track: 0,
+        from: Position { bar: 1, beat: 0 },
+        to: Position { bar: 2, beat: 3 },
+    })));
+    let selection = Event::Selection2(Some(Selection2::Beats {
+        track: 0,
+        staff: 0,
+        voice: 1,
         from: Position { bar: 1, beat: 0 },
         to: Position { bar: 2, beat: 3 },
     }));
@@ -743,4 +757,184 @@ fn disabled_plugins_hear_no_events_and_add_no_tabs() {
         plugins.tab_content(&panel()).unwrap_err().kind,
         ErrorKind::NotFound
     );
+}
+
+/// The rest of the core for interface 1.2: a score at a revision, the
+/// changes plugins hand back, and what they say.
+#[derive(Default)]
+struct Editor {
+    score: Mutex<Option<(u64, oxiguitar_host::api::score2::Score2)>>,
+    applied: Mutex<Vec<(String, u64, String, String)>>,
+    said: Mutex<Vec<String>>,
+}
+
+impl Core for Editor {
+    fn notify(&self, _level: Level, text: String) {
+        self.said.lock().unwrap().push(text);
+    }
+
+    fn score2(&self) -> Option<(u64, oxiguitar_host::api::score2::Score2)> {
+        self.score.lock().unwrap().clone()
+    }
+
+    fn apply(
+        &self,
+        plugin: &str,
+        revision: u64,
+        name: String,
+        score: oxiguitar_host::api::score2::Score2,
+    ) -> Result<(), String> {
+        let now = self.score.lock().unwrap().as_ref().map_or(0, |(r, _)| *r);
+        if revision != now {
+            return Err(format!("the score has changed since revision {revision}"));
+        }
+        self.applied
+            .lock()
+            .unwrap()
+            .push((plugin.to_owned(), revision, name, score.info.title));
+        Ok(())
+    }
+}
+
+#[test]
+fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
+    use oxiguitar_host::api::score2::{MasterBarExt, Score2};
+    let dir = folder("one-two", &["test.oxp"]);
+    std::fs::copy(second_oxp(), dir.join("second.oxp")).unwrap();
+    let core = Arc::new(Editor::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        core.clone(),
+    );
+
+    // The test plugin's tool, from its manifest; the second plugin (1.1)
+    // has none.
+    let tools = plugins.tools();
+    assert_eq!(tools.len(), 1);
+    assert_eq!(tools[0].spec.name, "Mark the Title");
+    assert_eq!(plugins.run_tool(tools[0]).unwrap(), "No score is open.");
+
+    // With a score open, the tool hands back the changed score, made from
+    // the revision it was given.
+    let mut score = Score2::default();
+    score.info.title = "Song".into();
+    *core.score.lock().unwrap() = Some((5, score.clone()));
+    assert_eq!(
+        plugins.run_tool(tools[0]).unwrap(),
+        "The title is now Song!."
+    );
+    assert_eq!(
+        *core.applied.lock().unwrap(),
+        [(
+            "Test plugin".to_owned(),
+            5,
+            "Mark the Title".to_owned(),
+            "Song!".to_owned()
+        )]
+    );
+
+    // A change the core refuses is an error for the plugin, not a crash.
+    struct Stale(Arc<Editor>);
+    impl Core for Stale {
+        fn notify(&self, level: Level, text: String) {
+            self.0.notify(level, text);
+        }
+        fn score2(&self) -> Option<(u64, Score2)> {
+            self.0.score2()
+        }
+        fn apply(&self, plugin: &str, _: u64, name: String, score: Score2) -> Result<(), String> {
+            self.0.apply(plugin, 999, name, score)
+        }
+    }
+    let stale_dir = folder("one-two-stale", &["test.oxp"]);
+    let stale = Plugins::discover(
+        std::slice::from_ref(&stale_dir),
+        SharedSettings::default(),
+        "x11",
+        Arc::new(Stale(core.clone())),
+    );
+    let e = stale.run_tool(stale.tools()[0]).unwrap_err();
+    assert!(
+        e.message
+            .contains("the score has changed since revision 999"),
+        "{e}"
+    );
+    assert!(
+        stale.found()[0].failure().is_none(),
+        "an error, not a failure"
+    );
+
+    // Writing: the score version 2 reaches a plugin built for 1.2. The test
+    // plugin writes with a version-1 writer, so the SDK names free time as
+    // lost.
+    let format = plugins.writers()[0];
+    let mut free = score.clone();
+    free.master_bars
+        .push(oxiguitar_host::api::score2::MasterBar2 {
+            ext: vec![MasterBarExt::FreeTime],
+            ..Score2::from_v1(Score {
+                master_bars: vec![oxiguitar_host::api::score::MasterBar {
+                    time_signature: oxiguitar_host::api::score::TimeSignature {
+                        numerator: 4,
+                        denominator: 4,
+                    },
+                    key_signature: oxiguitar_host::api::score::KeySignature {
+                        fifths: 0,
+                        mode: oxiguitar_host::api::score::KeyMode::Major,
+                    },
+                    repeat_start: false,
+                    repeat_end: None,
+                    alternate_endings: 0,
+                    marker: None,
+                    double_bar: false,
+                    triplet_feel: oxiguitar_host::api::score::TripletFeel::None,
+                    tempo_changes: vec![],
+                    directions: vec![],
+                }],
+                ..Score::default()
+            })
+            .master_bars[0]
+                .clone()
+        });
+    free.tracks
+        .push(oxiguitar_host::api::score2::Track2::default());
+    let written = plugins.write(format, &free).unwrap();
+    assert!(
+        written
+            .losses
+            .iter()
+            .any(|l| l.message == "free time is left out by this plugin" && l.place == "bar 1"),
+        "{:?}",
+        written.losses
+    );
+
+    // The selection: the test plugin (1.2) hears the editor's, the second
+    // plugin (1.1) the one it knows.
+    plugins.push(Event::Selection(Some(Selection {
+        track: 0,
+        from: Position { bar: 0, beat: 1 },
+        to: Position { bar: 0, beat: 1 },
+    })));
+    plugins.push(Event::Selection2(Some(Selection2::Caret {
+        track: 0,
+        staff: 0,
+        voice: 2,
+        bar: 0,
+        beat: 1,
+        string: 3,
+    })));
+    plugins.wait_for_events();
+    let events =
+        String::from_utf8(plugins.call_service("test-echo", "events", b"").unwrap()).unwrap();
+    assert!(events.contains("Selection2(Some(Caret"), "{events}");
+    assert!(!events.contains("Selection(Some"), "{events}");
+    let said = core.said.lock().unwrap().clone();
+    assert!(
+        said.iter()
+            .any(|s| s.contains("heard Selection(Some(Selection")),
+        "{said:?}"
+    );
+    assert!(!said.iter().any(|s| s.contains("Selection2")), "{said:?}");
 }

@@ -244,6 +244,9 @@ type Shared = Rc<RefCell<App>>;
 thread_local! {
     /// The app, for events arriving from the worker thread.
     static APP: RefCell<Option<Shared>> = const { RefCell::new(None) };
+    /// The plugins' tools for the Tools menu, after the core's: (plugin id,
+    /// tool id, menu entry).
+    static PLUGIN_TOOLS: RefCell<Vec<(String, String, String)>> = const { RefCell::new(Vec::new()) };
 }
 
 /// What the window does for plugins: shows their footer messages, shows
@@ -275,6 +278,20 @@ impl oxiguitar_host::Core for WindowCore {
 
     fn score(&self) -> Option<oxiguitar_host::api::score::Score> {
         self.open.wire()
+    }
+
+    fn score2(&self) -> Option<(u64, oxiguitar_host::api::score2::Score2)> {
+        self.open.wire2()
+    }
+
+    fn apply(
+        &self,
+        plugin: &str,
+        revision: u64,
+        name: String,
+        score: oxiguitar_host::api::score2::Score2,
+    ) -> Result<(), String> {
+        self.open.apply(plugin, revision, name, score)
     }
 
     fn withdrawn(&self, id: &str) {
@@ -474,6 +491,17 @@ fn main() -> Result<(), slint::PlatformError> {
     ];
     about.extend(about_folders(&startup.inventory.folders, args.safe_mode));
     ui.set_about_lines(lines(&about.iter().map(String::as_str).collect::<Vec<_>>()));
+    PLUGIN_TOOLS.with(|t| {
+        *t.borrow_mut() = startup
+            .plugins
+            .tools()
+            .iter()
+            .filter_map(|t| {
+                let plugin = t.plugin.manifest.as_ref()?.id.clone();
+                Some((plugin, t.spec.id.clone(), t.spec.name.clone()))
+            })
+            .collect();
+    });
     set_tools(&ui, &tool_rows(&default_tools()));
 
     ui.set_player_available(!startup.inventory.instruments.is_empty());
@@ -634,7 +662,16 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_tool_picked(move |i| {
-        a.borrow().worker.send(Request::ApplyTool(i as usize));
+        let i = usize::try_from(i).unwrap_or(usize::MAX);
+        let ours = oxiguitar_tools::all().len();
+        let request = match i.checked_sub(ours) {
+            None => Request::ApplyTool(i),
+            Some(j) => match PLUGIN_TOOLS.with(|t| t.borrow().get(j).cloned()) {
+                Some((plugin, tool, _)) => Request::PluginTool(plugin, tool),
+                None => return,
+            },
+        };
+        a.borrow().worker.send(request);
     });
     let a = app.clone();
     ui.on_toolbar_activated(move |id| toolbar_activated(&a, id.as_str()));
@@ -771,8 +808,16 @@ fn reason_phrase(why: &str) -> String {
     }
 }
 
+/// The Tools menu: the core's tools, then the plugins' (interface 1.2).
 fn set_tools(ui: &AppWindow, rows: &[ToolRow]) {
-    ui.set_tools(ModelRc::new(VecModel::from(rows.to_vec())));
+    let mut rows = rows.to_vec();
+    PLUGIN_TOOLS.with(|t| {
+        rows.extend(t.borrow().iter().map(|(_, _, name)| ToolRow {
+            title: name.as_str().into(),
+            enabled: true,
+        }));
+    });
+    ui.set_tools(ModelRc::new(VecModel::from(rows)));
 }
 
 /// A message for the footer.
@@ -1744,7 +1789,10 @@ fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
 fn caret_moved(app: &Shared) {
     sync_caret(app, true);
     let s = app.borrow();
-    s.worker.send(Request::Selection(s.editing.for_plugins()));
+    s.worker.send(Request::Selection(
+        s.editing.for_plugins(),
+        s.editing.for_plugins2(),
+    ));
 }
 
 /// Draws the caret and the selection over the page, highlights the

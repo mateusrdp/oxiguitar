@@ -28,9 +28,9 @@
 //! }
 //! ```
 //!
-//! Interface 1.1 added `tabs` and `events`. Later minor versions add keys
-//! for tools, exporters and toolbar sections when plugins need them
-//! (docs/design/plugins.md, "What plugins contribute").
+//! Interface 1.1 added `tabs` and `events`, 1.2 `tools`. Later minor
+//! versions add keys for exporters and toolbar sections when plugins need
+//! them (docs/design/plugins.md, "What plugins contribute").
 
 use std::cmp::Ordering;
 use std::fmt;
@@ -92,6 +92,23 @@ pub struct Manifest {
     /// The kinds of event it wants pushed to it. Since interface 1.1.
     #[serde(default)]
     pub events: Vec<EventKind>,
+    /// The tools it adds to the Tools menu. Since interface 1.2.
+    #[serde(default)]
+    pub tools: Vec<ToolSpec>,
+}
+
+/// A tool, as the manifest declares it: an entry of the Tools menu that
+/// the core runs by asking the plugin (`Request::Tool`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ToolSpec {
+    /// The id requests name it by, unique in the plugin.
+    pub id: String,
+    /// The menu entry, in title case: "Transpose by Octave".
+    pub name: String,
+    /// What it does, in a sentence: shown with the tool where there is
+    /// room (`oxiguitar-cli tools`).
+    #[serde(default)]
+    pub description: String,
 }
 
 impl Manifest {
@@ -202,6 +219,23 @@ impl Manifest {
             if t.title.trim().is_empty() {
                 out.push(format!("tab {:?}: the title is empty", t.id));
             }
+        }
+        let mut tools: Vec<&str> = Vec::new();
+        for t in &self.tools {
+            if !is_id(&t.id) || tools.contains(&t.id.as_str()) {
+                out.push(format!("tool {:?}: not a valid or unique id", t.id));
+            }
+            tools.push(&t.id);
+            if t.name.trim().is_empty() {
+                out.push(format!("tool {:?}: the name is empty", t.id));
+            }
+        }
+        let since_1_2 = InterfaceVersion { major: 1, minor: 2 };
+        if self.interface < since_1_2 && !self.tools.is_empty() {
+            out.push(format!(
+                "tools need interface {since_1_2}, and the manifest asks for {}",
+                self.interface
+            ));
         }
         let since_1_1 = InterfaceVersion { major: 1, minor: 1 };
         if self.interface < since_1_1 {
@@ -564,6 +598,19 @@ mod tests {
                 .replace("\"1.0\"", "\"1.1\"")
                 .replace("\"T\"", "\" \""))
             .contains("title")
+        );
+        let tooled = GP5.replace(
+            "\"formats\"",
+            "\"tools\": [{\"id\": \"up\", \"name\": \"Up an Octave\"}], \"formats\"",
+        );
+        assert!(err(&tooled).contains("tools need interface 1.2"));
+        let m = Manifest::parse(tooled.replace("\"1.0\"", "\"1.2\"").as_bytes()).unwrap();
+        assert_eq!(m.tools[0].name, "Up an Octave");
+        assert!(
+            err(&tooled
+                .replace("\"1.0\"", "\"1.2\"")
+                .replace("\"Up an Octave\"", "\"\""))
+            .contains("name is empty")
         );
         let big = vec![b' '; crate::MAX_MANIFEST_LEN + 1];
         assert!(Manifest::parse(&big).unwrap_err().contains("more than"));

@@ -82,7 +82,7 @@ pub(crate) fn open(path: &str, data: &[u8]) -> Result<Opened, String> {
     let plugin = format.plugin.name();
     let (name, extensions) = (format.spec.name.clone(), format.spec.extensions.clone());
     let read = opened.read;
-    let score = oxiguitar_model::wire::from_wire(read.score)
+    let score = oxiguitar_model::wire::from_wire2(read.score)
         .map_err(|e| format!("the {plugin} plugin gave a score this OxiGuitar can't hold ({e})"))?;
     Ok(Opened {
         format: name,

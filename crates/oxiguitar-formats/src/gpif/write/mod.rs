@@ -825,6 +825,9 @@ impl<'s> Writer<'s> {
         if mb.double_bar {
             x.push_str("<DoubleBar />\n");
         }
+        if mb.free_time {
+            x.push_str("<FreeTime />\n");
+        }
         if let Some(m) = &mb.marker {
             let _ = writeln!(
                 x,

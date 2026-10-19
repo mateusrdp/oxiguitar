@@ -21,12 +21,14 @@ use oxiguitar_model::{BeatKind, Score};
 use crate::{StaffBar, Touched};
 
 /// Whether every voice of `at` that holds music fills its bar exactly.
-/// A bar that isn't in the score, or whose time signature can't give a
-/// length, counts as adding up: there is nothing to judge it by.
+/// A bar that isn't in the score, is in free time, or whose time signature
+/// can't give a length, counts as adding up: there is nothing to judge it
+/// by.
 pub fn adds_up(score: &Score, at: StaffBar) -> bool {
     let Some(want) = score
         .master_bars
         .get(at.bar)
+        .filter(|mb| !mb.free_time)
         .and_then(|mb| mb.expected_length())
     else {
         return true;
@@ -176,6 +178,9 @@ mod tests {
         );
         assert!(!check.contains(at(0, 0)));
         assert_eq!(check.len(), 3);
+        // A bar in free time adds up, whatever it holds.
+        s.master_bars[2].free_time = true;
+        assert!(adds_up(&s, at(0, 2)));
     }
 
     #[test]

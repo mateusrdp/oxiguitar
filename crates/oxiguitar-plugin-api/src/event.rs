@@ -48,6 +48,11 @@ pub enum Event {
     Selection(Option<Selection>),
     /// Playback started, stopped, or the cursor reached another beat.
     Playback(Playback),
+    /// The selection changed, as the editor has it: the caret (with its
+    /// voice and string) or a range; `None` when no score is open. Sent
+    /// instead of [`Event::Selection`] to plugins built for interface 1.2
+    /// or later. Since interface 1.2.
+    Selection2(Option<Selection2>),
 }
 
 impl Event {
@@ -57,7 +62,7 @@ impl Event {
             Event::ScoreOpened { .. } | Event::ScoreChanged { .. } | Event::ScoreClosed => {
                 EventKind::Score
             }
-            Event::Selection(_) => EventKind::Selection,
+            Event::Selection(_) | Event::Selection2(_) => EventKind::Selection,
             Event::Playback(_) => EventKind::Playback,
         }
     }
@@ -81,6 +86,55 @@ pub struct Selection {
     pub from: Position,
     /// The last beat selected (the same as `from` for one beat).
     pub to: Position,
+}
+
+/// The selection as the editor has it (interface 1.2). Tracks, staves,
+/// voices, bars and beats count from 0; a beat counts in its own voice.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Selection2 {
+    /// Nothing selected: the caret, on a beat of one voice, and on a
+    /// string of the tablature (from 1, the highest; 0 on a staff without
+    /// strings).
+    Caret {
+        /// The track.
+        track: u32,
+        /// The staff in the track.
+        staff: u32,
+        /// The voice, 0 to 3.
+        voice: u32,
+        /// The bar.
+        bar: u32,
+        /// The beat, in the voice.
+        beat: u32,
+        /// The string, from 1; 0 for none.
+        string: u8,
+    },
+    /// A run of beats in one voice of one staff, from one beat to another,
+    /// both included.
+    Beats {
+        /// The track.
+        track: u32,
+        /// The staff in the track.
+        staff: u32,
+        /// The voice, 0 to 3.
+        voice: u32,
+        /// The first beat: its bar, and its place in the voice.
+        from: Position,
+        /// The last beat.
+        to: Position,
+    },
+    /// Whole bars across tracks: the tracks from `first_track` to
+    /// `last_track`, the bars from `first_bar` to `last_bar`, all included.
+    Bars {
+        /// The first track.
+        first_track: u32,
+        /// The last track.
+        last_track: u32,
+        /// The first bar.
+        first_bar: u32,
+        /// The last bar.
+        last_bar: u32,
+    },
 }
 
 /// Where playback is. Sent when playback starts or stops, when the cursor
@@ -118,6 +172,14 @@ mod tests {
                 at: Position { bar: 7, beat: 1 },
                 seconds: 12.5,
             }),
+            Event::Selection2(Some(Selection2::Caret {
+                track: 0,
+                staff: 0,
+                voice: 1,
+                bar: 2,
+                beat: 3,
+                string: 4,
+            })),
         ];
         for (i, e) in events.iter().enumerate() {
             let bytes = encode(e).unwrap();
@@ -132,7 +194,8 @@ mod tests {
                 EventKind::Score,
                 EventKind::Score,
                 EventKind::Selection,
-                EventKind::Playback
+                EventKind::Playback,
+                EventKind::Selection
             ]
         );
         assert_eq!(

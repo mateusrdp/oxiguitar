@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use oxiguitar_display::Rect;
 use oxiguitar_edit::{Caret, Selection, StaffBar};
-use oxiguitar_host::api::event::{Position, Selection as PluginSelection};
+use oxiguitar_host::api::event::{Position, Selection as PluginSelection, Selection2};
 use oxiguitar_layout::{Found, Hits, Spot};
 use oxiguitar_model::Score;
 
@@ -388,6 +388,55 @@ impl Editing {
             track: u32::try_from(track).unwrap_or(u32::MAX),
             from,
             to,
+        })
+    }
+
+    /// The selection as plugins built for interface 1.2 see it: the caret
+    /// with its voice and string, a run of beats of one voice, or bars
+    /// across tracks.
+    pub(crate) fn for_plugins2(&self) -> Option<Selection2> {
+        let score = self.score.as_ref()?;
+        let c = self.caret?;
+        let n = |i: usize| u32::try_from(i).unwrap_or(u32::MAX);
+        let pos = |(bar, beat): (usize, usize)| Position {
+            bar: n(bar),
+            beat: n(beat),
+        };
+        Some(match self.selection {
+            None => {
+                let stringed = score
+                    .tracks
+                    .get(c.track)
+                    .and_then(|t| t.staves.get(c.staff))
+                    .is_some_and(|s| s.string_count() > 0);
+                Selection2::Caret {
+                    track: n(c.track),
+                    staff: n(c.staff),
+                    voice: n(c.voice),
+                    bar: n(c.bar),
+                    beat: n(c.beat),
+                    string: if stringed { c.string } else { 0 },
+                }
+            }
+            Some(Selection::Beats {
+                track,
+                staff,
+                voice,
+                from,
+                to,
+            }) => Selection2::Beats {
+                track: n(track),
+                staff: n(staff),
+                voice: n(voice),
+                from: pos(from),
+                to: pos(to),
+            },
+            Some(Selection::Bars { tracks, bars }) => Selection2::Bars {
+                first_track: n(tracks.0),
+                last_track: n(tracks.1),
+                first_bar: n(bars.0),
+                last_bar: n(bars.1),
+            },
         })
     }
 }

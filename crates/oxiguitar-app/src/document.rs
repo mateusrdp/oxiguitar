@@ -143,24 +143,89 @@ pub(crate) struct EditState {
 }
 
 /// The open score as plugins may ask for it, from any thread: set by the
-/// worker when a score is opened or changed. Converted to the plugins' form
-/// only when one asks.
+/// worker when a score is opened or changed, with its revision. Converted
+/// to the plugins' form only when one asks. Changes plugins hand back go
+/// to the worker ([`OpenScore::apply`]).
 #[derive(Clone, Default)]
-pub(crate) struct OpenScore(Arc<Mutex<Option<Arc<Score>>>>);
+pub(crate) struct OpenScore(Arc<Mutex<Shared>>);
+
+#[derive(Default)]
+struct Shared {
+    score: Option<Arc<Score>>,
+    revision: u64,
+    /// The worker, where plugins' changes go.
+    edits: Option<std::sync::mpsc::Sender<crate::worker::Request>>,
+}
 
 impl OpenScore {
-    pub(crate) fn set(&self, score: Option<Arc<Score>>) {
-        *self.0.lock().unwrap_or_else(PoisonError::into_inner) = score;
+    fn lock(&self) -> std::sync::MutexGuard<'_, Shared> {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// The open score, as plugins see it.
+    /// The open score, and its revision.
+    pub(crate) fn set(&self, score: Option<Arc<Score>>, revision: u64) {
+        let mut s = self.lock();
+        s.score = score;
+        s.revision = revision;
+    }
+
+    /// Where the changes plugins hand back go: the worker's requests.
+    pub(crate) fn connect(&self, edits: std::sync::mpsc::Sender<crate::worker::Request>) {
+        self.lock().edits = Some(edits);
+    }
+
+    /// The open score, as plugins built for interface 1.0 or 1.1 see it.
     pub(crate) fn wire(&self) -> Option<oxiguitar_host::api::score::Score> {
-        let score = self
-            .0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone();
+        let score = self.lock().score.clone();
         score.map(|s| oxiguitar_model::wire::to_wire(&s))
+    }
+
+    /// The open score, version 2, and its revision (interface 1.2).
+    pub(crate) fn wire2(&self) -> Option<(u64, oxiguitar_host::api::score2::Score2)> {
+        let (score, revision) = {
+            let s = self.lock();
+            (s.score.clone(), s.revision)
+        };
+        score.map(|s| (revision, oxiguitar_model::wire::to_wire2(&s)))
+    }
+
+    /// A plugin hands back the score changed, made from `revision`: checked
+    /// here, recorded by the worker as one change the user can undo. The
+    /// error is a sentence for the plugin.
+    pub(crate) fn apply(
+        &self,
+        plugin: &str,
+        revision: u64,
+        name: String,
+        score: oxiguitar_host::api::score2::Score2,
+    ) -> Result<(), String> {
+        let s = self.lock();
+        if s.score.is_none() {
+            return Err("no score is open".to_owned());
+        }
+        if revision != s.revision {
+            return Err(format!(
+                "the score has changed since revision {revision} (it is at {}): ask for it again",
+                s.revision
+            ));
+        }
+        let name = name.trim().to_owned();
+        if name.is_empty() {
+            return Err("a change needs a name, for the Edit menu".to_owned());
+        }
+        let score = oxiguitar_model::wire::from_wire2(score)?;
+        score.check_structure()?;
+        let Some(edits) = &s.edits else {
+            return Err("the score can't be changed now".to_owned());
+        };
+        edits
+            .send(crate::worker::Request::PluginEdit {
+                plugin: plugin.to_owned(),
+                revision,
+                name,
+                score: Box::new(score),
+            })
+            .map_err(|_| "the score can't be changed now".to_owned())
     }
 }
 
@@ -185,7 +250,7 @@ impl Document {
             .filter(|e| e.level != LogLevel::Info)
             .cloned()
             .collect();
-        let score = oxiguitar_model::wire::from_wire(read.score).map_err(|e| {
+        let score = oxiguitar_model::wire::from_wire2(read.score).map_err(|e| {
             format!("{name}: the {plugin} plugin gave a score this OxiGuitar can't hold ({e}).")
         })?;
         let check = BarCheck::of(&score);
@@ -312,6 +377,16 @@ impl Document {
             self.check.update(&self.score, &touched);
         }
         (format!("{}: {}", tool.name(), outcome.report), changed)
+    }
+
+    /// A plugin's change, the whole score changed, as one command named
+    /// `name` that the user can undo.
+    pub(crate) fn apply_change(&mut self, name: &str, new: Score) {
+        let score = Arc::make_mut(&mut self.score);
+        let touched = self
+            .history
+            .record(score, name, vec![Region::Whole], |s| *s = new);
+        self.check.update(&self.score, &touched);
     }
 
     /// The title for PDF metadata: the score's, or the file's name.
@@ -442,7 +517,7 @@ impl Document {
         plugins: &Plugins,
         to: Option<(PathBuf, SaveFormat)>,
     ) -> Result<Prepared, String> {
-        let wire = oxiguitar_model::wire::to_wire(&self.score);
+        let wire = oxiguitar_model::wire::to_wire2(&self.score);
         let write = |format: &SaveFormat| -> Result<(Vec<u8>, Vec<LogEntry>), String> {
             let writers = plugins.writers();
             let Some(f) = writers.iter().find(|f| f.spec.id == format.id) else {

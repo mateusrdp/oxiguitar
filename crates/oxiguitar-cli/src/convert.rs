@@ -64,7 +64,7 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let score = oxiguitar_model::wire::to_wire(&opened.score);
+    let score = oxiguitar_model::wire::to_wire2(&opened.score);
     let written = match plugins().write(format, &score) {
         Ok(w) => w,
         Err(e) => {

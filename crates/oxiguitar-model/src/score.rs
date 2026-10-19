@@ -124,6 +124,9 @@ pub struct MasterBar {
     pub tempo_changes: Vec<TempoChange>,
     /// Navigation signs and jumps: segno, coda, D.S., D.C., fine.
     pub directions: Vec<Direction>,
+    /// The bar is in free time: no time signature to add up to (a
+    /// cadenza). Its time signature is kept for the bars after it.
+    pub free_time: bool,
 }
 
 impl Default for MasterBar {
@@ -139,6 +142,7 @@ impl Default for MasterBar {
             triplet_feel: TripletFeel::None,
             tempo_changes: Vec::new(),
             directions: Vec::new(),
+            free_time: false,
         }
     }
 }

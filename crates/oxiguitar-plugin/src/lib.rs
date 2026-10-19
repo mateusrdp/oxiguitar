@@ -57,9 +57,10 @@
 
 pub use oxiguitar_plugin_api as api;
 pub use oxiguitar_plugin_api::display;
-pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection};
+pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::message::{Availability, Error, ErrorKind, Level, LogEntry};
 pub use oxiguitar_plugin_api::score;
+pub use oxiguitar_plugin_api::score2;
 pub use oxiguitar_plugin_api::tab::{
     Canvas, Pointer, PointerButton, PointerKind, Row, TabContent, TabEvent, Widget,
 };
@@ -114,6 +115,57 @@ pub trait Plugin: Send + Sync + 'static {
     fn event(&self, event: &Event) {
         let _ = event;
     }
+
+    /// The reader for the format `format` into the score version 2
+    /// (interface 1.2). When a plugin has both, this one is used.
+    fn reader2(&self, format: &str) -> Option<&dyn FormatReader2> {
+        let _ = format;
+        None
+    }
+
+    /// The writer for the format `format` from the score version 2
+    /// (interface 1.2). When a plugin has both, this one is used.
+    fn writer2(&self, format: &str) -> Option<&dyn FormatWriter2> {
+        let _ = format;
+        None
+    }
+
+    /// The tool `id` (an id from the manifest's `tools`; interface 1.2).
+    fn tool(&self, id: &str) -> Option<&dyn Tool> {
+        let _ = id;
+        None
+    }
+}
+
+/// Reads one file format into the score version 2 (interface 1.2).
+pub trait FormatReader2: Send + Sync {
+    /// Reads `data`, a whole file. Treat it as untrusted: a damaged file
+    /// gives an error saying where, never a panic (FMT-1).
+    fn read(&self, data: &[u8]) -> Result<Read2, Error>;
+}
+
+/// What a [`FormatReader2`] read.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Read2 {
+    /// The score.
+    pub score: score2::Score2,
+    /// What couldn't be carried over faithfully (FMT-2).
+    pub log: Vec<LogEntry>,
+}
+
+/// Writes the score version 2 in one file format (interface 1.2).
+pub trait FormatWriter2: Send + Sync {
+    /// Writes `score` as a whole file.
+    fn write(&self, score: &score2::Score2) -> Result<Written, Error>;
+}
+
+/// A Tools menu entry (interface 1.2). A tool that changes the score asks
+/// for it ([`Host::score2`]) and hands back its change ([`Host::apply`]),
+/// which the user can undo as one step.
+pub trait Tool: Send + Sync {
+    /// Runs the tool, which the user picked in the Tools menu. Returns a
+    /// sentence for the footer about what it did (or an empty one).
+    fn run(&self) -> Result<String, Error>;
 }
 
 /// A tab in one of the window's areas (docs/design/plugins.md, "What
@@ -182,6 +234,13 @@ pub trait Service: Send + Sync {
 pub fn dispatch(plugin: &dyn Plugin, request: Request<'_>) -> Result<Answer<'static>, Error> {
     match request {
         Request::Read { format, data } => {
+            if let Some(reader) = plugin.reader2(&format) {
+                let Read2 { score, log } = reader.read(data.as_slice())?;
+                return Ok(Answer::Read2 {
+                    score: Box::new(score),
+                    log,
+                });
+            }
             let reader = plugin
                 .reader(&format)
                 .ok_or_else(|| Error::not_found(format!("this plugin doesn't read {format:?}")))?;
@@ -192,14 +251,49 @@ pub fn dispatch(plugin: &dyn Plugin, request: Request<'_>) -> Result<Answer<'sta
             })
         }
         Request::Write { format, score } => {
-            let writer = plugin
-                .writer(&format)
-                .ok_or_else(|| Error::not_found(format!("this plugin doesn't write {format:?}")))?;
-            let Written { data, losses } = writer.write(&score)?;
+            let Written { data, losses } = match plugin.writer(&format) {
+                Some(writer) => writer.write(&score)?,
+                None => writer2(plugin, &format)?.write(&score2::Score2::from_v1(*score))?,
+            };
             Ok(Answer::Written {
                 data: Blob::owned(data),
                 losses,
             })
+        }
+        Request::Write2 { format, score } => {
+            let Written { data, losses } =
+                match plugin.writer2(&format) {
+                    Some(writer) => writer.write(&score)?,
+                    None => {
+                        // A plugin with only a version-1 writer: what version 1
+                        // can't hold is lost, and said so.
+                        let writer = plugin.writer(&format).ok_or_else(|| {
+                            Error::not_found(format!("this plugin doesn't write {format:?}"))
+                        })?;
+                        let mut written = writer.write(&score.to_v1())?;
+                        written
+                            .losses
+                            .extend(score.extensions_used().into_iter().map(
+                                |(what, bar, count)| LogEntry {
+                                    level: Level::Warning,
+                                    message: format!("{what} is left out by this plugin"),
+                                    place: format!("bar {bar}"),
+                                    count: u32::try_from(count).unwrap_or(u32::MAX),
+                                },
+                            ));
+                        written
+                    }
+                };
+            Ok(Answer::Written {
+                data: Blob::owned(data),
+                losses,
+            })
+        }
+        Request::Tool { tool } => {
+            let tool = plugin
+                .tool(&tool)
+                .ok_or_else(|| Error::not_found(format!("this plugin has no tool {tool:?}")))?;
+            Ok(Answer::Report(tool.run()?))
         }
         Request::Probe { interface, id } => {
             let service = find_service(plugin, &interface, &id)?;
@@ -227,6 +321,12 @@ pub fn dispatch(plugin: &dyn Plugin, request: Request<'_>) -> Result<Answer<'sta
             Ok(Answer::Done)
         }
     }
+}
+
+fn writer2<'p>(plugin: &'p dyn Plugin, format: &str) -> Result<&'p dyn FormatWriter2, Error> {
+    plugin
+        .writer2(format)
+        .ok_or_else(|| Error::not_found(format!("this plugin doesn't write {format:?}")))
 }
 
 fn find_tab<'p>(plugin: &'p dyn Plugin, id: &str) -> Result<&'p dyn Tab, Error> {
@@ -349,6 +449,33 @@ impl Host {
     }
 }
 
+impl Host {
+    /// The open score, version 2, with its revision, or `None` when none is
+    /// open (interface 1.2). Keep the revision for [`Host::apply`].
+    pub fn score2(&self) -> Result<Option<(u64, score2::Score2)>, Error> {
+        match self.0.request(HostRequest::Score2)? {
+            HostAnswer::Score2 { revision, score } => Ok(score.map(|s| (revision, *s))),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Hands the core a changed score (interface 1.2), made from the score
+    /// of `revision` ([`Host::score2`]). The core records it as one change
+    /// the user can undo, named `name` ("Transpose"), and shows it a moment
+    /// later. If the score changed since `revision`, the change is refused
+    /// with an error: ask for the score again and redo the change.
+    pub fn apply(&self, revision: u64, name: &str, score: score2::Score2) -> Result<(), Error> {
+        match self.0.request(HostRequest::Apply {
+            revision,
+            name: name.into(),
+            score: Box::new(score),
+        })? {
+            HostAnswer::Done => Ok(()),
+            other => Err(unexpected(&other)),
+        }
+    }
+}
+
 fn unexpected(answer: &HostAnswer<'_>) -> Error {
     Error::new(
         ErrorKind::Failed,
@@ -366,6 +493,14 @@ impl HostServices for Detached {
             | HostRequest::Redraw { .. } => Ok(HostAnswer::Done),
             HostRequest::Settings => Ok(HostAnswer::Settings("{}".into())),
             HostRequest::Score => Ok(HostAnswer::Score(None)),
+            HostRequest::Score2 => Ok(HostAnswer::Score2 {
+                revision: 0,
+                score: None,
+            }),
+            HostRequest::Apply { .. } => Err(Error::new(
+                ErrorKind::Failed,
+                "a detached host has no score to change",
+            )),
             HostRequest::Service { interface, .. } => Err(Error::not_found(format!(
                 "no service of {interface:?} (a detached host has none)"
             ))),
@@ -406,14 +541,21 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
             return out;
         }
     };
+    let knows_1_2 = manifest.knows_minor(2);
     for f in &manifest.formats {
-        if f.read && plugin.reader(&f.id).is_none() {
+        if !knows_1_2 && (plugin.reader2(&f.id).is_some() || plugin.writer2(&f.id).is_some()) {
+            out.push(format!(
+                "format {:?} uses the score version 2, which needs interface 1.2 in the manifest",
+                f.id
+            ));
+        }
+        if f.read && plugin.reader(&f.id).is_none() && plugin.reader2(&f.id).is_none() {
             out.push(format!(
                 "format {:?} is declared as read, but has no reader",
                 f.id
             ));
         }
-        if f.write && plugin.writer(&f.id).is_none() {
+        if f.write && plugin.writer(&f.id).is_none() && plugin.writer2(&f.id).is_none() {
             out.push(format!(
                 "format {:?} is declared as written, but has no writer",
                 f.id
@@ -426,6 +568,11 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
                 "service {:?} of {:?} is declared, but not implemented",
                 s.id, s.interface
             ));
+        }
+    }
+    for t in &manifest.tools {
+        if plugin.tool(&t.id).is_none() {
+            out.push(format!("tool {:?} is declared, but not implemented", t.id));
         }
     }
     for t in &manifest.tabs {
@@ -629,7 +776,123 @@ mod tests {
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
         let later = ECHO.replace("\"1.0\"", "\"1.9\"");
-        assert!(check::<Echo>(&later, "0.1.0")[0].contains("this SDK is 1.1"));
+        assert!(check::<Echo>(&later, "0.1.0")[0].contains("this SDK is 1.2"));
+    }
+
+    /// A plugin of interface 1.2: a reader into the score version 2, a
+    /// version-1 writer, and a tool.
+    struct Two;
+
+    impl Plugin for Two {
+        fn start(_host: Host) -> Result<Two, Error> {
+            Ok(Two)
+        }
+        fn reader2(&self, format: &str) -> Option<&dyn FormatReader2> {
+            (format == "two").then_some(self as &dyn FormatReader2)
+        }
+        fn writer(&self, format: &str) -> Option<&dyn FormatWriter> {
+            (format == "two").then_some(self as &dyn FormatWriter)
+        }
+        fn tool(&self, id: &str) -> Option<&dyn Tool> {
+            (id == "t").then_some(self as &dyn Tool)
+        }
+    }
+
+    impl FormatReader2 for Two {
+        fn read(&self, _data: &[u8]) -> Result<Read2, Error> {
+            Ok(Read2 {
+                score: score2::Score2::default(),
+                log: Vec::new(),
+            })
+        }
+    }
+
+    impl FormatWriter for Two {
+        fn write(&self, score: &score::Score) -> Result<Written, Error> {
+            Ok(Written {
+                data: score.info.title.clone().into_bytes(),
+                losses: Vec::new(),
+            })
+        }
+    }
+
+    impl Tool for Two {
+        fn run(&self) -> Result<String, Error> {
+            Ok("ran".into())
+        }
+    }
+
+    #[test]
+    fn interface_1_2_reads_version_2_writes_either_and_runs_tools() {
+        let two = Two;
+        let read = dispatch(
+            &two,
+            Request::Read {
+                format: "two".into(),
+                data: Blob::borrowed(b""),
+            },
+        )
+        .unwrap();
+        assert!(matches!(read, Answer::Read2 { .. }));
+        let mut score = score2::Score2::default();
+        score.info.title = "T".into();
+        let mut bar = score2::Score2::from_v1(score::Score {
+            master_bars: vec![score::MasterBar {
+                time_signature: score::TimeSignature {
+                    numerator: 4,
+                    denominator: 4,
+                },
+                key_signature: score::KeySignature {
+                    fifths: 0,
+                    mode: score::KeyMode::Major,
+                },
+                repeat_start: false,
+                repeat_end: None,
+                alternate_endings: 0,
+                marker: None,
+                double_bar: false,
+                triplet_feel: score::TripletFeel::None,
+                tempo_changes: vec![],
+                directions: vec![],
+            }],
+            ..score::Score::default()
+        })
+        .master_bars
+        .remove(0);
+        bar.ext.push(score2::MasterBarExt::FreeTime);
+        score.master_bars.push(bar);
+        let Answer::Written { data, losses } = dispatch(
+            &two,
+            Request::Write2 {
+                format: "two".into(),
+                score: Box::new(score),
+            },
+        )
+        .unwrap() else {
+            panic!("a file")
+        };
+        assert_eq!(data.as_slice(), b"T");
+        assert_eq!(losses[0].message, "free time is left out by this plugin");
+        assert_eq!(
+            dispatch(&two, Request::Tool { tool: "t".into() }).unwrap(),
+            Answer::Report("ran".into())
+        );
+        assert_eq!(
+            dispatch(&two, Request::Tool { tool: "u".into() })
+                .unwrap_err()
+                .kind,
+            ErrorKind::NotFound
+        );
+        // Version 2 needs interface 1.2 in the manifest.
+        let manifest = r#"{"interface": "1.1", "id": "two", "name": "Two", "version": "0.1.0",
+            "formats": [{"id": "two", "name": "Two", "extensions": ["two"], "read": true,
+            "signatures": [{"at": 0, "text": "TWO"}]}]}"#;
+        assert!(
+            check::<Two>(manifest, "0.1.0")
+                .iter()
+                .any(|p| p.contains("needs interface 1.2"))
+        );
+        assert!(check::<Two>(&manifest.replace("1.1", "1.2"), "0.1.0").is_empty());
     }
 
     /// A tab counting its button's clicks, and events.
