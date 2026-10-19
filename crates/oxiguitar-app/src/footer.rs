@@ -2,8 +2,10 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! The footer's messages: one line at the bottom of the window shows the
-//! latest; clicking it expands the whole list for this session (errors,
-//! warnings, tool reports, plugin notes). No window code here.
+//! latest; clicking it expands the whole list for this session. It holds
+//! errors and warnings only: it isn't a log (Mateus, 19 Oct 2026), so
+//! messages that are only worth knowing (`Level::Info`: the plugins found,
+//! a tool's report, a file exported) aren't kept. No window code here.
 
 use oxiguitar_host::{Level, Notice};
 
@@ -19,7 +21,7 @@ pub(crate) struct Footer {
 impl Footer {
     pub(crate) fn push(&mut self, level: Level, text: impl Into<String>) {
         let text = text.into();
-        if text.trim().is_empty() {
+        if level == Level::Info || text.trim().is_empty() {
             return;
         }
         self.messages.push(Notice::new(level, text));
@@ -65,15 +67,17 @@ mod tests {
     fn the_latest_message_shows_and_the_rest_are_kept() {
         let mut f = Footer::default();
         assert!(f.latest().is_none());
-        f.push(Level::Info, "one");
+        f.push(Level::Error, "one");
         f.push(Level::Warning, "two");
         f.push(Level::Error, "  ");
+        // Only worth knowing: not kept.
+        f.push(Level::Info, "Plugins: Guitar Pro 5 0.1.0.");
         assert_eq!(f.len(), 2);
         assert_eq!(f.latest().map(|n| n.text.as_str()), Some("two"));
         let order: Vec<&str> = f.newest_first().map(|n| n.text.as_str()).collect();
         assert_eq!(order, ["two", "one"]);
         for i in 0..KEEP {
-            f.push(Level::Info, format!("{i}"));
+            f.push(Level::Warning, format!("{i}"));
         }
         assert_eq!(f.len(), KEEP);
         assert_eq!(f.newest_first().last().map(|n| n.text.as_str()), Some("0"));

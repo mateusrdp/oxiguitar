@@ -73,13 +73,15 @@ pub(crate) fn recognise(path: &str, data: &[u8]) -> Result<(String, Vec<String>,
 
 /// Reads the file at `path`, holding `data`. The error is a sentence.
 pub(crate) fn open(path: &str, data: &[u8]) -> Result<Opened, String> {
-    let plugins = plugins();
-    let format = plugins
-        .recognise(data, extension(path))
+    // A plugin that fails while reading is withdrawn and the next one
+    // that recognises the file reads it.
+    let opened = plugins()
+        .open(data, extension(path))
         .map_err(|e| e.to_string())?;
+    let format = opened.format;
     let plugin = format.plugin.name();
     let (name, extensions) = (format.spec.name.clone(), format.spec.extensions.clone());
-    let read = plugins.read(format, data).map_err(|e| e.to_string())?;
+    let read = opened.read;
     let score = oxiguitar_model::wire::from_wire(read.score)
         .map_err(|e| format!("the {plugin} plugin gave a score this OxiGuitar can't hold ({e})"))?;
     Ok(Opened {

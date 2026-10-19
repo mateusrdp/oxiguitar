@@ -32,6 +32,17 @@
 //! to them, in order, on a thread of their own that sleeps until there is
 //! something to deliver.
 //!
+//! A plugin that fails (it can't be loaded or started, it crashes, or it
+//! breaks the interface's contract: an answer that can't be read, of the
+//! wrong kind, or tab contents the core can't show) is withdrawn for the
+//! rest of the session, and everything goes on as if it weren't installed
+//! (Mateus, 19 Oct 2026): its formats, tabs, services, instruments and
+//! events are gone, a file it would have read goes to the next plugin
+//! that recognises it, and a service is chosen again among the others. The
+//! footer says so once, as an error; [`Core::withdrawn`] lets the window
+//! take its tabs away. An ordinary error a plugin answers with (a damaged
+//! file, a widget it refuses) is not a failure.
+//!
 //! Nothing here polls or runs on a timer: everything happens when it is
 //! asked for.
 
@@ -89,6 +100,13 @@ pub trait Core: Send + Sync {
     fn score(&self) -> Option<Score> {
         None
     }
+
+    /// The plugin `id` failed and is withdrawn for the rest of the session:
+    /// its tabs should go. The footer has already been told. The default
+    /// does nothing.
+    fn withdrawn(&self, id: &str) {
+        let _ = id;
+    }
 }
 
 /// A core without a window: messages go nowhere, and no score is open.
@@ -116,7 +134,8 @@ struct Inner {
     chosen: Mutex<HashMap<String, Choice>>,
     /// Events waiting to be delivered.
     events: Arc<Queue>,
-    /// The plugins that have failed an event: told once in the footer.
+    /// The plugins that answered an event with an error: told once in the
+    /// footer.
     failed_events: Mutex<Vec<usize>>,
 }
 
@@ -141,6 +160,8 @@ pub struct Found {
     pub state: State,
     manifest_bytes: Vec<u8>,
     loaded: OnceLock<Result<Loaded, String>>,
+    /// Why it was withdrawn, once it failed.
+    failed: OnceLock<String>,
 }
 
 /// Whether a plugin file can be used.
@@ -172,9 +193,14 @@ impl Found {
         self.loaded.get().is_some()
     }
 
+    /// Why it was withdrawn for the rest of the session, if it failed.
+    pub fn failure(&self) -> Option<&str> {
+        self.failed.get().map(String::as_str)
+    }
+
     fn ready(&self) -> Option<&Manifest> {
-        match (&self.state, &self.manifest) {
-            (State::Ready, Some(m)) => Some(m),
+        match (&self.state, &self.manifest, self.failed.get()) {
+            (State::Ready, Some(m), None) => Some(m),
             _ => None,
         }
     }
@@ -187,6 +213,7 @@ impl fmt::Debug for Found {
             .field("id", &self.manifest.as_ref().map(|m| &m.id))
             .field("state", &self.state)
             .field("loaded", &self.is_loaded())
+            .field("failed", &self.failure())
             .finish()
     }
 }
@@ -336,6 +363,37 @@ pub struct ReadScore {
     /// What the reader couldn't carry over faithfully (FMT-2).
     pub log: Vec<LogEntry>,
 }
+
+/// A file opened by [`Plugins::open`]: the format that read it, and what
+/// its plugin read.
+#[derive(Clone, Debug)]
+pub struct OpenedFile<'a> {
+    /// The format, and its plugin.
+    pub format: FormatRef<'a>,
+    /// The score and the import log.
+    pub read: ReadScore,
+}
+
+/// Why [`Plugins::open`] opened nothing. Its text is a sentence for the
+/// footer, to follow the file's name.
+#[derive(Clone, Debug, PartialEq)]
+pub enum OpenError {
+    /// No usable plugin recognises the file.
+    Unrecognised(Unrecognised),
+    /// The plugin that recognised it couldn't read it (a damaged file).
+    Read(Error),
+}
+
+impl fmt::Display for OpenError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            OpenError::Unrecognised(why) => why.fmt(f),
+            OpenError::Read(e) => e.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for OpenError {}
 
 /// What a format plugin wrote.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -575,6 +633,25 @@ impl Plugins {
         out
     }
 
+    /// Recognises `data`, a whole file, and reads it with the plugin that
+    /// recognises it. If that plugin fails while reading, it is withdrawn
+    /// and the next plugin that recognises the file reads it, as if the
+    /// first had never been installed. `extension` is as for
+    /// [`Plugins::recognise`].
+    pub fn open(&self, data: &[u8], extension: Option<&str>) -> Result<OpenedFile<'_>, OpenError> {
+        loop {
+            let format = self
+                .recognise(data, extension)
+                .map_err(OpenError::Unrecognised)?;
+            match self.read(format, data) {
+                Ok(read) => return Ok(OpenedFile { format, read }),
+                // Withdrawn: each turn withdraws one plugin, so this ends.
+                Err(_) if format.plugin.failure().is_some() => {}
+                Err(e) => return Err(OpenError::Read(e)),
+            }
+        }
+    }
+
     /// Reads `data` with the plugin that owns `format`, loading it first if
     /// needed.
     pub fn read(&self, format: FormatRef<'_>, data: &[u8]) -> Result<ReadScore, Error> {
@@ -656,28 +733,38 @@ impl Plugins {
         Ok(ServiceRef { plugin, spec })
     }
 
-    /// Calls `method` of the service chosen for `interface`.
+    /// Calls `method` of the service chosen for `interface`. If the
+    /// service's plugin fails, it is withdrawn and the call goes to the
+    /// service chosen among the others, as if it had never been installed.
     pub fn call_service(
         &self,
         interface: &str,
         method: &str,
         input: &[u8],
     ) -> Result<Vec<u8>, Error> {
-        let service = self
-            .service(interface)
-            .map_err(|why| Error::new(ErrorKind::NotFound, why))?;
-        let index = self.index_of(service.plugin);
-        match self.request(
-            index,
-            &Request::Service {
-                interface: interface.to_owned(),
-                id: service.spec.id.clone(),
-                method: method.to_owned(),
-                input: Blob::borrowed(input),
-            },
-        )? {
-            Answer::Service(output) => Ok(output.into_vec()),
-            other => Err(self.unexpected(index, &other)),
+        loop {
+            let service = self
+                .service(interface)
+                .map_err(|why| Error::new(ErrorKind::NotFound, why))?;
+            let index = self.index_of(service.plugin);
+            let answer = self.request(
+                index,
+                &Request::Service {
+                    interface: interface.to_owned(),
+                    id: service.spec.id.clone(),
+                    method: method.to_owned(),
+                    input: Blob::borrowed(input),
+                },
+            );
+            let error = match answer {
+                Ok(Answer::Service(output)) => return Ok(output.into_vec()),
+                Ok(other) => self.unexpected(index, &other),
+                Err(e) => e,
+            };
+            // Withdrawn: each turn withdraws one plugin, so this ends.
+            if service.plugin.failure().is_none() {
+                return Err(error);
+            }
         }
     }
 
@@ -739,14 +826,24 @@ impl Plugins {
         event: TabEvent,
     ) -> Result<TabContent, Error> {
         let tab = self.find_tab(id)?;
-        self.tab_answer(
+        let answer = self.tab_answer(
             tab,
             &Request::TabEvent {
                 tab: id.tab.clone(),
                 widget: widget.to_owned(),
                 event,
             },
-        )
+        );
+        match answer {
+            // An ordinary error (the plugin refused the event): said in the
+            // footer, and the tab keeps showing what it shows now.
+            Err(e) if tab.plugin.failure().is_none() => {
+                let name = tab.plugin.name();
+                self.0.core.notify(Level::Warning, format!("{name}: {e}"));
+                self.tab_content(id)
+            }
+            answer => answer,
+        }
     }
 
     fn find_tab(&self, id: &TabId) -> Result<TabRef<'_>, Error> {
@@ -762,13 +859,9 @@ impl Plugins {
         match self.request(tab.index, request)? {
             Answer::Tab(content) => match content.problems().into_iter().next() {
                 None => Ok(*content),
-                Some(problem) => Err(Error::new(
-                    ErrorKind::Invalid,
-                    format!(
-                        "{}: the tab {} can't be shown ({problem})",
-                        tab.plugin.name(),
-                        tab.spec.title
-                    ),
+                Some(problem) => Err(self.fail(
+                    tab.index,
+                    format!("its tab {} can't be shown ({problem})", tab.spec.title),
                 )),
             },
             other => Err(self.unexpected(tab.index, &other)),
@@ -835,6 +928,10 @@ impl Plugins {
                 Ok(other) => self.unexpected(index, &other),
                 Err(e) => e,
             };
+            if self.0.found[index].failure().is_some() {
+                // Withdrawn, and the footer told.
+                continue;
+            }
             let mut failed = self
                 .0
                 .failed_events
@@ -966,6 +1063,12 @@ impl Plugins {
                 format!("{name} isn't used in safe mode"),
             ));
         }
+        if let Some(why) = found.failure() {
+            return Err(Error::new(
+                ErrorKind::Failed,
+                format!("{name} stopped working: {why}"),
+            ));
+        }
         if found.ready().is_none() {
             return Err(Error::new(
                 ErrorKind::Failed,
@@ -981,16 +1084,17 @@ impl Plugins {
                         format!("{name} asked for its own contributions while starting"),
                     ));
                 }
-                found.loaded.get_or_init(|| {
+                let result = found.loaded.get_or_init(|| {
                     STARTING.with(|s| s.borrow_mut().push(index));
                     let result =
                         loader::load(&found.path, &found.manifest_bytes, self.host_calls(index));
                     STARTING.with(|s| s.borrow_mut().retain(|&i| i != index));
-                    if let Err(e) = &result {
-                        self.0.core.notify(Level::Error, format!("{name}: {e}"));
-                    }
                     result
-                })
+                });
+                if let Err(e) = result {
+                    return Err(self.fail(index, e.clone()));
+                }
+                result
             }
         };
         result
@@ -1003,18 +1107,45 @@ impl Plugins {
         let plugin = self.loaded(index)?;
         let bytes = encode(request).map_err(|e| Error::new(ErrorKind::Failed, e.to_string()))?;
         let (status, answer) = plugin.call(&bytes);
-        let name = || self.0.found[index].name();
-        let answer = outcome(status, &answer).map_err(|mut e| {
-            if status != Status::FAILED {
-                e.message = format!("{}: {}", name(), e.message);
-            }
-            e
-        })?;
+        // An error the plugin answered with is an answer; anything else
+        // that isn't a readable answer (a crash, a request it couldn't
+        // read, an error or an answer that can't be decoded) is a failure.
+        let ordinary = status == Status::FAILED && decode::<Error>(&answer).is_ok();
+        let answer = match outcome(status, &answer) {
+            Ok(answer) => answer,
+            Err(e) if ordinary => return Err(e),
+            Err(e) => return Err(self.fail(index, e.message)),
+        };
         decode::<Answer<'_>>(answer)
             .map(Answer::into_owned)
-            .map_err(|e| Error::new(ErrorKind::Failed, format!("{}: its answer: {e}", name())))
+            .map_err(|e| self.fail(index, format!("its answer can't be read ({e})")))
     }
 
+    /// Withdraws the plugin at `index` for the rest of the session, because
+    /// `why`: from now on it is as if it weren't installed. Tells the
+    /// footer and the window the first time. Returns the error for the
+    /// call that found it.
+    fn fail(&self, index: usize, why: String) -> Error {
+        let found = &self.0.found[index];
+        let name = found.name();
+        if found.failed.set(why.clone()).is_ok() {
+            // Forget the services chosen with it in the running, so the
+            // next use chooses among the others.
+            self.chosen()
+                .retain(|_, choice| matches!(choice, Ok((i, _)) if *i != index));
+            self.0.core.notify(
+                Level::Error,
+                format!("{name} stopped working and isn't used until OxiGuitar restarts: {why}."),
+            );
+            if let Some(m) = &found.manifest {
+                self.0.core.withdrawn(&m.id);
+            }
+        }
+        Error::new(ErrorKind::Failed, format!("{name} stopped working: {why}"))
+    }
+
+    /// A plugin answered with something it wasn't asked for: a broken
+    /// contract, so it is withdrawn.
     fn unexpected(&self, index: usize, answer: &Answer<'_>) -> Error {
         let kind = match answer {
             Answer::Read { .. } => "a score",
@@ -1024,12 +1155,9 @@ impl Plugins {
             Answer::Tab(_) => "a tab's contents",
             Answer::Done => "\"done\"",
         };
-        Error::new(
-            ErrorKind::Failed,
-            format!(
-                "{}: answered with {kind}, which wasn't asked for",
-                self.0.found[index].name()
-            ),
+        self.fail(
+            index,
+            format!("it answered with {kind}, which wasn't asked for"),
         )
     }
 
@@ -1161,6 +1289,7 @@ fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
         state,
         manifest_bytes: bytes,
         loaded: OnceLock::new(),
+        failed: OnceLock::new(),
     }
 }
 

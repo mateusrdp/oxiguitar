@@ -7,7 +7,7 @@ From top to bottom:
 - **Top panel**: the **Player** tab, with play, play selection, pause, stop and rewind, count-in, loop and metronome, and the choice of output (how the score will sound). They stay greyed out until an output plugin is installed ([Settings and plugins](plugins.md)).
 - **Left panel, the score, right panel.** The left panel holds the **palette**, every notation and effect tool of the editor as a button, in groups (voices and modes, bar, note, effects, notation, automation). They are greyed out until the editor arrives; hover over one to see its name. Click a group's heading to fold it away or bring it back. The right panel will hold the properties of what you select, with the editor; today it holds a note saying so and starts folded away. The score sits on a dark background whatever the page colour, with its zoom slider in the corner ([Zoom](zoom.md)).
 - **Bottom panel**: the **Tracks** tab, each track with its mixer, its notation buttons and an overview of the track across the song ([Tracks and notation](tracks.md)).
-- **Messages**: one line at the very bottom with the latest message: what went wrong opening a file, what a tool did, what is missing. Click it to see every message since OxiGuitar started; the chevron in its corner folds the list back.
+- **Messages**: one line at the very bottom with the latest error or warning: what went wrong opening a file, what is missing, a plugin that stopped working. It shows nothing else, so it stays quiet while everything works. Click it to see every message since OxiGuitar started; the chevron in its corner folds the list back.
 
 ## Panels
 

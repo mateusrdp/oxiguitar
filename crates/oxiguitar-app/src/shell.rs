@@ -97,6 +97,16 @@ impl Area {
         }
     }
 
+    /// Takes away every tab `gone` says goes, keeping the same tab showing
+    /// when it stays, and the area's first tab otherwise. Whether any went.
+    pub(crate) fn remove(&mut self, gone: impl Fn(&str) -> bool) -> bool {
+        let showing = self.active_id().to_owned();
+        let before = self.tabs.len();
+        self.tabs.retain(|t| !gone(&t.id));
+        self.active = self.tabs.iter().position(|t| t.id == showing).unwrap_or(0);
+        self.tabs.len() != before
+    }
+
     /// The id of the tab showing, or "" when the area has none.
     pub(crate) fn active_id(&self) -> &str {
         self.tabs.get(self.active).map_or("", |t| t.id.as_str())

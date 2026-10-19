@@ -3616,6 +3616,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxiguitar-test-second-plugin"
+version = "0.1.0"
+dependencies = [
+ "oxiguitar-plugin",
+]
+
+[[package]]
 name = "oxiguitar-testgen"
 version = "0.1.0"
 dependencies = [

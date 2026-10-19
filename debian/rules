@@ -28,7 +28,7 @@ release = target/$(DEB_HOST_RUST_TYPE)/release
 # The programs look for the system plugin folder beside themselves
 # (crates/oxiguitar-host/src/folders.rs): <bin>/../lib/oxiguitar/plugins.
 plugin_folder = target/$(DEB_HOST_RUST_TYPE)/lib/oxiguitar/plugins
-plugins = $(filter-out test,$(notdir $(wildcard plugins/*)))
+plugins = $(filter-out test test-second,$(notdir $(wildcard plugins/*)))
 noto = /usr/share/fonts/truetype/noto/NotoSans-Regular.ttf
 app_id = io.github.mateusrdp.OxiGuitar
 

@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# Builds our plugins (every folder of plugins/ but plugins/test) as .oxp
+# Builds our plugins (every folder of plugins/ but the test plugins,
+# plugins/test and plugins/test-second) as .oxp
 # files and puts them in the system plugin folder of a cargo build of the
 # programs, so `cargo run -p oxiguitar-app` and `oxiguitar-cli` open files.
 # That folder is where the host looks beside the program
@@ -66,7 +67,7 @@ fi
 
 for dir in "$root"/plugins/*/; do
     name="$(basename "$dir")"
-    [[ "$name" == test ]] && continue
+    [[ "$name" == test || "$name" == test-* ]] && continue
     package="oxiguitar-$name-plugin"
     CARGO_TARGET_DIR="$root/target/oxp" cargo rustc --quiet -p "$package" "${args[@]}"
     library="$build_dir/$prefix${package//-/_}$suffix"

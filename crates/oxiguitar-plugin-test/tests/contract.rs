@@ -32,6 +32,22 @@ fn test_oxp() -> &'static Path {
     })
 }
 
+/// The second test plugin (`plugins/test-second`), which reads the test
+/// plugin's format too, built once.
+fn second_oxp() -> &'static Path {
+    static BUILT: OnceLock<PathBuf> = OnceLock::new();
+    BUILT.get_or_init(|| {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        oxiguitar_plugin_test::build(
+            &workspace,
+            "oxiguitar-test-second-plugin",
+            "test-second",
+            false,
+        )
+        .expect("the second test plugin builds")
+    })
+}
+
 /// A folder of its own for one test, holding the given copies of the test
 /// plugin.
 ///
@@ -61,12 +77,13 @@ fn make_folder(name: &str, copies: &[&str], link: bool) -> PathBuf {
 }
 
 /// The rest of the core, as plugins see it: what they said, which tabs
-/// asked to be redrawn, and a score that is open.
+/// asked to be redrawn, a score that is open, and the plugins withdrawn.
 #[derive(Default)]
 struct Heard(
     Mutex<Vec<(Level, String)>>,
     Mutex<Vec<TabId>>,
     Option<Score>,
+    Mutex<Vec<String>>,
 );
 
 impl Core for Heard {
@@ -80,6 +97,10 @@ impl Core for Heard {
 
     fn score(&self) -> Option<Score> {
         self.2.clone()
+    }
+
+    fn withdrawn(&self, id: &str) {
+        self.3.lock().unwrap().push(id.to_owned());
     }
 }
 
@@ -165,17 +186,6 @@ fn services_are_chosen_by_conditions_priority_probe_and_settings() {
     let e = plugins.call_service("test-echo", "fail", b"").unwrap_err();
     assert_eq!(e.kind, ErrorKind::Invalid);
     assert_eq!(e.to_string(), "failed on purpose (in the test) at byte 7");
-
-    // A panic is caught in the plugin and reported; the plugin goes on.
-    let e = plugins.call_service("test-echo", "panic", b"").unwrap_err();
-    assert_eq!(
-        e.message,
-        "Test plugin: it crashed (a panic: panicked on purpose)"
-    );
-    assert_eq!(
-        plugins.call_service("test-echo", "echo", b"still").unwrap(),
-        b"still"
-    );
 
     // A plugin calling a service through the host while it answers a call
     // (here its own: the host routes it back in).
@@ -455,12 +465,21 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
         );
     }
 
-    // The plugin's own refusal, in its words; a tab nobody has.
-    let e = plugins
+    // The plugin's own refusal, in its words, goes to the footer, and the
+    // tab keeps its contents; a tab nobody has.
+    let kept = plugins
         .tab_event(&panel(), "click", TabEvent::Toggled(true))
-        .unwrap_err();
-    assert_eq!(e.kind, ErrorKind::Invalid);
-    assert!(e.message.contains("doesn't take"), "{e}");
+        .unwrap();
+    assert_eq!(label(&kept, 0, 0), "Clicks: 1");
+    {
+        let told = heard.0.lock().unwrap();
+        assert_eq!(told.len(), 1);
+        assert_eq!(told[0].0, Level::Warning);
+        assert!(
+            told[0].1.starts_with("Test plugin: ") && told[0].1.contains("doesn't take"),
+            "{told:?}"
+        );
+    }
     let nobody = TabId {
         plugin: "oxiguitar.test".into(),
         tab: "nothing".into(),
@@ -477,19 +496,136 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
         "The test plugin's other tab."
     );
 
-    // Contents the core can't show are refused, saying why; the plugin and
-    // its other tab carry on.
+    // Contents the core can't show break the contract: the plugin is
+    // withdrawn, its tabs with it, as if it weren't installed.
     plugins.call_service("test-echo", "break", b"").unwrap();
     let e = plugins.tab_content(&panel()).unwrap_err();
-    assert_eq!(e.kind, ErrorKind::Invalid);
     assert!(
         e.message
-            .starts_with("Test plugin: the tab Test can't be shown (")
+            .starts_with("Test plugin stopped working: its tab Test can't be shown (")
             && e.message.contains("used twice"),
         "{e}"
     );
-    assert!(plugins.tab_content(&side).is_ok());
-    assert!(heard.0.lock().unwrap().is_empty());
+    assert!(plugins.tabs().is_empty());
+    assert_eq!(
+        plugins.tab_content(&side).unwrap_err().kind,
+        ErrorKind::NotFound
+    );
+    assert_eq!(*heard.3.lock().unwrap(), ["oxiguitar.test"]);
+    let told = heard.0.lock().unwrap();
+    assert_eq!(told.last().map(|t| t.0), Some(Level::Error));
+}
+
+#[test]
+fn a_plugin_that_fails_is_withdrawn_as_if_it_were_not_installed() {
+    // The test plugin first, the second test plugin in a later folder:
+    // both read the test format, and the first one is chosen.
+    let first = folder("withdrawn", &["test.oxp"]);
+    let later = Path::new(env!("CARGO_TARGET_TMPDIR")).join("contract-withdrawn-later");
+    let _ = std::fs::remove_dir_all(&later);
+    std::fs::create_dir_all(&later).unwrap();
+    std::fs::copy(second_oxp(), later.join("test-second.oxp")).unwrap();
+    let (plugins, heard) = discover(&[first, later], SharedSettings::default());
+    let file = b"OXGTEST\nTarde em Itapu\xc3\xa3\n";
+    let opened = plugins.open(file, Some("oxgtest")).unwrap();
+    assert_eq!(opened.format.plugin.name(), "Test plugin");
+    assert_eq!(opened.read.score.info.title, "Tarde em Itapuã");
+    assert_eq!(plugins.tabs().len(), 2);
+    assert!(plugins.wants(EventKind::Score));
+
+    // An ordinary error is an answer, not a failure.
+    let e = plugins.call_service("test-echo", "fail", b"").unwrap_err();
+    assert_eq!(e.kind, ErrorKind::Invalid);
+    assert!(plugins.found()[0].failure().is_none());
+
+    // A crash while reading: the test plugin is withdrawn, and the file
+    // goes to the next plugin that recognises it.
+    let opened = plugins.open(b"OXGTEST\npanic\n", Some("oxgtest")).unwrap();
+    assert_eq!(opened.format.plugin.name(), "Second test plugin");
+    assert_eq!(opened.read.score.info.title, oxiguitar_test_second_title());
+    let failed = &plugins.found()[0];
+    assert!(failed.is_loaded());
+    assert!(
+        failed
+            .failure()
+            .is_some_and(|why| why.contains("panicked on purpose, reading")),
+        "{failed:?}"
+    );
+    // From now on it is as if it weren't installed: every file of the
+    // format goes to the second plugin, and its tabs, services and events
+    // are gone.
+    let opened = plugins.open(file, Some("oxgtest")).unwrap();
+    assert_eq!(opened.format.plugin.name(), "Second test plugin");
+    assert!(plugins.tabs().is_empty());
+    assert!(!plugins.wants(EventKind::Score));
+    assert!(plugins.service("test-echo").is_err());
+    let e = plugins
+        .call_service("test-echo", "echo", b"hi")
+        .unwrap_err();
+    assert_eq!(e.kind, ErrorKind::NotFound);
+    assert!(plugins.instruments().is_empty());
+    assert_eq!(*heard.3.lock().unwrap(), ["oxiguitar.test"]);
+    // The footer is told once, as an error, naming the plugin.
+    let told = heard.0.lock().unwrap();
+    let errors: Vec<&String> = told
+        .iter()
+        .filter(|(level, _)| *level == Level::Error)
+        .map(|(_, text)| text)
+        .collect();
+    assert_eq!(errors.len(), 1, "{told:?}");
+    assert!(
+        errors[0].starts_with("Test plugin stopped working and isn't used until OxiGuitar restarts: it crashed (a panic: panicked on purpose, reading)"),
+        "{}",
+        errors[0]
+    );
+
+    // With no other plugin for the format, a file is refused as if the
+    // plugin had never been there.
+    let dir = folder("withdrawn-alone", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let e = plugins
+        .open(b"OXGTEST\npanic\n", Some("oxgtest"))
+        .unwrap_err();
+    assert!(
+        matches!(
+            e,
+            oxiguitar_host::OpenError::Unrecognised(oxiguitar_host::Unrecognised::NoReaders)
+        ),
+        "{e:?}"
+    );
+}
+
+#[test]
+fn a_service_whose_plugin_crashes_is_chosen_again_among_the_others() {
+    let dir = folder("service-crash", &["test.oxp"]);
+    let (plugins, heard) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    // A panic is caught in the plugin and reported; the plugin is withdrawn,
+    // and with it every service of test-echo it provided.
+    let e = plugins.call_service("test-echo", "panic", b"").unwrap_err();
+    assert_eq!(e.kind, ErrorKind::NotFound, "{e}");
+    assert!(
+        plugins.found()[0]
+            .failure()
+            .is_some_and(|why| why == "it crashed (a panic: panicked on purpose)"),
+        "{:?}",
+        plugins.found()[0]
+    );
+    assert!(plugins.service("test-echo").is_err());
+    assert_eq!(
+        heard
+            .0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(level, _)| *level == Level::Error)
+            .count(),
+        1
+    );
+}
+
+/// The title the second test plugin gives every score.
+fn oxiguitar_test_second_title() -> &'static str {
+    "Read by the second plugin"
 }
 
 /// The test plugin's canvas size, from its source.
@@ -510,6 +646,7 @@ fn events_are_pushed_in_order_and_the_plugin_asks_for_the_score() {
             },
             ..Score::default()
         }),
+        Mutex::default(),
     ));
     let plugins = Plugins::discover(
         std::slice::from_ref(&dir),

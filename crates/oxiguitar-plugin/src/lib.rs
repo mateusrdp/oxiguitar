@@ -51,9 +51,9 @@
 //! [`dispatch`] with messages.
 //!
 //! Every call may come from any thread, several at once, so a plugin is
-//! `Send + Sync`. A panic inside a call is caught and reported as an
-//! error; the plugin stays loaded and usable (build with the default
-//! `panic = "unwind"`).
+//! `Send + Sync`. A panic inside a call is caught (build with the default
+//! `panic = "unwind"`): OxiGuitar then withdraws the plugin for the rest
+//! of the session and carries on as if it weren't installed.
 
 pub use oxiguitar_plugin_api as api;
 pub use oxiguitar_plugin_api::display;
@@ -276,8 +276,9 @@ impl Host {
         Host(Arc::new(Detached))
     }
 
-    /// Shows a message in the footer. A message that can't be shown is
-    /// dropped.
+    /// Shows a message in the footer. The footer holds errors and warnings
+    /// only, so a `Level::Info` message isn't shown; a message that can't
+    /// be shown is dropped.
     pub fn notify(&self, level: Level, text: impl Into<String>) {
         let _ = self.0.request(HostRequest::Notify {
             level,

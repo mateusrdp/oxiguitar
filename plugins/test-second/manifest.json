@@ -1,0 +1,19 @@
+{
+  "interface": "1.0",
+  "id": "oxiguitar.test-second",
+  "name": "Second test plugin",
+  "version": "0.1.0",
+  "description": "Reads the test plugin's format too, for testing that a failing plugin's files go to the next. Never shipped.",
+  "authors": ["The OxiGuitar contributors"],
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/mateusrdp/oxiguitar",
+  "formats": [
+    {
+      "id": "oxgtest",
+      "name": "OxiGuitar test text",
+      "extensions": ["oxgtest"],
+      "read": true,
+      "signatures": [{ "at": 0, "text": "OXGTEST\n" }]
+    }
+  ]
+}

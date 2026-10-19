@@ -33,8 +33,8 @@ pub use inventory::{
 };
 pub use oxiguitar_plugin_api as api;
 pub use plugins::{
-    Core, DISABLED_KEY, FormatRef, Found, InstrumentRef, Plugins, ReadScore, SERVICES_KEY,
-    ServiceRef, State, TabId, TabRef, Unheard, Unrecognised, WrittenFile,
+    Core, DISABLED_KEY, FormatRef, Found, InstrumentRef, OpenError, OpenedFile, Plugins, ReadScore,
+    SERVICES_KEY, ServiceRef, State, TabId, TabRef, Unheard, Unrecognised, WrittenFile,
 };
 pub use settings::{Settings, SharedSettings};
 
