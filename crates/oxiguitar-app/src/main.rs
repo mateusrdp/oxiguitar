@@ -196,8 +196,9 @@ struct App {
 /// What the question over the window asks.
 #[derive(Clone, Debug, PartialEq)]
 enum Asked {
-    /// Write the file despite what it loses, or under another name?
-    Save,
+    /// Write the file despite what it loses, or under another name? With
+    /// `elsewhere`, the buttons are Save, Save As… and Cancel.
+    Save { elsewhere: bool },
     /// Save the changes before going on to this?
     Unsaved(Then),
 }
@@ -1587,8 +1588,17 @@ fn handle(app: &Shared, event: Event) {
             ui.invoke_scroll_to(0.0, 0.0);
             settings_changed(app);
         }
-        Event::AskSave { heading, lines } => {
-            ask(app, Asked::Save, &heading, &lines, &["Save", "Cancel"]);
+        Event::AskSave {
+            heading,
+            lines,
+            elsewhere,
+        } => {
+            let buttons: &[&str] = if elsewhere {
+                &["Save", "Save As…", "Cancel"]
+            } else {
+                &["Save", "Cancel"]
+            };
+            ask(app, Asked::Save { elsewhere }, &heading, &lines, buttons);
         }
         Event::Saved {
             name,
@@ -2277,8 +2287,13 @@ fn question_answered(app: &Shared, i: i32) {
         return;
     };
     match (asked, i) {
-        (Asked::Save, 0) => app.borrow().worker.send(Request::ConfirmSave),
-        (Asked::Save, _) => {
+        (Asked::Save { .. }, 0) => app.borrow().worker.send(Request::ConfirmSave),
+        (Asked::Save { elsewhere: true }, 1) => {
+            // What waits on the save keeps waiting, for the file chosen.
+            app.borrow().worker.send(Request::CancelSave);
+            save_as_dialog(app);
+        }
+        (Asked::Save { .. }, _) => {
             let mut s = app.borrow_mut();
             s.after_save = None;
             s.worker.send(Request::CancelSave);
@@ -2302,6 +2317,7 @@ fn save(app: &Shared) {
 /// name's extension (Guitar Pro 7–8's .gp when it has none).
 fn save_as_dialog(app: &Shared) {
     if let Some(problem) = no_dialogs() {
+        app.borrow_mut().after_save = None;
         message(app, Level::Warning, problem);
         return;
     }
@@ -2324,6 +2340,7 @@ fn save_as_dialog(app: &Shared) {
         )
     };
     if formats.is_empty() {
+        app.borrow_mut().after_save = None;
         message(
             app,
             Level::Error,
@@ -2346,6 +2363,13 @@ fn save_as_dialog(app: &Shared) {
             dialog = dialog.set_directory(f);
         }
         let Some(mut path) = dialog.save_file() else {
+            // Nothing waits on a save that won't happen (quitting after
+            // "Save the changes…?", say).
+            let _ = slint::invoke_from_event_loop(|| {
+                if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                    app.borrow_mut().after_save = None;
+                }
+            });
             return;
         };
         let ext = path

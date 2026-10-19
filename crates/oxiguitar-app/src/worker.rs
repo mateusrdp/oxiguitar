@@ -90,7 +90,13 @@ pub(crate) enum Event {
     },
     /// A save waits for the user: a heading and lines to show, with Save
     /// and Cancel ([`Request::ConfirmSave`], [`Request::CancelSave`]).
-    AskSave { heading: String, lines: Vec<String> },
+    AskSave {
+        heading: String,
+        lines: Vec<String>,
+        /// The score would go to another file than it came from: the
+        /// question also offers Save As.
+        elsewhere: bool,
+    },
     /// The score was saved, perhaps under another name.
     Saved {
         name: String,
@@ -418,8 +424,13 @@ fn save(st: &mut State, to: Option<(PathBuf, String)>, sink: &dyn Fn(Event)) {
     match doc.prepare_save(&st.plugins, to) {
         Ok(prepared) if prepared.ask() => {
             let (heading, lines) = prepared.question(&doc.path);
+            let elsewhere = prepared.instead.is_some();
             st.pending_save = Some(prepared);
-            sink(Event::AskSave { heading, lines });
+            sink(Event::AskSave {
+                heading,
+                lines,
+                elsewhere,
+            });
         }
         Ok(prepared) => write_save(st, &prepared, sink),
         Err(e) => {
