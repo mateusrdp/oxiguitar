@@ -12,11 +12,11 @@ A plugin keeps its settings as a JSON object under its id in OxiGuitar's setting
 It reads and writes only its own object, through the host:
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:settings_read}}
+{{#include ../template/src/statistics.rs:settings_read}}
 ```
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:settings_write}}
+{{#include ../template/src/statistics.rs:settings_write}}
 ```
 
 - `settings()` returns the object (empty when there is none). It is a `serde_json::Map`, so add `serde_json = "1"` to your dependencies.

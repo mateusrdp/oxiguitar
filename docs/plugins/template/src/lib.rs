@@ -8,17 +8,17 @@
 //!
 //! - [`format`]: reads and writes "Example tab" files (`.extab`), a tiny
 //!   text format of eighth notes on a guitar;
-//! - [`fretboard`]: a tab in the bottom area, with a fretboard tuned like
-//!   the open score's first track; click a string to name the note;
+//! - [`statistics`]: a tab in the right area counting the notes on each
+//!   string of a track of the open score, as a small chart;
 //! - [`service`]: the service `note-names`, which other plugins call to
 //!   name a pitch.
 //!
-//! [`notes`] holds what the fretboard and the service share.
+//! [`notes`] holds note names and standard tuning.
 
 pub mod format;
-pub mod fretboard;
 pub mod notes;
 pub mod service;
+pub mod statistics;
 
 use oxiguitar_plugin::{Error, FormatReader, FormatWriter, Host, Plugin, Service, Tab};
 
@@ -26,13 +26,13 @@ use oxiguitar_plugin::{Error, FormatReader, FormatWriter, Host, Plugin, Service,
 /// The plugin: built once, when OxiGuitar first uses one of its
 /// contributions, and kept until the program ends.
 pub struct Example {
-    fretboard: fretboard::Fretboard,
+    statistics: statistics::Statistics,
 }
 
 impl Plugin for Example {
     fn start(host: Host) -> Result<Example, Error> {
         Ok(Example {
-            fretboard: fretboard::Fretboard::new(host),
+            statistics: statistics::Statistics::new(host),
         })
     }
 
@@ -52,11 +52,11 @@ impl Plugin for Example {
     }
 
     fn tab(&self, id: &str) -> Option<&dyn Tab> {
-        (id == fretboard::ID).then_some(&self.fretboard as &dyn Tab)
+        (id == statistics::ID).then_some(&self.statistics as &dyn Tab)
     }
 
     fn event(&self, event: &oxiguitar_plugin::Event) {
-        self.fretboard.event(event);
+        self.statistics.event(event);
     }
 }
 

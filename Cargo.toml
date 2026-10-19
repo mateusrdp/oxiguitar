@@ -25,11 +25,13 @@ oxiguitar-display = { path = "crates/oxiguitar-display" }
 oxiguitar-layout = { path = "crates/oxiguitar-layout" }
 oxiguitar-render = { path = "crates/oxiguitar-render" }
 oxiguitar-tools = { path = "crates/oxiguitar-tools" }
-oxiguitar-host = { path = "crates/oxiguitar-host" }
+# Published on crates.io for plugin authors (Mateus, 19 Oct 2026): the
+# version must be the workspace's (raised with it at each release).
+oxiguitar-host = { path = "crates/oxiguitar-host", version = "0.1.0" }
 oxiguitar-testgen = { path = "crates/oxiguitar-testgen" }
-oxiguitar-plugin-api = { path = "crates/oxiguitar-plugin-api" }
-oxiguitar-plugin = { path = "crates/oxiguitar-plugin" }
-oxiguitar-plugin-test = { path = "crates/oxiguitar-plugin-test" }
+oxiguitar-plugin-api = { path = "crates/oxiguitar-plugin-api", version = "0.1.0" }
+oxiguitar-plugin = { path = "crates/oxiguitar-plugin", version = "0.1.0" }
+oxiguitar-plugin-test = { path = "crates/oxiguitar-plugin-test", version = "0.1.0" }
 oxiguitar-test-plugin = { path = "plugins/test" }
 # Reading plugin manifests without loading the plugin. 0.37 is the version
 # Debian has (rust-object 0.37.3). `unaligned`: without it object insists on

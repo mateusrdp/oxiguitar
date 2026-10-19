@@ -2,7 +2,7 @@
 
 An instrument turns the player's timed events into sound for the tracks given to it: a MIDI synthesiser, a modelled guitar amplifier, sampled drums. The core plays the score: it turns it into a timeline of notes with every effect, tempo, the metronome and count-in, runs the transport, and mixes the instruments' sound (volume, pan, mute, solo) before an audio-device service sends it to the system.
 
-**The instrument interface comes with the player (OxiGuitar 1.0).** Interface 1.0 already lets a manifest declare instruments, so the window knows them, but there is no `Instrument` trait yet, and nothing calls one. Don't declare instruments until then: a declared instrument makes the player's controls and the mixer look usable when no sound can come out.
+**The instrument interface comes with the player (OxiGuitar 1.0).** Interface 1.0 already lets a manifest declare instruments, so the window knows them, but there is no `Instrument` trait yet, and nothing calls one. The player will ignore instruments declared by a plugin built for an interface older than the instrument interface, so declaring one now does nothing: declare instruments when you implement them, with the SDK that brings the trait.
 
 What is settled, so you can plan:
 

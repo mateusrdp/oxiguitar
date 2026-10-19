@@ -7,7 +7,14 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-publish.workspace = true
+homepage = "https://mateusrdp.github.io/oxiguitar/plugins/"
+documentation = "https://docs.rs/oxiguitar-host"
+readme = "README.md"
+keywords = ["oxiguitar", "plugin", "host", "guitar", "tablature"]
+categories = ["multimedia::audio"]
+# On crates.io, for plugin authors (Mateus, 19 Oct 2026; the release
+# workflow publishes it on a v* tag).
+publish = true
 
 [dependencies]
 oxiguitar-plugin-api.workspace = true

@@ -121,7 +121,7 @@ As built in slice 3 (`oxiguitar_plugin_api::tab`, `display` and `event`; the hos
 
 ### Writing a plugin
 
-The plugin developer guide, [`docs/plugins/`](../plugins/src/README.md) (mdBook, published beside the user manual at `/plugins/`), shows how, step by step, from the template plugin in `docs/plugins/template/` (M2's slice 7). The template is a workspace of its own that authors copy: a format (read and write), a tab with widgets and a canvas, score events, settings and a service. It takes the SDK and the contract suite from the release tag as git dependencies, and its `tests/contract.rs` builds the `.oxp` file and runs the contract suite under `cargo test`. The guide's code examples are included from the template's sources (mdBook anchors), so they are the code CI builds: `scripts/check-plugin-template.sh` copies the template out of the repository, points it at this checkout's SDK, and runs fmt, clippy, its tests, `oxiguitar-plugin-test --build` and `oxiguitar-cli` on its sample, on Linux, Windows and macOS (CI's "Plugin template" jobs, part of `ci-success`).
+The plugin developer guide, [`docs/plugins/`](../plugins/src/README.md) (mdBook, published beside the user manual at `/plugins/`), shows how, step by step, from the template plugin in `docs/plugins/template/` (M2's slice 7). The template is a workspace of its own that authors copy: a format (read and write), a tab with widgets and a canvas, score events, settings and a service. It takes the SDK and the contract suite from crates.io by version, and its `tests/contract.rs` builds the `.oxp` file and runs the contract suite under `cargo test`. The guide's code examples are included from the template's sources (mdBook anchors), so they are the code CI builds: `scripts/check-plugin-template.sh` copies the template out of the repository, points it at this checkout's SDK, and runs fmt, clippy, its tests, `oxiguitar-plugin-test --build` and `oxiguitar-cli` on its sample, on Linux, Windows and macOS (CI's "Plugin template" jobs, part of `ci-success`).
 
 `plugins/test` remains the example of every part of the interface, and our Guitar Pro plugins (`plugins/gp3` … `plugins/gp`) of a format plugin as we ship it.
 
@@ -176,6 +176,8 @@ An instrument plugin declares what it can play, so the player offers it only for
 
 Every one of the 128 programs falls in exactly one class (`oxiguitar_plugin_api::class`, tested).
 
+The `instruments` key is in interface 1.0, but the instrument interface itself comes with the player (M4), in a later minor version. **The player ignores instruments declared by a plugin built for an interface before that one** (Mateus, 19 Oct 2026: the key stays, and the rule avoids rework), so until then no plugin counts as an output.
+
 `plays` lists what the plugin covers (absent = everything); `does_not_play` removes classes from that. A realistic-drums plugin says `plays: ["drums"]`; the MIDI synthesiser says nothing. A track whose chosen instrument no longer exists falls back to the default, with a footer message.
 
 **Plugins can depend on plugins.** A plugin can define a service interface for others: the NAM plugin, for example, needs a clean guitar signal, which a "guitar DI" service provides (a plucked-string model today, sampled DI notes later). The manifest says what a plugin `provides` and `requires`.
@@ -211,6 +213,7 @@ As built in slice 3: `crates/oxiguitar-app/src/manager.rs` (the rows and the `di
 
 ## Distribution
 
+- **The crates plugin authors build with are on crates.io** (Mateus, 19 Oct 2026): `oxiguitar-plugin-api`, `oxiguitar-plugin`, `oxiguitar-host` and `oxiguitar-plugin-test`, published at each release's version when Mateus publishes the GitHub release (`.github/workflows/crates.yml`, which also packages and verifies them on pull requests). The template plugin depends on them by version.
 - **Our plugins live in this repository**, under `plugins/`, one crate each, so a change to the interface and the plugins that use it land in one pull request while the interface is young. They may move to their own repository once the interface reaches 1.0.
 - Each release attaches every plugin for every target (`oxiguitar-gp5-0.2.0-linux-x86_64.oxp`, …) to the same GitHub release, with SHA256SUMS.
 - **Two packages** (Mateus, 18 Oct 2026): `oxiguitar`, the core alone, and `oxiguitar-plugins-basic`, the plugins we write and recommend, installed into `/usr/lib/oxiguitar/plugins/`. `oxiguitar` lists `oxiguitar-plugins-basic` under **Suggests** (apt doesn't install suggested packages by default, so the core really ships alone). Both must meet Debian's criteria for its archive. The basic set: the Guitar Pro format plugins (3, 4, 5, 6, 7–8), the MIDI instrument and the audio-device plugins for Linux. The .rpm splits the same way (`Suggests:`); the AppImage, the Windows zip and the .dmg come in two downloads each, the core and a zip of the basic plugins (Mateus, 18 Oct 2026: no plugins inside the AppImage), the plugins unpacked into the user's plugin folder by hand.

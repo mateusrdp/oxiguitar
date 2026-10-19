@@ -7,10 +7,10 @@ As it stands, the plugin adds three things, each in its own file:
 | File | What it adds | Manifest entry |
 | --- | --- | --- |
 | `src/format.rs` | Opens and saves "Example tab" files (`.extab`), a small text format: one guitar track of eighth notes. Try `samples/open-strings.extab`. | `formats` |
-| `src/fretboard.rs` | A "Fretboard" tab in the bottom area, tuned like the open score's first track. Click a string to name the note. | `tabs`, `events` |
+| `src/statistics.rs` | A "Statistics" tab in the right area: the notes on each string of a track of the open score, as a small chart. Click a bar for its count. | `tabs`, `events` |
 | `src/service.rs` | The service `note-names`, which other plugins can call to name a pitch. | `services` |
 
-`src/lib.rs` ties them together and exports the plugin; `src/notes.rs` holds what the fretboard and the service share.
+`src/lib.rs` ties them together and exports the plugin; `src/notes.rs` holds note names and standard tuning.
 
 ## Make it yours
 
@@ -49,7 +49,7 @@ Put the `.oxp` file (from `dist/`, or `target/oxp/example.oxp` after `cargo test
 | macOS | `~/Library/Application Support/OxiGuitar/plugins/` |
 | Windows | `%APPDATA%\OxiGuitar\plugins\` |
 
-Tools → Plugins lists it. Open `samples/open-strings.extab`, and look at the Fretboard tab in the bottom area.
+Tools → Plugins lists it. Open `samples/open-strings.extab`, and look at the Statistics tab in the right area.
 
 ## The Example tab format
 

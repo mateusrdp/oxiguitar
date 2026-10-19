@@ -30,11 +30,6 @@ pub fn name(pitch: Pitch, flats: bool) -> String {
     format!("{}{octave}", names[usize::from(pitch.0 % 12)])
 }
 
-/// The pitch of `fret` on a string tuned to `open`, if it is a MIDI note.
-pub fn fretted(open: Pitch, fret: u8) -> Option<Pitch> {
-    open.0.checked_add(fret).filter(|&p| p <= 127).map(Pitch)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -45,7 +40,5 @@ mod tests {
         assert_eq!(name(Pitch(42), false), "F♯2");
         assert_eq!(name(Pitch(42), true), "G♭2");
         assert_eq!(name(Pitch(0), false), "C-1");
-        assert_eq!(fretted(Pitch(40), 5), Some(Pitch(45)));
-        assert_eq!(fretted(Pitch(120), 12), None);
     }
 }

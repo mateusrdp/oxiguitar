@@ -78,7 +78,9 @@ pub struct Manifest {
     /// The file formats it reads or writes.
     #[serde(default)]
     pub formats: Vec<FormatSpec>,
-    /// The instruments it offers the player.
+    /// The instruments it offers the player. The instrument interface comes
+    /// with the player, in a later minor version; the player ignores
+    /// instruments declared by a plugin built for an older interface.
     #[serde(default)]
     pub instruments: Vec<InstrumentSpec>,
     /// The services it implements.

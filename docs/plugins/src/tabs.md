@@ -5,7 +5,7 @@ A tab sits in one of the window's four areas, beside the core's own (Player, Tra
 ## Declaring a tab
 
 ```json
-"tabs": [{ "id": "fretboard", "title": "Fretboard", "area": "bottom" }]
+"tabs": [{ "id": "statistics", "title": "Statistics", "area": "right" }]
 ```
 
 | Key | What it is |
@@ -45,13 +45,13 @@ An error returned from `on` takes the tab's place, and the footer says it, until
 The template's tab:
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:content}}
+{{#include ../template/src/statistics.rs:content}}
 ```
 
 and what it does with the user's events:
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:on}}
+{{#include ../template/src/statistics.rs:on}}
 ```
 
 ### Contents the core refuses
@@ -60,7 +60,7 @@ Contents with an id missing or used twice, a slider whose range is backwards, a 
 
 ## Redrawing
 
-A tab whose contents change on their own (after an event, a timer, a finished download) calls `host.redraw("fretboard")`. The core asks for `content` when the tab is next on screen; a tab no one is looking at costs nothing. Nothing polls: don't ask for redraws on a timer to look for changes.
+A tab whose contents change on their own (after an event, a timer, a finished download) calls `host.redraw("statistics")`. The core asks for `content` when the tab is next on screen; a tab no one is looking at costs nothing. Nothing polls: don't ask for redraws on a timer to look for changes.
 
 ## The canvas
 
@@ -86,10 +86,10 @@ Colours are **roles**, resolved by the window's theme, so a canvas follows the d
 
 Text crosses as text, and the core draws it with its own fonts: `Font::Sans`, the window's text font, or `Font::Music`, the music font (Bravura), where the text is [SMuFL](https://w3c.github.io/smufl/latest/) code points and `size` is a five-line staff's height, as in engraving (`"\u{E050}"` is a G clef). A plugin needs no fonts of its own.
 
-The template draws a fretboard:
+The template draws a bar chart, one bar per string:
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:draw}}
+{{#include ../template/src/statistics.rs:draw}}
 ```
 
 ### Limits
@@ -106,15 +106,15 @@ pub struct Pointer {
 }
 ```
 
-A press gives `Down`, moving with the button held gives `Drag`s, letting go gives `Up` (wherever the pointer is). Drags the plugin hasn't answered yet are merged, so a slow plugin gets the latest position rather than a backlog. There is no hover: the pointer is reported only while a button is held. The template finds the string and fret under a press:
+A press gives `Down`, moving with the button held gives `Drag`s, letting go gives `Up` (wherever the pointer is). Drags the plugin hasn't answered yet are merged, so a slow plugin gets the latest position rather than a backlog. There is no hover: the pointer is reported only while a button is held. The template finds the bar under a press:
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:pointer}}
+{{#include ../template/src/statistics.rs:pointer}}
 ```
 
 ## Tips
 
 - One tab, one purpose. A left or right area is narrow: a column of widgets fits better there than a wide canvas. The bottom area is as tall as the track list (up to five tracks) until the user drags its splitter, so a tab there should still make sense when short. A canvas shrinks to fit, keeping its proportions, but a tab doesn't scroll: rows that don't fit are cut off, so put buttons and toggles above a canvas, as the template does.
-- Lay a canvas out in round units of your own (the template's frets are 50 units wide) and let the core scale it.
+- Lay a canvas out in round units of your own (the template's chart is 120 × 60) and let the core scale it.
 - Keep `content` cheap: build it from state you already have. Do slow work (reading the score, a download) when an event or a click asks for it, and call `redraw` when it's done.
 - A plugin's settings belong in its own tab; the core draws no settings forms ([Settings](settings.md)).

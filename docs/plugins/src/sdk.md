@@ -13,7 +13,7 @@ Four things in it matter to OxiGuitar:
 - **The `oxp` feature.** `export_plugin!` exports the entry point and the manifest's section only with it, so the same crate is an ordinary library for `cargo test` and a plugin file when built with `--features oxp --crate-type cdylib`. Without the feature in `Cargo.toml`, that build fails with "does not have the feature `oxp`".
 - **`unsafe_code = "deny"`**, not `"forbid"`: the two attributes `export_plugin!` generates (`#[unsafe(no_mangle)]` and `#[unsafe(link_section)]`) need `unsafe`, and allow it for themselves only. You write no `unsafe` code.
 - **`panic = "unwind"`**, Rust's default. A panic in a call is then caught and reported as an error; with `panic = "abort"` it closes OxiGuitar.
-- **The SDK's tag**: the release of OxiGuitar you build for. A plugin built with the SDK of 0.2 loads in every later OxiGuitar with interface 1.x ([Interface versions](versions.md)).
+- **The SDK's version**: `0.2`, the release of OxiGuitar you build for. A plugin built with the SDK of 0.2 loads in every later OxiGuitar with interface 1.x ([Interface versions](versions.md)).
 
 ## The plugin
 
@@ -39,7 +39,7 @@ The ids are the manifest's. Returning `None` answers "not found", which the cont
 Every call may come from any thread, several at once, so `Plugin` and every contribution are `Send + Sync`, and every method takes `&self`. Keep what changes behind a `Mutex` or in atomics, and don't hold a lock while you call the host or do slow work: the template's tab does
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:state}}
+{{#include ../template/src/statistics.rs:state}}
 ```
 
 and takes the lock only to read or change `State`.

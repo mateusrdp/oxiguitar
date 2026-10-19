@@ -153,9 +153,9 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
    - Each Tracks row (Mateus, 19 Oct 2026): the name; the mixer (mute and solo toggles drawn by our renderer, volume slider, pan knob), starting at the file's values, greyed out until an output plugin is installed; TAB and standard notation; the track across the song like a waveform, with a placeholder for the playback position.
 7. **The plugin developer guide** (`docs/plugins/`) and its template plugin, before v0.2 freezes interface 1.0. Built in session 13.
    - The guide: an mdBook, the user manual's sister book, published with it at `/plugins/` (`.github/workflows/docs.yml`). Fourteen pages, from what a plugin is to building for every system and where users put the file; every code example is included from the template (mdBook anchors), so it is code CI builds.
-   - The template (`docs/plugins/template/`): a workspace of its own that takes the SDK and the contract suite from the release tag; a format read and written, a Fretboard tab (widgets, a canvas, pointer events, score events, the open score, a setting), a service; `cargo test` runs the contract suite on its `.oxp` file; a GitHub workflow for the five files of the six targets and a release.
+   - The template (`docs/plugins/template/`): a workspace of its own that takes the SDK and the contract suite from crates.io (Mateus, 19 Oct 2026: publish them); a format read and written, a Statistics tab in the right area (widgets, a small chart canvas, pointer events, score events, the open score, a setting; it replaced a Fretboard tab Mateus found too big), a service; `cargo test` runs the contract suite on its `.oxp` file; a GitHub workflow for the five files of the six targets and a release.
    - Gate (M2's "the developer guide builds a working plugin from the template"): `scripts/check-plugin-template.sh` in CI on Linux, Windows and macOS, part of `ci-success`: the template copied out of the repository, fmt, clippy, its tests, the contract suite, and `oxiguitar-cli` opening its sample through the plugin file.
-   - The interface points the guide showed are awkward go to Mateus before the freeze; none is changed without his answer.
+   - The interface points the guide raised, answered by Mateus on 19 Oct 2026: the crates go to crates.io; `instruments` stays in 1.0, ignored by the player for plugins older than the instrument interface (M4); a failing plugin must leave everything as if it had never been loaded (the next PR); the footer shows only errors and important warnings, not import logs; bars that don't add up are the editor's (M3); conveniences go to the Wishlist below.
 
 Then v0.2: the develop → main pull request, which Mateus merges and tags.
 
@@ -163,6 +163,8 @@ Then v0.2: the develop → main pull request, which Mateus merges and tags.
 
 - M3a: note entry on tab and staff, the full core palette (left area), the inspector (right area), 4 voices, tracks and tunings, undo and redo, copy and paste, bar and signature changes, repeats, transposition, tuplets of any grouping with a triplet shortcut and "Other…" (EDIT-1 to EDIT-10); the .gp writer, in the GP 7–8 format plugin (the default save format).
 - M3b: the .gp5 writer in the GP5 plugin, with loss warnings (FMT-3).
+- Bars that don't add up (Mateus, 19 Oct 2026): the editor checks a bar's beats against its time signature every time an edit adds, removes or changes a beat. Such bars are allowed, shown and played (with whatever adjustment playback needs), only marked as wrong: the bar drawn in red, or highlighted. Nothing is checked or marked before the editor.
+- The track dialog (Mateus, 19 Oct 2026): clicking a track opens a modal dialog to change its name and, for stringed instruments, the number of strings and the tuning: a drop-down of documented popular tunings (E Standard, Drop D, Open G, …) and "Other", a field that takes notes such as `EADGBE`, validated as notes and against the number of strings. Tunings are named that compactly wherever they show. (Clicking a track's name today shows that track alone; that moves elsewhere when the dialog comes.)
 
 Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; round-trip tests pass for every writable format; files we write open correctly in Guitar Pro 8; transposition works chromatically and diatonically.
 
@@ -171,6 +173,8 @@ Done when: the TuxGuitar parity checklist works; every edit undoes and redoes; r
 - In the core: score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); the transport in the top area (play, play selection, stop, pause, rewind, count-in, loop, audible and visual metronome, PLAY-5); the follow cursor; the mixer (PLAY-6), in each Tracks row rather than a tab of its own; the output choice.
 - As plugins: the MIDI instrument (a SoundFont synthesiser, PLAY-1, with downloads of better SoundFonts at the user's request, PLAY-8), audio-device plugins per system, WAV export (PLAY-7). Instruments declare the classes of instrument they play.
 - v1.0's minimum: the Guitar Pro 7+ format plugin reading and writing, and the basic MIDI player, in `oxiguitar-plugins-basic`.
+
+- Instruments declared by a plugin built for an interface before the instrument interface's are ignored by the player (Mateus, 19 Oct 2026: the `instruments` manifest key stays in 1.0, and this rule avoids rework). Until then no plugin counts as an output.
 
 Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes; golden-file tests cover event output; the practice tools work on every reference song; with no instrument installed the transport is greyed out and the footer says where to get one.
 
@@ -184,3 +188,14 @@ Done when: playback matches the written effects by ear; playback starts in under
 - **M10** — a simpler viewer and player for Android and iPad, on the same core, with its plugins built in.
 
 Unscheduled, late nice-to-have: screen-reader support (UI-11). Keyboard access is required from M1.
+
+## Wishlist
+
+Things that would make contributors' and plugin authors' lives easier, none needed by a milestone (Mateus, 19 Oct 2026: conveniences go here unless they speed up development). Each is an addition to the SDK, the API's Rust types or the tools, never to the wire, so any can come after the interface freezes.
+
+- `Default` values or constructors for the wire score's types that have none (`MasterBar`, `Bar`, `Beat`, `Duration`, `Note`, `TimeSignature`, `KeySignature`), so a format reader doesn't spell out every field.
+- Constructors for tab widgets (`Widget::button("id", "Text")` and the like).
+- `oxiguitar_plugin::serde_json`, re-exported, so a plugin with settings needs no dependency of its own.
+- `oxiguitar-plugin-test --target TRIPLE`, and a universal macOS build, so the tool does what the template's `build-oxp.sh` does.
+- Sample files in the contract suite (`oxiguitar-plugin-test FILE.oxp --sample song.extab`): read each one through the plugin and check the score's shape, since today the suite feeds readers only damaged input.
+- The plugin's own data folder, handed to it by the host (a new host request), when the first plugin keeps data.

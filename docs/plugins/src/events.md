@@ -29,7 +29,7 @@ Events that say where something is now (the selection, the playback position, a 
 The template's tab:
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:event}}
+{{#include ../template/src/statistics.rs:event}}
 ```
 
 ## The open score
@@ -43,7 +43,7 @@ let score: Option<oxiguitar_plugin::score::Score> = host.score()?;
 `None` means no score is open. The core converts the score into the interface's types for each request, which takes milliseconds for a short song and tens of milliseconds for a long one, so ask once per revision, when you need it, rather than in every `event` or every `content`. The template asks the next time its tab is drawn, and only if a score event came since:
 
 ```rust,ignore
-{{#include ../template/src/fretboard.rs:score}}
+{{#include ../template/src/statistics.rs:score}}
 ```
 
 The score you get is a copy: changing it changes nothing in OxiGuitar. Edits will go through the core as undoable commands, from the editor's release.

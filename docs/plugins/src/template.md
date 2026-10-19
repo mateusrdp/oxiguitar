@@ -3,7 +3,7 @@
 The template plugin is a complete plugin you copy and change. It lives in OxiGuitar's repository as [`docs/plugins/template/`](https://github.com/mateusrdp/oxiguitar/tree/main/docs/plugins/template), and adds one of each common thing:
 
 - a **format**, "Example tab" (`.extab`): a tiny text format of eighth notes on a guitar, read and written;
-- a **tab**, "Fretboard", in the bottom area: a fretboard tuned like the open score's first track, where a click on a string names the note, with a setting remembered in settings.json;
+- a **tab**, "Statistics", in the right area: how many notes each string of a track plays in the open score, as a small chart you can click, with a setting remembered in settings.json;
 - a **service**, `note-names`, which other plugins can call to name a pitch.
 
 Each is one file in `src/`; you delete what you don't need.
@@ -19,7 +19,7 @@ rm -rf oxiguitar
 cd my-plugin
 ```
 
-The template's `Cargo.toml` takes the SDK from the same tag, `v0.2.0`. To build for a later OxiGuitar, change both tags in `Cargo.toml`.
+The template's `Cargo.toml` takes the SDK and the contract suite from crates.io, version 0.2: plugins built with it load in OxiGuitar 0.2 and later.
 
 ## 2. Build and test it
 
@@ -46,7 +46,7 @@ cp target/oxp/example.oxp ~/Library/Application\ Support/OxiGuitar/plugins/
 
 On Windows, copy `target\oxp\example.oxp` to `%APPDATA%\OxiGuitar\plugins\`.
 
-Start OxiGuitar. Tools → Plugins lists "Example", not loaded yet. Open `samples/open-strings.extab` (File → Open): the plugin loads and reads it (`oxiguitar-cli info samples/open-strings.extab` also prints its import log, one warning). The bottom area has a **Fretboard** tab beside Tracks, known from the manifest before the plugin loaded; open it, and click a string.
+Start OxiGuitar. Tools → Plugins lists "Example", not loaded yet. Open `samples/open-strings.extab` (File → Open): the plugin loads and reads it (`oxiguitar-cli info samples/open-strings.extab` also prints its import log, one warning). The right area has a **Statistics** tab, known from the manifest before the plugin loaded; open it, and click a bar of its chart.
 
 ## 4. Make it yours
 
@@ -63,7 +63,7 @@ Start OxiGuitar. Tools → Plugins lists "Example", not loaded yet. Open `sample
 | `manifest.json` | What the plugin adds, read by OxiGuitar without loading the plugin |
 | `src/lib.rs` | The plugin type, which hands out each contribution, and `export_plugin!` |
 | `src/format.rs` | The Example tab format |
-| `src/fretboard.rs` | The Fretboard tab |
+| `src/statistics.rs` | The Statistics tab |
 | `src/service.rs` | The `note-names` service |
 | `src/notes.rs` | Note names and standard tuning, shared by the last two |
 | `tests/contract.rs` | Builds the `.oxp` file and runs the contract suite on it |
