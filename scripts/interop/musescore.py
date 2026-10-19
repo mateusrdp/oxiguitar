@@ -24,7 +24,7 @@ And a bar MuseScore reads differently from us passes if MuseScore reads the
 original file's bar (looked for in ORIGINALS by name) the same way: then
 MuseScore, not our file, differs. A file MuseScore can't open, or crashes
 on, fails, unless MuseScore can't open the original either. Exits 1 naming
-each file that fails.
+each file that fails, or when no file could be compared.
 """
 
 import os
@@ -216,11 +216,14 @@ def main():
             )
             continue
         checked += 1
-    print(
-        f"{checked} files: MuseScore reads what we wrote as we do; {failed} failed"
-        + (f"; {skipped} it can't open at all" if skipped else "")
+    summary = f"{checked} files: MuseScore reads what we wrote as we do; {failed} failed" + (
+        f"; {skipped} it can't open at all" if skipped else ""
     )
-    sys.exit(1 if failed else 0)
+    print(summary)
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::notice title=MuseScore::{summary}")
+    # MuseScore that opens nothing has checked nothing.
+    sys.exit(1 if failed or checked == 0 else 0)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,8 @@
 //
 // With --originals, alphaTab's reading of each original must match too:
 // true of our own fixtures, where alphaTab and our readers agree. Exits 1
-// naming each file that differs or that alphaTab can't read.
+// naming each file that differs or that alphaTab can't read, or when no
+// file was compared.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -152,5 +153,7 @@ for (const dir of args) {
     checked++;
   }
 }
-console.log(`${checked} files: alphaTab reads what we wrote as we do; ${failed} failed`);
-process.exit(failed > 0 ? 1 : 0);
+const summary = `${checked} files: alphaTab reads what we wrote as we do; ${failed} failed`;
+console.log(summary);
+if (process.env.GITHUB_ACTIONS) console.log(`::notice title=alphaTab::${summary}`);
+process.exit(failed > 0 || checked === 0 ? 1 : 0);
