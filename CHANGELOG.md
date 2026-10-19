@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-19
+
+Milestone M2 (the plugin system and the window shell) is complete. OxiGuitar is now a small core with plugins: every file format is a plugin, and the program alone opens nothing, so install the basic plugins beside it (the user manual's "Installing"). Plugin interface 1 is frozen from this release: plugins built for it keep loading in later versions. Writing your own plugin: the plugin developer guide (https://mateusrdp.github.io/oxiguitar/plugins/), its template, and the SDK (`oxiguitar-plugin`, taken from this repository at the tag `v0.2.0`). The window shows where the editor and the player are going: the editor's palette and each track's mixer, greyed out until they arrive.
+
 ### Added
 
 - A plugin that fails is withdrawn for the rest of the session, and OxiGuitar carries on as if it weren't installed (Mateus, 19 Oct 2026): a plugin that can't start, crashes, or breaks the interface's contract (an answer that can't be read or wasn't asked for, tab contents that can't be shown) loses its formats, tabs, services, instruments and events; a file it would have read goes to the next plugin that recognises it, and a service is chosen again among the others. The footer says so once, as an error, its tabs leave the window, and the plugin manager shows it as stopped working, and why. An error a plugin answers with is not a failure: a widget event it refuses is a warning in the footer, and the tab keeps its contents.

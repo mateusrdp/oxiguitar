@@ -2,7 +2,7 @@
   "interface": "1.0",
   "id": "oxiguitar.gp4",
   "name": "Guitar Pro 4",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Reads Guitar Pro 4 files (.gp4).",
   "authors": ["Mateus Rocha de Paula", "The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",
