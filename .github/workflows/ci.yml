@@ -214,6 +214,15 @@ jobs:
             echo "::error title=Plugin template (${{ matrix.name }})::$report"
           fi
           exit "$status"
+      # The plugin built from the template, with its sample, for trying it in
+      # the app by hand (the guide's "Try it in OxiGuitar").
+      - uses: actions/upload-artifact@v7
+        with:
+          name: example-plugin-${{ runner.os }}
+          path: |
+            ${{ runner.temp }}/template/example-plugin/dist/*.oxp
+            ${{ runner.temp }}/template/example-plugin/samples/open-strings.extab
+          retention-days: 14
 
   # M1's speed budget: a 300-bar, 8-track file opens in under a second, from
   # reading the file to the first tiles (crates/oxiguitar-app/src/speed.rs);

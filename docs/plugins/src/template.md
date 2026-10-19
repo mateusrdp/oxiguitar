@@ -46,7 +46,7 @@ cp target/oxp/example.oxp ~/Library/Application\ Support/OxiGuitar/plugins/
 
 On Windows, copy `target\oxp\example.oxp` to `%APPDATA%\OxiGuitar\plugins\`.
 
-Start OxiGuitar. Tools → Plugins lists "Example", not loaded yet. Open `samples/open-strings.extab` (File → Open): the plugin loads, reads it, and the footer says what its import log holds. The bottom area now has a **Fretboard** tab; click a string on it.
+Start OxiGuitar. Tools → Plugins lists "Example", not loaded yet. Open `samples/open-strings.extab` (File → Open): the plugin loads and reads it (`oxiguitar-cli info samples/open-strings.extab` also prints its import log, one warning). The bottom area has a **Fretboard** tab beside Tracks, known from the manifest before the plugin loaded; open it, and click a string.
 
 ## 4. Make it yours
 

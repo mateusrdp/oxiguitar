@@ -114,7 +114,7 @@ A press gives `Down`, moving with the button held gives `Drag`s, letting go give
 
 ## Tips
 
-- One tab, one purpose. A left or right area is narrow: a column of widgets fits better there than a wide canvas.
+- One tab, one purpose. A left or right area is narrow: a column of widgets fits better there than a wide canvas. The bottom area is as tall as the track list (up to five tracks) until the user drags its splitter, so a tab there should still make sense when short. A canvas shrinks to fit, keeping its proportions, but a tab doesn't scroll: rows that don't fit are cut off, so put buttons and toggles above a canvas, as the template does.
 - Lay a canvas out in round units of your own (the template's frets are 50 units wide) and let the core scale it.
 - Keep `content` cheap: build it from state you already have. Do slow work (reading the score, a download) when an event or a click asks for it, and call `redraw` when it's done.
 - A plugin's settings belong in its own tab; the core draws no settings forms ([Settings](settings.md)).

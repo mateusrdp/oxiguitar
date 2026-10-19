@@ -180,14 +180,8 @@ impl Tab for Fretboard {
                         muted: false,
                     }],
                 },
-                Row {
-                    widgets: vec![Widget::Canvas(Canvas {
-                        id: "board".into(),
-                        width: WIDTH,
-                        height: height(s.tuning.len()),
-                        items: draw(&s),
-                    })],
-                },
+                // The controls before the canvas: in a short area the canvas
+                // shrinks, and they stay in sight.
                 Row {
                     widgets: vec![
                         Widget::Label {
@@ -207,6 +201,14 @@ impl Tab for Fretboard {
                             enabled: s.picked.is_some(),
                         },
                     ],
+                },
+                Row {
+                    widgets: vec![Widget::Canvas(Canvas {
+                        id: "board".into(),
+                        width: WIDTH,
+                        height: height(s.tuning.len()),
+                        items: draw(&s),
+                    })],
                 },
             ],
         }
@@ -395,18 +397,18 @@ mod tests {
         assert!(tab.content().problems().is_empty());
         // String 2 (B3), fret 3: D4.
         tab.on("board", down(fret_x(3), string_y(1))).unwrap();
-        assert_eq!(label(&tab.content(), 2), "String 2, fret 3: D4");
+        assert_eq!(label(&tab.content(), 1), "String 2, fret 3: D4");
         // String 6 open: E2.
         tab.on("board", down(5.0, string_y(5) + 3.0)).unwrap();
-        assert_eq!(label(&tab.content(), 2), "String 6, fret 0: E2");
+        assert_eq!(label(&tab.content(), 1), "String 6, fret 0: E2");
         tab.on("flats", TabEvent::Toggled(true)).unwrap();
         tab.on("board", down(fret_x(2), string_y(5))).unwrap();
-        assert_eq!(label(&tab.content(), 2), "String 6, fret 2: G♭2");
+        assert_eq!(label(&tab.content(), 1), "String 6, fret 2: G♭2");
         // Outside the strings, nothing changes.
         tab.on("board", down(fret_x(2), 500.0)).unwrap();
-        assert_eq!(label(&tab.content(), 2), "String 6, fret 2: G♭2");
+        assert_eq!(label(&tab.content(), 1), "String 6, fret 2: G♭2");
         tab.on("clear", TabEvent::Clicked).unwrap();
-        assert!(label(&tab.content(), 2).starts_with("Click"));
+        assert!(label(&tab.content(), 1).starts_with("Click"));
         assert!(tab.on("clear", TabEvent::Toggled(true)).is_err());
     }
 
