@@ -33,6 +33,7 @@ compile_error!("build oxiguitar-app with the `wayland` feature (the default) or 
 
 mod canvas;
 mod document;
+mod editing;
 mod footer;
 mod icons;
 mod manager;
@@ -86,7 +87,7 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, FooterRow, ManagerRow, PaletteGroupRow, PaletteToolRow,
+    AppWindow, AreaState, BoxItem, FooterRow, ManagerRow, PaletteGroupRow, PaletteToolRow,
     PluginManagerWindow, PluginRow, PluginWidget, TileItem, ToolRow, ToolbarItemRow,
     ToolbarSectionRow, TrackRow,
 };
@@ -177,6 +178,10 @@ struct App {
     /// once opened (hidden, not dropped, when closed).
     plugins: oxiguitar_host::Plugins,
     manager: Option<PluginManagerWindow>,
+    /// The editor: the caret and the selection over the page.
+    editing: editing::Editing,
+    /// The bars that don't add up, every track's.
+    bad: Vec<oxiguitar_edit::StaffBar>,
 }
 
 /// A plugin tab's last contents (or why it can't be shown) and its
@@ -398,6 +403,8 @@ fn main() -> Result<(), slint::PlatformError> {
         plugin_views: Default::default(),
         plugins: startup.plugins.clone(),
         manager: None,
+        editing: editing::Editing::default(),
+        bad: Vec::new(),
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
     measure_palette();
@@ -406,13 +413,18 @@ fn main() -> Result<(), slint::PlatformError> {
         "Ctrl + O: open a file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
         "Escape or a click: close this note",
         "Mouse wheel over the page: scroll it;  Shift + wheel: zoom the page around the pointer",
-        "Arrow keys, Page Up / Page Down, Home / End, the scroll bars: scroll the page",
+        "Page Up / Page Down, the scroll bars: scroll the page;  with no score open, the arrow keys too",
+        "A click on the page puts the caret there; Shift + click selects up to it",
+        "Left / Right: the previous / next beat;  Up / Down: the string above / below;  Home / End: the bar's first / last beat",
+        "Ctrl + Home / Ctrl + End: the first / last bar;  Tab / Shift + Tab: the next / previous staff;  Ctrl + Up / Ctrl + Down: the previous / next track",
+        "Shift + the arrows, Home, End: select;  Ctrl + Shift + Left / Right: select by bar;  Ctrl + A: select all;  Escape: drop the selection",
+        "Ctrl + 1 to Ctrl + 4: voice 1 to 4;  Ctrl + Z / Ctrl + Y: undo / redo;  F4: the next bar that doesn't add up (shown in red)",
         "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
         "Panels: click a tab's name to open it, the open tab's name (or the chevron) to collapse its panel",
         "Footer: click it to see every message; the chevron folds it back",
-        "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to show that track alone",
+        "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to select the track",
         "Tools → Plugins: every plugin file, and a tickbox to enable or disable each from the next start;  oxiguitar --safe-mode starts without any plugin",
     ]));
     let mut about = vec![
@@ -477,9 +489,39 @@ fn main() -> Result<(), slint::PlatformError> {
         sync_tracks(&a);
     });
     let a = app.clone();
-    ui.on_track_solo(move |i| {
-        a.borrow_mut().tracks.solo(i as usize);
-        sync_tracks(&a);
+    ui.on_track_selected(move |i| {
+        let moved = usize::try_from(i).is_ok_and(|i| a.borrow_mut().editing.select_track(i));
+        if moved {
+            caret_moved(&a);
+        }
+    });
+    let a = app.clone();
+    ui.on_page_pressed(move |x, y, shift| page_pressed(&a, x, y, shift));
+    let a = app.clone();
+    ui.on_caret_key(move |name, shift, ctrl| {
+        let Some(key) = editing::Key::from_name(name.as_str()) else {
+            return false;
+        };
+        let taken = a.borrow_mut().editing.key(key, shift, ctrl);
+        if taken {
+            caret_moved(&a);
+        }
+        taken
+    });
+    let a = app.clone();
+    ui.on_undo(move || a.borrow().worker.send(Request::Undo));
+    let a = app.clone();
+    ui.on_redo(move || a.borrow().worker.send(Request::Redo));
+    let a = app.clone();
+    ui.on_next_bad_bar(move || {
+        let moved = {
+            let mut s = a.borrow_mut();
+            let next = s.editing.next_bad(&s.bad);
+            next.is_some_and(|b| s.editing.go_to(b))
+        };
+        if moved {
+            caret_moved(&a);
+        }
     });
     let a = app.clone();
     ui.on_mixer_volume(move |i, v| {
@@ -1370,7 +1412,9 @@ fn toolbar_activated(app: &Shared, id: &str) {
     match id {
         item::OPEN => open_dialog(app),
         item::EXPORT_PDF => export_dialog(app),
-        // Save, Undo and Redo come with the editor; they are greyed out.
+        item::UNDO => app.borrow().worker.send(Request::Undo),
+        item::REDO => app.borrow().worker.send(Request::Redo),
+        // Save comes with the .gp writer (M3 slice 2); it is greyed out.
         _ => {}
     }
 }
@@ -1382,6 +1426,9 @@ fn handle(app: &Shared, event: Event) {
     };
     match event {
         Event::Opened {
+            score,
+            edit,
+            bad,
             tracks,
             tools,
             pdf_name,
@@ -1395,6 +1442,9 @@ fn handle(app: &Shared, event: Event) {
                     tracks.iter().map(|t| t.can_tab).collect(),
                 );
                 s.mixer = Mixer::new(tracks.iter().map(|t| t.mix).collect());
+                let first = s.tracks.shown().first().copied().unwrap_or(0);
+                s.editing.opened(score, first);
+                s.bad = bad;
                 s.settings.tracks = s.tracks.shown();
                 s.settings.notation = s.tracks.notation();
                 s.pdf_name = pdf_name;
@@ -1441,10 +1491,23 @@ fn handle(app: &Shared, event: Event) {
                 .shell
                 .set_item(item::EXPORT_PDF, Some(true), None);
             sync_toolbar(app);
+            sync_edit_state(app, &edit);
             ui.invoke_scroll_to(0.0, 0.0);
             settings_changed(app);
         }
-        Event::Engraved { engraving, sheets } => {
+        Event::Changed { score, edit, bad } => {
+            {
+                let mut s = app.borrow_mut();
+                s.editing.changed(score);
+                s.bad = bad;
+            }
+            sync_edit_state(app, &edit);
+        }
+        Event::Engraved {
+            engraving,
+            sheets,
+            hits,
+        } => {
             {
                 let mut s = app.borrow_mut();
                 s.engraving = engraving;
@@ -1452,9 +1515,11 @@ fn handle(app: &Shared, event: Event) {
                     lists: Vec::new(),
                     rects: sheets,
                 };
+                s.editing.engraved(hits);
                 retire_tiles(&mut s, 1.0);
             }
             set_content_size(app, &ui);
+            sync_caret(app, false);
             canvas_changed(app);
         }
         Event::Tile {
@@ -1487,6 +1552,139 @@ fn handle(app: &Shared, event: Event) {
         }
         Event::Tools(tools) => set_tools(&ui, &tool_rows(&tools)),
         Event::Message(level, text) => message(app, level, text),
+    }
+}
+
+/// What the Edit menu and the toolbar say about undo and redo.
+fn sync_edit_state(app: &Shared, edit: &document::EditState) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let title = |verb: &str, name: &Option<String>| match name {
+        Some(n) => format!("{verb} {n}"),
+        None => verb.to_owned(),
+    };
+    ui.set_can_undo(edit.undo.is_some());
+    ui.set_can_redo(edit.redo.is_some());
+    ui.set_undo_title(title("Undo", &edit.undo).into());
+    ui.set_redo_title(title("Redo", &edit.redo).into());
+    {
+        let mut s = app.borrow_mut();
+        s.shell
+            .set_item(item::UNDO, Some(edit.undo.is_some()), None);
+        s.shell
+            .set_item(item::REDO, Some(edit.redo.is_some()), None);
+    }
+    sync_toolbar(app);
+}
+
+/// A press on the page, at (`x`, `y`) in the viewport's logical pixels:
+/// the caret goes there (with Shift, the selection grows to it).
+fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let moved = {
+        let mut s = app.borrow_mut();
+        let px = PX_PER_PT * s.zoom;
+        let (cx, cy) = ((x - ui.get_origin_x()) / px, (y - ui.get_origin_y()) / px);
+        let sheet = s
+            .sheets
+            .rects
+            .iter()
+            .enumerate()
+            .find(|(_, r)| cx >= r.x && cx < r.right() && cy >= r.y && cy < r.bottom())
+            .map(|(i, r)| (i, r.x, r.y));
+        match sheet {
+            Some((i, ox, oy)) => s.editing.press_at(i, cx - ox, cy - oy, shift),
+            None => false,
+        }
+    };
+    if moved {
+        caret_moved(app);
+    }
+}
+
+/// The caret or the selection moved: draw them, keep the caret in view,
+/// and tell the plugins that listen.
+fn caret_moved(app: &Shared) {
+    sync_caret(app, true);
+    let s = app.borrow();
+    s.worker.send(Request::Selection(s.editing.for_plugins()));
+}
+
+/// Draws the caret and the selection over the page, highlights the
+/// caret's track, and, when `scroll`, scrolls the caret into view.
+fn sync_caret(app: &Shared, scroll: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let s = app.borrow();
+    // A box on sheet `sheet`, in canvas points.
+    let place = |sheet: usize, r: Rect| -> Option<BoxItem> {
+        let o = s.sheets.rects.get(sheet)?;
+        Some(BoxItem {
+            x: o.x + r.x,
+            y: o.y + r.y,
+            w: r.width,
+            h: r.height,
+        })
+    };
+    let found = s.editing.caret_box();
+    let column = found.and_then(|f| place(f.sheet, f.column));
+    let string = found.and_then(|f| f.string.and_then(|r| place(f.sheet, r)));
+    ui.set_caret_shown(column.is_some());
+    if let Some(b) = &column {
+        ui.set_caret(b.clone());
+    }
+    ui.set_string_shown(string.is_some());
+    if let Some(b) = string {
+        ui.set_caret_string(b);
+    }
+    let boxes: Vec<BoxItem> = s
+        .editing
+        .selection_boxes()
+        .into_iter()
+        .filter_map(|(sheet, r)| place(sheet, r))
+        .collect();
+    ui.set_selection_boxes(ModelRc::new(VecModel::from(boxes)));
+    ui.set_selected_track(
+        s.editing
+            .track()
+            .and_then(|t| i32::try_from(t).ok())
+            .unwrap_or(-1),
+    );
+    ui.set_bad_bars(s.editing.any_shown(&s.bad));
+    if let (true, Some(b)) = (scroll, column) {
+        let px = PX_PER_PT * s.zoom;
+        let x0 = ui.get_origin_x() + b.x * px;
+        let y0 = ui.get_origin_y() + b.y * px;
+        let (x1, y1) = (x0 + b.w * px, y0 + b.h * px);
+        let (vx, vy) = (ui.get_view_x(), ui.get_view_y());
+        let (vw, vh) = (ui.get_view_width(), ui.get_view_height());
+        let margin = 24.0;
+        let nx = if x0 < vx + margin {
+            x0 - margin
+        } else if x1 > vx + vw - margin {
+            (x1 - vw + margin).min(x0 - margin)
+        } else {
+            vx
+        };
+        // Off screen (a jump such as F4): the caret's staves go to the
+        // middle of the view. Near an edge: just enough to show them.
+        let ny = if y1 < vy || y0 > vy + vh {
+            y0 - (vh - (y1 - y0)).max(0.0) / 2.0
+        } else if y0 < vy + margin {
+            y0 - margin
+        } else if y1 > vy + vh - margin {
+            (y1 - vh + margin).min(y0 - margin)
+        } else {
+            vy
+        };
+        if (nx - vx).abs() > 0.5 || (ny - vy).abs() > 0.5 {
+            drop(s);
+            ui.invoke_scroll_to(nx, ny);
+        }
     }
 }
 
@@ -1845,6 +2043,7 @@ fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
         s.paint += 1;
         retire_tiles(&mut s, zoom / old);
     }
+    ui.set_pt_scale(PX_PER_PT * zoom);
     set_content_size(app, &ui);
     let k = zoom / old;
     ui.invoke_scroll_to(

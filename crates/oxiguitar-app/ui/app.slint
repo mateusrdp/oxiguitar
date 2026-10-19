@@ -23,6 +23,16 @@ export struct TileItem {
     size: length,
 }
 
+// A box over the page, in canvas points (the editor's caret and selection;
+// editing.rs). The window places it with the origin and the zoom, so it
+// follows resizing and zooming by itself.
+export struct BoxItem {
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+}
+
 export struct TrackRow {
     name: string,
     shown: bool,
@@ -102,6 +112,9 @@ global Look {
     out property <color> on-canvas: #ffffff80;
     out property <color> warning: #d39a2c;
     out property <color> error: #d9534f;
+    // The caret, the selection and the selected track: the score's accent,
+    // between its light and dark pages' greens so it reads on both.
+    out property <color> accent: #3aa55f;
 }
 
 // A level's dot in the footer.
@@ -573,6 +586,24 @@ export component AppWindow inherits Window {
     // Tiles from before a zoom or a new engraving, shown under the new ones
     // until those cover the view (main.rs).
     in property <[TileItem]> old-tiles;
+    // Logical pixels per canvas point (the score zoom).
+    in property <float> pt-scale: 1.333;
+    // The editor (M3): the caret's column over its staves, the box around
+    // its string on the tablature, and the selection, in canvas points.
+    in property <bool> caret-shown: false;
+    in property <BoxItem> caret;
+    in property <bool> string-shown: false;
+    in property <BoxItem> caret-string;
+    in property <[BoxItem]> selection-boxes;
+    // The track the caret is in, highlighted in the track list.
+    in property <int> selected-track: -1;
+    // The Edit menu and the toolbar's Undo and Redo.
+    in property <bool> can-undo: false;
+    in property <bool> can-redo: false;
+    in property <string> undo-title: "Undo";
+    in property <string> redo-title: "Redo";
+    // Some shown bar doesn't add up: Tools → Next Bar That Doesn't Add Up.
+    in property <bool> bad-bars: false;
     out property <length> view-x: -flick.viewport-x;
     out property <length> view-y: -flick.viewport-y;
     out property <length> view-width: flick.visible-width;
@@ -664,7 +695,6 @@ export component AppWindow inherits Window {
     callback settings-changed();
     callback canvas-changed();
     callback zoom-moved(float);
-    callback track-solo(int);
     callback standard-clicked(int);
     callback tablature-clicked(int);
     in property <image> standard-icon;
@@ -681,6 +711,15 @@ export component AppWindow inherits Window {
     callback toolbar-activated(string);
     callback tab-clicked(int, int);
     callback open-plugin-manager();
+    // The editor (editing.rs): a press on the page, in the viewport's
+    // logical pixels, with Shift; a key by name, with Shift and Ctrl,
+    // answering whether the editor took it.
+    callback page-pressed(length, length, bool);
+    callback caret-key(string, bool, bool) -> bool;
+    callback undo();
+    callback redo();
+    callback next-bad-bar();
+    callback track-selected(int);
     // Plugins' tabs (plugin_tab.slint), by area number (0 top, 1 bottom,
     // 2 left, 3 right): their rows, or a message instead; what the user does
     // to their widgets; a canvas's room.
@@ -742,6 +781,13 @@ export component AppWindow inherits Window {
             MenuItem { title: "Quit"; shortcut: @keys(Control + Q); activated => { root.quit(); } }
         }
         Menu {
+            title: "Edit";
+            MenuItem { title: root.undo-title; enabled: root.can-undo; shortcut: @keys(Control + Z); activated => { root.undo(); } }
+            MenuItem { title: root.redo-title; enabled: root.can-redo; shortcut: @keys(Control + Y); activated => { root.redo(); } }
+            MenuSeparator { }
+            MenuItem { title: "Select All"; enabled: root.has-score; shortcut: @keys(Control + A); activated => { root.caret-key("a", false, true); } }
+        }
+        Menu {
             title: "View";
             // Staff layouts (VIEW-3), as in Guitar Pro.
             Menu {
@@ -773,6 +819,9 @@ export component AppWindow inherits Window {
                 activated => { root.tool-picked(i); }
             }
             MenuSeparator {}
+            // Guitar Pro 8's "Check bar duration" key.
+            MenuItem { title: "Next Bar That Doesn't Add Up"; enabled: root.bad-bars; shortcut: @keys(F4); activated => { root.next-bad-bar(); } }
+            MenuSeparator {}
             MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
         }
         Menu {
@@ -799,13 +848,27 @@ export component AppWindow inherits Window {
 
     keys := FocusScope {
         key-pressed(event) => {
-            if (event.modifiers.control || event.modifiers.alt) {
-                return reject;
-            }
+            // The editor's keys first (editing.rs): the caret and the
+            // selection, as Guitar Pro 8 moves its cursor.
+            let name = event.text == Key.LeftArrow ? "left"
+                : event.text == Key.RightArrow ? "right"
+                : event.text == Key.UpArrow ? "up"
+                : event.text == Key.DownArrow ? "down"
+                : event.text == Key.Home ? "home"
+                : event.text == Key.End ? "end"
+                : event.text == Key.Tab ? "tab"
+                : event.text == Key.Backtab ? "backtab"
+                : event.text == Key.Escape ? "escape"
+                : event.text;
             if (event.text == Key.Escape) {
                 // Closes the Help popups (a click anywhere does too).
                 shortcuts-popup.close();
                 about-popup.close();
+            }
+            if (root.has-score && !event.modifiers.alt && root.caret-key(name, event.modifiers.shift, event.modifiers.control)) {
+                return accept;
+            }
+            if (event.modifiers.control || event.modifiers.alt || event.text == Key.Escape) {
                 return reject;
             }
             if (event.text == Key.PageDown || event.text == " ") {
@@ -1003,6 +1066,47 @@ export component AppWindow inherits Window {
                             source: t.image;
                             image-rendering: pixelated;
                         }
+                        // A press puts the caret there (main.rs, page_pressed).
+                        TouchArea {
+                            x: 0;
+                            y: 0;
+                            width: flick.viewport-width;
+                            height: flick.viewport-height;
+                            pointer-event(e) => {
+                                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                                    keys.focus();
+                                    root.page-pressed(self.mouse-x, self.mouse-y, e.modifiers.shift);
+                                }
+                            }
+                        }
+                        // The selection and the caret, over the tiles: moving
+                        // them redraws no tile.
+                        for b in root.selection-boxes : Rectangle {
+                            x: root.origin-x + b.x * root.pt-scale * 1px;
+                            y: root.origin-y + b.y * root.pt-scale * 1px;
+                            width: b.w * root.pt-scale * 1px;
+                            height: b.h * root.pt-scale * 1px;
+                            background: Look.accent.transparentize(0.8);
+                        }
+                        if root.caret-shown : Rectangle {
+                            x: root.origin-x + root.caret.x * root.pt-scale * 1px;
+                            y: root.origin-y + root.caret.y * root.pt-scale * 1px;
+                            width: root.caret.w * root.pt-scale * 1px;
+                            height: root.caret.h * root.pt-scale * 1px;
+                            background: Look.accent.transparentize(0.88);
+                            border-color: Look.accent.transparentize(0.4);
+                            border-width: 1px;
+                            border-radius: 2px;
+                        }
+                        if root.string-shown : Rectangle {
+                            x: root.origin-x + root.caret-string.x * root.pt-scale * 1px;
+                            y: root.origin-y + root.caret-string.y * root.pt-scale * 1px;
+                            width: root.caret-string.w * root.pt-scale * 1px;
+                            height: root.caret-string.h * root.pt-scale * 1px;
+                            border-color: Look.accent;
+                            border-width: 1.5px;
+                            border-radius: 2px;
+                        }
                     }
 
                     if !root.has-score : Text {
@@ -1099,8 +1203,9 @@ export component AppWindow inherits Window {
                 background: Palette.alternate-background;
                 if root.bottom-area.active-id == "tracks" && !root.has-score : Placeholder { text: "The tracks of the open score appear here."; }
                 // Track list: each track's notation buttons show it (both
-                // off hides it); click a name to show that track alone. No
-                // show tick: the buttons do that (Mateus, 17 Oct 2026).
+                // off hides it); a click on a name selects the track for the
+                // editor (Mateus, 19 Oct 2026). No show tick: the buttons do
+                // that (Mateus, 17 Oct 2026).
                 if root.bottom-area.active-id == "tracks" && root.has-score : ScrollView {
                     VerticalLayout {
                         alignment: start;
@@ -1117,9 +1222,11 @@ export component AppWindow inherits Window {
                             height: 28px;
                             Rectangle {
                                 width: 200px;
+                                border-radius: 3px;
+                                background: i == root.selected-track ? Look.accent.transparentize(0.75) : transparent;
                                 Text {
-                                    x: 0;
-                                    width: parent.width;
+                                    x: 4px;
+                                    width: parent.width - 8px;
                                     text: track.name;
                                     font-size: 12px;
                                     font-weight: track.shown ? 600 : 400;
@@ -1128,7 +1235,7 @@ export component AppWindow inherits Window {
                                 }
                                 TouchArea {
                                     mouse-cursor: pointer;
-                                    clicked => { root.track-solo(i); }
+                                    clicked => { root.track-selected(i); }
                                 }
                             }
                             NotationButton {

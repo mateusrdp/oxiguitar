@@ -6,10 +6,13 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- The caret and the selection on the page (M3 slice 1): a click in the music or Guitar Pro 8's keys move a caret drawn over the page (the beat across its staves, and its string framed on the tablature); Shift selects, Ctrl + A selects all; the page scrolls to keep the caret in view; plugins that listen hear every move. The Edit menu (Undo, Redo, Select All) and the toolbar's Undo and Redo work: Tools → Infer Key Signatures is now a change you can undo. Bars that don't add up are laid in red on screen (not in a PDF), the footer says how many and where the first is, and Tools → Next Bar That Doesn't Add Up (F4) walks through them. The manual has a new page, Editing.
 - The editor's foundations (M3 slice 1), without a window yet: `oxiguitar-edit`, with the caret and its moves as Guitar Pro 8's cursor makes them (beat by beat across bar lines, string by string, Home, Ctrl + Home and Ctrl + End, Tab to the next staff, another track keeping the same moment, another voice likewise), selections (a run of beats in one voice, or whole bars across tracks), edit commands with unlimited undo and redo that copy only the parts of the score they change, and the check for bars that don't add up: every bar when a file opens, then only the bars an edit touches. In the corpus, 231 of 83,721 staff bars don't add up, in 20 of 104 files, checked in about 60 ms. The engraver now also says where every staff, bar, beat and string is drawn, and lays a translucent red under the bars it is asked to mark (never in a PDF).
 
 ### Changed
 
+- A click on a track's name selects the track for the editor instead of showing it alone; a track is shown while its clef or TAB button is on (Mateus, 19 Oct 2026).
+- The arrow keys, Home and End move the caret once a score is open; Page Up, Page Down and Space still scroll.
 - The palette leaves out Guitar Pro 8's Automation group, its Timer and both its stem-direction tools: OxiGuitar draws stems by voice only, odd voices up and even voices down (Mateus, 19 Oct 2026). 124 tools remain, in five groups.
 
 ## [0.2.0] - 2026-10-19
