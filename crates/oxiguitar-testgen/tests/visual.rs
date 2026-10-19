@@ -125,7 +125,7 @@ fn draw(
     if !warnings.is_empty() {
         return Err(format!("the reader warns: {}", warnings.join("; ")));
     }
-    let score = oxiguitar_model::wire::from_wire(read.score)?;
+    let score = oxiguitar_model::wire::from_wire2(read.score)?;
     let engraved = engrave(&score, fonts, meta, &r.options);
     let theme = if r.dark { Theme::DARK } else { Theme::LIGHT };
     let mut raster = Raster::new();

@@ -471,3 +471,14 @@ fn corpus_round_trips() {
     report("corpus", &t);
     assert!(t.failures.is_empty(), "{} failures", t.failures.len());
 }
+
+#[test]
+fn free_time_round_trips() {
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp");
+    let mut score = read(&std::fs::read(path).unwrap()).unwrap().score;
+    score.master_bars[1].free_time = true;
+    let written = write_gp(&score).unwrap();
+    assert_eq!(written.losses.warning_count(), 0);
+    assert_eq!(read(&written.data).unwrap().score, score);
+}

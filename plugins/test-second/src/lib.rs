@@ -8,20 +8,31 @@
 //! file the test plugin fails on (it panics on the title `panic`) goes to
 //! the next plugin that recognises it, as if the test plugin had never been
 //! installed (docs/design/plugins.md, "How the host loads and chooses").
+//!
+//! Built for interface 1.1, it hears the selection as 1.1 gives it
+//! (`Event::Selection`, where the test plugin, built for 1.2, hears
+//! `Event::Selection2`), and says each in the footer as a warning,
+//! starting "heard", for the contract tests to see.
 
 use oxiguitar_plugin::score::{Score, ScoreInfo};
-use oxiguitar_plugin::{Error, ErrorKind, FormatReader, Host, Plugin, Read};
+use oxiguitar_plugin::{Error, ErrorKind, Event, FormatReader, Host, Level, Plugin, Read};
 
 /// The title of every score it reads.
 pub const TITLE: &str = "Read by the second plugin";
 
 /// The plugin.
 #[derive(Debug)]
-pub struct Second;
+pub struct Second {
+    host: Host,
+}
 
 impl Plugin for Second {
-    fn start(_host: Host) -> Result<Second, Error> {
-        Ok(Second)
+    fn start(host: Host) -> Result<Second, Error> {
+        Ok(Second { host })
+    }
+
+    fn event(&self, event: &Event) {
+        self.host.notify(Level::Warning, format!("heard {event:?}"));
     }
 
     fn reader(&self, format: &str) -> Option<&dyn FormatReader> {

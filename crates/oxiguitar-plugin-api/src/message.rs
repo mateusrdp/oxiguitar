@@ -18,6 +18,12 @@
 //! [`HostRequest::Score`]). The host sends them only to plugins whose
 //! manifest asks for interface 1.1 or later and declares the tab or the
 //! event kind.
+//!
+//! Interface 1.2 added the score version 2 ([`Request::Write2`],
+//! [`Answer::Read2`], [`HostRequest::Score2`]), tools ([`Request::Tool`],
+//! [`Answer::Report`]) and edits ([`HostRequest::Apply`]). The host sends
+//! a plugin built for 1.2 or later [`Request::Write2`] instead of
+//! [`Request::Write`], and takes either answer to a [`Request::Read`].
 
 use std::fmt;
 
@@ -27,6 +33,7 @@ use crate::Blob;
 use crate::abi::Status;
 use crate::event::Event;
 use crate::score::Score;
+use crate::score2::Score2;
 use crate::tab::{TabContent, TabEvent};
 
 /// Encodes a message.
@@ -155,6 +162,24 @@ pub enum Request<'a> {
     /// Something the plugin subscribed to happened. Answered with
     /// [`Answer::Done`]. Since interface 1.1.
     Event(Event),
+    /// Write `score`, version 2, in the format `format`. Answered with
+    /// [`Answer::Written`]. Sent instead of [`Request::Write`] to plugins
+    /// built for interface 1.2 or later. Since interface 1.2.
+    Write2 {
+        /// The format's id.
+        format: String,
+        /// The score to write.
+        score: Box<Score2>,
+    },
+    /// Run the tool `tool` (an id from the manifest's `tools`), which the
+    /// user picked in the Tools menu. A tool that changes the score asks
+    /// for it ([`HostRequest::Score2`]) and hands back its change
+    /// ([`HostRequest::Apply`]). Answered with [`Answer::Report`]. Since
+    /// interface 1.2.
+    Tool {
+        /// The tool's id.
+        tool: String,
+    },
 }
 
 /// A plugin's answer to a [`Request`].
@@ -183,6 +208,17 @@ pub enum Answer<'a> {
     Tab(Box<TabContent>),
     /// Done. Since interface 1.1.
     Done,
+    /// The score read from a file, version 2, and what couldn't be carried
+    /// over. Since interface 1.2.
+    Read2 {
+        /// The score.
+        score: Box<Score2>,
+        /// What the reader couldn't carry over faithfully (FMT-2).
+        log: Vec<LogEntry>,
+    },
+    /// What a tool did, in a sentence for the footer ("Transposed 3
+    /// tracks up a tone."); empty to say nothing. Since interface 1.2.
+    Report(String),
 }
 
 impl Answer<'_> {
@@ -198,6 +234,8 @@ impl Answer<'_> {
             Answer::Service(b) => Answer::Service(b.into_owned()),
             Answer::Tab(t) => Answer::Tab(t),
             Answer::Done => Answer::Done,
+            Answer::Read2 { score, log } => Answer::Read2 { score, log },
+            Answer::Report(r) => Answer::Report(r),
         }
     }
 }
@@ -338,6 +376,24 @@ pub enum HostRequest<'a> {
     /// The open score, as plugins see it. Answered with
     /// [`HostAnswer::Score`]. Since interface 1.1.
     Score,
+    /// The open score, version 2, and its revision. Answered with
+    /// [`HostAnswer::Score2`]. Since interface 1.2.
+    Score2,
+    /// Change the open score to `score`, as one change the user can undo,
+    /// named `name` in the Edit menu ("Undo Transpose"). `revision` is the
+    /// revision the change was made from ([`HostAnswer::Score2`]): if the
+    /// score has changed since, the host refuses the change with an error,
+    /// and the plugin may ask for the score again and redo it. Answered
+    /// with [`HostAnswer::Done`] once the change is accepted; it shows a
+    /// moment later. Since interface 1.2.
+    Apply {
+        /// The revision the change was made from.
+        revision: u64,
+        /// The change's name, a few words.
+        name: String,
+        /// The whole score, changed.
+        score: Box<Score2>,
+    },
 }
 
 /// The host's answer to a [`HostRequest`].
@@ -351,6 +407,14 @@ pub enum HostAnswer<'a> {
     Service(#[serde(borrow)] Blob<'a>),
     /// The open score, or `None` when none is open. Since interface 1.1.
     Score(Option<Box<Score>>),
+    /// The open score, version 2, or `None` when none is open, with its
+    /// revision (as score events give it). Since interface 1.2.
+    Score2 {
+        /// The score's revision.
+        revision: u64,
+        /// The score.
+        score: Option<Box<Score2>>,
+    },
 }
 
 impl HostAnswer<'_> {
@@ -361,6 +425,7 @@ impl HostAnswer<'_> {
             HostAnswer::Settings(s) => HostAnswer::Settings(s),
             HostAnswer::Service(b) => HostAnswer::Service(b.into_owned()),
             HostAnswer::Score(s) => HostAnswer::Score(s),
+            HostAnswer::Score2 { revision, score } => HostAnswer::Score2 { revision, score },
         }
     }
 }
@@ -457,5 +522,34 @@ mod tests {
         );
         assert_eq!(first(encode(&HostRequest::Score).unwrap()), 5);
         assert_eq!(first(encode(&HostAnswer::Score(None)).unwrap()), 3);
+
+        // Interface 1.2.
+        let write2 = Request::Write2 {
+            format: "gp".into(),
+            score: Box::default(),
+        };
+        assert_eq!(first(encode(&write2).unwrap()), 7);
+        assert_eq!(
+            first(encode(&Request::Tool { tool: "t".into() }).unwrap()),
+            8
+        );
+        let read2 = Answer::Read2 {
+            score: Box::default(),
+            log: vec![],
+        };
+        assert_eq!(first(encode(&read2).unwrap()), 6);
+        assert_eq!(first(encode(&Answer::Report(String::new())).unwrap()), 7);
+        assert_eq!(first(encode(&HostRequest::Score2).unwrap()), 6);
+        let apply = HostRequest::Apply {
+            revision: 3,
+            name: "Transpose".into(),
+            score: Box::default(),
+        };
+        assert_eq!(first(encode(&apply).unwrap()), 7);
+        let score2 = HostAnswer::Score2 {
+            revision: 1,
+            score: None,
+        };
+        assert_eq!(first(encode(&score2).unwrap()), 4);
     }
 }

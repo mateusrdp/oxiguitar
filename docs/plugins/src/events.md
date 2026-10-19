@@ -11,7 +11,7 @@ A plugin that follows what the user does subscribes to events: OxiGuitar pushes 
 | Kind | Events | Sent today |
 | --- | --- | --- |
 | `score` | `ScoreOpened { revision }`, `ScoreChanged { revision }`, `ScoreClosed` | Yes |
-| `selection` | `Selection(Some(Selection { track, from, to }))`, or `Selection(None)` when nothing is selected | From the editor (OxiGuitar 0.5) |
+| `selection` | `Selection(Some(Selection { track, from, to }))`, or `Selection(None)` when nothing is selected; a plugin built for interface 1.2 gets `Selection2` instead, with voice, string and several tracks ([Tools and changes](tools.md#the-selection)) | From the editor (OxiGuitar 0.5) |
 | `playback` | `Playback(Playback { playing, at, seconds })`: playback started or stopped, the cursor reached another beat, or it jumped | From the player (OxiGuitar 1.0) |
 
 Positions are a bar and a beat of the bar's first voice, both from 0; tracks are numbered from 0. A score's `revision` is a number that changes with every score opened or changed in the session.

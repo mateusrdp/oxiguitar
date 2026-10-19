@@ -587,12 +587,7 @@ impl<'a> Reader<'a> {
                 format!("bar {}", self.place.0),
             );
         }
-        if el.child("FreeTime").is_some() {
-            self.log.info(
-                "free-time bars are read as ordinary bars",
-                format!("bar {}", self.place.0),
-            );
-        }
+        mb.free_time = el.child("FreeTime").is_some();
         mb
     }
 

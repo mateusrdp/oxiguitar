@@ -24,7 +24,11 @@
 //!   button `score` asks the host for the open score and shows its title;
 //! - every kind of event (score, selection, playback): each is written down
 //!   and shown in `panel`, and a score being opened asks the host to
-//!   redraw `panel`.
+//!   redraw `panel`. Built for interface 1.2, it hears the editor's
+//!   selection (`Event::Selection2`);
+//! - the tool `mark` (interface 1.2), "Mark the Title": it asks for the
+//!   score (version 2), adds `!` to its title and hands it back as one
+//!   change.
 //!
 //! `echo`'s methods exercise the host's side: `notify` and `settings` call
 //! the host's services, `via-host` calls `test-echo` back through the host
@@ -39,7 +43,8 @@ use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{Score, ScoreInfo};
 use oxiguitar_plugin::{
     Availability, Canvas, Error, ErrorKind, Event, FormatReader, FormatWriter, Host, Level,
-    LogEntry, Plugin, PointerKind, Read, Row, Service, Tab, TabContent, TabEvent, Widget, Written,
+    LogEntry, Plugin, PointerKind, Read, Row, Service, Tab, TabContent, TabEvent, Tool, Widget,
+    Written,
 };
 
 /// The first line of every `oxgtest` file.
@@ -51,6 +56,7 @@ pub struct TestPlugin {
     host: Host,
     panel: Panel,
     side: Side,
+    mark: Mark,
 }
 
 /// The service that is never available.
@@ -83,6 +89,24 @@ struct PanelState {
 #[derive(Debug)]
 struct Side;
 
+/// The tool `mark`.
+#[derive(Debug)]
+struct Mark {
+    host: Host,
+}
+
+impl Tool for Mark {
+    fn run(&self) -> Result<String, Error> {
+        let Some((revision, mut score)) = self.host.score2()? else {
+            return Ok("No score is open.".into());
+        };
+        score.info.title.push('!');
+        let title = score.info.title.clone();
+        self.host.apply(revision, "Mark the Title", score)?;
+        Ok(format!("The title is now {title}."))
+    }
+}
+
 /// The panel canvas's size, in its own units.
 pub const CANVAS: (f32, f32) = (100.0, 50.0);
 
@@ -94,8 +118,13 @@ impl Plugin for TestPlugin {
                 state: Mutex::default(),
             },
             side: Side,
+            mark: Mark { host: host.clone() },
             host,
         })
+    }
+
+    fn tool(&self, id: &str) -> Option<&dyn Tool> {
+        (id == "mark").then_some(&self.mark as &dyn Tool)
     }
 
     fn tab(&self, id: &str) -> Option<&dyn Tab> {

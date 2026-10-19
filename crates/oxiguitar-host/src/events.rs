@@ -41,6 +41,7 @@ fn replaces(older: &Event, newer: &Event) -> bool {
         (older, newer),
         (Event::ScoreChanged { .. }, Event::ScoreChanged { .. })
             | (Event::Selection(_), Event::Selection(_))
+            | (Event::Selection2(_), Event::Selection2(_))
             | (Event::Playback(_), Event::Playback(_))
     )
 }
@@ -58,8 +59,22 @@ impl Queue {
         if s.closed {
             return false;
         }
-        match s.waiting.back_mut() {
-            Some(last) if replaces(last, &event) => *last = event,
+        // The selection is pushed in both its forms, one after the other
+        // (Event::Selection and Event::Selection2): each replaces its own
+        // kind, just behind the other.
+        let n = s.waiting.len();
+        let pair = matches!(
+            (s.waiting.back(), &event),
+            (Some(Event::Selection(_)), Event::Selection2(_))
+                | (Some(Event::Selection2(_)), Event::Selection(_))
+        );
+        let at = if pair {
+            n.checked_sub(2)
+        } else {
+            n.checked_sub(1)
+        };
+        match at.and_then(|i| s.waiting.get_mut(i)) {
+            Some(older) if replaces(older, &event) => *older = event,
             _ => s.waiting.push_back(event),
         }
         let start = !s.started;

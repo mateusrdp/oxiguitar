@@ -24,11 +24,21 @@ pub fn read(data: &[u8]) -> Result<Read, Error> {
     })
 }
 
-/// Writes `score`, as it crossed the plugin interface, as a Guitar Pro 7–8
-/// file (.gp), with what the file couldn't hold.
+/// Reads `data` as [`read`] does, into the score version 2 (interface
+/// 1.2), which holds everything the readers read.
+pub fn read2(data: &[u8]) -> Result<oxiguitar_plugin::Read2, Error> {
+    let imported = crate::read(data).map_err(error)?;
+    Ok(oxiguitar_plugin::Read2 {
+        score: wire::to_wire2(&imported.score),
+        log: log(&imported.log),
+    })
+}
+
+/// Writes `score`, version 2, as it crossed the plugin interface, as a
+/// Guitar Pro 7–8 file (.gp), with what the file couldn't hold.
 #[cfg(feature = "gp")]
 pub fn write_gp(
-    score: &oxiguitar_plugin::score::Score,
+    score: &oxiguitar_plugin::score2::Score2,
 ) -> Result<oxiguitar_plugin::Written, Error> {
     let invalid = |message: String| Error {
         kind: ErrorKind::Invalid,
@@ -36,7 +46,7 @@ pub fn write_gp(
         offset: None,
         context: String::new(),
     };
-    let score = wire::from_wire(score.clone()).map_err(invalid)?;
+    let score = wire::from_wire2(score.clone()).map_err(invalid)?;
     let written = crate::write_gp(&score).map_err(invalid)?;
     Ok(oxiguitar_plugin::Written {
         data: written.data,

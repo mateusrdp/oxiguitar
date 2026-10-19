@@ -1,5 +1,5 @@
 {
-  "interface": "1.1",
+  "interface": "1.2",
   "id": "oxiguitar.test",
   "name": "Test plugin",
   "version": "0.2.0",
@@ -32,5 +32,8 @@
     { "id": "panel", "title": "Test", "area": "bottom" },
     { "id": "side", "title": "Test side", "area": "right" }
   ],
-  "events": ["score", "selection", "playback"]
+  "events": ["score", "selection", "playback"],
+  "tools": [
+    { "id": "mark", "name": "Mark the Title", "description": "Adds an exclamation mark to the score's title, as one change." }
+  ]
 }

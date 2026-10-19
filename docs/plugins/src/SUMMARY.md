@@ -9,6 +9,7 @@
 - [Formats: reading and writing files](formats.md)
 - [Tabs: widgets and canvases](tabs.md)
 - [Events and the open score](events.md)
+- [Tools and changes to the score](tools.md)
 - [Services](services.md)
 - [Instruments](instruments.md)
 - [Settings](settings.md)

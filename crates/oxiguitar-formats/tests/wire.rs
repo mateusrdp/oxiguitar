@@ -2,8 +2,10 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Every score we can read crosses the plugin interface without loss: the
-//! model, converted to the wire score, encoded, decoded and converted back,
-//! equals what it was. This is what the format plugins (M2) rely on.
+//! model, converted to the wire score (version 2, interface 1.2), encoded,
+//! decoded and converted back, equals what it was; and so does version 1,
+//! for a score without what version 1 lacks (free time). This is what the
+//! format plugins rely on.
 //!
 //! Covers the public fixtures and the 50 visual references, and the
 //! private corpus when `corpus/files/` holds it:
@@ -11,8 +13,9 @@
 
 use std::path::{Path, PathBuf};
 
-use oxiguitar_model::wire::{from_wire, to_wire};
+use oxiguitar_model::wire::{from_wire, from_wire2, to_wire, to_wire2};
 use oxiguitar_plugin_api::score::Score as WireScore;
+use oxiguitar_plugin_api::score2::Score2;
 use oxiguitar_plugin_api::{decode, encode};
 
 fn files(dir: &Path) -> Vec<PathBuf> {
@@ -34,7 +37,7 @@ fn round_trip_all(dirs: &[PathBuf]) -> usize {
         let Ok(imported) = oxiguitar_formats::read(&data) else {
             continue;
         };
-        let score = imported.score;
+        let mut score = imported.score;
         let encoded = encode(&to_wire(&score)).unwrap();
         bytes_total += encoded.len();
         let decoded: WireScore = decode(&encoded).unwrap();
@@ -42,6 +45,16 @@ fn round_trip_all(dirs: &[PathBuf]) -> usize {
         assert!(
             back == score,
             "{} changed crossing the interface",
+            path.display()
+        );
+        // Version 2, with a bar in free time.
+        score.master_bars[0].free_time = true;
+        let encoded = encode(&to_wire2(&score)).unwrap();
+        let decoded: Score2 = decode(&encoded).unwrap();
+        let back = from_wire2(decoded).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        assert!(
+            back == score,
+            "{} changed crossing as version 2",
             path.display()
         );
         count += 1;

@@ -87,7 +87,7 @@ Staff properties (`<Property name="…">`):
 
 ### Master bars
 
-`Time` ("n/d"), `Key/AccidentalCount` and `Mode`, `Repeat` (`start`, `end`, `count` = times played), `AlternateEndings` ("1 2"), `Section/Letter` and `Text` (marker; the letter is new in the model), `DoubleBar`, `TripletFeel`, `Directions/Target` and `Jump` (names in the reader's `direction()`; note `DaCoda` means "to coda"). `Fermatas` are logged; `FreeTime` is read as an ordinary bar.
+`Time` ("n/d"), `Key/AccidentalCount` and `Mode`, `Repeat` (`start`, `end`, `count` = times played), `AlternateEndings` ("1 2"), `Section/Letter` and `Text` (marker; the letter is new in the model), `DoubleBar`, `TripletFeel`, `Directions/Target` and `Jump` (names in the reader's `direction()`; note `DaCoda` means "to coda"). `FreeTime` (an empty element): the bar is in free time, so it need not add up to its time signature (score v2, interface 1.2). `Fermatas` are logged.
 
 ### Bars, voices, beats, notes
 

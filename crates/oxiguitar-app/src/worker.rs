@@ -18,7 +18,7 @@ use std::thread::JoinHandle;
 
 use oxiguitar_display::{Rect, Theme};
 use oxiguitar_edit::StaffBar;
-use oxiguitar_host::api::event::{Event as PluginEvent, Selection as PluginSelection};
+use oxiguitar_host::api::event::{Event as PluginEvent, Selection as PluginSelection, Selection2};
 use oxiguitar_host::{Level, Plugins};
 use oxiguitar_layout::Hits;
 use oxiguitar_model::Score;
@@ -55,8 +55,9 @@ pub(crate) enum Request {
     Undo,
     /// Edit → Redo.
     Redo,
-    /// The caret or the selection moved: tell the plugins that listen.
-    Selection(Option<PluginSelection>),
+    /// The caret or the selection moved: tell the plugins that listen, in
+    /// both forms (interface 1.1's, and 1.2's for plugins built for it).
+    Selection(Option<PluginSelection>, Option<Selection2>),
     /// Write the shown tracks as a PDF.
     ExportPdf(PathBuf, Settings),
     /// File → Save (`None`): the file the score came from, in its own
@@ -68,6 +69,17 @@ pub(crate) enum Request {
     ConfirmSave,
     /// The user declined it.
     CancelSave,
+    /// A plugin handed back the score changed, made from `revision`
+    /// (interface 1.2): one change the user can undo, named `name`.
+    PluginEdit {
+        plugin: String,
+        revision: u64,
+        name: String,
+        score: Box<Score>,
+    },
+    /// Run a plugin's tool from the Tools menu: the plugin's id, the
+    /// tool's id.
+    PluginTool(String, String),
     /// End the worker.
     Stop,
 }
@@ -170,6 +182,7 @@ impl Worker {
         sink: impl Fn(Event) + Send + 'static,
     ) -> Worker {
         let (requests, rx) = channel();
+        open.connect(requests.clone());
         let thread = std::thread::Builder::new()
             .name("oxiguitar-worker".to_owned())
             .spawn(move || run(&rx, plugins, open, &sink))
@@ -254,9 +267,10 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 | Request::ApplyTool(_)
                 | Request::Undo
                 | Request::Redo => true,
-                Request::Selection(_) => false,
+                Request::Selection(..) => false,
                 Request::Stop => true,
                 Request::Tiles { .. } => tiles,
+                Request::PluginEdit { .. } | Request::PluginTool(..) => true,
                 Request::ExportPdf(..)
                 | Request::Save(_)
                 | Request::ConfirmSave
@@ -341,8 +355,48 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
             }
             Request::CancelSave => st.pending_save = None,
-            Request::Selection(selection) => {
+            Request::PluginEdit {
+                plugin,
+                revision,
+                name,
+                score,
+            } => {
+                let Some(doc) = st.doc.as_mut() else {
+                    continue;
+                };
+                if revision != st.revision {
+                    sink(Event::Message(
+                        Level::Warning,
+                        format!(
+                            "{plugin}: its change came after another and was left out: {name}."
+                        ),
+                    ));
+                    continue;
+                }
+                doc.apply_change(&name, *score);
+                sink(Event::Tools(doc.tools()));
+                changed_score(&mut st, sink);
+                engrave(&mut st, sink);
+            }
+            Request::PluginTool(plugin, tool) => {
+                let tools = st.plugins.tools();
+                let Some(t) = tools.iter().find(|t| {
+                    t.spec.id == tool && t.plugin.manifest.as_ref().is_some_and(|m| m.id == plugin)
+                }) else {
+                    continue;
+                };
+                let name = t.spec.name.clone();
+                match st.plugins.run_tool(*t) {
+                    Ok(report) if !report.trim().is_empty() => {
+                        sink(Event::Message(Level::Info, format!("{name}: {report}")));
+                    }
+                    Ok(_) => {}
+                    Err(e) => sink(Event::Message(Level::Error, format!("{name}: {e}"))),
+                }
+            }
+            Request::Selection(selection, selection2) => {
                 st.plugins.push(PluginEvent::Selection(selection));
+                st.plugins.push(PluginEvent::Selection2(selection2));
             }
             Request::ExportPdf(path, settings) => {
                 let Some(doc) = st.doc.as_ref() else {
@@ -372,8 +426,8 @@ fn open(st: &mut State, path: PathBuf, sink: &dyn Fn(Event)) {
     match Document::open(&path, &st.plugins) {
         Ok(doc) => {
             // Plugins hear of it as the window does (pushing never waits).
-            st.open.set(Some(doc.score.clone()));
             st.revision += 1;
+            st.open.set(Some(doc.score.clone()), st.revision);
             st.plugins.push(PluginEvent::ScoreOpened {
                 revision: st.revision,
             });
@@ -483,8 +537,8 @@ fn changed_score(st: &mut State, sink: &dyn Fn(Event)) {
     let Some(doc) = st.doc.as_ref() else {
         return;
     };
-    st.open.set(Some(doc.score.clone()));
     st.revision += 1;
+    st.open.set(Some(doc.score.clone()), st.revision);
     st.plugins.push(PluginEvent::ScoreChanged {
         revision: st.revision,
     });
@@ -706,5 +760,44 @@ mod tests {
         assert!(matches!(next(&rx), Event::Message(Level::Info, _)));
         assert!(matches!(next(&rx), Event::Saved { .. }));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_plugin_s_change_is_one_undoable_command_unless_late() {
+        let (tx, rx) = channel();
+        let open = OpenScore::default();
+        let worker = Worker::start(crate::test_plugins().clone(), open.clone(), move |e| {
+            let _ = tx.send(e);
+        });
+        worker.send(Request::Open(fixture()));
+        while !matches!(next(&rx), Event::Opened { .. }) {}
+        let (revision, mut score) = open.wire2().unwrap();
+        score.info.title = "Changed".into();
+        // A stale revision is refused at once, with a sentence.
+        let late = open
+            .apply("A plugin", revision + 1, "Rename".into(), score.clone())
+            .unwrap_err();
+        assert!(late.contains("has changed since"), "{late}");
+        assert!(
+            open.apply("A plugin", revision, " ".into(), score.clone())
+                .is_err()
+        );
+        open.apply("A plugin", revision, "Rename".into(), score)
+            .unwrap();
+        loop {
+            if let Event::Changed { score, edit, .. } = next(&rx) {
+                assert_eq!(score.info.title, "Changed");
+                assert_eq!(edit.undo.as_deref(), Some("Rename"));
+                break;
+            }
+        }
+        // Undone like any other change.
+        worker.send(Request::Undo);
+        loop {
+            if let Event::Changed { score, .. } = next(&rx) {
+                assert_ne!(score.info.title, "Changed");
+                break;
+            }
+        }
     }
 }
