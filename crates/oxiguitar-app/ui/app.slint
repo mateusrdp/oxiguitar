@@ -25,13 +25,37 @@ export struct TileItem {
 
 export struct TrackRow {
     name: string,
-    instrument: string,
     shown: bool,
     // The notation buttons: standard notation and tablature (both off when
     // the track is hidden), and whether the track has strings to tab.
     standard: bool,
     tablature: bool,
     can-tab: bool,
+    // The mixer (Mateus, 19 Oct 2026: no tab of its own): volume 0 to 1,
+    // pan -1 (left) to 1 (right), mute and solo, as the file sets them.
+    volume: float,
+    pan: float,
+    mute: bool,
+    solo: bool,
+    // The track across the song (tracks.rs, waveform): SVG path data in a
+    // box `bars` wide and 2 high.
+    wave: string,
+    bars: int,
+}
+
+// The editor's palette (palette.rs): every tool greyed out until M3.
+export struct PaletteToolRow {
+    // The tool's id (palette.rs), for the editor to act on.
+    id: string,
+    icon: image,
+    tip: string,
+    enabled: bool,
+}
+
+export struct PaletteGroupRow {
+    title: string,
+    collapsed: bool,
+    tools: [PaletteToolRow],
 }
 
 export struct ToolRow {
@@ -126,28 +150,36 @@ component IconButton inherits Rectangle {
 }
 
 // A notation button: a symbol drawn by our renderer and centred on its ink,
-// highlighted when on, like the palette buttons of the GUI spike.
+// highlighted when on, like the palette buttons of the GUI spike. The
+// mixer's mute and solo toggles are drawn and highlighted the same way,
+// and greyed out until an output plugin is installed.
 component NotationButton inherits Rectangle {
     in property <image> icon;
     in property <bool> on;
     in property <string> tip;
+    in property <bool> enabled: true;
     callback clicked();
 
     width: 28px;
     height: 26px;
     border-radius: 4px;
-    background: root.on ? Palette.accent-background
-        : touch.has-hover ? Palette.control-background.darker(0.15) : Palette.control-background;
+    background: root.on && root.enabled ? Palette.accent-background
+        : root.on ? Palette.accent-background.transparentize(0.6)
+        : touch.has-hover && root.enabled ? Palette.control-background.darker(0.15) : Palette.control-background;
     border-width: focus.has-focus ? 2px : 1px;
     border-color: focus.has-focus ? Palette.accent-background.brighter(0.4) : Palette.border;
+    opacity: root.enabled ? 1 : 0.55;
     accessible-role: button;
     accessible-label: root.tip;
     accessible-checked: root.on;
+    accessible-enabled: root.enabled;
 
     touch := TouchArea {
+        enabled: root.enabled;
         clicked => { root.clicked(); }
     }
     focus := FocusScope {
+        enabled: root.enabled;
         focus-on-click: false;
         key-pressed(event) => {
             if (event.text == " " || event.text == "\n") {
@@ -167,6 +199,216 @@ component NotationButton inherits Rectangle {
     }
     Tooltip {
         text: @markdown("\{root.tip}");
+    }
+}
+
+// The pan knob: a dial whose mark points left at -1, up at 0 and right at
+// 1, over 270 degrees. Drag up or right to turn it right; arrow keys move
+// it a tenth; a double click centres it.
+component Knob inherits Rectangle {
+    in-out property <float> value;
+    in property <bool> enabled: true;
+    in property <string> tip;
+    callback changed(float);
+    property <float> pressed-value;
+    property <angle> turn: root.value * 135deg;
+
+    width: 22px;
+    height: 22px;
+    border-radius: self.width / 2;
+    background: Palette.control-background;
+    border-width: focus.has-focus ? 2px : 1px;
+    border-color: focus.has-focus ? Palette.accent-background.brighter(0.4) : Palette.border;
+    opacity: root.enabled ? 1 : 0.55;
+    accessible-role: slider;
+    accessible-label: root.tip;
+    accessible-value: round(root.value * 100);
+    accessible-value-minimum: -100;
+    accessible-value-maximum: 100;
+    accessible-enabled: root.enabled;
+
+    function set(v: float) {
+        root.value = clamp(v, -1, 1);
+        root.changed(root.value);
+    }
+    Path {
+        width: 100%;
+        height: 100%;
+        viewbox-width: 22;
+        viewbox-height: 22;
+        stroke: root.enabled ? Palette.accent-background : Palette.foreground.transparentize(0.3);
+        stroke-width: 2.5px;
+        MoveTo { x: 11 + 1.5 * sin(root.turn); y: 11 - 1.5 * cos(root.turn); }
+        LineTo { x: 11 + 9 * sin(root.turn); y: 11 - 9 * cos(root.turn); }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.pressed-value = root.value;
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.set(root.pressed-value + ((self.mouse-x - self.pressed-x) - (self.mouse-y - self.pressed-y)) / 60px);
+            }
+        }
+        double-clicked => { root.set(0); }
+    }
+    focus := FocusScope {
+        enabled: root.enabled;
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.RightArrow || event.text == Key.UpArrow) {
+                root.set(root.value + 0.1);
+                return accept;
+            }
+            if (event.text == Key.LeftArrow || event.text == Key.DownArrow) {
+                root.set(root.value - 0.1);
+                return accept;
+            }
+            reject
+        }
+    }
+    Tooltip {
+        text: @markdown("\{root.tip}");
+    }
+}
+
+// A palette tool: its icon drawn by our renderer, centred on its ink, at
+// the button's size. Greyed out until the editor; the tooltip says so.
+component PaletteButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> tip;
+    in property <bool> enabled;
+    callback clicked();
+
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: touch.has-hover && root.enabled ? Palette.control-background : transparent;
+    accessible-role: button;
+    accessible-label: root.tip;
+    accessible-enabled: root.enabled;
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+    Image {
+        source: root.icon;
+        width: 32px;
+        height: 32px;
+        colorize: root.enabled ? Palette.foreground.transparentize(0.1) : Palette.foreground.transparentize(0.62);
+    }
+    Tooltip {
+        text: @markdown("\{root.tip}");
+    }
+}
+
+// The palette: its groups under headings that collapse and expand with a
+// click, each group's buttons wrapping to the area's width (ui.md,
+// "Palette").
+component PaletteView inherits ScrollView {
+    in property <[PaletteGroupRow]> groups;
+    in property <image> chevron-open;
+    in property <image> chevron-closed;
+    callback group-clicked(int);
+    property <length> cell: 34px;
+    property <int> columns: max(1, floor((self.visible-width - 12px) / root.cell));
+
+    VerticalLayout {
+        alignment: start;
+        padding: 6px;
+        padding-top: 4px;
+        spacing: 2px;
+        for group[g] in root.groups : VerticalLayout {
+            spacing: 2px;
+            Rectangle {
+                height: 22px;
+                accessible-role: button;
+                accessible-label: group.title;
+                accessible-expanded: !group.collapsed;
+                accessible-expandable: true;
+                heading-touch := TouchArea {
+                    clicked => { root.group-clicked(g); }
+                }
+                HorizontalLayout {
+                    spacing: 4px;
+                    Image {
+                        width: 12px;
+                        source: group.collapsed ? root.chevron-closed : root.chevron-open;
+                        colorize: Palette.foreground.transparentize(heading-touch.has-hover ? 0.2 : 0.5);
+                    }
+                    Text {
+                        text: group.title;
+                        font-size: 11px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                        color: Palette.foreground.transparentize(heading-touch.has-hover ? 0.1 : 0.35);
+                    }
+                }
+            }
+            if !group.collapsed : Rectangle {
+                height: ceil(group.tools.length / root.columns) * root.cell;
+                for tool[i] in group.tools : PaletteButton {
+                    x: mod(i, root.columns) * root.cell;
+                    y: floor(i / root.columns) * root.cell;
+                    icon: tool.icon;
+                    tip: tool.tip;
+                    enabled: tool.enabled;
+                }
+            }
+        }
+    }
+}
+
+// A track across the song, like a waveform: how much it plays in each bar
+// (Mateus, 19 Oct 2026), with the playback position as a mark. Until the
+// player (M4) the mark is a placeholder, greyed out at the start of the song.
+component TrackOverview inherits Rectangle {
+    in property <string> wave;
+    in property <int> bars;
+    in property <bool> shown;
+    // 0 (start) to 1 (end of the song).
+    in property <float> position;
+
+    border-radius: 3px;
+    background: Palette.control-background.transparentize(0.4);
+    clip: true;
+    Path {
+        x: 4px;
+        y: 3px;
+        width: parent.width - 8px;
+        height: parent.height - 6px;
+        commands: root.wave;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: max(1, root.bars);
+        viewbox-height: 2;
+        fit: fill;
+        fill: Palette.foreground.transparentize(root.shown ? 0.45 : 0.75);
+    }
+    // The playback position: a line with a playhead on top.
+    property <length> mark-x: 4px + clamp(root.position, 0, 1) * (root.width - 8px);
+    Rectangle {
+        x: root.mark-x - self.width / 2;
+        width: 2px;
+        height: parent.height;
+        background: Palette.foreground.transparentize(0.45);
+    }
+    Path {
+        x: root.mark-x - 4px;
+        y: 0;
+        width: 8px;
+        height: 6px;
+        viewbox-width: 8;
+        viewbox-height: 6;
+        fill: Palette.foreground.transparentize(0.45);
+        commands: "M0 0 L8 0 L4 6 Z";
+    }
+    Tooltip {
+        text: @markdown("Playback position (comes with the player)");
     }
 }
 
@@ -392,9 +634,13 @@ export component AppWindow inherits Window {
 
     in property <[TrackRow]> tracks;
     in property <[ToolRow]> tools;
+    in property <[PaletteGroupRow]> palette-groups;
+    callback palette-group-clicked(int);
 
     // The player (top area). Off until an output plugin is installed.
     in property <bool> player-available: false;
+    // Where the player is in the song, 0 to 1; the start until M4.
+    in property <float> song-position: 0;
     in property <[string]> outputs: ["No output plugin"];
 
     // Score zoom as log2 of the zoom factor: -2 is 25 %, 0 is 100 %, 2 is 400 %.
@@ -423,6 +669,14 @@ export component AppWindow inherits Window {
     callback tablature-clicked(int);
     in property <image> standard-icon;
     in property <image> tablature-icon;
+    in property <image> mute-icon;
+    in property <image> solo-icon;
+    // The mixer's controls in each track's row (greyed out until an output
+    // plugin is installed; they work from M4).
+    callback mixer-volume(int, float);
+    callback mixer-pan(int, float);
+    callback mixer-mute(int);
+    callback mixer-solo(int);
     callback tool-picked(int);
     callback toolbar-activated(string);
     callback tab-clicked(int, int);
@@ -682,7 +936,7 @@ export component AppWindow inherits Window {
             }
 
             HorizontalLayout {
-                // Left area: the palette (M3), then plugins' tabs.
+                // Left area: the palette (greyed out until M3), then plugins' tabs.
                 if root.left-shown && root.left-area.collapsed : SideStrip {
                     chevron: @image-url("../../../assets/icons/ui/chevron-right.svg");
                     tip: "Expand";
@@ -699,7 +953,12 @@ export component AppWindow inherits Window {
                     }
                     Rectangle {
                         background: Palette.alternate-background;
-                        if root.left-area.active-id == "palette" : Placeholder { text: "The palette of notation and effect tools comes with the editor."; }
+                        if root.left-area.active-id == "palette" : PaletteView {
+                            groups: root.palette-groups;
+                            chevron-open: @image-url("../../../assets/icons/ui/chevron-down.svg");
+                            chevron-closed: @image-url("../../../assets/icons/ui/chevron-right.svg");
+                            group-clicked(g) => { root.palette-group-clicked(g); }
+                        }
                         if root.left-area.plugin : PluginTab {
                     rows: root.left-plugin-rows;
                     message: root.left-plugin-message;
@@ -824,7 +1083,7 @@ export component AppWindow inherits Window {
                 }
             }
 
-            // Bottom area: the track list and the mixer, then plugins' tabs.
+            // Bottom area: the track list with each track's mixer, then plugins' tabs.
             if root.bottom-shown && !root.bottom-area.collapsed : Splitter {
                 dragged(d) => { root.bottom-height = clamp(root.bottom-height - d, 48px, 400px); }
             }
@@ -846,20 +1105,18 @@ export component AppWindow inherits Window {
                     VerticalLayout {
                         alignment: start;
                         padding-top: 4px;
+                        // Each row (Mateus, 19 Oct 2026): the name, the
+                        // mixer (mute, solo, volume, pan; greyed out until
+                        // an output plugin is installed), then tablature
+                        // and standard notation, in any combination; both
+                        // off hides the track; then the track across the
+                        // song, with the playback position.
                         for track[i] in root.tracks : HorizontalLayout {
-                            padding-left: 8px;
+                            padding-left: 10px;
                             spacing: 8px;
                             height: 28px;
-                            Text {
-                                text: i + 1;
-                                width: 20px;
-                                vertical-alignment: center;
-                                horizontal-alignment: right;
-                                font-size: 12px;
-                                color: Palette.foreground.transparentize(0.4);
-                            }
                             Rectangle {
-                                width: 260px;
+                                width: 200px;
                                 Text {
                                     x: 0;
                                     width: parent.width;
@@ -874,32 +1131,75 @@ export component AppWindow inherits Window {
                                     clicked => { root.track-solo(i); }
                                 }
                             }
-                            Text {
-                                text: track.instrument;
-                                width: 90px;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                                color: Palette.foreground.transparentize(0.3);
+                            NotationButton {
+                                icon: root.mute-icon;
+                                on: track.mute;
+                                enabled: root.player-available;
+                                tip: root.player-available ? "Mute" : "Mute (comes with the player)";
+                                clicked => { root.mixer-mute(i); }
                             }
-                            // Notation: standard notation and tablature, in
-                            // any combination; both off hides the track.
+                            NotationButton {
+                                icon: root.solo-icon;
+                                on: track.solo;
+                                enabled: root.player-available;
+                                tip: root.player-available ? "Solo" : "Solo (comes with the player)";
+                                clicked => { root.mixer-solo(i); }
+                            }
+                            Rectangle {
+                                width: 96px;
+                                Slider {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    minimum: 0;
+                                    maximum: 1;
+                                    step: 0.01;
+                                    value: track.volume;
+                                    enabled: root.player-available;
+                                    changed(v) => { root.mixer-volume(i, v); }
+                                }
+                                Tooltip { text: @markdown("\{root.player-available ? "Volume" : "Volume (comes with the player)"}"); }
+                            }
+                            VerticalLayout {
+                                alignment: center;
+                                Knob {
+                                    value: track.pan;
+                                    enabled: root.player-available;
+                                    tip: root.player-available ? "Pan" : "Pan (comes with the player)";
+                                    changed(v) => { root.mixer-pan(i, v); }
+                                }
+                            }
+                            Rectangle { width: 6px; }
+                            // Tracks without strings have no tablature; the
+                            // empty slot keeps the clefs in one column.
+                            Rectangle {
+                                width: 28px;
+                                if track.can-tab : NotationButton {
+                                    icon: root.tablature-icon;
+                                    on: track.tablature;
+                                    tip: "Tablature";
+                                    clicked => { root.tablature-clicked(i); }
+                                }
+                            }
                             NotationButton {
                                 icon: root.standard-icon;
                                 on: track.standard;
                                 tip: "Standard notation";
                                 clicked => { root.standard-clicked(i); }
                             }
-                            if track.can-tab : NotationButton {
-                                icon: root.tablature-icon;
-                                on: track.tablature;
-                                tip: "Tablature";
-                                clicked => { root.tablature-clicked(i); }
+                            // The track across the song, to the row's end.
+                            Rectangle { width: 6px; }
+                            TrackOverview {
+                                min-width: 80px;
+                                horizontal-stretch: 1;
+                                wave: track.wave;
+                                bars: track.bars;
+                                shown: track.shown;
+                                position: root.song-position;
                             }
-                            Rectangle { }
+                            Rectangle { width: 2px; }
                         }
                     }
                 }
-                if root.bottom-area.active-id == "mixer" : Placeholder { text: "Volume, pan, mute and solo for each track come with the player."; }
                 if root.bottom-area.plugin : PluginTab {
                     rows: root.bottom-plugin-rows;
                     message: root.bottom-plugin-message;

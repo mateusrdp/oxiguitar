@@ -36,6 +36,7 @@ mod document;
 mod footer;
 mod icons;
 mod manager;
+mod palette;
 mod plugin_tabs;
 mod prefs;
 mod shell;
@@ -76,7 +77,7 @@ use crate::footer::{Footer, level_code};
 use crate::plugin_tabs::TabThread;
 use crate::prefs::ViewPrefs;
 use crate::shell::{Shell, Side, item};
-use crate::tracks::Tracks;
+use crate::tracks::{Mixer, Tracks};
 use crate::worker::{Event, Request, Worker};
 
 /// The code Slint generates from `ui/app.slint`.
@@ -85,16 +86,20 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, FooterRow, ManagerRow, PluginManagerWindow, PluginRow, PluginWidget,
-    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    AppWindow, AreaState, FooterRow, ManagerRow, PaletteGroupRow, PaletteToolRow,
+    PluginManagerWindow, PluginRow, PluginWidget, TileItem, ToolRow, ToolbarItemRow,
+    ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
 const APP_ID: &str = "io.github.mateusrdp.OxiGuitar";
 /// Interface zoom steps, as in web browsers.
 const UI_ZOOMS: &[f32] = &[0.5, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0];
-/// Size of the notation buttons' icons, in logical pixels.
-const NOTATION_ICON: f32 = 24.0;
+/// Size of the track rows' toggle icons (notation, mute, solo), in
+/// logical pixels.
+const TOGGLE_ICON: f32 = 24.0;
+/// Size of a palette button and its icon, in logical pixels.
+const PALETTE_BUTTON: f32 = 32.0;
 /// Pixels of smooth (touchpad) scrolling per wheel notch, for both zooms.
 const PIXELS_PER_STEP: f64 = 60.0;
 /// Score zoom per wheel notch, in the slider's log2 units: 2^(1/8), about 9 %.
@@ -113,7 +118,16 @@ struct App {
     track_count: usize,
     /// The track list: shown tracks and their notation.
     tracks: Tracks,
-    /// The notation buttons' icons, and the scale they were drawn for.
+    /// Each track's mixer.
+    mixer: Mixer,
+    /// The track rows' toggles (notation, mute, solo), measured at start.
+    toggles: icons::IconSet,
+    /// The palette's icons, measured on a thread of their own at start so
+    /// the window never waits for them; `None` until they are.
+    palette_icons: Option<Arc<icons::IconSet>>,
+    /// Which palette groups are collapsed.
+    palette: palette::Palette,
+    /// The scale the icons were drawn for.
     icons_scale: f32,
     /// The newest engraving: its id and where its sheets sit, in points.
     engraving: u64,
@@ -325,6 +339,10 @@ fn main() -> Result<(), slint::PlatformError> {
         settings: Settings::default(),
         track_count: 0,
         tracks: Tracks::default(),
+        mixer: Mixer::default(),
+        toggles: icons::IconSet::new(&icons::toggles(), icons::Fill::TOGGLES),
+        palette_icons: None,
+        palette: palette::Palette::default(),
         icons_scale: 0.0,
         engraving: 0,
         sheets: Sheets::default(),
@@ -356,6 +374,7 @@ fn main() -> Result<(), slint::PlatformError> {
         manager: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
+    measure_palette();
 
     ui.set_shortcut_lines(lines(&[
         "Ctrl + O: open a file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
@@ -435,6 +454,33 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_track_solo(move |i| {
         a.borrow_mut().tracks.solo(i as usize);
         sync_tracks(&a);
+    });
+    let a = app.clone();
+    ui.on_mixer_volume(move |i, v| {
+        let m = a.borrow_mut().mixer.set_volume(i as usize, v);
+        sync_mix(&a, i as usize, m);
+    });
+    let a = app.clone();
+    ui.on_mixer_pan(move |i, v| {
+        let m = a.borrow_mut().mixer.set_pan(i as usize, v);
+        sync_mix(&a, i as usize, m);
+    });
+    let a = app.clone();
+    ui.on_mixer_mute(move |i| {
+        let m = a.borrow_mut().mixer.toggle_mute(i as usize);
+        sync_mix(&a, i as usize, m);
+    });
+    let a = app.clone();
+    ui.on_mixer_solo(move |i| {
+        let m = a.borrow_mut().mixer.toggle_solo(i as usize);
+        sync_mix(&a, i as usize, m);
+    });
+    let a = app.clone();
+    ui.on_palette_group_clicked(move |g| {
+        a.borrow_mut().palette.toggle(g as usize);
+        if let Some(ui) = a.borrow().ui.upgrade() {
+            set_palette(&a, &ui, false);
+        }
     });
     let a = app.clone();
     ui.on_tool_picked(move |i| {
@@ -1322,6 +1368,7 @@ fn handle(app: &Shared, event: Event) {
                     tracks.iter().map(|t| t.default_notation).collect(),
                     tracks.iter().map(|t| t.can_tab).collect(),
                 );
+                s.mixer = Mixer::new(tracks.iter().map(|t| t.mix).collect());
                 s.settings.tracks = s.tracks.shown();
                 s.settings.notation = s.tracks.notation();
                 s.pdf_name = pdf_name;
@@ -1338,11 +1385,16 @@ fn handle(app: &Shared, event: Event) {
                     let row = app.borrow().tracks.row(i);
                     TrackRow {
                         name: t.name.as_str().into(),
-                        instrument: t.instrument.as_str().into(),
                         shown: row.shown,
                         standard: row.standard,
                         tablature: row.tablature,
                         can_tab: t.can_tab,
+                        volume: t.mix.volume,
+                        pan: t.mix.pan,
+                        mute: t.mix.mute,
+                        solo: t.mix.solo,
+                        wave: tracks::waveform(&t.activity).into(),
+                        bars: i32::try_from(t.activity.len()).unwrap_or(i32::MAX),
                     }
                 })
                 .collect();
@@ -1465,6 +1517,21 @@ fn settings_changed(app: &Shared) {
     }
 }
 
+/// A track's mixer changed: show it in its row.
+fn sync_mix(app: &Shared, i: usize, mix: oxiguitar_model::Mix) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let model = ui.get_tracks();
+    if let Some(mut row) = model.row_data(i) {
+        row.volume = mix.volume;
+        row.pan = mix.pan;
+        row.mute = mix.mute;
+        row.solo = mix.solo;
+        model.set_row_data(i, row);
+    }
+}
+
 /// The track list changed: show its state in every row, and engrave again.
 fn sync_tracks(app: &Shared) {
     let Some(ui) = app.borrow().ui.upgrade() else {
@@ -1491,26 +1558,108 @@ fn sync_tracks(app: &Shared) {
     settings_changed(app);
 }
 
-/// Draws the notation buttons' icons for the window's current scale.
+/// Draws the track rows' and the palette's icons for the window's current
+/// scale.
 fn refresh_icons(app: &Shared, ui: &AppWindow) {
     let scale = ui.window().scale_factor();
     if (scale - app.borrow().icons_scale).abs() < 1e-3 {
         return;
     }
-    let px = (NOTATION_ICON * scale).round().max(8.0) as u32;
-    let images: Vec<Image> = icons::symbol_icons(&[icons::G_CLEF, icons::TAB_CLEF], px)
-        .into_iter()
-        .map(|icon| {
-            let buf =
-                SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&icon.rgba, icon.size, icon.size);
-            Image::from_rgba8_premultiplied(buf)
-        })
-        .collect();
-    if let [std, tab] = images.as_slice() {
+    let px = (TOGGLE_ICON * scale).round().max(8.0) as u32;
+    let images: Vec<Image> = app.borrow().toggles.draw(px).iter().map(image_of).collect();
+    if let [std, tab, mute, solo] = images.as_slice() {
         ui.set_standard_icon(std.clone());
         ui.set_tablature_icon(tab.clone());
+        ui.set_mute_icon(mute.clone());
+        ui.set_solo_icon(solo.clone());
     }
     app.borrow_mut().icons_scale = scale;
+    set_palette(app, ui, true);
+}
+
+/// Measures the palette's icons on a thread of their own, so the window
+/// never waits for them, and shows the palette once they are ready.
+fn measure_palette() {
+    let spawned = std::thread::Builder::new()
+        .name("palette icons".to_owned())
+        .spawn(|| {
+            let faces: Vec<(icons::Face, icons::Fit)> =
+                palette::tools().map(|(_, t)| (t.face, t.fit)).collect();
+            let set = Arc::new(icons::IconSet::new(&faces, icons::Fill::PALETTE));
+            let _ = slint::invoke_from_event_loop(move || {
+                let Some(app) = APP.with(|a| a.borrow().clone()) else {
+                    return;
+                };
+                app.borrow_mut().palette_icons = Some(set);
+                if let Some(ui) = app.borrow().ui.upgrade() {
+                    set_palette(&app, &ui, true);
+                }
+            });
+        });
+    if let Err(e) = spawned {
+        eprintln!("oxiguitar: the palette's icons can't be drawn: {e}");
+    }
+}
+
+fn image_of(icon: &icons::Icon) -> Image {
+    let buf = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&icon.rgba, icon.size, icon.size);
+    Image::from_rgba8_premultiplied(buf)
+}
+
+/// The palette's groups for the window: every tool greyed out until the
+/// editor (M3), with its icon once the icons are measured. `redraw` draws
+/// the icons again (a new scale); otherwise only the groups' collapsed
+/// state changes and the icons already shown are kept.
+fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
+    let s = app.borrow();
+    let Some(set) = s.palette_icons.clone() else {
+        return;
+    };
+    let model = ui.get_palette_groups();
+    let fresh = redraw || model.row_count() != palette::GROUPS.len();
+    let images: Vec<Image> = if fresh {
+        let px = (PALETTE_BUTTON * ui.window().scale_factor())
+            .round()
+            .max(8.0) as u32;
+        set.draw(px).iter().map(image_of).collect()
+    } else {
+        Vec::new()
+    };
+    let mut images = images.into_iter();
+    let groups: Vec<PaletteGroupRow> = palette::GROUPS
+        .iter()
+        .enumerate()
+        .map(|(g, group)| {
+            let tools: ModelRc<PaletteToolRow> = if fresh {
+                let rows: Vec<PaletteToolRow> = group
+                    .tools
+                    .iter()
+                    .map(|t| PaletteToolRow {
+                        id: t.id.into(),
+                        icon: images.next().unwrap_or_default(),
+                        tip: palette::tip(t.name).into(),
+                        enabled: false,
+                    })
+                    .collect();
+                ModelRc::new(VecModel::from(rows))
+            } else {
+                model.row_data(g).map(|r| r.tools).unwrap_or_default()
+            };
+            PaletteGroupRow {
+                title: group.title.into(),
+                collapsed: s.palette.collapsed(g),
+                tools,
+            }
+        })
+        .collect();
+    drop(s);
+    if fresh {
+        ui.set_palette_groups(ModelRc::new(VecModel::from(groups)));
+    } else {
+        for (g, row) in groups.into_iter().enumerate() {
+            model.set_row_data(g, row);
+        }
+    }
 }
 
 /// The window's score area in points, for the Vertical layout.

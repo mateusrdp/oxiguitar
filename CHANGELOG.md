@@ -6,6 +6,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- The window shows what's coming (M2 slice 6). The left panel holds the editor's palette, open from the start: every tool of Guitar Pro 8's editing palette, 132 in its six groups (voices and modes, bar, note, effects, notation, automation), each as an icon drawn by our renderer from Bravura's symbols, the interface font, lines and curves, centred on its ink, greyed out until the editor with a tooltip giving its name. Groups fold away with a click on their heading. Each track's row in the Tracks tab gains its mixer: mute and solo buttons drawn like the notation buttons, a volume slider and a pan knob, showing what the file sets, greyed out until an output plugin is installed.
+
 - The test builds (Actions → Test builds) carry the test plugin apart, `oxiguitar-test-plugin-<system>`, with a README saying where to put it, for trying plugin tabs and events by hand.
 - `debian/`: both packages, `oxiguitar` and `oxiguitar-plugins-basic`, built the way Debian builds them (dh-cargo, `dpkg-buildpackage`, `-dbgsym` packages), in sid with no network, by the Debian workflow, which also runs lintian on them and installs them into a clean sid. The source is `scripts/debian/source.sh`'s: HEAD without our Noto Sans, which comes from `fonts-noto-core` (`Built-Using`), plus the crates in a vendor component until Debian has them all (`docs/debian.md`).
 - Manual pages for `oxiguitar` and `oxiguitar-cli` (`assets/linux/man/`), installed by the .deb and .rpm. Each .deb gains a Debian-format `changelog.gz` and `md5sums`, and the release workflow runs lintian from Debian sid on every .deb (`scripts/package/lintian.sh`): errors and warnings fail the release, but for the two tags about the contact being the issue tracker.
@@ -34,6 +36,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
+- No Mixer tab: the mixer's controls sit in each track's row of the Tracks tab (Mateus, 19 Oct 2026). A row is now the track's name, mute, solo, volume, pan, then TAB and standard notation, then an overview of the track across the song, like a waveform of how much it plays in each bar, with a placeholder for the playback position; the number and the string count are gone. The left panel starts open, with the palette.
 - The score's tiles sit on whole device pixels, so no faint line shows between them (it did with Slint 1.17 when the page or the scroll position fell between two pixels).
 
 - Over the page, the mouse wheel now scrolls and Shift + wheel zooms the score around the pointer (Mateus, 18 Oct 2026; it was the other way round). Ctrl + wheel still zooms the interface.
