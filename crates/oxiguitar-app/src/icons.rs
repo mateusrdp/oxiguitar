@@ -360,8 +360,8 @@ fn ink_pixels(pixmap: &Pixmap) -> Option<Ink> {
     let (mut x0, mut y0, mut x1, mut y1) = (u32::MAX, u32::MAX, 0, 0);
     for y in 0..h {
         let row = data.get((y * w * 4) as usize..((y + 1) * w * 4) as usize)?;
-        for (x, px) in row.chunks_exact(4).enumerate() {
-            if px.get(3).copied().unwrap_or(0) > 24 {
+        for (x, [_, _, _, alpha]) in row.as_chunks::<4>().0.iter().enumerate() {
+            if *alpha > 24 {
                 let x = x as u32;
                 x0 = x0.min(x);
                 y0 = y0.min(y);
