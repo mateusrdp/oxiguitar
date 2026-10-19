@@ -1,6 +1,6 @@
 [package]
 name = "oxiguitar-gp-plugin"
-description = "The OxiGuitar format plugin for Guitar Pro 7–8: reads Guitar Pro 7 and 8 files (.gp)."
+description = "The OxiGuitar format plugin for Guitar Pro 7–8: reads and writes Guitar Pro 7 and 8 files (.gp)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -20,7 +20,7 @@ oxp = []
 
 [dependencies]
 oxiguitar-plugin.workspace = true
-# Only this plugin's reader (docs/design/plugins.md: each plugin carries
+# Only this plugin's reader and writer (docs/design/plugins.md: each plugin carries
 # only its own code).
 oxiguitar-formats = { path = "../../crates/oxiguitar-formats", default-features = false, features = ["gp", "plugin"] }
 

@@ -331,7 +331,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-display"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde",
@@ -341,7 +341,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-formats"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-model",
  "oxiguitar-plugin",
@@ -369,7 +369,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gp-plugin"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -377,7 +377,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gp3-plugin"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -385,7 +385,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gp4-plugin"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -393,7 +393,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gp5-plugin"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -401,7 +401,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gpx-plugin"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -409,14 +409,14 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-model"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-plugin-api",
 ]
 
 [[package]]
 name = "oxiguitar-plugin"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde_json",
@@ -424,7 +424,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "postcard",
  "serde",
@@ -433,7 +433,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-render"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "krilla",
  "oxiguitar-display",

@@ -118,6 +118,27 @@ pub fn read(data: &[u8]) -> Result<Imported, ReadError> {
 }
 
 /// Reads a Guitar Pro 3, 4 or 5 file.
+/// A score written as a file, and what the file couldn't hold (FMT-3).
+#[derive(Clone, Debug)]
+pub struct Written {
+    /// The file's contents.
+    pub data: Vec<u8>,
+    /// What was left out or changed, each with the first place it happens;
+    /// empty when the file reads back as the score.
+    pub losses: ImportLog,
+}
+
+/// Writes `score` as a Guitar Pro 7–8 file (.gp). Fails only for a score
+/// that isn't whole: no tracks, no bars, or a staff missing bars.
+#[cfg(feature = "gp")]
+pub fn write_gp(score: &Score) -> Result<Written, String> {
+    let w = gpif::write::write_gp(score)?;
+    Ok(Written {
+        data: w.data,
+        losses: w.losses,
+    })
+}
+
 #[cfg(any(feature = "gp3", feature = "gp4", feature = "gp5"))]
 fn read_binary(data: &[u8], format: Format) -> Result<Imported, ReadError> {
     let mut r = gp::read(data, &format)?;

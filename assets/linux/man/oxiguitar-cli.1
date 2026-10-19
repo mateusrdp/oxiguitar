@@ -2,7 +2,7 @@
 .\" Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 .TH OXIGUITAR-CLI 1 "October 2026" "OxiGuitar" "User Commands"
 .SH NAME
-oxiguitar\-cli \- print and engrave guitar tablature files
+oxiguitar\-cli \- print, convert and engrave guitar tablature files
 .SH SYNOPSIS
 .B oxiguitar\-cli info
 .RB [ \-\-bars ]
@@ -10,6 +10,10 @@ oxiguitar\-cli \- print and engrave guitar tablature files
 .br
 .B oxiguitar\-cli detect
 .IR file ...
+.br
+.B oxiguitar\-cli convert
+.I file
+.I new\-file
 .br
 .B oxiguitar\-cli render
 .I file
@@ -37,7 +41,7 @@ oxiguitar\-cli \- print and engrave guitar tablature files
 .B oxiguitar\-cli
 is the command\-line companion of
 .BR oxiguitar (1).
-It reads files through the same format plugins, from the same plugin folders
+It reads and writes files through the same format plugins, from the same plugin folders
 (see
 .BR oxiguitar (1)),
 and never creates or changes anything there.
@@ -55,6 +59,15 @@ adds a line per bar and track.
 .BI detect " file" ...
 Print the format of each file and the plugin that reads it, recognised from
 its contents rather than its extension.
+.TP
+.BI convert " file new\-file"
+Read
+.I file
+and write it as
+.IR new\-file ,
+in the format its extension names (.gp for Guitar Pro 7 and 8).
+Prints what the new file can't hold (its losses), each with the first bar
+and track it happens in, and notes on what Guitar Pro does differently.
 .TP
 .BI render " file"
 Engrave a score to PNG pages and/or a PDF.
@@ -118,7 +131,9 @@ Run a tool on the score first, as the Tools menu does; may be repeated.
 .B \-\-quiet
 Report only errors.
 .SH EXIT STATUS
-0 if every file was read, 1 if any could not be, 2 on bad usage.
+0 if every file was read (and, for
+.BR convert ,
+written), 1 if any could not be, 2 on bad usage.
 .SH ENVIRONMENT
 .BR XDG_CONFIG_HOME ", " XDG_DATA_HOME " and " OXIGUITAR_HOME
 choose the settings and the plugin folder, as for
@@ -127,6 +142,9 @@ choose the settings and the plugin folder, as for
 .TP
 .B oxiguitar\-cli info song.gp5
 Print the structure of song.gp5.
+.TP
+.B oxiguitar\-cli convert song.gp5 song.gp
+Write song.gp5 as a Guitar Pro 7 file, song.gp.
 .TP
 .B oxiguitar\-cli render song.gp \-\-pdf song.pdf \-\-tracks all
 Engrave every track of song.gp into a PDF.
