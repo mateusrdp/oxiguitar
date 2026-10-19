@@ -9,7 +9,7 @@
 //! order, as its user guide lists them (guitar-pro.com/docs/gp8, "Editing
 //! Palette Symbols", checked 19 Oct 2026): the voice and mode buttons at its
 //! top, then the bar, note, effect and notation symbols, less the automation
-//! group, Timer and Inverted Stem Direction (Mateus, 19 Oct 2026: stems go by
+//! group, Timer and the stem-direction tools (Mateus, 19 Oct 2026: stems go by
 //! voice only, odd voices up and even voices down). The
 //! names are the guide's; every icon is our own drawing (UI-3), made with
 //! our renderer from Bravura's symbols, the interface font, lines and
@@ -441,11 +441,6 @@ pub(crate) const GROUPS: &[Group] = &[
             tool("barre", "Extended Barre", Face::Drawn(barre)),
             tool("text", "Text", Face::Text("Aa")),
             tool("section", "Section", Face::Drawn(section)),
-            tool(
-                "stems-auto",
-                "Automatic Stem Direction",
-                Face::Drawn(stems_auto),
-            ),
             tool("beams-auto", "Automatic Beaming", Face::Drawn(beams_auto)),
             tool("beams-force", "Force Beaming", Face::Drawn(beams_force)),
             tool("beams-break", "Break Beaming", Face::Drawn(beams_break)),
@@ -487,13 +482,6 @@ fn stem_x(x: f32) -> f32 {
 fn note_up(p: &mut Pen<'_>, x: f32, y: f32, len: f32) {
     head(p, x, y);
     p.line(stem_x(x), y - 0.17 * S, stem_x(x), y - len, STEM);
-}
-
-/// A notehead with its stem down.
-fn note_down(p: &mut Pen<'_>, x: f32, y: f32, len: f32) {
-    head(p, x, y);
-    let sx = x + STEM / 2.0;
-    p.line(sx, y + 0.17 * S, sx, y + len, STEM);
 }
 
 /// A beam from `x0` to `x1`, its top at `y`.
@@ -1108,12 +1096,6 @@ fn section(p: &mut Pen<'_>) {
     label(p, "A", side / 2.0, side / 2.0, LABEL);
 }
 
-fn stems_auto(p: &mut Pen<'_>) {
-    // Stems follow the notes: up from the low one, down from the high one.
-    note_up(p, 0.0, 1.0 * S, 3.0 * S);
-    note_down(p, 1.9 * S, -S, 3.0 * S);
-}
-
 fn beams_auto(p: &mut Pen<'_>) {
     beamed(p, 2, 0.0, 1.5 * S, 1);
     beamed(p, 2, 3.3 * S, 1.5 * S, 1);
@@ -1174,9 +1156,9 @@ mod tests {
             ["Voices and modes", "Bar", "Note", "Effects", "Notation"]
         );
         // As many tools as the GP8 guide lists for each group, less the
-        // automation group, Timer and Inverted Stem Direction.
+        // automation group, Timer and both stem-direction tools.
         let counts: Vec<usize> = GROUPS.iter().map(|g| g.tools.len()).collect();
-        assert_eq!(counts, [8, 16, 34, 56, 11]);
+        assert_eq!(counts, [8, 16, 34, 56, 10]);
         let mut ids: Vec<&str> = tools().map(|(_, t)| t.id).collect();
         ids.sort_unstable();
         ids.dedup();

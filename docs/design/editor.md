@@ -38,9 +38,9 @@ Where OxiGuitar goes past TuxGuitar (four voices to its two, any tuplet to its l
 ### Tracks and the score (slices 1, 5 and 6)
 
 - [ ] Adding, duplicating, removing (after a question) and reordering tracks
-- [ ] Track properties: name, instrument, capo; strings (3 to 10) and tuning, as a key and a pattern (Standard, Drop, Open, Other) (EDIT-4)
+- [ ] Track properties: name, instrument, capo; strings (3 to 10) and tuning, as a key and a pattern (Standard, Drop, Open with the root low, Open with the fifth low, Other) (EDIT-4)
 - [ ] Changing strings or tuning on a track with notes, keeping the pitches or the frets
-- [ ] Transposition of a track, chromatic and diatonic, keeping the fingering or finding new frets (EDIT-8)
+- [ ] Transposition, chromatic and diatonic, keeping the fingering or finding new frets (EDIT-8), three ways: a track (right-click on its row), a selection (right-click on it in the page), every track (Tools → Transpose…)
 - [ ] Score information: title, subtitle, artist, album, words, music, copyright, transcriber, instructions, notices
 - [ ] Lyrics of a track
 - [ ] Track selection by a click on its row (slice 1); mute and solo follow with the player (M4)
@@ -76,8 +76,9 @@ Where OxiGuitar goes past TuxGuitar (four voices to its two, any tuplet to its l
 Decided by Mateus on 19 Oct 2026 unless said otherwise.
 
 - **Bars that don't add up** are allowed, shown and played (M4 adjusts what playback needs), only marked: on screen in red, never in a PDF. Every bar is checked when a file opens; after that only the bars an edit touches are checked again, nothing more ("I want this app to be FAST"). A voice holding only empty placeholder beats (Guitar Pro 3–5 fill an unused voice with one) doesn't count. The footer says how many bars and where the first is; Tools → Next Bar That Doesn't Add Up walks the caret through them.
-- **Stems** go by voice only: odd voices up, even voices down. The palette has no stem-direction override.
+- **Stems** go by voice only: odd voices up, even voices down. The palette has no stem-direction tools.
+- **Transposition** has three ways in (Mateus, 19 Oct 2026), so no task needs a selection made first: right-click on a track's row → Transpose… (that track), right-click on a selection → Transpose… (the selection, on its track), Tools → Transpose… (every track).
 - **Tracks:** a click on a row selects the track; a track is shown when its TAB or standard-notation button is on. Right-click on a row: Properties (also Edit → Track Properties…), Transpose…, Delete (which asks first).
-- **Tunings** are named compactly wherever they show (E Standard, Drop D, Open G, or the notes, low to high: `D A D G A D`). In the track dialog the tuning is a key and a pattern: Standard, Drop, Open or Other. Other keeps the key and takes any note for each string, checked only as a note and against the number of strings, never against the key.
+- **Tunings** are named compactly wherever they show (E Standard, Drop D, Open G, or the notes, low to high: `D A D G A D`). In the track dialog the tuning is a key and a pattern: Standard, Drop, Open with the root on the lowest string (Open D, Open E, Open C), Open with the fifth on the lowest string (Open G, Open A), or Other. Other keeps the key and takes any note for each string, checked only as a note and against the number of strings, never against the key.
 - **The clipboard** is OxiGuitar's own: copying and pasting work inside OxiGuitar, not with other programs.
 - **Undo** is unlimited (EDIT-5) and keeps copies of only what each command changed.

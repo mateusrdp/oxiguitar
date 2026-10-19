@@ -6,7 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
-- The palette leaves out Guitar Pro 8's Automation group, its Timer and its Inverted Stem Direction: OxiGuitar draws stems by voice only, odd voices up and even voices down (Mateus, 19 Oct 2026). 125 tools remain, in five groups.
+- The palette leaves out Guitar Pro 8's Automation group, its Timer and both its stem-direction tools: OxiGuitar draws stems by voice only, odd voices up and even voices down (Mateus, 19 Oct 2026). 124 tools remain, in five groups.
 
 ## [0.2.0] - 2026-10-19
 
