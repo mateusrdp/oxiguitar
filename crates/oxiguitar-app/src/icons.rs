@@ -133,6 +133,7 @@ const WHITE: Theme = Theme {
     },
     accent: Rgba::rgb(255, 255, 255),
     muted: Rgba::rgb(255, 255, 255),
+    warning: Rgba::rgb(255, 255, 255),
 };
 
 /// Draws a face: symbols, text, lines and curves, in units where a staff
