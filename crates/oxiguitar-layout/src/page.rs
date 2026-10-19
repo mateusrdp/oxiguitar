@@ -11,6 +11,7 @@ use oxiguitar_model::{ChordDiagram, Pitch, Score, Staff};
 use crate::Options;
 use crate::draw::Painter;
 use crate::engrave::DrawnSystem;
+use crate::hits::SystemHits;
 use crate::system::View;
 
 /// The header, drawn from the top of the content area.
@@ -298,8 +299,9 @@ pub(crate) fn assemble(
     systems: Vec<DrawnSystem>,
     p: &Painter<'_>,
     o: &Options,
-) -> Vec<DisplayList> {
+) -> (Vec<DisplayList>, Vec<SystemHits>) {
     let bottom = o.page_height - o.margin - FOOTER;
+    let mut hits = Vec::with_capacity(systems.len());
     let gap = 3.5 * p.sp;
     let new_page = || DisplayList::new(o.page_width, o.page_height);
     let mut pages = vec![new_page()];
@@ -327,6 +329,7 @@ pub(crate) fn assemble(
             page.items
                 .extend(s.list.items.iter().map(|i| i.offset(o.margin, y)));
         }
+        hits.push(s.hits.placed(pages.len() - 1, o.margin, y));
         y += s.height + gap;
         on_page += 1;
     }
@@ -350,7 +353,7 @@ pub(crate) fn assemble(
             );
         }
     }
-    pages
+    (pages, hits)
 }
 
 /// Puts the header and every system on one long sheet: stacked down it
@@ -364,8 +367,9 @@ pub(crate) fn sheet(
     p: &Painter<'_>,
     o: &Options,
     width: f32,
-) -> DisplayList {
+) -> (DisplayList, Vec<SystemHits>) {
     let gap = 3.5 * p.sp;
+    let mut hits = Vec::with_capacity(systems.len());
     let widest = systems.iter().map(|s| s.list.width).fold(0.0, f32::max);
     let width = if o.layout == crate::Layout::Horizontal {
         widest + 2.0 * o.margin
@@ -392,6 +396,7 @@ pub(crate) fn sheet(
     for (n, s) in systems.into_iter().enumerate() {
         list.items
             .extend(s.list.items.iter().map(|i| i.offset(o.margin, y)));
+        hits.push(s.hits.placed(0, o.margin, y));
         y += s.height;
         if n + 1 < count {
             y += gap;
@@ -403,7 +408,7 @@ pub(crate) fn sheet(
         p.text_centred(&mut list, copyright, 8.0, width / 2.0, y, Paint::Muted);
     }
     list.height = y + o.margin;
-    list
+    (list, hits)
 }
 
 #[cfg(test)]

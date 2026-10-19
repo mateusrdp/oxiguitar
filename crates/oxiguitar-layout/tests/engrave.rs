@@ -751,3 +751,62 @@ fn keyboards_get_a_grand_staff_and_tab_only_when_asked() {
         "piano as tab only"
     );
 }
+
+/// Bars that don't add up are marked in translucent red on the staves they
+/// belong to, and nowhere else; the same score without marks has none (a
+/// PDF shows what the file says).
+#[test]
+fn marked_bars_are_laid_in_red() {
+    use oxiguitar_display::Paint;
+    let (fonts, meta) = setup();
+    let score = read(&root().join("fixtures/gp/oxiguitar-test-song.gp5"));
+    let warnings = |e: &Engraved| -> Vec<oxiguitar_display::Rect> {
+        e.pages
+            .iter()
+            .flat_map(|p| &p.items)
+            .filter_map(|i| match i {
+                Item::Rect {
+                    rect,
+                    paint: Paint::Warning,
+                } => Some(*rect),
+                _ => None,
+            })
+            .collect()
+    };
+    let plain = engrave(&score, &fonts, &meta, &Options::default());
+    assert!(warnings(&plain).is_empty());
+    let options = Options {
+        marked: [(0, 0, 1), (5, 0, 1)].into_iter().collect(),
+        ..Options::default()
+    };
+    let marked = engrave(&score, &fonts, &meta, &options);
+    let rects = warnings(&marked);
+    assert_eq!(rects.len(), 1, "only the shown track's bar");
+    // The mark covers the bar the map gives for bar 2.
+    let bar = marked.hits.systems[0].staves[0]
+        .bars
+        .iter()
+        .find(|b| b.bar == 1)
+        .expect("bar 2 in the first system");
+    assert!((rects[0].x - bar.start).abs() < 0.01 && (rects[0].right() - bar.end).abs() < 0.01);
+    // Drawn under the notation: nothing that overlaps it comes before it.
+    let items = &marked.pages[0].items;
+    let at = items
+        .iter()
+        .position(|i| {
+            matches!(
+                i,
+                Item::Rect {
+                    paint: Paint::Warning,
+                    ..
+                }
+            )
+        })
+        .expect("the mark");
+    let r = rects[0];
+    let overlapping_before = items[..at].iter().filter(|i| {
+        let b = i.bounds();
+        b.x < r.right() && r.x < b.right() && b.y < r.bottom() && r.y < b.bottom()
+    });
+    assert_eq!(overlapping_before.count(), 0);
+}

@@ -3490,6 +3490,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxiguitar-edit"
+version = "0.2.0"
+dependencies = [
+ "oxiguitar-formats",
+ "oxiguitar-model",
+]
+
+[[package]]
 name = "oxiguitar-formats"
 version = "0.2.0"
 dependencies = [

@@ -90,6 +90,9 @@ pub enum Paint {
     Accent,
     /// Secondary marks such as bar numbers and ghosted elements.
     Muted,
+    /// What needs the user's attention, such as a bar whose beats don't
+    /// add up: a translucent red laid under the notation.
+    Warning,
 }
 
 /// An 8-bit sRGB colour with alpha.
@@ -123,6 +126,8 @@ pub struct Theme {
     pub accent: Rgba,
     /// Colour of [`Paint::Muted`].
     pub muted: Rgba,
+    /// Colour of [`Paint::Warning`], translucent.
+    pub warning: Rgba,
 }
 
 impl Theme {
@@ -132,6 +137,12 @@ impl Theme {
         page: Rgba::rgb(0xff, 0xff, 0xff),
         accent: Rgba::rgb(0x2e, 0x9e, 0x4f),
         muted: Rgba::rgb(0x80, 0x80, 0x80),
+        warning: Rgba {
+            r: 0xe0,
+            g: 0x24,
+            b: 0x24,
+            a: 0x38,
+        },
     };
 
     /// Light notation on a dark page (VIEW-8).
@@ -140,6 +151,12 @@ impl Theme {
         page: Rgba::rgb(0x1e, 0x1f, 0x22),
         accent: Rgba::rgb(0x5c, 0xd6, 0x7f),
         muted: Rgba::rgb(0x8c, 0x8c, 0x8c),
+        warning: Rgba {
+            r: 0xff,
+            g: 0x4d,
+            b: 0x4d,
+            a: 0x4c,
+        },
     };
 
     /// The colour for a role.
@@ -149,6 +166,7 @@ impl Theme {
             Paint::Page => self.page,
             Paint::Accent => self.accent,
             Paint::Muted => self.muted,
+            Paint::Warning => self.warning,
         }
     }
 }

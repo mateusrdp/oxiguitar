@@ -21,15 +21,18 @@
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use oxiguitar_model::{Score, Track};
+
+pub use hits::{BarHits, BeatHit, Found, Hits, Spot, StaffHits, SystemHits};
 
 mod draw;
 mod effects;
 mod engrave;
 mod grid;
 mod hands;
+mod hits;
 mod page;
 mod pitch;
 mod plan;
@@ -157,6 +160,10 @@ pub struct Options {
     /// neither is shown as standard notation: hiding a track is done by
     /// leaving it out of [`Options::tracks`].
     pub notation: BTreeMap<usize, Notation>,
+    /// Bars to mark as needing attention, as (track, staff, bar): the bars
+    /// that don't add up, shown on screen in translucent red (M3). Empty
+    /// for a PDF, which shows what the file says.
+    pub marked: BTreeSet<(usize, usize, usize)>,
 }
 
 /// Which notations a track shows (VIEW-1).
@@ -227,6 +234,7 @@ impl Default for Options {
             header: true,
             dynamics: true,
             notation: BTreeMap::new(),
+            marked: BTreeSet::new(),
         }
     }
 }
@@ -239,6 +247,8 @@ pub struct Engraved {
     pub pages: Vec<DisplayList>,
     /// Number of systems (lines of music).
     pub systems: usize,
+    /// Where every staff, bar and beat is drawn, for the editor.
+    pub hits: Hits,
 }
 
 /// Engraves `score` with the bundled music font's metadata.
@@ -269,7 +279,7 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
         let systems = system::break_systems(score, &views, &plans, &painter, width);
         let drawn: Vec<engrave::DrawnSystem> = systems
             .iter()
-            .map(|s| engrave::system(score, &views, &plans, s, &painter))
+            .map(|s| engrave::system(score, &views, &plans, s, &painter, &options.marked))
             .collect();
         let tallest = drawn.iter().map(|d| d.height).fold(0.0, f32::max);
         if layout.has_pages()
@@ -288,18 +298,19 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
             page::Header::default()
         };
         let systems = drawn.len();
-        let pages = match layout {
+        let (pages, hits) = match layout {
             Layout::Page => page::assemble(score, header, drawn, &painter, options),
-            _ => vec![page::sheet(
-                score,
-                header,
-                drawn,
-                &painter,
-                options,
-                sheet_width,
-            )],
+            _ => {
+                let (sheet, hits) =
+                    page::sheet(score, header, drawn, &painter, options, sheet_width);
+                (vec![sheet], hits)
+            }
         };
-        return Engraved { systems, pages };
+        return Engraved {
+            systems,
+            pages,
+            hits: Hits { systems: hits },
+        };
     }
 }
 
