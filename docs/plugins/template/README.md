@@ -1,6 +1,6 @@
 # An OxiGuitar plugin
 
-A template for [OxiGuitar](https://github.com/mateusrdp/oxiguitar) plugins. Copy this folder, rename a few things, and you have a plugin that builds, passes OxiGuitar's contract suite, and opens in the app. The [plugin developer guide](https://mateusrdp.github.io/oxiguitar/plugins/) explains every part.
+A template for [OxiGuitar](https://github.com/mateusrdp/oxiguitar) plugins. Copy this folder, rename a few things, and you have a plugin that builds, passes OxiGuitar's contract suite, and opens in the app. The [plugin developer guide](https://mateusrdp.github.io/oxiguitar/plugin-guide/) explains every part.
 
 As it stands, the plugin adds three things, each in its own file:
 

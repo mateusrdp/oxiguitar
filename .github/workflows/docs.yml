@@ -6,7 +6,7 @@
 # - On pushes to main that touch them (so they describe the released program),
 #   and by hand: build them and publish the manual to
 #   https://mateusrdp.github.io/oxiguitar/ and the guide to
-#   https://mateusrdp.github.io/oxiguitar/plugins/.
+#   https://mateusrdp.github.io/oxiguitar/plugin-guide/.
 #
 # Pages must use "GitHub Actions" as its source (Settings → Pages), and the
 # github-pages environment must allow main (Settings → Environments).
@@ -59,13 +59,23 @@ jobs:
               exit 1
             fi
           done
-          # The guide is published under the manual, at /plugins/.
-          cp -R docs/plugins/book docs/manual/book/plugins
+          # The guide is published under the manual, at /plugin-guide/. Not
+          # /plugins/: the manual has a plugins.html, which GitHub Pages
+          # serves for /plugins/ ahead of a plugins/ folder.
+          cp -R docs/plugins/book docs/manual/book/plugin-guide
       - name: Check internal links
         # mdBook only warns about a link to a missing page; fail instead.
+        # A page named like a folder (plugins.html beside plugins/) would
+        # hide the folder's index on GitHub Pages: fail on that too.
         run: |
           cd docs/manual/book
           missing=0
+          for dir in */; do
+            if [ -f "${dir%/}.html" ]; then
+              echo "::error::${dir%/}.html hides ${dir}index.html on GitHub Pages"
+              missing=1
+            fi
+          done
           while IFS= read -r -d '' page; do
             while IFS= read -r target; do
               if [ ! -f "$(dirname "$page")/$target" ]; then
