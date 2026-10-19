@@ -68,4 +68,4 @@ Plugins made by the OxiGuitar project keep the program's privacy promises: nothi
 
 ## Writing your own
 
-Plugins are written in Rust. The [plugin developer guide](plugins/index.html) shows how, from a template plugin that builds, passes our checks and opens in OxiGuitar as it is.
+Plugins are written in Rust. The [plugin developer guide](plugin-guide/index.html) shows how, from a template plugin that builds, passes our checks and opens in OxiGuitar as it is.

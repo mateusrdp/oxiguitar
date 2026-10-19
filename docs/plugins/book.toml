@@ -1,6 +1,6 @@
 # The OxiGuitar plugin developer guide, the user manual's sister book
 # (docs/design/plugins.md). Built with mdBook and published beside the manual,
-# at https://mateusrdp.github.io/oxiguitar/plugins/, by
+# at https://mateusrdp.github.io/oxiguitar/plugin-guide/, by
 # .github/workflows/docs.yml. Build it locally with: mdbook build docs/plugins
 # (the pages land in docs/plugins/book/, which git ignores).
 #
