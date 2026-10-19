@@ -40,7 +40,7 @@ pub trait Tab: Send + Sync {
 
 Every widget the user can use has an `id`, unique in the tab (a valid id: lowercase letters and digits joined by `.` or `-`). When the user uses one, the core calls `on(id, event)`, then `content` again. The widgets hold no state of their own: a toggle shows `on` as your last `content` said, so `on` must remember what changed.
 
-An error returned from `on` takes the tab's place, and the footer says it, until the plugin calls `host.redraw` for the tab. Return one only when the tab can't carry on (an event for a widget it doesn't have, say); for something the user should just know, call `host.notify` and return `Ok(())`, as the template does when it can't save a setting.
+An error returned from `on` is shown in the footer, as a warning, and the tab keeps showing its contents (the core asks for them again). Return one when the plugin refuses the event; for something the user should just know, call `host.notify` and return `Ok(())`, as the template does when it can't save a setting.
 
 The template's tab:
 
@@ -56,7 +56,7 @@ and what it does with the user's events:
 
 ### Contents the core refuses
 
-Contents with an id missing or used twice, a slider whose range is backwards, a choice or list selecting what it doesn't have, or a canvas that is empty, too large or holds something it can't draw are refused: the tab shows a sentence naming the first problem, and the plugin's other tabs carry on. `TabContent::problems()` gives the same sentences, and `cargo test` runs it on every tab's first contents; the contract suite also uses each widget once (a click, a tick, the slider's lowest value, an empty field, the first option, a press, drag and release in the middle of a canvas) and checks the contents after each.
+Contents with an id missing or used twice, a slider whose range is backwards, a choice or list selecting what it doesn't have, or a canvas that is too large or holds something it can't draw break the interface's contract: the plugin is withdrawn for the rest of the session, its tabs with it, and the footer names the first problem. `TabContent::problems()` gives the same sentences, and `cargo test` runs it on every tab's first contents; the contract suite also uses each widget once (a click, a tick, the slider's lowest value, an empty field, the first option, a press, drag and release in the middle of a canvas) and checks the contents after each.
 
 ## Redrawing
 

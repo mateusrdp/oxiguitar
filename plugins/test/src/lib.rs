@@ -7,7 +7,9 @@
 //! and drives every part of the interface through it:
 //!
 //! - the format `oxgtest`: a text file starting `OXGTEST`, whose second
-//!   line is the score's title; it reads and writes;
+//!   line is the score's title; it reads and writes, and panics on the
+//!   title `panic` (a failing plugin; `plugins/test-second` reads the same
+//!   format, to take over);
 //! - the service interface `test-echo`, with four services: `echo`
 //!   (available, priority 1), `second` (available, priority 0, so chosen
 //!   only when settings.json pins it), `unavailable` (its probe says no,
@@ -142,6 +144,11 @@ impl FormatReader for TestPlugin {
             offset: Some(MAGIC.len() as u64),
             ..Error::new(ErrorKind::UnexpectedEnd, "the file ends before the title")
         })?;
+        // A crash on purpose: the contract tests check that a plugin that
+        // fails is withdrawn and the file goes to the next plugin.
+        if title == "panic" {
+            panic!("panicked on purpose, reading");
+        }
         let score = Score {
             info: ScoreInfo {
                 title: title.to_owned(),

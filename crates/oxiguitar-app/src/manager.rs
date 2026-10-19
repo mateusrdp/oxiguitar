@@ -83,6 +83,10 @@ fn row(f: &Found, safe: bool, disabled: &[String]) -> Row {
     let toggles = matches!(f.state, State::Ready | State::Disabled | State::Replaced(_));
     let enabled = id.as_ref().is_some_and(|id| !disabled.contains(id));
     let mut state = match &f.state {
+        State::Ready if f.failure().is_some() => format!(
+            "Stopped working and not used until OxiGuitar restarts: {}.",
+            f.failure().unwrap_or_default()
+        ),
         State::Ready if safe => "Not loaded: OxiGuitar was started in safe mode.".to_owned(),
         State::Ready if f.is_loaded() => "Loaded.".to_owned(),
         State::Ready => "Not loaded yet: it loads when it is first needed.".to_owned(),

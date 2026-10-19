@@ -241,6 +241,32 @@ impl oxiguitar_host::Core for WindowCore {
     fn score(&self) -> Option<oxiguitar_host::api::score::Score> {
         self.open.wire()
     }
+
+    fn withdrawn(&self, id: &str) {
+        let id = id.to_owned();
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                plugin_withdrawn(&app, &id);
+            }
+        });
+    }
+}
+
+/// The plugin `id` failed and was withdrawn: its tabs go, as if it had
+/// never been installed, and the plugin manager shows why.
+fn plugin_withdrawn(app: &Shared, id: &str) {
+    let gone = {
+        let mut s = app.borrow_mut();
+        s.plugin_tabs.retain(|tab, _| tab.plugin != id);
+        plugin_tabs::remove_from(&mut s.shell, id)
+    };
+    if gone {
+        sync_shell(app);
+        for side in Side::ALL {
+            show_plugin_tab(app, side);
+        }
+    }
+    sync_manager(app);
 }
 
 /// The display system this build draws with, as plugins' conditions name

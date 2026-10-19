@@ -59,7 +59,8 @@ fn the_list_of_our_plugins_is_the_plugins_folder() {
     let mut folders: Vec<String> = std::fs::read_dir(workspace().join("plugins"))
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-        .filter(|n| n != "test")
+        // The test plugins, never shipped.
+        .filter(|n| n != "test" && !n.starts_with("test-"))
         .collect();
     folders.sort();
     let mut listed: Vec<String> = OURS.iter().map(|(_, n)| (*n).to_owned()).collect();

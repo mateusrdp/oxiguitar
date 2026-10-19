@@ -12,7 +12,7 @@ Four things in it matter to OxiGuitar:
 
 - **The `oxp` feature.** `export_plugin!` exports the entry point and the manifest's section only with it, so the same crate is an ordinary library for `cargo test` and a plugin file when built with `--features oxp --crate-type cdylib`. Without the feature in `Cargo.toml`, that build fails with "does not have the feature `oxp`".
 - **`unsafe_code = "deny"`**, not `"forbid"`: the two attributes `export_plugin!` generates (`#[unsafe(no_mangle)]` and `#[unsafe(link_section)]`) need `unsafe`, and allow it for themselves only. You write no `unsafe` code.
-- **`panic = "unwind"`**, Rust's default. A panic in a call is then caught and reported as an error; with `panic = "abort"` it closes OxiGuitar.
+- **`panic = "unwind"`**, Rust's default. A panic in a call is then caught, and the plugin is withdrawn for the rest of the session while OxiGuitar carries on; with `panic = "abort"` it closes OxiGuitar.
 - **The SDK's tag**: `v0.2.0`, the release of OxiGuitar you build for. A plugin built with the SDK of 0.2 loads in every later OxiGuitar with interface 1.x ([Interface versions](versions.md)).
 
 ## The plugin
@@ -25,7 +25,7 @@ Four things in it matter to OxiGuitar:
 
 | Method | Called when | Returns |
 | --- | --- | --- |
-| `start(host)` | The plugin is first needed | The plugin, or an error: it is then never called again |
+| `start(host)` | The plugin is first needed | The plugin, or an error: the plugin is then withdrawn, as if it weren't installed |
 | `reader(format)` | A file of the format `format` (an id from the manifest) is opened | A `FormatReader`, or `None` |
 | `writer(format)` | A score is saved in the format | A `FormatWriter`, or `None` |
 | `service(interface, id)` | The service is probed or called | A `Service`, or `None` |
@@ -50,7 +50,7 @@ and takes the lock only to read or change `State`.
 
 | Method | What it does | Since |
 | --- | --- | --- |
-| `notify(level, text)` | Shows a message in the footer, with the plugin's name. `Level::Info`, `Warning` or `Error` | 1.0 |
+| `notify(level, text)` | Shows a message in the footer, with the plugin's name: `Level::Warning` or `Error`. The footer isn't a log, so `Level::Info` messages aren't shown | 1.0 |
 | `settings()` | The plugin's settings: the JSON object under its id in settings.json ([Settings](settings.md)) | 1.0 |
 | `set_settings(map)` | Replaces them and saves settings.json | 1.0 |
 | `call_service(interface, method, input)` | Calls the service OxiGuitar chose for `interface`, which the manifest must list under `requires` ([Services](services.md)) | 1.0 |

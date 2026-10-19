@@ -62,6 +62,18 @@ pub(crate) fn add_to(shell: &mut Shell, plugins: &Plugins) {
     }
 }
 
+/// Takes away every tab of the plugin `id`, which was withdrawn: as if it
+/// had never been installed. Whether any went.
+pub(crate) fn remove_from(shell: &mut Shell, id: &str) -> bool {
+    let mut any = false;
+    for side in Side::ALL {
+        any |= shell
+            .area_mut(side)
+            .remove(|tab| tab_of(tab).is_some_and(|t| t.plugin == id));
+    }
+    any
+}
+
 /// The colours a canvas is drawn in: the score's ink, accent and muted
 /// colours, on the panels' own colour, so a canvas follows Dark Interface.
 pub(crate) fn theme(dark: bool) -> Theme {
@@ -366,6 +378,36 @@ mod tests {
         assert_eq!(tab_of("tracks"), None);
         assert_eq!(tab_of("plugin:nothing"), None);
         assert_eq!(side_of(Area::Left), Side::Left);
+    }
+
+    #[test]
+    fn a_withdrawn_plugin_s_tabs_go_and_the_rest_stay() {
+        let mut shell = Shell::default();
+        let add = |shell: &mut Shell, side: Side, plugin: &str, tab: &str| {
+            shell.area_mut(side).tabs.push(Tab {
+                id: shell_id(&TabId {
+                    plugin: plugin.into(),
+                    tab: tab.into(),
+                }),
+                title: tab.into(),
+            });
+        };
+        add(&mut shell, Side::Bottom, "a.one", "x");
+        add(&mut shell, Side::Bottom, "b.two", "y");
+        add(&mut shell, Side::Right, "a.one", "z");
+        let bottom = shell.area(Side::Bottom).tabs.len();
+        // The other plugin's tab showing in the bottom area, the withdrawn
+        // one's in the right area.
+        shell.area_mut(Side::Bottom).active = bottom - 1;
+        shell.area_mut(Side::Right).active = 1;
+        assert!(remove_from(&mut shell, "a.one"));
+        let ids =
+            |side| -> Vec<String> { shell.area(side).tabs.iter().map(|t| t.id.clone()).collect() };
+        assert_eq!(ids(Side::Bottom).len(), bottom - 1);
+        assert_eq!(shell.area(Side::Bottom).active_id(), "plugin:b.two/y");
+        assert!(ids(Side::Right).iter().all(|id| tab_of(id).is_none()));
+        assert_eq!(shell.area(Side::Right).active, 0);
+        assert!(!remove_from(&mut shell, "a.one"));
     }
 
     #[test]

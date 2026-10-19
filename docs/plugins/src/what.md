@@ -28,7 +28,7 @@ One plugin can add any mix of these. Tools for the Tools menu, other exports (PN
 3. **Then** it calls the plugin whenever one of its contributions is used, from any thread, possibly several at once.
 4. **At the end of the program**, the plugin goes with it.
 
-A plugin that fails to start is named in the footer and never called again. An error in a call is shown to the user; a panic is caught, reported as a crash in the footer, and the plugin stays usable. The rest of OxiGuitar carries on in both cases.
+An error a plugin answers with (a damaged file, say) is shown to the user, and the plugin goes on. A plugin that **fails** (it can't start, it panics, or it breaks the interface's contract) is withdrawn for the rest of the session: OxiGuitar carries on as if it weren't installed, so a file it would have read goes to the next plugin that recognises it and its tabs leave the window. The footer says so once, and Tools → Plugins shows why.
 
 ## In Rust
 

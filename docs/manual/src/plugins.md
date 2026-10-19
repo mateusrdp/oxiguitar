@@ -46,6 +46,7 @@ Both messages say where to download plugins: [the releases page](https://github.
 - **Disabled**: you switched it off.
 - **Not used**: another file holds the same plugin at a higher or equal version, and that one is used.
 - **Can't be used**, and why: the file is damaged, it is for another system, it needs a newer OxiGuitar, or its own conditions don't hold here (a plugin only for Wayland, say).
+- **Stopped working**, and why: it failed while OxiGuitar was running (it crashed, say). OxiGuitar stops using it until you restart and carries on as if it weren't installed: its tabs close, and a file it would have opened goes to another plugin that opens it, if you have one. The line at the bottom of the window says so when it happens.
 
 The tickbox beside a plugin enables or disables it. The change takes effect the next time OxiGuitar starts: a plugin can't be unloaded while the program runs, so one you untick while it is in use stays in use until you restart. The plugin's line says what will change, and the window reminds you to restart OxiGuitar while a change is waiting. OxiGuitar keeps the list in `settings.json`, under `disabled`.
 

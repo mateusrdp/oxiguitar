@@ -148,13 +148,13 @@ impl Document {
         let name = file_name(path);
         let data = std::fs::read(path).map_err(|e| format!("Cannot open {name}: {e}."))?;
         let extension = path.extension().and_then(|e| e.to_str());
-        let format = plugins
-            .recognise(&data, extension)
+        // A plugin that fails while reading is withdrawn and the next one
+        // that recognises the file reads it, as if it weren't installed.
+        let opened = plugins
+            .open(&data, extension)
             .map_err(|why| format!("{name}: {why}"))?;
-        let plugin = format.plugin.name();
-        let read = plugins
-            .read(format, &data)
-            .map_err(|e| format!("{name}: {e}"))?;
+        let plugin = opened.format.plugin.name();
+        let read = opened.read;
         let score = oxiguitar_model::wire::from_wire(read.score).map_err(|e| {
             format!("{name}: the {plugin} plugin gave a score this OxiGuitar can't hold ({e}).")
         })?;
