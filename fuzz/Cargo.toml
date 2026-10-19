@@ -64,6 +64,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "gp_writer"
+path = "fuzz_targets/gp_writer.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "any_file"
 path = "fuzz_targets/any_file.rs"
 test = false

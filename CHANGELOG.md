@@ -6,6 +6,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- Writing Guitar Pro 7 and 8 files (.gp), the editor's save format (M3 slice 2): the Guitar Pro 7–8 plugin now writes as well as reads, in the shape Guitar Pro 7.6 saves, claiming no particular version. Every track gets a sound from Guitar Pro's own library, drum tracks Guitar Pro's drum kit, and every chord diagram its chord spelled out from its name, which Guitar Pro needs. What a .gp file can't hold is named, with the first bar and track where it happens (FMT-3). A .gp file read and written comes back exactly; in the corpus, 50 of 104 files of every Guitar Pro version come back exactly and the rest name their losses, chiefly different dynamics on the notes of one beat (Guitar Pro 7 has one per beat).
+- `oxiguitar-cli convert FILE NEW-FILE`: reads a file and writes it in the format the new file's extension names (.gp), printing its losses. The test builds carry every reference song converted, the artifact "guitar-pro-check", for checking in Guitar Pro.
 - The palette's voice buttons (1 to 4) work and show which voice the caret is in. With a single track on the page, Ctrl + Up and Ctrl + Down show the previous or next track of the song in its place, as Guitar Pro's single-track view does (Mateus's check of slice 1, 19 Oct 2026).
 - `fixtures/guitar-pro-7.6/`: ten reference songs as Guitar Pro 7.6 saves them, and a test that reads each back against our original: every note, beat, effect and bar survives; Guitar Pro drops chord diagrams without a spelled-out chord and tempo text, and adds its own sounds and mixer settings (lessons for the .gp writer).
 
@@ -14,6 +16,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
+- Guitar Pro 7 and 8 files: an open string in a chord diagram that starts above the first fret is read as open, not at the diagram's first fret, and a diagram Guitar Pro is told to hide is read as a chord name only.
 - A click on a track's name selects the track for the editor instead of showing it alone; a track is shown while its clef or TAB button is on (Mateus, 19 Oct 2026).
 - The arrow keys, Home and End move the caret once a score is open; Page Up, Page Down and Space still scroll.
 - The palette leaves out Guitar Pro 8's Automation group, its Timer and both its stem-direction tools: OxiGuitar draws stems by voice only, odd voices up and even voices down (Mateus, 19 Oct 2026). 124 tools remain, in five groups.

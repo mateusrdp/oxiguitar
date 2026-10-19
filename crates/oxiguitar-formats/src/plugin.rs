@@ -4,7 +4,8 @@
 //! What the format plugins share: [`read`] reads a file with the readers in
 //! this build and hands back the score and its import log as they cross
 //! the plugin interface, and a [`ReadError`] as the interface's error, with
-//! the same words, place and offset.
+//! the same words, place and offset. [`write_gp`] writes a .gp file from a
+//! score that crossed it, with its losses.
 //!
 //! A plugin built with only its own reader (say `gp5`) refuses every other
 //! format as unsupported, even if the host asked it to read one.
@@ -20,6 +21,26 @@ pub fn read(data: &[u8]) -> Result<Read, Error> {
     Ok(Read {
         score: wire::to_wire(&imported.score),
         log: log(&imported.log),
+    })
+}
+
+/// Writes `score`, as it crossed the plugin interface, as a Guitar Pro 7–8
+/// file (.gp), with what the file couldn't hold.
+#[cfg(feature = "gp")]
+pub fn write_gp(
+    score: &oxiguitar_plugin::score::Score,
+) -> Result<oxiguitar_plugin::Written, Error> {
+    let invalid = |message: String| Error {
+        kind: ErrorKind::Invalid,
+        message,
+        offset: None,
+        context: String::new(),
+    };
+    let score = wire::from_wire(score.clone()).map_err(invalid)?;
+    let written = crate::write_gp(&score).map_err(invalid)?;
+    Ok(oxiguitar_plugin::Written {
+        data: written.data,
+        losses: log(&written.losses),
     })
 }
 

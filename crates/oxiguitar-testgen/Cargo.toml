@@ -26,6 +26,8 @@ tiny-skia.workspace = true
 # Reference pictures are saved in grayscale where they can be, at the best
 # compression, to keep the repository small (tiny-skia uses the same crate).
 png = "0.18"
+# tests/guitar_pro_7_6.rs compares the .gp writer's XML with Guitar Pro's.
+quick-xml.workspace = true
 
 [lints]
 workspace = true

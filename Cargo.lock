@@ -3643,6 +3643,7 @@ dependencies = [
  "oxiguitar-plugin-test",
  "oxiguitar-render",
  "png",
+ "quick-xml 0.42.0",
  "tiny-skia 0.12.0",
  "zip",
 ]
