@@ -13,7 +13,7 @@ use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet, Theme};
 use oxiguitar_host::Plugins;
 use oxiguitar_layout::{Layout, Notation, Options, Paper, engrave};
-use oxiguitar_model::Score;
+use oxiguitar_model::{Mix, Score};
 use oxiguitar_tools::Availability;
 
 /// How the score is shown: what the View menu and the track list set.
@@ -62,11 +62,46 @@ impl Settings {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct TrackInfo {
     pub(crate) name: String,
-    pub(crate) instrument: String,
     /// The track has strings to tab (not drums, not a track without strings).
     pub(crate) can_tab: bool,
     /// Its notation unless the user decides otherwise.
     pub(crate) default_notation: Notation,
+    /// Volume, pan, mute and solo, as the file sets them.
+    pub(crate) mix: Mix,
+    /// How much the track plays in each bar of the song, 0 (nothing) to 1
+    /// (the busiest bar of any track), for the track list's overview.
+    pub(crate) activity: Vec<f32>,
+}
+
+/// How much each track plays in each bar: the notes it strikes there (grace
+/// notes included, every staff and voice), relative to the busiest bar of
+/// any track, as a square root so quiet bars still show. Bars with only
+/// rests are 0.
+fn activity(score: &Score) -> Vec<Vec<f32>> {
+    let bars = score.master_bars.len();
+    let counts: Vec<Vec<usize>> = score
+        .tracks
+        .iter()
+        .map(|t| {
+            (0..bars)
+                .map(|b| {
+                    t.staves
+                        .iter()
+                        .filter_map(|s| s.bars.get(b))
+                        .flat_map(|bar| &bar.voices)
+                        .flat_map(|v| &v.beats)
+                        .filter(|beat| beat.kind == oxiguitar_model::BeatKind::Notes)
+                        .map(|beat| beat.notes.len())
+                        .sum()
+                })
+                .collect()
+        })
+        .collect();
+    let most = counts.iter().flatten().copied().max().unwrap_or(0).max(1) as f32;
+    counts
+        .into_iter()
+        .map(|c| c.into_iter().map(|n| (n as f32 / most).sqrt()).collect())
+        .collect()
 }
 
 /// A Tools menu entry for the open score.
@@ -131,26 +166,22 @@ impl Document {
 
     /// The tracks, for the track list.
     pub(crate) fn tracks(&self) -> Vec<TrackInfo> {
+        let activity = activity(&self.score);
         self.score
             .tracks
             .iter()
+            .zip(activity)
             .enumerate()
-            .map(|(i, t)| TrackInfo {
+            .map(|(i, (t, activity))| TrackInfo {
                 name: if t.name.trim().is_empty() {
                     format!("Track {}", i + 1)
                 } else {
                     t.name.trim().to_owned()
                 },
-                instrument: if t.instrument.percussion {
-                    "Drums".to_owned()
-                } else {
-                    match t.staves.first().map_or(0, |s| s.string_count()) {
-                        0 => String::new(),
-                        n => format!("{n} strings"),
-                    }
-                },
                 can_tab: !t.instrument.percussion && t.staves.iter().any(|s| s.string_count() > 0),
                 default_notation: oxiguitar_layout::default_notation(t),
+                mix: t.mix,
+                activity,
             })
             .collect()
     }
@@ -336,6 +367,36 @@ mod tests {
                 track.instrument.is_fretted() && info.can_tab
             );
             assert!(info.default_notation.any());
+        }
+    }
+
+    #[test]
+    fn activity_covers_every_bar_relative_to_the_busiest() {
+        let doc = open(&fixture("gp5")).unwrap();
+        let bars = doc.score.master_bars.len();
+        let tracks = doc.tracks();
+        assert!(bars > 0 && !tracks.is_empty());
+        for t in &tracks {
+            assert_eq!(t.activity.len(), bars, "{}", t.name);
+            assert!(t.activity.iter().all(|a| (0.0..=1.0).contains(a)));
+        }
+        let most = tracks
+            .iter()
+            .flat_map(|t| &t.activity)
+            .copied()
+            .fold(0.0, f32::max);
+        assert!((most - 1.0).abs() < 1e-6, "the busiest bar is 1");
+        // A bar of rests only plays nothing.
+        let score = &doc.score;
+        for (t, info) in score.tracks.iter().zip(&tracks) {
+            for (b, a) in info.activity.iter().enumerate() {
+                let silent = t.staves.iter().filter_map(|s| s.bars.get(b)).all(|bar| {
+                    bar.voices.iter().flat_map(|v| &v.beats).all(|beat| {
+                        beat.kind != oxiguitar_model::BeatKind::Notes || beat.notes.is_empty()
+                    })
+                });
+                assert_eq!(silent, *a == 0.0, "track {}, bar {b}", info.name);
+            }
         }
     }
 

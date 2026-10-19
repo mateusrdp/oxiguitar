@@ -16,6 +16,7 @@
 use std::collections::BTreeMap;
 
 use oxiguitar_layout::Notation;
+use oxiguitar_model::Mix;
 
 /// One row as the window shows it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -148,6 +149,84 @@ impl Tracks {
     }
 }
 
+/// The track's overview for its row (Mateus, 19 Oct 2026): how much it
+/// plays across the song, like a waveform, as SVG path data in a box as
+/// wide as the song has bars and 2 high, mirrored around y = 1. Each bar's
+/// activity (0 to 1) sets the height at its middle; silence is a thin line.
+pub(crate) fn waveform(activity: &[f32]) -> String {
+    use std::fmt::Write;
+    // Half the line's thickness where the track is silent.
+    const FLOOR: f32 = 0.04;
+    let n = activity.len();
+    if n == 0 {
+        return String::new();
+    }
+    let h = |i: usize| FLOOR.max(activity.get(i).copied().unwrap_or(0.0).clamp(0.0, 1.0) * 0.95);
+    let mut top: Vec<(f32, f32)> = Vec::with_capacity(n + 2);
+    top.push((0.0, h(0)));
+    top.extend((0..n).map(|i| (i as f32 + 0.5, h(i))));
+    top.push((n as f32, h(n - 1)));
+    let mut d = String::with_capacity(top.len() * 24);
+    for (k, (x, y)) in top.iter().enumerate() {
+        let _ = write!(
+            d,
+            "{}{x:.2} {:.3} ",
+            if k == 0 { "M" } else { "L" },
+            1.0 - y
+        );
+    }
+    for (x, y) in top.iter().rev() {
+        let _ = write!(d, "L{x:.2} {:.3} ", 1.0 + y);
+    }
+    d.push('Z');
+    d
+}
+
+/// Each track's mixer: volume, pan, mute and solo, as the file sets them
+/// until the user changes them (Mateus, 19 Oct 2026: the mixer sits in the
+/// track rows). Nothing sounds yet: the controls are greyed out until an
+/// output plugin is installed and reach the player in M4. The file on disk
+/// is never changed.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct Mixer {
+    mix: Vec<Mix>,
+}
+
+impl Mixer {
+    pub(crate) fn new(mix: Vec<Mix>) -> Mixer {
+        Mixer { mix }
+    }
+
+    pub(crate) fn get(&self, i: usize) -> Mix {
+        self.mix.get(i).copied().unwrap_or_default()
+    }
+
+    fn change(&mut self, i: usize, f: impl FnOnce(&mut Mix)) -> Mix {
+        if let Some(m) = self.mix.get_mut(i) {
+            f(m);
+        }
+        self.get(i)
+    }
+
+    /// Volume, 0 to 1.
+    pub(crate) fn set_volume(&mut self, i: usize, v: f32) -> Mix {
+        self.change(i, |m| m.volume = v.clamp(0.0, 1.0))
+    }
+
+    /// Pan, -1 (left) to 1 (right).
+    pub(crate) fn set_pan(&mut self, i: usize, v: f32) -> Mix {
+        self.change(i, |m| m.pan = v.clamp(-1.0, 1.0))
+    }
+
+    pub(crate) fn toggle_mute(&mut self, i: usize) -> Mix {
+        self.change(i, |m| m.mute = !m.mute)
+    }
+
+    pub(crate) fn toggle_solo(&mut self, i: usize) -> Mix {
+        self.change(i, |m| m.solo = !m.solo)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,5 +312,37 @@ mod tests {
         t.toggle_standard(2);
         assert_eq!(t.shown(), vec![1, 2]);
         assert_eq!(t.notation().len(), 3);
+    }
+
+    #[test]
+    fn the_mixer_keeps_each_tracks_values_in_range() {
+        let file = Mix {
+            volume: 0.5,
+            pan: -0.25,
+            mute: false,
+            solo: true,
+        };
+        let mut m = Mixer::new(vec![file, Mix::default()]);
+        assert_eq!(m.get(0), file);
+        assert_eq!(m.set_volume(0, 1.7).volume, 1.0);
+        assert_eq!(m.set_pan(1, -3.0).pan, -1.0);
+        assert!(m.toggle_mute(1).mute);
+        assert!(!m.toggle_solo(0).solo);
+        // A track that doesn't exist changes nothing.
+        assert_eq!(m.toggle_mute(9), Mix::default());
+        assert_eq!(m.get(1).volume, Mix::default().volume);
+    }
+
+    #[test]
+    fn the_waveform_spans_the_song_mirrored() {
+        assert_eq!(waveform(&[]), "");
+        let d = waveform(&[0.0, 1.0]);
+        assert!(
+            d.starts_with("M0.00 0.960 L0.50 0.960 L1.50 0.050 L2.00 0.050 "),
+            "{d}"
+        );
+        assert!(d.contains("L1.50 1.950 L0.50 1.040 L0.00 1.040 Z"), "{d}");
+        // Out-of-range values are clamped into the box.
+        assert!(!waveform(&[7.0, -1.0]).contains('-'));
     }
 }

@@ -30,7 +30,7 @@ use crate::manifest::is_id;
 pub enum Area {
     /// Above the page, across the window (the Player's area).
     Top,
-    /// Below the page, across the window (Tracks, Mixer).
+    /// Below the page, across the window (Tracks).
     Bottom,
     /// Left of the page (Palette).
     Left,

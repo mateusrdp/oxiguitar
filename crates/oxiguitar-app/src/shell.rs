@@ -162,9 +162,11 @@ pub(crate) mod item {
 impl Default for Shell {
     /// The core's toolbar and tabs. The toolbar holds only what is clicked
     /// often; settings made once (Dark Page, the layout) live in the View
-    /// menu (Mateus, 18 Oct 2026). The player and the track list start
-    /// open; the side areas, which hold placeholders until the editor
-    /// (M3), start collapsed so the page keeps its room.
+    /// menu (Mateus, 18 Oct 2026). The player, the track list (each row
+    /// with its mixer; there is no Mixer tab) and the palette (greyed out
+    /// until the editor) start open, so the window shows where it is going
+    /// (Mateus, 19 Oct 2026); the right area, which holds a placeholder
+    /// until the editor (M3), starts collapsed so the page keeps its room.
     fn default() -> Shell {
         let section = |id: &str, title: &str, items: Vec<ToolbarItem>| ToolbarSection {
             id: id.to_owned(),
@@ -194,11 +196,8 @@ impl Default for Shell {
             ],
             areas: [
                 Area::new(vec![Tab::new("player", "Player")], false),
-                Area::new(
-                    vec![Tab::new("tracks", "Tracks"), Tab::new("mixer", "Mixer")],
-                    false,
-                ),
-                Area::new(vec![Tab::new("palette", "Palette")], true),
+                Area::new(vec![Tab::new("tracks", "Tracks")], false),
+                Area::new(vec![Tab::new("palette", "Palette")], false),
                 Area::new(vec![Tab::new("inspector", "Inspector")], true),
             ],
         }
@@ -238,8 +237,17 @@ mod tests {
         let shell = Shell::default();
         assert_eq!(shell.area(Side::Top).active_id(), "player");
         assert_eq!(shell.area(Side::Bottom).active_id(), "tracks");
-        assert!(shell.area(Side::Left).collapsed && shell.area(Side::Right).collapsed);
+        assert_eq!(shell.area(Side::Left).active_id(), "palette");
+        assert!(!shell.area(Side::Left).collapsed && shell.area(Side::Right).collapsed);
         assert!(!shell.area(Side::Top).collapsed);
+        // No Mixer tab: the mixer's controls sit in each track's row.
+        let ids: Vec<&str> = shell
+            .areas
+            .iter()
+            .flat_map(|a| &a.tabs)
+            .map(|t| t.id.as_str())
+            .collect();
+        assert_eq!(ids, ["player", "tracks", "palette", "inspector"]);
         let ids: Vec<&str> = shell.toolbar.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(ids, ["file", "edit"]);
         assert_eq!(Side::from_index(3), Some(Side::Right));
@@ -250,8 +258,13 @@ mod tests {
     #[test]
     fn clicking_tabs_switches_and_collapses() {
         let mut area = Shell::default().area(Side::Bottom).clone();
+        // A plugin's tab beside the core's.
+        area.tabs.push(Tab::new("plugin:x/panel", "Panel"));
         area.click(1);
-        assert_eq!((area.active_id(), area.collapsed), ("mixer", false));
+        assert_eq!(
+            (area.active_id(), area.collapsed),
+            ("plugin:x/panel", false)
+        );
         area.click(1);
         assert!(area.collapsed, "the open tab's name collapses the area");
         area.click(0);
@@ -259,7 +272,7 @@ mod tests {
         area.click(7);
         assert_eq!(area.active_id(), "tracks");
         area.shown = false;
-        assert!(area.open("mixer") && area.shown && !area.collapsed);
+        assert!(area.open("plugin:x/panel") && area.shown && !area.collapsed);
         assert!(!area.open("nothing"));
     }
 
