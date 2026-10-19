@@ -38,12 +38,51 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      # Linux has two builds of the app (docs/design/plugins.md): oxiguitar
+      # is the Wayland one, oxiguitar-x11 the deprecated X11 one.
+      - if: runner.os == 'Linux'
+        run: |
+          cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
+          cp target/x11/release/oxiguitar target/release/oxiguitar-x11
+      # Our plugins where the programs look for them: lib/oxiguitar/plugins/
+      # beside bin's parent on Linux, plugins\ beside the .exe on Windows.
+      - run: scripts/build-plugins.sh
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: oxiguitar-${{ matrix.name }}
           path: |
             target/release/oxiguitar${{ matrix.exe }}
+            target/release/oxiguitar-x11
             target/release/oxiguitar-cli${{ matrix.exe }}
+            target/lib/oxiguitar/plugins/*.oxp
+            target/release/plugins/*.oxp
+          retention-days: 14
+          if-no-files-found: error
+      # The test plugin (plugins/test, never shipped), apart, for trying
+      # plugin tabs and events by hand: two tabs with every widget and a
+      # canvas. Not beside the others, so a test build doesn't load it
+      # unless the tester puts it in their plugin folder.
+      - name: The test plugin
+        shell: bash
+        run: |
+          cargo run --locked --release -p oxiguitar-plugin-test -- --build oxiguitar-test-plugin test --release
+          mkdir -p test-plugin
+          cp target/oxp/test.oxp test-plugin/
+          cat > test-plugin/README.txt <<'TXT'
+          The OxiGuitar test plugin: tabs "panel" (bottom area: every widget and
+          a canvas) and "side" (right area), and every kind of event. Never
+          shipped; for trying plugin tabs by hand.
+
+          Put test.oxp in your plugin folder and start OxiGuitar:
+            Linux    ~/.local/share/oxiguitar/plugins/
+            Windows  %APPDATA%\OxiGuitar\plugins\
+          Remove it, or untick it in Tools > Plugins, when done.
+          TXT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oxiguitar-test-plugin-${{ matrix.name }}
+          path: test-plugin/
           retention-days: 14
           if-no-files-found: error
 
@@ -57,21 +96,30 @@ jobs:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
       - run: |
-          mkdir -p dist
+          mkdir -p dist/bin dist/PlugIns
           for target in aarch64-apple-darwin x86_64-apple-darwin; do
             cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli --target "$target"
+            scripts/build-plugins.sh --target "$target"
           done
           for bin in oxiguitar oxiguitar-cli; do
-            lipo -create -output "dist/$bin" \
+            lipo -create -output "dist/bin/$bin" \
               "target/aarch64-apple-darwin/release/$bin" \
               "target/x86_64-apple-darwin/release/$bin"
-            lipo -info "dist/$bin"
+            lipo -info "dist/bin/$bin"
+          done
+          # Our plugins in PlugIns/ beside bin/, where the programs look
+          # (<bin>/../PlugIns), each one universal file.
+          for plugin in target/aarch64-apple-darwin/PlugIns/*.oxp; do
+            name="$(basename "$plugin")"
+            lipo -create -output "dist/PlugIns/$name" \
+              "$plugin" "target/x86_64-apple-darwin/PlugIns/$name"
           done
       - uses: actions/upload-artifact@v4
         with:
           name: oxiguitar-macos-universal
           path: |
-            dist/oxiguitar
-            dist/oxiguitar-cli
+            dist/bin/oxiguitar
+            dist/bin/oxiguitar-cli
+            dist/PlugIns/*.oxp
           retention-days: 14
           if-no-files-found: error

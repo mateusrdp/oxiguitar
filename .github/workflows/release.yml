@@ -1,6 +1,10 @@
 # Release packages: a portable .exe in a zip (Windows x86_64 and ARM64), an
-# AppImage, a .deb and an .rpm (Linux x86_64 and ARM64) and a universal .dmg
-# (macOS), none of them code-signed.
+# AppImage, a .deb and an .rpm of each Linux build (Wayland: oxiguitar; X11,
+# deprecated: oxiguitar-x11; x86_64 and ARM64) and a universal .dmg (macOS),
+# none of them code-signed. The core packages hold no plugins: the basic
+# plugins come apart (Mateus, 18 Oct 2026), as oxiguitar-plugins-basic (.deb,
+# .rpm; Suggested by the core), a zip for each system, and each plugin's own
+# file for each target, all attached to the release.
 #
 # - A pushed v* tag (only Mateus creates them) builds everything and attaches
 #   it, with SHA256SUMS, to a draft release for him to check and publish.
@@ -23,11 +27,14 @@ on:
     paths:
       - .github/workflows/release.yml
       - scripts/package/**
+      - scripts/build-plugins.sh
+      - plugins/**
       - about.toml
       - assets/linux/**
       - assets/macos/**
       - assets/icon/**
       - crates/oxiguitar-app/build.rs
+      - crates/oxiguitar-app/Cargo.toml
       - crates/oxiguitar-app/build/**
 
 permissions:
@@ -91,8 +98,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libfontconfig1-dev libxkbcommon-dev libwayland-dev \
-            rpm squashfs-tools xvfb xauth libxkbcommon-x11-0 libgl1-mesa-dri libegl1
+            rpm squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
+      # The two Linux builds of the app (docs/design/plugins.md): the
+      # Wayland one, the default, and the deprecated X11 one in a target
+      # folder of its own.
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      - run: cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
+      # Our plugins (target/lib/oxiguitar/plugins/), packaged apart from the
+      # core: oxiguitar-plugins-basic, a zip, and each plugin on its own.
+      - run: scripts/build-plugins.sh
       - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
@@ -104,57 +118,166 @@ jobs:
             "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-${{ matrix.arch }}"
           sha256sum "$RUNNER_TEMP/runtime"
           echo "APPIMAGE_RUNTIME=$RUNNER_TEMP/runtime" >> "$GITHUB_ENV"
-      - run: scripts/package/linux.sh all "$VERSION"
-      - name: Test the .deb on Debian sid
+      - run: scripts/package/linux.sh all "$VERSION" wayland
+      - run: scripts/package/linux.sh all "$VERSION" x11
+      - run: scripts/package/linux.sh plugins "$VERSION"
+      # The core alone opens nothing; with oxiguitar-plugins-basic it opens
+      # the sample. Each build starts in its own kind of session: the Wayland
+      # build in a headless Weston (scripts/package/in-wayland.sh), the X11
+      # build under Xvfb. Installing oxiguitar-x11 replaces oxiguitar and
+      # keeps the plugins.
+      - name: Test the .deb packages on Debian sid
         run: |
           docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euxc '
             apt-get update
             # The databases first, so the package triggers rebuild them.
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-              shared-mime-info desktop-file-utils xvfb xauth libgl1-mesa-dri
+              shared-mime-info desktop-file-utils xvfb xauth weston libgl1-mesa-dri
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
-            dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends):"
+            dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends|Suggests):"
+            test ! -e /usr/lib/oxiguitar
+            ! oxiguitar-cli info "$0" 2> /tmp/refused
+            grep -q "no plugin that opens files is installed" /tmp/refused
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-plugins-basic_*.deb
+            dpkg -s oxiguitar-plugins-basic | grep -E "^(Version|Depends|Enhances):"
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             grep -q "application/x-gtp=io.github.mateusrdp.OxiGuitar.desktop" /usr/share/applications/mimeinfo.cache
             desktop-file-validate /usr/share/applications/io.github.mateusrdp.OxiGuitar.desktop
+            OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar "$0"
+            # The X11 build takes its place.
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-x11_*.deb
+            ! dpkg -s oxiguitar 2> /dev/null | grep -q "^Status: install ok installed"
+            dpkg -s oxiguitar-x11 | grep -E "^(Version|Depends|Recommends|Provides|Conflicts|Replaces):"
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
-            apt-get remove -y oxiguitar
+            apt-get remove -y oxiguitar-x11 oxiguitar-plugins-basic
+            test ! -e /usr/lib/oxiguitar
           ' "$SAMPLE"
-      - name: Test the .rpm on Fedora
+      # Debian's own package checker, from sid, on every .deb
+      # (scripts/package/lintian.sh). Errors and warnings fail the release,
+      # but for the two tags about the contact being the issue tracker
+      # rather than an email (Mateus, 18 Oct 2026; scripts/package/linux.sh,
+      # "maintainer").
+      - name: Lintian
+        run: |
+          docker run --rm -e GITHUB_ACTIONS -v "$PWD:/w" -w /w debian:sid bash -euc '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends lintian > /dev/null
+            scripts/package/lintian.sh \
+              --allow malformed-contact --allow bogus-mail-host-in-debian-changelog \
+              dist/*.deb
+          '
+      - name: Test the .rpm packages on Fedora
         run: |
           docker run --rm -v "$PWD:/w" -w /w fedora:latest bash -euxc '
-            dnf install -y shared-mime-info desktop-file-utils xorg-x11-server-Xvfb xorg-x11-xauth mesa-dri-drivers mesa-libEGL
-            dnf install -y ./dist/oxiguitar-*.rpm
+            dnf install -y shared-mime-info desktop-file-utils xorg-x11-server-Xvfb xorg-x11-xauth weston mesa-dri-drivers mesa-libEGL
+            dnf install -y $(ls ./dist/oxiguitar-[0-9]*.rpm)
             rpm -q --requires oxiguitar
+            rpm -q --suggests oxiguitar | grep -q "^oxiguitar-plugins-basic"
+            ! oxiguitar-cli info "$0"
+            dnf install -y ./dist/oxiguitar-plugins-basic-*.rpm
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
-            OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
+            OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar "$0"
             dnf remove -y oxiguitar
+            dnf install -y ./dist/oxiguitar-x11-*.rpm
+            rpm -q --provides oxiguitar-x11 | grep -q "^oxiguitar = "
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
+            OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
+            dnf remove -y oxiguitar-x11 oxiguitar-plugins-basic
           ' "$SAMPLE"
-      - name: Test the AppImage
+      - name: Test the AppImages
         run: |
-          appimage="$(ls dist/OxiGuitar-*.AppImage)"
-          (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
-          test -x "$RUNNER_TEMP/squashfs-root/AppRun"
-          # Without FUSE on the runner, the runtime unpacks and runs.
-          APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a "$appimage" "$SAMPLE"
+          # The AppImages hold no plugins; the zip of the basic plugins,
+          # unpacked into a plugin folder, gives them their formats.
+          home="$RUNNER_TEMP/oxiguitar-home"
+          mkdir -p "$home/plugins" "$RUNNER_TEMP/empty-home"
+          unzip -q dist/OxiGuitar-plugins-basic-*-linux-*.zip -d "$home/plugins"
+          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 5
+          test "$(ls dist/oxp/*.oxp | wc -l)" -eq 5
+          for build in wayland x11; do
+            if [ "$build" = wayland ]; then
+              appimage="$(ls dist/OxiGuitar-[0-9]*.AppImage)"
+              run="scripts/package/in-wayland.sh"
+            else
+              appimage="$(ls dist/OxiGuitar-x11-*.AppImage)"
+              run="xvfb-run -a"
+            fi
+            rm -rf "$RUNNER_TEMP/squashfs-root"
+            (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
+            test -x "$RUNNER_TEMP/squashfs-root/AppRun"
+            test ! -e "$RUNNER_TEMP/squashfs-root/usr/lib/oxiguitar"
+            cli="$RUNNER_TEMP/squashfs-root/usr/bin/oxiguitar-cli"
+            ! OXIGUITAR_HOME="$RUNNER_TEMP/empty-home" "$cli" info "$SAMPLE"
+            OXIGUITAR_HOME="$home" "$cli" info "$SAMPLE" > /dev/null
+            # Without FUSE on the runner, the runtime unpacks and runs.
+            OXIGUITAR_HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 \
+              $run "$appimage" "$SAMPLE"
+          done
+      # With archive: false a step uploads exactly one file, so one step
+      # per package; each pattern matches one (versions start with a digit).
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.deb
+          path: dist/oxiguitar_*.deb
           archive: false
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.rpm
+          path: dist/oxiguitar-x11_*.deb
           archive: false
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.AppImage
+          path: dist/oxiguitar-[0-9]*.rpm
           archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/oxiguitar-x11-*.rpm
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-[0-9]*.AppImage
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-x11-*.AppImage
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/oxiguitar-plugins-basic_*.deb
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/oxiguitar-plugins-basic-*.rpm
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-plugins-basic-*.zip
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      # Each plugin on its own, together in one (zipped) artifact.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: oxp-linux-${{ matrix.arch }}
+          path: dist/oxp/*.oxp
           retention-days: 14
           if-no-files-found: error
 
@@ -175,6 +298,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      # Our plugins, in plugins\ beside the programs (target/release/plugins).
+      - run: scripts/build-plugins.sh
+        shell: bash
       - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
@@ -198,6 +324,9 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
+          # The core alone; the basic plugins in a zip of their own (to
+          # unzip into %APPDATA%\OxiGuitar\plugins or a plugins folder beside
+          # oxiguitar.exe) and each on its own.
           $name = "OxiGuitar-$env:VERSION-windows-${{ matrix.arch }}"
           $dir = "dist/$name"
           New-Item -ItemType Directory -Force $dir, "$dir/licenses" | Out-Null
@@ -209,10 +338,49 @@ jobs:
           Copy-Item assets/fonts/noto-sans/OFL.txt "$dir/licenses/NotoSans-OFL.txt"
           Compress-Archive -Path $dir -DestinationPath "dist/$name.zip"
           Get-Item "dist/$name.zip"
+          $plugins = Get-ChildItem target/release/plugins/*.oxp
+          if ($plugins.Count -ne 5) { throw 'expected our five plugins' }
+          $pdir = "dist/plugins-basic"
+          New-Item -ItemType Directory -Force $pdir, dist/oxp | Out-Null
+          Copy-Item $plugins $pdir
+          Copy-Item scripts/package/plugins-README.txt "$pdir/README.txt"
+          $pzip = "dist/OxiGuitar-plugins-basic-$env:VERSION-windows-${{ matrix.arch }}.zip"
+          Compress-Archive -Path "$pdir/*" -DestinationPath $pzip
+          Get-Item $pzip
+          foreach ($p in $plugins) {
+            Copy-Item $p "dist/oxp/oxiguitar-$($p.BaseName)-$env:VERSION-windows-${{ matrix.arch }}.oxp"
+          }
+      - name: Test the zips
+        shell: pwsh
+        run: |
+          # The core alone opens nothing; unzipped beside it, the plugins
+          # give it its formats.
+          $t = "$env:RUNNER_TEMP/zip-test"
+          Expand-Archive "dist/OxiGuitar-$env:VERSION-windows-${{ matrix.arch }}.zip" $t
+          $core = Get-ChildItem $t -Directory | Select-Object -First 1
+          if (Test-Path "$($core.FullName)/plugins") { throw 'the core zip holds plugins' }
+          $env:OXIGUITAR_HOME = "$env:RUNNER_TEMP/empty-home"
+          & "$($core.FullName)/oxiguitar-cli.exe" info $env:SAMPLE
+          if ($LASTEXITCODE -eq 0) { throw 'the core alone opened a file' }
+          Expand-Archive "dist/OxiGuitar-plugins-basic-$env:VERSION-windows-${{ matrix.arch }}.zip" "$($core.FullName)/plugins"
+          & "$($core.FullName)/oxiguitar-cli.exe" info $env:SAMPLE | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'the core with the plugin zip opened nothing' }
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/*.zip
+          path: dist/OxiGuitar-[0-9]*-windows-*.zip
           archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-plugins-basic-*.zip
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: oxp-windows-${{ matrix.arch }}
+          path: dist/oxp/*.oxp
           retention-days: 14
           if-no-files-found: error
 
@@ -232,11 +400,25 @@ jobs:
           for target in aarch64-apple-darwin x86_64-apple-darwin; do
             cargo build --release --locked -p oxiguitar-app --target "$target"
           done
+          # The command-line tool, for testing the plugin zip below.
+          cargo build --release --locked -p oxiguitar-cli --target aarch64-apple-darwin
           mkdir -p dist/macos
           lipo -create -output dist/macos/oxiguitar \
             target/aarch64-apple-darwin/release/oxiguitar \
             target/x86_64-apple-darwin/release/oxiguitar
           lipo -info dist/macos/oxiguitar
+      # Our plugins, each one universal file, packaged apart from the app.
+      - run: |
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            scripts/build-plugins.sh --target "$target"
+          done
+          mkdir -p dist/macos/PlugIns
+          for plugin in target/aarch64-apple-darwin/PlugIns/*.oxp; do
+            name="$(basename "$plugin")"
+            lipo -create -output "dist/macos/PlugIns/$name" \
+              "$plugin" "target/x86_64-apple-darwin/PlugIns/$name"
+            lipo -info "dist/macos/PlugIns/$name"
+          done
       - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
@@ -249,13 +431,42 @@ jobs:
           app="$mount/OxiGuitar.app"
           plutil -p "$app/Contents/Info.plist" | grep -E "CFBundleIdentifier|CFBundleShortVersionString|gp5"
           lipo -info "$app/Contents/MacOS/oxiguitar" | grep -q "x86_64 arm64"
+          test ! -e "$app/Contents/PlugIns"
           test -f "$app/Contents/Resources/OxiGuitar.icns"
           codesign --verify --verbose "$app"
+          # The core alone opens nothing; with the plugin zip it opens the
+          # sample (the zip unpacked into a plugin folder).
+          # A copy of the command-line tool away from the build's PlugIns.
+          home="$RUNNER_TEMP/oxiguitar-home"
+          mkdir -p "$home/plugins" "$RUNNER_TEMP/empty-home" "$RUNNER_TEMP/cli/bin"
+          cp target/aarch64-apple-darwin/release/oxiguitar-cli "$RUNNER_TEMP/cli/bin/"
+          cli="$RUNNER_TEMP/cli/bin/oxiguitar-cli"
+          ! OXIGUITAR_HOME="$RUNNER_TEMP/empty-home" "$cli" info "$SAMPLE"
+          unzip -q dist/OxiGuitar-plugins-basic-*-macos-universal.zip -d "$home/plugins"
+          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 5
+          for plugin in "$home"/plugins/*.oxp; do
+            lipo -info "$plugin" | grep -q "x86_64 arm64"
+            codesign --verify "$plugin"
+          done
+          OXIGUITAR_HOME="$home" "$cli" info "$SAMPLE" > /dev/null
+          test "$(ls dist/oxp/*.oxp | wc -l)" -eq 5
           hdiutil detach "$mount"
       - uses: actions/upload-artifact@v7
         with:
           path: dist/*.dmg
           archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-plugins-basic-*.zip
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: oxp-macos-universal
+          path: dist/oxp/*.oxp
           retention-days: 14
           if-no-files-found: error
 
@@ -284,24 +495,54 @@ jobs:
           path: dist
           merge-multiple: true
           skip-decompress: true
+      # Each plugin on its own: these artifacts are zipped, so unpacked here.
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: oxp-*
+          path: dist
+          merge-multiple: true
       - name: Check the packages
         run: |
-          # Exactly the nine packages, each a file: a .deb, an .rpm and an
-          # AppImage for each Linux architecture, a zip for each Windows
-          # architecture and the universal .dmg.
+          # Each kind of file, by name. The core: a .deb, an .rpm and an
+          # AppImage of each Linux build (Wayland, X11) for each Linux
+          # architecture, a zip for each Windows architecture and the
+          # universal .dmg. The basic plugins: a .deb and an .rpm for each
+          # Linux architecture, a zip for each of the five targets, and each
+          # plugin's own file for each of them.
           find dist -mindepth 1 -maxdepth 1 -printf '%y %s %f\n' | sort -k3
           if find dist -mindepth 1 -maxdepth 1 ! -type f | grep -q .; then
             echo "::error::dist/ holds something that is not a file" >&2
             exit 1
           fi
-          count="$(find dist -mindepth 1 -maxdepth 1 -type f | wc -l)"
-          if [ "$count" -ne 9 ]; then
-            echo "::error::expected 9 packages in dist/, found $count" >&2
-            exit 1
-          fi
-          for f in dist/*.zip; do
+          expect() { # expect COUNT PATTERN WHAT
+            local n
+            n="$(find dist -mindepth 1 -maxdepth 1 -type f -name "$2" | wc -l)"
+            if [ "$n" -ne "$1" ]; then
+              echo "::error::expected $1 $3 ($2), found $n" >&2
+              exit 1
+            fi
+          }
+          expect 2 'oxiguitar_*.deb' 'Wayland core .deb'
+          expect 2 'oxiguitar-x11_*.deb' 'X11 core .deb'
+          expect 2 'oxiguitar-plugins-basic_*.deb' 'plugin .deb'
+          expect 2 'oxiguitar-[0-9]*.rpm' 'Wayland core .rpm'
+          expect 2 'oxiguitar-x11-*.rpm' 'X11 core .rpm'
+          expect 2 'oxiguitar-plugins-basic-*.rpm' 'plugin .rpm'
+          expect 2 'OxiGuitar-[0-9]*.AppImage' 'Wayland AppImage'
+          expect 2 'OxiGuitar-x11-*.AppImage' 'X11 AppImage'
+          expect 2 'OxiGuitar-[0-9]*-windows-*.zip' 'Windows core zip'
+          expect 1 '*.dmg' '.dmg'
+          expect 5 'OxiGuitar-plugins-basic-*.zip' 'plugin zip'
+          expect 25 '*.oxp' 'plugin file'
+          expect 49 '*' 'files in all'
+          for f in dist/OxiGuitar-[0-9]*-windows-*.zip; do
             unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
             unzip -l "$f" | grep -q 'oxiguitar.exe' || { echo "::error::$f has no oxiguitar.exe" >&2; exit 1; }
+            ! unzip -l "$f" | grep -q '\.oxp$' || { echo "::error::$f holds plugins" >&2; exit 1; }
+          done
+          for f in dist/OxiGuitar-plugins-basic-*.zip; do
+            unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
+            [ "$(unzip -l "$f" | grep -c '\.oxp$')" -eq 5 ] || { echo "::error::$f lacks our five plugins" >&2; exit 1; }
           done
       - name: Checksums
         run: (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)

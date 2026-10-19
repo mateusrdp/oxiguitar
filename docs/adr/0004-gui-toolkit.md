@@ -1,6 +1,6 @@
 # 0004 — GUI toolkit: Slint
 
-- Status: accepted (Mateus merged the M0 pull request, #5, on 16 October 2026)
+- Status: accepted (Mateus merged the M0 pull request, #5, on 16 October 2026); since 19 Oct 2026 the app is pinned to Slint 1.17.1 for a Wayland-only clipboard ([ADR 0009](0009-wayland-first.md))
 - Date: 2026-10-15
 - Milestone: M0
 

@@ -1,0 +1,138 @@
+.\" SPDX-License-Identifier: GPL-3.0-or-later
+.\" Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+.TH OXIGUITAR-CLI 1 "October 2026" "OxiGuitar" "User Commands"
+.SH NAME
+oxiguitar\-cli \- print and engrave guitar tablature files
+.SH SYNOPSIS
+.B oxiguitar\-cli info
+.RB [ \-\-bars ]
+.IR file ...
+.br
+.B oxiguitar\-cli detect
+.IR file ...
+.br
+.B oxiguitar\-cli render
+.I file
+.RB [ \-\-png
+.IR prefix ]
+.RB [ \-\-pdf
+.IR file ]
+.RI [ options ]
+.br
+.B oxiguitar\-cli tools
+.br
+.B oxiguitar\-cli specimen
+.RB [ \-\-png
+.IR file ]
+.RB [ \-\-pdf
+.IR file ]
+.RB [ \-\-scale
+.IR n ]
+.RB [ \-\-dark ]
+.br
+.B oxiguitar\-cli version
+.br
+.B oxiguitar\-cli help
+.SH DESCRIPTION
+.B oxiguitar\-cli
+is the command\-line companion of
+.BR oxiguitar (1).
+It reads files through the same format plugins, from the same plugin folders
+(see
+.BR oxiguitar (1)),
+and never creates or changes anything there.
+The package
+.B oxiguitar\-plugins\-basic
+holds the plugins for Guitar Pro files, versions 3 to 8.
+.SH COMMANDS
+.TP
+.BR info " [" \-\-bars "] \fIfile\fR..."
+Print the structure of each file: its format, header, bars, tracks and the
+import log.
+.B \-\-bars
+adds a line per bar and track.
+.TP
+.BI detect " file" ...
+Print the format of each file and the plugin that reads it, recognised from
+its contents rather than its extension.
+.TP
+.BI render " file"
+Engrave a score to PNG pages and/or a PDF.
+.TP
+.B tools
+List the tools, as in the Tools menu of
+.BR oxiguitar (1).
+.TP
+.B specimen
+Draw the renderer's test page into a PNG and/or a PDF.
+.TP
+.B version
+Print the version.
+.TP
+.BR help ", " \-\-help
+Print a summary of the commands.
+.SH RENDER OPTIONS
+.TP
+.BI \-\-png " prefix"
+Write PNG pages
+.IR prefix \-1.png,
+.IR prefix \-2.png,
+and so on.
+Long sheets are cut into PNGs of at most 8192 pixels.
+.TP
+.BI \-\-pdf " file"
+Write a PDF, always in pages.
+.TP
+.BI \-\-scale " n"
+Pixels per point in the PNGs (default 2).
+.TP
+.B \-\-dark
+Draw a dark page.
+.TP
+.BR \-\-layout " page|vertical|horizontal|parchment"
+The staff layout (default page).
+.TP
+.BI \-\-width " pt"
+The window width for the vertical layout.
+.TP
+.BR \-\-paper " a4|letter"
+The paper size.
+.TP
+.BR \-\-tracks " \fIlist\fR|all"
+The tracks to engrave, as numbers separated by commas (default: the first).
+.TP
+.BI \-\-staff\-space " pt"
+The distance between staff lines.
+.TP
+.BI \-\-notation " track" = notation ,...
+Each track's notation:
+.BR std ", " tab " or " both
+(default: tab for fretted instruments).
+.TP
+.B \-\-no\-dynamics
+Hide dynamics markings.
+.TP
+.BI \-\-tool " id"
+Run a tool on the score first, as the Tools menu does; may be repeated.
+.TP
+.B \-\-quiet
+Report only errors.
+.SH EXIT STATUS
+0 if every file was read, 1 if any could not be, 2 on bad usage.
+.SH ENVIRONMENT
+.BR XDG_CONFIG_HOME ", " XDG_DATA_HOME " and " OXIGUITAR_HOME
+choose the settings and the plugin folder, as for
+.BR oxiguitar (1).
+.SH EXAMPLES
+.TP
+.B oxiguitar\-cli info song.gp5
+Print the structure of song.gp5.
+.TP
+.B oxiguitar\-cli render song.gp \-\-pdf song.pdf \-\-tracks all
+Engrave every track of song.gp into a PDF.
+.SH BUGS
+Report bugs at
+.UR https://github.com/mateusrdp/oxiguitar/issues
+.UE .
+.SH SEE ALSO
+.BR oxiguitar (1)

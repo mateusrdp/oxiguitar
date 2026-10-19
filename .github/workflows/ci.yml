@@ -56,6 +56,27 @@ jobs:
           cargo clippy --workspace --all-targets --all-features --locked \
             --message-format=short -- -D warnings 2>&1 \
             | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+      # The X11 build of the app (the Wayland one is the default above), and
+      # the two builds keeping apart: no X11 crate in the Wayland build, no
+      # Wayland crate in the X11 one (docs/design/plugins.md).
+      - name: Clippy, the X11 build
+        run: |
+          set -o pipefail
+          cargo clippy -p oxiguitar-app --no-default-features --features x11 --all-targets --locked \
+            --message-format=short -- -D warnings 2>&1 \
+            | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+      - name: The two Linux builds keep apart
+        run: scripts/check-display-crates.sh
+      # Each format plugin is built with one reader of oxiguitar-formats, so
+      # each reader alone must build cleanly too.
+      - name: Clippy, each reader alone
+        run: |
+          set -o pipefail
+          for reader in gp3 gp4 gp5 gpx gp; do
+            cargo clippy -p oxiguitar-formats --no-default-features --features "$reader,plugin" --locked \
+              --message-format=short -- -D warnings 2>&1 \
+              | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+          done
       - name: Docs
         run: |
           set -o pipefail
@@ -118,19 +139,28 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
       # Failing tests also become an annotation, so they can be read without
       # downloading the job log. Bash on every runner, Windows included.
+      # Default features only: with --all-features, every plugin crate would
+      # export the plugin entry symbol, and a binary linking two of them
+      # would not link. Tests that need our plugins build each one as its
+      # .oxp file (oxiguitar-plugin-test).
       - name: cargo test
         shell: bash
         env:
           CARGO_TERM_COLOR: never
         run: |
           set +e
-          cargo test --workspace --all-features --locked 2>&1 | tee test.log
+          cargo test --workspace --locked 2>&1 | tee test.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            # The "failures:" report (panic messages), or else the end of the output.
-            report=$(sed -n '/^failures:$/,/^test result:/p' test.log | head -n 60)
+            # Each panic with the lines after it, then the "failures:" report,
+            # or else the end of the output.
+            report=$( (grep -E -A6 'panicked at|^error: test failed|signal: ' test.log; sed -n '/^failures:$/,/^test result:/p' test.log) | head -n 80)
             [ -n "$report" ] || report=$(tail -n 40 test.log)
-            echo "::error title=cargo test (${{ matrix.name }})::$(printf '%s' "$report" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            # Encoded with bash itself: macOS's BSD sed can't join lines.
+            report=${report//'%'/'%25'}
+            report=${report//$'\r'/'%0D'}
+            report=${report//$'\n'/'%0A'}
+            echo "::error title=cargo test (${{ matrix.name }})::$report"
           fi
           exit "$status"
       # A visual-regression failure leaves what was drawn and a picture of
@@ -142,8 +172,62 @@ jobs:
           path: target/tmp/visual-diff/
           if-no-files-found: ignore
 
+  # M2's last gate: the plugin developer guide builds a working plugin from
+  # the template (docs/plugins/). A copy of docs/plugins/template/ outside
+  # the repository, built against this checkout's SDK: fmt, clippy, its
+  # tests and the contract suite (cargo test and oxiguitar-plugin-test), then
+  # oxiguitar-cli opens the template's sample through the plugin file. On
+  # each of the three systems, as the guide's "Building for every system".
+  template:
+    name: Plugin template (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, os: ubuntu-24.04 }
+          - { name: Windows, os: windows-2025 }
+          - { name: macOS, os: macos-15 }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+          components: clippy, rustfmt
+          # The template's universal macOS file needs both processors.
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build a plugin from the template, as the guide says
+        shell: bash
+        env:
+          CARGO_TERM_COLOR: never
+        run: |
+          set +e
+          scripts/check-plugin-template.sh "$RUNNER_TEMP/template" 2>&1 | tee template.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            report=$( (grep -E -B2 -A8 '^error|panicked at|FAIL|^Diff in' template.log; true) | head -n 60)
+            [ -n "$report" ] || report=$(tail -n 40 template.log)
+            report=${report//'%'/'%25'}
+            report=${report//$'\r'/'%0D'}
+            report=${report//$'\n'/'%0A'}
+            echo "::error title=Plugin template (${{ matrix.name }})::$report"
+          fi
+          exit "$status"
+      # The plugin built from the template, with its sample, for trying it in
+      # the app by hand (the guide's "Try it in OxiGuitar").
+      - uses: actions/upload-artifact@v7
+        with:
+          name: example-plugin-${{ runner.os }}
+          path: |
+            ${{ runner.temp }}/template/example-plugin/dist/*.oxp
+            ${{ runner.temp }}/template/example-plugin/samples/open-strings.extab
+          retention-days: 14
+
   # M1's speed budget: a 300-bar, 8-track file opens in under a second, from
-  # reading the file to the first tiles (crates/oxiguitar-app/src/speed.rs).
+  # reading the file to the first tiles (crates/oxiguitar-app/src/speed.rs);
+  # and M2's: 30 plugin manifests are read in under 10 ms at start
+  # (crates/oxiguitar-plugin-test/tests/contract.rs).
   # Only optimised builds are held to it. Thin LTO and one codegen unit are
   # turned off to build faster; that makes the check a little stricter.
   speed:
@@ -165,6 +249,8 @@ jobs:
           set +e
           cargo test --release --locked -p oxiguitar-app speed -- --nocapture 2>&1 | tee speed.log
           status=${PIPESTATUS[0]}
+          cargo test --release --locked -p oxiguitar-plugin-test --test contract speed_budget -- --nocapture 2>&1 | tee -a speed.log
+          [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
           # The times as notices on the run, and a failure as an error.
           grep -E '^speed-budget' speed.log | while read -r line; do echo "::notice title=Speed budget::$line"; done
           if [ "$status" -ne 0 ]; then
@@ -191,9 +277,19 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace xvfb libxkbcommon-x11-0 libgl1-mesa-dri libegl1 libfontconfig1-dev libxkbcommon-dev libwayland-dev
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace xvfb weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1 libfontconfig1-dev libxkbcommon-dev libwayland-dev
+      # Both Linux builds of the app: the X11 one in a target folder of its
+      # own, then copied beside the Wayland one so both find the plugins in
+      # target/lib/oxiguitar/plugins/.
+      - run: cargo build -p oxiguitar-app --no-default-features --features x11 --locked --target-dir target/x11
+      - run: cargo test -p oxiguitar-app --no-default-features --features x11 --locked --target-dir target/x11 display_system
       - run: cargo build --workspace --locked
-      - run: scripts/no-network.sh target/debug/oxiguitar-cli target/debug/oxiguitar
+      - run: cp target/x11/debug/oxiguitar target/debug/oxiguitar-x11
+      # Our plugins, where the programs look for them (target/lib/oxiguitar/
+      # plugins/), so the session reads every fixture through them.
+      - run: scripts/build-plugins.sh --debug
+      # The Wayland build in a headless Weston, the X11 build under Xvfb.
+      - run: scripts/no-network.sh target/debug/oxiguitar-cli --wayland target/debug/oxiguitar --x11 target/debug/oxiguitar-x11
 
   dco:
     name: Sign-off (DCO)
@@ -211,7 +307,7 @@ jobs:
   ci-success:
     name: ci-success
     if: always()
-    needs: [fmt, lint, test, speed, deny, no-network, dco]
+    needs: [fmt, lint, test, template, speed, deny, no-network, dco]
     runs-on: ubuntu-24.04
     steps:
       - name: Every job passed

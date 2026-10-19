@@ -1,0 +1,23 @@
+[package]
+name = "oxiguitar-plugin-test"
+description = "The OxiGuitar plugin contract suite: builds a plugin as an .oxp file and checks it against the plugin interface."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+oxiguitar-host.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+# tests/ours.rs: our plugins read every file exactly as the readers do
+# in-process.
+oxiguitar-formats.workspace = true
+oxiguitar-model = { workspace = true, features = ["wire"] }
+
+[lints]
+workspace = true

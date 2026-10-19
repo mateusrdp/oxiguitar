@@ -1,0 +1,122 @@
+# OxiGuitar and Debian's archive (ROADMAP, M2 slice 5; docs/debian.md).
+# Weekly, since Debian moves on its own, and on every change to Cargo.lock
+# or the packaging.
+#
+# crates: every crate the Linux programs and the basic plugins are built
+# from, against the librust-*-dev packages Debian unstable has
+# (scripts/debian/crate-audit.py). The report is the run's summary, notices
+# on the check run and an artifact; it informs, it fails nothing.
+#
+# packages: debian/ builds both packages in sid with no network.
+name: Debian
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - Cargo.lock
+      - debian/**
+      - scripts/debian/**
+      - .github/workflows/debian.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: debian-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  crates:
+    name: Crates against Debian
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python3 -I scripts/debian/crate-audit.py list > crates.tsv
+      - name: Check them against Debian sid
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euc '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3 > /dev/null
+            python3 -I scripts/debian/crate-audit.py check crates.tsv > debian-crates.md
+          '
+          cat debian-crates.md >> "$GITHUB_STEP_SUMMARY"
+          python3 -I scripts/debian/crate-audit.py annotate debian-crates.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: debian-crates
+          path: debian-crates.md
+
+  # debian/: the Debian source made from HEAD (scripts/debian/source.sh), its
+  # build dependencies installed from sid, then dpkg-buildpackage with no
+  # network at all, lintian on the source and both packages, and the
+  # packages installed into a clean sid.
+  packages:
+    name: Debian packages, built offline in sid
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg-dev
+      - run: scripts/debian/source.sh build
+      - name: Build dependencies from sid
+        run: |
+          docker run --name sid-build -v "$PWD/build:/build" -w /build debian:sid bash -euxc '
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get build-dep -y --no-install-recommends ./oxiguitar-*/
+          '
+          docker commit sid-build oxiguitar-sid-build
+      # On failure, the log's last lines become an annotation.
+      - name: Build with no network
+        run: |
+          status=0
+          docker run --rm --network none -v "$PWD/build:/build" oxiguitar-sid-build bash -euc '
+            cd /build/oxiguitar-*/
+            dpkg-buildpackage -us -uc -j"$(nproc)" > ../build.log 2>&1
+          ' || status=$?
+          tail -n 200 build/build.log
+          if [[ "$status" -ne 0 ]]; then
+            echo "::error title=dpkg-buildpackage failed::$(grep -v '^ *\(Compiling\|Running\|Fresh\) ' build/build.log | tail -n 40 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit "$status"
+          fi
+          ls -l build
+      # scripts/package/lintian.sh: errors and warnings fail, but for the
+      # tags about the placeholder contact at the reserved .invalid domain
+      # (docs/debian.md) and the one asking the first upload to close its
+      # ITP bug, which isn't filed yet.
+      - name: Lintian
+        run: |
+          docker run --rm -e GITHUB_ACTIONS -v "$PWD:/w" -w /w debian:sid bash -euc '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends lintian > /dev/null
+            cd build
+            ../scripts/package/lintian.sh \
+              --allow bogus-mail-host --allow bogus-mail-host-in-debian-changelog \
+              --allow initial-upload-closes-no-bugs \
+              ./*.changes
+          '
+      - name: Install them into a clean sid
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euxc '
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              shared-mime-info desktop-file-utils weston libgl1-mesa-dri man-db
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar_*.deb
+            ! oxiguitar-cli info fixtures/gp/oxiguitar-test-song.gp 2> /dev/null
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar-plugins-basic_*.deb
+            for f in fixtures/gp/*; do oxiguitar-cli info "$f" > /dev/null; done
+            man -w oxiguitar oxiguitar-cli
+            OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar fixtures/gp/oxiguitar-test-song.gp
+          '
+      - uses: actions/upload-artifact@v7
+        with:
+          name: debian-packages
+          path: |
+            build/*.deb
+            build/*.dsc
+            build/*.debian.tar.xz
+            build/*.buildinfo
+            build/*.changes

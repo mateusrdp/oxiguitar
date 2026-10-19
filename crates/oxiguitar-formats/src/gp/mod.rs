@@ -81,10 +81,10 @@ struct Reader<'a> {
 
 /// Reads a Guitar Pro 3, 4 or 5 file.
 pub(crate) fn read(data: &[u8], format: &Format) -> std::result::Result<GpRead, ReadError> {
-    let version_text = match format {
-        Format::GuitarPro3 { version }
-        | Format::GuitarPro4 { version }
-        | Format::GuitarPro5 { version } => version,
+    let (version_text, major) = match format {
+        Format::GuitarPro3 { version } => (version, 3),
+        Format::GuitarPro4 { version } => (version, 4),
+        Format::GuitarPro5 { version } => (version, 5),
         other => {
             return Err(ReadError::new(
                 ReadErrorKind::Unsupported(other.describe()),
@@ -92,12 +92,16 @@ pub(crate) fn read(data: &[u8], format: &Format) -> std::result::Result<GpRead, 
             ));
         }
     };
-    let version = Version::parse(version_text).ok_or_else(|| {
-        ReadError::new(
-            ReadErrorKind::Invalid(format!("unknown Guitar Pro version \"{version_text}\"")),
-            Some(1),
-        )
-    })?;
+    // The version's major number must be the one the header names (so
+    // "5.10", not "50.1"), and one this build reads.
+    let version = Version::parse(version_text)
+        .filter(|v| v.0 == major && reads(major))
+        .ok_or_else(|| {
+            ReadError::new(
+                ReadErrorKind::Invalid(format!("unknown Guitar Pro version \"{version_text}\"")),
+                Some(1),
+            )
+        })?;
     let mut r = Reader {
         c: Cursor::new(data),
         version,
@@ -114,9 +118,33 @@ pub(crate) fn read(data: &[u8], format: &Format) -> std::result::Result<GpRead, 
     })
 }
 
+/// Whether this build reads Guitar Pro `major` (its Cargo feature is on).
+const fn reads(major: u8) -> bool {
+    (major == 3 && cfg!(feature = "gp3"))
+        || (major == 4 && cfg!(feature = "gp4"))
+        || (major == 5 && cfg!(feature = "gp5"))
+}
+
 impl Reader<'_> {
     fn major(&self) -> u8 {
         self.version.0
+    }
+
+    /// Whether the file is Guitar Pro `major`. Never true for a version this
+    /// build doesn't read, so the compiler leaves that version's code out of
+    /// a plugin built for another version.
+    fn is(&self, major: u8) -> bool {
+        reads(major) && self.version.0 == major
+    }
+
+    /// Guitar Pro 3 or 4.
+    fn before_v5(&self) -> bool {
+        self.is(3) || self.is(4)
+    }
+
+    /// Guitar Pro 4 or 5.
+    fn since_v4(&self) -> bool {
+        self.is(4) || self.is(5)
     }
 
     fn here(&self) -> String {
@@ -137,16 +165,16 @@ impl Reader<'_> {
             .map_err(|e| e.within(|| "score information".into()))?;
 
         let mut song_triplet_feel = TripletFeel::None;
-        if self.major() < 5 && self.c.bool()? {
+        if self.before_v5() && self.c.bool()? {
             song_triplet_feel = TripletFeel::Triplet8th;
         }
-        let lyrics = if self.major() >= 4 {
+        let lyrics = if self.since_v4() {
             Some(self.lyrics().map_err(|e| e.within(|| "lyrics".into()))?)
         } else {
             None
         };
         let song_key: i32;
-        if self.major() == 5 {
+        if self.is(5) {
             if self.version > V5_00 {
                 // RSE master effect: volume, an unknown int, 11 equaliser bands.
                 self.c.skip(4 + 4 + 11)?;
@@ -163,14 +191,14 @@ impl Reader<'_> {
         } else {
             score.initial_tempo = f64::from(self.c.i32()?);
             song_key = self.c.i32()?;
-            if self.major() == 4 {
+            if self.is(4) {
                 self.c.i8()?; // octave, unused
             }
         }
         let channels = self
             .channels()
             .map_err(|e| e.within(|| "MIDI channel table".into()))?;
-        let directions = if self.major() == 5 {
+        let directions = if self.is(5) {
             let d = self.directions()?;
             self.c.i32()?; // master reverb
             d
@@ -205,7 +233,7 @@ impl Reader<'_> {
                 .map_err(|e| e.within(|| format!("track {}", i + 1)))?;
             score.tracks.push(track);
         }
-        if self.major() == 5 {
+        if self.is(5) {
             self.c.skip(if self.version == V5_00 { 2 } else { 1 })?;
         }
 
@@ -242,7 +270,7 @@ impl Reader<'_> {
             album: self.c.int_byte_size_string()?,
             ..ScoreInfo::default()
         };
-        if self.major() == 5 {
+        if self.is(5) {
             info.words = self.c.int_byte_size_string()?;
             info.music = self.c.int_byte_size_string()?;
         } else {
@@ -350,7 +378,7 @@ impl Reader<'_> {
         first_key: KeySignature,
         song_triplet_feel: TripletFeel,
     ) -> Result<MasterBar> {
-        if self.major() == 5 && index > 0 {
+        if self.is(5) && index > 0 {
             self.c.skip(1)?;
         }
         let prev = previous.last();
@@ -385,14 +413,14 @@ impl Reader<'_> {
             let n = self.c.i8()?;
             // Guitar Pro 5 stores how many times the section plays; earlier
             // versions store how many times it repeats.
-            let plays = if self.major() == 5 {
+            let plays = if self.is(5) {
                 i32::from(n)
             } else {
                 i32::from(n) + 1
             };
             mb.repeat_end = Some(u8::try_from(plays.clamp(2, 99)).unwrap_or(2));
         }
-        if self.major() < 5 && flags & 0x10 != 0 {
+        if self.before_v5() && flags & 0x10 != 0 {
             mb.alternate_endings = alternate_endings_v3(self.c.u8()?, previous);
         }
         if flags & 0x20 != 0 {
@@ -415,7 +443,7 @@ impl Reader<'_> {
             };
         }
         mb.double_bar = flags & 0x80 != 0;
-        if self.major() == 5 {
+        if self.is(5) {
             if flags & 0x03 != 0 {
                 self.c.skip(4)?; // beam grouping
             }
@@ -443,7 +471,7 @@ impl Reader<'_> {
     }
 
     fn track(&mut self, index: usize, channels: &[Channel]) -> Result<Track> {
-        if self.major() == 5 && (index == 0 || self.version == V5_00) {
+        if self.is(5) && (index == 0 || self.version == V5_00) {
             self.c.skip(1)?;
         }
         let flags = self.c.u8()?;
@@ -476,7 +504,7 @@ impl Reader<'_> {
             fret_count: u8::try_from(fret_count.clamp(1, 36)).unwrap_or(24),
             ..Staff::default()
         };
-        if self.major() == 5 {
+        if self.is(5) {
             let flags2 = self.c.i16()?;
             staff.show_tablature = flags2 & 0x01 != 0;
             staff.show_standard = flags2 & 0x02 != 0;
@@ -584,7 +612,7 @@ impl Reader<'_> {
             clef: score.tracks.get(ti).map_or(Clef::Treble8vb, clef_for),
             voices: Vec::new(),
         };
-        let voices = if self.major() == 5 { 2 } else { 1 };
+        let voices = if self.is(5) { 2 } else { 1 };
         for vi in 0..voices {
             let voice = self.voice(ti, string_count, vi == 0, tempo)?;
             if vi == 0 || !voice.is_empty() {
@@ -605,7 +633,7 @@ impl Reader<'_> {
                 }
             }
         }
-        if self.major() == 5 {
+        if self.is(5) {
             // Line break marker; the last bar of a file may omit it.
             if self.c.remaining() > 0 {
                 self.c.u8()?;
@@ -703,7 +731,7 @@ impl Reader<'_> {
             beat.kind = BeatKind::Rest;
         }
 
-        if self.major() == 5 {
+        if self.is(5) {
             let flags2 = self.c.i16()?;
             if flags2 & 0x0800 != 0 {
                 self.c.u8()?; // secondary beam break
@@ -771,7 +799,7 @@ impl Reader<'_> {
 
     fn mix_table_change(&mut self) -> Result<Option<i32>> {
         let instrument = self.c.i8()?;
-        if self.major() == 5 {
+        if self.is(5) {
             self.rse_instrument()?;
             if self.version == V5_00 {
                 self.c.skip(1)?;
@@ -782,7 +810,7 @@ impl Reader<'_> {
         for v in &mut values {
             *v = self.c.i8()?;
         }
-        if self.major() == 5 {
+        if self.is(5) {
             self.c.int_byte_size_string()?; // tempo name
         }
         let tempo = self.c.i32()?;
@@ -797,10 +825,10 @@ impl Reader<'_> {
                 self.c.bool()?; // tempo hidden
             }
         }
-        if self.major() >= 4 {
+        if self.since_v4() {
             self.c.u8()?; // "apply to all tracks" flags
         }
-        if self.major() == 5 {
+        if self.is(5) {
             self.c.i8()?; // wah
             if self.version > V5_00 {
                 self.c.int_byte_size_string()?; // RSE effect
@@ -829,7 +857,7 @@ impl Reader<'_> {
         if flags & 0x20 != 0 {
             kind = self.c.u8()?;
         }
-        if self.major() < 5 && flags & 0x01 != 0 {
+        if self.before_v5() && flags & 0x01 != 0 {
             self.c.skip(2)?; // independent duration and tuplet, unused by Guitar Pro itself
         }
         if flags & 0x10 != 0 {
@@ -845,7 +873,7 @@ impl Reader<'_> {
             note.effects.left_finger = u8::try_from(left).ok().filter(|f| *f <= 4);
             note.effects.right_finger = u8::try_from(right).ok().filter(|f| *f <= 4);
         }
-        if self.major() == 5 {
+        if self.is(5) {
             if flags & 0x01 != 0 {
                 self.c.f64()?; // duration percent
             }
@@ -873,7 +901,7 @@ impl Reader<'_> {
         if flags & 0x40 != 0 {
             note.effects.accent = Some(oxiguitar_model::Accent::Normal);
         }
-        if self.major() == 5 && flags & 0x02 != 0 {
+        if self.is(5) && flags & 0x02 != 0 {
             note.effects.accent = Some(oxiguitar_model::Accent::Heavy);
         }
         let mut grace = None;

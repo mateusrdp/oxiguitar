@@ -17,3 +17,7 @@ Thumbs.db
 # Release packages built by scripts/package/.
 /dist/
 /docs/manual/book/
+/docs/plugins/book/
+
+# Made when the plugin template is built in place; authors commit their own.
+docs/plugins/template/Cargo.lock

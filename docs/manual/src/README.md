@@ -4,7 +4,7 @@ OxiGuitar is a free guitar tablature and score viewer for Windows, macOS and Lin
 
 ![The OxiGuitar window with a score in the Page layout](images/window.png)
 
-The window has menus at the top, the score in the middle, the track list along the bottom and the score zoom at the bottom right. Everything else is in the menus or on a key: see [Keyboard and mouse](keys.md).
+The window has menus and a toolbar at the top, the player above the score, the palette on the left (greyed out until the editor), the score in the middle, the track list with each track's mixer along the bottom and a line of messages at the very bottom: see [The window](window.md). Shortcuts are in [Keyboard and mouse](keys.md).
 
 **Privacy.** OxiGuitar never connects to the internet on its own and never sends anything anywhere: no telemetry, no accounts, no automatic crash reports.
 

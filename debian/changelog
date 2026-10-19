@@ -1,0 +1,6 @@
+oxiguitar (0.2.0+ds-1) UNRELEASED; urgency=medium
+
+  * The packaging for Debian, built offline from the crates in the
+    orig-vendor component until Debian has them all (docs/debian.md).
+
+ -- OxiGuitar <maintainer@oxiguitar.invalid>  Mon, 19 Oct 2026 01:30:00 +1100

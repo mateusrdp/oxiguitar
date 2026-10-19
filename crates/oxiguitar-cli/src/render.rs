@@ -131,15 +131,15 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         }
     };
     let started = Instant::now();
-    let imported = match oxiguitar_formats::read(&data) {
-        Ok(i) => i,
+    let opened = match crate::plugins::open(&file, &data) {
+        Ok(o) => o,
         Err(e) => {
             eprintln!("{file}: {e}");
             return ExitCode::FAILURE;
         }
     };
     let read_ms = ms(started);
-    let mut score = imported.score;
+    let mut score = opened.score;
     for tool in tools {
         let outcome = tool.apply(&score);
         if !quiet {

@@ -1,0 +1,31 @@
+[package]
+name = "oxiguitar-host"
+description = "The OxiGuitar core's plugin host: the user folder, settings.json, the plugin folders and what was found in them."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+oxiguitar-plugin-api.workspace = true
+serde_json.workspace = true
+object.workspace = true
+libloading.workspace = true
+
+# The loader (src/loader.rs) is the one module with `unsafe` code, so the
+# crate denies it (which a module can allow) rather than forbidding it.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+print_stderr = "allow"
+undocumented_unsafe_blocks = "warn"

@@ -48,12 +48,14 @@ pub(crate) struct GpifRead {
     pub(crate) log: ImportLog,
 }
 
+#[cfg(feature = "gpx")]
 /// Reads a Guitar Pro 6 file (BCFZ or BCFS container).
 pub(crate) fn read_gpx(data: &[u8]) -> Result<GpifRead, ReadError> {
     let files = container::gpx(data).map_err(|e| e.within(|| "GPX container".into()))?;
     read_files(&files)
 }
 
+#[cfg(feature = "gp")]
 /// Reads a Guitar Pro 7 or 8 file (ZIP archive).
 pub(crate) fn read_gp7(data: &[u8]) -> Result<GpifRead, ReadError> {
     let files = container::gp7(data).map_err(|e| e.within(|| "ZIP archive".into()))?;

@@ -1,0 +1,3 @@
+Test-Command: home=$(mktemp -d); for f in fixtures/gp/*; do OXIGUITAR_HOME=$home oxiguitar-cli info "$f" > /dev/null; done; OXIGUITAR_HOME=$home oxiguitar-cli render fixtures/gp/oxiguitar-test-song.gp --pdf "$AUTOPKGTEST_TMP/song.pdf" --quiet; test -s "$AUTOPKGTEST_TMP/song.pdf"
+Depends: oxiguitar, oxiguitar-plugins-basic
+Restrictions: superficial

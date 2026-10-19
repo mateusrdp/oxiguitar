@@ -1,0 +1,93 @@
+.\" SPDX-License-Identifier: GPL-3.0-or-later
+.\" Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+.TH OXIGUITAR 1 "October 2026" "OxiGuitar" "User Commands"
+.SH NAME
+oxiguitar \- guitar tablature viewer, editor and player
+.SH SYNOPSIS
+.B oxiguitar
+.RB [ \-\-safe\-mode ]
+.RI [ file ]
+.SH DESCRIPTION
+.B oxiguitar
+shows guitar tablature and standard notation in a window, in four layouts,
+and exports it to PDF.
+With
+.I file
+it opens that file when it starts.
+.PP
+OxiGuitar opens and saves files only through format plugins, single files
+ending in
+.IR .oxp .
+The package
+.B oxiguitar\-plugins\-basic
+holds the plugins the project writes, which open Guitar Pro files of every
+version from 3 to 8 (.gp3, .gp4, .gp5, .gpx, .gp).
+With no format plugin installed, nothing can be opened, and the footer says
+where to get plugins.
+A plugin is loaded only when it is first needed.
+.PP
+.B Tools \(-> Plugins
+lists the plugins found, with their versions, and enables or disables each
+one from the next start.
+.B Help \(-> About
+lists the plugin folders in the order they are searched.
+.PP
+OxiGuitar sends nothing over the network.
+.SH OPTIONS
+.TP
+.B \-\-safe\-mode
+Start without using any plugin.
+The plugin manager still lists them, so a plugin that keeps OxiGuitar from
+working can be disabled.
+.SH FILES
+.TP
+.I ~/.config/oxiguitar/settings.json
+The settings, created as
+.B {}
+on the first start.
+.B plugin_folders
+replaces the folders searched for plugins, and
+.B disabled
+lists the plugins not to use.
+.TP
+.I ~/.local/share/oxiguitar/plugins/
+Your own plugins, created on the first start.
+.TP
+.I /usr/lib/oxiguitar/plugins/
+The plugins installed by packages.
+OxiGuitar only reads this folder.
+.SH ENVIRONMENT
+.TP
+.B XDG_CONFIG_HOME
+Replaces
+.I ~/.config
+in the path of the settings.
+.TP
+.B XDG_DATA_HOME
+Replaces
+.I ~/.local/share
+in the path of your plugin folder.
+.TP
+.B OXIGUITAR_HOME
+One folder for the settings and your plugins, in place of both above.
+.TP
+.BR WAYLAND_DISPLAY ", " DISPLAY
+The display to open the window on.
+The
+.B oxiguitar
+package is the Wayland build; on a desktop without Wayland, install
+.B \%oxiguitar\-x11
+instead.
+A build started where it can't open a window says which build is needed.
+.SH EXIT STATUS
+0 when the window is closed; 1 if it could not be opened.
+.SH BUGS
+Report bugs at
+.UR https://github.com/mateusrdp/oxiguitar/issues
+.UE .
+.SH SEE ALSO
+.BR oxiguitar\-cli (1)
+.PP
+The user manual:
+.UR https://mateusrdp.github.io/oxiguitar/
+.UE

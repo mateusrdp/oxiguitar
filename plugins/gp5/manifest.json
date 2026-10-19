@@ -1,0 +1,30 @@
+{
+  "interface": "1.0",
+  "id": "oxiguitar.gp5",
+  "name": "Guitar Pro 5",
+  "version": "0.2.0",
+  "description": "Reads Guitar Pro 5 files (.gp5).",
+  "authors": ["Mateus Rocha de Paula", "The OxiGuitar contributors"],
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/mateusrdp/oxiguitar",
+  "formats": [
+    {
+      "id": "gp5",
+      "name": "Guitar Pro 5",
+      "extensions": ["gp5"],
+      "read": true,
+      "write": false,
+      "signatures": [
+        { "at": 1, "text": "FICHIER GUITAR PRO v5" },
+        { "at": 1, "text": "FICHIER GUITAR PRO L5" },
+        { "at": 1, "text": "FICHIER GUITAR PRO 5" },
+        { "at": 1, "text": "FICHIER GUITARE PRO v5" },
+        { "at": 1, "text": "FICHIER GUITARE PRO L5" },
+        { "at": 1, "text": "FICHIER GUITARE PRO 5" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO v5" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO L5" },
+        { "at": 1, "text": "CLIPBOARD GUITAR PRO 5" }
+      ]
+    }
+  ]
+}

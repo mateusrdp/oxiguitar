@@ -1,9 +1,12 @@
-# The user manual (docs/manual/, mdBook) on GitHub Pages.
+# The user manual (docs/manual/) and the plugin developer guide (docs/plugins/),
+# both mdBook, on GitHub Pages.
 #
-# - On pull requests that touch the manual: build it, so broken links and
-#   missing pages show up before the merge.
-# - On pushes to main that touch it (so it describes the released program),
-#   and by hand: build it and publish it to https://mateusrdp.github.io/oxiguitar/.
+# - On pull requests that touch either: build them, so broken links, missing
+#   pages and examples missing from the template show up before the merge.
+# - On pushes to main that touch them (so they describe the released program),
+#   and by hand: build them and publish the manual to
+#   https://mateusrdp.github.io/oxiguitar/ and the guide to
+#   https://mateusrdp.github.io/oxiguitar/plugins/.
 #
 # Pages must use "GitHub Actions" as its source (Settings → Pages), and the
 # github-pages environment must allow main (Settings → Environments).
@@ -14,9 +17,9 @@ name: Manual
 on:
   push:
     branches: [main]
-    paths: [docs/manual/**, .github/workflows/docs.yml]
+    paths: [docs/manual/**, docs/plugins/**, .github/workflows/docs.yml]
   pull_request:
-    paths: [docs/manual/**, .github/workflows/docs.yml]
+    paths: [docs/manual/**, docs/plugins/**, .github/workflows/docs.yml]
   workflow_dispatch:
 
 permissions:
@@ -32,7 +35,7 @@ env:
 
 jobs:
   build:
-    name: Build the manual
+    name: Build the manual and the guide
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -45,7 +48,19 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$file" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
       - name: Build
-        run: mdbook build docs/manual
+        # mdBook only warns about an example it can't include (a file or an
+        # anchor missing from the template); fail instead.
+        run: |
+          set -o pipefail
+          for book in docs/manual docs/plugins; do
+            mdbook build "$book" 2>&1 | tee "$RUNNER_TEMP/mdbook.log"
+            if grep -E "WARN|ERROR" "$RUNNER_TEMP/mdbook.log"; then
+              echo "::error::mdbook build $book warned"
+              exit 1
+            fi
+          done
+          # The guide is published under the manual, at /plugins/.
+          cp -R docs/plugins/book docs/manual/book/plugins
       - name: Check internal links
         # mdBook only warns about a link to a missing page; fail instead.
         run: |
