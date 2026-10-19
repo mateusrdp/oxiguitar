@@ -502,6 +502,34 @@ fn main() -> Result<(), slint::PlatformError> {
         let Some(key) = editing::Key::from_name(name.as_str()) else {
             return false;
         };
+        // With one track on the page, Ctrl + Up and Down show the previous
+        // or next track in its place, as Guitar Pro's single-track view.
+        if ctrl && !shift && matches!(key, editing::Key::Up | editing::Key::Down) {
+            let target = {
+                let s = a.borrow();
+                let shown = s.tracks.shown();
+                match (shown.as_slice(), s.editing.track()) {
+                    ([only], Some(t)) if *only == t => {
+                        if key == editing::Key::Down {
+                            (t + 1 < s.tracks.len()).then_some(t + 1)
+                        } else {
+                            t.checked_sub(1)
+                        }
+                    }
+                    _ => None,
+                }
+            };
+            if let Some(t) = target {
+                {
+                    let mut s = a.borrow_mut();
+                    s.tracks.switch_to(t);
+                    s.editing.select_track(t);
+                }
+                sync_tracks(&a);
+                caret_moved(&a);
+                return true;
+            }
+        }
         let taken = a.borrow_mut().editing.key(key, shift, ctrl);
         if taken {
             caret_moved(&a);
@@ -548,6 +576,19 @@ fn main() -> Result<(), slint::PlatformError> {
         a.borrow_mut().palette.toggle(g as usize);
         if let Some(ui) = a.borrow().ui.upgrade() {
             set_palette(&a, &ui, false);
+        }
+    });
+    let a = app.clone();
+    ui.on_palette_tool_clicked(move |id| {
+        let Some(v) = palette::voice_of(id.as_str()) else {
+            return;
+        };
+        let moved = a
+            .borrow_mut()
+            .editing
+            .key(editing::Key::Voice(v), false, true);
+        if moved {
+            caret_moved(&a);
         }
     });
     let a = app.clone();
@@ -1655,6 +1696,7 @@ fn sync_caret(app: &Shared, scroll: bool) {
             .unwrap_or(-1),
     );
     ui.set_bad_bars(s.editing.any_shown(&s.bad));
+    sync_voice_buttons(&ui, s.editing.voice());
     if let (true, Some(b)) = (scroll, column) {
         let px = PX_PER_PT * s.zoom;
         let x0 = ui.get_origin_x() + b.x * px;
@@ -1861,8 +1903,9 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
                     .map(|t| PaletteToolRow {
                         id: t.id.into(),
                         icon: images.next().unwrap_or_default(),
-                        tip: palette::tip(t.name).into(),
+                        tip: palette::tool_tip(t.id, t.name).into(),
                         enabled: false,
+                        checked: false,
                     })
                     .collect();
                 ModelRc::new(VecModel::from(rows))
@@ -1876,12 +1919,39 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
             }
         })
         .collect();
+    let voice = s.editing.voice();
     drop(s);
     if fresh {
         ui.set_palette_groups(ModelRc::new(VecModel::from(groups)));
     } else {
         for (g, row) in groups.into_iter().enumerate() {
             model.set_row_data(g, row);
+        }
+    }
+    sync_voice_buttons(ui, voice);
+}
+
+/// The palette's voice buttons: usable with a score open, the caret's
+/// voice highlighted.
+fn sync_voice_buttons(ui: &AppWindow, voice: Option<usize>) {
+    let groups = ui.get_palette_groups();
+    for g in 0..groups.row_count() {
+        let Some(group) = groups.row_data(g) else {
+            continue;
+        };
+        for i in 0..group.tools.row_count() {
+            let Some(mut row) = group.tools.row_data(i) else {
+                continue;
+            };
+            let Some(v) = palette::voice_of(row.id.as_str()) else {
+                continue;
+            };
+            let (enabled, checked) = (voice.is_some(), voice == Some(v));
+            if (row.enabled, row.checked) != (enabled, checked) {
+                row.enabled = enabled;
+                row.checked = checked;
+                group.tools.set_row_data(i, row);
+            }
         }
     }
 }

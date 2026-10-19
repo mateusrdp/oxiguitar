@@ -13,10 +13,10 @@ A box over the page shows where the next edit goes: a beat of one voice, and on 
 | Home / End | The first / last beat of the bar |
 | Ctrl + Home / Ctrl + End | The first / last bar |
 | Tab / Shift + Tab | The next / previous staff |
-| Ctrl + Up / Ctrl + Down | The previous / next track shown |
-| Ctrl + 1 to Ctrl + 4 | Voice 1 to 4, at the same moment of the bar |
+| Ctrl + Up / Ctrl + Down | The previous / next track shown; with a single track on the page, the previous / next track of the song takes its place |
+| Ctrl + 1 to Ctrl + 4 | Voice 1 to 4, at the same moment of the bar (or the voice buttons at the top of the palette) |
 
-The page scrolls to keep the caret in view. A click on a track's name in the Tracks tab selects that track and moves the caret to it; the selected track's name is highlighted.
+The page scrolls to keep the caret in view. The palette's voice buttons, 1 to 4 at its top, show which voice the caret is in. A click on a track's name in the Tracks tab selects that track and moves the caret to it; the selected track's name is highlighted.
 
 ## Selecting
 

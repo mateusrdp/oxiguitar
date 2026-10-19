@@ -79,6 +79,33 @@ pub(crate) fn tip(name: &str) -> String {
     format!("{name} (comes with the editor)")
 }
 
+/// The tools that work already, with their shortcut (Guitar Pro 8's):
+/// the voice buttons, which pick the caret's voice (M3 slice 1).
+pub(crate) fn working(id: &str) -> Option<&'static str> {
+    Some(match id {
+        "voice-1" => "Ctrl + 1",
+        "voice-2" => "Ctrl + 2",
+        "voice-3" => "Ctrl + 3",
+        "voice-4" => "Ctrl + 4",
+        _ => return None,
+    })
+}
+
+/// The voice a voice button picks, from 0.
+pub(crate) fn voice_of(id: &str) -> Option<usize> {
+    let n: usize = id.strip_prefix("voice-")?.parse().ok()?;
+    (1..=4).contains(&n).then(|| n - 1)
+}
+
+/// A tool's tooltip: its name and shortcut once it works, else its name
+/// and that it comes with the editor.
+pub(crate) fn tool_tip(id: &str, name: &str) -> String {
+    match working(id) {
+        Some(keys) => format!("{name} ({keys})"),
+        None => tip(name),
+    }
+}
+
 /// Which groups are collapsed. Every group starts expanded.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Palette {
@@ -1164,6 +1191,18 @@ mod tests {
         ids.dedup();
         assert_eq!(ids.len(), tools().count(), "tool ids are unique");
         assert_eq!(tip("Rest"), "Rest (comes with the editor)");
+        assert_eq!(
+            tool_tip("voice-2", "Edit Voice 2"),
+            "Edit Voice 2 (Ctrl + 2)"
+        );
+        assert_eq!(tool_tip("rest", "Rest"), "Rest (comes with the editor)");
+        assert_eq!(voice_of("voice-4"), Some(3));
+        assert_eq!(voice_of("voice-5"), None);
+        assert_eq!(voice_of("multivoice"), None);
+        // Every working tool is in the palette.
+        for id in ["voice-1", "voice-2", "voice-3", "voice-4"] {
+            assert!(tools().any(|(_, t)| t.id == id), "{id}");
+        }
     }
 
     #[test]
