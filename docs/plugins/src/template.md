@@ -19,7 +19,7 @@ rm -rf oxiguitar
 cd my-plugin
 ```
 
-The template's `Cargo.toml` takes the SDK and the contract suite from crates.io, version 0.2: plugins built with it load in OxiGuitar 0.2 and later.
+The template's `Cargo.toml` takes the SDK and the contract suite from OxiGuitar's repository on GitHub, at the same tag, `v0.2.0` (Cargo downloads the repository the first time): plugins built with it load in OxiGuitar 0.2 and later. To build for a later OxiGuitar, change both tags.
 
 ## 2. Build and test it
 

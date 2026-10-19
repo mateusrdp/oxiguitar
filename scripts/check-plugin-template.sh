@@ -8,7 +8,7 @@
 #
 #   1. Copies docs/plugins/template/ to a folder outside this repository, as
 #      a plugin author would, and points its two OxiGuitar dependencies at
-#      this checkout instead of crates.io (the only change).
+#      this checkout instead of the release tag (the only change).
 #   2. cargo fmt, clippy and test in the copy: its unit tests, the test
 #      export_plugin! adds, and tests/contract.rs, which builds the .oxp
 #      file and runs the contract suite on it.
@@ -53,20 +53,21 @@ rm -rf "$plugin"
 cp -R "$root/docs/plugins/template" "$plugin"
 rm -rf "$plugin/target"
 
-# The template takes the SDK and the contract suite from crates.io; built
-# here, it uses this checkout's.
+# The template depends on a release tag; built here, it uses this checkout.
+# (Cargo fetches a git dependency even when it is patched, so the lines are
+# rewritten rather than patched.)
 manifest="$plugin/Cargo.toml"
-release='"[0-9][0-9.]*"'
-grep -q "^oxiguitar-plugin = $release\$" "$manifest"
-grep -q "^oxiguitar-plugin-test = $release\$" "$manifest"
+git_dep='git = "https://github.com/mateusrdp/oxiguitar", tag = "v[0-9.]*"'
+grep -q "^oxiguitar-plugin = { $git_dep }" "$manifest"
+grep -q "^oxiguitar-plugin-test = { $git_dep }" "$manifest"
 sdk="$root/crates/oxiguitar-plugin"
 suite="$root/crates/oxiguitar-plugin-test"
 if command -v cygpath >/dev/null; then
     sdk="$(cygpath -m "$sdk")"
     suite="$(cygpath -m "$suite")"
 fi
-sed -e "s|^oxiguitar-plugin = $release\$|oxiguitar-plugin = { path = \"$sdk\" }|" \
-    -e "s|^oxiguitar-plugin-test = $release\$|oxiguitar-plugin-test = { path = \"$suite\" }|" \
+sed -e "s|^oxiguitar-plugin = { $git_dep }|oxiguitar-plugin = { path = \"$sdk\" }|" \
+    -e "s|^oxiguitar-plugin-test = { $git_dep }|oxiguitar-plugin-test = { path = \"$suite\" }|" \
     "$manifest" > "$manifest.new"
 mv "$manifest.new" "$manifest"
 echo "check-plugin-template: the template copied to $plugin"

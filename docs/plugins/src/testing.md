@@ -30,7 +30,7 @@ A test that loads a plugin file must build it once per test program and never re
 The contract suite is also a program, for plugin files you have built:
 
 ```sh
-cargo install --locked oxiguitar-plugin-test
+cargo install --git https://github.com/mateusrdp/oxiguitar --tag v0.2.0 --locked oxiguitar-plugin-test
 oxiguitar-plugin-test target/oxp/example.oxp
 oxiguitar-plugin-test --build example-plugin example   # build PACKAGE as NAME.oxp, then check it
 ```

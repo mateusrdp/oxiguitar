@@ -7,16 +7,7 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-homepage = "https://mateusrdp.github.io/oxiguitar/plugins/"
-documentation = "https://docs.rs/oxiguitar-plugin-test"
-readme = "README.md"
-keywords = ["oxiguitar", "plugin", "testing", "guitar", "tablature"]
-categories = ["development-tools::testing"]
-# On crates.io, for plugin authors (Mateus, 19 Oct 2026; the release
-# workflow publishes it on a v* tag).
-publish = true
-# Its tests drive this repository's own plugins; they stay here.
-exclude = ["tests/"]
+publish.workspace = true
 
 [dependencies]
 oxiguitar-host.workspace = true

@@ -23,16 +23,16 @@ crate-type = ["lib"]
 oxp = []
 
 [dependencies]
-# The SDK, from crates.io: the version of the OxiGuitar release you build
-# for (0.2 builds plugins that load in OxiGuitar 0.2 and later).
-oxiguitar-plugin = "0.2"
+# The SDK, from OxiGuitar's repository at the tag of the release you build
+# for (v0.2.0 builds plugins that load in OxiGuitar 0.2 and later).
+oxiguitar-plugin = { git = "https://github.com/mateusrdp/oxiguitar", tag = "v0.2.0" }
 # The plugin's settings come and go as JSON objects (Host::settings).
 serde_json = "1"
 
 [dev-dependencies]
 # The contract suite: tests/contract.rs builds the `.oxp` file and checks it
 # through OxiGuitar's own plugin host.
-oxiguitar-plugin-test = "0.2"
+oxiguitar-plugin-test = { git = "https://github.com/mateusrdp/oxiguitar", tag = "v0.2.0" }
 
 [lints.rust]
 # Deny `unsafe`, don't forbid it: `export_plugin!` allows it on the two
