@@ -129,6 +129,11 @@ struct Writer<'s> {
     /// The last note on each string or pitch, per staff slot and voice, for
     /// ties: (slot, voice, key) → note id.
     last_note: HashMap<(usize, usize, u16), usize>,
+    /// The last beat with notes of each staff slot's voices: (slot, voice)
+    /// → (bar, beat).
+    last_noted: HashMap<(usize, usize), (usize, usize)>,
+    /// Whether the beat being written is its voice's last with notes.
+    in_last_beat: bool,
     /// Where the writer is, for the losses: (bar, track), 0-based.
     place: (usize, usize),
 }
@@ -296,6 +301,8 @@ impl<'s> Writer<'s> {
             notes: Vec::new(),
             rhythms: HashMap::new(),
             last_note: HashMap::new(),
+            last_noted: HashMap::new(),
+            in_last_beat: false,
             place: (0, 0),
         };
         // MIDI channels as Guitar Pro hands them out: in track order,
@@ -474,6 +481,17 @@ impl<'s> Writer<'s> {
                     .map(move |(si, staff)| (ti, plan, si, staff))
             })
             .collect();
+        for (slot, &(_, _, _, staff)) in slots.iter().enumerate() {
+            for (bi, bar) in staff.bars.iter().enumerate() {
+                for (vi, voice) in bar.voices.iter().enumerate() {
+                    for (bj, beat) in voice.beats.iter().enumerate() {
+                        if beat.kind == BeatKind::Notes && !beat.notes.is_empty() {
+                            self.last_noted.insert((slot, vi), (bi, bj));
+                        }
+                    }
+                }
+            }
+        }
         let mut master = String::new();
         master.push_str("<MasterBars>\n<!-- order is important here -->\n");
         for (bi, mb) in score.master_bars.iter().enumerate() {
@@ -879,10 +897,19 @@ impl<'s> Writer<'s> {
             "-1".to_owned(),
             "-1".to_owned(),
         ];
-        let written: Vec<(usize, &oxiguitar_model::Voice)> = written_voices(bar).collect();
+        // A bar without beats is written as Guitar Pro 6 writes it, with
+        // no voice at all: MuseScore fills an empty voice with notes from
+        // elsewhere. The reader reads either as one empty voice.
+        let written: Vec<(usize, &oxiguitar_model::Voice)> =
+            if bar.voices.iter().all(|v| v.beats.is_empty()) {
+                Vec::new()
+            } else {
+                written_voices(bar).collect()
+            };
         for (vi, voice) in written {
             let mut beat_ids = Vec::with_capacity(voice.beats.len());
-            for beat in &voice.beats {
+            for (bj, beat) in voice.beats.iter().enumerate() {
+                self.in_last_beat = self.last_noted.get(&(slot, vi)) == Some(&(self.place.0, bj));
                 beat_ids.push(self.beat(slot, track, plan, si, vi, beat).to_string());
             }
             let id = self.voices.len();
@@ -1201,6 +1228,18 @@ impl<'s> Writer<'s> {
                     props,
                     "<Property name=\"Midi\">\n<Number>{p}</Number>\n</Property>"
                 );
+                if !percussion {
+                    // Readers that don't look at Midi on a track without
+                    // strings (alphaTab) take the pitch from these, as
+                    // Guitar Pro 6 wrote it.
+                    let _ = writeln!(
+                        props,
+                        "<Property name=\"Octave\">\n<Number>{}</Number>\n</Property>\n\
+                         <Property name=\"Tone\">\n<Step>{}</Step>\n</Property>",
+                        p / 12,
+                        p % 12
+                    );
+                }
                 (props, i32::from(p), 256 + u16::from(p), None)
             }
         };
@@ -1323,8 +1362,20 @@ impl<'s> Writer<'s> {
         if fx.palm_mute {
             props.push_str("<Property name=\"PalmMuted\">\n<Enable />\n</Property>\n");
         }
-        if !fx.slides.is_empty() {
-            let (flags, fits) = slide_flags(&fx.slides);
+        let mut slides = fx.slides.clone();
+        if self.in_last_beat {
+            // MuseScore 4 crashes on a slide to the next note when there
+            // is none, and there is nothing to slide to.
+            let before = slides.len();
+            slides.retain(|s| !matches!(s, Slide::Shift | Slide::Legato));
+            if slides.len() != before {
+                self.loss(
+                    "a slide from a voice's last note, with no note to slide to, is left out",
+                );
+            }
+        }
+        if !slides.is_empty() {
+            let (flags, fits) = slide_flags(&slides);
             if !fits {
                 self.loss("a note can slide in one way and out one way; the others are left out");
             }
@@ -1604,6 +1655,53 @@ mod tests {
             let p: f64 = mix_value((f64::from(pan) + 1.0) / 2.0).parse().unwrap();
             assert_eq!(((p * 2.0 - 1.0) as f32).clamp(-1.0, 1.0), pan, "{pan}");
         }
+    }
+
+    fn fixture(path: &str) -> Score {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(path);
+        crate::read(&std::fs::read(path).unwrap()).unwrap().score
+    }
+
+    #[test]
+    fn written_for_other_readers_too() {
+        // A note without a string carries its pitch as octave and tone.
+        let piano = fixture("fixtures/reference/piano-grand-staff.gp");
+        let gpif = Writer::new(&piano).document();
+        assert!(gpif.contains(
+            "<Property name=\"Midi\">\n<Number>72</Number>\n</Property>\n\
+             <Property name=\"Octave\">\n<Number>6</Number>\n</Property>\n\
+             <Property name=\"Tone\">\n<Step>0</Step>\n</Property>"
+        ));
+
+        // A bar without beats has no voice; a slide from a voice's last note
+        // goes, named.
+        let mut song = fixture("fixtures/gp/oxiguitar-test-song.gp");
+        let bars = &mut song.tracks[0].staves[0].bars;
+        bars[1].voices = vec![oxiguitar_model::Voice::default()];
+        let last = bars
+            .iter_mut()
+            .rev()
+            .flat_map(|b| b.voices[0].beats.iter_mut().rev())
+            .find(|b| !b.notes.is_empty())
+            .unwrap();
+        last.notes[0].effects.slides = vec![Slide::Shift];
+        let mut w = Writer::new(&song);
+        let gpif = w.document();
+        assert!(gpif.contains("<Voices>-1 -1 -1 -1</Voices>"));
+        let slide = w
+            .losses
+            .entries()
+            .iter()
+            .find(|e| e.message.contains("no note to slide to"))
+            .unwrap();
+        assert_eq!(slide.count, 1);
+        let back = crate::read(&write_gp(&song).unwrap().data).unwrap().score;
+        assert_eq!(
+            back.tracks[0].staves[0].bars[1],
+            song.tracks[0].staves[0].bars[1]
+        );
     }
 
     #[test]

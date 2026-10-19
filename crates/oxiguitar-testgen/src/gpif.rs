@@ -533,6 +533,16 @@ fn write_beat(
                     n,
                     "<Property name=\"Midi\">\n<Number>{p}</Number>\n</Property>"
                 );
+                if matches!(track.kind, Kind::Pitched { .. }) {
+                    // As Guitar Pro 6 wrote it, and as alphaTab reads it.
+                    let _ = writeln!(
+                        n,
+                        "<Property name=\"Octave\">\n<Number>{}</Number>\n</Property>\n\
+                         <Property name=\"Tone\">\n<Step>{}</Step>\n</Property>",
+                        p / 12,
+                        p % 12
+                    );
+                }
             }
         }
         let _ = writeln!(

@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "description": "Checks that alphaTab reads the .gp files OxiGuitar writes as it reads the originals (scripts/interop/alphatab.mjs).",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "dependencies": {
+    "@coderline/alphatab": "1.8.4"
+  }
+}

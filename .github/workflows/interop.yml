@@ -1,0 +1,95 @@
+# Other programs open the .gp files OxiGuitar writes as we mean them
+# (FMT-4). Every fixture is written as .gp by the formats crate's write_gp
+# example, which also lists the notes our reader finds in each file; then
+#
+# - alphaTab (an independent Guitar Pro reader, scripts/interop/package.json
+#   pins it) must read every file beat by beat as we do, and read each
+#   original as it reads our file of it (scripts/interop/alphatab.mjs);
+# - MuseScore 4 must open every file and find the same tracks, bars and
+#   notes bar by bar, where it reads Guitar Pro as Guitar Pro means it
+#   (scripts/interop/musescore.py).
+#
+# Guitar Pro 7.6 itself is checked by hand (docs/testing.md). Only the
+# public fixtures are used here, never the private corpus.
+name: Interop
+
+on:
+  pull_request:
+    paths:
+      - crates/oxiguitar-formats/**
+      - crates/oxiguitar-model/**
+      - crates/oxiguitar-testgen/**
+      - fixtures/**
+      - scripts/interop/**
+      - .github/workflows/interop.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: interop-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # MuseScore Studio 4.7.5, and its published checksum.
+  MUSESCORE_URL: https://github.com/musescore/MuseScore/releases/download/v4.7.5/MuseScore-Studio-4.7.5.260831071-x86_64.AppImage
+  MUSESCORE_SHA256: a31b2da2dbcc2191bcc98beb7be5c15f2f517bedb3444def96fe3088b74d3a1e
+
+jobs:
+  write:
+    name: Write the fixtures as .gp
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo run --locked --release -p oxiguitar-formats --example write_gp -- fixtures/gp fixtures/reference written
+      - uses: actions/upload-artifact@v4
+        with:
+          name: interop-written
+          path: written
+          retention-days: 7
+
+  alphatab:
+    name: alphaTab
+    needs: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: interop-written
+          path: written
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+        working-directory: scripts/interop
+      - run: node scripts/interop/alphatab.mjs --originals fixtures/gp fixtures/reference written
+
+  musescore:
+    name: MuseScore 4
+    needs: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: interop-written
+          path: written
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb xauth libopengl0 libegl1 libgl1 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libnss3 libasound2t64
+      - name: Unpack MuseScore
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/musescore.AppImage" "$MUSESCORE_URL"
+          echo "$MUSESCORE_SHA256  $RUNNER_TEMP/musescore.AppImage" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/musescore.AppImage"
+          cd "$RUNNER_TEMP" && ./musescore.AppImage --appimage-extract > /dev/null
+      - name: Compare
+        env:
+          QT_QPA_PLATFORM: xcb
+        run: xvfb-run -a python3 scripts/interop/musescore.py "$RUNNER_TEMP/squashfs-root/AppRun" written fixtures/gp fixtures/reference
