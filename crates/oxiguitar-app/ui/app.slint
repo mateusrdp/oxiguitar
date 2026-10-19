@@ -10,7 +10,7 @@
 // add theirs to the same lists (docs/design/plugins.md). The score is drawn
 // by our renderer on the worker thread and shown here as tiles.
 
-import { Slider, ScrollView, Palette, ComboBox } from "std-widgets.slint";
+import { Slider, ScrollView, Palette, ComboBox, Button } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
@@ -567,6 +567,64 @@ component InfoPopup inherits PopupWindow {
     }
 }
 
+// A question over the whole window (saving, unsaved changes): a heading,
+// lines of text, and buttons, the first the default (Enter) and the last
+// the way out (Escape). Nothing behind it can be clicked while it shows.
+component Question inherits Rectangle {
+    in property <string> heading;
+    in property <[string]> lines;
+    in property <[string]> buttons;
+    callback answered(int);
+    background: #00000060;
+    TouchArea { }
+    keys := FocusScope {
+        init => { self.focus(); }
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.answered(root.buttons.length - 1);
+                return accept;
+            }
+            if (event.text == Key.Return) {
+                root.answered(0);
+                return accept;
+            }
+            accept
+        }
+    }
+    Rectangle {
+        width: min(520px, root.width - 40px);
+        height: min(box.preferred-height, root.height - 40px);
+        background: Palette.background;
+        border-color: Palette.border;
+        border-width: 1px;
+        border-radius: 6px;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000060;
+        box := VerticalLayout {
+            padding: 18px;
+            spacing: 10px;
+            Text { text: root.heading; font-size: 15px; font-weight: 700; wrap: word-wrap; }
+            ScrollView {
+                min-height: min(lines-box.preferred-height, 40px);
+                preferred-height: min(lines-box.preferred-height, 320px);
+                lines-box := VerticalLayout {
+                    spacing: 4px;
+                    for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+                }
+            }
+            HorizontalLayout {
+                alignment: end;
+                spacing: 8px;
+                for b[i] in root.buttons : Button {
+                    text: b;
+                    primary: i == 0;
+                    clicked => { root.answered(i); }
+                }
+            }
+        }
+    }
+}
+
 // A rounded pill floating over the canvas.
 component Pill inherits Rectangle {
     height: 26px;
@@ -577,7 +635,10 @@ component Pill inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
-    title: "OxiGuitar";
+    // "song.gp — OxiGuitar", with a dot while the score differs from the
+    // file (main.rs).
+    in property <string> window-title: "OxiGuitar";
+    title: root.window-title;
     // The window icon for X11, Windows and macOS. Wayland ignores it and
     // takes the icon of the desktop entry named by the app id (main.rs).
     icon: @image-url("../../../assets/icon/png/oxiguitar-256.png");
@@ -701,6 +762,16 @@ export component AppWindow inherits Window {
     in property <[string]> about-lines;
 
     callback open-file();
+    callback save();
+    callback save-as();
+    // The question over the window (saving, unsaved changes).
+    in property <bool> question-shown: false;
+    in property <string> question-heading;
+    in property <[string]> question-lines;
+    in property <[string]> question-buttons;
+    callback question-answered(int);
+    // Gives the keyboard back to the page (after a question).
+    public function focus-page() { keys.focus(); }
     callback export-pdf();
     callback quit();
     callback settings-changed();
@@ -782,6 +853,8 @@ export component AppWindow inherits Window {
         Menu {
             title: "File";
             MenuItem { title: "Open…"; shortcut: @keys(Control + O); activated => { root.open-file(); } }
+            MenuItem { title: "Save"; enabled: root.has-score; shortcut: @keys(Control + S); activated => { root.save(); } }
+            MenuItem { title: "Save As…"; enabled: root.has-score; shortcut: @keys(Control + Shift + S); activated => { root.save-as(); } }
             MenuItem { title: "Export PDF…"; enabled: root.has-score; activated => { root.export-pdf(); } }
             Menu {
                 title: "Paper Size";
@@ -1398,5 +1471,14 @@ export component AppWindow inherits Window {
                 }
             }
         }
+    }
+
+    if root.question-shown : Question {
+        width: root.width;
+        height: root.height;
+        heading: root.question-heading;
+        lines: root.question-lines;
+        buttons: root.question-buttons;
+        answered(i) => { root.question-answered(i); }
     }
 }

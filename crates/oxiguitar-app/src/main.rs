@@ -73,7 +73,7 @@ use slint::{
 };
 
 use crate::canvas::{Sheets, TILE};
-use crate::document::{OpenScore, Settings, ToolEntry};
+use crate::document::{FULLEST, OpenScore, SaveFormat, Settings, ToolEntry};
 use crate::footer::{Footer, level_code};
 use crate::plugin_tabs::TabThread;
 use crate::prefs::ViewPrefs;
@@ -182,6 +182,35 @@ struct App {
     editing: editing::Editing,
     /// The bars that don't add up, every track's.
     bad: Vec<oxiguitar_edit::StaffBar>,
+    /// The open file's name, and whether the score differs from it.
+    doc_name: Option<String>,
+    modified: bool,
+    /// The formats the installed plugins write, for File → Save As.
+    save_formats: Vec<SaveFormat>,
+    /// The question over the window, if one shows.
+    question: Option<Asked>,
+    /// What to do once the score is saved (after "Save the changes…?").
+    after_save: Option<Then>,
+}
+
+/// What the question over the window asks.
+#[derive(Clone, Debug, PartialEq)]
+enum Asked {
+    /// Write the file despite what it loses, or under another name?
+    Save,
+    /// Save the changes before going on to this?
+    Unsaved(Then),
+}
+
+/// What waits on the answer to "Save the changes…?".
+#[derive(Clone, Debug, PartialEq)]
+enum Then {
+    /// File → Open's dialog.
+    OpenDialog,
+    /// This file (dropped on the window).
+    Open(PathBuf),
+    /// Quit.
+    Quit,
 }
 
 /// A plugin tab's last contents (or why it can't be shown) and its
@@ -344,6 +373,7 @@ fn main() -> Result<(), slint::PlatformError> {
         oxiguitar_host::start(oxiguitar_host::Folders::here(), display_system(), core)
     };
     let open_extensions = startup.plugins.read_extensions();
+    let save_formats = SaveFormat::writable(&startup.plugins);
     let mut shell = Shell::default();
     plugin_tabs::add_to(&mut shell, &startup.plugins);
     // Only when a plugin has tabs.
@@ -405,12 +435,17 @@ fn main() -> Result<(), slint::PlatformError> {
         manager: None,
         editing: editing::Editing::default(),
         bad: Vec::new(),
+        doc_name: None,
+        modified: false,
+        save_formats,
+        question: None,
+        after_save: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
     measure_palette();
 
     ui.set_shortcut_lines(lines(&[
-        "Ctrl + O: open a file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
+        "Ctrl + O: open a file;  Ctrl + S: save it;  Ctrl + Shift + S: save it as another file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
         "Escape or a click: close this note",
         "Mouse wheel over the page: scroll it;  Shift + wheel: zoom the page around the pointer",
         "Page Up / Page Down, the scroll bars: scroll the page;  with no score open, the arrow keys too",
@@ -466,12 +501,17 @@ fn main() -> Result<(), slint::PlatformError> {
     sync_shell(&app);
 
     let a = app.clone();
-    ui.on_open_file(move || open_dialog(&a));
+    ui.on_open_file(move || unless_unsaved(&a, Then::OpenDialog));
+    let a = app.clone();
+    ui.on_save(move || save(&a));
+    let a = app.clone();
+    ui.on_save_as(move || save_as_dialog(&a));
+    let a = app.clone();
+    ui.on_question_answered(move |i| question_answered(&a, i));
     let a = app.clone();
     ui.on_export_pdf(move || export_dialog(&a));
-    ui.on_quit(|| {
-        let _ = slint::quit_event_loop();
-    });
+    let a = app.clone();
+    ui.on_quit(move || unless_unsaved(&a, Then::Quit));
     let a = app.clone();
     ui.on_settings_changed(move || settings_changed(&a));
     let a = app.clone();
@@ -638,7 +678,13 @@ fn main() -> Result<(), slint::PlatformError> {
     // Closing the main window ends the program, even with the plugin
     // manager's window open (the event loop would otherwise wait for the
     // last window).
-    ui.window().on_close_requested(|| {
+    // With unsaved changes, the window asks first and stays.
+    let a = app.clone();
+    ui.window().on_close_requested(move || {
+        if a.borrow().modified {
+            unless_unsaved(&a, Then::Quit);
+            return slint::CloseRequestResponse::KeepWindowShown;
+        }
         let _ = slint::quit_event_loop();
         slint::CloseRequestResponse::HideWindow
     });
@@ -1451,11 +1497,11 @@ fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
 /// A toolbar button was clicked.
 fn toolbar_activated(app: &Shared, id: &str) {
     match id {
-        item::OPEN => open_dialog(app),
+        item::OPEN => unless_unsaved(app, Then::OpenDialog),
+        item::SAVE => save(app),
         item::EXPORT_PDF => export_dialog(app),
         item::UNDO => app.borrow().worker.send(Request::Undo),
         item::REDO => app.borrow().worker.send(Request::Redo),
-        // Save comes with the .gp writer (M3 slice 2); it is greyed out.
         _ => {}
     }
 }
@@ -1474,9 +1520,12 @@ fn handle(app: &Shared, event: Event) {
             tools,
             pdf_name,
             folder,
+            name,
         } => {
             {
                 let mut s = app.borrow_mut();
+                s.doc_name = Some(name);
+                s.after_save = None;
                 s.track_count = tracks.len();
                 s.tracks = Tracks::new(
                     tracks.iter().map(|t| t.default_notation).collect(),
@@ -1528,14 +1577,38 @@ fn handle(app: &Shared, event: Event) {
             sync_areas(app);
             set_tools(&ui, &tool_rows(&tools));
             ui.set_has_score(true);
-            app.borrow_mut()
-                .shell
-                .set_item(item::EXPORT_PDF, Some(true), None);
+            {
+                let mut s = app.borrow_mut();
+                s.shell.set_item(item::EXPORT_PDF, Some(true), None);
+                s.shell.set_item(item::SAVE, Some(true), None);
+            }
             sync_toolbar(app);
             sync_edit_state(app, &edit);
             ui.invoke_scroll_to(0.0, 0.0);
             settings_changed(app);
         }
+        Event::AskSave { heading, lines } => {
+            ask(app, Asked::Save, &heading, &lines, &["Save", "Cancel"]);
+        }
+        Event::Saved {
+            name,
+            edit,
+            pdf_name,
+            folder,
+        } => {
+            let then = {
+                let mut s = app.borrow_mut();
+                s.doc_name = Some(name);
+                s.pdf_name = pdf_name;
+                s.folder = folder;
+                s.after_save.take()
+            };
+            sync_edit_state(app, &edit);
+            if let Some(then) = then {
+                go_on(app, then);
+            }
+        }
+        Event::SaveFailed => app.borrow_mut().after_save = None,
         Event::Changed { score, edit, bad } => {
             {
                 let mut s = app.borrow_mut();
@@ -1609,6 +1682,16 @@ fn sync_edit_state(app: &Shared, edit: &document::EditState) {
     ui.set_can_redo(edit.redo.is_some());
     ui.set_undo_title(title("Undo", &edit.undo).into());
     ui.set_redo_title(title("Redo", &edit.redo).into());
+    let window_title = {
+        let mut s = app.borrow_mut();
+        s.modified = edit.modified;
+        match &s.doc_name {
+            Some(name) if edit.modified => format!("• {name} — OxiGuitar"),
+            Some(name) => format!("{name} — OxiGuitar"),
+            None => "OxiGuitar".to_owned(),
+        }
+    };
+    ui.set_window_title(window_title.into());
     {
         let mut s = app.borrow_mut();
         s.shell
@@ -2128,6 +2211,171 @@ fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
     }
 }
 
+/// Goes on to `then`, asking first whether to save the changes when the
+/// score differs from its file.
+fn unless_unsaved(app: &Shared, then: Then) {
+    let name = {
+        let s = app.borrow();
+        if s.question.is_some() {
+            return;
+        }
+        s.modified.then(|| s.doc_name.clone().unwrap_or_default())
+    };
+    match name {
+        Some(name) => ask(
+            app,
+            Asked::Unsaved(then),
+            &format!("Save the changes to {name}?"),
+            &["They are lost if you don't.".to_owned()],
+            &["Save", "Don't Save", "Cancel"],
+        ),
+        None => go_on(app, then),
+    }
+}
+
+/// Does what waited on the unsaved-changes question.
+fn go_on(app: &Shared, then: Then) {
+    match then {
+        Then::OpenDialog => open_dialog(app),
+        Then::Open(path) => app.borrow().worker.send(Request::Open(path)),
+        Then::Quit => {
+            let _ = slint::quit_event_loop();
+        }
+    }
+}
+
+/// Shows the question over the window.
+fn ask(app: &Shared, asked: Asked, heading: &str, lines: &[String], buttons: &[&str]) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    app.borrow_mut().question = Some(asked);
+    ui.set_question_heading(heading.into());
+    ui.set_question_lines(ModelRc::new(VecModel::from(
+        lines
+            .iter()
+            .map(|l| SharedString::from(l.as_str()))
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_question_buttons(ModelRc::new(VecModel::from(
+        buttons
+            .iter()
+            .map(|b| SharedString::from(*b))
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_question_shown(true);
+}
+
+/// The user answered the question: button `i`, the last being Cancel.
+fn question_answered(app: &Shared, i: i32) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_question_shown(false);
+    ui.invoke_focus_page();
+    let Some(asked) = app.borrow_mut().question.take() else {
+        return;
+    };
+    match (asked, i) {
+        (Asked::Save, 0) => app.borrow().worker.send(Request::ConfirmSave),
+        (Asked::Save, _) => {
+            let mut s = app.borrow_mut();
+            s.after_save = None;
+            s.worker.send(Request::CancelSave);
+        }
+        (Asked::Unsaved(then), 0) => {
+            app.borrow_mut().after_save = Some(then);
+            save(app);
+        }
+        (Asked::Unsaved(then), 1) => go_on(app, then),
+        (Asked::Unsaved(_), _) => {}
+    }
+}
+
+/// File → Save: the file the score came from, in its own format unless
+/// that loses part of the score (the worker asks then).
+fn save(app: &Shared) {
+    app.borrow().worker.send(Request::Save(None));
+}
+
+/// File → Save As…: any name, in a format the plugins write, chosen by the
+/// name's extension (Guitar Pro 7–8's .gp when it has none).
+fn save_as_dialog(app: &Shared) {
+    if let Some(problem) = no_dialogs() {
+        message(app, Level::Warning, problem);
+        return;
+    }
+    let (folder, stem, formats, sender) = {
+        let s = app.borrow();
+        let stem = s
+            .doc_name
+            .as_deref()
+            .map(|n| {
+                std::path::Path::new(n)
+                    .file_stem()
+                    .map_or_else(|| n.to_owned(), |x| x.to_string_lossy().into_owned())
+            })
+            .unwrap_or_else(|| "score".to_owned());
+        (
+            s.folder.clone(),
+            stem,
+            s.save_formats.clone(),
+            s.worker.sender(),
+        )
+    };
+    if formats.is_empty() {
+        message(
+            app,
+            Level::Error,
+            "No installed plugin writes files, so nothing can be saved.".to_owned(),
+        );
+        return;
+    }
+    // The fullest format first, as the default.
+    let mut formats = formats;
+    formats.sort_by_key(|f| f.id != FULLEST);
+    let pick = move || {
+        let first = formats.first().and_then(|f| f.extensions.first()).cloned();
+        let mut dialog = rfd::FileDialog::new()
+            .set_title("Save As")
+            .set_file_name(format!("{stem}.{}", first.as_deref().unwrap_or("gp")));
+        for f in &formats {
+            dialog = dialog.add_filter(&f.name, &f.extensions);
+        }
+        if let Some(f) = folder {
+            dialog = dialog.set_directory(f);
+        }
+        let Some(mut path) = dialog.save_file() else {
+            return;
+        };
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(str::to_ascii_lowercase);
+        let format = ext
+            .as_deref()
+            .and_then(|e| {
+                formats
+                    .iter()
+                    .find(|f| f.extensions.iter().any(|x| x.eq_ignore_ascii_case(e)))
+            })
+            .or(formats.first());
+        let Some(format) = format else {
+            return;
+        };
+        if !format
+            .extensions
+            .iter()
+            .any(|x| ext.as_deref().is_some_and(|e| x.eq_ignore_ascii_case(e)))
+            && let Some(e) = format.extensions.first()
+        {
+            path.set_extension(e);
+        }
+        let _ = sender.send(Request::Save(Some((path, format.id.clone()))));
+    };
+    run_dialog(pick);
+}
+
 /// File → Open: the system's dialog, off the UI thread where the system
 /// allows it, so the window keeps drawing.
 fn open_dialog(app: &Shared) {
@@ -2250,7 +2498,12 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                 // first, as File → Open opens one file.
                 if !s.drop_pending {
                     s.drop_pending = true;
-                    s.worker.send(Request::Open(path.clone()));
+                    // Once this event is done with the app: unsaved
+                    // changes are asked about first.
+                    let (a2, path) = (a.clone(), path.clone());
+                    slint::Timer::single_shot(Duration::ZERO, move || {
+                        unless_unsaved(&a2, Then::Open(path));
+                    });
                     let a = a.clone();
                     slint::Timer::single_shot(Duration::from_millis(100), move || {
                         a.borrow_mut().drop_pending = false;

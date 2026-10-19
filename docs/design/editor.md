@@ -65,9 +65,9 @@ Where OxiGuitar goes past TuxGuitar (four voices to its two, any tuplet to its l
 
 ### Files (slices 2 and 7)
 
-- [ ] Save and Save As: .gp (the default) and .gp5; a file is saved in its own format unless that format would lose something, and then as .gp (Mateus, 19 Oct 2026)
-- [ ] Losses named before writing (FMT-3), and what the opened file had that OxiGuitar couldn't keep (FMT-2)
-- [ ] A question before closing or opening over unsaved changes
+- [ ] Save and Save As: .gp (the default) and .gp5; a file is saved in its own format unless that format would lose something, and then as .gp (Mateus, 19 Oct 2026). .gp done in slice 2; .gp5 in slice 7
+- [x] Losses named before writing (FMT-3), and what the opened file had that OxiGuitar couldn't keep (FMT-2) (slice 2)
+- [x] A question before closing or opening over unsaved changes (slice 2)
 - [ ] File → New
 - Not planned: TuxGuitar also writes Guitar Pro 3 and 4 and its own .tg; OxiGuitar writes .gp and .gp5 only (the brief: Guitar Pro 3–4 are read only).
 

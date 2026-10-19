@@ -28,7 +28,8 @@ use crate::canvas::Sheets;
 #[cfg(test)]
 use crate::canvas::TILE;
 use crate::document::{
-    Document, EditState, Engraver, OpenScore, Settings, ToolEntry, TrackInfo, file_name,
+    Document, EditState, Engraver, OpenScore, Prepared, SaveFormat, Settings, ToolEntry, TrackInfo,
+    file_name,
 };
 
 /// What the window asks of the worker.
@@ -58,6 +59,15 @@ pub(crate) enum Request {
     Selection(Option<PluginSelection>),
     /// Write the shown tracks as a PDF.
     ExportPdf(PathBuf, Settings),
+    /// File → Save (`None`): the file the score came from, in its own
+    /// format unless that loses part of the score; File → Save As: this
+    /// file, in the format with this id. Asks first ([`Event::AskSave`])
+    /// when something would be lost or the file changes.
+    Save(Option<(PathBuf, String)>),
+    /// The user agreed to the save asked about.
+    ConfirmSave,
+    /// The user declined it.
+    CancelSave,
     /// End the worker.
     Stop,
 }
@@ -75,7 +85,21 @@ pub(crate) enum Event {
         tools: Vec<ToolEntry>,
         pdf_name: String,
         folder: Option<PathBuf>,
+        /// The file's name, for the window's title.
+        name: String,
     },
+    /// A save waits for the user: a heading and lines to show, with Save
+    /// and Cancel ([`Request::ConfirmSave`], [`Request::CancelSave`]).
+    AskSave { heading: String, lines: Vec<String> },
+    /// The score was saved, perhaps under another name.
+    Saved {
+        name: String,
+        edit: EditState,
+        pdf_name: String,
+        folder: Option<PathBuf>,
+    },
+    /// The save didn't happen; the reason is in the footer.
+    SaveFailed,
     /// A new engraving: where each sheet sits on the canvas, in points,
     /// and where every staff, bar and beat is on the sheets.
     Engraved {
@@ -116,6 +140,9 @@ impl std::fmt::Debug for Event {
             Event::Changed { bad, .. } => write!(f, "Changed({} bad bars)", bad.len()),
             Event::Tools(t) => write!(f, "Tools({})", t.len()),
             Event::Message(l, s) => write!(f, "Message({l:?}, {s:?})"),
+            Event::AskSave { heading, .. } => write!(f, "AskSave({heading:?})"),
+            Event::Saved { name, .. } => write!(f, "Saved({name:?})"),
+            Event::SaveFailed => write!(f, "SaveFailed"),
         }
     }
 }
@@ -178,6 +205,8 @@ struct State {
     sheets: Sheets,
     engraving: u64,
     raster: Raster,
+    /// A save waiting for the user's answer.
+    pending_save: Option<Prepared>,
 }
 
 fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &dyn Fn(Event)) {
@@ -198,6 +227,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
         sheets: Sheets::default(),
         engraving: 0,
         raster: Raster::new(),
+        pending_save: None,
     };
     let mut pending: VecDeque<Request> = VecDeque::new();
     loop {
@@ -221,7 +251,10 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 Request::Selection(_) => false,
                 Request::Stop => true,
                 Request::Tiles { .. } => tiles,
-                Request::ExportPdf(..) => false,
+                Request::ExportPdf(..)
+                | Request::Save(_)
+                | Request::ConfirmSave
+                | Request::CancelSave => false,
             })
         };
         match request {
@@ -295,6 +328,13 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     engrave(&mut st, sink);
                 }
             }
+            Request::Save(to) => save(&mut st, to, sink),
+            Request::ConfirmSave => {
+                if let Some(prepared) = st.pending_save.take() {
+                    write_save(&mut st, &prepared, sink);
+                }
+            }
+            Request::CancelSave => st.pending_save = None,
             Request::Selection(selection) => {
                 st.plugins.push(PluginEvent::Selection(selection));
             }
@@ -342,10 +382,73 @@ fn open(st: &mut State, path: PathBuf, sink: &dyn Fn(Event)) {
                 tools: doc.tools(),
                 pdf_name: doc.pdf_name(),
                 folder: path.parent().map(PathBuf::from),
+                name: doc.name(),
             });
             st.doc = Some(doc);
+            st.pending_save = None;
         }
         Err(e) => sink(Event::Message(Level::Error, e)),
+    }
+}
+
+/// File → Save and Save As: the file is got ready, then written, or held
+/// while the user is asked.
+fn save(st: &mut State, to: Option<(PathBuf, String)>, sink: &dyn Fn(Event)) {
+    let Some(doc) = st.doc.as_ref() else {
+        sink(Event::SaveFailed);
+        return;
+    };
+    let to = match to {
+        Some((path, id)) => match SaveFormat::writable(&st.plugins)
+            .into_iter()
+            .find(|f| f.id == id)
+        {
+            Some(format) => Some((path, format)),
+            None => {
+                sink(Event::Message(
+                    Level::Error,
+                    "No installed plugin writes that format.".to_owned(),
+                ));
+                sink(Event::SaveFailed);
+                return;
+            }
+        },
+        None => None,
+    };
+    match doc.prepare_save(&st.plugins, to) {
+        Ok(prepared) if prepared.ask() => {
+            let (heading, lines) = prepared.question(&doc.path);
+            st.pending_save = Some(prepared);
+            sink(Event::AskSave { heading, lines });
+        }
+        Ok(prepared) => write_save(st, &prepared, sink),
+        Err(e) => {
+            sink(Event::Message(Level::Error, e));
+            sink(Event::SaveFailed);
+        }
+    }
+}
+
+fn write_save(st: &mut State, prepared: &Prepared, sink: &dyn Fn(Event)) {
+    let Some(doc) = st.doc.as_mut() else {
+        sink(Event::SaveFailed);
+        return;
+    };
+    match doc.save(prepared) {
+        Ok(()) => {
+            let name = doc.name();
+            sink(Event::Message(Level::Info, format!("Saved {name}.")));
+            sink(Event::Saved {
+                name,
+                edit: doc.edit_state(),
+                pdf_name: doc.pdf_name(),
+                folder: doc.path.parent().map(PathBuf::from),
+            });
+        }
+        Err(e) => {
+            sink(Event::Message(Level::Error, e));
+            sink(Event::SaveFailed);
+        }
     }
 }
 
@@ -537,5 +640,60 @@ mod tests {
         worker.send(Request::Engrave(Settings::default()));
         worker.send(Request::Open(fixture()));
         assert!(matches!(next(&rx), Event::Opened { .. }));
+    }
+
+    #[test]
+    fn saving_asks_when_the_file_changes_and_writes_on_yes() {
+        let (tx, rx) = channel();
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
+        let dir =
+            std::env::temp_dir().join(format!("oxiguitar-worker-save-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let gp5 = dir.join("song.gp5");
+        std::fs::copy(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5"),
+            &gp5,
+        )
+        .unwrap();
+        worker.send(Request::Open(gp5));
+        while !matches!(next(&rx), Event::Opened { .. }) {}
+
+        // No plugin writes .gp5: Save asks before writing song.gp.
+        worker.send(Request::Save(None));
+        let Event::AskSave { heading, .. } = next(&rx) else {
+            panic!("expected a question")
+        };
+        assert_eq!(heading, "Save song.gp?");
+        worker.send(Request::CancelSave);
+        worker.send(Request::ConfirmSave);
+        assert!(matches!(
+            rx.recv_timeout(Duration::from_millis(300)),
+            Err(RecvTimeoutError::Timeout)
+        ));
+        assert!(!dir.join("song.gp").exists());
+
+        worker.send(Request::Save(None));
+        assert!(matches!(next(&rx), Event::AskSave { .. }));
+        worker.send(Request::ConfirmSave);
+        assert!(matches!(next(&rx), Event::Message(Level::Info, s) if s == "Saved song.gp."));
+        let Event::Saved { name, edit, .. } = next(&rx) else {
+            panic!("expected Saved")
+        };
+        assert_eq!(name, "song.gp");
+        assert!(!edit.modified);
+        assert!(dir.join("song.gp").exists());
+
+        // Now a .gp file with nothing lost: written at once.
+        worker.send(Request::Save(None));
+        assert!(matches!(next(&rx), Event::Message(Level::Info, _)));
+        assert!(matches!(next(&rx), Event::Saved { .. }));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
