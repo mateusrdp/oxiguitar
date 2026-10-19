@@ -10,8 +10,8 @@ On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so tha
 | --- | --- | --- |
 | M0 Foundations | — | **Done** (16 Oct 2026) |
 | M1 Viewer | v0.1 | **Done** (17 Oct 2026; v0.1.0 published as a pre-release, 18 Oct 2026) |
-| M2 Plugin system and window shell | v0.2 | **Done** (19 Oct 2026; v0.2.0 when Mateus tags it) |
-| M3 Editor | v0.5 | Not started |
+| M2 Plugin system and window shell | v0.2 | **Done** (19 Oct 2026; v0.2.0 published as a pre-release, 19 Oct 2026) |
+| M3 Editor | v0.5 | Planning (19 Oct 2026) |
 | M4 Player | **v1.0** | Not started |
 | M5 Guitar Pro 8 notation and editing parity | | Not started |
 | M6 Format plugins: MusicXML, ABC, MuseScore, MIDI files | | Not started |
@@ -157,7 +157,7 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
    - Gate (M2's "the developer guide builds a working plugin from the template"): `scripts/check-plugin-template.sh` in CI on Linux, Windows and macOS, part of `ci-success`: the template copied out of the repository, fmt, clippy, its tests, the contract suite, and `oxiguitar-cli` opening its sample through the plugin file.
    - The interface points the guide raised, answered by Mateus on 19 Oct 2026: nothing is published on crates.io (plugin authors use git dependencies on the release tag); `instruments` stays in 1.0, ignored by the player for plugins older than the instrument interface (M4); a failing plugin must leave everything as if it had never been loaded (built: the plugin is withdrawn, its files go to the next plugin, its services are chosen again, its tabs leave the window); the footer shows only errors and important warnings, not import logs; bars that don't add up are the editor's (M3); conveniences go to the Wishlist below.
 
-Then v0.2: the develop → main pull request, which Mateus merges and tags.
+Then v0.2: released. Mateus merged the develop → main pull request (#72) and the guide's address fix (#74), tagged `v0.2.0`, and published v0.2.0 as a pre-release on 19 Oct 2026 (49 files and SHA256SUMS).
 
 ## M3 — Editor (v0.5)
 
