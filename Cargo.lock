@@ -3452,6 +3452,7 @@ version = "0.2.0"
 dependencies = [
  "i-slint-backend-winit",
  "oxiguitar-display",
+ "oxiguitar-edit",
  "oxiguitar-host",
  "oxiguitar-layout",
  "oxiguitar-model",

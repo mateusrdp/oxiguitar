@@ -90,7 +90,9 @@ fn open_like_the_window(path: &Path, all_tracks: bool) -> Times {
     };
     worker.send(Request::Engrave(settings));
     let (engraving, rects) = match next(&rx) {
-        Event::Engraved { engraving, sheets } => (engraving, sheets),
+        Event::Engraved {
+            engraving, sheets, ..
+        } => (engraving, sheets),
         other => panic!("expected an engraving, got {other:?}"),
     };
     let engraved = start.elapsed();

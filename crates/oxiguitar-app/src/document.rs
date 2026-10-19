@@ -5,14 +5,15 @@
 //! engraving, tools and PDF export. No window code here, so all of it is
 //! tested without a display.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet, Theme};
+use oxiguitar_edit::{BarCheck, History, Region};
 use oxiguitar_host::Plugins;
-use oxiguitar_layout::{Layout, Notation, Options, Paper, engrave};
+use oxiguitar_layout::{Engraved, Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::{Mix, Score};
 use oxiguitar_tools::Availability;
 
@@ -113,10 +114,26 @@ pub(crate) struct ToolEntry {
 }
 
 /// An open score. The score is shared (never copied) with plugins that ask
-/// for it ([`OpenScore`]).
+/// for it ([`OpenScore`]), and with the window, which moves the caret over
+/// it.
 pub(crate) struct Document {
     pub(crate) path: PathBuf,
     pub(crate) score: Arc<Score>,
+    /// Every change made since the file was opened, to undo and redo.
+    pub(crate) history: History,
+    /// The bars that don't add up.
+    pub(crate) check: BarCheck,
+}
+
+/// What the Edit menu and the toolbar show about the history.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct EditState {
+    /// The name of the change Undo would undo.
+    pub(crate) undo: Option<String>,
+    /// The name of the change Redo would redo.
+    pub(crate) redo: Option<String>,
+    /// The score differs from the file.
+    pub(crate) modified: bool,
 }
 
 /// The open score as plugins may ask for it, from any thread: set by the
@@ -158,10 +175,73 @@ impl Document {
         let score = oxiguitar_model::wire::from_wire(read.score).map_err(|e| {
             format!("{name}: the {plugin} plugin gave a score this OxiGuitar can't hold ({e}).")
         })?;
+        let check = BarCheck::of(&score);
         Ok(Document {
             path: path.to_owned(),
             score: Arc::new(score),
+            history: History::new(),
+            check,
         })
+    }
+
+    /// What the Edit menu shows.
+    pub(crate) fn edit_state(&self) -> EditState {
+        EditState {
+            undo: self.history.undo_label().map(str::to_owned),
+            redo: self.history.redo_label().map(str::to_owned),
+            modified: self.history.is_modified(),
+        }
+    }
+
+    /// The bars that don't add up, as the engraver marks them.
+    pub(crate) fn marked(&self) -> BTreeSet<(usize, usize, usize)> {
+        self.check
+            .iter()
+            .map(|b| (b.track, b.staff, b.bar))
+            .collect()
+    }
+
+    /// The footer's warning about bars that don't add up, when there are
+    /// any: how many, and where the first is.
+    pub(crate) fn bad_bars_warning(&self) -> Option<String> {
+        let first = self.check.in_score_order(|_| true).first().copied()?;
+        let n = self.check.len();
+        let track = self
+            .score
+            .tracks
+            .get(first.track)
+            .map(|t| t.name.trim())
+            .filter(|n| !n.is_empty())
+            .map_or_else(
+                || format!("track {}", first.track + 1),
+                |n| format!("“{n}”"),
+            );
+        Some(format!(
+            "{n} bar{} {} add up to {} time signature; the first is bar {} of {track}. \
+             F4 goes to the next.",
+            if n == 1 { "" } else { "s" },
+            if n == 1 { "doesn't" } else { "don't" },
+            if n == 1 { "its" } else { "their" },
+            first.bar + 1
+        ))
+    }
+
+    /// Undoes the last change. Returns its name and whether the bad bars
+    /// changed, or `None` with nothing to undo.
+    pub(crate) fn undo(&mut self) -> Option<String> {
+        let score = Arc::make_mut(&mut self.score);
+        let (label, touched) = self.history.undo(score)?;
+        self.check.update(&self.score, &touched);
+        Some(label)
+    }
+
+    /// Redoes the last undone change. Returns its name, or `None` with
+    /// nothing to redo.
+    pub(crate) fn redo(&mut self) -> Option<String> {
+        let score = Arc::make_mut(&mut self.score);
+        let (label, touched) = self.history.redo(score)?;
+        self.check.update(&self.score, &touched);
+        Some(label)
     }
 
     /// The tracks, for the track list.
@@ -208,8 +288,13 @@ impl Document {
         };
         let outcome = tool.apply(&self.score);
         let changed = outcome.score.is_some();
-        if let Some(score) = outcome.score {
-            self.score = Arc::new(score);
+        if let Some(new) = outcome.score {
+            // One undoable command (M3). Tools may change anything.
+            let score = Arc::make_mut(&mut self.score);
+            let touched = self
+                .history
+                .record(score, tool.name(), vec![Region::Whole], |s| *s = new);
+            self.check.update(&self.score, &touched);
         }
         (format!("{}: {}", tool.name(), outcome.report), changed)
     }
@@ -251,9 +336,19 @@ impl Engraver {
         })
     }
 
-    /// Engraves the score as the settings say.
-    pub(crate) fn engrave(&self, score: &Score, settings: &Settings) -> Vec<DisplayList> {
-        engrave(score, &self.fonts, &self.meta, &settings.options()).pages
+    /// Engraves the score as the settings say, with `marked` bars laid in
+    /// red, and the map of where everything is drawn.
+    pub(crate) fn engrave(
+        &self,
+        score: &Score,
+        settings: &Settings,
+        marked: BTreeSet<(usize, usize, usize)>,
+    ) -> Engraved {
+        let options = Options {
+            marked,
+            ..settings.options()
+        };
+        engrave(score, &self.fonts, &self.meta, &options)
     }
 
     /// The PDF of the shown tracks: always the Page layout on the chosen
@@ -267,7 +362,8 @@ impl Engraver {
             layout: Layout::Page,
             ..settings.clone()
         };
-        let pages = self.engrave(&doc.score, &paged);
+        // A PDF shows what the file says: no marks.
+        let pages = self.engrave(&doc.score, &paged, BTreeSet::new()).pages;
         let refs: Vec<&DisplayList> = pages.iter().collect();
         let bytes = oxiguitar_render::to_pdf(&refs, &self.fonts, &Theme::LIGHT, &doc.title())
             .map_err(|e| e.to_string())?;
@@ -308,7 +404,11 @@ mod tests {
                 layout,
                 ..Settings::default()
             };
-            assert_eq!(e.engrave(&doc.score, &s).len(), 1, "{layout:?}");
+            assert_eq!(
+                e.engrave(&doc.score, &s, BTreeSet::new()).pages.len(),
+                1,
+                "{layout:?}"
+            );
         }
         let (pdf, pages) = e
             .pdf(
@@ -398,6 +498,51 @@ mod tests {
                 assert_eq!(silent, *a == 0.0, "track {}, bar {b}", info.name);
             }
         }
+    }
+
+    #[test]
+    fn undo_redo_and_the_bars_that_dont_add_up() {
+        let mut doc = open(&fixture("gp5")).unwrap();
+        assert!(doc.check.is_empty() && doc.bad_bars_warning().is_none());
+        assert_eq!(doc.edit_state(), EditState::default());
+        assert!(doc.undo().is_none() && doc.redo().is_none());
+        let shared = doc.score.clone();
+        // A change that shortens bar 2 of track 1.
+        let score = Arc::make_mut(&mut doc.score);
+        let region = Region::Bars {
+            track: 0,
+            staff: 0,
+            bars: 1..2,
+        };
+        let touched = doc.history.record(score, "Delete Beat", vec![region], |s| {
+            s.tracks[0].staves[0].bars[1].voices[0].beats.pop();
+        });
+        doc.check.update(&doc.score, &touched);
+        assert!(
+            !Arc::ptr_eq(&shared, &doc.score),
+            "a shared score is never changed"
+        );
+        assert_eq!(doc.marked().into_iter().collect::<Vec<_>>(), [(0, 0, 1)]);
+        let warning = doc.bad_bars_warning().unwrap();
+        assert!(
+            warning
+                .starts_with("1 bar doesn't add up to its time signature; the first is bar 2 of "),
+            "{warning}"
+        );
+        assert_eq!(
+            doc.edit_state(),
+            EditState {
+                undo: Some("Delete Beat".into()),
+                redo: None,
+                modified: true
+            }
+        );
+        assert_eq!(doc.undo().as_deref(), Some("Delete Beat"));
+        assert!(doc.check.is_empty(), "the bar adds up again");
+        assert_eq!(*doc.score, *shared);
+        assert!(!doc.edit_state().modified);
+        assert_eq!(doc.redo().as_deref(), Some("Delete Beat"));
+        assert_eq!(doc.check.len(), 1);
     }
 
     #[test]

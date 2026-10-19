@@ -8,10 +8,11 @@
 //! track (Mateus, 16 Oct 2026); a hidden track comes back, in the notation
 //! of the button clicked, when either button is clicked. There is no
 //! separate show tick: the buttons do that job, so the two can't disagree
-//! (Mateus, 17 Oct 2026). Clicking a name shows that track alone; clicking
-//! a button on another track adds it, so several tracks can be shown at
-//! once without a separate "Multitrack" switch (Mateus, 17 Oct 2026). The
-//! last shown track cannot be hidden.
+//! (Mateus, 17 Oct 2026). A button on another track adds it, so several
+//! tracks can be shown at once without a separate "Multitrack" switch
+//! (Mateus, 17 Oct 2026). A click on a track's name selects it for the
+//! editor and changes nothing here (Mateus, 19 Oct 2026). The last shown
+//! track cannot be hidden.
 
 use std::collections::BTreeMap;
 
@@ -117,13 +118,6 @@ impl Tracks {
                 tablature: !r.tablature,
             },
         );
-    }
-
-    /// Show track `i` alone.
-    pub(crate) fn solo(&mut self, i: usize) {
-        if i < self.len() {
-            self.shown = vec![i];
-        }
     }
 
     fn apply(&mut self, i: usize, n: Notation) {
@@ -296,7 +290,7 @@ mod tests {
     #[test]
     fn drums_have_no_tab() {
         let mut t = guitar_piano_drums();
-        t.solo(2);
+        t.toggle_standard(2);
         t.toggle_tablature(2);
         assert!(!t.row(2).tablature);
         assert!(t.row(2).standard);
@@ -306,11 +300,11 @@ mod tests {
     fn several_tracks_shown_via_their_own_buttons() {
         let mut t = guitar_piano_drums();
         assert_eq!(t.shown(), vec![0]);
-        t.solo(1);
-        assert_eq!(t.shown(), vec![1]);
         // A button on another track adds it: no separate multitrack switch.
         t.toggle_standard(2);
-        assert_eq!(t.shown(), vec![1, 2]);
+        assert_eq!(t.shown(), vec![0, 2]);
+        t.toggle_standard(1);
+        assert_eq!(t.shown(), vec![0, 1, 2], "in score order");
         assert_eq!(t.notation().len(), 3);
     }
 

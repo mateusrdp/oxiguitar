@@ -7,6 +7,7 @@
 - [Opening files](opening.md)
 - [Layouts](layouts.md)
 - [Tracks and notation](tracks.md)
+- [Editing](editing.md)
 - [Zoom](zoom.md)
 - [Dark page and dynamics](view.md)
 - [Tools](tools.md)

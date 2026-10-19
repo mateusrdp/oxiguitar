@@ -12,18 +12,24 @@
 
 use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::JoinHandle;
 
 use oxiguitar_display::{Rect, Theme};
-use oxiguitar_host::api::event::Event as PluginEvent;
+use oxiguitar_edit::StaffBar;
+use oxiguitar_host::api::event::{Event as PluginEvent, Selection as PluginSelection};
 use oxiguitar_host::{Level, Plugins};
+use oxiguitar_layout::Hits;
+use oxiguitar_model::Score;
 use oxiguitar_render::Raster;
 
 use crate::canvas::Sheets;
 #[cfg(test)]
 use crate::canvas::TILE;
-use crate::document::{Document, Engraver, OpenScore, Settings, ToolEntry, TrackInfo, file_name};
+use crate::document::{
+    Document, EditState, Engraver, OpenScore, Settings, ToolEntry, TrackInfo, file_name,
+};
 
 /// What the window asks of the worker.
 #[derive(Debug)]
@@ -41,8 +47,15 @@ pub(crate) enum Request {
         dark: bool,
         tiles: Vec<(u32, u32)>,
     },
-    /// Apply the Tools menu's tool with this index.
+    /// Apply the Tools menu's tool with this index, as one undoable
+    /// command.
     ApplyTool(usize),
+    /// Edit → Undo.
+    Undo,
+    /// Edit → Redo.
+    Redo,
+    /// The caret or the selection moved: tell the plugins that listen.
+    Selection(Option<PluginSelection>),
     /// Write the shown tracks as a PDF.
     ExportPdf(PathBuf, Settings),
     /// End the worker.
@@ -53,13 +66,29 @@ pub(crate) enum Request {
 pub(crate) enum Event {
     /// A score was opened (and replaces the previous one).
     Opened {
+        /// The score, shared read-only with the window for the caret.
+        score: Arc<Score>,
+        edit: EditState,
+        /// The bars that don't add up.
+        bad: Vec<StaffBar>,
         tracks: Vec<TrackInfo>,
         tools: Vec<ToolEntry>,
         pdf_name: String,
         folder: Option<PathBuf>,
     },
-    /// A new engraving: where each sheet sits on the canvas, in points.
-    Engraved { engraving: u64, sheets: Vec<Rect> },
+    /// A new engraving: where each sheet sits on the canvas, in points,
+    /// and where every staff, bar and beat is on the sheets.
+    Engraved {
+        engraving: u64,
+        sheets: Vec<Rect>,
+        hits: Arc<Hits>,
+    },
+    /// The score changed (a tool, an undo, a redo).
+    Changed {
+        score: Arc<Score>,
+        edit: EditState,
+        bad: Vec<StaffBar>,
+    },
     /// One tile, premultiplied RGBA, `canvas::TILE` pixels square.
     Tile {
         engraving: u64,
@@ -78,10 +107,13 @@ impl std::fmt::Debug for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Event::Opened { tracks, .. } => write!(f, "Opened({} tracks)", tracks.len()),
-            Event::Engraved { engraving, sheets } => {
+            Event::Engraved {
+                engraving, sheets, ..
+            } => {
                 write!(f, "Engraved({engraving}, {} sheets)", sheets.len())
             }
             Event::Tile { col, row, .. } => write!(f, "Tile({col}, {row})"),
+            Event::Changed { bad, .. } => write!(f, "Changed({} bad bars)", bad.len()),
             Event::Tools(t) => write!(f, "Tools({})", t.len()),
             Event::Message(l, s) => write!(f, "Message({l:?}, {s:?})"),
         }
@@ -181,7 +213,12 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
         };
         let superseded = |p: &VecDeque<Request>, tiles: bool| {
             p.iter().any(|r| match r {
-                Request::Open(_) | Request::Engrave(_) | Request::ApplyTool(_) => true,
+                Request::Open(_)
+                | Request::Engrave(_)
+                | Request::ApplyTool(_)
+                | Request::Undo
+                | Request::Redo => true,
+                Request::Selection(_) => false,
                 Request::Stop => true,
                 Request::Tiles { .. } => tiles,
                 Request::ExportPdf(..) => false,
@@ -236,16 +273,30 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     continue;
                 };
                 let (report, changed) = doc.apply_tool(i);
-                if changed {
-                    st.open.set(Some(doc.score.clone()));
-                    st.revision += 1;
-                    st.plugins.push(PluginEvent::ScoreChanged {
-                        revision: st.revision,
-                    });
-                }
                 sink(Event::Tools(doc.tools()));
                 sink(Event::Message(Level::Info, report));
+                if changed {
+                    changed_score(&mut st, sink);
+                }
                 engrave(&mut st, sink);
+            }
+            Request::Undo | Request::Redo => {
+                let Some(doc) = st.doc.as_mut() else {
+                    continue;
+                };
+                let done = if matches!(request, Request::Undo) {
+                    doc.undo()
+                } else {
+                    doc.redo()
+                };
+                if done.is_some() {
+                    sink(Event::Tools(doc.tools()));
+                    changed_score(&mut st, sink);
+                    engrave(&mut st, sink);
+                }
+            }
+            Request::Selection(selection) => {
+                st.plugins.push(PluginEvent::Selection(selection));
             }
             Request::ExportPdf(path, settings) => {
                 let Some(doc) = st.doc.as_ref() else {
@@ -280,7 +331,13 @@ fn open(st: &mut State, path: PathBuf, sink: &dyn Fn(Event)) {
             st.plugins.push(PluginEvent::ScoreOpened {
                 revision: st.revision,
             });
+            if let Some(warning) = doc.bad_bars_warning() {
+                sink(Event::Message(Level::Warning, warning));
+            }
             sink(Event::Opened {
+                score: doc.score.clone(),
+                edit: doc.edit_state(),
+                bad: doc.check.iter().collect(),
                 tracks: doc.tracks(),
                 tools: doc.tools(),
                 pdf_name: doc.pdf_name(),
@@ -296,12 +353,31 @@ fn engrave(st: &mut State, sink: &dyn Fn(Event)) {
     let Some(doc) = st.doc.as_ref() else {
         return;
     };
-    let lists = st.engraver.engrave(&doc.score, &st.settings);
-    st.sheets = Sheets::stack(lists);
+    let engraved = st.engraver.engrave(&doc.score, &st.settings, doc.marked());
+    st.sheets = Sheets::stack(engraved.pages);
     st.engraving += 1;
     sink(Event::Engraved {
         engraving: st.engraving,
         sheets: st.sheets.rects.clone(),
+        hits: Arc::new(engraved.hits),
+    });
+}
+
+/// The open score changed: plugins hear of it (pushing never waits), then
+/// the window.
+fn changed_score(st: &mut State, sink: &dyn Fn(Event)) {
+    let Some(doc) = st.doc.as_ref() else {
+        return;
+    };
+    st.open.set(Some(doc.score.clone()));
+    st.revision += 1;
+    st.plugins.push(PluginEvent::ScoreChanged {
+        revision: st.revision,
+    });
+    sink(Event::Changed {
+        score: doc.score.clone(),
+        edit: doc.edit_state(),
+        bad: doc.check.iter().collect(),
     });
 }
 
@@ -379,7 +455,10 @@ mod tests {
         assert!(!tracks.is_empty() && !tools.is_empty());
 
         worker.send(Request::Engrave(Settings::default()));
-        let Event::Engraved { engraving, sheets } = next(&rx) else {
+        let Event::Engraved {
+            engraving, sheets, ..
+        } = next(&rx)
+        else {
             panic!("expected Engraved")
         };
         assert_eq!(sheets.len(), 1);
