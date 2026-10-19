@@ -1,0 +1,24 @@
+# The OxiGuitar plugin developer guide, the user manual's sister book
+# (docs/design/plugins.md). Built with mdBook and published beside the manual,
+# at https://mateusrdp.github.io/oxiguitar/plugins/, by
+# .github/workflows/docs.yml. Build it locally with: mdbook build docs/plugins
+# (the pages land in docs/plugins/book/, which git ignores).
+#
+# Its code examples are included from the template plugin (template/), which
+# CI builds and checks (scripts/check-plugin-template.sh), so they compile.
+
+[book]
+title = "Writing OxiGuitar plugins"
+authors = ["Mateus Rocha de Paula", "The OxiGuitar contributors"]
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/mateusrdp/oxiguitar"
+edit-url-template = "https://github.com/mateusrdp/oxiguitar/edit/develop/docs/plugins/{path}"
+default-theme = "light"
+preferred-dark-theme = "navy"
+no-section-label = true
+
+[output.html.search]
+enable = true

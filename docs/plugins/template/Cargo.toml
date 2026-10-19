@@ -1,0 +1,50 @@
+# An OxiGuitar plugin: a template to copy (docs/plugins/, "Start from the
+# template"). Rename the package, the plugin's id and its file, then delete
+# the parts you don't need.
+
+[package]
+name = "example-plugin"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+description = "An example OxiGuitar plugin: a small text tab format, a statistics tab and a note-name service."
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+# An ordinary library for `cargo test`; the `.oxp` file is the same crate
+# built with `--features oxp --crate-type cdylib` (oxiguitar-plugin-test
+# does that).
+crate-type = ["lib"]
+
+[features]
+# Turned on only when the `.oxp` file is built: it exports the plugin's
+# entry point and manifest. Every plugin needs this feature.
+oxp = []
+
+[dependencies]
+# The SDK, from OxiGuitar's repository at the tag of the release you build
+# for (v0.2.0 builds plugins that load in OxiGuitar 0.2 and later).
+oxiguitar-plugin = { git = "https://github.com/mateusrdp/oxiguitar", tag = "v0.2.0" }
+# The plugin's settings come and go as JSON objects (Host::settings).
+serde_json = "1"
+
+[dev-dependencies]
+# The contract suite: tests/contract.rs builds the `.oxp` file and checks it
+# through OxiGuitar's own plugin host.
+oxiguitar-plugin-test = { git = "https://github.com/mateusrdp/oxiguitar", tag = "v0.2.0" }
+
+[lints.rust]
+# Deny `unsafe`, don't forbid it: `export_plugin!` allows it on the two
+# attributes it generates (the entry point and the manifest's section).
+unsafe_code = "deny"
+
+[profile.release]
+# Small files. Keep the default `panic = "unwind"`: a panic is then caught
+# and reported as an error instead of closing OxiGuitar.
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+
+# Its own workspace, wherever the folder is copied.
+[workspace]

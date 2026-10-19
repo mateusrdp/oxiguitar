@@ -22,6 +22,7 @@ Comment:
 Files:
  crates/oxiguitar-plugin-api/*
  crates/oxiguitar-plugin/*
+ docs/plugins/template/*
 Copyright: 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 License: MIT or Apache-2.0
 

@@ -2,8 +2,10 @@
 resolver = "3"
 members = ["crates/*", "plugins/*"]
 # Throwaway experiments with their own workspaces and lock files (see
-# spikes/README.md), and the fuzz targets (nightly Rust, see fuzz/README.md).
-exclude = ["spikes", "fuzz"]
+# spikes/README.md), the fuzz targets (nightly Rust, see fuzz/README.md), and
+# the template plugin, a workspace of its own that authors copy
+# (docs/plugins/; scripts/check-plugin-template.sh builds it).
+exclude = ["spikes", "fuzz", "docs/plugins/template"]
 
 [workspace.package]
 version = "0.1.0"

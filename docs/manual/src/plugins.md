@@ -64,3 +64,7 @@ In safe mode no plugin is used at all, so nothing can be opened or played, but *
 ## Privacy
 
 Plugins made by the OxiGuitar project keep the program's privacy promises: nothing is uploaded, and nothing is downloaded unless you ask. We make no promises about plugins from anywhere else: a plugin can do anything a program can, so install only plugins you trust.
+
+## Writing your own
+
+Plugins are written in Rust. The [plugin developer guide](plugins/index.html) shows how, from a template plugin that builds, passes our checks and opens in OxiGuitar as it is.

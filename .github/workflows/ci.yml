@@ -172,6 +172,58 @@ jobs:
           path: target/tmp/visual-diff/
           if-no-files-found: ignore
 
+  # M2's last gate: the plugin developer guide builds a working plugin from
+  # the template (docs/plugins/). A copy of docs/plugins/template/ outside
+  # the repository, built against this checkout's SDK: fmt, clippy, its
+  # tests and the contract suite (cargo test and oxiguitar-plugin-test), then
+  # oxiguitar-cli opens the template's sample through the plugin file. On
+  # each of the three systems, as the guide's "Building for every system".
+  template:
+    name: Plugin template (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, os: ubuntu-24.04 }
+          - { name: Windows, os: windows-2025 }
+          - { name: macOS, os: macos-15 }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+          components: clippy, rustfmt
+          # The template's universal macOS file needs both processors.
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build a plugin from the template, as the guide says
+        shell: bash
+        env:
+          CARGO_TERM_COLOR: never
+        run: |
+          set +e
+          scripts/check-plugin-template.sh "$RUNNER_TEMP/template" 2>&1 | tee template.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            report=$( (grep -E -B2 -A8 '^error|panicked at|FAIL|^Diff in' template.log; true) | head -n 60)
+            [ -n "$report" ] || report=$(tail -n 40 template.log)
+            report=${report//'%'/'%25'}
+            report=${report//$'\r'/'%0D'}
+            report=${report//$'\n'/'%0A'}
+            echo "::error title=Plugin template (${{ matrix.name }})::$report"
+          fi
+          exit "$status"
+      # The plugin built from the template, with its sample, for trying it in
+      # the app by hand (the guide's "Try it in OxiGuitar").
+      - uses: actions/upload-artifact@v7
+        with:
+          name: example-plugin-${{ runner.os }}
+          path: |
+            ${{ runner.temp }}/template/example-plugin/dist/*.oxp
+            ${{ runner.temp }}/template/example-plugin/samples/open-strings.extab
+          retention-days: 14
+
   # M1's speed budget: a 300-bar, 8-track file opens in under a second, from
   # reading the file to the first tiles (crates/oxiguitar-app/src/speed.rs);
   # and M2's: 30 plugin manifests are read in under 10 ms at start
@@ -255,7 +307,7 @@ jobs:
   ci-success:
     name: ci-success
     if: always()
-    needs: [fmt, lint, test, speed, deny, no-network, dco]
+    needs: [fmt, lint, test, template, speed, deny, no-network, dco]
     runs-on: ubuntu-24.04
     steps:
       - name: Every job passed
