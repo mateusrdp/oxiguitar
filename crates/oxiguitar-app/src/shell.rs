@@ -209,7 +209,12 @@ impl Default for Shell {
                 Area::new(vec![Tab::new("tracks", "Tracks")], false),
                 Area::new(vec![Tab::new("palette", "Palette")], false),
                 // Open: it shows the caret's bar (Mateus, 20 Oct 2026).
-                Area::new(vec![Tab::new("inspector", "Inspector")], false),
+                // The song's information beside it, as Guitar Pro 8's Song
+                // Inspector (Mateus, 20 Oct 2026).
+                Area::new(
+                    vec![Tab::new("inspector", "Inspector"), Tab::new("song", "Song")],
+                    false,
+                ),
             ],
         }
     }
@@ -259,7 +264,7 @@ mod tests {
             .flat_map(|a| &a.tabs)
             .map(|t| t.id.as_str())
             .collect();
-        assert_eq!(ids, ["player", "tracks", "palette", "inspector"]);
+        assert_eq!(ids, ["player", "tracks", "palette", "inspector", "song"]);
         let ids: Vec<&str> = shell.toolbar.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(ids, ["file", "edit"]);
         assert_eq!(Side::from_index(3), Some(Side::Right));

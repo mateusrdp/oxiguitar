@@ -46,7 +46,7 @@ pub use clip::{Clip, ClipTrack, Paste, copy};
 pub use effects::{BeatChange, Effect, HarmonicKind, NoteChange};
 pub use entry::{Command, Edited, apply, new_score};
 pub use history::{Change, History, Region, Touched};
-pub use notation::LYRIC_LINES;
+pub use notation::{LYRIC_LINES, tidy_info};
 pub use selection::{Selection, Span};
 pub use tracks::{TrackSettings, notes_lost};
 /// How many notes a transposition would leave out.

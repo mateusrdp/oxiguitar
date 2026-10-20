@@ -399,14 +399,15 @@ mod tests {
         // The other plugin's tab showing in the bottom area, the withdrawn
         // one's in the right area.
         shell.area_mut(Side::Bottom).active = bottom - 1;
-        shell.area_mut(Side::Right).active = 1;
+        let right = shell.area(Side::Right).tabs.len();
+        shell.area_mut(Side::Right).active = right - 1;
         assert!(remove_from(&mut shell, "a.one"));
         let ids =
             |side| -> Vec<String> { shell.area(side).tabs.iter().map(|t| t.id.clone()).collect() };
         assert_eq!(ids(Side::Bottom).len(), bottom - 1);
         assert_eq!(shell.area(Side::Bottom).active_id(), "plugin:b.two/y");
         assert!(ids(Side::Right).iter().all(|id| tab_of(id).is_none()));
-        assert_eq!(shell.area(Side::Right).active, 0);
+        assert!(shell.area(Side::Right).active < right - 1);
         assert!(!remove_from(&mut shell, "a.one"));
     }
 

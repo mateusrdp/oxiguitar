@@ -1,6 +1,6 @@
 # Editing
 
-OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, add effects, chords, text and lyrics, undo, and find the bars that don't add up. The score's information comes next.
+OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, add effects, chords, text and lyrics, set the score's information, undo, and find the bars that don't add up.
 
 ## The caret
 
@@ -181,6 +181,10 @@ A syllable already there shows in the field, to change; an empty field leaves th
 Lyrics are kept as Guitar Pro keeps them, and a file's lyrics follow its rules on the page: a space or a hyphen starts the next syllable, each further space or hyphen leaves a note empty, a plus joins two words on one note ("got+to"), and text in square brackets ("[Verse 2]") is a note to yourself, not shown.
 
 The Inspector shows the beat's chord and text, with **Edit…** to change them.
+
+## The song's information
+
+The **Song** tab, beside the Inspector on the right, holds the score's information, in Guitar Pro's order: title, artist, subtitle, album, words, music, copyright, transcriber, notices and instructions. Type in a field; it is set when you press Enter or leave the field, as one step to undo. The title, subtitle and artist show at the top of the page and of a PDF.
 
 ## Undo and redo
 

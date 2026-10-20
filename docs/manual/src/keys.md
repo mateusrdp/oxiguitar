@@ -28,6 +28,7 @@
 | Ctrl + C, Ctrl + X, Ctrl + V, Ctrl + Shift + V | Copy, cut, paste, Special Paste ([Copy, cut and paste](editing.md#copy-cut-and-paste)) |
 | Ctrl + Z / Ctrl + Y | Undo / redo |
 | F4 | The next bar that doesn't add up |
+| Ctrl + F | Search the palette; Escape empties it, Enter goes back to the score |
 | Ctrl + mouse wheel | Zoom the interface in or out |
 | Ctrl + + / Ctrl + − / Ctrl + 0 | Zoom the interface in, out, back to 100 % |
 | Score zoom slider, bottom right | Zoom the score; click the percentage for 100 % |

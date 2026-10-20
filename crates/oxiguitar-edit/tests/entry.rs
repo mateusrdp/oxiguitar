@@ -149,6 +149,19 @@ fn effects() -> Vec<Command> {
         })),
         Command::Chord(None),
         Command::Text("Riff A".into()),
+        Command::Info(Box::new(oxiguitar_model::ScoreInfo {
+            title: "A new title".into(),
+            subtitle: "Second take".into(),
+            artist: "Someone".into(),
+            album: "Demos".into(),
+            words: "W. Riter".into(),
+            music: "C. Omposer".into(),
+            copyright: "2026".into(),
+            transcriber: "Mateus".into(),
+            instructions: "Play it slow".into(),
+            notices: vec!["First notice".into(), String::new(), "Third".into()],
+        })),
+        Command::Info(Box::default()),
         Command::Text(String::new()),
         // Placed at the caret when run.
         Command::Syllable {

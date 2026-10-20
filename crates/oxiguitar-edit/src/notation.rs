@@ -16,7 +16,7 @@
 //!   sings; Guitar Pro keeps five.
 
 use oxiguitar_model::lyrics::{set_syllable, sung_beats, syllables};
-use oxiguitar_model::{BeatKind, ChordDiagram, LyricLine, Note, Score};
+use oxiguitar_model::{BeatKind, ChordDiagram, LyricLine, Note, Score, ScoreInfo};
 
 use crate::{Caret, Command, Edited, History, Region};
 
@@ -31,6 +31,7 @@ pub(crate) fn apply(
     let done = match command {
         Command::Chord(d) => chord(score, history, c, d.as_ref(), label),
         Command::Text(t) => text(score, history, c, t, label),
+        Command::Info(i) => info(score, history, i, label),
         Command::Syllable {
             line,
             at,
@@ -106,6 +107,49 @@ fn syllable(
         if let Some(tr) = s.tracks.get_mut(t) {
             tr.lyrics = lines;
         }
+    }))
+}
+
+/// The score's information as files keep it: each field trimmed, the
+/// notices' lines without trailing spaces or empty lines at the end.
+pub fn tidy_info(info: &ScoreInfo) -> ScoreInfo {
+    let t = |s: &str| s.trim().to_owned();
+    let mut notices: Vec<String> = info
+        .notices
+        .iter()
+        .flat_map(|n| n.split('\n'))
+        .map(|l| l.trim_end().to_owned())
+        .collect();
+    while notices.last().is_some_and(String::is_empty) {
+        notices.pop();
+    }
+    ScoreInfo {
+        title: t(&info.title),
+        subtitle: t(&info.subtitle),
+        artist: t(&info.artist),
+        album: t(&info.album),
+        words: t(&info.words),
+        music: t(&info.music),
+        copyright: t(&info.copyright),
+        transcriber: t(&info.transcriber),
+        instructions: t(&info.instructions),
+        notices,
+    }
+}
+
+/// [`Command::Info`].
+fn info(
+    score: &mut Score,
+    history: &mut History,
+    info: &ScoreInfo,
+    label: &str,
+) -> Option<crate::Touched> {
+    let info = tidy_info(info);
+    if info == score.info {
+        return None;
+    }
+    Some(history.record(score, label, vec![Region::Info], |s| {
+        s.info = info;
     }))
 }
 
@@ -275,6 +319,31 @@ mod tests {
         let mut four = am();
         four.frets.truncate(4);
         assert!(apply(&mut s, &mut h, at(0), None, Command::Chord(Some(four))).is_none());
+    }
+
+    #[test]
+    fn score_information() {
+        let mut s = new_score();
+        let mut h = History::new();
+        let info = ScoreInfo {
+            title: " Song ".into(),
+            notices: vec!["one  ".into(), "two\nthree".into(), String::new()],
+            ..ScoreInfo::default()
+        };
+        apply(
+            &mut s,
+            &mut h,
+            at(0),
+            None,
+            Command::Info(Box::new(info.clone())),
+        )
+        .unwrap();
+        assert_eq!(s.info.title, "Song");
+        assert_eq!(s.info.notices, ["one", "two", "three"]);
+        assert!(apply(&mut s, &mut h, at(0), None, Command::Info(Box::new(info))).is_none());
+        assert_eq!(h.undo_label(), Some("Score Information"));
+        h.undo(&mut s);
+        assert_eq!(s, new_score());
     }
 
     #[test]
