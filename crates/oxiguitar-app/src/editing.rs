@@ -23,7 +23,7 @@ use oxiguitar_display::Rect;
 use oxiguitar_edit::{Caret, Command, Selection, StaffBar};
 use oxiguitar_host::api::event::{Position, Selection as PluginSelection, Selection2};
 use oxiguitar_layout::{Found, Hits, Spot, pitch_at_step};
-use oxiguitar_model::{BeatKind, Clef, NoteValue, Pitch, Score};
+use oxiguitar_model::{BeatKind, Clef, NoteValue, Pitch, Score, Tuplet};
 
 /// How soon a second digit must follow the first to make a two-digit
 /// fret.
@@ -105,6 +105,8 @@ pub(crate) fn menu_command(name: &str) -> Option<Command> {
         "voice-3" => Command::MoveToVoice(2),
         "voice-4" => Command::MoveToVoice(3),
         "remove-unused-voices" => Command::RemoveUnusedVoices,
+        "insert-bar" => Command::InsertBar,
+        "delete-bars" => Command::DeleteBars,
         _ => return None,
     })
 }
@@ -145,10 +147,42 @@ pub(crate) struct AtCaret {
     pub(crate) dots: u8,
     pub(crate) rest: bool,
     pub(crate) tied: bool,
+    /// The beat is a triplet.
+    pub(crate) triplet: bool,
+    /// The caret's bar opens a repeat.
+    pub(crate) repeat_start: bool,
+    /// The caret's bar closes a repeat.
+    pub(crate) repeat_end: bool,
+    /// The caret's bar ends with a double bar line.
+    pub(crate) double_bar: bool,
+    /// The caret's bar is in free time.
+    pub(crate) free_time: bool,
+}
+
+/// A dialog the keys or the palette open at the caret.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Dialog {
+    /// The Bar dialog: signatures, clef, tempo, feel, repeats, endings,
+    /// directions, section.
+    Bar,
+    /// Custom N-tuplet.
+    Tuplet,
+}
+
+/// The dialog a key opens, as Guitar Pro 8's keys open its own: Ctrl + T
+/// (time signature), Ctrl + K (key signature), Ctrl + / (feel), D
+/// (directions) and Shift + Insert (section) all open the Bar dialog.
+pub(crate) fn dialog_key(name: &str, shift: bool, ctrl: bool, alt: bool) -> Option<Dialog> {
+    match (name, ctrl, alt) {
+        ("t" | "T" | "k" | "K" | "/" | "?", true, false) => Some(Dialog::Bar),
+        ("d" | "D", false, false) if !shift => Some(Dialog::Bar),
+        ("insert", false, false) if shift => Some(Dialog::Bar),
+        _ => None,
+    }
 }
 
 /// A command typed at the caret, as the worker takes it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Typed {
     pub(crate) command: Command,
     pub(crate) caret: Caret,
@@ -282,6 +316,13 @@ impl Editing {
                 Command::MoveToVoice(usize::from(digit(name)? - 1))
             }
             ("insert", true, false) => Command::InsertBeat,
+            ("insert", false, false) if !shift => Command::InsertBar,
+            ("delete", true, false) => Command::DeleteBars,
+            ("/" | "?", false, false) => Command::Tuplet(Tuplet::TRIPLET),
+            ("[" | "{", false, false) => Command::RepeatStart,
+            ("]" | "}", false, false) => Command::RepeatEnd,
+            ("|", false, false) => Command::FreeTime,
+            ("l" | "L", false, true) if shift => Command::FreeTime,
             ("up", false, true) if shift => Command::SemitoneUp,
             ("down", false, true) if shift => Command::SemitoneDown,
             ("up", false, true) => Command::StringUp,
@@ -309,6 +350,34 @@ impl Editing {
             .get(c.staff)?
             .transposition;
         pitch_at_step(step, clef, key, transposition)
+    }
+
+    /// What the Bar dialog opens on: the caret's bar (the selection's
+    /// first), and its heading ("Bar 3", or "Bars 3–6" for a selection).
+    pub(crate) fn bar_state(&self) -> Option<(oxiguitar_edit::BarState, String)> {
+        let c = self.caret?;
+        let score = self.score.as_ref()?;
+        let (first, last) = self.selection.map_or((c.bar, c.bar), |s| s.bars());
+        let state = oxiguitar_edit::BarState::at(score, Caret { bar: first, ..c })?;
+        let heading = if first == last {
+            format!("Bar {}", first + 1)
+        } else {
+            format!("Bars {}–{}", first + 1, last + 1)
+        };
+        Some((state, heading))
+    }
+
+    /// The tuplet of the caret's beat, if it is in one.
+    pub(crate) fn beat_tuplet(&self) -> Option<Tuplet> {
+        let c = self.caret?;
+        let score = self.score.as_ref()?;
+        c.voice_in(score)?
+            .beats
+            .get(c.beat)?
+            .duration
+            .tuplets
+            .first()
+            .copied()
     }
 
     /// The caret's line or space on the standard staff, if it is there.
@@ -342,6 +411,7 @@ impl Editing {
         let c = self.caret?;
         let score = self.score.as_ref()?;
         let beat = c.voice_in(score).and_then(|v| v.beats.get(c.beat));
+        let bar = score.master_bars.get(c.bar);
         Some(AtCaret {
             voice: c.voice,
             value: beat.map(|b| b.duration.value),
@@ -352,6 +422,11 @@ impl Editing {
                     .iter()
                     .any(|n| n.tie && n.string().is_none_or(|s| s == c.string))
             }),
+            triplet: beat.is_some_and(|b| b.duration.tuplets == [Tuplet::TRIPLET]),
+            repeat_start: bar.is_some_and(|b| b.repeat_start),
+            repeat_end: bar.is_some_and(|b| b.repeat_end.is_some()),
+            double_bar: bar.is_some_and(|b| b.double_bar),
+            free_time: bar.is_some_and(|b| b.free_time),
         })
     }
 
@@ -951,6 +1026,14 @@ mod tests {
             ("insert", false, true, false, Command::InsertBeat),
             ("up", true, false, true, Command::SemitoneUp),
             ("delete", true, true, false, Command::ClearBeats),
+            ("delete", false, true, false, Command::DeleteBars),
+            ("insert", false, false, false, Command::InsertBar),
+            ("/", false, false, false, Command::Tuplet(Tuplet::TRIPLET)),
+            ("?", true, false, false, Command::Tuplet(Tuplet::TRIPLET)),
+            ("[", false, false, false, Command::RepeatStart),
+            ("]", false, false, false, Command::RepeatEnd),
+            ("|", true, false, false, Command::FreeTime),
+            ("L", true, false, true, Command::FreeTime),
             ("3", false, false, true, Command::MoveToVoice(2)),
             ("down", false, false, true, Command::StringDown),
         ] {
@@ -1008,6 +1091,16 @@ mod tests {
         // Tab leaves the standard staff.
         e.key(Key::Tab, false, false);
         assert_eq!(e.height(), None);
+    }
+
+    #[test]
+    fn dialog_keys() {
+        assert_eq!(dialog_key("t", false, true, false), Some(Dialog::Bar));
+        assert_eq!(dialog_key("k", false, true, false), Some(Dialog::Bar));
+        assert_eq!(dialog_key("d", false, false, false), Some(Dialog::Bar));
+        assert_eq!(dialog_key("insert", true, false, false), Some(Dialog::Bar));
+        assert_eq!(dialog_key("insert", false, false, false), None);
+        assert_eq!(dialog_key("/", false, false, false), None);
     }
 
     #[test]

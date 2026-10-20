@@ -60,6 +60,32 @@ A tied note always plays the fret of the note it continues: change that note and
 
 Every change can be undone. After typing, the bars that don't add up are checked again (see below).
 
+### Tuplets
+
+**/** (or the palette's **Triplet**) makes the beat a triplet, three in the time of two, or takes it out of one; with a run of beats selected, all of them. **Custom N-tuplet** (in the palette, or **Edit → Custom N-tuplet…**) asks for any grouping, *n* notes in the time of *m*, with the usual *m* filled in as you change *n*: 5 to 7 in the time of 4, 9 to 15 in the time of 8, and 2, 4 and 8 in the time of 3, 3 and 6. A beat added after a tuplet's last beat is in the same tuplet, so typing on fills it.
+
+## Bars
+
+The bar commands work on the caret's bar or, with a selection, on its bars.
+
+| Keys | What they do |
+| --- | --- |
+| Insert | Inserts an empty bar before the caret's, in its time and key |
+| Ctrl + Delete | Deletes the caret's bar, or the selected bars, from every track (never the last bar left). A tempo change in them moves to the bar after them, so the music after them keeps its tempo |
+| [ and ] | A repeat opens at the bar, or closes at it (played twice); press again to take it away |
+| \| or Alt + Shift + L | Free time: the bar has no time signature to add up to |
+| Ctrl + T, Ctrl + K, Ctrl + /, D, Shift + Insert | Opens the **Bar** dialog |
+
+The **Bar** dialog (also **Edit → Bar…** and the palette's Clef, Key Signature, Time Signature, Rhythmic Interpretation, Alternate Endings and Directions) shows what the bar carries and changes any of it at once, as one change to undo:
+
+- **Time signature**, **key** and **feel** change from this bar until the next bar that had another, as Guitar Pro changes them. A tempo change inside a bar stays at the same point of the bar when its time signature changes.
+- **Clef** changes the caret's track from this bar until its next clef. A guitar's staff sounds an octave below the written notes, and it keeps doing so in any clef (its bass clef has the small 8 too). Drum tracks keep the drums' clef.
+- **Tempo** is the tempo from the start of the bar: in the first bar, the song's tempo.
+- **Repeat**: whether a repeat opens here, and whether one closes here and how many times it is played.
+- **Alternate endings** 1 to 8, **Section** (a letter and a name; empty for none), **Double bar line**, **Free time**, and the **Directions**: segno, coda, fine and the jumps (D.C., D.S., "to coda" and the rest).
+
+The palette's **Repeat Start**, **Repeat Close**, **Free Time** and **Double Bar Line** switch those at once, and light up when the caret's bar has them; **Triplet** lights up on a triplet beat.
+
 ## Undo and redo
 
 **Edit → Undo** (Ctrl + Z) and **Edit → Redo** (Ctrl + Y), or the arrows in the toolbar, undo and redo every change, as many times as you like. The menu names the change: "Undo Infer Key Signatures".

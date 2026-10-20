@@ -95,7 +95,15 @@ pub(crate) fn working(id: &str) -> Option<Option<&'static str>> {
         "dotted" => "Shift + .",
         "double-dotted" => "Ctrl + .",
         "tie" => "L",
-        _ if command_of(id).is_some() => return Some(None),
+        "triplet" => "/",
+        "repeat-start" => "[",
+        "repeat-close" => "]",
+        "free-time" => "|",
+        "time-signature" => "Ctrl + T",
+        "key-signature" => "Ctrl + K",
+        "rhythmic-interpretation" => "Ctrl + /",
+        "directions" => "D",
+        _ if command_of(id).is_some() || dialog_of(id).is_some() => return Some(None),
         _ => return None,
     }))
 }
@@ -114,6 +122,27 @@ pub(crate) fn command_of(id: &str) -> Option<Command> {
         "dotted" => Command::Dot,
         "double-dotted" => Command::DoubleDot,
         "tie" => Command::Tie,
+        "triplet" => Command::Tuplet(oxiguitar_model::Tuplet::TRIPLET),
+        "repeat-start" => Command::RepeatStart,
+        "repeat-close" => Command::RepeatEnd,
+        "free-time" => Command::FreeTime,
+        "double-bar" => Command::DoubleBar,
+        _ => return None,
+    })
+}
+
+/// The dialog a tool opens at the caret: the bar's tools open the Bar
+/// dialog, Custom N-tuplet its own.
+pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
+    use crate::editing::Dialog;
+    Some(match id {
+        "clef"
+        | "key-signature"
+        | "time-signature"
+        | "rhythmic-interpretation"
+        | "alternate-endings"
+        | "directions" => Dialog::Bar,
+        "tuplet" => Dialog::Tuplet,
         _ => return None,
     })
 }
@@ -131,6 +160,11 @@ pub(crate) fn checked(id: &str, at: &AtCaret) -> bool {
         Some(Command::Dot) => at.dots == 1,
         Some(Command::DoubleDot) => at.dots == 2,
         Some(Command::Tie) => at.tied,
+        Some(Command::Tuplet(_)) => at.triplet,
+        Some(Command::RepeatStart) => at.repeat_start,
+        Some(Command::RepeatEnd) => at.repeat_end,
+        Some(Command::DoubleBar) => at.double_bar,
+        Some(Command::FreeTime) => at.free_time,
         _ => false,
     }
 }
@@ -1249,6 +1283,8 @@ mod tests {
             dots: 1,
             rest: false,
             tied: true,
+            repeat_end: true,
+            ..AtCaret::default()
         };
         for (id, on) in [
             ("voice-2", true),
@@ -1260,6 +1296,9 @@ mod tests {
             ("rest", false),
             ("tie", true),
             ("bend", false),
+            ("triplet", false),
+            ("repeat-close", true),
+            ("repeat-start", false),
         ] {
             assert_eq!(checked(id, &at), on, "{id}");
         }
@@ -1283,9 +1322,24 @@ mod tests {
             "dotted",
             "double-dotted",
             "tie",
+            "triplet",
+            "tuplet",
+            "repeat-start",
+            "repeat-close",
+            "free-time",
+            "double-bar",
+            "clef",
+            "key-signature",
+            "time-signature",
+            "rhythmic-interpretation",
+            "alternate-endings",
+            "directions",
         ] {
             assert!(tools().any(|(_, t)| t.id == id), "{id}");
+            assert!(working(id).is_some(), "{id} works");
         }
+        assert_eq!(tool_tip("triplet", "Triplet"), "Triplet (/)");
+        assert_eq!(dialog_of("tuplet"), Some(crate::editing::Dialog::Tuplet));
     }
 
     #[test]

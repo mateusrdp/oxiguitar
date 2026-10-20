@@ -21,19 +21,22 @@
 //! | Ctrl + Insert | [`Command::InsertBeat`] |
 //! | Alt + Shift + Up and Down | [`Command::SemitoneUp`], [`Command::SemitoneDown`] |
 //! | Alt + Up and Down | [`Command::StringUp`], [`Command::StringDown`]: the same pitch on the next string |
+//! | / | [`Command::Tuplet`]: the triplet |
+//! | Insert, Ctrl + Delete | [`Command::InsertBar`], [`Command::DeleteBars`] |
+//! | `[`, `]`, `\|` | [`Command::RepeatStart`], [`Command::RepeatEnd`], [`Command::FreeTime`] |
 //!
 //! At the caret's place after a voice's last beat (see [`Caret::at_end`])
 //! a fret, a rest or a tie adds a beat as long as the beat before it.
 
 use oxiguitar_model::{
-    Bar, Beat, BeatKind, BeatTechnique, Duration, Dynamic, Note, NotePlace, NoteValue, Pitch,
-    Score, Staff, Voice,
+    Bar, Beat, BeatKind, BeatTechnique, Clef, Direction, Duration, Dynamic, KeySignature, Marker,
+    Note, NotePlace, NoteValue, Pitch, Score, Staff, TimeSignature, TripletFeel, Tuplet, Voice,
 };
 
 use crate::{Caret, History, Region, Selection, Touched};
 
 /// An edit typed at the caret.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Command {
     /// A fret on the caret's string. With `again`, the fret replaces the
     /// fret just typed, as its second digit: one change, not two.
@@ -98,11 +101,51 @@ pub enum Command {
     /// Voices after the first that hold no notes are emptied, in every bar
     /// of the caret's staff.
     RemoveUnusedVoices,
+    /// The beat, or the selected beats, in this tuplet, or out of it if
+    /// they are in it already (the Triplet tool is 3 in the time of 2).
+    Tuplet(Tuplet),
+    /// A bar before the caret's (or the selection's first), in its time
+    /// and key (Insert).
+    InsertBar,
+    /// The caret's bar, or the selection's bars, out of every track; never
+    /// every bar (Ctrl + Delete).
+    DeleteBars,
+    /// This time signature from the bar until the next change.
+    TimeSignature(TimeSignature),
+    /// This key signature from the bar until the next change.
+    KeySignature(KeySignature),
+    /// The caret's staff in this clef from the bar until its next change.
+    Clef(Clef),
+    /// This tempo, in quarter notes per minute, from the bar's start.
+    Tempo(u16),
+    /// This feel from the bar until the next change.
+    TripletFeel(TripletFeel),
+    /// A repeat opens at the bar, or no longer does (`[`).
+    RepeatStart,
+    /// A repeat closes at the bar, played twice, or no longer does (`]`).
+    RepeatEnd,
+    /// The repeat closing at the bar is played this many times in all;
+    /// under 2, it no longer closes there.
+    RepeatCount(u8),
+    /// The bars belong to these alternate endings (bit 0 is ending 1);
+    /// 0 for none.
+    AlternateEndings(u16),
+    /// The bar has this direction, or no longer has it.
+    Direction(Direction),
+    /// The bar starts this section; `None` or an empty one for none.
+    Section(Option<Marker>),
+    /// A double bar line ends the bar, or no longer does.
+    DoubleBar,
+    /// The bars are in free time, or no longer are (`|`).
+    FreeTime,
+    /// Everything the Bar dialog sets, as one change: each part that
+    /// differs from the caret's bar, as its own command would set it.
+    Bar(Box<crate::BarState>),
 }
 
 impl Command {
     /// The change's name, as Edit → Undo shows it.
-    pub fn label(self) -> &'static str {
+    pub fn label(&self) -> &'static str {
         match self {
             Command::Fret { .. } => FRET,
             Command::Pitch(_) => "Type Note",
@@ -128,6 +171,24 @@ impl Command {
             Command::ClearBar => "Clear Bar",
             Command::MoveToVoice(_) => "Move to Voice",
             Command::RemoveUnusedVoices => "Remove Unused Voices",
+            Command::Tuplet(t) if *t == Tuplet::TRIPLET => "Triplet",
+            Command::Tuplet(_) => "Tuplet",
+            Command::InsertBar => "Insert Bar",
+            Command::DeleteBars => "Delete Bars",
+            Command::TimeSignature(_) => "Time Signature",
+            Command::KeySignature(_) => "Key Signature",
+            Command::Clef(_) => "Clef",
+            Command::Tempo(_) => "Tempo",
+            Command::TripletFeel(_) => "Triplet Feel",
+            Command::RepeatStart => "Repeat Start",
+            Command::RepeatEnd => "Repeat Close",
+            Command::RepeatCount(_) => "Repeat Count",
+            Command::AlternateEndings(_) => "Alternate Endings",
+            Command::Direction(_) => "Direction",
+            Command::Section(_) => "Section",
+            Command::DoubleBar => "Double Bar Line",
+            Command::FreeTime => "Free Time",
+            Command::Bar(_) => "Bar Properties",
         }
     }
 }
@@ -158,6 +219,10 @@ pub fn apply(
     if command == Command::AppendBar {
         return append_bar(score, history, caret);
     }
+    if let Some(edited) = crate::bars::apply(score, history, caret, selection, &command) {
+        return edited;
+    }
+    let label = command.label();
     let undone = matches!(command, Command::Fret { again: true, .. })
         && history.undo_label() == Some(FRET)
         && history.undo(score).is_some();
@@ -181,7 +246,7 @@ pub fn apply(
         bars: plan.first..plan.first + plan.bars.len(),
     };
     let (track, staff, first) = (caret.track, caret.staff, plan.first);
-    let touched = history.record(score, command.label(), vec![region], |s| {
+    let touched = history.record(score, label, vec![region], |s| {
         if let Some(dst) = s
             .tracks
             .get_mut(track)
@@ -232,6 +297,18 @@ fn follow_ties(staff: &Staff, voice: usize, first: usize, bars: &mut Vec<Bar>) {
         at += 1;
     }
     bars.truncate(kept);
+}
+
+/// Every tied note of `staff` from bar `first` on given the fret of the
+/// note it continues, in every voice: after bars were removed before it.
+pub(crate) fn retie(staff: &mut Staff, first: usize) {
+    let mut bars = Vec::new();
+    for voice in 0..crate::VOICES {
+        follow_ties(staff, voice, first, &mut bars);
+    }
+    if let Some(dst) = staff.bars.get_mut(first..first + bars.len()) {
+        dst.clone_from_slice(&bars);
+    }
 }
 
 /// What a bar's notes in `voice` leave on each string, as [`played`]
@@ -563,8 +640,37 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             );
             one(bar, Caret { beat: at, ..c })
         }
-        // Made by `append_bar`, before any plan.
-        Command::AppendBar => None,
+        // Made by `append_bar` and `bars::apply`, before any plan.
+        Command::AppendBar
+        | Command::InsertBar
+        | Command::DeleteBars
+        | Command::TimeSignature(_)
+        | Command::KeySignature(_)
+        | Command::Clef(_)
+        | Command::Tempo(_)
+        | Command::TripletFeel(_)
+        | Command::RepeatStart
+        | Command::RepeatEnd
+        | Command::RepeatCount(_)
+        | Command::AlternateEndings(_)
+        | Command::Direction(_)
+        | Command::Section(_)
+        | Command::DoubleBar
+        | Command::FreeTime
+        | Command::Bar(_) => None,
+        Command::Tuplet(t) => {
+            let targets = targets(score, c, selection);
+            let off = staff
+                .bars
+                .get(c.bar)
+                .and_then(|b| b.voices.get(c.voice))
+                .and_then(|v| v.beats.get(c.beat))
+                .is_some_and(|b| b.duration.tuplets == [t]);
+            on_beats(score, c, &targets, |b| {
+                let to = if off { Vec::new() } else { vec![t] };
+                (b.duration.tuplets != to).then(|| b.duration.tuplets = to)
+            })
+        }
         Command::MoveBeatLeft | Command::MoveBeatRight => {
             let mut bar = old.clone();
             let v = bar.voices.get_mut(c.voice)?;
@@ -746,16 +852,63 @@ fn grow_voices(bar: &mut Bar, voice: usize) {
 /// How long a new beat at `at` is: as long as the main beat before it, or a
 /// quarter.
 fn duration_before(v: &Voice, at: usize) -> Duration {
-    v.beats
+    let before: Vec<&Beat> = v
+        .beats
         .get(..at)
-        .and_then(|b| b.iter().rev().find(|b| b.grace.is_none()))
-        .map_or_else(
-            || Duration::new(NoteValue::Quarter),
-            |b| Duration {
-                tuplets: Vec::new(),
-                ..b.duration.clone()
-            },
-        )
+        .unwrap_or_default()
+        .iter()
+        .filter(|b| b.grace.is_none())
+        .collect();
+    let Some(last) = before.last() else {
+        return Duration::new(NoteValue::Quarter);
+    };
+    Duration {
+        tuplets: if tuplet_open(&before) {
+            last.duration.tuplets.clone()
+        } else {
+            Vec::new()
+        },
+        ..last.duration.clone()
+    }
+}
+
+/// Whether the beats `before` end inside a tuplet group that isn't full
+/// yet: the run of beats in the last one's tuplet, counted as written,
+/// doesn't make whole groups of its first beat's value (three eighths for
+/// a triplet of eighths), so the next beat belongs to it too.
+fn tuplet_open(before: &[&Beat]) -> bool {
+    let Some(last) = before.last() else {
+        return false;
+    };
+    let Some(t) = last.duration.tuplets.last().copied() else {
+        return false;
+    };
+    let written = |b: &Beat| {
+        Duration {
+            tuplets: Vec::new(),
+            ..b.duration.clone()
+        }
+        .length()
+    };
+    let run: Vec<&&Beat> = before
+        .iter()
+        .rev()
+        .take_while(|b| b.duration.tuplets == last.duration.tuplets)
+        .collect();
+    let (Some(first), Some(total)) = (
+        run.last().and_then(|b| written(b)),
+        run.iter().try_fold(oxiguitar_model::Ratio::ZERO, |sum, b| {
+            sum.checked_add(written(b)?)
+        }),
+    ) else {
+        return false;
+    };
+    let Some(group) = first.checked_mul(oxiguitar_model::Ratio::from_integer(i64::from(t.notes)))
+    else {
+        return false;
+    };
+    // Whole groups: `total` a multiple of `group`.
+    total.checked_div(group).is_some_and(|q| q.denom() != 1)
 }
 
 /// Puts `note` into `beat` in place of the note on its string (or, for a
@@ -1266,6 +1419,56 @@ mod tests {
         assert_eq!(s.tracks[0].staves[0].bars[0].voices.len(), 1);
         run(&mut s, &mut h, at(0, 1), Command::ClearBar).unwrap();
         assert!(beats(&s).is_empty());
+    }
+
+    #[test]
+    fn the_triplet_goes_on_and_off() {
+        let mut s = score(1, 1);
+        let mut h = History::new();
+        let sel = Selection::between(at(0, 1), at(2, 1));
+        run(&mut s, &mut h, at(2, 1), Command::Value(NoteValue::Eighth)).unwrap();
+        apply(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            Some(sel),
+            Command::Tuplet(Tuplet::TRIPLET),
+        )
+        .unwrap();
+        assert!(
+            beats(&s)[..3]
+                .iter()
+                .all(|b| b.duration.tuplets == [Tuplet::TRIPLET])
+        );
+        assert!(beats(&s)[3].duration.tuplets.is_empty());
+        run(&mut s, &mut h, at(1, 1), Command::Tuplet(Tuplet::TRIPLET)).unwrap();
+        assert!(beats(&s)[1].duration.tuplets.is_empty());
+        let five = Tuplet {
+            notes: 5,
+            in_time_of: 4,
+        };
+        run(&mut s, &mut h, at(1, 1), Command::Tuplet(five)).unwrap();
+        assert_eq!(beats(&s)[1].duration.tuplets, [five]);
+    }
+
+    #[test]
+    fn typing_on_fills_the_tuplet() {
+        let mut s = score(1, 1);
+        let mut h = History::new();
+        let bar = &mut s.tracks[0].staves[0].bars[0];
+        bar.voices[0].beats.truncate(1);
+        let mut c = at(0, 1);
+        run(&mut s, &mut h, c, Command::Value(NoteValue::Eighth)).unwrap();
+        run(&mut s, &mut h, c, Command::Tuplet(Tuplet::TRIPLET)).unwrap();
+        // Two more beats typed after it are triplet eighths; the fourth
+        // starts afresh.
+        for i in 1..=3 {
+            c = Caret { beat: i, ..c };
+            run(&mut s, &mut h, c, fret(i as u8)).unwrap();
+        }
+        let tuplets: Vec<usize> = beats(&s).iter().map(|b| b.duration.tuplets.len()).collect();
+        assert_eq!(tuplets, [1, 1, 1, 0]);
+        assert_eq!(beats(&s)[3].duration.value, NoteValue::Eighth);
     }
 
     #[test]
