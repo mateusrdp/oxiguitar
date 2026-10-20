@@ -190,6 +190,7 @@ Each slice is one or more pull requests into develop, with every gate green, a t
 - As plugins: the MIDI instrument (a SoundFont synthesiser, PLAY-1, with downloads of better SoundFonts at the user's request, PLAY-8), audio-device plugins per system, WAV export (PLAY-7). Instruments declare the classes of instrument they play.
 - v1.0's minimum: the Guitar Pro 7+ format plugin reading and writing, and the basic MIDI player, in `oxiguitar-plugins-basic`.
 
+- A slide from a note to no note (a voice's last note, or before a rest) plays as a slide off the note: down toward the open string, up toward the last fret, fading out (Mateus, 20 Oct 2026: it is common on stringed instruments and must stay allowed; the player gives it a direction).
 - Instruments declared by a plugin built for an interface before the instrument interface's are ignored by the player (Mateus, 19 Oct 2026: the `instruments` manifest key stays in 1.0, and this rule avoids rework). Until then no plugin counts as an output.
 
 Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes; golden-file tests cover event output; the practice tools work on every reference song; with no instrument installed the transport is greyed out and the footer says where to get one.

@@ -57,6 +57,9 @@ pub struct Song {
     pub copyright: String,
     /// Tabbed by.
     pub tabber: String,
+    /// Instructions: for a reference song, what it tests, so whoever opens
+    /// it in Guitar Pro or elsewhere knows what to look at.
+    pub instructions: String,
     /// Starting tempo in quarter notes a minute.
     pub tempo: u32,
     /// Starting tempo's label ("Moderato"), or empty.
@@ -82,6 +85,7 @@ impl Song {
             music: String::new(),
             copyright: String::new(),
             tabber: String::new(),
+            instructions: String::new(),
             tempo: 100,
             tempo_label: String::new(),
             tempo_changes: Vec::new(),

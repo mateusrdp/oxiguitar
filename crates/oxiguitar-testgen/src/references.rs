@@ -31,7 +31,15 @@ pub struct Reference {
     pub dark: bool,
 }
 
-fn reference(name: &'static str, about: &'static str, song: Song) -> Reference {
+/// Added to the instructions of a reference that differs from the others
+/// only in how OxiGuitar shows it.
+const VIEW_ONLY: &str = " What this file tests is how OxiGuitar shows it (its layout, paper, \
+    page colour or tracks shown), not the file: in Guitar Pro or anywhere else it is an \
+    ordinary score.";
+
+fn reference(name: &'static str, about: &'static str, mut song: Song) -> Reference {
+    // What the file tests travels inside it (Mateus, 20 Oct 2026).
+    song.instructions = format!("OxiGuitar test file: {about}");
     Reference {
         name,
         about,
@@ -44,6 +52,7 @@ fn reference(name: &'static str, about: &'static str, song: Song) -> Reference {
 impl Reference {
     fn with(mut self, change: impl FnOnce(&mut Options)) -> Reference {
         change(&mut self.options);
+        self.song.instructions.push_str(VIEW_ONLY);
         self
     }
 }

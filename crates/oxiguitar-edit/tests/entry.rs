@@ -224,9 +224,6 @@ fn every_edit_is_saved_and_read_back_equal() {
             .score;
         let mut history = History::new();
         random_edits(&mut score, &mut history, 0x51ed_270b + i as u64, 400);
-        // Deleting what a note slid to leaves a slide to nothing, which a
-        // .gp file doesn't keep (the writer names it).
-        drop_slides_to_nothing(&mut score);
         let written = oxiguitar_formats::write_gp(&score).unwrap();
         assert_eq!(
             written.losses.warning_count(),
@@ -268,29 +265,4 @@ fn every_edit_is_saved_and_read_back_equal() {
         compared += 1;
     }
     assert!(compared >= 40, "only {compared} files compared");
-}
-
-/// Shift and legato slides from each voice's last note go, as the .gp
-/// writer leaves them out.
-fn drop_slides_to_nothing(score: &mut Score) {
-    use oxiguitar_model::{BeatKind, Slide};
-    for t in &mut score.tracks {
-        for s in &mut t.staves {
-            for voice in 0..4 {
-                let last = s
-                    .bars
-                    .iter_mut()
-                    .filter_map(|b| b.voices.get_mut(voice))
-                    .flat_map(|v| v.beats.iter_mut())
-                    .rfind(|b| b.kind == BeatKind::Notes && !b.notes.is_empty());
-                if let Some(b) = last {
-                    for n in &mut b.notes {
-                        n.effects
-                            .slides
-                            .retain(|s| !matches!(s, Slide::Shift | Slide::Legato));
-                    }
-                }
-            }
-        }
-    }
 }

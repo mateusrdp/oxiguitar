@@ -20,6 +20,11 @@ Where MuseScore reads Guitar Pro its own way, less is compared:
 - a transposing instrument's notes are counted, not compared: MuseScore
   shifts them from what Guitar Pro means, in Guitar Pro's own files too.
 
+A file with a slide from a voice's last note to no note is left out
+(WRITTEN/NAME.EXT.musescore-skip says so): MuseScore 4 crashes on it, a
+known MuseScore bug, and the slide is right (players slide off a note to
+nothing; Mateus, 20 Oct 2026).
+
 And a bar MuseScore reads differently from us passes if MuseScore reads the
 original file's bar (looked for in ORIGINALS by name) the same way: then
 MuseScore, not our file, differs. A file MuseScore can't open, or crashes
@@ -145,11 +150,17 @@ def main():
         sys.exit("usage: musescore.py MSCORE WRITTEN ORIGINALS...")
     mscore, written, originals = sys.argv[1], sys.argv[2], sys.argv[3:]
     out = tempfile.mkdtemp(prefix="musescore-")
-    failed = checked = skipped = 0
+    failed = checked = skipped = bugs = 0
     for name in sorted(os.listdir(written)):
         if not name.endswith(".notes"):
             continue
         base = name[: -len(".notes")]
+        skip_file = os.path.join(written, base + ".musescore-skip")
+        if os.path.isfile(skip_file):
+            with open(skip_file, encoding="utf-8") as f:
+                print(f"skip {base}: {f.read().strip()} (a MuseScore bug)", flush=True)
+            bugs += 1
+            continue
         bars, expected = ours(os.path.join(written, name))
         try:
             with open(os.path.join(written, base + ".long"), encoding="utf-8") as f:
@@ -218,7 +229,7 @@ def main():
         checked += 1
     summary = f"{checked} files: MuseScore reads what we wrote as we do; {failed} failed" + (
         f"; {skipped} it can't open at all" if skipped else ""
-    )
+    ) + (f"; {bugs} left out for a MuseScore bug" if bugs else "")
     print(summary)
     if os.environ.get("GITHUB_ACTIONS"):
         print(f"::notice title=MuseScore::{summary}")

@@ -129,11 +129,10 @@ struct Writer<'s> {
     /// The last note on each string or pitch, per staff slot and voice, for
     /// ties: (slot, voice, key) → note id.
     last_note: HashMap<(usize, usize, u16), usize>,
-    /// The last beat with notes of each staff slot's voices: (slot, voice)
-    /// → (bar, beat).
-    last_noted: HashMap<(usize, usize), (usize, usize)>,
-    /// Whether the beat being written is its voice's last with notes.
-    in_last_beat: bool,
+    /// The notes that start a hammer-on or pull-off: the next note on
+    /// their string in their voice is its destination, which Guitar Pro
+    /// marks too (`HopoDestination`).
+    hopo_origins: std::collections::HashSet<usize>,
     /// Where the writer is, for the losses: (bar, track), 0-based.
     place: (usize, usize),
 }
@@ -304,8 +303,7 @@ impl<'s> Writer<'s> {
             notes: Vec::new(),
             rhythms: HashMap::new(),
             last_note: HashMap::new(),
-            last_noted: HashMap::new(),
-            in_last_beat: false,
+            hopo_origins: std::collections::HashSet::new(),
             place: (0, 0),
         };
         // MIDI channels as Guitar Pro hands them out: in track order,
@@ -484,17 +482,6 @@ impl<'s> Writer<'s> {
                     .map(move |(si, staff)| (ti, plan, si, staff))
             })
             .collect();
-        for (slot, &(_, _, _, staff)) in slots.iter().enumerate() {
-            for (bi, bar) in staff.bars.iter().enumerate() {
-                for (vi, voice) in bar.voices.iter().enumerate() {
-                    for (bj, beat) in voice.beats.iter().enumerate() {
-                        if beat.kind == BeatKind::Notes && !beat.notes.is_empty() {
-                            self.last_noted.insert((slot, vi), (bi, bj));
-                        }
-                    }
-                }
-            }
-        }
         let mut master = String::new();
         master.push_str("<MasterBars>\n<!-- order is important here -->\n");
         for (bi, mb) in score.master_bars.iter().enumerate() {
@@ -907,8 +894,7 @@ impl<'s> Writer<'s> {
         // empty placeholders, or leaves them out after the last used one.
         for (vi, voice) in written_voices(bar) {
             let mut beat_ids = Vec::with_capacity(voice.beats.len());
-            for (bj, beat) in voice.beats.iter().enumerate() {
-                self.in_last_beat = self.last_noted.get(&(slot, vi)) == Some(&(self.place.0, bj));
+            for beat in &voice.beats {
                 beat_ids.push(self.beat(slot, track, plan, si, vi, beat).to_string());
             }
             let id = self.voices.len();
@@ -1342,6 +1328,13 @@ impl<'s> Writer<'s> {
                 "<Property name=\"HarmonicFret\">\n<HFret>{fret}</HFret>\n</Property>\n<Property name=\"HarmonicType\">\n<HType>{kind}</HType>\n</Property>"
             );
         }
+        if self
+            .last_note
+            .get(&(slot, vi, key))
+            .is_some_and(|p| self.hopo_origins.contains(p))
+        {
+            props.push_str("<Property name=\"HopoDestination\">\n<Enable />\n</Property>\n");
+        }
         if fx.hammer_pull {
             props.push_str("<Property name=\"HopoOrigin\">\n<Enable />\n</Property>\n");
         }
@@ -1354,20 +1347,12 @@ impl<'s> Writer<'s> {
         if fx.palm_mute {
             props.push_str("<Property name=\"PalmMuted\">\n<Enable />\n</Property>\n");
         }
-        let mut slides = fx.slides.clone();
-        if self.in_last_beat {
-            // MuseScore 4 crashes on a slide to the next note when there
-            // is none, and there is nothing to slide to.
-            let before = slides.len();
-            slides.retain(|s| !matches!(s, Slide::Shift | Slide::Legato));
-            if slides.len() != before {
-                self.loss(
-                    "a slide from a voice's last note, with no note to slide to, is left out",
-                );
-            }
-        }
+        // A slide from a voice's last note, to no note, is kept: players
+        // slide off a note to nothing (Mateus, 20 Oct 2026). MuseScore 4
+        // crashes on it; the interop check works around that.
+        let slides = &fx.slides;
         if !slides.is_empty() {
-            let (flags, fits) = slide_flags(&slides);
+            let (flags, fits) = slide_flags(slides);
             if !fits {
                 self.loss("a note can slide in one way and out one way; the others are left out");
             }
@@ -1397,6 +1382,9 @@ impl<'s> Writer<'s> {
             prev.origin = true;
         }
         self.last_note.insert(key3, id);
+        if fx.hammer_pull {
+            self.hopo_origins.insert(id);
+        }
         self.notes.push(NoteOut {
             head,
             origin: false,
@@ -1667,8 +1655,8 @@ mod tests {
              <Property name=\"Tone\">\n<Step>0</Step>\n</Property>"
         ));
 
-        // A bar without beats has no voice; a slide from a voice's last note
-        // goes, named.
+        // A bar without beats has no voice; a slide from a voice's last note,
+        // to no note, is kept (players slide off to nothing).
         let mut song = fixture("fixtures/gp/oxiguitar-test-song.gp");
         let bars = &mut song.tracks[0].staves[0].bars;
         bars[1].voices = vec![oxiguitar_model::Voice::default()];
@@ -1682,18 +1670,13 @@ mod tests {
         let mut w = Writer::new(&song);
         let gpif = w.document();
         assert!(gpif.contains("<Voices>-1 -1 -1 -1</Voices>"));
-        let slide = w
-            .losses
-            .entries()
-            .iter()
-            .find(|e| e.message.contains("no note to slide to"))
-            .unwrap();
-        assert_eq!(slide.count, 1);
+        assert_eq!(w.losses.warning_count(), 0);
         let back = crate::read(&write_gp(&song).unwrap().data).unwrap().score;
         assert_eq!(
             back.tracks[0].staves[0].bars[1],
             song.tracks[0].staves[0].bars[1]
         );
+        assert_eq!(back.tracks[0].staves[0].bars, song.tracks[0].staves[0].bars);
     }
 
     #[test]
