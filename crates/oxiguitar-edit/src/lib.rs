@@ -24,12 +24,14 @@
 //!
 //! See `docs/design/editor.md` for the rules and the parity checklist.
 
+mod bars;
 mod caret;
 mod check;
 mod entry;
 mod history;
 mod selection;
 
+pub use bars::BarState;
 pub use caret::{Caret, StaffBar, VOICES, beat_at, onsets};
 pub use check::{BarCheck, adds_up};
 pub use entry::{Command, Edited, apply, new_score};

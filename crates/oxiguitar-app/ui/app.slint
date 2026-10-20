@@ -12,6 +12,7 @@
 
 import { Slider, ScrollView, Palette, ComboBox, Button } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
+import { BarDialog, BarFields, TupletDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -773,6 +774,22 @@ export component AppWindow inherits Window {
     in property <[string]> question-lines;
     in property <[string]> question-buttons;
     callback question-answered(int);
+    // The Bar dialog and Custom N-tuplet (bar_form.rs).
+    in property <bool> bar-dialog-shown: false;
+    in-out property <BarFields> bar-fields;
+    in-out property <[bool]> bar-endings;
+    in-out property <[bool]> bar-directions;
+    in property <[string]> bar-key-names;
+    in property <[string]> bar-clef-names;
+    in property <[string]> bar-feel-names;
+    in property <[string]> bar-direction-names;
+    in property <string> bar-heading: "Bar";
+    callback bar-dialog-done(bool);
+    in property <bool> tuplet-dialog-shown: false;
+    in-out property <int> tuplet-notes: 3;
+    in-out property <int> tuplet-in-time-of: 2;
+    pure callback tuplet-usual(int) -> int;
+    callback tuplet-dialog-done(bool);
     // Gives the keyboard back to the page (after a question).
     public function focus-page() { keys.focus(); }
     callback export-pdf();
@@ -894,6 +911,11 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Voice 4 (Alt + 4)"; enabled: root.has-score; activated => { root.edit-command("voice-4"); } }
             }
             MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
+            MenuSeparator { }
+            MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
+            MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
+            MenuItem { title: "Bar… (Ctrl + T)"; enabled: root.has-score; activated => { root.edit-command("bar-dialog"); } }
+            MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
         }
         Menu {
             title: "View";
@@ -1501,6 +1523,29 @@ export component AppWindow inherits Window {
                 }
             }
         }
+    }
+
+    if root.bar-dialog-shown : BarDialog {
+        width: root.width;
+        height: root.height;
+        fields <=> root.bar-fields;
+        endings: root.bar-endings;
+        directions: root.bar-directions;
+        key-names: root.bar-key-names;
+        clef-names: root.bar-clef-names;
+        feel-names: root.bar-feel-names;
+        direction-names: root.bar-direction-names;
+        heading: root.bar-heading;
+        done(ok) => { root.bar-dialog-done(ok); }
+    }
+
+    if root.tuplet-dialog-shown : TupletDialog {
+        width: root.width;
+        height: root.height;
+        notes <=> root.tuplet-notes;
+        in-time-of <=> root.tuplet-in-time-of;
+        usual(n) => { return root.tuplet-usual(n); }
+        done(ok) => { root.tuplet-dialog-done(ok); }
     }
 
     if root.question-shown : Question {

@@ -31,6 +31,7 @@
 #[cfg(not(any(feature = "wayland", feature = "x11")))]
 compile_error!("build oxiguitar-app with the `wayland` feature (the default) or `x11`");
 
+mod bar_form;
 mod canvas;
 mod document;
 mod editing;
@@ -87,9 +88,9 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, BoxItem, FooterRow, ManagerRow, PaletteGroupRow, PaletteToolRow,
-    PluginManagerWindow, PluginRow, PluginWidget, TileItem, ToolRow, ToolbarItemRow,
-    ToolbarSectionRow, TrackRow,
+    AppWindow, AreaState, BarFields, BoxItem, FooterRow, ManagerRow, PaletteGroupRow,
+    PaletteToolRow, PluginManagerWindow, PluginRow, PluginWidget, TileItem, ToolRow,
+    ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -191,6 +192,8 @@ struct App {
     save_formats: Vec<SaveFormat>,
     /// The question over the window, if one shows.
     question: Option<Asked>,
+    /// The bar the open Bar dialog was opened on, as it was.
+    bar_dialog: Option<oxiguitar_edit::BarState>,
     /// What to do once the score is saved (after "Save the changes…?").
     after_save: Option<Then>,
 }
@@ -462,6 +465,7 @@ fn main() -> Result<(), slint::PlatformError> {
         untitled: false,
         save_formats,
         question: None,
+        bar_dialog: None,
         after_save: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
@@ -481,6 +485,7 @@ fn main() -> Result<(), slint::PlatformError> {
         "L / Shift + L: tie the note / the beat;  Backspace: delete the note;  Shift + Delete: delete the beat;  Ctrl + Insert: insert a beat",
         "Alt + Shift + Up / Down: a semitone up / down;  Alt + Up / Down: the same note on the string above / below",
         "On the standard staff: click a line or space, Up / Down to move it, Enter to put a note there;  Alt + 1 to 4: move the beat to that voice;  Ctrl + Shift + Delete: clear the beat;  Right at the end: add a bar",
+        "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + T, Ctrl + K, D: the Bar dialog",
         "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
@@ -544,6 +549,11 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_new_file(move || unless_unsaved(&a, Then::New));
     let a = app.clone();
     ui.on_edit_command(move |name| {
+        match name.as_str() {
+            "bar-dialog" => return open_edit_dialog(&a, editing::Dialog::Bar),
+            "tuplet-dialog" => return open_edit_dialog(&a, editing::Dialog::Tuplet),
+            _ => {}
+        }
         let Some(command) = editing::menu_command(name.as_str()) else {
             return;
         };
@@ -558,6 +568,30 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_save_as(move || save_as_dialog(&a));
     let a = app.clone();
     ui.on_question_answered(move |i| question_answered(&a, i));
+    let a = app.clone();
+    ui.on_bar_dialog_done(move |ok| bar_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
+    ui.on_tuplet_usual(|n| i32::from(bar_form::usual_in_time_of(u8::try_from(n).unwrap_or(3))));
+    ui.set_bar_key_names(strings(bar_form::key_names()));
+    ui.set_bar_clef_names(strings(
+        bar_form::CLEFS
+            .iter()
+            .map(|(n, _)| (*n).to_owned())
+            .collect(),
+    ));
+    ui.set_bar_feel_names(strings(
+        bar_form::FEELS
+            .iter()
+            .map(|(n, _)| (*n).to_owned())
+            .collect(),
+    ));
+    ui.set_bar_direction_names(strings(
+        bar_form::DIRECTIONS
+            .iter()
+            .map(|(n, _)| (*n).to_owned())
+            .collect(),
+    ));
     let a = app.clone();
     ui.on_export_pdf(move || export_dialog(&a));
     let a = app.clone();
@@ -636,6 +670,10 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_edit_key(move |name, shift, ctrl, alt| {
+        if let Some(d) = editing::dialog_key(name.as_str(), shift, ctrl, alt) {
+            open_edit_dialog(&a, d);
+            return true;
+        }
         let typed = a
             .borrow_mut()
             .editing
@@ -692,6 +730,10 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_palette_tool_clicked(move |id| {
+        if let Some(d) = palette::dialog_of(id.as_str()) {
+            open_edit_dialog(&a, d);
+            return;
+        }
         if let Some(command) = palette::command_of(id.as_str()) {
             let typed = a.borrow_mut().editing.tool(command);
             if let Some(t) = typed {
@@ -2402,6 +2444,133 @@ fn ask(app: &Shared, asked: Asked, heading: &str, lines: &[String], buttons: &[&
             .collect::<Vec<_>>(),
     )));
     ui.set_question_shown(true);
+}
+
+/// A list of strings for the window.
+fn strings(list: Vec<String>) -> ModelRc<SharedString> {
+    ModelRc::new(VecModel::from(
+        list.into_iter().map(SharedString::from).collect::<Vec<_>>(),
+    ))
+}
+
+/// Opens the Bar dialog or Custom N-tuplet at the caret.
+fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() {
+        return;
+    }
+    match dialog {
+        editing::Dialog::Bar => {
+            let Some((state, heading)) = app.borrow().editing.bar_state() else {
+                return;
+            };
+            let f = bar_form::BarForm::of(&state);
+            ui.set_bar_fields(BarFields {
+                numerator: f.numerator,
+                denominator: f.denominator,
+                key: f.key,
+                minor: f.minor,
+                clef: f.clef,
+                tempo: f.tempo,
+                feel: f.feel,
+                repeat_start: f.repeat_start,
+                repeat_count: f.repeat_count,
+                letter: f.letter.into(),
+                section: f.section.into(),
+                double_bar: f.double_bar,
+                free_time: f.free_time,
+            });
+            ui.set_bar_endings(ModelRc::new(VecModel::from(f.endings)));
+            ui.set_bar_directions(ModelRc::new(VecModel::from(f.directions)));
+            ui.set_bar_heading(heading.into());
+            app.borrow_mut().bar_dialog = Some(state);
+            ui.set_bar_dialog_shown(true);
+        }
+        editing::Dialog::Tuplet => {
+            if app.borrow().editing.bar_state().is_none() {
+                return;
+            }
+            let t = app
+                .borrow()
+                .editing
+                .beat_tuplet()
+                .unwrap_or(oxiguitar_model::Tuplet {
+                    notes: 5,
+                    in_time_of: 4,
+                });
+            ui.set_tuplet_notes(i32::from(t.notes));
+            ui.set_tuplet_in_time_of(i32::from(t.in_time_of));
+            ui.set_tuplet_dialog_shown(true);
+        }
+    }
+}
+
+/// The Bar dialog closed: on OK, what it sets is one change at the caret.
+fn bar_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_bar_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(was) = app.borrow_mut().bar_dialog.take() else {
+        return;
+    };
+    if !ok {
+        return;
+    }
+    let f = ui.get_bar_fields();
+    let form = bar_form::BarForm {
+        numerator: f.numerator,
+        denominator: f.denominator,
+        key: f.key,
+        minor: f.minor,
+        clef: f.clef,
+        tempo: f.tempo,
+        feel: f.feel,
+        repeat_start: f.repeat_start,
+        repeat_count: f.repeat_count,
+        letter: f.letter.to_string(),
+        section: f.section.to_string(),
+        double_bar: f.double_bar,
+        free_time: f.free_time,
+        endings: ui.get_bar_endings().iter().collect(),
+        directions: ui.get_bar_directions().iter().collect(),
+    };
+    let state = form.to_state(&was);
+    if state == was {
+        return;
+    }
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Bar(Box::new(state)));
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// Custom N-tuplet closed: on OK, the beats go into that tuplet.
+fn tuplet_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_tuplet_dialog_shown(false);
+    ui.invoke_focus_page();
+    if !ok {
+        return;
+    }
+    let Some(t) = bar_form::tuplet(ui.get_tuplet_notes(), ui.get_tuplet_in_time_of()) else {
+        return;
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Tuplet(t));
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
 }
 
 /// The user answered the question: button `i`, the last being Cancel.

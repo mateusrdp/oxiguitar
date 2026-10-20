@@ -29,39 +29,96 @@ impl Rng {
     }
 }
 
-const COMMANDS: [Command; 25] = [
-    Command::MoveBeatLeft,
-    Command::MoveBeatRight,
-    Command::ClearBeats,
-    Command::ClearBar,
-    Command::MoveToVoice(1),
-    Command::RemoveUnusedVoices,
-    Command::AppendBar,
-    Command::Pitch(oxiguitar_model::Pitch(62)),
-    Command::Value(oxiguitar_model::NoteValue::Sixteenth),
-    Command::StringUp,
-    Command::Fret {
-        fret: 3,
-        again: false,
-    },
-    Command::Fret {
-        fret: 12,
-        again: true,
-    },
-    Command::Rest,
-    Command::Longer,
-    Command::Shorter,
-    Command::Dot,
-    Command::DoubleDot,
-    Command::Tie,
-    Command::TieBeat,
-    Command::DeleteNote,
-    Command::DeleteBeats,
-    Command::InsertBeat,
-    Command::SemitoneUp,
-    Command::SemitoneDown,
-    Command::StringDown,
-];
+/// Every command, as random runs pick them.
+fn commands() -> Vec<Command> {
+    vec![
+        Command::Tuplet(oxiguitar_model::Tuplet::TRIPLET),
+        Command::Tuplet(oxiguitar_model::Tuplet {
+            notes: 5,
+            in_time_of: 4,
+        }),
+        Command::InsertBar,
+        Command::DeleteBars,
+        Command::TimeSignature(oxiguitar_model::TimeSignature {
+            numerator: 7,
+            denominator: 8,
+        }),
+        Command::KeySignature(oxiguitar_model::KeySignature {
+            fifths: -3,
+            mode: oxiguitar_model::KeyMode::Minor,
+        }),
+        Command::Clef(oxiguitar_model::Clef::Bass),
+        Command::Tempo(97),
+        Command::TripletFeel(oxiguitar_model::TripletFeel::Triplet8th),
+        Command::RepeatStart,
+        Command::RepeatEnd,
+        Command::RepeatCount(3),
+        Command::AlternateEndings(0b11),
+        Command::Direction(oxiguitar_model::Direction::Segno),
+        Command::Direction(oxiguitar_model::Direction::DalSegnoAlCoda),
+        Command::Section(None),
+        Command::DoubleBar,
+        Command::FreeTime,
+        Command::Section(Some(oxiguitar_model::Marker {
+            letter: String::new(),
+            text: String::new(),
+            color: oxiguitar_model::Color { r: 0, g: 0, b: 0 },
+        })),
+        Command::MoveBeatLeft,
+        Command::MoveBeatRight,
+        Command::ClearBeats,
+        Command::ClearBar,
+        Command::MoveToVoice(1),
+        Command::RemoveUnusedVoices,
+        Command::AppendBar,
+        Command::Pitch(oxiguitar_model::Pitch(62)),
+        Command::Value(oxiguitar_model::NoteValue::Sixteenth),
+        Command::StringUp,
+        Command::Fret {
+            fret: 3,
+            again: false,
+        },
+        Command::Fret {
+            fret: 12,
+            again: true,
+        },
+        Command::Rest,
+        Command::Longer,
+        Command::Shorter,
+        Command::Dot,
+        Command::DoubleDot,
+        Command::Tie,
+        Command::TieBeat,
+        Command::DeleteNote,
+        Command::DeleteBeats,
+        Command::InsertBeat,
+        Command::SemitoneUp,
+        Command::SemitoneDown,
+        Command::StringDown,
+        Command::Section(Some(oxiguitar_model::Marker {
+            letter: "B".into(),
+            text: "Chorus".into(),
+            color: oxiguitar_model::Color::default(),
+        })),
+        Command::Bar(Box::new(oxiguitar_edit::BarState {
+            time_signature: oxiguitar_model::TimeSignature {
+                numerator: 5,
+                denominator: 4,
+            },
+            key_signature: oxiguitar_model::KeySignature::default(),
+            clef: oxiguitar_model::Clef::Treble8vb,
+            tempo: 133.0,
+            triplet_feel: oxiguitar_model::TripletFeel::None,
+            repeat_start: true,
+            repeat_end: Some(2),
+            alternate_endings: 0,
+            directions: vec![oxiguitar_model::Direction::ToCoda],
+            marker: None,
+            double_bar: false,
+            free_time: false,
+        })),
+    ]
+}
 
 fn fixtures() -> Vec<PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -110,11 +167,12 @@ fn random_edits(score: &mut Score, history: &mut History, seed: u64, steps: usiz
     let mut rng = Rng(seed);
     let mut caret = Caret::at_start(score, 0).unwrap();
     let mut changes = 0;
+    let all = commands();
     for _ in 0..steps {
         if rng.below(3) == 0 {
             caret = somewhere(score, &mut rng, caret);
         }
-        let command = COMMANDS[rng.below(COMMANDS.len())];
+        let command = all[rng.below(all.len())].clone();
         let selection = (rng.below(5) == 0).then(|| {
             let head = caret.next_beat(score).next_beat(score);
             Selection::between(caret, head)
