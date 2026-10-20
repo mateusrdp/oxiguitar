@@ -41,6 +41,16 @@ Type at the caret, with Guitar Pro 8's keys:
 | Ctrl + Insert | Inserts a rest as long as the caret's beat, before it |
 | Alt + Shift + Up / Down | Moves the note a semitone up / down on its string |
 | Alt + Up / Down | Moves the note to the string above / below, at the same pitch |
+| Enter | On the standard staff, puts a note at the caret's line or space (see below) |
+| Ctrl + Shift + Delete | Clears the beat, or the selected beats: rests of the same length, without effects |
+| Alt + 1 to Alt + 4 | Moves the beat to voice 1 to 4, at the same moment of the bar |
+| Right, at the very end | Adds a bar after the last, in its time and key |
+
+**On the standard staff**, click a line or a space: the caret marks it, and Up / Down move it a step at a time. **Enter** puts a note there, in the bar's key (on a line or space the key signature sharpens, the note is sharp); on a guitar it goes on the string where its fret is lowest, nearest the caret's string, and the caret moves to that string. A semitone up or down with Alt + Shift + Up / Down gives the notes the key leaves out. Clicking the tablature, or Tab, takes the caret back to the strings.
+
+The **Edit** menu has the same commands and a few more: Insert Beat, Delete Beats, Clear Beats, Clear Bar, Move Beat Left / Right (it swaps places with its neighbour in the bar), Move Beat to Voice (into a voice that has room at that moment: a rest of its length takes its place), and Remove Unused Voices (voices after the first that hold no notes, in every bar of the track).
+
+**File → New** (Ctrl + N) starts a new score: one bar of 4/4 at 120 and a steel-string guitar in standard tuning. Pressing Right at its end adds a bar. Save asks where to put it the first time.
 
 A beat added after a voice's last beat is as long as the beat before it. Typing into a voice that the bar doesn't have yet starts that voice. Note lengths, dots, semitones and deleting beats act on every selected beat when a run of beats is selected.
 

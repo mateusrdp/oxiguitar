@@ -11,6 +11,7 @@
 //! the same pass that draws, so it can't disagree with the picture.
 
 use oxiguitar_display::Rect;
+use oxiguitar_model::Clef;
 
 /// Every system's map, in sheet order.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -41,8 +42,8 @@ pub struct StaffHits {
     pub track: usize,
     /// The staff in the track, from 0.
     pub staff: usize,
-    /// Top line of the standard staff, if shown.
-    pub standard: Option<f32>,
+    /// The standard staff, if shown: its top line and its staff space.
+    pub standard: Option<(f32, f32)>,
     /// The tablature, if shown: the y of string 1 (the top line), the
     /// distance between strings, and how many strings.
     pub tablature: Option<(f32, f32, u8)>,
@@ -66,6 +67,9 @@ pub struct BarHits {
     pub notes: f32,
     /// Its bar line.
     pub end: f32,
+    /// The clef this view of the bar is written in (a grand staff's hands
+    /// have their own).
+    pub clef: Clef,
     /// Its beats, every voice, as drawn.
     pub beats: Vec<BeatHit>,
 }
@@ -98,6 +102,9 @@ pub struct Spot {
     pub beat: Option<usize>,
     /// The string nearest the point, if it is on the tablature.
     pub string: Option<u8>,
+    /// The line or space nearest the point, if it is on (or near) the
+    /// standard staff: 0 the bottom line, 8 the top line, with its clef.
+    pub step: Option<(i32, Clef)>,
 }
 
 /// Where a beat is drawn, for the caret.
@@ -110,6 +117,9 @@ pub struct Found {
     /// The string's place on the tablature, a box around where its fret
     /// number goes; `None` without tablature.
     pub string: Option<Rect>,
+    /// The line or space asked for on the standard staff, a box where its
+    /// note head goes; `None` when none was asked for or none is shown.
+    pub step: Option<Rect>,
 }
 
 impl BarHits {
@@ -133,6 +143,20 @@ impl StaffHits {
         }
         let n = ((y - top) / gap).round().clamp(0.0, f32::from(strings - 1));
         Some(n as u8 + 1)
+    }
+
+    /// The line or space of the standard staff at height `y`, if `y` is on
+    /// it or within three spaces of it: 0 the bottom line, 8 the top line.
+    fn step_at(&self, y: f32) -> Option<i32> {
+        let (top, sp) = self.standard?;
+        if sp <= 0.0 {
+            return None;
+        }
+        let bottom = top + 4.0 * sp;
+        if y < top - 3.0 * sp || y > bottom + 3.0 * sp {
+            return None;
+        }
+        Some(((bottom - y) / (sp / 2.0)).round() as i32)
     }
 
     /// How far `y` is from this staff's lines, 0 inside them.
@@ -179,19 +203,28 @@ impl Hits {
                 .min_by(|a, b| (a.x - x).abs().total_cmp(&(b.x - x).abs()))
                 .map(|b| b.beat),
         };
+        let string = staff.string_at(y);
         Some(Spot {
             track: staff.track,
             staff: staff.staff,
             bar: bar.bar,
             beat,
-            string: staff.string_at(y),
+            string,
+            step: string
+                .is_none()
+                .then(|| staff.step_at(y))
+                .flatten()
+                .map(|s| (s, bar.clef)),
         })
     }
 
     /// Where beat `beat` of `voice` in bar `bar` of `track`'s staff `staff`
-    /// is drawn, with string `string` marked on the tablature. In a voice
-    /// with no beats in the bar, the column is where its first note would
-    /// go. `None` if that staff or bar isn't shown.
+    /// is drawn, with string `string` marked on the tablature and, when
+    /// asked, line or space `step` on the standard staff in that clef (a
+    /// grand staff's hand in that clef). In a voice with no beats in the
+    /// bar, the column is where its first note would go. `None` if that
+    /// staff or bar isn't shown.
+    #[allow(clippy::too_many_arguments)]
     pub fn find(
         &self,
         track: usize,
@@ -200,8 +233,12 @@ impl Hits {
         voice: usize,
         beat: usize,
         string: u8,
+        step: Option<(i32, Clef)>,
     ) -> Option<Found> {
         let mut found: Option<(usize, Rect, &StaffHits, f32, f32)> = None;
+        // The standard staff for `step`: its top line and staff space, and
+        // whether its clef is the one asked for.
+        let mut standard: Option<(f32, f32, bool)> = None;
         for system in &self.systems {
             for s in system
                 .staves
@@ -226,6 +263,12 @@ impl Hits {
                     |h| (h.x, h.width),
                 );
                 let half = (w * 0.5).clamp(4.0, 12.0);
+                if let (Some((top, sp)), Some((_, clef))) = (s.standard, step) {
+                    let fits = b.clef == clef;
+                    if standard.is_none_or(|(_, _, f)| !f && fits) {
+                        standard = Some((top, sp, fits));
+                    }
+                }
                 // The column covers every view of the staff (a grand
                 // staff's hands and its tablature).
                 found = Some(match found {
@@ -257,10 +300,15 @@ impl Hits {
                 Rect::new(x - half, y - gap * 0.5, 2.0 * half, gap)
             })
         });
+        let step = standard.zip(step).map(|((top, sp, _), (n, _))| {
+            let y = top + 4.0 * sp - n as f32 * sp / 2.0;
+            Rect::new(x - half, y - sp * 0.5, 2.0 * half, sp)
+        });
         Some(Found {
             sheet,
             column,
             string,
+            step,
         })
     }
 
@@ -351,7 +399,7 @@ impl SystemHits {
         for s in &mut self.staves {
             s.top += dy;
             s.bottom += dy;
-            if let Some(t) = s.standard.as_mut() {
+            if let Some((t, _)) = s.standard.as_mut() {
                 *t += dy;
             }
             if let Some((t, _, _)) = s.tablature.as_mut() {
@@ -380,6 +428,7 @@ mod tests {
             start,
             notes: start + 5.0,
             end: start + 100.0,
+            clef: Clef::Treble8vb,
             beats: (0..4)
                 .map(|i| BeatHit {
                     voice: 0,
@@ -397,7 +446,7 @@ mod tests {
                 staves: vec![StaffHits {
                     track: 2,
                     staff: 0,
-                    standard: Some(100.0),
+                    standard: Some((100.0, 5.0)),
                     tablature: Some((150.0, 6.0, 6)),
                     top: 100.0,
                     bottom: 180.0,
@@ -418,10 +467,21 @@ mod tests {
                 staff: 0,
                 bar: 1,
                 beat: Some(1),
-                string: Some(3)
+                string: Some(3),
+                step: None,
             }
         );
-        assert_eq!(m.hit(0, 136.0, 110.0, 0).unwrap().string, None);
+        let on_staff = m.hit(0, 136.0, 110.0, 0).unwrap();
+        assert_eq!(on_staff.string, None);
+        // 110 is two spaces down from the top line (100, spaces of 5): the
+        // middle line.
+        assert_eq!(on_staff.step, Some((4, Clef::Treble8vb)));
+        assert_eq!(
+            m.hit(0, 136.0, 117.5, 0).unwrap().step,
+            Some((1, Clef::Treble8vb))
+        );
+        // Past the last beat's column: the place after it.
+        assert_eq!(m.hit(0, 199.0, 110.0, 0).unwrap().beat, Some(4));
         assert_eq!(m.hit(0, 136.0, 110.0, 1).unwrap().beat, None);
         assert!(m.hit(1, 136.0, 110.0, 0).is_none(), "another sheet");
         assert!(m.hit(0, 136.0, 400.0, 0).is_none(), "far below");
@@ -432,14 +492,21 @@ mod tests {
     #[test]
     fn the_caret_box_and_a_selection() {
         let m = map();
-        let f = m.find(2, 0, 1, 0, 2, 4).unwrap();
+        let f = m
+            .find(2, 0, 1, 0, 2, 4, Some((8, Clef::Treble8vb)))
+            .unwrap();
+        let top = f.step.unwrap();
+        assert!(
+            (top.y + top.height / 2.0 - 100.0).abs() < 0.01,
+            "the top line"
+        );
         assert_eq!(f.sheet, 0);
         assert!(f.column.x < 160.0 && f.column.right() > 160.0);
         let s = f.string.unwrap();
         assert!((s.y + s.height / 2.0 - 168.0).abs() < 0.01);
         // An empty voice: where its first note would go.
-        assert!(m.find(2, 0, 0, 3, 0, 1).is_some());
-        assert!(m.find(1, 0, 0, 0, 0, 1).is_none(), "a hidden track");
+        assert!(m.find(2, 0, 0, 3, 0, 1, None).is_some());
+        assert!(m.find(1, 0, 0, 0, 0, 1, None).is_none(), "a hidden track");
         let (_, whole) = m.span(2, 0, 1, None).unwrap();
         assert_eq!((whole.x, whole.right()), (100.0, 200.0));
         let (_, part) = m.span(2, 0, 0, Some((0, 1, 2))).unwrap();

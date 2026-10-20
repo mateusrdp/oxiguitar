@@ -11,6 +11,7 @@
 //! | Key | Command |
 //! | --- | --- |
 //! | 0 to 9 | [`Command::Fret`]: the fret on the caret's string; two digits typed in a row make a two-digit fret |
+//! | Enter | [`Command::Pitch`]: the note at the caret's line or space of the standard staff |
 //! | R | [`Command::Rest`] |
 //! | − and + | [`Command::Longer`], [`Command::Shorter`]; the palette's note values [`Command::Value`] |
 //! | Shift + . and Ctrl + . | [`Command::Dot`], [`Command::DoubleDot`] |
@@ -42,6 +43,10 @@ pub enum Command {
         /// Replaces the last change, if that was a fret typed.
         again: bool,
     },
+    /// A note of this pitch, entered on the standard staff: on a string,
+    /// at the lowest fret it can be played, nearest the caret's string; on
+    /// a staff without strings, as a pitch.
+    Pitch(Pitch),
     /// The beat becomes a rest.
     Rest,
     /// The next longer note value (−).
@@ -74,6 +79,25 @@ pub enum Command {
     StringUp,
     /// The note at the same pitch on the string below.
     StringDown,
+    /// A bar after the last, as the last in time and key, where the caret
+    /// goes: Right at the end of the score.
+    AppendBar,
+    /// The caret's beat swaps places with the beat before it in the bar.
+    MoveBeatLeft,
+    /// The caret's beat swaps places with the beat after it in the bar.
+    MoveBeatRight,
+    /// The caret's beat, or the selected beats, become rests of the same
+    /// length, without effects, chord or text.
+    ClearBeats,
+    /// Every voice of the caret's bar emptied.
+    ClearBar,
+    /// The caret's beat moves to another voice (0 to 3) at the same moment
+    /// of the bar, if that voice has room there; a rest of its length
+    /// takes its place.
+    MoveToVoice(usize),
+    /// Voices after the first that hold no notes are emptied, in every bar
+    /// of the caret's staff.
+    RemoveUnusedVoices,
 }
 
 impl Command {
@@ -81,6 +105,7 @@ impl Command {
     pub fn label(self) -> &'static str {
         match self {
             Command::Fret { .. } => FRET,
+            Command::Pitch(_) => "Type Note",
             Command::Rest => "Rest",
             Command::Longer => "Longer Note",
             Command::Shorter => "Shorter Note",
@@ -96,6 +121,13 @@ impl Command {
             Command::SemitoneDown => "Semitone Down",
             Command::StringUp => "String Up",
             Command::StringDown => "String Down",
+            Command::AppendBar => "Add Bar",
+            Command::MoveBeatLeft => "Move Beat Left",
+            Command::MoveBeatRight => "Move Beat Right",
+            Command::ClearBeats => "Clear Beats",
+            Command::ClearBar => "Clear Bar",
+            Command::MoveToVoice(_) => "Move to Voice",
+            Command::RemoveUnusedVoices => "Remove Unused Voices",
         }
     }
 }
@@ -123,6 +155,9 @@ pub fn apply(
     selection: Option<Selection>,
     command: Command,
 ) -> Option<Edited> {
+    if command == Command::AppendBar {
+        return append_bar(score, history, caret);
+    }
     let undone = matches!(command, Command::Fret { again: true, .. })
         && history.undo_label() == Some(FRET)
         && history.undo(score).is_some();
@@ -135,7 +170,10 @@ pub fn apply(
     let mut plan = plan;
     plan.bars.iter_mut().for_each(tidy);
     if let Some(staff) = staff_of(score, caret) {
-        follow_ties(staff, caret.voice, plan.first, &mut plan.bars);
+        // Every voice: some commands move notes between voices.
+        for voice in 0..crate::VOICES {
+            follow_ties(staff, voice, plan.first, &mut plan.bars);
+        }
     }
     let region = Region::Bars {
         track: caret.track,
@@ -239,6 +277,62 @@ fn played(bar: &mut Bar, voice: usize, last: &mut [Option<u8>]) {
     }
 }
 
+/// The score File → New makes: one bar of 4/4 at 120, and one steel-string
+/// guitar in standard tuning, as Guitar Pro starts a new file.
+pub fn new_score() -> Score {
+    Score {
+        master_bars: vec![oxiguitar_model::MasterBar::default()],
+        tracks: vec![oxiguitar_model::Track {
+            name: "Track 1".to_owned(),
+            short_name: "T1".to_owned(),
+            staves: vec![Staff {
+                tuning: Staff::standard_guitar_tuning(),
+                bars: vec![Bar::default()],
+                ..Staff::default()
+            }],
+            ..oxiguitar_model::Track::default()
+        }],
+        ..Score::new()
+    }
+}
+
+/// [`Command::AppendBar`]: a bar after the last, in its time, key and
+/// feel, an empty voice in every staff, each in its last bar's clef.
+fn append_bar(score: &mut Score, history: &mut History, c: Caret) -> Option<Edited> {
+    let last = score.master_bars.last()?.clone();
+    let at = score.master_bars.len();
+    let touched = history.record(
+        score,
+        Command::AppendBar.label(),
+        vec![Region::Whole],
+        |s| {
+            s.master_bars.push(oxiguitar_model::MasterBar {
+                time_signature: last.time_signature,
+                key_signature: last.key_signature,
+                triplet_feel: last.triplet_feel,
+                free_time: last.free_time,
+                ..oxiguitar_model::MasterBar::default()
+            });
+            for staff in s.tracks.iter_mut().flat_map(|t| &mut t.staves) {
+                let clef = staff.bars.last().map_or_else(Default::default, |b| b.clef);
+                staff.bars.push(Bar {
+                    clef,
+                    voices: vec![Voice::default()],
+                });
+            }
+        },
+    );
+    let caret = Caret {
+        bar: at,
+        beat: 0,
+        ..c
+    };
+    Some(Edited {
+        touched,
+        caret: caret.clamp(score).unwrap_or(caret),
+    })
+}
+
 /// A bar as files keep it: a voice after the first that holds no notes or
 /// rests is an empty placeholder, and none follows the last used voice.
 fn tidy(bar: &mut Bar) {
@@ -276,6 +370,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         && matches!(
             command,
             Command::Fret { .. }
+                | Command::Pitch(_)
                 | Command::Tie
                 | Command::StringUp
                 | Command::StringDown
@@ -304,6 +399,41 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             set_note(beat, Note::fretted(c.string, fret));
             settle_dynamic(beat, dynamic);
             one(bar, c)
+        }
+        Command::Pitch(pitch) => {
+            let dynamic = dynamic_at(score, c);
+            let mut bar = old.clone();
+            let (note, caret) = if staff.string_count() == 0 {
+                (
+                    Note {
+                        place: NotePlace::Pitched(pitch),
+                        ..Note::fretted(1, 0)
+                    },
+                    c,
+                )
+            } else {
+                let taken: Vec<u8> = bar
+                    .voices
+                    .get(c.voice)
+                    .and_then(|v| v.beats.get(c.beat))
+                    .filter(|b| b.kind == BeatKind::Notes)
+                    .map(|b| b.notes.iter().filter_map(Note::string).collect())
+                    .unwrap_or_default();
+                let strings = u8::try_from(staff.string_count()).ok()?;
+                let (string, fret) = (1..=strings)
+                    .filter(|s| !taken.contains(s))
+                    .filter_map(|s| {
+                        let open = staff.pitch_of(s, 0)?.0;
+                        let fret = pitch.0.checked_sub(open)?;
+                        (fret <= staff.fret_count).then_some((s, fret))
+                    })
+                    .min_by_key(|&(s, fret)| (fret, s.abs_diff(c.string)))?;
+                (Note::fretted(string, fret), Caret { string, ..c })
+            };
+            let beat = beat_at_caret(&mut bar, c, BeatKind::Notes)?;
+            set_note(beat, note);
+            settle_dynamic(beat, dynamic);
+            one(bar, caret)
         }
         Command::Rest => {
             let mut bar = old.clone();
@@ -432,6 +562,112 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
                 },
             );
             one(bar, Caret { beat: at, ..c })
+        }
+        // Made by `append_bar`, before any plan.
+        Command::AppendBar => None,
+        Command::MoveBeatLeft | Command::MoveBeatRight => {
+            let mut bar = old.clone();
+            let v = bar.voices.get_mut(c.voice)?;
+            let other = if command == Command::MoveBeatLeft {
+                c.beat.checked_sub(1)?
+            } else {
+                c.beat + 1
+            };
+            if other >= v.beats.len() || c.beat >= v.beats.len() {
+                return None;
+            }
+            v.beats.swap(c.beat, other);
+            one(bar, Caret { beat: other, ..c })
+        }
+        Command::ClearBeats => {
+            let targets = targets(score, c, selection);
+            on_beats(score, c, &targets, |b| {
+                let cleared = Beat {
+                    kind: BeatKind::Rest,
+                    duration: b.duration.clone(),
+                    grace: b.grace,
+                    ..Beat::default()
+                };
+                (*b != cleared).then(|| *b = cleared)
+            })
+        }
+        Command::ClearBar => {
+            let bar = Bar {
+                clef: old.clef,
+                voices: vec![Voice::default()],
+            };
+            one(bar, Caret { beat: 0, ..c })
+        }
+        Command::MoveToVoice(to) => {
+            if to >= crate::VOICES || to == c.voice {
+                return None;
+            }
+            let mut bar = old.clone();
+            let from = bar.voices.get(c.voice)?;
+            let beat = from.beats.get(c.beat)?.clone();
+            if beat.grace.is_some() {
+                return None;
+            }
+            let onset = crate::onsets(from).get(c.beat).copied()?;
+            let length = beat.duration.length()?;
+            grow_voices(&mut bar, to);
+            // The target voice: rests up to the moment if it is shorter,
+            // then room for the beat.
+            let target = bar.voices.get_mut(to)?;
+            let filled = target.length()?;
+            let index = if filled <= onset {
+                let gap = onset.checked_sub(filled)?;
+                for d in rests_for(gap)? {
+                    target.beats.push(Beat {
+                        kind: BeatKind::Rest,
+                        duration: d,
+                        ..Beat::default()
+                    });
+                }
+                target.beats.push(beat.clone());
+                target.beats.len() - 1
+            } else {
+                // Only into a rest or placeholder of exactly the beat's
+                // place and length.
+                let starts = crate::onsets(target);
+                let i = starts.iter().position(|s| *s == onset)?;
+                let there = target.beats.get(i)?;
+                if there.kind == BeatKind::Notes || there.duration.length()? != length {
+                    return None;
+                }
+                *target.beats.get_mut(i)? = beat.clone();
+                i
+            };
+            let source = bar.voices.get_mut(c.voice)?.beats.get_mut(c.beat)?;
+            *source = Beat {
+                kind: BeatKind::Rest,
+                duration: beat.duration.clone(),
+                ..Beat::default()
+            };
+            one(
+                bar,
+                Caret {
+                    voice: to,
+                    beat: index,
+                    ..c
+                },
+            )
+        }
+        Command::RemoveUnusedVoices => {
+            let mut bars = staff.bars.clone();
+            for bar in &mut bars {
+                for v in bar.voices.iter_mut().skip(1) {
+                    if !v.beats.iter().any(|b| b.kind == BeatKind::Notes) {
+                        v.beats.clear();
+                    }
+                }
+                tidy(bar);
+            }
+            (bars != staff.bars).then_some(Plan {
+                first: 0,
+                bars,
+                caret: Caret { voice: 0, ..c },
+            })
         }
         Command::StringUp | Command::StringDown => {
             let to = if command == Command::StringUp {
@@ -579,6 +815,36 @@ fn settle_dynamic(beat: &mut Beat, dynamic: Dynamic) {
     if beat.effects.dynamic.is_none() && dynamic != Dynamic::default() {
         beat.effects.dynamic = Some(dynamic);
     }
+}
+
+/// Rests that fill `gap` (whole notes) exactly, longest first, each a
+/// plain value or dotted once; `None` for a gap no such rests fill (in a
+/// tuplet, say).
+fn rests_for(gap: oxiguitar_model::Ratio) -> Option<Vec<Duration>> {
+    const VALUES: [NoteValue; 7] = [
+        NoteValue::Whole,
+        NoteValue::Half,
+        NoteValue::Quarter,
+        NoteValue::Eighth,
+        NoteValue::Sixteenth,
+        NoteValue::ThirtySecond,
+        NoteValue::SixtyFourth,
+    ];
+    let mut left = gap;
+    let mut out = Vec::new();
+    while left > oxiguitar_model::Ratio::ZERO {
+        let next = VALUES.iter().find_map(|&v| {
+            let d = Duration::new(v);
+            let len = d.length()?;
+            (len <= left).then_some((d, len))
+        })?;
+        left = left.checked_sub(next.1)?;
+        out.push(next.0);
+        if out.len() > 64 {
+            return None;
+        }
+    }
+    Some(out)
 }
 
 /// How loud a note typed at the caret is: as its beat, or else as the last
@@ -916,6 +1182,90 @@ mod tests {
             run(&mut s, &mut h, at(1, 1), Command::SemitoneDown).is_none(),
             "below the open string"
         );
+    }
+
+    #[test]
+    fn pitches_go_on_the_lowest_fret_near_the_caret() {
+        let mut s = score(1, 1);
+        let mut h = History::new();
+        // A4 (69) is fret 5 on string 1, but the beat has a note there:
+        // fret 10 on string 2 is the lowest left.
+        let c = run(&mut s, &mut h, at(1, 3), Command::Pitch(Pitch(69))).unwrap();
+        assert_eq!(c.string, 2);
+        let n = beats(&s)[1]
+            .notes
+            .iter()
+            .find(|n| n.string() == Some(2))
+            .unwrap();
+        assert_eq!(
+            n.place,
+            NotePlace::Fretted {
+                string: 2,
+                fret: 10
+            }
+        );
+        // Too low for the guitar.
+        assert!(run(&mut s, &mut h, at(2, 1), Command::Pitch(Pitch(30))).is_none());
+        // A staff without strings takes the pitch itself.
+        s.tracks[0].staves[0].tuning.clear();
+        run(&mut s, &mut h, at(3, 1), Command::Pitch(Pitch(60))).unwrap();
+        assert!(
+            beats(&s)[3]
+                .notes
+                .iter()
+                .any(|n| n.place == NotePlace::Pitched(Pitch(60)))
+        );
+    }
+
+    #[test]
+    fn a_new_score_and_a_bar_added_at_its_end() {
+        let mut s = new_score();
+        s.check_structure().unwrap();
+        assert_eq!((s.bar_count(), s.tracks.len()), (1, 1));
+        s.master_bars[0].key_signature.fifths = 2;
+        let mut h = History::new();
+        let e = apply(&mut s, &mut h, at(0, 1), None, Command::AppendBar).unwrap();
+        assert!(e.touched.everything);
+        assert_eq!((e.caret.bar, e.caret.beat), (1, 0));
+        assert_eq!(s.bar_count(), 2);
+        assert_eq!(s.master_bars[1].key_signature.fifths, 2);
+        s.check_structure().unwrap();
+        h.undo(&mut s);
+        assert_eq!(s.bar_count(), 1);
+    }
+
+    #[test]
+    fn moving_clearing_and_voices() {
+        let mut s = score(1, 1);
+        let mut h = History::new();
+        run(&mut s, &mut h, at(0, 1), fret(5)).unwrap();
+        let c = run(&mut s, &mut h, at(0, 1), Command::MoveBeatRight).unwrap();
+        assert_eq!(c.beat, 1);
+        assert_eq!(
+            beats(&s)[1].notes[0].place,
+            NotePlace::Fretted { string: 1, fret: 5 }
+        );
+        assert!(run(&mut s, &mut h, at(0, 1), Command::MoveBeatLeft).is_none());
+        run(&mut s, &mut h, at(1, 1), Command::ClearBeats).unwrap();
+        assert_eq!(beats(&s)[1].kind, BeatKind::Rest);
+        // The third quarter to voice 2: rests before it there, a rest in
+        // its place here.
+        let c = run(&mut s, &mut h, at(2, 1), Command::MoveToVoice(1)).unwrap();
+        assert_eq!((c.voice, c.beat), (1, 1));
+        let voices = &s.tracks[0].staves[0].bars[0].voices;
+        assert_eq!(voices[1].beats.len(), 2);
+        assert_eq!(voices[1].beats[0].kind, BeatKind::Rest);
+        assert_eq!(voices[1].beats[0].duration.value, NoteValue::Half);
+        assert_eq!(voices[0].beats[2].kind, BeatKind::Rest);
+        // Back into the rest of exactly its place.
+        let c = run(&mut s, &mut h, c, Command::MoveToVoice(0)).unwrap();
+        assert_eq!((c.voice, c.beat), (0, 2));
+        assert_eq!(beats(&s)[2].kind, BeatKind::Notes);
+        // Voice 2 holds only rests now: removed.
+        run(&mut s, &mut h, at(0, 1), Command::RemoveUnusedVoices).unwrap();
+        assert_eq!(s.tracks[0].staves[0].bars[0].voices.len(), 1);
+        run(&mut s, &mut h, at(0, 1), Command::ClearBar).unwrap();
+        assert!(beats(&s).is_empty());
     }
 
     #[test]

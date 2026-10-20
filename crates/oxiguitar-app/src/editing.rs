@@ -22,8 +22,8 @@ use std::time::{Duration, Instant};
 use oxiguitar_display::Rect;
 use oxiguitar_edit::{Caret, Command, Selection, StaffBar};
 use oxiguitar_host::api::event::{Position, Selection as PluginSelection, Selection2};
-use oxiguitar_layout::{Found, Hits, Spot};
-use oxiguitar_model::{BeatKind, NoteValue, Score};
+use oxiguitar_layout::{Found, Hits, Spot, pitch_at_step};
+use oxiguitar_model::{BeatKind, Clef, NoteValue, Pitch, Score};
 
 /// How soon a second digit must follow the first to make a two-digit
 /// fret.
@@ -84,6 +84,48 @@ pub(crate) struct Editing {
     selection: Option<Selection>,
     /// The last digit typed, where and when, for a two-digit fret.
     digit: Option<(Caret, u8, Instant)>,
+    /// The caret's line or space on the standard staff (0 the bottom line,
+    /// 8 the top line) in a clef, where Enter enters a note; `None` while
+    /// the caret is on the tablature.
+    height: Option<(i32, Clef)>,
+}
+
+/// The commands of the Edit menu's note items, by the name the menu
+/// passes.
+pub(crate) fn menu_command(name: &str) -> Option<Command> {
+    Some(match name {
+        "insert-beat" => Command::InsertBeat,
+        "delete-beats" => Command::DeleteBeats,
+        "clear-beats" => Command::ClearBeats,
+        "clear-bar" => Command::ClearBar,
+        "move-left" => Command::MoveBeatLeft,
+        "move-right" => Command::MoveBeatRight,
+        "voice-1" => Command::MoveToVoice(0),
+        "voice-2" => Command::MoveToVoice(1),
+        "voice-3" => Command::MoveToVoice(2),
+        "voice-4" => Command::MoveToVoice(3),
+        "remove-unused-voices" => Command::RemoveUnusedVoices,
+        _ => return None,
+    })
+}
+
+/// How many strings the caret's staff has.
+fn strings(score: &Score, c: Caret) -> usize {
+    score
+        .tracks
+        .get(c.track)
+        .and_then(|t| t.staves.get(c.staff))
+        .map_or(0, |s| s.string_count())
+}
+
+/// The clef of the caret's bar.
+fn clef_of(score: &Score, c: Caret) -> Clef {
+    score
+        .tracks
+        .get(c.track)
+        .and_then(|t| t.staves.get(c.staff))
+        .and_then(|s| s.bars.get(c.bar))
+        .map_or(Clef::Treble, |b| b.clef)
 }
 
 /// A key's digit, 0 to 9.
@@ -117,6 +159,7 @@ impl Editing {
     /// A score was opened: the caret goes to the start of `first`.
     pub(crate) fn opened(&mut self, score: Arc<Score>, first: usize) {
         self.caret = Caret::at_start(&score, first);
+        self.height = None;
         self.anchor = None;
         self.selection = None;
         self.score = Some(score);
@@ -223,6 +266,7 @@ impl Editing {
                     }
                 }
             }
+            ("\n" | "\r" | "enter", false, false) => Command::Pitch(self.pitch_here()?),
             ("r" | "R", false, false) => Command::Rest,
             ("-" | "_", false, false) => Command::Longer,
             ("+" | "=", false, false) => Command::Shorter,
@@ -232,7 +276,11 @@ impl Editing {
             ("l", false, false) if !shift => Command::Tie,
             ("l" | "L", false, false) => Command::TieBeat,
             ("backspace" | "delete", false, false) if !shift => Command::DeleteNote,
+            ("delete", true, false) if shift => Command::ClearBeats,
             ("delete", false, false) => Command::DeleteBeats,
+            ("1" | "2" | "3" | "4", false, true) => {
+                Command::MoveToVoice(usize::from(digit(name)? - 1))
+            }
             ("insert", true, false) => Command::InsertBeat,
             ("up", false, true) if shift => Command::SemitoneUp,
             ("down", false, true) if shift => Command::SemitoneDown,
@@ -245,6 +293,38 @@ impl Editing {
             caret,
             selection: self.selection,
         })
+    }
+
+    /// The pitch at the caret's line or space of the standard staff, in its
+    /// bar's key and its staff's transposition.
+    fn pitch_here(&self) -> Option<Pitch> {
+        let (step, clef) = self.height?;
+        let c = self.caret?;
+        let score = self.score.as_ref()?;
+        let key = score.master_bars.get(c.bar)?.key_signature;
+        let transposition = score
+            .tracks
+            .get(c.track)?
+            .staves
+            .get(c.staff)?
+            .transposition;
+        pitch_at_step(step, clef, key, transposition)
+    }
+
+    /// The caret's line or space on the standard staff, if it is there.
+    #[cfg(test)]
+    pub(crate) fn height(&self) -> Option<(i32, Clef)> {
+        self.height
+    }
+
+    /// Right with the caret on the last place of the last bar: a bar to add
+    /// after it, where the caret goes.
+    pub(crate) fn at_the_end(&mut self) -> Option<Typed> {
+        let score = self.score.clone()?;
+        let c = self.caret?;
+        (c.bar + 1 == score.bar_count() && c.next_beat(&score) == c)
+            .then(|| self.tool(Command::AppendBar))
+            .flatten()
     }
 
     /// A palette tool's command at the caret, on the selection.
@@ -299,6 +379,13 @@ impl Editing {
             (Key::Left | Key::Right, true) => return false,
             (Key::Up, false) if shift => c,
             (Key::Down, false) if shift => c,
+            (Key::Up | Key::Down, false) if self.height.is_some() || strings(s, c) == 0 => {
+                // On the standard staff: a line or space up or down.
+                let (step, clef) = self.height.unwrap_or((4, clef_of(s, c)));
+                let step = if key == Key::Up { step + 1 } else { step - 1 };
+                self.height = Some((step.clamp(-8, 16), clef));
+                c
+            }
             (Key::Up, false) => c.string_up(),
             (Key::Down, false) => c.string_down(s),
             (Key::Up, true) => c.prev_track(s, &shown),
@@ -307,8 +394,14 @@ impl Editing {
             (Key::End, false) => c.bar_end(s),
             (Key::Home, true) => c.first_bar(s),
             (Key::End, true) => c.last_bar(s).bar_end(s),
-            (Key::Tab, _) => c.next_staff(s, &shown),
-            (Key::BackTab, _) => c.prev_staff(s, &shown),
+            (Key::Tab, _) => {
+                self.height = None;
+                c.next_staff(s, &shown)
+            }
+            (Key::BackTab, _) => {
+                self.height = None;
+                c.prev_staff(s, &shown)
+            }
             (Key::Voice(v), true) => c.with_voice(s, v),
             (Key::Voice(_), false) => return false,
             (Key::SelectAll, true) => {
@@ -362,6 +455,7 @@ impl Editing {
         let Some(to) = to.clamp(&score) else {
             return false;
         };
+        self.height = spot.step;
         if shift {
             let anchor = *self.anchor.get_or_insert(c);
             self.selection = Some(Selection::between(anchor, to));
@@ -451,8 +545,15 @@ impl Editing {
     /// Where to draw the caret, from the engraver's map.
     pub(crate) fn caret_box(&self) -> Option<Found> {
         let c = self.caret?;
-        self.hits
-            .find(c.track, c.staff, c.bar, c.voice, c.beat, c.string)
+        self.hits.find(
+            c.track,
+            c.staff,
+            c.bar,
+            c.voice,
+            c.beat,
+            c.string,
+            self.height,
+        )
     }
 
     /// Where to draw the selection: a box per bar of each staff, with its
@@ -631,6 +732,7 @@ mod tests {
                                 start,
                                 notes: start + 5.0,
                                 end: start + 100.0,
+                                clef: Clef::Treble8vb,
                                 beats: (0..4)
                                     .map(|beat| BeatHit {
                                         voice: 0,
@@ -848,6 +950,8 @@ mod tests {
             ("delete", true, false, false, Command::DeleteBeats),
             ("insert", false, true, false, Command::InsertBeat),
             ("up", true, false, true, Command::SemitoneUp),
+            ("delete", true, true, false, Command::ClearBeats),
+            ("3", false, false, true, Command::MoveToVoice(2)),
             ("down", false, false, true, Command::StringDown),
         ] {
             assert_eq!(
@@ -867,6 +971,43 @@ mod tests {
             (at.voice, at.value, at.rest),
             (0, Some(NoteValue::Quarter), false)
         );
+    }
+
+    #[test]
+    fn enter_types_the_note_at_the_caret_s_line_or_space() {
+        let mut e = editing(1, &[0]);
+        let now = Instant::now();
+        assert_eq!(
+            e.typed("\n", false, false, false, now),
+            None,
+            "on the tablature"
+        );
+        let spot = Spot {
+            track: 0,
+            staff: 0,
+            bar: 1,
+            beat: Some(2),
+            string: None,
+            step: Some((8, Clef::Treble8vb)),
+        };
+        assert!(e.press(spot, false));
+        assert_eq!(e.height(), Some((8, Clef::Treble8vb)));
+        // The guitar's top line, F5 written, sounds F4.
+        assert_eq!(
+            e.typed("\n", false, false, false, now).map(|t| t.command),
+            Some(Command::Pitch(Pitch(65)))
+        );
+        // Up: a space higher, G.
+        e.key(Key::Up, false, false);
+        assert_eq!(e.height(), Some((9, Clef::Treble8vb)));
+        assert_eq!(e.caret().unwrap().string, 1, "the string stays");
+        assert_eq!(
+            e.typed("\n", false, false, false, now).map(|t| t.command),
+            Some(Command::Pitch(Pitch(67)))
+        );
+        // Tab leaves the standard staff.
+        e.key(Key::Tab, false, false);
+        assert_eq!(e.height(), None);
     }
 
     #[test]

@@ -37,6 +37,8 @@ use crate::document::{
 pub(crate) enum Request {
     /// Read a score file.
     Open(PathBuf),
+    /// File → New: a new score, not saved yet.
+    New,
     /// Engrave the open score with these settings.
     Engrave(Settings),
     /// Draw tiles of engraving `engraving` (skipped if that is no longer the
@@ -106,6 +108,8 @@ pub(crate) enum Event {
         folder: Option<PathBuf>,
         /// The file's name, for the window's title.
         name: String,
+        /// A new score with no file yet (File → New).
+        untitled: bool,
     },
     /// A save waits for the user: a heading and lines to show, with Save
     /// and Cancel ([`Request::ConfirmSave`], [`Request::CancelSave`]).
@@ -275,6 +279,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
         let superseded = |p: &VecDeque<Request>, tiles: bool| {
             p.iter().any(|r| match r {
                 Request::Open(_)
+                | Request::New
                 | Request::Engrave(_)
                 | Request::ApplyTool(_)
                 | Request::Edit { .. }
@@ -293,6 +298,10 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
         match request {
             Request::Stop => return,
             Request::Open(path) => open(&mut st, path, sink),
+            Request::New => {
+                let doc = Document::untitled(&st.plugins);
+                opened(&mut st, doc, None, sink);
+            }
             Request::Engrave(settings) => {
                 st.settings = settings;
                 if !superseded(&pending, false) {
@@ -455,31 +464,35 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
 
 fn open(st: &mut State, path: PathBuf, sink: &dyn Fn(Event)) {
     match Document::open(&path, &st.plugins) {
-        Ok(doc) => {
-            // Plugins hear of it as the window does (pushing never waits).
-            st.revision += 1;
-            st.open.set(Some(doc.score.clone()), st.revision);
-            st.plugins.push(PluginEvent::ScoreOpened {
-                revision: st.revision,
-            });
-            if let Some(warning) = doc.bad_bars_warning() {
-                sink(Event::Message(Level::Warning, warning));
-            }
-            sink(Event::Opened {
-                score: doc.score.clone(),
-                edit: doc.edit_state(),
-                bad: doc.check.iter().collect(),
-                tracks: doc.tracks(),
-                tools: doc.tools(),
-                pdf_name: doc.pdf_name(),
-                folder: path.parent().map(PathBuf::from),
-                name: doc.name(),
-            });
-            st.doc = Some(doc);
-            st.pending_save = None;
-        }
+        Ok(doc) => opened(st, doc, path.parent().map(PathBuf::from), sink),
         Err(e) => sink(Event::Message(Level::Error, e)),
     }
+}
+
+/// A score opened or made: plugins hear of it, then the window.
+fn opened(st: &mut State, doc: Document, folder: Option<PathBuf>, sink: &dyn Fn(Event)) {
+    // Plugins hear of it as the window does (pushing never waits).
+    st.revision += 1;
+    st.open.set(Some(doc.score.clone()), st.revision);
+    st.plugins.push(PluginEvent::ScoreOpened {
+        revision: st.revision,
+    });
+    if let Some(warning) = doc.bad_bars_warning() {
+        sink(Event::Message(Level::Warning, warning));
+    }
+    sink(Event::Opened {
+        score: doc.score.clone(),
+        edit: doc.edit_state(),
+        bad: doc.check.iter().collect(),
+        tracks: doc.tracks(),
+        tools: doc.tools(),
+        pdf_name: doc.pdf_name(),
+        folder,
+        name: doc.name(),
+        untitled: doc.untitled,
+    });
+    st.doc = Some(doc);
+    st.pending_save = None;
 }
 
 /// File → Save and Save As: the file is got ready, then written, or held
@@ -832,5 +845,94 @@ mod tests {
                 break;
             }
         }
+    }
+
+    #[test]
+    fn a_new_score_takes_notes_and_is_saved_where_asked() {
+        let (tx, rx) = channel();
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
+        worker.send(Request::New);
+        let score = loop {
+            if let Event::Opened {
+                score,
+                untitled,
+                name,
+                tracks,
+                ..
+            } = next(&rx)
+            {
+                assert!(untitled);
+                assert_eq!(name, "Untitled");
+                assert_eq!(tracks.len(), 1);
+                break score;
+            }
+        };
+        let caret = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        worker.send(Request::Edit {
+            command: Command::Fret {
+                fret: 7,
+                again: false,
+            },
+            caret,
+            selection: None,
+        });
+        let caret = loop {
+            if let Event::Changed {
+                caret: Some(c),
+                edit,
+                ..
+            } = next(&rx)
+            {
+                assert!(edit.modified);
+                assert_eq!(edit.undo.as_deref(), Some("Type Fret"));
+                break c;
+            }
+        };
+        // Right at the end of the score: a second bar.
+        worker.send(Request::Edit {
+            command: Command::AppendBar,
+            caret: caret.bar_end(&score),
+            selection: None,
+        });
+        loop {
+            if let Event::Changed {
+                score,
+                caret: Some(c),
+                ..
+            } = next(&rx)
+            {
+                assert_eq!((score.bar_count(), c.bar), (2, 1));
+                break;
+            }
+        }
+        let dir = std::env::temp_dir().join(format!("oxiguitar-new-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("song.gp");
+        worker.send(Request::Save(Some((path.clone(), "gp".to_owned()))));
+        loop {
+            match next(&rx) {
+                Event::Saved { name, edit, .. } => {
+                    assert_eq!(name, "song.gp");
+                    assert!(!edit.modified);
+                    break;
+                }
+                Event::AskSave { .. } => worker.send(Request::ConfirmSave),
+                Event::SaveFailed => panic!("the save failed"),
+                _ => {}
+            }
+        }
+        let back = Document::open(&path, crate::test_plugins()).unwrap().score;
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(back.bar_count(), 2);
+        assert_eq!(
+            back.tracks[0].staves[0].bars[0].voices[0].beats[0].notes[0].place,
+            oxiguitar_model::NotePlace::Fretted { string: 1, fret: 7 }
+        );
     }
 }

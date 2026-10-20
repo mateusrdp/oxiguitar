@@ -23,7 +23,7 @@ Where OxiGuitar goes past TuxGuitar (four voices to its two, any tuplet to its l
 - [ ] Clearing a beat and a bar; removing a voice nobody uses
 - [ ] Bars that don't add up: marked, listed one by one (TuxGuitar's "measure errors" dialog does this, with a fix button; OxiGuitar marks them in red and walks through them, slice 1)
 
-Built in slice 3 so far (each waits for .gp5 in slice 7 to be ticked): frets typed on the tablature with two-digit frets, chords, rests, inserting and deleting beats and notes, note values whole to 64th from the keys and the palette, dots, ties (note and beat), voices started by typing in them, semitones, the same note on the next string.
+Built in slice 3 so far (each waits for .gp5 in slice 7 to be ticked): frets typed on the tablature with two-digit frets, chords, rests, inserting and deleting beats and notes, note values whole to 64th from the keys and the palette, dots, ties (note and beat), voices started by typing in them, semitones, the same note on the next string; then pitches entered on the standard staff (Enter at the caret's line or space, the string with the lowest fret nearest the caret's), File → New, a bar added by Right at the end, moving beats left and right and to another voice, clearing beats and bars, removing unused voices.
 
 ### Bars and structure (slice 4)
 
@@ -87,4 +87,6 @@ Decided by Mateus on 19 Oct 2026 unless said otherwise.
 - **The clipboard** is OxiGuitar's own: copying and pasting work inside OxiGuitar, not with other programs.
 - **Undo** is unlimited (EDIT-5) and keeps copies of only what each command changed.
 - **Note entry** (slice 3, `oxiguitar_edit::Command`) uses Guitar Pro 8's keys. A voice shorter than its bar gives the caret one more place after its last beat, where typing adds a beat as long as the one before it. A tied note always has the fret of the note it continues (the last note played on its string in the voice, as Guitar Pro reads a tie), so a change to a note carries through its ties. A typed note takes its beat's dynamic, or the last one before it (Guitar Pro keeps one per beat). A beat made a rest drops tapping, which belongs to notes. Voices keep their places: an unused voice before a used one is an empty placeholder, written as no voice. Every edit is held to two gates over every fixture (and the corpus where it is): random runs undone to the original and redone to the end, and the edited score saved as .gp reading back equal (`oxiguitar-edit --test entry`).
+- **The standard staff** (slice 3): a click on it gives the caret a line or space, which Up / Down move and Enter fills, in the bar's key. Guitar Pro 8 offers its fretboard and keyboard views for this; OxiGuitar's caret is the MuseScore-like way in until those views come as plugins.
+- **File → New** starts as Guitar Pro does: one bar, 4/4, 120, a steel-string guitar in standard tuning; Right at the end of the score adds a bar, as TuxGuitar does.
 - **Drum tracks** take no frets: their notes are drum sounds, entered with the drum tools later.

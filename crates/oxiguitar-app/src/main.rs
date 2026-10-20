@@ -185,6 +185,8 @@ struct App {
     /// The open file's name, and whether the score differs from it.
     doc_name: Option<String>,
     modified: bool,
+    /// The score was made with File → New and has no file yet.
+    untitled: bool,
     /// The formats the installed plugins write, for File → Save As.
     save_formats: Vec<SaveFormat>,
     /// The question over the window, if one shows.
@@ -206,6 +208,8 @@ enum Asked {
 /// What waits on the answer to "Save the changes…?".
 #[derive(Clone, Debug, PartialEq)]
 enum Then {
+    /// File → New.
+    New,
     /// File → Open's dialog.
     OpenDialog,
     /// This file (dropped on the window).
@@ -455,6 +459,7 @@ fn main() -> Result<(), slint::PlatformError> {
         bad: Vec::new(),
         doc_name: None,
         modified: false,
+        untitled: false,
         save_formats,
         question: None,
         after_save: None,
@@ -463,7 +468,7 @@ fn main() -> Result<(), slint::PlatformError> {
     measure_palette();
 
     ui.set_shortcut_lines(lines(&[
-        "Ctrl + O: open a file;  Ctrl + S: save it;  Ctrl + Shift + S: save it as another file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
+        "Ctrl + N: a new score;  Ctrl + O: open a file;  Ctrl + S: save it;  Ctrl + Shift + S: save it as another file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
         "Escape or a click: close this note",
         "Mouse wheel over the page: scroll it;  Shift + wheel: zoom the page around the pointer",
         "Page Up / Page Down, the scroll bars: scroll the page;  with no score open, the arrow keys too",
@@ -475,6 +480,7 @@ fn main() -> Result<(), slint::PlatformError> {
         "0 to 9: a fret on the caret's string (two digits in a row: 10 to 24);  R: rest;  − / +: longer / shorter;  Shift + . / Ctrl + .: dot / double dot",
         "L / Shift + L: tie the note / the beat;  Backspace: delete the note;  Shift + Delete: delete the beat;  Ctrl + Insert: insert a beat",
         "Alt + Shift + Up / Down: a semitone up / down;  Alt + Up / Down: the same note on the string above / below",
+        "On the standard staff: click a line or space, Up / Down to move it, Enter to put a note there;  Alt + 1 to 4: move the beat to that voice;  Ctrl + Shift + Delete: clear the beat;  Right at the end: add a bar",
         "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
@@ -534,6 +540,18 @@ fn main() -> Result<(), slint::PlatformError> {
 
     let a = app.clone();
     ui.on_open_file(move || unless_unsaved(&a, Then::OpenDialog));
+    let a = app.clone();
+    ui.on_new_file(move || unless_unsaved(&a, Then::New));
+    let a = app.clone();
+    ui.on_edit_command(move |name| {
+        let Some(command) = editing::menu_command(name.as_str()) else {
+            return;
+        };
+        let typed = a.borrow_mut().editing.tool(command);
+        if let Some(t) = typed {
+            send_typed(&a, t);
+        }
+    });
     let a = app.clone();
     ui.on_save(move || save(&a));
     let a = app.clone();
@@ -599,6 +617,14 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
                 sync_tracks(&a);
                 caret_moved(&a);
+                return true;
+            }
+        }
+        // Right at the very end of the score adds a bar, as Guitar Pro.
+        if key == editing::Key::Right && !shift && !ctrl {
+            let typed = a.borrow_mut().editing.at_the_end();
+            if let Some(t) = typed {
+                send_typed(&a, t);
                 return true;
             }
         }
@@ -1591,10 +1617,12 @@ fn handle(app: &Shared, event: Event) {
             pdf_name,
             folder,
             name,
+            untitled,
         } => {
             {
                 let mut s = app.borrow_mut();
                 s.doc_name = Some(name);
+                s.untitled = untitled;
                 s.after_save = None;
                 s.track_count = tracks.len();
                 s.tracks = Tracks::new(
@@ -1678,6 +1706,7 @@ fn handle(app: &Shared, event: Event) {
             let then = {
                 let mut s = app.borrow_mut();
                 s.doc_name = Some(name);
+                s.untitled = false;
                 s.pdf_name = pdf_name;
                 s.folder = folder;
                 s.after_save.take()
@@ -1860,7 +1889,8 @@ fn sync_caret(app: &Shared, scroll: bool) {
     };
     let found = s.editing.caret_box();
     let column = found.and_then(|f| place(f.sheet, f.column));
-    let string = found.and_then(|f| f.string.and_then(|r| place(f.sheet, r)));
+    // On the standard staff, the caret's line or space; else its string.
+    let string = found.and_then(|f| f.step.or(f.string).and_then(|r| place(f.sheet, r)));
     ui.set_caret_shown(column.is_some());
     if let Some(b) = &column {
         ui.set_caret(b.clone());
@@ -2343,6 +2373,7 @@ fn unless_unsaved(app: &Shared, then: Then) {
 /// Does what waited on the unsaved-changes question.
 fn go_on(app: &Shared, then: Then) {
     match then {
+        Then::New => app.borrow().worker.send(Request::New),
         Then::OpenDialog => open_dialog(app),
         Then::Open(path) => app.borrow().worker.send(Request::Open(path)),
         Then::Quit => {
@@ -2407,6 +2438,11 @@ fn question_answered(app: &Shared, i: i32) {
 /// File → Save: the file the score came from, in its own format unless
 /// that loses part of the score (the worker asks then).
 fn save(app: &Shared) {
+    // A new score has no file yet: Save asks for a name, as Save As.
+    if app.borrow().untitled {
+        save_as_dialog(app);
+        return;
+    }
     app.borrow().worker.send(Request::Save(None));
 }
 

@@ -32,6 +32,6 @@ mod selection;
 
 pub use caret::{Caret, StaffBar, VOICES, beat_at, onsets};
 pub use check::{BarCheck, adds_up};
-pub use entry::{Command, Edited, apply};
+pub use entry::{Command, Edited, apply, new_score};
 pub use history::{Change, History, Region, Touched};
 pub use selection::{Selection, Span};

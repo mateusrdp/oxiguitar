@@ -129,6 +129,8 @@ pub(crate) struct Document {
     pub(crate) history: History,
     /// The bars that don't add up.
     pub(crate) check: BarCheck,
+    /// A score made with File → New, not saved yet: Save asks for a name.
+    pub(crate) untitled: bool,
 }
 
 /// What the Edit menu and the toolbar show about the history.
@@ -261,7 +263,34 @@ impl Document {
             score: Arc::new(score),
             history: History::new(),
             check,
+            untitled: false,
         })
+    }
+
+    /// File → New: a new score (one bar, one guitar), in the fullest format
+    /// the plugins write, with no file yet.
+    pub(crate) fn untitled(plugins: &Plugins) -> Document {
+        let writable = SaveFormat::writable(plugins);
+        let format = writable
+            .iter()
+            .find(|f| f.id == FULLEST)
+            .or(writable.first())
+            .cloned()
+            .unwrap_or_else(|| SaveFormat {
+                id: FULLEST.to_owned(),
+                name: "Guitar Pro 7–8".to_owned(),
+                extensions: vec!["gp".to_owned()],
+            });
+        let score = oxiguitar_edit::new_score();
+        Document {
+            path: PathBuf::from("Untitled.gp"),
+            format,
+            opened_losses: Vec::new(),
+            check: BarCheck::of(&score),
+            score: Arc::new(score),
+            history: History::new(),
+            untitled: true,
+        }
     }
 
     /// What the Edit menu shows.
@@ -620,13 +649,19 @@ impl Document {
         }
         self.path.clone_from(&prepared.path);
         self.format = prepared.format.clone();
+        self.untitled = false;
         self.history.mark_saved();
         Ok(())
     }
 
-    /// The file's name, for the window's title.
+    /// The file's name, for the window's title ("Untitled" before a new
+    /// score is saved).
     pub(crate) fn name(&self) -> String {
-        file_name(&self.path)
+        if self.untitled {
+            "Untitled".to_owned()
+        } else {
+            file_name(&self.path)
+        }
     }
 }
 
