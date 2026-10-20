@@ -29,6 +29,7 @@ mod note;
 mod ratio;
 mod score;
 mod track;
+pub mod tuning;
 #[cfg(feature = "wire")]
 pub mod wire;
 

@@ -146,6 +146,20 @@ pub enum Command {
     Cut,
     /// The clipboard pasted at the caret (Ctrl + V, Ctrl + Shift + V).
     Paste(crate::Paste),
+    /// A steel-string guitar track after the caret's.
+    AddTrack,
+    /// A copy of the caret's track after it.
+    DuplicateTrack,
+    /// The caret's track out of the score; never the last track.
+    DeleteTrack,
+    /// The caret's track one place up the list.
+    MoveTrackUp,
+    /// The caret's track one place down the list.
+    MoveTrackDown,
+    /// The caret's track's properties (the track dialog).
+    TrackProperties(Box<crate::TrackSettings>),
+    /// A transposition of the caret's track, the selection or every track.
+    Transpose(crate::Transposition),
 }
 
 impl Command {
@@ -196,6 +210,13 @@ impl Command {
             Command::Bar(_) => "Bar Properties",
             Command::Cut => "Cut",
             Command::Paste(_) => "Paste",
+            Command::AddTrack => "Add Track",
+            Command::DuplicateTrack => "Duplicate Track",
+            Command::DeleteTrack => "Delete Track",
+            Command::MoveTrackUp => "Move Track Up",
+            Command::MoveTrackDown => "Move Track Down",
+            Command::TrackProperties(_) => "Track Properties",
+            Command::Transpose(_) => "Transpose",
         }
     }
 }
@@ -230,6 +251,12 @@ pub fn apply(
         return edited;
     }
     if let Some(edited) = crate::clip::apply(score, history, caret, selection, &command) {
+        return edited;
+    }
+    if let Some(edited) = crate::tracks::apply(score, history, caret, &command) {
+        return edited;
+    }
+    if let Some(edited) = crate::transpose::apply(score, history, caret, selection, &command) {
         return edited;
     }
     let label = command.label();
@@ -669,7 +696,14 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::FreeTime
         | Command::Bar(_)
         | Command::Cut
-        | Command::Paste(_) => None,
+        | Command::Paste(_)
+        | Command::AddTrack
+        | Command::DuplicateTrack
+        | Command::DeleteTrack
+        | Command::MoveTrackUp
+        | Command::MoveTrackDown
+        | Command::TrackProperties(_)
+        | Command::Transpose(_) => None,
         Command::Tuplet(t) => {
             let targets = targets(score, c, selection);
             let off = staff
