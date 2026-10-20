@@ -558,7 +558,11 @@ mod tests {
         }
         run(&mut s, &mut h, at(1, 1), None, paste(short, 1, true)).unwrap();
         assert_eq!(frets(&s, 0, 1), [Some(4), Some(1), None, Some(6), Some(7)]);
-        assert_eq!(crate::BarCheck::of(&s).iter().count(), 0, "every bar adds up");
+        assert_eq!(
+            crate::BarCheck::of(&s).iter().count(),
+            0,
+            "every bar adds up"
+        );
     }
 
     #[test]
