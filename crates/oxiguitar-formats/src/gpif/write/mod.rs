@@ -93,6 +93,10 @@ fn part_configuration(plans: &[TrackPlan]) -> Vec<u8> {
 struct TrackPlan {
     percussion: bool,
     sound: tables::Sound,
+    /// The instrument set's name and type (`<InstrumentSet>`): the sound's,
+    /// or an electric guitar's for an instrument without frets that has
+    /// strings and shows no tablature, so the reader keeps its strings.
+    set: (&'static str, &'static str),
     /// -1 when the track is written an octave above its sound (guitar,
     /// bass: the treble 8vb clef), else 0.
     octave_shift: i32,
@@ -173,7 +177,39 @@ fn mix_value(v: f64) -> String {
     v.to_string()
 }
 
-/// A MIDI pitch as GPIF spells it, with sharps.
+/// The tuning Guitar Pro 7.6 gives a staff without strings, lowest first: a
+/// guitar's on the first staff, a five-string bass's on the others (as it
+/// saves a piano's grand staff).
+fn default_tuning(staff: usize) -> &'static [u8] {
+    if staff == 0 {
+        &[40, 45, 50, 55, 59, 64]
+    } else {
+        &[23, 28, 33, 38, 43]
+    }
+}
+
+/// Where Guitar Pro puts a pitch on a staff without strings: the string
+/// (from 0, the lowest) with the lowest fret not below 0, or past either
+/// end the lowest or highest string with a fret out of range.
+fn string_and_fret(tuning_low_first: &[u8], pitch: u8) -> (usize, i32) {
+    let pitch = i32::from(pitch);
+    tuning_low_first
+        .iter()
+        .enumerate()
+        .map(|(i, open)| (i, pitch - i32::from(*open)))
+        .filter(|(_, fret)| *fret >= 0)
+        .min_by_key(|(_, fret)| *fret)
+        .unwrap_or((
+            0,
+            pitch - i32::from(tuning_low_first.first().copied().unwrap_or(0)),
+        ))
+}
+
+/// A MIDI pitch as GPIF spells it, with sharps. Guitar Pro numbers octaves
+/// from MIDI 0 (its octave is MIDI ÷ 12: MIDI 64 is E5, MIDI 60 C5), one
+/// above scientific pitch, and draws the staff from these (Mateus's check
+/// in Guitar Pro 7.6, 20 Oct 2026: written one octave lower, the staff was
+/// drawn an octave low).
 fn pitch_xml(midi: i32) -> String {
     const STEPS: [(&str, &str); 12] = [
         ("C", ""),
@@ -195,7 +231,7 @@ fn pitch_xml(midi: i32) -> String {
         .unwrap_or(("C", ""));
     format!(
         "<Pitch><Step>{step}</Step><Accidental>{accidental}</Accidental><Octave>{}</Octave></Pitch>",
-        midi.div_euclid(12) - 1
+        midi.div_euclid(12)
     )
 }
 
@@ -432,6 +468,24 @@ impl<'s> Writer<'s> {
         } else if !stringed && notation & 0x02 != 0 {
             self.track_loss("tablature can't be shown for a track without strings");
         }
+        // What the reader makes of it (`gpif::NOT_FRETTED`): an instrument
+        // without frets shown without tablature has no strings; any other
+        // instrument has the strings its tuning gives.
+        let not_fretted = crate::gpif::NOT_FRETTED.contains(&sound.set_type);
+        // A track with strings whose sound has no frets (a piano part with
+        // frets, from a Guitar Pro 5 file) shown without tablature keeps
+        // its strings as Guitar Pro files hold it: an electric guitar's
+        // instrument set with the instrument's sound.
+        let set = if !percussion && stringed && not_fretted && notation & 0x02 == 0 {
+            ("Electric Guitar", "electricGuitar")
+        } else {
+            (sound.set_name, sound.set_type)
+        };
+        if !percussion && !stringed && !not_fretted {
+            self.track_loss(
+                "a fretted instrument without strings is written with Guitar Pro's six strings",
+            );
+        }
 
         let staves = track
             .staves
@@ -442,6 +496,7 @@ impl<'s> Writer<'s> {
         TrackPlan {
             percussion,
             sound,
+            set,
             octave_shift,
             transpose,
             notation,
@@ -649,7 +704,7 @@ impl<'s> Writer<'s> {
         let _ = write!(
             x,
             "<InstrumentSet>\n<Name>{}</Name>\n<Type>{}</Type>\n<LineCount>5</LineCount>\n<Elements>\n",
-            s.set_name, s.set_type
+            plan.set.0, plan.set.1
         );
         if plan.percussion {
             drum_elements(x);
@@ -761,10 +816,13 @@ impl<'s> Writer<'s> {
             "<Property name=\"PartialCapoFret\">\n<Fret>0</Fret>\n</Property>\n<Property name=\"PartialCapoStringFlags\">\n<Bitset>{}</Bitset>\n</Property>",
             "0".repeat(strings.max(6))
         );
-        // A staff without strings (drums, piano) has a tuning of zeros,
-        // which the reader takes for none.
-        let pitches: Vec<String> = if plan.percussion || strings == 0 {
+        // Drums have a tuning of zeros, which the reader takes for none. A
+        // staff without strings (a piano, a violin) has Guitar Pro's own
+        // default, as Guitar Pro 7.6 writes it, and shows no tablature.
+        let pitches: Vec<String> = if plan.percussion {
             vec!["0".to_owned(); 6]
+        } else if strings == 0 {
+            default_tuning(si).iter().map(ToString::to_string).collect()
         } else {
             low_first.iter().map(ToString::to_string).collect()
         };
@@ -1207,6 +1265,17 @@ impl<'s> Writer<'s> {
                     "<Property name=\"Midi\">\n<Number>{p}</Number>\n</Property>"
                 );
                 if !percussion {
+                    // Guitar Pro gives every note a string and fret, on a
+                    // staff without strings too, from its default tuning,
+                    // out of range as need be (Guitar Pro 7.6: fret -40 on
+                    // the lowest string for MIDI 0, 63 on the highest for
+                    // MIDI 127). Without them it drew frets of -2³¹.
+                    let (string, fret) = string_and_fret(default_tuning(si), p);
+                    let _ = writeln!(
+                        props,
+                        "<Property name=\"Fret\">\n<Fret>{fret}</Fret>\n</Property>\n\
+                         <Property name=\"String\">\n<String>{string}</String>\n</Property>"
+                    );
                     // Readers that don't look at Midi on a track without
                     // strings (alphaTab) take the pitch from these, as
                     // Guitar Pro 6 wrote it.
@@ -1649,11 +1718,16 @@ mod tests {
         // A note without a string carries its pitch as octave and tone.
         let piano = fixture("fixtures/reference/piano-grand-staff.gp");
         let gpif = Writer::new(&piano).document();
+        // C5 (MIDI 72): fret 8 on the first staff's high E string of
+        // Guitar Pro's default tuning, and octave and tone for alphaTab.
         assert!(gpif.contains(
             "<Property name=\"Midi\">\n<Number>72</Number>\n</Property>\n\
+             <Property name=\"Fret\">\n<Fret>8</Fret>\n</Property>\n\
+             <Property name=\"String\">\n<String>5</String>\n</Property>\n\
              <Property name=\"Octave\">\n<Number>6</Number>\n</Property>\n\
              <Property name=\"Tone\">\n<Step>0</Step>\n</Property>"
         ));
+        assert!(gpif.contains("<Pitches>40 45 50 55 59 64</Pitches>"));
 
         // A bar without beats has no voice; a slide from a voice's last note,
         // to no note, is kept (players slide off to nothing).

@@ -130,11 +130,57 @@ struct StaffContext {
 #[derive(Clone, Debug, Default)]
 struct TrackContext {
     percussion: bool,
+    /// Guitar Pro names the instrument as one without frets (a piano, a
+    /// violin, a voice): see [`NOT_FRETTED`].
+    not_fretted: bool,
     /// Octaves the written part sits above or below the sounding one
     /// (-1 for guitar and bass).
     octave_shift: i32,
     staves: Vec<StaffContext>,
 }
+
+/// Guitar Pro 7–8's instrument types (`<InstrumentSet><Type>`) of
+/// instruments without frets (from the instruments Guitar Pro 7.6 offers,
+/// `docs/formats/guitar-pro-sounds.md`; "other" is what our writer once
+/// wrote). Any type not listed may have strings.
+pub(crate) const NOT_FRETTED: &[&str] = &[
+    "acousticPiano",
+    "electricPiano",
+    "harpsichord",
+    "celesta",
+    "electricOrgan",
+    "keySynthesizer",
+    "leadSynthesizer",
+    "padSynthesizer",
+    "seqSynthesizer",
+    "brassSynthesizer",
+    "bassSynthesizer",
+    "synthBass",
+    "xylophone",
+    "vibraphone",
+    "timpani",
+    "violin",
+    "viola",
+    "cello",
+    "contrabass",
+    "harp",
+    "voice",
+    "choir",
+    "flute",
+    "piccolo",
+    "recorder",
+    "oboe",
+    "englishHorn",
+    "clarinet",
+    "bassoon",
+    "saxophone",
+    "trumpet",
+    "trombone",
+    "frenchHorn",
+    "tuba",
+    "harmonica",
+    "other",
+];
 
 pub(super) struct Reader<'a> {
     root: Element<'a>,
@@ -317,6 +363,7 @@ impl<'a> Reader<'a> {
             .path(&["MidiConnection", "PrimaryChannel"])
             .or_else(|| gm.and_then(|g| g.child("PrimaryChannel")))
             .and_then(|c| num::<u8>(c.text()));
+        ctx.not_fretted = set_type.is_some_and(|t| NOT_FRETTED.contains(&t));
         ctx.percussion = set_type.is_some_and(|t| t == "drumKit")
             || gp6_ref.is_some_and(|r| r.starts_with("drmkt"))
             || (set_type.is_none() && gp6_ref.is_none() && channel == Some(9));
@@ -429,7 +476,15 @@ impl<'a> Reader<'a> {
                 .filter(|p| *p <= 127)
                 .collect();
             // Drum kits store a tuning of zeros; that is no tuning at all.
-            if !tctx.percussion && pitches.iter().any(|p| *p != 0) {
+            // Guitar Pro gives every other track a tuning, a piano too (a
+            // guitar's, and a five-string bass's on its second staff): an
+            // instrument without frets shown without tablature has no
+            // strings, and its notes are read by pitch. One shown with
+            // tablature (a keyboard part from a Guitar Pro 5 file) keeps
+            // them.
+            let tab_shown = notation_flags.is_none_or(|f| f & 2 != 0);
+            let default_only = tctx.not_fretted && !tab_shown;
+            if !tctx.percussion && !default_only && pitches.iter().any(|p| *p != 0) {
                 if pitches.len() > MAX_STRINGS {
                     self.log.warn(
                         format!(
