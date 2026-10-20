@@ -186,7 +186,9 @@ pub(crate) fn apply(
 }
 
 /// A beat as it goes into a track: a rest of its length between drums and
-/// pitched tracks, without the notes on strings the track hasn't. Grace
+/// pitched tracks, without the notes on strings the track hasn't, and
+/// without notes placed by pitch on a track with strings or by string on
+/// one without (a .gp file would read them back the other way). Grace
 /// beats don't cross between drums and pitches.
 fn fit(b: &Beat, from_drums: bool, to_drums: bool, strings: usize) -> Option<Beat> {
     if from_drums != to_drums {
@@ -199,7 +201,7 @@ fn fit(b: &Beat, from_drums: bool, to_drums: bool, strings: usize) -> Option<Bea
     let mut b = b.clone();
     b.notes.retain(|n| match n.place {
         NotePlace::Fretted { string, .. } => usize::from(string) <= strings,
-        NotePlace::Pitched(_) => true,
+        NotePlace::Pitched(_) => strings == 0 || to_drums,
     });
     if b.kind == BeatKind::Notes && b.notes.is_empty() {
         b = Beat {

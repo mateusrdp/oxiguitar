@@ -23,6 +23,8 @@
 | Ctrl + K, Ctrl + /, D, Shift + Insert | The Bar dialog ([Bars](editing.md#bars)) |
 | X, O, ;, :, !, H, (, S, Alt + S, Shift + S, V, P, Shift + P, I, Y, Ctrl + Alt + Y, Alt + P, Alt + T, N, ", T, ), $, <, G, Ctrl + Alt + G, Ctrl + D, Ctrl + U, Shift + D, Shift + U, Ctrl + Alt + W | Effects ([Effects](editing.md#effects)) |
 | B / Ctrl + Alt + V | The bend editor / the whammy bar's ([Bends and the whammy bar](editing.md#bends-and-the-whammy-bar)) |
+| A / Shift + T | The chord dialog / the beat's text ([Chords, text and lyrics](editing.md#chords-text-and-lyrics)) |
+| Ctrl + T, then Space, −, Backspace, Up / Down, Enter | Type lyrics on the page ([Chords, text and lyrics](editing.md#chords-text-and-lyrics)) |
 | Ctrl + C, Ctrl + X, Ctrl + V, Ctrl + Shift + V | Copy, cut, paste, Special Paste ([Copy, cut and paste](editing.md#copy-cut-and-paste)) |
 | Ctrl + Z / Ctrl + Y | Undo / redo |
 | F4 | The next bar that doesn't add up |

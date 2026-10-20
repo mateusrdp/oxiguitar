@@ -90,6 +90,8 @@ pub(crate) struct Band {
     pub(crate) dynamics: Option<f32>,
     /// Baselines of the lyric lines, by line number.
     pub(crate) lyrics: Vec<f32>,
+    /// Where the first lyric line's baseline is, or would be.
+    lyric_first: f32,
 }
 
 /// The kinds of effect lane, nearest the staff first.
@@ -276,25 +278,26 @@ pub(crate) fn system(
         let std_top = v.show_std.then_some(top);
         // Under the staff (or under the tab and its rhythm): dynamics, then
         // lyrics.
-        let under_lines = |from: f32| -> (Option<f32>, Vec<f32>, f32) {
+        let under_lines = |from: f32| -> (Option<f32>, Vec<f32>, f32, f32) {
             let mut y = from;
             let dynamics = has_dynamics.then(|| {
                 y += 2.6 * sp;
                 y - 0.6 * sp
             });
+            let first = y + 2.4 * sp - 0.5 * sp;
             let lyrics = (0..lyric_lines)
                 .map(|_| {
                     y += 2.4 * sp;
                     y - 0.5 * sp
                 })
                 .collect();
-            (dynamics, lyrics, y)
+            (dynamics, lyrics, y, first)
         };
         let std_bottom = top + 4.0 * sp + below_std;
-        let (mut dynamics, mut lyrics, after_std) = if v.show_std {
+        let (mut dynamics, mut lyrics, after_std, mut lyric_first) = if v.show_std {
             under_lines(std_bottom)
         } else {
-            (None, Vec::new(), std_bottom)
+            (None, Vec::new(), std_bottom, std_bottom)
         };
         let tab_top = v.show_tab.then_some(if v.show_std {
             after_std + 2.0 * sp + lanes_height
@@ -332,9 +335,10 @@ pub(crate) fn system(
             after_std - bottom + 1.5 * sp
         };
         if !v.show_std {
-            let (d, l, end) = under_lines(bottom + after - 1.0 * sp);
+            let (d, l, end, first) = under_lines(bottom + after - 1.0 * sp);
             dynamics = d;
             lyrics = l;
+            lyric_first = first;
             after = end - bottom + 1.0 * sp;
         }
         bands.push(Band {
@@ -346,6 +350,7 @@ pub(crate) fn system(
             lanes,
             dynamics,
             lyrics,
+            lyric_first,
         });
         cursor = bottom + after + 2.5 * sp;
     }
@@ -606,6 +611,7 @@ fn system_hits(
             tablature: band.tab_top.map(|t| (t, tg, strings)),
             top: band.std_top.or(band.tab_top).unwrap_or(band.top),
             bottom: band.bottom,
+            lyrics: (band.lyric_first, 2.4 * p.sp),
             bars: bar_hits,
         });
     }

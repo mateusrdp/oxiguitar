@@ -34,6 +34,7 @@ compile_error!("build oxiguitar-app with the `wayland` feature (the default) or 
 mod bar_form;
 mod bend_form;
 mod canvas;
+mod chord_form;
 mod document;
 mod editing;
 mod effect_form;
@@ -92,9 +93,9 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField, InspectorVoice,
-    ManagerRow, PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow, PluginWidget,
-    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
+    AltBox, AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField,
+    InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow,
+    PluginWidget, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -200,6 +201,8 @@ struct App {
     bar_dialog: Option<oxiguitar_edit::BarState>,
     /// The bend or whammy-bar editor, while it is open.
     bend_dialog: Option<bend_form::BendForm>,
+    /// The chord dialog, while it is open.
+    chord_dialog: Option<chord_form::ChordForm>,
     /// What the open Transpose dialog applies to.
     transpose_scope: Option<oxiguitar_edit::Scope>,
     /// What to do once the score is saved (after "Save the changes…?").
@@ -479,6 +482,7 @@ fn main() -> Result<(), slint::PlatformError> {
         question: None,
         bar_dialog: None,
         bend_dialog: None,
+        chord_dialog: None,
         transpose_scope: None,
         after_save: None,
     }));
@@ -499,7 +503,8 @@ fn main() -> Result<(), slint::PlatformError> {
         "L / Shift + L: tie the note / the beat;  Backspace: delete the note;  Shift + Delete: delete the beat;  Ctrl + Insert: insert a beat",
         "Alt + Shift + Up / Down: a semitone up / down;  Alt + Up / Down: the same note on the string above / below",
         "On the standard staff: click a line or space, Up / Down to move it, Enter to put a note there;  Alt + 1 to 4: move the beat to that voice;  Ctrl + Shift + Delete: clear the beat;  Right at the end: add a bar",
-        "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + K, Ctrl + /, D: the Bar dialog",
+        "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + K, Ctrl + /, D: the Bar dialog;  A: a chord;  Shift + T: text above the beat",
+        "Ctrl + T: type lyrics under the beat (Space or − the next note, Backspace back, Up / Down another verse, Enter done)",
         "Effects: X dead, O ghost, ; and : accent and heavy accent, ! staccato, H hammer-on, S / Alt + S / Shift + S legato / shift slide / slide out down, V vibrato, P / Shift + P palm mute (note / beat), I let ring",
         "Y natural harmonic, Ctrl + Alt + Y artificial, Alt + P pinch, Alt + T tapped;  N trill;  \": tremolo picking;  T or ) tapping;  $ slap;  ( left-hand tapping;  < fade in;  G / Ctrl + Alt + G grace note",
         "Ctrl + D / Ctrl + U: brush down / up;  Shift + D / Shift + U: pick stroke down / up;  Ctrl + Alt + W: wide vibrato;  B: bend;  Ctrl + Alt + V: whammy bar",
@@ -570,6 +575,9 @@ fn main() -> Result<(), slint::PlatformError> {
         match name.as_str() {
             "bar-dialog" => return open_edit_dialog(&a, editing::Dialog::Bar),
             "tuplet-dialog" => return open_edit_dialog(&a, editing::Dialog::Tuplet),
+            "chord-dialog" => return open_edit_dialog(&a, editing::Dialog::Chord),
+            "text-dialog" => return open_edit_dialog(&a, editing::Dialog::Text),
+            "lyrics" => return open_edit_dialog(&a, editing::Dialog::Lyrics),
             "cut" => return clipboard(&a, editing::ClipKey::Cut),
             "copy" => return clipboard(&a, editing::ClipKey::Copy),
             "paste" => return clipboard(&a, editing::ClipKey::Paste),
@@ -617,6 +625,30 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_bend_released(move || bend_edit(&a, bend_form::BendForm::release));
     let a = app.clone();
     ui.on_bend_dialog_done(move |ok| bend_dialog_done(&a, ok));
+    ui.set_chord_roots(strings(chord_form::note_names()));
+    ui.set_chord_triads(strings(chord_form::triad_names()));
+    ui.set_chord_extensions(strings(chord_form::extension_names()));
+    ui.set_chord_basses(strings(chord_form::bass_names()));
+    let a = app.clone();
+    ui.on_chord_changed(move |kind, value, text| {
+        chord_changed(&a, kind.as_str(), value, text.as_str())
+    });
+    let a = app.clone();
+    ui.on_chord_dialog_done(move |ok| chord_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_text_dialog_done(move |ok| {
+        let Some(ui) = a.borrow().ui.upgrade() else {
+            return;
+        };
+        ui.set_text_dialog_shown(false);
+        ui.invoke_focus_page();
+        if ok {
+            let text = ui.get_text_dialog_text().to_string();
+            edit_at_caret(&a, oxiguitar_edit::Command::Text(text));
+        }
+    });
+    let a = app.clone();
+    ui.on_lyric_key(move |key, text| lyric_key(&a, key.as_str(), text.as_str()));
     let a = app.clone();
     ui.on_inspector_changed(move |id, value| {
         let action = a.borrow().editing.field_changed(id.as_str(), value);
@@ -629,6 +661,8 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             Some(effect_form::Action::Bend) => open_edit_dialog(&a, editing::Dialog::Bend),
             Some(effect_form::Action::Whammy) => open_edit_dialog(&a, editing::Dialog::Whammy),
+            Some(effect_form::Action::Chord) => open_edit_dialog(&a, editing::Dialog::Chord),
+            Some(effect_form::Action::Text) => open_edit_dialog(&a, editing::Dialog::Text),
             None => {}
         }
     });
@@ -1810,6 +1844,7 @@ fn handle(app: &Shared, event: Event) {
                 s.mixer = Mixer::new(tracks.iter().map(|t| t.mix).collect());
                 let first = s.tracks.shown().first().copied().unwrap_or(0);
                 s.editing.opened(score, first);
+                ui.set_lyric_shown(false);
                 s.bad = bad;
                 s.settings.tracks = s.tracks.shown();
                 s.settings.notation = s.tracks.notation();
@@ -1920,6 +1955,10 @@ fn handle(app: &Shared, event: Event) {
             set_content_size(app, &ui);
             sync_caret(app, false);
             canvas_changed(app);
+            // The field for lyrics follows its beat to where it is now.
+            if ui.get_lyric_shown() {
+                show_lyric(app, &ui, ui.get_lyric_text().to_string());
+            }
         }
         Event::Tile {
             engraving,
@@ -1990,6 +2029,15 @@ fn sync_edit_state(app: &Shared, edit: &document::EditState) {
 /// A press on the page, at (`x`, `y`) in the viewport's logical pixels:
 /// the caret goes there (with Shift, the selection grows to it).
 fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
+    // A click elsewhere ends typing lyrics, keeping what was typed.
+    let typing = app
+        .borrow()
+        .ui
+        .upgrade()
+        .map(|ui| (ui.get_lyric_shown(), ui.get_lyric_text().to_string()));
+    if let Some((true, text)) = typing {
+        lyric_key(app, "done", &text);
+    }
     let moved = on_sheet(app, x, y)
         .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.press_at(i, sx, sy, shift));
     if moved {
@@ -2680,6 +2728,193 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
             app.borrow_mut().bend_dialog = Some(form);
             ui.set_bend_dialog_shown(true);
         }
+        editing::Dialog::Chord => {
+            let Some(form) = app.borrow().editing.chord_form() else {
+                return;
+            };
+            ui.set_chord_last_fret(i32::from(form.frets_max()));
+            sync_chord(&ui, &form);
+            app.borrow_mut().chord_dialog = Some(form);
+            ui.set_chord_dialog_shown(true);
+        }
+        editing::Dialog::Text => {
+            let Some(text) = app.borrow().editing.beat_text() else {
+                return;
+            };
+            ui.set_text_dialog_text(text.into());
+            ui.set_text_dialog_shown(true);
+        }
+        editing::Dialog::Lyrics => {
+            let started = app.borrow_mut().editing.start_lyrics();
+            if let Some((_, text)) = started {
+                show_lyric(app, &ui, text);
+            }
+        }
+    }
+}
+
+/// Shows the field where lyrics are typed, holding `text`, under the beat
+/// it types at; hidden when nothing is typed there.
+fn show_lyric(app: &Shared, ui: &AppWindow, text: String) {
+    let spot = {
+        let s = app.borrow();
+        s.editing.lyric_spot().and_then(|(sheet, x, y, gap)| {
+            let o = s.sheets.rects.get(sheet)?;
+            Some((o.x + x, o.y + y, gap))
+        })
+    };
+    match spot {
+        Some((x, y, gap)) => {
+            ui.set_lyric_x(x);
+            ui.set_lyric_y(y);
+            // The engraver's lyric size: 1.9 staff spaces, its lines 2.4
+            // apart.
+            ui.set_lyric_size(gap * 1.9 / 2.4);
+            ui.set_lyric_text(text.into());
+            ui.set_lyric_shown(true);
+        }
+        None => ui.set_lyric_shown(false),
+    }
+    caret_moved(app);
+}
+
+/// A key that ends a syllable typed on the page.
+fn lyric_key(app: &Shared, key: &str, text: &str) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let key = match key {
+        "space" => editing::LyricKey::Space,
+        "hyphen" => editing::LyricKey::Hyphen,
+        "back" => editing::LyricKey::Back,
+        "up" => editing::LyricKey::Up,
+        "down" => editing::LyricKey::Down,
+        _ => editing::LyricKey::Done,
+    };
+    let (edit, next) = app.borrow_mut().editing.lyric_key(key, text);
+    if let Some(t) = edit {
+        send_typed(app, t);
+    }
+    match next {
+        Some((_, text)) => show_lyric(app, &ui, text),
+        None => {
+            ui.set_lyric_shown(false);
+            ui.invoke_focus_page();
+        }
+    }
+}
+
+/// An edit at the caret (or on the selection), as a tool makes it.
+fn edit_at_caret(app: &Shared, command: oxiguitar_edit::Command) {
+    let typed = app.borrow_mut().editing.tool(command);
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// Shows the chord dialog's state.
+fn sync_chord(ui: &AppWindow, f: &chord_form::ChordForm) {
+    use oxiguitar_edit::harmony::{Extension, Triad, alt};
+    ui.set_chord_name(f.name.as_str().into());
+    ui.set_chord_library(strings(f.library.iter().map(|d| d.name.clone()).collect()));
+    let c = f.chord;
+    let index = |i: Option<usize>| i.and_then(|i| i32::try_from(i).ok()).unwrap_or(-1);
+    ui.set_chord_root(index(c.map(|c| c.root)));
+    ui.set_chord_triad(index(
+        c.and_then(|c| Triad::ALL.iter().position(|t| *t == c.triad)),
+    ));
+    ui.set_chord_extension(index(
+        c.and_then(|c| Extension::ALL.iter().position(|e| *e == c.extension)),
+    ));
+    ui.set_chord_bass(index(c.map(|c| c.bass.map_or(0, |b| b + 1))));
+    let bits = c.map_or(0, |c| c.alterations);
+    ui.set_chord_alterations(ModelRc::new(VecModel::from(
+        alt::NAMES
+            .iter()
+            .map(|(bit, name)| AltBox {
+                label: name.replace('b', "♭").replace('#', "♯").into(),
+                on: bits & bit != 0,
+            })
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_chord_strings(i32::try_from(f.strings()).unwrap_or(0));
+    ui.set_chord_dots(ModelRc::new(VecModel::from(f.dots())));
+    ui.set_chord_first_fret(i32::from(f.first_fret));
+    ui.set_chord_voicings(strings(
+        f.voicings
+            .iter()
+            .map(|v| chord_form::ChordForm::shape_text(v))
+            .collect(),
+    ));
+    ui.set_chord_show_diagram(f.show_diagram);
+}
+
+/// A change in the chord dialog: `kind` names what, `value` and `text`
+/// carry it.
+fn chord_changed(app: &Shared, kind: &str, value: i32, text: &str) {
+    use oxiguitar_edit::harmony::{Extension, Triad, alt};
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if kind == "remove" {
+        ui.set_chord_dialog_shown(false);
+        ui.invoke_focus_page();
+        app.borrow_mut().chord_dialog = None;
+        edit_at_caret(app, oxiguitar_edit::Command::Chord(None));
+        return;
+    }
+    let i = usize::try_from(value).unwrap_or(0);
+    let form = {
+        let mut s = app.borrow_mut();
+        let Some(f) = s.chord_dialog.as_mut() else {
+            return;
+        };
+        let bit = alt::NAMES.get(i).map_or(0, |(b, _)| *b);
+        match kind {
+            "name" => f.type_name(text),
+            "library" => f.pick_library(i),
+            "root" => f.build(|c| c.root = i),
+            "triad" => f.build(|c| c.triad = Triad::ALL.get(i).copied().unwrap_or(c.triad)),
+            "extension" => {
+                f.build(|c| c.extension = Extension::ALL.get(i).copied().unwrap_or(c.extension))
+            }
+            "bass" => f.build(|c| c.bass = i.checked_sub(1)),
+            "alt-on" => f.build(|c| c.alterations |= bit),
+            "alt-off" => f.build(|c| c.alterations &= !bit),
+            "grid" => {
+                let strings = f.strings();
+                let low = i / 100;
+                if let Some(high_first) = strings.checked_sub(low + 1) {
+                    f.click_grid(high_first, u8::try_from(i % 100).unwrap_or(0));
+                }
+            }
+            "head" => {
+                if let Some(high_first) = f.strings().checked_sub(i + 1) {
+                    f.click_head(high_first);
+                }
+            }
+            "first" => f.scroll(u8::try_from(i).unwrap_or(1)),
+            "voicing" => f.pick_voicing(i),
+            "show" => f.show_diagram = value != 0,
+            _ => {}
+        }
+        f.clone()
+    };
+    sync_chord(&ui, &form);
+}
+
+/// The chord dialog closed: on OK, its diagram on the caret's beat.
+fn chord_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_chord_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(form) = app.borrow_mut().chord_dialog.take() else {
+        return;
+    };
+    if ok {
+        edit_at_caret(app, oxiguitar_edit::Command::Chord(form.diagram()));
     }
 }
 

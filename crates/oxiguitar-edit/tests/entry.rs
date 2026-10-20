@@ -139,6 +139,25 @@ fn effects() -> Vec<Command> {
         .into_iter()
         .map(Command::Note),
     );
+    // Chords (fitted to the caret's staff when run), text and lyrics.
+    out.extend([
+        Command::Chord(Some(oxiguitar_model::ChordDiagram::default())),
+        Command::Chord(Some(oxiguitar_model::ChordDiagram {
+            name: "N.C.".into(),
+            first_fret: 1,
+            frets: Vec::new(),
+        })),
+        Command::Chord(None),
+        Command::Text("Riff A".into()),
+        Command::Text(String::new()),
+        // Placed at the caret when run.
+        Command::Syllable {
+            line: 0,
+            at: (0, 0),
+            text: String::new(),
+            hyphen: false,
+        },
+    ]);
     out.extend(
         [
             B::Tremolo(Some(NoteValue::Eighth)),
@@ -405,6 +424,35 @@ fn random_edits(
                 .or(clip);
         }
         let mut command = all[rng.below(all.len())].clone();
+        // A syllable at the caret's beat, on one of the first lines.
+        if let Command::Syllable {
+            line,
+            at,
+            text,
+            hyphen,
+        } = &mut command
+        {
+            *line = rng.below(3);
+            *at = (caret.bar, caret.beat);
+            *text = ["Hel", "lo", "world,", "got to", ""][rng.below(5)].into();
+            *hyphen = rng.below(2) == 0;
+        }
+        // A diagram for the caret's strings, as the chord editor makes one.
+        if let Command::Chord(Some(d)) = &mut command
+            && d.name.is_empty()
+        {
+            let staff = &score.tracks[caret.track].staves[caret.staff];
+            let first = 1 + rng.below(5) as u8;
+            d.name = ["Am", "C7(b9)/E", "F#m7(b5)", "G"][rng.below(4)].into();
+            d.first_fret = first;
+            d.frets = (0..staff.string_count())
+                .map(|i| match (i + rng.below(3)) % 4 {
+                    0 => None,
+                    1 => Some(0),
+                    k => Some((first + k as u8 - 2).min(staff.fret_count)),
+                })
+                .collect();
+        }
         if let Command::Paste(p) = &mut command {
             match &clip {
                 Some(c) => p.clip = c.clone(),
@@ -419,8 +467,19 @@ fn random_edits(
                 | Command::Whammy(_)
                 | Command::Note(_)
                 | Command::Beat(_)
+                | Command::Chord(_)
+                | Command::Text(_)
+                | Command::Syllable { .. }
         );
+        let shown = format!("{command:?} at {caret:?} sel {selection:?}");
         if let Some(e) = apply(score, history, caret, selection, command) {
+            if std::env::var("TRACE").is_ok() {
+                let w = oxiguitar_formats::write_gp(score).unwrap();
+                let back = oxiguitar_formats::read(&w.data).unwrap().score;
+                if back != *score || w.losses.warning_count() > 0 {
+                    panic!("after {shown}: {:?}", w.losses.entries());
+                }
+            }
             caret = e.caret;
             changes += 1;
             effects += usize::from(effect);
@@ -457,6 +516,9 @@ fn random_edits_undo_to_the_original_and_redo_to_the_end() {
 fn every_edit_is_saved_and_read_back_equal() {
     let mut compared = 0;
     for (i, path) in fixtures().into_iter().enumerate() {
+        if std::env::var("TRACE").is_ok_and(|t| !path.to_string_lossy().contains(&t)) {
+            continue;
+        }
         let Some(mut score) = read(&path) else {
             continue;
         };

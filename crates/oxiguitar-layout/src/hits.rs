@@ -52,6 +52,9 @@ pub struct StaffHits {
     pub top: f32,
     /// See `top`.
     pub bottom: f32,
+    /// Where its lyrics go: the first line's baseline (where it would be,
+    /// with none yet) and the distance between lines.
+    pub lyrics: (f32, f32),
     /// Its bars, left to right.
     pub bars: Vec<BarHits>,
 }
@@ -340,6 +343,36 @@ impl Hits {
         })
     }
 
+    /// Where a syllable of lyric line `line` goes under beat `beat` of
+    /// `bar` of `track`'s first voice: its sheet, the beat's middle and the
+    /// line's baseline, on the track's first staff (its top view). `None`
+    /// if that bar isn't shown.
+    pub fn lyric_spot(
+        &self,
+        track: usize,
+        bar: usize,
+        beat: usize,
+        line: usize,
+    ) -> Option<(usize, f32, f32, f32)> {
+        for system in &self.systems {
+            for s in system
+                .staves
+                .iter()
+                .filter(|s| s.track == track && s.staff == 0)
+            {
+                let Some(b) = s.bars.iter().find(|b| b.bar == bar) else {
+                    continue;
+                };
+                let h = b.voice(0).find(|h| h.beat == beat)?;
+                let (first, gap) = s.lyrics;
+                #[allow(clippy::cast_precision_loss)]
+                let y = first + gap * line as f32;
+                return Some((system.sheet, h.x, y, gap));
+            }
+        }
+        None
+    }
+
     /// The part of bar `bar` of `track`'s staff `staff` that beats `first`
     /// to `last` of `voice` cover, or the whole bar for `None`, on each
     /// sheet it is drawn on: for drawing a selection.
@@ -427,6 +460,7 @@ impl SystemHits {
         for s in &mut self.staves {
             s.top += dy;
             s.bottom += dy;
+            s.lyrics.0 += dy;
             if let Some((t, _)) = s.standard.as_mut() {
                 *t += dy;
             }
@@ -483,6 +517,7 @@ mod tests {
                     tablature: Some((150.0, 6.0, 6)),
                     top: 100.0,
                     bottom: 180.0,
+                    lyrics: (130.0, 12.0),
                     bars: vec![bar(0, 0.0), bar(1, 100.0)],
                 }],
             }],

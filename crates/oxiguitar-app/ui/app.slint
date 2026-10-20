@@ -12,7 +12,7 @@
 
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
-import { BarDialog, BarFields, BendDialog, GridPoint, PasteDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
+import { AltBox, BarDialog, BarFields, BendDialog, ChordDialog, GridPoint, PasteDialog, TextDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -922,6 +922,38 @@ export component AppWindow inherits Window {
     callback bend-dragged(float, float);
     callback bend-released();
     callback bend-dialog-done(bool);
+    // Text, lyrics and chords (M3 slice 6).
+    in property <bool> text-dialog-shown: false;
+    in-out property <string> text-dialog-text;
+    callback text-dialog-done(bool);
+    // Lyrics typed on the page (Ctrl + T): a field under the beat, at
+    // canvas points (lyric-x the beat's middle, lyric-y the baseline).
+    in property <bool> lyric-shown: false;
+    in property <float> lyric-x;
+    in property <float> lyric-y;
+    in property <float> lyric-size: 10;
+    in-out property <string> lyric-text;
+    callback lyric-key(string, string);
+    in property <bool> chord-dialog-shown: false;
+    in-out property <string> chord-name;
+    in property <[string]> chord-library;
+    in property <[string]> chord-roots;
+    in-out property <int> chord-root;
+    in property <[string]> chord-triads;
+    in-out property <int> chord-triad;
+    in property <[string]> chord-extensions;
+    in-out property <int> chord-extension;
+    in property <[string]> chord-basses;
+    in-out property <int> chord-bass;
+    in property <[AltBox]> chord-alterations;
+    in property <int> chord-strings: 6;
+    in property <[int]> chord-dots;
+    in-out property <int> chord-first-fret: 1;
+    in property <int> chord-last-fret: 24;
+    in property <[string]> chord-voicings;
+    in property <bool> chord-show-diagram: true;
+    callback chord-changed(string, int, string);
+    callback chord-dialog-done(bool);
     in property <bool> paste-dialog-shown: false;
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
@@ -1098,6 +1130,9 @@ export component AppWindow inherits Window {
             MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
             MenuItem { title: "Bar… (Ctrl + K)"; enabled: root.has-score; activated => { root.edit-command("bar-dialog"); } }
             MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
+            MenuItem { title: "Chord… (A)"; enabled: root.has-score; activated => { root.edit-command("chord-dialog"); } }
+            MenuItem { title: "Text… (Shift + T)"; enabled: root.has-score; activated => { root.edit-command("text-dialog"); } }
+            MenuItem { title: "Type Lyrics (Ctrl + T)"; enabled: root.has-score; activated => { root.edit-command("lyrics"); } }
             MenuSeparator { }
             MenuItem { title: "Track Properties…"; enabled: root.has-score; activated => { root.edit-command("track-properties"); } }
             MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
@@ -1456,6 +1491,62 @@ export component AppWindow inherits Window {
                             border-width: 1.5px;
                             border-radius: 2px;
                         }
+                        // Lyrics typed on the page (M3 slice 6, as in
+                        // MuseScore): space and hyphen go to the next beat.
+                        if root.lyric-shown : lyric-box := Rectangle {
+                            property <length> size: root.lyric-size * root.pt-scale * 1px;
+                            x: root.origin-x + root.lyric-x * root.pt-scale * 1px - self.width / 2;
+                            y: root.origin-y + root.lyric-y * root.pt-scale * 1px - self.size * 1.1;
+                            width: max(lyric-input.preferred-width + 10px, 3 * self.size);
+                            height: self.size * 1.5;
+                            background: root.dark-page ? #1e1f22 : #ffffff;
+                            border-color: Look.accent;
+                            border-width: 1px;
+                            border-radius: 2px;
+                            FocusScope {
+                                capture-key-pressed(event) => {
+                                    if (event.text == " ") {
+                                        root.lyric-key("space", lyric-input.text);
+                                        return accept;
+                                    }
+                                    if (event.text == "-") {
+                                        root.lyric-key("hyphen", lyric-input.text);
+                                        return accept;
+                                    }
+                                    if (event.text == Key.UpArrow) {
+                                        root.lyric-key("up", lyric-input.text);
+                                        return accept;
+                                    }
+                                    if (event.text == Key.DownArrow) {
+                                        root.lyric-key("down", lyric-input.text);
+                                        return accept;
+                                    }
+                                    if (event.text == Key.Backspace && lyric-input.text == "") {
+                                        root.lyric-key("back", "");
+                                        return accept;
+                                    }
+                                    if (event.text == Key.Escape || event.text == Key.Return) {
+                                        root.lyric-key("done", lyric-input.text);
+                                        return accept;
+                                    }
+                                    reject
+                                }
+                                lyric-input := TextInput {
+                                    x: 5px;
+                                    width: lyric-box.width - 10px;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: center;
+                                    text <=> root.lyric-text;
+                                    font-size: lyric-box.size;
+                                    color: root.dark-page ? #e6e6e6 : #1a1a1a;
+                                    single-line: true;
+                                    init => {
+                                        self.focus();
+                                        self.set-selection-offsets(0, 999);
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     if !root.has-score : Text {
@@ -1801,6 +1892,49 @@ export component AppWindow inherits Window {
         dragged(c, r) => { root.bend-dragged(c, r); }
         released => { root.bend-released(); }
         done(ok) => { root.bend-dialog-done(ok); }
+    }
+
+    if root.text-dialog-shown : TextDialog {
+        width: root.width;
+        height: root.height;
+        text <=> root.text-dialog-text;
+        done(ok) => { root.text-dialog-done(ok); }
+    }
+
+    if root.chord-dialog-shown : ChordDialog {
+        width: root.width;
+        height: root.height;
+        name <=> root.chord-name;
+        library: root.chord-library;
+        roots: root.chord-roots;
+        root-index <=> root.chord-root;
+        triads: root.chord-triads;
+        triad-index <=> root.chord-triad;
+        extensions: root.chord-extensions;
+        extension-index <=> root.chord-extension;
+        basses: root.chord-basses;
+        bass-index <=> root.chord-bass;
+        alterations: root.chord-alterations;
+        strings: root.chord-strings;
+        dots: root.chord-dots;
+        first-fret <=> root.chord-first-fret;
+        last-fret: root.chord-last-fret;
+        voicings: root.chord-voicings;
+        show-diagram: root.chord-show-diagram;
+        name-typed(t) => { root.chord-changed("name", 0, t); }
+        library-picked(i) => { root.chord-changed("library", i, ""); }
+        root-picked(i) => { root.chord-changed("root", i, ""); }
+        triad-picked(i) => { root.chord-changed("triad", i, ""); }
+        extension-picked(i) => { root.chord-changed("extension", i, ""); }
+        bass-picked(i) => { root.chord-changed("bass", i, ""); }
+        alteration-toggled(i, on) => { root.chord-changed(on ? "alt-on" : "alt-off", i, ""); }
+        grid-clicked(string, row) => { root.chord-changed("grid", string * 100 + row, ""); }
+        head-clicked(i) => { root.chord-changed("head", i, ""); }
+        scrolled(v) => { root.chord-changed("first", v, ""); }
+        voicing-picked(i) => { root.chord-changed("voicing", i, ""); }
+        show-toggled(on) => { root.chord-changed("show", on ? 1 : 0, ""); }
+        remove => { root.chord-changed("remove", 0, ""); }
+        done(ok) => { root.chord-dialog-done(ok); }
     }
 
     if root.paste-dialog-shown : PasteDialog {

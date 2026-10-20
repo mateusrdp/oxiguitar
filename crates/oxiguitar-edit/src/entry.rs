@@ -177,6 +177,23 @@ pub enum Command {
     /// A value of the caret's beat, or the selected beats (the
     /// Inspector).
     Beat(crate::BeatChange),
+    /// This chord diagram on the caret's beat, or none.
+    Chord(Option<oxiguitar_model::ChordDiagram>),
+    /// This free text above the caret's beat; empty for none.
+    Text(String),
+    /// A syllable of line `line` (from 0) of the caret's track's lyrics,
+    /// at beat `at` (bar, beat) of its first staff's first voice; empty to
+    /// leave that beat empty. `hyphen` when the word goes on.
+    Syllable {
+        /// The line (verse), from 0.
+        line: usize,
+        /// The bar and beat.
+        at: (usize, usize),
+        /// The syllable.
+        text: String,
+        /// A hyphen follows.
+        hyphen: bool,
+    },
 }
 
 impl Command {
@@ -240,6 +257,9 @@ impl Command {
             Command::Whammy(_) => "Whammy Bar",
             Command::Note(n) => n.label(),
             Command::Beat(b) => b.label(),
+            Command::Chord(_) => "Chord",
+            Command::Text(_) => "Text",
+            Command::Syllable { .. } => "Lyrics",
         }
     }
 }
@@ -283,6 +303,9 @@ pub fn apply(
         return edited;
     }
     if let Some(edited) = crate::effects::apply(score, history, caret, selection, &command) {
+        return edited;
+    }
+    if let Some(edited) = crate::notation::apply(score, history, caret, &command) {
         return edited;
     }
     let label = command.label();
@@ -735,7 +758,10 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Bend(_)
         | Command::Whammy(_)
         | Command::Note(_)
-        | Command::Beat(_) => None,
+        | Command::Beat(_)
+        | Command::Chord(_)
+        | Command::Text(_)
+        | Command::Syllable { .. } => None,
         Command::Tuplet(t) => {
             let targets = targets(score, c, selection);
             let off = staff
@@ -892,7 +918,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
 /// beat: a beat of kind `kind`, as long as the one before it. The voice
 /// itself is made if the bar doesn't have it yet. `None` for a caret past
 /// the place after the last beat.
-fn beat_at_caret(bar: &mut Bar, c: Caret, kind: BeatKind) -> Option<&mut Beat> {
+pub(crate) fn beat_at_caret(bar: &mut Bar, c: Caret, kind: BeatKind) -> Option<&mut Beat> {
     grow_voices(bar, c.voice);
     let v = bar.voices.get_mut(c.voice)?;
     if c.beat == v.beats.len() {
@@ -1039,7 +1065,7 @@ fn note_before(score: &Score, c: Caret) -> Option<Beat> {
 /// Every note of `beat` as loud as `dynamic`, and the beat marked so when
 /// that isn't the default, as a Guitar Pro 6–8 file holds it: one dynamic
 /// per beat, which its notes take.
-fn settle_dynamic(beat: &mut Beat, dynamic: Dynamic) {
+pub(crate) fn settle_dynamic(beat: &mut Beat, dynamic: Dynamic) {
     for n in &mut beat.notes {
         n.dynamic = dynamic;
     }
@@ -1081,7 +1107,7 @@ pub(crate) fn rests_for(gap: oxiguitar_model::Ratio) -> Option<Vec<Duration>> {
 /// How loud a note typed at the caret is: as its beat, or else as the last
 /// beat with notes before it in the voice (Guitar Pro keeps one dynamic per
 /// beat, and a dynamic lasts until the next).
-fn dynamic_at(score: &Score, c: Caret) -> Dynamic {
+pub(crate) fn dynamic_at(score: &Score, c: Caret) -> Dynamic {
     let loudness = |b: &Beat| {
         b.effects
             .dynamic

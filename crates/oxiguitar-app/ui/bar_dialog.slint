@@ -27,12 +27,19 @@ export struct BarFields {
 // A dimmed backdrop and a card, with Enter for OK and Escape for Cancel.
 component Card inherits Rectangle {
     in property <length> card-width: 560px;
+    // Whether the card takes the keyboard (Enter, Escape) when it opens;
+    // a card whose field takes it instead says no.
+    in property <bool> takes-focus: true;
     in property <string> heading;
     callback done(bool);
     background: #00000060;
     TouchArea { }
     keys := FocusScope {
-        init => { self.focus(); }
+        init => {
+            if (root.takes-focus) {
+                self.focus();
+            }
+        }
         key-pressed(event) => {
             if (event.text == Key.Escape) {
                 root.done(false);
@@ -625,6 +632,246 @@ export component BendDialog inherits Rectangle {
                 font-size: 11px;
                 wrap: word-wrap;
                 opacity: 0.7;
+            }
+        }
+    }
+}
+
+// Text above a beat (M3 slice 6): one line; empty for none.
+export component TextDialog inherits Rectangle {
+    in-out property <string> text;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Text";
+        card-width: 400px;
+        takes-focus: false;
+        done(ok) => { root.done(ok); }
+        // Escape cancels from the field too.
+        FocusScope {
+            key-pressed(event) => {
+                if (event.text == Key.Escape) {
+                    root.done(false);
+                    return accept;
+                }
+                reject
+            }
+            LineEdit {
+                text <=> root.text;
+                placeholder-text: "Text above the beat";
+                init => { self.focus(); }
+                accepted => { root.done(true); }
+            }
+        }
+    }
+}
+
+// An alteration's tickbox in the chord dialog.
+export struct AltBox {
+    label: string,
+    on: bool,
+}
+
+// The chord dialog (M3 slice 6; `chord_form.rs`): Guitar Pro 8's Chord
+// window, with its builder.
+export component ChordDialog inherits Rectangle {
+    in-out property <string> name;
+    in property <[string]> library;
+    in property <[string]> roots;
+    in-out property <int> root-index;
+    in property <[string]> triads;
+    in-out property <int> triad-index;
+    in property <[string]> extensions;
+    in-out property <int> extension-index;
+    in property <[string]> basses;
+    in-out property <int> bass-index;
+    in property <[AltBox]> alterations;
+    // Strings, and each string's dot, low to high: the row (0 the first
+    // fret shown), -1 open, -2 not played, -3 off the grid.
+    in property <int> strings: 6;
+    in property <[int]> dots;
+    in-out property <int> first-fret: 1;
+    in property <int> last-fret: 24;
+    in property <[string]> voicings;
+    in property <bool> show-diagram: true;
+    callback name-typed(string);
+    callback library-picked(int);
+    callback root-picked(int);
+    callback triad-picked(int);
+    callback extension-picked(int);
+    callback bass-picked(int);
+    callback alteration-toggled(int, bool);
+    callback grid-clicked(int, int);
+    callback head-clicked(int);
+    callback scrolled(int);
+    callback voicing-picked(int);
+    callback show-toggled(bool);
+    callback remove();
+    callback done(bool);
+    property <length> cell-w: 28px;
+    property <length> cell-h: 30px;
+    property <length> grid-w: (root.strings - 1) * root.cell-w;
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Chord";
+        card-width: 720px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 10px;
+            HorizontalLayout {
+                spacing: 8px;
+                Text { text: "Name"; font-size: 12px; vertical-alignment: center; }
+                LineEdit {
+                    text <=> root.name;
+                    edited(t) => { root.name-typed(t); }
+                    accepted => { root.done(true); }
+                }
+                if root.library.length > 0 : ComboBox {
+                    min-width: 150px;
+                    model: root.library;
+                    current-index: -1;
+                    current-value: "The track's chords";
+                    selected => { root.library-picked(self.current-index); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 6px;
+                ComboBox { model: root.roots; current-index <=> root.root-index; selected => { root.root-picked(self.current-index); } }
+                ComboBox { model: root.triads; current-index <=> root.triad-index; selected => { root.triad-picked(self.current-index); } }
+                ComboBox { model: root.extensions; current-index <=> root.extension-index; selected => { root.extension-picked(self.current-index); } }
+                HorizontalLayout {
+                    spacing: 4px;
+                    Text { text: "Bass"; font-size: 12px; vertical-alignment: center; }
+                    ComboBox { model: root.basses; current-index <=> root.bass-index; selected => { root.bass-picked(self.current-index); } }
+                }
+            }
+            HorizontalLayout {
+                spacing: 4px;
+                for a[i] in root.alterations : CheckBox {
+                    text: a.label;
+                    checked: a.on;
+                    toggled => { root.alteration-toggled(i, self.checked); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 16px;
+                alignment: start;
+                if root.strings > 1 : VerticalLayout {
+                    spacing: 4px;
+                    alignment: start;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        CheckBox {
+                            text: "Show the diagram";
+                            checked: root.show-diagram;
+                            toggled => { root.show-toggled(self.checked); }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        Text { text: "First fret"; font-size: 12px; vertical-alignment: center; }
+                        SpinBox {
+                            width: 80px;
+                            minimum: 1;
+                            maximum: root.last-fret;
+                            value <=> root.first-fret;
+                            edited(v) => { root.scrolled(v); }
+                        }
+                    }
+                    Rectangle {
+                        width: root.grid-w + 2 * root.cell-w;
+                        height: 5 * root.cell-h + 26px;
+                        opacity: root.show-diagram ? 1 : 0.4;
+                        // Open and not-played marks above the strings.
+                        for d[i] in root.dots : Rectangle {
+                            x: root.cell-w + i * root.cell-w - 10px;
+                            y: 0;
+                            width: 20px;
+                            height: 20px;
+                            Text {
+                                text: d == -1 ? "o" : d == -2 ? "×" : "";
+                                font-size: 14px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                            TouchArea { clicked => { root.head-clicked(i); } }
+                        }
+                        Rectangle {
+                            x: root.cell-w;
+                            y: 24px;
+                            width: root.grid-w;
+                            height: 5 * root.cell-h;
+                            // The nut, or the first fret's number.
+                            Rectangle {
+                                y: 0;
+                                height: root.first-fret == 1 ? 4px : 1px;
+                                background: Palette.foreground;
+                            }
+                            if root.first-fret > 1 : Text {
+                                x: -root.cell-w;
+                                y: root.cell-h / 2 - 8px;
+                                width: root.cell-w - 4px;
+                                horizontal-alignment: right;
+                                text: root.first-fret;
+                                font-size: 11px;
+                            }
+                            for i in 6 : Rectangle {
+                                y: i * root.cell-h;
+                                height: 1px;
+                                background: Palette.foreground;
+                                opacity: 0.6;
+                            }
+                            for i in root.strings : Rectangle {
+                                x: i * root.cell-w;
+                                width: 1px;
+                                background: Palette.foreground;
+                                opacity: 0.6;
+                            }
+                            for d[i] in root.dots : Rectangle {
+                                visible: d >= 0;
+                                x: i * root.cell-w - 9px;
+                                y: max(d, 0) * root.cell-h + root.cell-h / 2 - 9px;
+                                width: 18px;
+                                height: 18px;
+                                border-radius: 9px;
+                                background: Palette.foreground;
+                            }
+                            TouchArea {
+                                x: -root.cell-w / 2;
+                                width: root.grid-w + root.cell-w;
+                                clicked => {
+                                    root.grid-clicked(
+                                        clamp(round((self.mouse-x - root.cell-w / 2) / root.cell-w), 0, root.strings - 1),
+                                        clamp(floor(self.mouse-y / root.cell-h), 0, 4));
+                                }
+                            }
+                        }
+                    }
+                }
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: start;
+                    if root.voicings.length > 0 : Text { text: "Ways to play it, low string first"; font-size: 12px; }
+                    for v[i] in root.voicings : Rectangle {
+                        height: 24px;
+                        width: 170px;
+                        border-radius: 4px;
+                        background: touch.has-hover ? Palette.control-background : transparent;
+                        Text {
+                            x: 6px;
+                            text: v;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                        }
+                        touch := TouchArea { clicked => { root.voicing-picked(i); } }
+                    }
+                }
+            }
+            HorizontalLayout {
+                alignment: start;
+                Button { text: "Remove the chord"; clicked => { root.remove(); } }
             }
         }
     }
