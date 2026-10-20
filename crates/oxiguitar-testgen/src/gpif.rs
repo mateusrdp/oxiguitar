@@ -356,7 +356,8 @@ fn write_track(x: &mut String, ti: usize, track: &crate::song::Track) {
     x.push_str("<PlaybackState>Default</PlaybackState>\n</Track>\n");
 }
 
-/// A MIDI pitch as GPIF writes it.
+/// A MIDI pitch as GPIF writes it: Guitar Pro's octave is MIDI ÷ 12 (MIDI
+/// 60 is C5), one above scientific pitch.
 fn pitch_xml(midi: u8) -> String {
     const STEPS: [(&str, &str); 12] = [
         ("C", ""),
@@ -375,7 +376,7 @@ fn pitch_xml(midi: u8) -> String {
     let (step, accidental) = STEPS[usize::from(midi % 12)];
     format!(
         "<Pitch><Step>{step}</Step><Accidental>{accidental}</Accidental><Octave>{}</Octave></Pitch>",
-        i32::from(midi / 12) - 1
+        i32::from(midi / 12)
     )
 }
 

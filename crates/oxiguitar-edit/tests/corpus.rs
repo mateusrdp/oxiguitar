@@ -99,9 +99,14 @@ fn the_corpus() {
 fn the_fixtures_add_up() {
     // Our own files are written whole: every bar of every reference and
     // fixture adds up, which also shows the check has no false alarms.
+    // Files made by hand in Guitar Pro (`fixtures/guitar-pro-7.6/`) are
+    // Mateus's, a note or two in a bar.
     let all = scores("fixtures");
     assert!(all.len() >= 50, "{}", all.len());
-    for (path, score) in &all {
+    for (path, score) in all
+        .iter()
+        .filter(|(p, _)| !p.to_string_lossy().contains("guitar-pro-7.6"))
+    {
         let check = BarCheck::of(score);
         assert!(
             check.is_empty(),
