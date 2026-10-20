@@ -112,6 +112,57 @@ fn effects() -> Vec<Command> {
         Command::Whammy(Some(curve(&[(0, 0), (30, -100), (60, 0)]))),
         Command::Whammy(None),
     ]);
+    // The Inspector's values (slice 6).
+    use oxiguitar_edit::{BeatChange as B, NoteChange as N};
+    use oxiguitar_model::{Accent, Harmonic, NoteValue, Stroke, Trill};
+    out.extend(
+        [
+            N::Accent(Some(Accent::Heavy)),
+            N::Accent(None),
+            N::SlideIn(Some(Slide::InFromAbove)),
+            N::SlideOut(Some(Slide::Legato)),
+            N::SlideOut(None),
+            N::Harmonic(Some(Harmonic::Artificial { semitones: 7 })),
+            N::Harmonic(Some(Harmonic::Tapped { fret: 5 })),
+            N::Harmonic(Some(Harmonic::Feedback)),
+            N::Harmonic(None),
+            N::Trill(Some(Trill {
+                fret: 2,
+                speed: NoteValue::Sixteenth,
+            })),
+            N::Trill(None),
+            N::LeftFinger(Some(0)),
+            N::LeftFinger(Some(4)),
+            N::RightFinger(Some(2)),
+            N::LeftFinger(None),
+        ]
+        .into_iter()
+        .map(Command::Note),
+    );
+    out.extend(
+        [
+            B::Tremolo(Some(NoteValue::Eighth)),
+            B::Tremolo(Some(NoteValue::Sixteenth)),
+            B::Tremolo(None),
+            B::Stroke(Some(Stroke {
+                direction: StrokeDirection::Down,
+                speed: NoteValue::Eighth,
+            })),
+            B::Stroke(Some(Stroke {
+                direction: StrokeDirection::Up,
+                speed: NoteValue::SixtyFourth,
+            })),
+            B::Stroke(None),
+            B::PickStroke(Some(StrokeDirection::Up)),
+            B::PickStroke(None),
+            B::Technique(Some(BeatTechnique::Pop)),
+            B::Technique(None),
+            B::Grace(Some(GraceKind::OnBeat)),
+            B::Grace(None),
+        ]
+        .into_iter()
+        .map(Command::Beat),
+    );
     out
 }
 
@@ -362,7 +413,12 @@ fn random_edits(
         }
         let effect = matches!(
             command,
-            Command::Effect(_) | Command::Dynamic(_) | Command::Bend(_) | Command::Whammy(_)
+            Command::Effect(_)
+                | Command::Dynamic(_)
+                | Command::Bend(_)
+                | Command::Whammy(_)
+                | Command::Note(_)
+                | Command::Beat(_)
         );
         if let Some(e) = apply(score, history, caret, selection, command) {
             caret = e.caret;

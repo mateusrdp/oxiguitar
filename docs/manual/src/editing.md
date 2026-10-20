@@ -154,6 +154,12 @@ The palette's **dynamics**, ppp to fff, set the dynamic of the caret's beat, or 
 
 **B** (or the palette's **Bend**) opens the **bend editor** for the note on the caret's string; **Ctrl + Alt + V** (or **Whammy Bar**) opens it for the beat's whammy bar. Pick a type (Bend, Bend and release, Release, Prebend, Prebend and bend, Prebend and release; for the whammy bar Dive, Dip, Return, Predive, Predive and dive) and a pitch from ¼ tone to 3 tones, or drag the curve's points on the grid: time across the note in twelfths, pitch up the side in quarter tones. A press on an empty grid starts a bend at that pitch. The curve has an origin, a middle held at one pitch between two places, and a destination, which is the shape a .gp file holds. **Enter** applies it, **Escape** cancels, and "No bend" takes the bend away. With a selection, the curve goes on every selected note (or beat).
 
+### The Inspector's note and beat
+
+Under the caret's bar, the **Inspector** shows the note on the caret's string and its beat, and changes them. The tickboxes switch effects as their keys do (on a selection, on every selected note or beat). The drop-downs and numbers set what the keys only start at a default: the accent, how the note slides in and out, the harmonic and how far up an artificial or tapped harmonic sounds, the trill's speed (sixteenths, thirty-seconds or sixty-fourths) and the fret it trills with, the fingers of the left and right hands, the dynamic, the speed of tremolo picking, grace notes, the brush and how long it takes, the pick stroke, and tapping, slapping or popping. **Edit…** beside the bend and the whammy bar opens their editor. On a rest only its dynamic shows. Each change is one step to undo.
+
+A .gp file keeps trills in sixteenths only: saving a faster trill as .gp names it among what the file can't hold.
+
 ## Undo and redo
 
 **Edit → Undo** (Ctrl + Z) and **Edit → Redo** (Ctrl + Y), or the arrows in the toolbar, undo and redo every change, as many times as you like. The menu names the change: "Undo Infer Key Signatures".

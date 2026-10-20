@@ -171,6 +171,12 @@ pub enum Command {
     /// This whammy-bar curve on the caret's beat, or the selected beats;
     /// `None` for none.
     Whammy(Option<oxiguitar_model::Bend>),
+    /// A value of the caret's note, or the selected notes (the
+    /// Inspector).
+    Note(crate::NoteChange),
+    /// A value of the caret's beat, or the selected beats (the
+    /// Inspector).
+    Beat(crate::BeatChange),
 }
 
 impl Command {
@@ -232,6 +238,8 @@ impl Command {
             Command::Dynamic(_) => "Dynamic",
             Command::Bend(_) => "Bend",
             Command::Whammy(_) => "Whammy Bar",
+            Command::Note(n) => n.label(),
+            Command::Beat(b) => b.label(),
         }
     }
 }
@@ -725,7 +733,9 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Effect(_)
         | Command::Dynamic(_)
         | Command::Bend(_)
-        | Command::Whammy(_) => None,
+        | Command::Whammy(_)
+        | Command::Note(_)
+        | Command::Beat(_) => None,
         Command::Tuplet(t) => {
             let targets = targets(score, c, selection);
             let off = staff

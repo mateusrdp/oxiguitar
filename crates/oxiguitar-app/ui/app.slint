@@ -10,7 +10,7 @@
 // add theirs to the same lists (docs/design/plugins.md). The score is drawn
 // by our renderer on the worker thread and shown here as tiles.
 
-import { Slider, ScrollView, Palette, ComboBox, Button } from "std-widgets.slint";
+import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
 import { BarDialog, BarFields, BendDialog, GridPoint, PasteDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
@@ -558,15 +558,31 @@ export struct InspectorVoice {
     current: bool,
 }
 
+// One row of the Inspector's note and beat (effect_form.rs).
+export struct InspectorField {
+    id: string,
+    label: string,
+    // 0 heading, 1 tickbox, 2 drop-down, 3 number, 4 button.
+    kind: int,
+    value: int,
+    options: [string],
+    min: int,
+    max: int,
+}
+
 // The Inspector: the caret's bar, each voice's beats against the time
-// signature (Mateus, 20 Oct 2026).
+// signature (Mateus, 20 Oct 2026); then the caret's note and beat, whose
+// effects and values it changes (M3 slice 6).
 component Inspector inherits Rectangle {
     in property <string> heading;
     in property <string> unit;
     in property <string> caret;
     in property <[InspectorVoice]> voices;
-    ScrollView {
+    in property <[InspectorField]> fields;
+    callback field-changed(string, int);
+    scroll := ScrollView {
         VerticalLayout {
+            width: scroll.visible-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -601,6 +617,47 @@ component Inspector inherits Rectangle {
                 }
             }
             Text { text: root.caret; font-size: 11px; color: Palette.foreground.transparentize(0.4); wrap: word-wrap; }
+            for f in root.fields : VerticalLayout {
+                if f.kind == 0 : Text {
+                    text: f.label;
+                    font-size: 13px;
+                    font-weight: 700;
+                }
+                if f.kind == 1 : CheckBox {
+                    text: f.label;
+                    checked: f.value == 1;
+                    toggled => { root.field-changed(f.id, self.checked ? 1 : 0); }
+                }
+                if f.kind == 2 : HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+                    ComboBox {
+                        min-width: 60px;
+                        horizontal-stretch: 1;
+                        model: f.options;
+                        current-index: f.value;
+                        selected => { root.field-changed(f.id, self.current-index); }
+                    }
+                }
+                if f.kind == 3 : HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+                    SpinBox {
+                        min-width: 60px;
+                        horizontal-stretch: 1;
+                        minimum: f.min;
+                        maximum: f.max;
+                        value: f.value;
+                        edited(v) => { root.field-changed(f.id, v); }
+                    }
+                }
+                if f.kind == 4 : HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; }
+                    Text { text: f.options[0]; font-size: 12px; vertical-alignment: center; horizontal-stretch: 1; }
+                    Button { text: "Edit…"; clicked => { root.field-changed(f.id, 0); } }
+                }
+            }
         }
     }
 }
@@ -929,6 +986,8 @@ export component AppWindow inherits Window {
     in property <string> inspector-unit;
     in property <string> inspector-caret;
     in property <[InspectorVoice]> inspector-voices;
+    in property <[InspectorField]> inspector-fields;
+    callback inspector-changed(string, int);
     callback caret-key(string, bool, bool) -> bool;
     // Note entry: a key typed at the caret, with Shift, Ctrl and Alt,
     // answering whether it was one (editing.rs, `Editing::typed`).
@@ -1462,6 +1521,8 @@ export component AppWindow inherits Window {
                             unit: root.inspector-unit;
                             caret: root.inspector-caret;
                             voices: root.inspector-voices;
+                            fields: root.inspector-fields;
+                            field-changed(id, v) => { root.inspector-changed(id, v); }
                         }
                         if root.right-area.plugin : PluginTab {
                     rows: root.right-plugin-rows;

@@ -236,6 +236,82 @@ impl Effect {
     }
 }
 
+/// A value of the caret's note (or the selected notes) set, as the
+/// Inspector sets it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum NoteChange {
+    /// An accent, a heavy accent, or none.
+    Accent(Option<Accent>),
+    /// How the note slides in (from below or above), or not.
+    SlideIn(Option<Slide>),
+    /// How the note slides out (shift, legato, down or up), or not.
+    SlideOut(Option<Slide>),
+    /// A harmonic, or none.
+    Harmonic(Option<Harmonic>),
+    /// A trill, or none.
+    Trill(Option<Trill>),
+    /// The left hand's finger (thumb 0, index 1 … little 4), or none.
+    LeftFinger(Option<u8>),
+    /// The right hand's finger (p 0, i 1, m 2, a 3, c 4), or none.
+    RightFinger(Option<u8>),
+}
+
+impl NoteChange {
+    /// Whether it needs a note on a string.
+    fn needs_strings(self) -> bool {
+        !matches!(
+            self,
+            NoteChange::Accent(_) | NoteChange::LeftFinger(_) | NoteChange::RightFinger(_)
+        )
+    }
+
+    /// The change's name, as Edit → Undo shows it.
+    pub fn label(self) -> &'static str {
+        match self {
+            NoteChange::Accent(_) => "Accent",
+            NoteChange::SlideIn(_) | NoteChange::SlideOut(_) => "Slide",
+            NoteChange::Harmonic(_) => "Harmonic",
+            NoteChange::Trill(_) => "Trill",
+            NoteChange::LeftFinger(_) | NoteChange::RightFinger(_) => "Fingering",
+        }
+    }
+}
+
+/// A value of the caret's beat (or the selected beats) set, as the
+/// Inspector sets it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BeatChange {
+    /// Tremolo picking at this speed, or none.
+    Tremolo(Option<NoteValue>),
+    /// A brush, its direction and how long it takes, or none.
+    Stroke(Option<Stroke>),
+    /// A pick stroke, or none.
+    PickStroke(Option<StrokeDirection>),
+    /// Tapping, slapping or popping, or none.
+    Technique(Option<BeatTechnique>),
+    /// A grace note (a thirty-second, as Guitar Pro writes them), or a
+    /// beat of its own again.
+    Grace(Option<GraceKind>),
+}
+
+impl BeatChange {
+    /// Whether it needs notes on strings.
+    fn needs_strings(self) -> bool {
+        !matches!(self, BeatChange::Tremolo(_) | BeatChange::Grace(_))
+    }
+
+    /// The change's name, as Edit → Undo shows it.
+    pub fn label(self) -> &'static str {
+        match self {
+            BeatChange::Tremolo(_) => "Tremolo Picking",
+            BeatChange::Stroke(_) => "Brush",
+            BeatChange::PickStroke(_) => "Pickstroke",
+            BeatChange::Technique(_) => "Technique",
+            BeatChange::Grace(_) => "Grace Note",
+        }
+    }
+}
+
 /// Runs an effect, a dynamic, a bend or a whammy curve; `None` for another
 /// command.
 pub(crate) fn apply(
@@ -250,6 +326,8 @@ pub(crate) fn apply(
         Command::Dynamic(d) => Edit::Dynamic(*d),
         Command::Bend(b) => Edit::Bend(b.clone()),
         Command::Whammy(w) => Edit::Whammy(w.clone()),
+        Command::Note(n) => Edit::Note(*n),
+        Command::Beat(b) => Edit::Beat(*b),
         _ => return None,
     };
     Some(run(score, history, c, selection, command.label(), &edit))
@@ -260,6 +338,8 @@ enum Edit {
     Dynamic(Dynamic),
     Bend(Option<Bend>),
     Whammy(Option<Bend>),
+    Note(NoteChange),
+    Beat(BeatChange),
 }
 
 /// Whether the selection is what a command at `c` acts on: beats of the
@@ -311,6 +391,22 @@ fn run(
             strings
                 && each_beat(&mut bars, first, &targets, c, |b| {
                     (b.kind == BeatKind::Notes).then(|| b.effects.whammy = w.clone())
+                })
+        }
+        Edit::Note(change) => {
+            (strings || !change.needs_strings())
+                && set_notes(&mut bars, first, &targets, c, all_notes, |n| {
+                    let fretted = matches!(n.place, NotePlace::Fretted { .. });
+                    (fretted || !change.needs_strings()).then_some(())?;
+                    note_change(n, *change, frets)
+                })
+        }
+        Edit::Beat(change) => {
+            (strings || !change.needs_strings())
+                && each_beat(&mut bars, first, &targets, c, |b| {
+                    (b.kind == BeatKind::Notes).then_some(())?;
+                    beat_change(b, *change);
+                    Some(())
                 })
         }
     };
@@ -550,6 +646,65 @@ fn set_beat(b: &mut Beat, e: Effect, on: bool) {
     }
 }
 
+/// Sets a value on a note; `None` when it can't take it (a trill past the
+/// last fret, a finger past the little one).
+fn note_change(n: &mut Note, change: NoteChange, frets: u8) -> Option<()> {
+    let fx = &mut n.effects;
+    match change {
+        NoteChange::Accent(a) => fx.accent = a,
+        NoteChange::SlideIn(s) | NoteChange::SlideOut(s) => {
+            let into = matches!(change, NoteChange::SlideIn(_));
+            if s.is_some_and(|s| slide_in(s) != into) {
+                return None;
+            }
+            fx.slides.retain(|x| slide_in(*x) != into);
+            if let Some(s) = s {
+                fx.slides.push(s);
+                fx.slides.sort_by_key(|x| !slide_in(*x));
+            }
+        }
+        NoteChange::Harmonic(h) => fx.harmonic = h,
+        NoteChange::Trill(t) => {
+            if t.is_some_and(|t| t.fret > frets.min(99)) {
+                return None;
+            }
+            fx.trill = t;
+        }
+        NoteChange::LeftFinger(f) | NoteChange::RightFinger(f) => {
+            if f.is_some_and(|f| f > 4) {
+                return None;
+            }
+            if matches!(change, NoteChange::LeftFinger(_)) {
+                fx.left_finger = f;
+            } else {
+                fx.right_finger = f;
+            }
+        }
+    }
+    Some(())
+}
+
+fn beat_change(b: &mut Beat, change: BeatChange) {
+    let fx = &mut b.effects;
+    match change {
+        BeatChange::Tremolo(t) => {
+            fx.tremolo_picking = t;
+            for n in &mut b.notes {
+                n.effects.tremolo_picking = None;
+            }
+        }
+        BeatChange::Stroke(s) => fx.stroke = s,
+        BeatChange::PickStroke(d) => fx.pick_stroke = d,
+        BeatChange::Technique(t) => fx.technique = t,
+        BeatChange::Grace(g) => {
+            if g.is_some() && b.grace.is_none() {
+                b.duration = Duration::new(NoteValue::ThirtySecond);
+            }
+            b.grace = g;
+        }
+    }
+}
+
 /// [`Command::Dynamic`]: the marking on each target beat (notes and
 /// rests), its notes played at it.
 fn dynamic(
@@ -758,6 +913,106 @@ mod tests {
         apply(&mut s, &mut h, at(0, 1), None, Command::Dynamic(Dynamic::P)).unwrap();
         assert!(beat(&s, 0).notes.iter().all(|n| n.dynamic == Dynamic::P));
         assert!(apply(&mut s, &mut h, at(0, 1), None, Command::Dynamic(Dynamic::P)).is_none());
+    }
+
+    #[test]
+    fn the_inspector_sets_values() {
+        let (mut s, mut h) = song();
+        let c = at(1, 3);
+        let note = |s: &Score| beat(s, 1).notes[0].effects.clone();
+        let trill = Trill {
+            fret: 10,
+            speed: NoteValue::ThirtySecond,
+        };
+        apply(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Note(NoteChange::Trill(Some(trill))),
+        )
+        .unwrap();
+        assert_eq!(note(&s).trill, Some(trill));
+        let past = Trill { fret: 30, ..trill };
+        assert!(
+            apply(
+                &mut s,
+                &mut h,
+                c,
+                None,
+                Command::Note(NoteChange::Trill(Some(past)))
+            )
+            .is_none()
+        );
+        apply(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Note(NoteChange::SlideOut(Some(Slide::OutUp))),
+        )
+        .unwrap();
+        apply(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Note(NoteChange::SlideIn(Some(Slide::InFromAbove))),
+        )
+        .unwrap();
+        assert_eq!(note(&s).slides, [Slide::InFromAbove, Slide::OutUp]);
+        // An out slide is no in slide.
+        assert!(
+            apply(
+                &mut s,
+                &mut h,
+                c,
+                None,
+                Command::Note(NoteChange::SlideIn(Some(Slide::Shift)))
+            )
+            .is_none()
+        );
+        apply(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Note(NoteChange::SlideIn(None)),
+        )
+        .unwrap();
+        assert_eq!(note(&s).slides, [Slide::OutUp]);
+        apply(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Note(NoteChange::LeftFinger(Some(3))),
+        )
+        .unwrap();
+        assert_eq!(note(&s).left_finger, Some(3));
+        let stroke = Stroke {
+            direction: StrokeDirection::Down,
+            speed: NoteValue::Eighth,
+        };
+        apply(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Beat(BeatChange::Stroke(Some(stroke))),
+        )
+        .unwrap();
+        assert_eq!(beat(&s, 1).effects.stroke, Some(stroke));
+        apply(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Beat(BeatChange::Grace(Some(GraceKind::OnBeat))),
+        )
+        .unwrap();
+        assert_eq!(beat(&s, 1).duration.value, NoteValue::ThirtySecond);
+        assert_eq!(h.undo_label(), Some("Grace Note"));
     }
 
     #[test]

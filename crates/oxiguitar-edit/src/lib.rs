@@ -41,7 +41,7 @@ pub use bars::BarState;
 pub use caret::{Caret, StaffBar, VOICES, beat_at, onsets};
 pub use check::{BarCheck, adds_up};
 pub use clip::{Clip, ClipTrack, Paste, copy};
-pub use effects::{Effect, HarmonicKind};
+pub use effects::{BeatChange, Effect, HarmonicKind, NoteChange};
 pub use entry::{Command, Edited, apply, new_score};
 pub use history::{Change, History, Region, Touched};
 pub use selection::{Selection, Span};

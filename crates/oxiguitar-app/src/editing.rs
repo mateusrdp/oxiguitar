@@ -583,6 +583,19 @@ impl Editing {
         }
     }
 
+    /// The Inspector's rows for the caret's note and beat.
+    pub(crate) fn effect_fields(&self) -> Vec<crate::effect_form::Field> {
+        match (self.score.as_ref(), self.caret) {
+            (Some(s), Some(c)) => crate::effect_form::fields(s, c),
+            _ => Vec::new(),
+        }
+    }
+
+    /// A field of the Inspector's note or beat changed.
+    pub(crate) fn field_changed(&self, id: &str, value: i32) -> Option<crate::effect_form::Action> {
+        crate::effect_form::changed(self.score.as_ref()?, self.caret?, id, value)
+    }
+
     /// The tuplet of the caret's beat, if it is in one.
     pub(crate) fn beat_tuplet(&self) -> Option<Tuplet> {
         let c = self.caret?;
