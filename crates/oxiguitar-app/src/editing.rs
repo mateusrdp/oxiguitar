@@ -90,6 +90,36 @@ pub(crate) struct Editing {
     height: Option<(i32, Clef)>,
     /// What was last copied or cut: OxiGuitar's own clipboard.
     clipboard: Option<Arc<oxiguitar_edit::Clip>>,
+    /// Where lyrics are being typed on the page, if they are.
+    lyric: Option<Lyric>,
+}
+
+/// Where a syllable is being typed (Ctrl + T, as in MuseScore; Mateus,
+/// 21 Oct 2026): a line of the caret's track's lyrics, at a beat its first
+/// staff's first voice sings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Lyric {
+    pub(crate) track: usize,
+    /// The line (verse), from 0.
+    pub(crate) line: usize,
+    /// The bar and beat.
+    pub(crate) at: (usize, usize),
+}
+
+/// What ends a syllable being typed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum LyricKey {
+    /// Space: the next beat.
+    Space,
+    /// Hyphen: the next beat, the word going on.
+    Hyphen,
+    /// Backspace in an empty field: the beat before.
+    Back,
+    /// Up / Down: the line above / below, same beat.
+    Up,
+    Down,
+    /// Enter or Escape: done.
+    Done,
 }
 
 /// The clipboard's keys, as Guitar Pro 8's.
@@ -285,19 +315,29 @@ pub(crate) enum Dialog {
     Bend,
     /// The whammy bar's editor, for the caret's beat.
     Whammy,
+    /// The chord dialog, for the caret's beat.
+    Chord,
+    /// Text above the caret's beat.
+    Text,
+    /// Lyrics typed on the page, at the caret's beat (not a dialog).
+    Lyrics,
 }
 
 /// The dialog a key opens, as Guitar Pro 8's keys open its own: Ctrl + K
 /// (key signature), Ctrl + / (feel), D (directions) and Shift + Insert
 /// (section) open the Bar dialog; B the bend editor, Ctrl + Alt + V the
-/// whammy bar's. Ctrl + T, Guitar Pro's time signature key, is Text's
-/// (Mateus, 20 Oct 2026).
+/// whammy bar's; A the chord dialog; Shift + T the beat's text; Ctrl + T
+/// (Guitar Pro's time signature key) starts typing lyrics on the page, as
+/// in MuseScore (Mateus, 20 and 21 Oct 2026).
 pub(crate) fn dialog_key(name: &str, shift: bool, ctrl: bool, alt: bool) -> Option<Dialog> {
     match (name, ctrl, alt) {
         ("k" | "K" | "/" | "?", true, false) => Some(Dialog::Bar),
         ("d" | "D", false, false) if !shift => Some(Dialog::Bar),
         ("insert", false, false) if shift => Some(Dialog::Bar),
         ("b", false, false) if !shift => Some(Dialog::Bend),
+        ("a", false, false) if !shift => Some(Dialog::Chord),
+        ("t" | "T", true, false) if !shift => Some(Dialog::Lyrics),
+        ("T", false, false) if shift => Some(Dialog::Text),
         ("v" | "V", true, true) => Some(Dialog::Whammy),
         _ => None,
     }
@@ -358,6 +398,7 @@ pub(crate) struct Typed {
 impl Editing {
     /// A score was opened: the caret goes to the start of `first`.
     pub(crate) fn opened(&mut self, score: Arc<Score>, first: usize) {
+        self.lyric = None;
         self.caret = Caret::at_start(&score, first);
         self.height = None;
         self.anchor = None;
@@ -594,6 +635,180 @@ impl Editing {
     /// A field of the Inspector's note or beat changed.
     pub(crate) fn field_changed(&self, id: &str, value: i32) -> Option<crate::effect_form::Action> {
         crate::effect_form::changed(self.score.as_ref()?, self.caret?, id, value)
+    }
+
+    /// Starts typing lyrics (Ctrl + T): line 1 at the caret's beat, or the
+    /// next beat the track's first voice sings. The syllable there, to
+    /// edit. `None` when nothing is sung from there on.
+    pub(crate) fn start_lyrics(&mut self) -> Option<(Lyric, String)> {
+        let c = self.caret?;
+        let score = self.score.clone()?;
+        let staff = score.tracks.get(c.track)?.staves.first()?;
+        // The caret's moment, in the first voice.
+        let onset = c
+            .voice_in(&score)
+            .and_then(|v| oxiguitar_edit::onsets(v).get(c.beat).copied());
+        let first = staff.bars.get(c.bar).and_then(|b| b.voices.first());
+        let from = match (onset, first) {
+            (Some(at), Some(v)) => oxiguitar_edit::onsets(v)
+                .iter()
+                .position(|o| *o >= at)
+                .unwrap_or(v.beats.len()),
+            _ => 0,
+        };
+        let at = oxiguitar_model::lyrics::sung_beats(staff, c.bar)
+            .into_iter()
+            .find(|&(bar, beat)| bar > c.bar || beat >= from)?;
+        let lyric = Lyric {
+            track: c.track,
+            line: 0,
+            at,
+        };
+        self.lyric = Some(lyric);
+        self.follow_lyric();
+        Some((lyric, self.syllable_at(lyric).0))
+    }
+
+    /// The syllable of line `l.line` at its beat, as typed, and whether a
+    /// hyphen follows it.
+    pub(crate) fn syllable_at(&self, l: Lyric) -> (String, bool) {
+        let Some(score) = self.score.as_ref() else {
+            return (String::new(), false);
+        };
+        let Some(track) = score.tracks.get(l.track) else {
+            return (String::new(), false);
+        };
+        let (Some(line), Some(staff)) = (track.lyrics.get(l.line), track.staves.first()) else {
+            return (String::new(), false);
+        };
+        let index = oxiguitar_model::lyrics::sung_beats(staff, line.start_bar)
+            .iter()
+            .position(|b| *b == l.at);
+        index
+            .and_then(|i| {
+                oxiguitar_model::lyrics::syllables(&line.text)
+                    .get(i)
+                    .cloned()
+            })
+            .map_or((String::new(), false), |s| (s.text, s.hyphen))
+    }
+
+    /// A key ended the syllable `text`: the edit that sets it (when it
+    /// changed), and where typing goes on (`None`: done).
+    pub(crate) fn lyric_key(
+        &mut self,
+        key: LyricKey,
+        text: &str,
+    ) -> (Option<Typed>, Option<(Lyric, String)>) {
+        let Some(l) = self.lyric else {
+            return (None, None);
+        };
+        let text = text.trim();
+        let (was, was_hyphen) = self.syllable_at(l);
+        let hyphen = match key {
+            LyricKey::Hyphen => true,
+            LyricKey::Space => false,
+            _ => was_hyphen,
+        };
+        let lines = self
+            .score
+            .as_ref()
+            .and_then(|s| s.tracks.get(l.track))
+            .map_or(0, |t| t.lyrics.len());
+        let next = match key {
+            LyricKey::Space | LyricKey::Hyphen => {
+                self.sung_next(l, true).map(|at| Lyric { at, ..l })
+            }
+            LyricKey::Back => self.sung_next(l, false).map(|at| Lyric { at, ..l }),
+            LyricKey::Up => Some(Lyric {
+                line: l.line.saturating_sub(1),
+                ..l
+            }),
+            // The line below, a new one under the last too (once this one
+            // holds something), five at most.
+            LyricKey::Down => Some(Lyric {
+                line: if l.line < lines || !text.is_empty() {
+                    (l.line + 1).min(oxiguitar_edit::LYRIC_LINES - 1)
+                } else {
+                    l.line
+                },
+                ..l
+            }),
+            LyricKey::Done => None,
+        };
+        // The caret goes on first, so the edit leaves it where typing goes
+        // on, however late the edit is done.
+        self.lyric = next;
+        self.follow_lyric();
+        let edit = (text != was || hyphen != was_hyphen)
+            .then(|| {
+                self.tool(Command::Syllable {
+                    line: l.line,
+                    at: l.at,
+                    text: text.to_owned(),
+                    hyphen,
+                })
+            })
+            .flatten();
+        let next = next.map(|n| {
+            // The syllable typed is not in the score yet: on the same
+            // beat, it is what the field shows again.
+            let shown = if n.at == l.at && n.line == l.line {
+                text.to_owned()
+            } else {
+                self.syllable_at(n).0
+            };
+            (n, shown)
+        });
+        (edit, next)
+    }
+
+    /// The beat after (or before) `l`'s that the first voice sings.
+    fn sung_next(&self, l: Lyric, forward: bool) -> Option<(usize, usize)> {
+        let staff = self.score.as_ref()?.tracks.get(l.track)?.staves.first()?;
+        let sung = oxiguitar_model::lyrics::sung_beats(staff, 0);
+        let i = sung.iter().position(|b| *b == l.at)?;
+        if forward {
+            sung.get(i + 1).copied()
+        } else {
+            sung.get(i.checked_sub(1)?).copied()
+        }
+    }
+
+    /// The caret goes where lyrics are typed, so the view follows.
+    fn follow_lyric(&mut self) {
+        if let Some(l) = self.lyric {
+            self.caret = Some(Caret {
+                track: l.track,
+                staff: 0,
+                voice: 0,
+                bar: l.at.0,
+                beat: l.at.1,
+                string: self.caret.map_or(1, |c| c.string),
+            });
+            self.selection = None;
+            self.anchor = None;
+            self.height = None;
+        }
+    }
+
+    /// Where the field for lyrics goes on the page: its sheet, the beat's
+    /// middle, the line's baseline and the space between lines.
+    pub(crate) fn lyric_spot(&self) -> Option<(usize, f32, f32, f32)> {
+        let l = self.lyric?;
+        self.hits.lyric_spot(l.track, l.at.0, l.at.1, l.line)
+    }
+
+    /// The chord dialog for the caret's beat.
+    pub(crate) fn chord_form(&self) -> Option<crate::chord_form::ChordForm> {
+        crate::chord_form::ChordForm::open(self.score.as_ref()?, self.caret?)
+    }
+
+    /// The text above the caret's beat; `None` where there is no beat.
+    pub(crate) fn beat_text(&self) -> Option<String> {
+        let c = self.caret?;
+        let beat = c.voice_in(self.score.as_ref()?)?.beats.get(c.beat)?;
+        (beat.kind != BeatKind::Empty).then(|| beat.text.clone())
     }
 
     /// The tuplet of the caret's beat, if it is in one.
@@ -1159,6 +1374,7 @@ mod tests {
                     tablature: Some((top, 6.0, 6)),
                     top,
                     bottom: top + 30.0,
+                    lyrics: (top + 45.0, 12.0),
                     bars: (0..bars)
                         .map(|bar| {
                             let start = 100.0 * bar as f32;
@@ -1591,11 +1807,61 @@ mod tests {
     }
 
     #[test]
-    fn dialog_keys() {
+    fn lyrics_typed_on_the_page() {
+        let mut e = editing(1, &[0]);
+        let mut score = (*e.score().unwrap()).clone();
+        let mut h = oxiguitar_edit::History::new();
+        // Type, and the edit is made as the worker would.
+        let mut type_ = |e: &mut Editing, key, text: &str| {
+            let (edit, next) = e.lyric_key(key, text);
+            if let Some(t) = edit {
+                oxiguitar_edit::apply(&mut score, &mut h, t.caret, t.selection, t.command).unwrap();
+                e.changed(Arc::new(score.clone()));
+            }
+            next
+        };
+        e.key(Key::Right, false, false);
+        let (l, shown) = e.start_lyrics().unwrap();
+        assert_eq!((l.line, l.at, shown.as_str()), (0, (0, 1), ""));
+        let n = type_(&mut e, LyricKey::Hyphen, "Hel").unwrap();
+        assert_eq!(n.0.at, (0, 2));
+        assert_eq!(e.caret().unwrap().beat, 2, "the caret follows");
+        type_(&mut e, LyricKey::Space, "lo").unwrap();
+        // Across the bar line.
+        type_(&mut e, LyricKey::Space, "big").unwrap();
+        let n = type_(&mut e, LyricKey::Done, "world");
+        assert!(n.is_none());
+        // The line starts at the bar; its first beat is left empty.
         assert_eq!(
-            dialog_key("t", false, true, false),
+            e.score().unwrap().tracks[0].lyrics[0].text,
+            "-Hel-lo big world"
+        );
+        assert_eq!(e.score().unwrap().tracks[0].lyrics[0].start_bar, 0);
+        assert_eq!((e.caret().unwrap().bar, e.caret().unwrap().beat), (1, 0));
+        // Back on a syllable: it shows; Backspace in an empty field goes back.
+        e.key(Key::Left, false, false);
+        e.key(Key::Left, false, false);
+        let (_, shown) = e.start_lyrics().unwrap();
+        assert_eq!(shown, "lo");
+        let n = type_(&mut e, LyricKey::Back, "").unwrap();
+        assert_eq!((n.0.at, n.1.as_str()), ((0, 1), "Hel"));
+        // Down: the next line, at the same beat; not past a line still empty.
+        let n = type_(&mut e, LyricKey::Down, "Hel").unwrap();
+        assert_eq!(n.0.line, 1);
+        let n = type_(&mut e, LyricKey::Down, "").unwrap();
+        assert_eq!(n.0.line, 1);
+    }
+
+    #[test]
+    fn dialog_keys() {
+        assert_eq!(dialog_key("t", false, true, false), Some(Dialog::Lyrics));
+        assert_eq!(dialog_key("T", true, false, false), Some(Dialog::Text));
+        assert_eq!(dialog_key("t", false, false, false), None, "T is tapping");
+        assert_eq!(dialog_key("a", false, false, false), Some(Dialog::Chord));
+        assert_eq!(
+            dialog_key("a", false, true, false),
             None,
-            "Ctrl + T is Text's"
+            "Ctrl + A selects all"
         );
         assert_eq!(dialog_key("b", false, false, false), Some(Dialog::Bend));
         assert_eq!(dialog_key("v", false, true, true), Some(Dialog::Whammy));

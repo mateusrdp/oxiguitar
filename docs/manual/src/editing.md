@@ -1,6 +1,6 @@
 # Editing
 
-OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, add effects, undo, and find the bars that don't add up. Chord diagrams, lyrics, text and the score's information come next.
+OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, add effects, chords, text and lyrics, undo, and find the bars that don't add up. The score's information comes next.
 
 ## The caret
 
@@ -159,6 +159,28 @@ The palette's **dynamics**, ppp to fff, set the dynamic of the caret's beat, or 
 Under the caret's bar, the **Inspector** shows the note on the caret's string and its beat, and changes them. The tickboxes switch effects as their keys do (on a selection, on every selected note or beat). The drop-downs and numbers set what the keys only start at a default: the accent, how the note slides in and out, the harmonic and how far up an artificial or tapped harmonic sounds, the trill's speed (sixteenths, thirty-seconds or sixty-fourths) and the fret it trills with, the fingers of the left and right hands, the dynamic, the speed of tremolo picking, grace notes, the brush and how long it takes, the pick stroke, and tapping, slapping or popping. **Edit…** beside the bend and the whammy bar opens their editor. On a rest only its dynamic shows. Each change is one step to undo.
 
 A .gp file keeps trills in sixteenths only: saving a faster trill as .gp names it among what the file can't hold.
+
+## Chords, text and lyrics
+
+**A** (or the palette's **Chord**, or **Edit → Chord…**) opens the **chord dialog** for the caret's beat. Build the chord: its root, its type (major, minor, augmented, diminished, suspended second or fourth, power chord), a sixth, seventh or extension (6, 6/9, 7, maj7, 9, maj9, 11, 13, add9), alterations (♭5, ♯5, ♭9, ♯9, ♯11, ♭13) and a bass note. The name follows ("C7(b9)/E"), and the list beside the diagram gives the ways to play it on the track's strings, easiest first; click one to make it the diagram. Or click on the diagram: on the grid to place or take away a note, above a string to make it open (o) or not played (×), with **First fret** to move up the neck; the chord your notes make is named, as Guitar Pro suggests one. A name you type is kept as you typed it. **The track's chords** picks one the track already has. **Show the diagram** off keeps the name alone. The first time, the diagram starts from the beat's notes. On a rest, or after the voice's last beat, a chord with a diagram puts its notes in the beat. **Remove the chord** takes it off the beat. The palette's **Chords** opens the same dialog.
+
+**Shift + T** (or the palette's **Text**, or **Edit → Text…**) sets the text above the caret's beat; empty takes it away.
+
+**Lyrics are typed on the page**, as in MuseScore. Put the caret on a note and press **Ctrl + T** (or the palette's **Lyrics**, or **Edit → Type Lyrics**): a small field opens under the beat. Type the syllable, then:
+
+| Keys | Does |
+| --- | --- |
+| Space | The next note: the syllable ends a word |
+| − (hyphen) | The next note: the word goes on ("Hel-" then "lo") |
+| Backspace, in an empty field | The note before |
+| Down / Up | The next verse / the verse above, on the same note (up to five, as Guitar Pro) |
+| Enter or Escape, or a click elsewhere | Done |
+
+A syllable already there shows in the field, to change; an empty field leaves the note without one. Lyrics go on the notes of the track's first voice, on its first staff; a tied note continues the syllable before it, and rests and grace notes get none. Every syllable is one step to undo.
+
+Lyrics are kept as Guitar Pro keeps them, and a file's lyrics follow its rules on the page: a space or a hyphen starts the next syllable, each further space or hyphen leaves a note empty, a plus joins two words on one note ("got+to"), and text in square brackets ("[Verse 2]") is a note to yourself, not shown.
+
+The Inspector shows the beat's chord and text, with **Edit…** to change them.
 
 ## Undo and redo
 

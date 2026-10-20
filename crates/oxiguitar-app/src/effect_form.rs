@@ -184,7 +184,12 @@ fn here(score: &Score, c: Caret) -> Option<(&Beat, Option<&Note>, bool, u8)> {
 
 /// A bend's or whammy curve's summary: its furthest pitch.
 fn curve_summary(b: Option<&oxiguitar_model::Bend>) -> String {
-    let Some(far) = b.and_then(|b| b.points.iter().map(|p| p.cents).max_by_key(|c| c.abs())) else {
+    let Some(far) = b.and_then(|b| {
+        b.points
+            .iter()
+            .map(|p| p.cents)
+            .max_by_key(|c| c.unsigned_abs())
+    }) else {
         return "None".to_owned();
     };
     let rows = (far / crate::bend_form::ROW_CENTS).abs();
@@ -331,6 +336,17 @@ pub(crate) fn fields(score: &Score, c: Caret) -> Vec<Field> {
             .position(|d| *d == dynamic)
             .unwrap_or(5),
     ));
+    let chord = beat
+        .chord
+        .and_then(|i| score.tracks.get(c.track)?.chords.get(i))
+        .map_or_else(|| "None".to_owned(), |d| d.name.clone());
+    out.push(button("chord", "Chord", chord));
+    let text = if beat.text.is_empty() {
+        "None".to_owned()
+    } else {
+        beat.text.clone()
+    };
+    out.push(button("text", "Text", text));
     if rest {
         return out;
     }
@@ -419,6 +435,10 @@ pub(crate) enum Action {
     Bend,
     /// The whammy bar's editor.
     Whammy,
+    /// The chord dialog.
+    Chord,
+    /// The beat's text.
+    Text,
 }
 
 /// The field `id` changed to `value` (on or off, the option picked, the
@@ -443,6 +463,8 @@ pub(crate) fn changed(score: &Score, c: Caret, id: &str, value: i32) -> Option<A
         "wide-vibrato" => effect(Effect::WideVibrato),
         "bend" => Some(Action::Bend),
         "whammy" => Some(Action::Whammy),
+        "chord" => Some(Action::Chord),
+        "text" => Some(Action::Text),
         "accent" => note_change(NoteChange::Accent(match pick? {
             0 => None,
             1 => Some(Accent::Normal),
@@ -643,7 +665,7 @@ mod tests {
         apply(&mut s, &mut h, at(1, 2), None, Command::Rest).unwrap();
         let f = fields(&s, at(1, 2));
         assert_eq!(f[0].label, "Rest · quarter note");
-        assert_eq!(f.len(), 2);
+        assert_eq!(f.len(), 4, "dynamic, chord and text");
     }
 
     #[test]

@@ -25,6 +25,7 @@
 
 mod bar;
 mod duration;
+pub mod lyrics;
 mod note;
 mod ratio;
 mod score;

@@ -77,11 +77,6 @@ const fn dynamic(id: &'static str, name: &'static str, g: Glyph) -> Tool {
     }
 }
 
-/// The tooltip of a tool, or of anything else that waits for the editor.
-pub(crate) fn tip(name: &str) -> String {
-    format!("{name} (comes with the editor)")
-}
-
 /// The tools that work already, with their shortcut (Guitar Pro 8's) if
 /// they have one: the voice buttons, which pick the caret's voice (M3
 /// slice 1), and note entry's (slice 3).
@@ -103,6 +98,9 @@ pub(crate) fn working(id: &str) -> Option<Option<&'static str>> {
         "rhythmic-interpretation" => "Ctrl + /",
         "directions" => "D",
         "bend" => "B",
+        "chord" => "A",
+        "text" => "Shift + T",
+        "lyrics" => "Ctrl + T",
         "whammy" => "Ctrl + Alt + V",
         "dead" => "X",
         "ghost" => "O",
@@ -228,6 +226,9 @@ pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
         | "section" => Dialog::Bar,
         "tuplet" => Dialog::Tuplet,
         "bend" => Dialog::Bend,
+        "chord" | "chords" => Dialog::Chord,
+        "text" => Dialog::Text,
+        "lyrics" => Dialog::Lyrics,
         "whammy" => Dialog::Whammy,
         _ => return None,
     })
@@ -269,15 +270,11 @@ pub(crate) fn tool_tip(id: &str, name: &str) -> String {
     match working(id) {
         Some(Some(keys)) => format!("{name} ({keys})"),
         Some(None) => name.to_owned(),
-        None if COMING.contains(&id) => tip(name),
+        // Every tool that doesn't work yet is beyond TAB-1 and comes with
+        // Guitar Pro 8's notation, in M5.
         None => format!("{name} (comes in M5)"),
     }
 }
-
-/// The tools still to come in M3: chords, lyrics and text. Every other
-/// tool that doesn't work yet is beyond TAB-1 and comes with Guitar Pro
-/// 8's notation, in M5.
-const COMING: &[&str] = &["lyrics", "chords", "chord", "text"];
 
 /// Which groups are collapsed. Every group starts expanded.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1363,7 +1360,6 @@ mod tests {
         ids.sort_unstable();
         ids.dedup();
         assert_eq!(ids.len(), tools().count(), "tool ids are unique");
-        assert_eq!(tip("Rest"), "Rest (comes with the editor)");
         assert_eq!(
             tool_tip("voice-2", "Edit Voice 2"),
             "Edit Voice 2 (Ctrl + 2)"
@@ -1371,7 +1367,8 @@ mod tests {
         assert_eq!(tool_tip("rest", "Rest"), "Rest (R)");
         assert_eq!(tool_tip("half", "Half Note"), "Half Note");
         assert_eq!(tool_tip("bend", "Bend"), "Bend (B)");
-        assert_eq!(tool_tip("chord", "Chord"), "Chord (comes with the editor)");
+        assert_eq!(tool_tip("chord", "Chord"), "Chord (A)");
+        assert_eq!(tool_tip("lyrics", "Lyrics"), "Lyrics (Ctrl + T)");
         assert_eq!(tool_tip("fermata", "Fermata"), "Fermata (comes in M5)");
         assert_eq!(command_of("ff"), Some(Command::Dynamic(Dynamic::FF)));
         assert_eq!(

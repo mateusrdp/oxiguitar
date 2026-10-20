@@ -309,7 +309,7 @@ fn grid_points(points: &[BendPoint], whammy: bool) -> Vec<Point> {
         [first, middle @ .., last] => {
             let far = middle
                 .iter()
-                .max_by_key(|q| q.cents.abs())
+                .max_by_key(|q| q.cents.unsigned_abs())
                 .copied()
                 .unwrap_or(*first);
             vec![*first, far, far, *last]

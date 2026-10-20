@@ -239,23 +239,20 @@ fn measure_dynamics(bars: &mut [BarPlan], p: &Painter<'_>) {
     }
 }
 
-/// Splits Guitar Pro lyrics into syllables: words are separated by spaces
-/// or line breaks, syllables by hyphens (kept on the syllable they follow,
-/// so the reader sees the word continue).
+/// A line's syllables as drawn, Guitar Pro's syntax read by
+/// `oxiguitar_model::lyrics`: a hyphen after a syllable whose word goes
+/// on, and an empty string for a beat left empty.
 pub(crate) fn syllables(text: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    for word in text.split_whitespace() {
-        let parts: Vec<&str> = word.split('-').filter(|s| !s.is_empty()).collect();
-        let last = parts.len().saturating_sub(1);
-        for (i, part) in parts.into_iter().enumerate() {
-            out.push(if i < last {
-                format!("{part}-")
+    oxiguitar_model::lyrics::syllables(text)
+        .into_iter()
+        .map(|s| {
+            if s.hyphen && !s.text.is_empty() {
+                format!("{}-", s.text)
             } else {
-                part.to_owned()
-            });
-        }
-    }
-    out
+                s.text
+            }
+        })
+        .collect()
 }
 
 /// Gives one line of lyrics to the first voice's beats with notes, from
@@ -276,7 +273,10 @@ fn place_lyrics(bars: &mut [BarPlan], line: usize, start_bar: usize, text: &str)
                 let Some(w) = words.next() else {
                     return;
                 };
-                b.lyrics.push((line, w));
+                // An empty beat takes no syllable.
+                if !w.is_empty() {
+                    b.lyrics.push((line, w));
+                }
             }
         }
     }
@@ -490,10 +490,16 @@ mod tests {
 
     #[test]
     fn lyrics_split_into_syllables() {
+        // A second space leaves a beat empty, as in Guitar Pro.
         assert_eq!(
             syllables("Tar-de em  Ita-pu-ã\nnum"),
-            vec!["Tar-", "de", "em", "Ita-", "pu-", "ã", "num"]
+            vec!["Tar-", "de", "em", "", "Ita-", "pu-", "ã", "num"]
         );
         assert!(syllables("  ").is_empty());
+        // Guitar Pro's syntax: a plus joins words, brackets hide text.
+        assert_eq!(
+            syllables("[Verse 1] Got+to go-ing [x2]"),
+            vec!["Got to", "go-", "ing"]
+        );
     }
 }

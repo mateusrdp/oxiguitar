@@ -1497,7 +1497,7 @@ fn on_sixtieths(points: &[BendPoint]) -> bool {
             .checked_mul(Ratio::from_integer(60))
             .is_some_and(|r| r.denom() == 1)
             && (Ratio::ZERO..=Ratio::ONE).contains(&p.offset)
-            && p.cents.abs() <= 2400
+            && p.cents.unsigned_abs() <= 2400
     })
 }
 
@@ -1548,7 +1548,7 @@ fn fit_curve(points: &[BendPoint]) -> (Vec<BendPoint>, bool) {
         [first, middle @ .., last] => {
             let far = middle
                 .iter()
-                .max_by_key(|q| q.cents.abs())
+                .max_by_key(|q| q.cents.unsigned_abs())
                 .copied()
                 .unwrap_or(*first);
             (vec![*first, far, far, *last], false)
@@ -1690,6 +1690,21 @@ fn drum_elements(x: &mut String) {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::indexing_slicing)]
     use super::*;
+
+    #[test]
+    fn a_bend_at_the_end_of_the_range_is_simplified_not_a_panic() {
+        // Guitar Pro 3–5 readers saturate a huge bend at i32's ends; the
+        // fuzz target found one (21 Oct 2026).
+        let p = |o: i64, cents| BendPoint {
+            offset: Ratio::new(o, 4).unwrap(),
+            cents,
+        };
+        let points = [p(0, 0), p(1, i32::MIN), p(2, 100), p(3, 0), p(4, 0)];
+        assert!(!on_sixtieths(&points));
+        let (fitted, fits) = fit_curve(&points);
+        assert!(!fits);
+        assert_eq!(fitted[1].cents, i32::MIN);
+    }
 
     #[test]
     fn text_is_escaped() {
