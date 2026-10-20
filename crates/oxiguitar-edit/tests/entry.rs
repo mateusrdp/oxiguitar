@@ -43,9 +43,82 @@ fn paste(times: u8, replace: bool) -> Command {
     })
 }
 
+/// A curve as the bend editor makes them: origin, a middle held at one
+/// value, destination, on sixtieths of the note.
+fn curve(points: &[(i64, i32)]) -> oxiguitar_model::Bend {
+    oxiguitar_model::Bend {
+        points: points
+            .iter()
+            .map(|&(sixtieths, cents)| oxiguitar_model::BendPoint {
+                offset: oxiguitar_model::Ratio::new(sixtieths, 60).unwrap(),
+                cents,
+            })
+            .collect(),
+    }
+}
+
+/// Every effect (slice 6), as random runs pick them.
+fn effects() -> Vec<Command> {
+    use oxiguitar_edit::{Effect, HarmonicKind};
+    use oxiguitar_model::{BeatTechnique, GraceKind, Slide, StrokeDirection};
+    let mut out: Vec<Command> = [
+        Effect::Dead,
+        Effect::Ghost,
+        Effect::Accent,
+        Effect::HeavyAccent,
+        Effect::Staccato,
+        Effect::HammerPull,
+        Effect::LeftHandTap,
+        Effect::Slide(Slide::Legato),
+        Effect::Slide(Slide::Shift),
+        Effect::Slide(Slide::InFromBelow),
+        Effect::Slide(Slide::InFromAbove),
+        Effect::Slide(Slide::OutDown),
+        Effect::Slide(Slide::OutUp),
+        Effect::Vibrato,
+        Effect::PalmMute,
+        Effect::PalmMuteBeat,
+        Effect::LetRing,
+        Effect::Harmonic(HarmonicKind::Natural),
+        Effect::Harmonic(HarmonicKind::Artificial),
+        Effect::Harmonic(HarmonicKind::Tapped),
+        Effect::Harmonic(HarmonicKind::Pinch),
+        Effect::Harmonic(HarmonicKind::Semi),
+        Effect::Trill,
+        Effect::TremoloPicking,
+        Effect::WideVibrato,
+        Effect::FadeIn,
+        Effect::Technique(BeatTechnique::Tap),
+        Effect::Technique(BeatTechnique::Slap),
+        Effect::Technique(BeatTechnique::Pop),
+        Effect::Brush(StrokeDirection::Down),
+        Effect::Brush(StrokeDirection::Up),
+        Effect::PickStroke(StrokeDirection::Down),
+        Effect::PickStroke(StrokeDirection::Up),
+        Effect::Grace(GraceKind::BeforeBeat),
+        Effect::Grace(GraceKind::OnBeat),
+    ]
+    .into_iter()
+    .map(Command::Effect)
+    .collect();
+    out.extend([
+        Command::Dynamic(oxiguitar_model::Dynamic::PP),
+        Command::Dynamic(oxiguitar_model::Dynamic::FFF),
+        Command::Bend(Some(curve(&[(0, 0), (30, 200), (60, 200)]))),
+        Command::Bend(Some(curve(&[(0, 0), (15, 100), (45, 100), (60, 0)]))),
+        Command::Bend(Some(curve(&[(0, 300), (60, 300)]))),
+        Command::Bend(None),
+        Command::Whammy(Some(curve(&[(0, 0), (60, -400)]))),
+        Command::Whammy(Some(curve(&[(0, 0), (30, -100), (60, 0)]))),
+        Command::Whammy(None),
+    ]);
+    out
+}
+
 /// Every command, as random runs pick them.
 fn commands() -> Vec<Command> {
-    vec![
+    let mut all = effects();
+    all.extend(vec![
         Command::Tuplet(oxiguitar_model::Tuplet::TRIPLET),
         Command::Tuplet(oxiguitar_model::Tuplet {
             notes: 5,
@@ -192,7 +265,8 @@ fn commands() -> Vec<Command> {
             double_bar: false,
             free_time: false,
         })),
-    ]
+    ]);
+    all
 }
 
 fn fixtures() -> Vec<PathBuf> {
@@ -237,11 +311,18 @@ fn somewhere(score: &Score, rng: &mut Rng, from: Caret) -> Caret {
     c.clamp(score).unwrap_or(from)
 }
 
-/// Runs `steps` random edits; returns the scores after each change.
-fn random_edits(score: &mut Score, history: &mut History, seed: u64, steps: usize) -> usize {
+/// Runs `steps` random edits; returns how many changed the score, and how
+/// many of those were effects (slice 6).
+fn random_edits(
+    score: &mut Score,
+    history: &mut History,
+    seed: u64,
+    steps: usize,
+) -> (usize, usize) {
     let mut rng = Rng(seed);
     let mut caret = Caret::at_start(score, 0).unwrap();
     let mut changes = 0;
+    let mut effects = 0;
     let all = commands();
     let mut clip: Option<Arc<oxiguitar_edit::Clip>> = None;
     for _ in 0..steps {
@@ -279,25 +360,32 @@ fn random_edits(score: &mut Score, history: &mut History, seed: u64, steps: usiz
                 None => continue,
             }
         }
+        let effect = matches!(
+            command,
+            Command::Effect(_) | Command::Dynamic(_) | Command::Bend(_) | Command::Whammy(_)
+        );
         if let Some(e) = apply(score, history, caret, selection, command) {
             caret = e.caret;
             changes += 1;
+            effects += usize::from(effect);
         }
     }
-    changes
+    (changes, effects)
 }
 
 #[test]
 fn random_edits_undo_to_the_original_and_redo_to_the_end() {
     let mut total = 0;
+    let mut effects = 0;
     for (i, path) in fixtures().into_iter().enumerate() {
         let Some(original) = read(&path) else {
             continue;
         };
         let mut score = original.clone();
         let mut history = History::new();
-        let changes = random_edits(&mut score, &mut history, 0x9e37_79b9 + i as u64, 400);
+        let (changes, fx) = random_edits(&mut score, &mut history, 0x9e37_79b9 + i as u64, 600);
         total += changes;
+        effects += fx;
         let end = score.clone();
         score.check_structure().unwrap();
         while history.undo(&mut score).is_some() {}
@@ -306,6 +394,7 @@ fn random_edits_undo_to_the_original_and_redo_to_the_end() {
         assert!(score == end, "{}: redo all", path.display());
     }
     assert!(total > 2000, "only {total} changes were made");
+    assert!(effects > 1000, "only {effects} effects were changed");
 }
 
 #[test]
@@ -325,7 +414,7 @@ fn every_edit_is_saved_and_read_back_equal() {
             .unwrap()
             .score;
         let mut history = History::new();
-        random_edits(&mut score, &mut history, 0x51ed_270b + i as u64, 400);
+        random_edits(&mut score, &mut history, 0x51ed_270b + i as u64, 600);
         let written = oxiguitar_formats::write_gp(&score).unwrap();
         assert_eq!(
             written.losses.warning_count(),

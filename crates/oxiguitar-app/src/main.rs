@@ -32,6 +32,7 @@
 compile_error!("build oxiguitar-app with the `wayland` feature (the default) or `x11`");
 
 mod bar_form;
+mod bend_form;
 mod canvas;
 mod document;
 mod editing;
@@ -90,7 +91,7 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, BarFields, BoxItem, FooterRow, InspectorVoice, ManagerRow,
+    AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorVoice, ManagerRow,
     PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow, PluginWidget, TileItem,
     ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
 };
@@ -196,6 +197,8 @@ struct App {
     question: Option<Asked>,
     /// The bar the open Bar dialog was opened on, as it was.
     bar_dialog: Option<oxiguitar_edit::BarState>,
+    /// The bend or whammy-bar editor, while it is open.
+    bend_dialog: Option<bend_form::BendForm>,
     /// What the open Transpose dialog applies to.
     transpose_scope: Option<oxiguitar_edit::Scope>,
     /// What to do once the score is saved (after "Save the changes…?").
@@ -474,6 +477,7 @@ fn main() -> Result<(), slint::PlatformError> {
         save_formats,
         question: None,
         bar_dialog: None,
+        bend_dialog: None,
         transpose_scope: None,
         after_save: None,
     }));
@@ -494,7 +498,10 @@ fn main() -> Result<(), slint::PlatformError> {
         "L / Shift + L: tie the note / the beat;  Backspace: delete the note;  Shift + Delete: delete the beat;  Ctrl + Insert: insert a beat",
         "Alt + Shift + Up / Down: a semitone up / down;  Alt + Up / Down: the same note on the string above / below",
         "On the standard staff: click a line or space, Up / Down to move it, Enter to put a note there;  Alt + 1 to 4: move the beat to that voice;  Ctrl + Shift + Delete: clear the beat;  Right at the end: add a bar",
-        "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + T, Ctrl + K, D: the Bar dialog",
+        "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + K, Ctrl + /, D: the Bar dialog",
+        "Effects: X dead, O ghost, ; and : accent and heavy accent, ! staccato, H hammer-on, S / Alt + S / Shift + S legato / shift slide / slide out down, V vibrato, P / Shift + P palm mute (note / beat), I let ring",
+        "Y natural harmonic, Ctrl + Alt + Y artificial, Alt + P pinch, Alt + T tapped;  N trill;  \": tremolo picking;  T or ) tapping;  $ slap;  ( left-hand tapping;  < fade in;  G / Ctrl + Alt + G grace note",
+        "Ctrl + D / Ctrl + U: brush down / up;  Shift + D / Shift + U: pick stroke down / up;  Ctrl + Alt + W: wide vibrato;  B: bend;  Ctrl + Alt + V: whammy bar",
         "Ctrl + C, Ctrl + X, Ctrl + V: copy, cut, paste;  Ctrl + Shift + V: Special Paste (several times, or replacing)",
         "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
@@ -592,6 +599,23 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_paste_dialog_done(move |ok| paste_dialog_done(&a, ok));
+    ui.set_bend_amounts(strings(bend_form::amounts()));
+    let a = app.clone();
+    ui.on_bend_kind_picked(move |i| {
+        bend_edit(&a, |f| {
+            f.pick_kind(usize::try_from(i).unwrap_or(usize::MAX))
+        })
+    });
+    let a = app.clone();
+    ui.on_bend_amount_picked(move |i| bend_edit(&a, |f| f.pick_amount(i + 1)));
+    let a = app.clone();
+    ui.on_bend_pressed(move |c, r| bend_edit(&a, |f| f.press(c, r)));
+    let a = app.clone();
+    ui.on_bend_dragged(move |c, r| bend_edit(&a, |f| f.drag(c, r)));
+    let a = app.clone();
+    ui.on_bend_released(move || bend_edit(&a, bend_form::BendForm::release));
+    let a = app.clone();
+    ui.on_bend_dialog_done(move |ok| bend_dialog_done(&a, ok));
     ui.set_track_instrument_names(strings(
         track_form::INSTRUMENTS
             .iter()
@@ -2621,6 +2645,97 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
             ui.set_tuplet_in_time_of(i32::from(t.in_time_of));
             ui.set_tuplet_dialog_shown(true);
         }
+        editing::Dialog::Bend | editing::Dialog::Whammy => {
+            let whammy = dialog == editing::Dialog::Whammy;
+            let here = {
+                let s = app.borrow();
+                if whammy {
+                    s.editing.whammy_here()
+                } else {
+                    s.editing.bend_here()
+                }
+            };
+            let Some(curve) = here else {
+                return;
+            };
+            let form = bend_form::BendForm::open(curve.as_ref(), whammy);
+            ui.set_bend_heading(if whammy { "Whammy Bar" } else { "Bend" }.into());
+            sync_bend(&ui, &form);
+            app.borrow_mut().bend_dialog = Some(form);
+            ui.set_bend_dialog_shown(true);
+        }
+    }
+}
+
+/// Shows the bend editor's state.
+fn sync_bend(ui: &AppWindow, f: &bend_form::BendForm) {
+    let types: &[&str] = if f.whammy {
+        &bend_form::WHAMMY_TYPES
+    } else {
+        &bend_form::BEND_TYPES
+    };
+    // "Custom" last, always, so the list never changes under the box.
+    let mut names: Vec<String> = types.iter().map(|t| (*t).to_owned()).collect();
+    names.push("Custom".to_owned());
+    let kind = f.kind.unwrap_or(types.len());
+    if ui.get_bend_types().row_count() != names.len() {
+        ui.set_bend_types(strings(names));
+    }
+    ui.set_bend_kind(i32::try_from(kind).unwrap_or(0));
+    ui.set_bend_amount(f.amount - 1);
+    let (low, high) = f.rows();
+    ui.set_bend_low(low);
+    ui.set_bend_high(high);
+    ui.set_bend_points(ModelRc::new(VecModel::from(
+        f.points
+            .iter()
+            .map(|p| GridPoint {
+                col: p.col,
+                row: p.row,
+            })
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_bend_path(f.path().into());
+}
+
+/// A change in the bend editor.
+fn bend_edit(app: &Shared, edit: impl FnOnce(&mut bend_form::BendForm)) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let form = {
+        let mut s = app.borrow_mut();
+        let Some(f) = s.bend_dialog.as_mut() else {
+            return;
+        };
+        edit(f);
+        f.clone()
+    };
+    sync_bend(&ui, &form);
+}
+
+/// The bend editor closed: on OK, a changed curve is one change at the
+/// caret (or on the selection).
+fn bend_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_bend_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(form) = app.borrow_mut().bend_dialog.take() else {
+        return;
+    };
+    if !ok || !form.changed {
+        return;
+    }
+    let command = if form.whammy {
+        oxiguitar_edit::Command::Whammy(form.bend())
+    } else {
+        oxiguitar_edit::Command::Bend(form.bend())
+    };
+    let typed = app.borrow_mut().editing.tool(command);
+    if let Some(t) = typed {
+        send_typed(app, t);
     }
 }
 

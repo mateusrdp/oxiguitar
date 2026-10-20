@@ -22,8 +22,8 @@
 use crate::editing::AtCaret;
 use crate::icons::{Face, Fit, Pen, S, VALUES, glyph};
 use oxiguitar_display::smufl::glyph::Glyph;
-use oxiguitar_edit::Command;
-use oxiguitar_model::NoteValue;
+use oxiguitar_edit::{Command, Effect};
+use oxiguitar_model::{Dynamic, NoteValue};
 
 /// One tool.
 #[derive(Clone, Copy, Debug)]
@@ -99,10 +99,42 @@ pub(crate) fn working(id: &str) -> Option<Option<&'static str>> {
         "repeat-start" => "[",
         "repeat-close" => "]",
         "free-time" => "|",
-        "time-signature" => "Ctrl + T",
         "key-signature" => "Ctrl + K",
         "rhythmic-interpretation" => "Ctrl + /",
         "directions" => "D",
+        "bend" => "B",
+        "whammy" => "Ctrl + Alt + V",
+        "dead" => "X",
+        "ghost" => "O",
+        "accent" => ";",
+        "heavy-accent" => ":",
+        "staccato" => "!",
+        "hammer" => "H",
+        "left-hand-tapping" => "(",
+        "legato-slide" => "S",
+        "shift-slide" => "Alt + S",
+        "slide-out-down" => "Shift + S",
+        "vibrato" => "V",
+        "palm-mute" => "P",
+        "let-ring" => "I",
+        "natural-harmonic" => "Y",
+        "artificial-harmonic" => "Ctrl + Alt + Y",
+        "trill" => "N",
+        "tremolo-picking" => "\"",
+        "wide-bridge-vibrato" => "Ctrl + Alt + W",
+        "fade-in" => "<",
+        "tapping" => "T",
+        "slap" => "$",
+        "brush-down" => "Ctrl + D",
+        "brush-up" => "Ctrl + U",
+        "pickstroke-down" => "Shift + D",
+        "pickstroke-up" => "Shift + U",
+        "grace-before" => "G",
+        "grace-on" => "Ctrl + Alt + G",
+        "semitone-up" => "Alt + Shift + Up",
+        "semitone-down" => "Alt + Shift + Down",
+        "multiple-ties" => "Shift + L",
+        "section" => "Shift + Insert",
         _ if command_of(id).is_some() || dialog_of(id).is_some() => return Some(None),
         _ => return None,
     }))
@@ -127,6 +159,57 @@ pub(crate) fn command_of(id: &str) -> Option<Command> {
         "repeat-close" => Command::RepeatEnd,
         "free-time" => Command::FreeTime,
         "double-bar" => Command::DoubleBar,
+        "semitone-up" => Command::SemitoneUp,
+        "semitone-down" => Command::SemitoneDown,
+        "multiple-ties" => Command::TieBeat,
+        "ppp" => Command::Dynamic(Dynamic::PPP),
+        "pp" => Command::Dynamic(Dynamic::PP),
+        "p" => Command::Dynamic(Dynamic::P),
+        "mp" => Command::Dynamic(Dynamic::MP),
+        "mf" => Command::Dynamic(Dynamic::MF),
+        "f" => Command::Dynamic(Dynamic::F),
+        "ff" => Command::Dynamic(Dynamic::FF),
+        "fff" => Command::Dynamic(Dynamic::FFF),
+        _ => return effect_of(id).map(Command::Effect),
+    })
+}
+
+/// The effect an effect tool switches (M3 slice 6).
+pub(crate) fn effect_of(id: &str) -> Option<Effect> {
+    use oxiguitar_edit::HarmonicKind as H;
+    use oxiguitar_model::{BeatTechnique, GraceKind, Slide, StrokeDirection};
+    Some(match id {
+        "ghost" => Effect::Ghost,
+        "accent" => Effect::Accent,
+        "heavy-accent" => Effect::HeavyAccent,
+        "staccato" => Effect::Staccato,
+        "let-ring" => Effect::LetRing,
+        "palm-mute" => Effect::PalmMute,
+        "dead" => Effect::Dead,
+        "natural-harmonic" => Effect::Harmonic(H::Natural),
+        "artificial-harmonic" => Effect::Harmonic(H::Artificial),
+        "fade-in" => Effect::FadeIn,
+        "grace-before" => Effect::Grace(GraceKind::BeforeBeat),
+        "grace-on" => Effect::Grace(GraceKind::OnBeat),
+        "hammer" => Effect::HammerPull,
+        "tremolo-picking" => Effect::TremoloPicking,
+        "left-hand-tapping" => Effect::LeftHandTap,
+        "legato-slide" => Effect::Slide(Slide::Legato),
+        "shift-slide" => Effect::Slide(Slide::Shift),
+        "slide-in-below" => Effect::Slide(Slide::InFromBelow),
+        "slide-in-above" => Effect::Slide(Slide::InFromAbove),
+        "slide-out-down" => Effect::Slide(Slide::OutDown),
+        "slide-out-up" => Effect::Slide(Slide::OutUp),
+        "trill" => Effect::Trill,
+        "vibrato" => Effect::Vibrato,
+        "wide-bridge-vibrato" => Effect::WideVibrato,
+        "brush-down" => Effect::Brush(StrokeDirection::Down),
+        "brush-up" => Effect::Brush(StrokeDirection::Up),
+        "pickstroke-down" => Effect::PickStroke(StrokeDirection::Down),
+        "pickstroke-up" => Effect::PickStroke(StrokeDirection::Up),
+        "tapping" => Effect::Technique(BeatTechnique::Tap),
+        "slap" => Effect::Technique(BeatTechnique::Slap),
+        "pop" => Effect::Technique(BeatTechnique::Pop),
         _ => return None,
     })
 }
@@ -141,8 +224,11 @@ pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
         | "time-signature"
         | "rhythmic-interpretation"
         | "alternate-endings"
-        | "directions" => Dialog::Bar,
+        | "directions"
+        | "section" => Dialog::Bar,
         "tuplet" => Dialog::Tuplet,
+        "bend" => Dialog::Bend,
+        "whammy" => Dialog::Whammy,
         _ => return None,
     })
 }
@@ -165,6 +251,8 @@ pub(crate) fn checked(id: &str, at: &AtCaret) -> bool {
         Some(Command::RepeatEnd) => at.repeat_end,
         Some(Command::DoubleBar) => at.double_bar,
         Some(Command::FreeTime) => at.free_time,
+        Some(Command::Effect(e)) => at.has(e),
+        Some(Command::Dynamic(d)) => at.dynamic == Some(d),
         _ => false,
     }
 }
@@ -181,9 +269,15 @@ pub(crate) fn tool_tip(id: &str, name: &str) -> String {
     match working(id) {
         Some(Some(keys)) => format!("{name} ({keys})"),
         Some(None) => name.to_owned(),
-        None => tip(name),
+        None if COMING.contains(&id) => tip(name),
+        None => format!("{name} (comes in M5)"),
     }
 }
+
+/// The tools still to come in M3: chords, lyrics and text. Every other
+/// tool that doesn't work yet is beyond TAB-1 and comes with Guitar Pro
+/// 8's notation, in M5.
+const COMING: &[&str] = &["lyrics", "chords", "chord", "text"];
 
 /// Which groups are collapsed. Every group starts expanded.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1276,7 +1370,16 @@ mod tests {
         );
         assert_eq!(tool_tip("rest", "Rest"), "Rest (R)");
         assert_eq!(tool_tip("half", "Half Note"), "Half Note");
-        assert_eq!(tool_tip("bend", "Bend"), "Bend (comes with the editor)");
+        assert_eq!(tool_tip("bend", "Bend"), "Bend (B)");
+        assert_eq!(tool_tip("chord", "Chord"), "Chord (comes with the editor)");
+        assert_eq!(tool_tip("fermata", "Fermata"), "Fermata (comes in M5)");
+        assert_eq!(command_of("ff"), Some(Command::Dynamic(Dynamic::FF)));
+        assert_eq!(
+            command_of("shift-slide"),
+            Some(Command::Effect(Effect::Slide(
+                oxiguitar_model::Slide::Shift
+            )))
+        );
         let at = AtCaret {
             voice: 1,
             value: Some(NoteValue::Eighth),

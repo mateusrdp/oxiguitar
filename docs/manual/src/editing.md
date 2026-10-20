@@ -1,6 +1,6 @@
 # Editing
 
-OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, undo, and find the bars that don't add up. Effects come next.
+OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, add effects, undo, and find the bars that don't add up. Chord diagrams, lyrics, text and the score's information come next.
 
 ## The caret
 
@@ -74,7 +74,7 @@ The bar commands work on the caret's bar or, with a selection, on its bars.
 | Ctrl + Delete | Deletes the caret's bar, or the selected bars, from every track (never the last bar left). A tempo change in them moves to the bar after them, so the music after them keeps its tempo |
 | [ and ] | A repeat opens at the bar, or closes at it (played twice); press again to take it away |
 | \| or Alt + Shift + L | Free time: the bar has no time signature to add up to |
-| Ctrl + T, Ctrl + K, Ctrl + /, D, Shift + Insert | Opens the **Bar** dialog |
+| Ctrl + K, Ctrl + /, D, Shift + Insert | Opens the **Bar** dialog |
 | Double-click on a time signature | Opens the **Bar** dialog for that bar |
 
 The **Bar** dialog (also **Edit → Bar…** and the palette's Clef, Key Signature, Time Signature, Rhythmic Interpretation, Alternate Endings and Directions) shows what the bar carries and changes any of it at once, as one change to undo:
@@ -109,6 +109,50 @@ Beats and bars paste into any track. Between a drum track and a pitched one only
 - **Tools → Transpose…**: every track, with the key signatures.
 
 Up is a positive number, down a negative one. **Keep the fingering** keeps each note on its string and moves its fret; otherwise each note goes to the fret nearest the one it had, so a run stays where your hand is. Notes that no string can play any more are left out, after a question saying how many. Drum tracks are never transposed. Undo brings everything back.
+
+## Effects
+
+Every effect of Guitar Pro's tablature has a key and a tool in the palette's **Effects** group. Pressed once, an effect goes on; pressed again, it comes off. A note effect goes on the note on the caret's string, and does nothing if that string has no note in the beat; on a staff without strings it goes on every note of the beat. A beat effect goes on the caret's beat. With a selection, both go on every note (or beat) selected, unless all of them have it already: then it comes off all of them. Rests take no effects. The tools light up when the caret's note or beat has their effect.
+
+Guitar Pro 8's keys, and a few of our own for effects it gives none (the effect's first letter, with at most one modifier):
+
+| Keys | Effect | On |
+| --- | --- | --- |
+| X | Dead note | Note |
+| O | Ghost note | Note |
+| ; / : | Accent / heavy accent | Note |
+| ! | Staccato | Note |
+| H | Hammer-on or pull-off to the next note | Note |
+| ( | Left-hand tapping | Note |
+| S | Legato slide | Note |
+| Alt + S | Shift slide | Note |
+| Shift + S | Slide out downwards | Note |
+| V | Vibrato | Note |
+| P / Shift + P | Palm mute on the note / on every note of the beat | Note |
+| I | Let ring | Note |
+| Y | Natural harmonic | Note |
+| Ctrl + Alt + Y | Artificial harmonic (an octave up) | Note |
+| Alt + P | Pinch harmonic | Note |
+| Alt + T | Tapped harmonic (12 frets up) | Note |
+| N | Trill with the next fret up, in sixteenths | Note |
+| B | The bend editor | Note |
+| " | Tremolo picking, in thirty-seconds | Beat |
+| T or ) | Tapping | Beat |
+| $ | Slap | Beat |
+| < | Fade in | Beat |
+| G / Ctrl + Alt + G | Grace note before the beat / on the beat | Beat |
+| Ctrl + D / Ctrl + U | Brush down / up, over a sixteenth | Beat |
+| Shift + D / Shift + U | Pick stroke down / up | Beat |
+| Ctrl + Alt + W | Wide vibrato with the whammy bar | Beat |
+| Ctrl + Alt + V | The whammy bar's editor | Beat |
+
+Slides in from below and from above and out upwards, popping and the semi-harmonic have tools in the palette but no keys. A note slides in one way and out one way: another slide on the same side takes the place of the first. A note has one harmonic: another kind takes its place. A grace note is a thirty-second, as Guitar Pro writes them, and takes no time in the bar.
+
+The palette's **dynamics**, ppp to fff, set the dynamic of the caret's beat, or of every selected beat (rests too), and its notes play at it. They have no keys. View → Dynamics shows them on the page.
+
+### Bends and the whammy bar
+
+**B** (or the palette's **Bend**) opens the **bend editor** for the note on the caret's string; **Ctrl + Alt + V** (or **Whammy Bar**) opens it for the beat's whammy bar. Pick a type (Bend, Bend and release, Release, Prebend, Prebend and bend, Prebend and release; for the whammy bar Dive, Dip, Return, Predive, Predive and dive) and a pitch from ¼ tone to 3 tones, or drag the curve's points on the grid: time across the note in twelfths, pitch up the side in quarter tones. A press on an empty grid starts a bend at that pitch. The curve has an origin, a middle held at one pitch between two places, and a destination, which is the shape a .gp file holds. **Enter** applies it, **Escape** cancels, and "No bend" takes the bend away. With a selection, the curve goes on every selected note (or beat).
 
 ## Undo and redo
 
