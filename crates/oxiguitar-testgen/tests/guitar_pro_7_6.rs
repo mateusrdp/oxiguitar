@@ -50,6 +50,9 @@ fn guitar_pro_7_6_keeps_our_songs() {
         );
         // What Guitar Pro 7.6 changes (above).
         ours.tempo_label.clear();
+        // The re-saves are older than the instructions saying what each
+        // file tests (20 Oct 2026).
+        ours.info.instructions.clear();
         for (o, t) in ours.tracks.iter_mut().zip(&theirs.score.tracks) {
             o.mix = t.mix;
             if t.chords.is_empty() {
@@ -155,6 +158,7 @@ fn our_writer_writes_what_guitar_pro_7_6_does() {
             .unwrap()
             .score;
         ours.tempo_label.clear();
+        ours.info.instructions.clear();
         for (o, t) in ours.tracks.iter_mut().zip(&theirs.tracks) {
             o.mix = t.mix;
             if t.chords.is_empty() {

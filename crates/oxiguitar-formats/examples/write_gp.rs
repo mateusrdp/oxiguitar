@@ -116,6 +116,29 @@ fn too_long(score: &Score) -> String {
     out
 }
 
+/// Whether a voice's last note slides to the next note (shift or legato),
+/// when there is none.
+fn slides_to_nothing(score: &oxiguitar_model::Score) -> bool {
+    use oxiguitar_model::{BeatKind, Slide};
+    score.tracks.iter().flat_map(|t| &t.staves).any(|s| {
+        (0..4).any(|voice| {
+            s.bars
+                .iter()
+                .filter_map(|b| b.voices.get(voice))
+                .flat_map(|v| &v.beats)
+                .rfind(|b| b.kind == BeatKind::Notes && !b.notes.is_empty())
+                .is_some_and(|b| {
+                    b.notes.iter().any(|n| {
+                        n.effects
+                            .slides
+                            .iter()
+                            .any(|s| matches!(s, Slide::Shift | Slide::Legato))
+                    })
+                })
+        })
+    })
+}
+
 fn main() {
     let args: Vec<PathBuf> = std::env::args_os().skip(1).map(PathBuf::from).collect();
     let Some((out, inputs)) = args.split_last() else {
@@ -146,6 +169,19 @@ fn main() {
                 .unwrap_or_else(|e| panic!("{name}: we can't read what we wrote: {e}"));
             std::fs::write(out.join(format!("{name}.notes")), notes(&back.score)).unwrap();
             std::fs::write(out.join(format!("{name}.long")), too_long(&back.score)).unwrap();
+            // MuseScore 4 crashes on a slide from a voice's last note to
+            // no note, a known MuseScore bug; such a file is ours and
+            // right, so musescore.py leaves it out and says why.
+            let skip = out.join(format!("{name}.musescore-skip"));
+            if slides_to_nothing(&back.score) {
+                std::fs::write(
+                    &skip,
+                    "a slide from a voice's last note to no note, which MuseScore 4 crashes on\n",
+                )
+                .unwrap();
+            } else {
+                let _ = std::fs::remove_file(&skip);
+            }
             let lost = file.losses.warning_count();
             println!("{name}: {} bytes, {lost} kinds of loss", file.data.len());
             written += 1;

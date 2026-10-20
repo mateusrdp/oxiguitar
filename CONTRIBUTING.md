@@ -88,6 +88,18 @@ Add the project to [CREDITS.md](CREDITS.md) in the same pull request. Nothing ma
 - **Public fixtures** (`fixtures/`) are files we made ourselves or that carry a license allowing redistribution. Each one is listed in `fixtures/README.md` with its origin.
 - **The private corpus** — community transcriptions of unclear ownership — is never committed. `corpus/MANIFEST.toml` lists names and checksums only. Never add such a file to the repository, even temporarily.
 
+### Checking what OxiGuitar writes, in Guitar Pro and elsewhere
+
+`fixtures/guitar-pro-check/` holds the .gp files OxiGuitar's writer makes of every reference song and of the test song in every format, with what each conversion lost (`conversions.txt`). They are there so anyone can open them in the program and version they have, on the system they have, and report what looks wrong. That covers Guitar Pro 7 or 8, older and newer releases, Windows, macOS, Wine, and other programs that read .gp (MuseScore, TuxGuitar, alphaTab, Songsterr). Each file says what it tests in its score information (File → Score Information in Guitar Pro, under Instructions), and `fixtures/reference/README.md` lists them all.
+
+When you check them:
+
+- Say which program, version and system you used, and which file and bar looks wrong. A screenshot helps, and so does the file as your program saves it again.
+- A file that tests how OxiGuitar shows a score (its layouts, paper size, dark page, the tracks shown) looks ordinary elsewhere. Its instructions say so.
+- Known differences that are other programs' bugs, not ours, are listed in `fixtures/guitar-pro-check/README.md`.
+
+After changing the writer or the reference songs, run `scripts/guitar-pro-check.sh` to write the files again; a test (`cargo test -p oxiguitar-testgen --test guitar_pro_check`) fails until they match the writer. Every test build also attaches them as "guitar-pro-check".
+
 ## Adding a file format
 
 Every format is its own plugin; the core recognises no format itself (docs/design/plugins.md). The Guitar Pro plugins in `plugins/gp3` … `plugins/gp` show the shape.

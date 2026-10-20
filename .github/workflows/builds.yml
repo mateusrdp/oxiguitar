@@ -91,15 +91,8 @@ jobs:
       - name: Files for Guitar Pro
         if: matrix.name == 'linux-x86_64'
         run: |
-          mkdir -p guitar-pro-check
-          {
-            for f in fixtures/reference/*.gp; do
-              target/release/oxiguitar-cli convert "$f" "guitar-pro-check/$(basename "$f")"
-            done
-            for f in fixtures/gp/oxiguitar-test-song.*; do
-              target/release/oxiguitar-cli convert "$f" "guitar-pro-check/test-song-from-${f##*.}.gp"
-            done
-          } | tee guitar-pro-check/conversions.txt
+          scripts/guitar-pro-check.sh guitar-pro-check
+          cp fixtures/guitar-pro-check/README.md guitar-pro-check/
       - if: matrix.name == 'linux-x86_64'
         uses: actions/upload-artifact@v4
         with:
