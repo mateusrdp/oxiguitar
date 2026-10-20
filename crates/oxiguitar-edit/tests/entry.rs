@@ -9,6 +9,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing)]
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use oxiguitar_edit::{Caret, Command, History, Selection, apply};
 use oxiguitar_model::Score;
@@ -27,6 +28,19 @@ impl Rng {
     fn below(&mut self, n: usize) -> usize {
         (self.next() % n.max(1) as u64) as usize
     }
+}
+
+/// A paste; the run puts in what it last copied.
+fn paste(times: u8, replace: bool) -> Command {
+    Command::Paste(oxiguitar_edit::Paste {
+        clip: Arc::new(oxiguitar_edit::Clip::Beats {
+            beats: Vec::new(),
+            drums: false,
+            chords: Vec::new(),
+        }),
+        times,
+        replace,
+    })
 }
 
 /// Every command, as random runs pick them.
@@ -100,6 +114,11 @@ fn commands() -> Vec<Command> {
             text: "Chorus".into(),
             color: oxiguitar_model::Color::default(),
         })),
+        Command::Cut,
+        paste(1, false),
+        paste(1, true),
+        paste(3, false),
+        paste(2, true),
         Command::Bar(Box::new(oxiguitar_edit::BarState {
             time_signature: oxiguitar_model::TimeSignature {
                 numerator: 5,
@@ -168,15 +187,42 @@ fn random_edits(score: &mut Score, history: &mut History, seed: u64, steps: usiz
     let mut caret = Caret::at_start(score, 0).unwrap();
     let mut changes = 0;
     let all = commands();
+    let mut clip: Option<Arc<oxiguitar_edit::Clip>> = None;
     for _ in 0..steps {
         if rng.below(3) == 0 {
             caret = somewhere(score, &mut rng, caret);
         }
-        let command = all[rng.below(all.len())].clone();
-        let selection = (rng.below(5) == 0).then(|| {
-            let head = caret.next_beat(score).next_beat(score);
-            Selection::between(caret, head)
-        });
+        let selection = match rng.below(10) {
+            0 | 1 => {
+                let head = caret.next_beat(score).next_beat(score);
+                Some(Selection::between(caret, head))
+            }
+            // Whole bars across tracks.
+            2 => {
+                let last = score.tracks.len() - 1;
+                let bars = (
+                    caret.bar,
+                    (caret.bar + rng.below(3)).min(score.bar_count() - 1),
+                );
+                Some(Selection::Bars {
+                    tracks: (caret.track, (caret.track + rng.below(2)).min(last)),
+                    bars,
+                })
+            }
+            _ => None,
+        };
+        if rng.below(8) == 0 {
+            clip = oxiguitar_edit::copy(score, caret, selection)
+                .map(Arc::new)
+                .or(clip);
+        }
+        let mut command = all[rng.below(all.len())].clone();
+        if let Command::Paste(p) = &mut command {
+            match &clip {
+                Some(c) => p.clip = c.clone(),
+                None => continue,
+            }
+        }
         if let Some(e) = apply(score, history, caret, selection, command) {
             caret = e.caret;
             changes += 1;

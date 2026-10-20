@@ -12,7 +12,7 @@
 
 import { Slider, ScrollView, Palette, ComboBox, Button } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
-import { BarDialog, BarFields, TupletDialog } from "bar_dialog.slint";
+import { BarDialog, BarFields, PasteDialog, TupletDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -790,6 +790,13 @@ export component AppWindow inherits Window {
     in-out property <int> tuplet-in-time-of: 2;
     pure callback tuplet-usual(int) -> int;
     callback tuplet-dialog-done(bool);
+    in property <bool> paste-dialog-shown: false;
+    in-out property <int> paste-times: 1;
+    in-out property <bool> paste-replace: false;
+    callback paste-dialog-done(bool);
+    // The score's sections, for Edit → Go to Section.
+    in property <[string]> sections;
+    callback go-to-section(int);
     // Gives the keyboard back to the page (after a question).
     public function focus-page() { keys.focus(); }
     callback export-pdf();
@@ -894,6 +901,17 @@ export component AppWindow inherits Window {
             MenuItem { title: root.redo-title; enabled: root.can-redo; shortcut: @keys(Control + Y); activated => { root.redo(); } }
             MenuSeparator { }
             MenuItem { title: "Select All"; enabled: root.has-score; shortcut: @keys(Control + A); activated => { root.caret-key("a", false, true); } }
+            MenuSeparator { }
+            MenuItem { title: "Cut (Ctrl + X)"; enabled: root.has-score; activated => { root.edit-command("cut"); } }
+            MenuItem { title: "Copy (Ctrl + C)"; enabled: root.has-score; activated => { root.edit-command("copy"); } }
+            MenuItem { title: "Paste (Ctrl + V)"; enabled: root.has-score; activated => { root.edit-command("paste"); } }
+            MenuItem { title: "Special Paste… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("special-paste"); } }
+            MenuSeparator { }
+            Menu {
+                title: "Go to Section";
+                if root.sections.length == 0 : MenuItem { title: "No sections"; enabled: false; }
+                for s[i] in root.sections : MenuItem { title: s; activated => { root.go-to-section(i); } }
+            }
             MenuSeparator { }
             // Note entry's keys are taken on the page (editing.rs); these
             // items name them, and do the same.
@@ -1546,6 +1564,14 @@ export component AppWindow inherits Window {
         in-time-of <=> root.tuplet-in-time-of;
         usual(n) => { return root.tuplet-usual(n); }
         done(ok) => { root.tuplet-dialog-done(ok); }
+    }
+
+    if root.paste-dialog-shown : PasteDialog {
+        width: root.width;
+        height: root.height;
+        times <=> root.paste-times;
+        replace <=> root.paste-replace;
+        done(ok) => { root.paste-dialog-done(ok); }
     }
 
     if root.question-shown : Question {
