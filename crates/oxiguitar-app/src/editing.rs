@@ -186,6 +186,91 @@ pub(crate) struct AtCaret {
     pub(crate) double_bar: bool,
     /// The caret's bar is in free time.
     pub(crate) free_time: bool,
+    /// The effects of the caret's note and beat, a bit per entry of
+    /// [`EFFECTS`].
+    pub(crate) effects: u64,
+    /// The caret's beat's dynamic.
+    pub(crate) dynamic: Option<oxiguitar_model::Dynamic>,
+}
+
+impl AtCaret {
+    /// Whether the caret's note (or beat) has `e`.
+    pub(crate) fn has(&self, e: oxiguitar_edit::Effect) -> bool {
+        EFFECTS
+            .iter()
+            .position(|x| *x == e)
+            .is_some_and(|i| self.effects & (1 << i) != 0)
+    }
+}
+
+/// Every effect the palette shows as on or off.
+pub(crate) const EFFECTS: &[oxiguitar_edit::Effect] = {
+    use oxiguitar_edit::{Effect as E, HarmonicKind as H};
+    use oxiguitar_model::{BeatTechnique as T, GraceKind as G, Slide, StrokeDirection as D};
+    &[
+        E::Dead,
+        E::Ghost,
+        E::Accent,
+        E::HeavyAccent,
+        E::Staccato,
+        E::HammerPull,
+        E::LeftHandTap,
+        E::Slide(Slide::Legato),
+        E::Slide(Slide::Shift),
+        E::Slide(Slide::InFromBelow),
+        E::Slide(Slide::InFromAbove),
+        E::Slide(Slide::OutDown),
+        E::Slide(Slide::OutUp),
+        E::Vibrato,
+        E::PalmMute,
+        E::LetRing,
+        E::Harmonic(H::Natural),
+        E::Harmonic(H::Artificial),
+        E::Harmonic(H::Tapped),
+        E::Harmonic(H::Pinch),
+        E::Harmonic(H::Semi),
+        E::Trill,
+        E::TremoloPicking,
+        E::WideVibrato,
+        E::FadeIn,
+        E::Technique(T::Tap),
+        E::Technique(T::Slap),
+        E::Technique(T::Pop),
+        E::Brush(D::Down),
+        E::Brush(D::Up),
+        E::PickStroke(D::Down),
+        E::PickStroke(D::Up),
+        E::Grace(G::BeforeBeat),
+        E::Grace(G::OnBeat),
+    ]
+};
+
+/// The bits of [`EFFECTS`] the caret's note and beat have: a note effect
+/// as the note on the caret's string has it (every note, on a staff
+/// without strings), a beat effect as the beat has it.
+fn effects_at(beat: &oxiguitar_model::Beat, string: Option<u8>) -> u64 {
+    let notes: Vec<&oxiguitar_model::Note> = beat
+        .notes
+        .iter()
+        .filter(|n| string.is_none() || n.string() == string)
+        .collect();
+    let mut bits = 0;
+    for (i, e) in EFFECTS.iter().enumerate() {
+        let on = match e {
+            oxiguitar_edit::Effect::TremoloPicking
+            | oxiguitar_edit::Effect::WideVibrato
+            | oxiguitar_edit::Effect::FadeIn
+            | oxiguitar_edit::Effect::Technique(_)
+            | oxiguitar_edit::Effect::Brush(_)
+            | oxiguitar_edit::Effect::PickStroke(_)
+            | oxiguitar_edit::Effect::Grace(_) => e.on_beat(beat),
+            _ => !notes.is_empty() && notes.iter().all(|n| e.on_note(beat, n)),
+        };
+        if on {
+            bits |= 1 << i;
+        }
+    }
+    bits
 }
 
 /// A dialog the keys or the palette open at the caret.
@@ -196,18 +281,70 @@ pub(crate) enum Dialog {
     Bar,
     /// Custom N-tuplet.
     Tuplet,
+    /// The bend editor, for the caret's note.
+    Bend,
+    /// The whammy bar's editor, for the caret's beat.
+    Whammy,
 }
 
-/// The dialog a key opens, as Guitar Pro 8's keys open its own: Ctrl + T
-/// (time signature), Ctrl + K (key signature), Ctrl + / (feel), D
-/// (directions) and Shift + Insert (section) all open the Bar dialog.
+/// The dialog a key opens, as Guitar Pro 8's keys open its own: Ctrl + K
+/// (key signature), Ctrl + / (feel), D (directions) and Shift + Insert
+/// (section) open the Bar dialog; B the bend editor, Ctrl + Alt + V the
+/// whammy bar's. Ctrl + T, Guitar Pro's time signature key, is Text's
+/// (Mateus, 20 Oct 2026).
 pub(crate) fn dialog_key(name: &str, shift: bool, ctrl: bool, alt: bool) -> Option<Dialog> {
     match (name, ctrl, alt) {
-        ("t" | "T" | "k" | "K" | "/" | "?", true, false) => Some(Dialog::Bar),
+        ("k" | "K" | "/" | "?", true, false) => Some(Dialog::Bar),
         ("d" | "D", false, false) if !shift => Some(Dialog::Bar),
         ("insert", false, false) if shift => Some(Dialog::Bar),
+        ("b", false, false) if !shift => Some(Dialog::Bend),
+        ("v" | "V", true, true) => Some(Dialog::Whammy),
         _ => None,
     }
+}
+
+/// The effect a key switches (M3 slice 6): Guitar Pro 8's keys, and keys
+/// of our own for the effects it gives none, each the effect's first
+/// letter with at most one modifier, the commonest guitar effects first
+/// (Mateus, 20 Oct 2026): T tapping, Alt + S shift slide, Shift + S slide
+/// out downwards, Alt + P pinch harmonic, Alt + T tapped harmonic.
+pub(crate) fn effect_key(name: &str, shift: bool, ctrl: bool, alt: bool) -> Option<Command> {
+    use oxiguitar_edit::{Effect as E, HarmonicKind as H};
+    use oxiguitar_model::{BeatTechnique, GraceKind, Slide, StrokeDirection};
+    let effect = match (name, shift, ctrl, alt) {
+        ("x", false, false, false) => E::Dead,
+        ("o", false, false, false) => E::Ghost,
+        (";", _, false, false) => E::Accent,
+        (":", _, false, false) => E::HeavyAccent,
+        ("!", _, false, false) => E::Staccato,
+        ("h", false, false, false) => E::HammerPull,
+        ("(", _, false, false) => E::LeftHandTap,
+        ("s", false, false, false) => E::Slide(Slide::Legato),
+        ("s" | "S", false, false, true) => E::Slide(Slide::Shift),
+        ("S", true, false, false) => E::Slide(Slide::OutDown),
+        ("v", false, false, false) => E::Vibrato,
+        ("p", false, false, false) => E::PalmMute,
+        ("P", true, false, false) => E::PalmMuteBeat,
+        ("i", false, false, false) => E::LetRing,
+        ("y", false, false, false) => E::Harmonic(H::Natural),
+        ("y" | "Y", false, true, true) => E::Harmonic(H::Artificial),
+        ("p" | "P", false, false, true) => E::Harmonic(H::Pinch),
+        ("t" | "T", false, false, true) => E::Harmonic(H::Tapped),
+        ("n", false, false, false) => E::Trill,
+        ("\"", _, false, false) => E::TremoloPicking,
+        ("w" | "W", false, true, true) => E::WideVibrato,
+        ("<", _, false, false) => E::FadeIn,
+        ("t", false, false, false) | (")", _, false, false) => E::Technique(BeatTechnique::Tap),
+        ("$", _, false, false) => E::Technique(BeatTechnique::Slap),
+        ("d" | "D", false, true, false) => E::Brush(StrokeDirection::Down),
+        ("u" | "U", false, true, false) => E::Brush(StrokeDirection::Up),
+        ("D", true, false, false) => E::PickStroke(StrokeDirection::Down),
+        ("U", true, false, false) => E::PickStroke(StrokeDirection::Up),
+        ("g", false, false, false) => E::Grace(GraceKind::BeforeBeat),
+        ("g" | "G", false, true, true) => E::Grace(GraceKind::OnBeat),
+        _ => return None,
+    };
+    Some(Command::Effect(effect))
 }
 
 /// A command typed at the caret, as the worker takes it.
@@ -355,7 +492,7 @@ impl Editing {
             ("down", false, true) if shift => Command::SemitoneDown,
             ("up", false, true) => Command::StringUp,
             ("down", false, true) => Command::StringDown,
-            _ => return None,
+            _ => effect_key(name, shift, ctrl, alt)?,
         };
         Some(Typed {
             command,
@@ -403,6 +540,47 @@ impl Editing {
     /// The Inspector's view of the caret's bar.
     pub(crate) fn bar_view(&self) -> Option<crate::inspector::BarView> {
         crate::inspector::bar_view(self.score.as_ref()?, self.caret?)
+    }
+
+    /// What the bend editor opens on: the bend of the note on the caret's
+    /// string, or none. `None` when there is nothing to bend: no note on a
+    /// string there and no selection, or a drum track.
+    pub(crate) fn bend_here(&self) -> Option<Option<oxiguitar_model::Bend>> {
+        let c = self.caret?;
+        let score = self.score.as_ref()?;
+        let track = score.tracks.get(c.track)?;
+        if track.instrument.percussion || strings(score, c) == 0 {
+            return None;
+        }
+        let note = c
+            .voice_in(score)
+            .and_then(|v| v.beats.get(c.beat))
+            .filter(|b| b.kind == BeatKind::Notes)
+            .and_then(|b| b.notes.iter().find(|n| n.string() == Some(c.string)));
+        match note {
+            Some(n) => Some(n.effects.bend.clone()),
+            None => self.selection.map(|_| None),
+        }
+    }
+
+    /// What the whammy bar's editor opens on: the caret's beat's curve, or
+    /// none. `None` when the beat has no notes and nothing is selected, or
+    /// on a track without strings.
+    pub(crate) fn whammy_here(&self) -> Option<Option<oxiguitar_model::Bend>> {
+        let c = self.caret?;
+        let score = self.score.as_ref()?;
+        let track = score.tracks.get(c.track)?;
+        if track.instrument.percussion || strings(score, c) == 0 {
+            return None;
+        }
+        let beat = c
+            .voice_in(score)
+            .and_then(|v| v.beats.get(c.beat))
+            .filter(|b| b.kind == BeatKind::Notes);
+        match beat {
+            Some(b) => Some(b.effects.whammy.clone()),
+            None => self.selection.map(|_| None),
+        }
     }
 
     /// The tuplet of the caret's beat, if it is in one.
@@ -562,6 +740,16 @@ impl Editing {
             repeat_end: bar.is_some_and(|b| b.repeat_end.is_some()),
             double_bar: bar.is_some_and(|b| b.double_bar),
             free_time: bar.is_some_and(|b| b.free_time),
+            effects: beat.map_or(0, |b| {
+                effects_at(b, (strings(score, c) > 0).then_some(c.string))
+            }),
+            dynamic: beat.and_then(|b| {
+                b.effects.dynamic.or_else(|| {
+                    (b.kind == BeatKind::Notes)
+                        .then(|| b.notes.first().map(|n| n.dynamic))
+                        .flatten()
+                })
+            }),
         })
     }
 
@@ -1217,7 +1405,7 @@ mod tests {
                 "{name}"
             );
         }
-        assert_eq!(typed(&mut e, "x", false, false, false, 0), None);
+        assert_eq!(typed(&mut e, "z", false, false, false, 0), None);
         assert_eq!(
             typed(&mut e, "1", false, true, false, 0),
             None,
@@ -1310,8 +1498,94 @@ mod tests {
     }
 
     #[test]
+    fn effect_keys() {
+        use oxiguitar_edit::{Effect as E, HarmonicKind as H};
+        use oxiguitar_model::{BeatTechnique, GraceKind, Slide, StrokeDirection};
+        for (name, shift, ctrl, alt, e) in [
+            ("x", false, false, false, E::Dead),
+            ("o", false, false, false, E::Ghost),
+            (";", false, false, false, E::Accent),
+            (":", true, false, false, E::HeavyAccent),
+            ("!", true, false, false, E::Staccato),
+            ("h", false, false, false, E::HammerPull),
+            ("(", true, false, false, E::LeftHandTap),
+            ("s", false, false, false, E::Slide(Slide::Legato)),
+            ("s", false, false, true, E::Slide(Slide::Shift)),
+            ("S", true, false, false, E::Slide(Slide::OutDown)),
+            ("v", false, false, false, E::Vibrato),
+            ("p", false, false, false, E::PalmMute),
+            ("P", true, false, false, E::PalmMuteBeat),
+            ("i", false, false, false, E::LetRing),
+            ("y", false, false, false, E::Harmonic(H::Natural)),
+            ("y", false, true, true, E::Harmonic(H::Artificial)),
+            ("p", false, false, true, E::Harmonic(H::Pinch)),
+            ("t", false, false, true, E::Harmonic(H::Tapped)),
+            ("n", false, false, false, E::Trill),
+            ("\"", true, false, false, E::TremoloPicking),
+            ("w", false, true, true, E::WideVibrato),
+            ("<", true, false, false, E::FadeIn),
+            ("t", false, false, false, E::Technique(BeatTechnique::Tap)),
+            (")", true, false, false, E::Technique(BeatTechnique::Tap)),
+            ("$", true, false, false, E::Technique(BeatTechnique::Slap)),
+            ("d", false, true, false, E::Brush(StrokeDirection::Down)),
+            ("u", false, true, false, E::Brush(StrokeDirection::Up)),
+            (
+                "D",
+                true,
+                false,
+                false,
+                E::PickStroke(StrokeDirection::Down),
+            ),
+            ("U", true, false, false, E::PickStroke(StrokeDirection::Up)),
+            ("g", false, false, false, E::Grace(GraceKind::BeforeBeat)),
+            ("g", false, true, true, E::Grace(GraceKind::OnBeat)),
+        ] {
+            assert_eq!(
+                effect_key(name, shift, ctrl, alt),
+                Some(Command::Effect(e)),
+                "{name}"
+            );
+        }
+        // Keys taken by something else.
+        assert_eq!(effect_key("t", false, true, false), None);
+        assert_eq!(effect_key("d", false, false, false), None);
+        assert_eq!(effect_key("s", false, true, false), None);
+        // The palette shows the caret's note's effects.
+        let mut e = editing(1, &[0]);
+        let t = e
+            .typed("x", false, false, false, Instant::now())
+            .map(|t| t.command);
+        assert_eq!(t, Some(Command::Effect(E::Dead)));
+        let mut s = (*e.score().unwrap()).clone();
+        let c = e.caret().unwrap();
+        let mut h = oxiguitar_edit::History::new();
+        oxiguitar_edit::apply(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Fret {
+                fret: 3,
+                again: false,
+            },
+        )
+        .unwrap();
+        oxiguitar_edit::apply(&mut s, &mut h, c, None, Command::Effect(E::Dead)).unwrap();
+        e.changed(Arc::new(s));
+        let at = e.at_caret().unwrap();
+        assert!(at.has(E::Dead) && !at.has(E::Ghost));
+        assert!(EFFECTS.len() <= 64);
+    }
+
+    #[test]
     fn dialog_keys() {
-        assert_eq!(dialog_key("t", false, true, false), Some(Dialog::Bar));
+        assert_eq!(
+            dialog_key("t", false, true, false),
+            None,
+            "Ctrl + T is Text's"
+        );
+        assert_eq!(dialog_key("b", false, false, false), Some(Dialog::Bend));
+        assert_eq!(dialog_key("v", false, true, true), Some(Dialog::Whammy));
         assert_eq!(dialog_key("k", false, true, false), Some(Dialog::Bar));
         assert_eq!(dialog_key("d", false, false, false), Some(Dialog::Bar));
         assert_eq!(dialog_key("insert", true, false, false), Some(Dialog::Bar));

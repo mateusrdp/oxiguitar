@@ -160,6 +160,17 @@ pub enum Command {
     TrackProperties(Box<crate::TrackSettings>),
     /// A transposition of the caret's track, the selection or every track.
     Transpose(crate::Transposition),
+    /// An effect switched on or off at the caret, or on the selection
+    /// (TAB-1).
+    Effect(crate::Effect),
+    /// This dynamic on the caret's beat, or the selected beats.
+    Dynamic(Dynamic),
+    /// This bend on the caret's note, or the selected notes; `None` for
+    /// none.
+    Bend(Option<oxiguitar_model::Bend>),
+    /// This whammy-bar curve on the caret's beat, or the selected beats;
+    /// `None` for none.
+    Whammy(Option<oxiguitar_model::Bend>),
 }
 
 impl Command {
@@ -217,6 +228,10 @@ impl Command {
             Command::MoveTrackDown => "Move Track Down",
             Command::TrackProperties(_) => "Track Properties",
             Command::Transpose(_) => "Transpose",
+            Command::Effect(e) => e.label(),
+            Command::Dynamic(_) => "Dynamic",
+            Command::Bend(_) => "Bend",
+            Command::Whammy(_) => "Whammy Bar",
         }
     }
 }
@@ -257,6 +272,9 @@ pub fn apply(
         return edited;
     }
     if let Some(edited) = crate::transpose::apply(score, history, caret, selection, &command) {
+        return edited;
+    }
+    if let Some(edited) = crate::effects::apply(score, history, caret, selection, &command) {
         return edited;
     }
     let label = command.label();
@@ -467,7 +485,7 @@ struct Plan {
     caret: Caret,
 }
 
-fn staff_of(score: &Score, c: Caret) -> Option<&Staff> {
+pub(crate) fn staff_of(score: &Score, c: Caret) -> Option<&Staff> {
     score.tracks.get(c.track)?.staves.get(c.staff)
 }
 
@@ -703,7 +721,11 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::MoveTrackUp
         | Command::MoveTrackDown
         | Command::TrackProperties(_)
-        | Command::Transpose(_) => None,
+        | Command::Transpose(_)
+        | Command::Effect(_)
+        | Command::Dynamic(_)
+        | Command::Bend(_)
+        | Command::Whammy(_) => None,
         Command::Tuplet(t) => {
             let targets = targets(score, c, selection);
             let off = staff
@@ -1089,7 +1111,11 @@ fn dynamic_at(score: &Score, c: Caret) -> Dynamic {
 /// The beats a command on durations or pitches acts on, as (bar, beat) in
 /// the caret's voice: the selected beats of the caret's staff and voice,
 /// or the caret's beat.
-fn targets(score: &Score, c: Caret, selection: Option<Selection>) -> Vec<(usize, usize)> {
+pub(crate) fn targets(
+    score: &Score,
+    c: Caret,
+    selection: Option<Selection>,
+) -> Vec<(usize, usize)> {
     let Some(staff) = staff_of(score, c) else {
         return Vec::new();
     };

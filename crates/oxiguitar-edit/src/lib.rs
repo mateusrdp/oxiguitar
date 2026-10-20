@@ -17,6 +17,8 @@
 //!   the score.
 //! - [`apply`]: note entry, each [`Command`] typed at the caret one
 //!   undoable change.
+//! - Effects ([`Effect`], slice 6): switched on and off at the caret or
+//!   on a selection, with a default for those that hold a value.
 //! - [`BarCheck`]: the bars whose beats don't add up to their time
 //!   signature. Every bar is checked once when a file opens; after that only
 //!   the bars an edit touched ([`Touched`]), nothing more (Mateus, 19 Oct
@@ -28,6 +30,7 @@ mod bars;
 mod caret;
 mod check;
 mod clip;
+mod effects;
 mod entry;
 mod history;
 mod selection;
@@ -38,6 +41,7 @@ pub use bars::BarState;
 pub use caret::{Caret, StaffBar, VOICES, beat_at, onsets};
 pub use check::{BarCheck, adds_up};
 pub use clip::{Clip, ClipTrack, Paste, copy};
+pub use effects::{Effect, HarmonicKind};
 pub use entry::{Command, Edited, apply, new_score};
 pub use history::{Change, History, Region, Touched};
 pub use selection::{Selection, Span};

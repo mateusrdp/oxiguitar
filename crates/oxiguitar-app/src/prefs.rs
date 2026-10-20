@@ -21,6 +21,8 @@ pub(crate) struct ViewPrefs {
     pub(crate) dark_interface: bool,
     /// Light notation on a dark page; off by default, so the page is white.
     pub(crate) dark_page: bool,
+    /// Dynamics on the page; off by default, as they clutter it (Mateus,
+    /// 20 Oct 2026).
     pub(crate) dynamics: bool,
     pub(crate) layout: Layout,
     pub(crate) paper: Paper,
@@ -31,7 +33,7 @@ impl Default for ViewPrefs {
         ViewPrefs {
             dark_interface: true,
             dark_page: false,
-            dynamics: true,
+            dynamics: false,
             layout: Layout::Page,
             paper: Paper::A4,
         }
@@ -101,7 +103,7 @@ mod tests {
     #[test]
     fn defaults_are_a_dark_interface_and_a_white_page() {
         let d = ViewPrefs::from_value(None);
-        assert!(d.dark_interface && !d.dark_page && d.dynamics);
+        assert!(d.dark_interface && !d.dark_page && !d.dynamics);
         assert_eq!(ViewPrefs::from_value(Some(&json!("nonsense"))), d);
     }
 
@@ -110,7 +112,7 @@ mod tests {
         let p = ViewPrefs {
             dark_interface: false,
             dark_page: true,
-            dynamics: false,
+            dynamics: true,
             layout: Layout::Horizontal,
             paper: Paper::Letter,
         };

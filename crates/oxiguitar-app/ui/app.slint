@@ -12,7 +12,7 @@
 
 import { Slider, ScrollView, Palette, ComboBox, Button } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
-import { BarDialog, BarFields, PasteDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
+import { BarDialog, BarFields, BendDialog, GridPoint, PasteDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -773,7 +773,7 @@ export component AppWindow inherits Window {
     in-out property <bool> dark-interface: true;
     init => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
     changed dark-interface => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
-    in-out property <bool> dynamics: true;
+    in-out property <bool> dynamics: false;
 
     // The shell (shell.rs): the toolbar and the four areas, numbered
     // 0 top, 1 bottom, 2 left, 3 right. The View menu's ticks show or hide
@@ -848,6 +848,23 @@ export component AppWindow inherits Window {
     in-out property <int> tuplet-in-time-of: 2;
     pure callback tuplet-usual(int) -> int;
     callback tuplet-dialog-done(bool);
+    // The bend and whammy-bar editor (bend_form.rs).
+    in property <bool> bend-dialog-shown: false;
+    in property <string> bend-heading: "Bend";
+    in property <[string]> bend-types;
+    in property <[string]> bend-amounts;
+    in-out property <int> bend-kind;
+    in-out property <int> bend-amount;
+    in property <int> bend-low: 0;
+    in property <int> bend-high: 12;
+    in property <[GridPoint]> bend-points;
+    in property <string> bend-path;
+    callback bend-kind-picked(int);
+    callback bend-amount-picked(int);
+    callback bend-pressed(float, float);
+    callback bend-dragged(float, float);
+    callback bend-released();
+    callback bend-dialog-done(bool);
     in property <bool> paste-dialog-shown: false;
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
@@ -1020,7 +1037,7 @@ export component AppWindow inherits Window {
             MenuSeparator { }
             MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
             MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
-            MenuItem { title: "Bar… (Ctrl + T)"; enabled: root.has-score; activated => { root.edit-command("bar-dialog"); } }
+            MenuItem { title: "Bar… (Ctrl + K)"; enabled: root.has-score; activated => { root.edit-command("bar-dialog"); } }
             MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
             MenuSeparator { }
             MenuItem { title: "Track Properties…"; enabled: root.has-score; activated => { root.edit-command("track-properties"); } }
@@ -1703,6 +1720,26 @@ export component AppWindow inherits Window {
         in-time-of <=> root.tuplet-in-time-of;
         usual(n) => { return root.tuplet-usual(n); }
         done(ok) => { root.tuplet-dialog-done(ok); }
+    }
+
+    if root.bend-dialog-shown : BendDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.bend-heading;
+        types: root.bend-types;
+        amounts: root.bend-amounts;
+        kind <=> root.bend-kind;
+        amount <=> root.bend-amount;
+        low: root.bend-low;
+        high: root.bend-high;
+        points: root.bend-points;
+        path: root.bend-path;
+        kind-picked(i) => { root.bend-kind-picked(i); }
+        amount-picked(i) => { root.bend-amount-picked(i); }
+        pressed(c, r) => { root.bend-pressed(c, r); }
+        dragged(c, r) => { root.bend-dragged(c, r); }
+        released => { root.bend-released(); }
+        done(ok) => { root.bend-dialog-done(ok); }
     }
 
     if root.paste-dialog-shown : PasteDialog {

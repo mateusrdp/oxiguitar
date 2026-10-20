@@ -487,3 +487,145 @@ export component TransposeDialog inherits Rectangle {
         }
     }
 }
+
+// A point of a bend curve on the editor's grid (`bend_form::Point`).
+export struct GridPoint {
+    col: int,
+    row: int,
+}
+
+// The bend and whammy-bar editor (M3 slice 6; `bend_form.rs`): a type, a
+// pitch, and a curve whose points are dragged on a grid of twelfths of the
+// note by quarter tones.
+export component BendDialog inherits Rectangle {
+    in property <string> heading: "Bend";
+    in property <[string]> types;
+    in property <[string]> amounts;
+    in-out property <int> kind;
+    in-out property <int> amount;
+    // The lowest and highest rows (quarter tones).
+    in property <int> low: 0;
+    in property <int> high: 12;
+    in property <[GridPoint]> points;
+    // The curve as SVG path data, 10 units a cell.
+    in property <string> path;
+    callback kind-picked(int);
+    callback amount-picked(int);
+    callback pressed(float, float);
+    callback dragged(float, float);
+    callback released();
+    callback done(bool);
+    property <length> grid-w: 360px;
+    property <length> grid-h: 240px;
+    property <length> cell-w: self.grid-w / 12;
+    property <length> cell-h: self.grid-h / (self.high - self.low);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 460px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 10px;
+            HorizontalLayout {
+                spacing: 8px;
+                ComboBox {
+                    model: root.types;
+                    current-index <=> root.kind;
+                    selected => { root.kind-picked(self.current-index); }
+                }
+                ComboBox {
+                    model: root.amounts;
+                    current-index <=> root.amount;
+                    selected => { root.amount-picked(self.current-index); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 6px;
+                // Whole tones up the side.
+                Rectangle {
+                    width: 34px;
+                    height: root.grid-h;
+                    for i in (root.high - root.low) / 4 + 1 : Text {
+                        property <int> tones: (root.high - i * 4) / 4;
+                        x: 0;
+                        y: i * 4 * root.cell-h - 7px;
+                        width: 30px;
+                        horizontal-alignment: right;
+                        font-size: 11px;
+                        color: Palette.foreground;
+                        opacity: 0.7;
+                        text: self.tones == 0 ? "0" : self.tones < 0 ? "−" + (-self.tones) : self.tones;
+                    }
+                }
+                Rectangle {
+                    width: root.grid-w;
+                    height: root.grid-h;
+                    background: Palette.alternate-background;
+                    border-color: Palette.border;
+                    border-width: 1px;
+                    for i in 13 : Rectangle {
+                        x: i * root.cell-w;
+                        y: 0;
+                        width: 1px;
+                        height: root.grid-h;
+                        background: Palette.border;
+                        opacity: mod(i, 3) == 0 ? 0.9 : 0.4;
+                    }
+                    for i in root.high - root.low + 1 : Rectangle {
+                        x: 0;
+                        y: i * root.cell-h;
+                        width: root.grid-w;
+                        height: root.high - i == 0 ? 2px : 1px;
+                        background: Palette.border;
+                        opacity: mod(root.high - i, 4) == 0 ? 0.9 : 0.35;
+                    }
+                    Path {
+                        x: 0;
+                        y: 0;
+                        width: root.grid-w;
+                        height: root.grid-h;
+                        commands: root.path;
+                        viewbox-x: 0;
+                        viewbox-y: 0;
+                        viewbox-width: 120;
+                        viewbox-height: (root.high - root.low) * 10;
+                        fit: fill;
+                        stroke: #2e9d5b;
+                        stroke-width: 2px;
+                    }
+                    for p in root.points : Rectangle {
+                        x: p.col * root.cell-w - 5px;
+                        y: (root.high - p.row) * root.cell-h - 5px;
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 5px;
+                        background: #2e9d5b;
+                    }
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        pointer-event(e) => {
+                            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                                root.pressed(self.mouse-x / root.cell-w, root.high - self.mouse-y / root.cell-h);
+                            }
+                            if (e.kind == PointerEventKind.up) {
+                                root.released();
+                            }
+                        }
+                        moved => {
+                            if (self.pressed) {
+                                root.dragged(self.mouse-x / root.cell-w, root.high - self.mouse-y / root.cell-h);
+                            }
+                        }
+                    }
+                }
+            }
+            Text {
+                text: "Drag the points: time across the note, pitch up the side in quarter tones. Enter applies; Escape cancels.";
+                font-size: 11px;
+                wrap: word-wrap;
+                opacity: 0.7;
+            }
+        }
+    }
+}
