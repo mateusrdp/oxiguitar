@@ -364,7 +364,9 @@ pub(crate) fn system(
             }
         }
     }
-    let hits = system_hits(score, views, plans, &bands, &bars, p, height);
+    let mut hits = system_hits(score, views, plans, &bands, &bars, p, height);
+    // Where each bar's time signature is drawn, for the editor.
+    let mut times: HashMap<usize, (f32, f32)> = HashMap::new();
     let mut ties: HashMap<(usize, usize, u8), (f32, f32)> = HashMap::new();
     for (vi, (v, band)) in views.iter().zip(&bands).enumerate() {
         let vplans = plans.bars.get(vi);
@@ -402,7 +404,9 @@ pub(crate) fn system(
             let Some(grid) = plans.grids.get(bx.index) else {
                 continue;
             };
-            ctx.bar_start(&mut list, bx, k == 0, plan.clef);
+            if let Some(range) = ctx.bar_start(&mut list, bx, k == 0, plan.clef) {
+                times.insert(bx.index, range);
+            }
             if let Some(top) = band.std_top {
                 ctx.std_bar(&mut list, plan, grid, bx, top, vi, &mut ties);
             }
@@ -508,6 +512,9 @@ pub(crate) fn system(
         let y = (first.top + last.bottom) / 2.0 + 0.35 * size;
         p.text_right(&mut list, &label, size, room, y, Paint::Ink);
     }
+    for b in hits.staves.iter_mut().flat_map(|s| &mut s.bars) {
+        b.time_signature = times.get(&b.bar).copied();
+    }
     DrawnSystem { list, height, hits }
 }
 
@@ -585,6 +592,7 @@ fn system_hits(
                 notes: bx.notes,
                 end: bx.end,
                 clef: plan.clef,
+                time_signature: None,
                 beats,
             });
         }
@@ -692,12 +700,18 @@ impl Ctx<'_> {
     /// What opens a bar before its notes. At the start of a system: time
     /// signature, then start-repeat sign (the system prefix shows clef and
     /// key). Elsewhere: start-repeat sign, key change, time signature.
-    fn bar_start(&self, list: &mut DisplayList, bx: &BarX, first_in_system: bool, clef: Clef) {
+    /// Returns where the time signature is, left to right, if it is drawn.
+    fn bar_start(
+        &self,
+        list: &mut DisplayList,
+        bx: &BarX,
+        first_in_system: bool,
+        clef: Clef,
+    ) -> Option<(f32, f32)> {
         let p = self.p;
         let sp = self.sp();
-        let Some(mb) = self.score.master_bars.get(bx.index) else {
-            return;
-        };
+        let mb = self.score.master_bars.get(bx.index)?;
+        let mut time = None;
         let previous = bx
             .index
             .checked_sub(1)
@@ -763,11 +777,13 @@ impl Ctx<'_> {
                     top + 0.73 * h,
                 );
             }
+            time = Some((x, x + w));
             x += w + sp;
         }
         if first_in_system && mb.repeat_start {
             self.repeat_start(list, x);
         }
+        time
     }
 
     /// A start-repeat sign whose thick line begins at `x`; returns its right

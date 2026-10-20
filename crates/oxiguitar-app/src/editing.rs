@@ -396,6 +396,11 @@ impl Editing {
         Some((state, heading))
     }
 
+    /// The Inspector's view of the caret's bar.
+    pub(crate) fn bar_view(&self) -> Option<crate::inspector::BarView> {
+        crate::inspector::bar_view(self.score.as_ref()?, self.caret?)
+    }
+
     /// The tuplet of the caret's beat, if it is in one.
     pub(crate) fn beat_tuplet(&self) -> Option<Tuplet> {
         let c = self.caret?;
@@ -668,6 +673,19 @@ impl Editing {
         true
     }
 
+    /// A double-click at (`x`, `y`) on sheet `sheet`: on a time signature,
+    /// the caret goes to the start of its bar. Whether it was on one.
+    pub(crate) fn time_signature_at(&mut self, sheet: usize, x: f32, y: f32) -> bool {
+        let Some(spot) = self.hits.time_signature_at(sheet, x, y) else {
+            return false;
+        };
+        self.go_to(StaffBar {
+            track: spot.track,
+            staff: spot.staff,
+            bar: spot.bar,
+        })
+    }
+
     /// A press at (`x`, `y`) on sheet `sheet`, in the sheet's points: the
     /// place there in the caret's voice, as [`Editing::press`] takes it.
     pub(crate) fn press_at(&mut self, sheet: usize, x: f32, y: f32, shift: bool) -> bool {
@@ -934,6 +952,7 @@ mod tests {
                                 notes: start + 5.0,
                                 end: start + 100.0,
                                 clef: Clef::Treble8vb,
+                                time_signature: None,
                                 beats: (0..4)
                                     .map(|beat| BeatHit {
                                         voice: 0,

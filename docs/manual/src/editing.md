@@ -75,6 +75,7 @@ The bar commands work on the caret's bar or, with a selection, on its bars.
 | [ and ] | A repeat opens at the bar, or closes at it (played twice); press again to take it away |
 | \| or Alt + Shift + L | Free time: the bar has no time signature to add up to |
 | Ctrl + T, Ctrl + K, Ctrl + /, D, Shift + Insert | Opens the **Bar** dialog |
+| Double-click on a time signature | Opens the **Bar** dialog for that bar |
 
 The **Bar** dialog (also **Edit → Bar…** and the palette's Clef, Key Signature, Time Signature, Rhythmic Interpretation, Alternate Endings and Directions) shows what the bar carries and changes any of it at once, as one change to undo:
 
@@ -104,5 +105,7 @@ Beats and bars paste into any track. Between a drum track and a pitched one only
 **Edit → Undo** (Ctrl + Z) and **Edit → Redo** (Ctrl + Y), or the arrows in the toolbar, undo and redo every change, as many times as you like. The menu names the change: "Undo Infer Key Signatures".
 
 ## Bars that don't add up
+
+The **Inspector**, on the right, shows the caret's bar: its time signature, and for each voice how many beats it holds against it, counted in the time signature's own unit (quarter notes in 4/4, eighth notes in 6/8): "3½ of 4", then *Full*, *½ beat short* or *1 beat too long*, and how many beats (notes, chords and rests) were entered. The caret's voice is highlighted, and the last line says on which beat the caret's beat starts. It follows every move and every change, so it is the quickest way to see what a bar still needs while composing.
 
 A bar whose beats are longer or shorter than its time signature is laid in translucent red on the page. Such bars are allowed (many files have a few), and the PDF export shows the music without the red. When a file has any, the line at the bottom of the window says how many and where the first is. **Tools → Next Bar That Doesn't Add Up** (F4, as Guitar Pro's "Check bar duration") moves the caret to the next one in the tracks shown, going round to the start. A voice that holds nothing (Guitar Pro fills unused voices with empty beats) doesn't count.
