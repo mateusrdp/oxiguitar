@@ -46,6 +46,7 @@ mod palette;
 mod plugin_tabs;
 mod prefs;
 mod shell;
+mod song;
 #[cfg(test)]
 mod speed;
 #[cfg(test)]
@@ -95,7 +96,8 @@ mod ui {
 use ui::{
     AltBox, AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField,
     InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow,
-    PluginWidget, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
+    PluginWidget, SongField, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields,
+    TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -505,6 +507,7 @@ fn main() -> Result<(), slint::PlatformError> {
         "On the standard staff: click a line or space, Up / Down to move it, Enter to put a note there;  Alt + 1 to 4: move the beat to that voice;  Ctrl + Shift + Delete: clear the beat;  Right at the end: add a bar",
         "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + K, Ctrl + /, D: the Bar dialog;  A: a chord;  Shift + T: text above the beat",
         "Ctrl + T: type lyrics under the beat (Space or − the next note, Backspace back, Up / Down another verse, Enter done)",
+        "Ctrl + F: search the palette (Escape empties it, Enter goes back to the score)",
         "Effects: X dead, O ghost, ; and : accent and heavy accent, ! staccato, H hammer-on, S / Alt + S / Shift + S legato / shift slide / slide out down, V vibrato, P / Shift + P palm mute (note / beat), I let ring",
         "Y natural harmonic, Ctrl + Alt + Y artificial, Alt + P pinch, Alt + T tapped;  N trill;  \": tremolo picking;  T or ) tapping;  $ slap;  ( left-hand tapping;  < fade in;  G / Ctrl + Alt + G grace note",
         "Ctrl + D / Ctrl + U: brush down / up;  Shift + D / Shift + U: pick stroke down / up;  Ctrl + Alt + W: wide vibrato;  B: bend;  Ctrl + Alt + V: whammy bar",
@@ -645,6 +648,22 @@ fn main() -> Result<(), slint::PlatformError> {
         if ok {
             let text = ui.get_text_dialog_text().to_string();
             edit_at_caret(&a, oxiguitar_edit::Command::Text(text));
+        }
+    });
+    let a = app.clone();
+    ui.on_song_edited(move |id, text| {
+        let info = a.borrow().editing.score().map(|s| s.info.clone());
+        let Some(mut info) = info else {
+            return;
+        };
+        if song::set(&mut info, id.as_str(), text.as_str()) {
+            edit_at_caret(&a, oxiguitar_edit::Command::Info(Box::new(info)));
+        }
+    });
+    let a = app.clone();
+    ui.on_palette_searched(move |_| {
+        if let Some(ui) = a.borrow().ui.upgrade() {
+            sync_found(&ui);
         }
     });
     let a = app.clone();
@@ -836,6 +855,10 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_edit_key(move |name, shift, ctrl, alt| {
+        if ctrl && !alt && !shift && matches!(name.as_str(), "f" | "F") {
+            search_palette(&a);
+            return true;
+        }
         if let Some(k) = editing::clip_key(name.as_str(), shift, ctrl, alt) {
             clipboard(&a, k);
             return true;
@@ -2398,6 +2421,13 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
 /// The palette's working tools: usable with a score open, highlighted as
 /// the caret's beat is (its voice, value, dots, rest, tie).
 fn sync_palette_state(ui: &AppWindow, at: Option<editing::AtCaret>) {
+    sync_palette_rows(ui, at);
+    if !ui.get_palette_query().is_empty() {
+        sync_found(ui);
+    }
+}
+
+fn sync_palette_rows(ui: &AppWindow, at: Option<editing::AtCaret>) {
     let groups = ui.get_palette_groups();
     for g in 0..groups.row_count() {
         let Some(group) = groups.row_data(g) else {
@@ -2753,6 +2783,25 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
     }
 }
 
+/// Ctrl + F: the palette shows, and its search field takes the keyboard.
+fn search_palette(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    {
+        let mut s = app.borrow_mut();
+        let area = s.shell.area_mut(Side::Left);
+        if let Some(i) = area.tabs.iter().position(|t| t.id == "palette") {
+            area.active = i;
+        }
+        area.collapsed = false;
+        area.shown = true;
+    }
+    sync_areas(app);
+    ui.set_left_shown(true);
+    ui.set_palette_search_requests(ui.get_palette_search_requests() + 1);
+}
+
 /// Shows the field where lyrics are typed, holding `text`, under the beat
 /// it types at; hidden when nothing is typed there.
 fn show_lyric(app: &Shared, ui: &AppWindow, text: String) {
@@ -3095,7 +3144,63 @@ fn track_list_changed(app: &Shared, tracks: &[TrackInfo], was: &[Option<usize>])
 
 /// The Inspector shows the caret's bar: each voice's beats against the
 /// time signature.
+/// The Song tab: each field changed in place, so one being typed in keeps
+/// its place and cursor.
+fn sync_song(app: &Shared, ui: &AppWindow) {
+    let fields = app
+        .borrow()
+        .editing
+        .score()
+        .map(|s| song::fields(&s.info))
+        .unwrap_or_default();
+    let rows: Vec<SongField> = fields
+        .into_iter()
+        .map(|f| SongField {
+            id: f.id.into(),
+            label: f.label.into(),
+            text: f.text.into(),
+            multiline: f.multiline,
+        })
+        .collect();
+    let model = ui.get_song_fields();
+    if model.row_count() != rows.len() {
+        ui.set_song_fields(ModelRc::new(VecModel::from(rows)));
+        return;
+    }
+    for (i, row) in rows.into_iter().enumerate() {
+        if model.row_data(i).is_some_and(|r| r.text != row.text) {
+            model.set_row_data(i, row);
+        }
+    }
+}
+
+/// The palette's search: the tools whose names hold the words typed, as
+/// the palette shows them (enabled, lit).
+fn sync_found(ui: &AppWindow) {
+    let query = ui.get_palette_query().to_lowercase();
+    if query.trim().is_empty() {
+        ui.set_palette_found(ModelRc::default());
+        return;
+    }
+    let groups = ui.get_palette_groups();
+    let mut found = Vec::new();
+    for (g, group) in palette::GROUPS.iter().enumerate() {
+        let Some(row) = groups.row_data(g) else {
+            continue;
+        };
+        for (i, t) in group.tools.iter().enumerate() {
+            if palette::matches(t.name, &query)
+                && let Some(tool) = row.tools.row_data(i)
+            {
+                found.push(tool);
+            }
+        }
+    }
+    ui.set_palette_found(ModelRc::new(VecModel::from(found)));
+}
+
 fn sync_inspector(app: &Shared, ui: &AppWindow) {
+    sync_song(app, ui);
     let fields = app.borrow().editing.effect_fields();
     ui.set_inspector_fields(ModelRc::new(VecModel::from(
         fields

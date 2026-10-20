@@ -181,6 +181,8 @@ pub enum Command {
     Chord(Option<oxiguitar_model::ChordDiagram>),
     /// This free text above the caret's beat; empty for none.
     Text(String),
+    /// The score's information: title, artist and the rest.
+    Info(Box<oxiguitar_model::ScoreInfo>),
     /// A syllable of line `line` (from 0) of the caret's track's lyrics,
     /// at beat `at` (bar, beat) of its first staff's first voice; empty to
     /// leave that beat empty. `hyphen` when the word goes on.
@@ -259,6 +261,7 @@ impl Command {
             Command::Beat(b) => b.label(),
             Command::Chord(_) => "Chord",
             Command::Text(_) => "Text",
+            Command::Info(_) => "Score Information",
             Command::Syllable { .. } => "Lyrics",
         }
     }
@@ -761,6 +764,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Beat(_)
         | Command::Chord(_)
         | Command::Text(_)
+        | Command::Info(_)
         | Command::Syllable { .. } => None,
         Command::Tuplet(t) => {
             let targets = targets(score, c, selection);

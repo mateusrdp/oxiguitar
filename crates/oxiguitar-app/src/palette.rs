@@ -276,6 +276,14 @@ pub(crate) fn tool_tip(id: &str, name: &str) -> String {
     }
 }
 
+/// Whether a tool named `name` is one the palette's search for `query`
+/// (lower case) finds: every word typed is in the name ("slide" finds the
+/// six slides, "nat harm" the natural harmonic).
+pub(crate) fn matches(name: &str, query: &str) -> bool {
+    let name = name.to_lowercase();
+    query.split_whitespace().all(|word| name.contains(word))
+}
+
 /// Which groups are collapsed. Every group starts expanded.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Palette {
@@ -1367,6 +1375,10 @@ mod tests {
         assert_eq!(tool_tip("rest", "Rest"), "Rest (R)");
         assert_eq!(tool_tip("half", "Half Note"), "Half Note");
         assert_eq!(tool_tip("bend", "Bend"), "Bend (B)");
+        let slides = tools().filter(|(_, t)| matches(t.name, "slide")).count();
+        assert_eq!(slides, 6);
+        assert!(matches("Natural Harmonic", "nat harm"));
+        assert!(!matches("Natural Harmonic", "pinch"));
         assert_eq!(tool_tip("chord", "Chord"), "Chord (A)");
         assert_eq!(tool_tip("lyrics", "Lyrics"), "Lyrics (Ctrl + T)");
         assert_eq!(tool_tip("fermata", "Fermata"), "Fermata (comes in M5)");
