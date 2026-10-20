@@ -184,7 +184,12 @@ fn here(score: &Score, c: Caret) -> Option<(&Beat, Option<&Note>, bool, u8)> {
 
 /// A bend's or whammy curve's summary: its furthest pitch.
 fn curve_summary(b: Option<&oxiguitar_model::Bend>) -> String {
-    let Some(far) = b.and_then(|b| b.points.iter().map(|p| p.cents).max_by_key(|c| c.abs())) else {
+    let Some(far) = b.and_then(|b| {
+        b.points
+            .iter()
+            .map(|p| p.cents)
+            .max_by_key(|c| c.unsigned_abs())
+    }) else {
         return "None".to_owned();
     };
     let rows = (far / crate::bend_form::ROW_CENTS).abs();
