@@ -88,6 +88,35 @@ pub(crate) struct Editing {
     /// 8 the top line) in a clef, where Enter enters a note; `None` while
     /// the caret is on the tablature.
     height: Option<(i32, Clef)>,
+    /// What was last copied or cut: OxiGuitar's own clipboard.
+    clipboard: Option<Arc<oxiguitar_edit::Clip>>,
+}
+
+/// The clipboard's keys, as Guitar Pro 8's.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ClipKey {
+    /// Ctrl + C.
+    Copy,
+    /// Ctrl + X.
+    Cut,
+    /// Ctrl + V.
+    Paste,
+    /// Ctrl + Shift + V: Special Paste.
+    Special,
+}
+
+/// The clipboard key `name` with these modifiers is, if any.
+pub(crate) fn clip_key(name: &str, shift: bool, ctrl: bool, alt: bool) -> Option<ClipKey> {
+    if !ctrl || alt {
+        return None;
+    }
+    match (name, shift) {
+        ("c" | "C", false) => Some(ClipKey::Copy),
+        ("x" | "X", false) => Some(ClipKey::Cut),
+        ("v" | "V", false) => Some(ClipKey::Paste),
+        ("v" | "V", true) => Some(ClipKey::Special),
+        _ => None,
+    }
 }
 
 /// The commands of the Edit menu's note items, by the name the menu
@@ -404,6 +433,103 @@ impl Editing {
             caret: self.caret?,
             selection: self.selection,
         })
+    }
+
+    /// Copies the selection, or the caret's beat. Whether there was
+    /// anything to copy.
+    pub(crate) fn copy(&mut self) -> bool {
+        let (Some(score), Some(c)) = (self.score.as_ref(), self.caret) else {
+            return false;
+        };
+        match oxiguitar_edit::copy(score, c, self.selection) {
+            Some(clip) => {
+                self.clipboard = Some(Arc::new(clip));
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Copies, then takes out what was copied.
+    pub(crate) fn cut(&mut self) -> Option<Typed> {
+        if !self.copy() {
+            return None;
+        }
+        let typed = self.tool(Command::Cut);
+        self.selection = None;
+        self.anchor = None;
+        typed
+    }
+
+    /// The clipboard pasted `times` times, replacing what is there or not,
+    /// at the selection's start or else the caret.
+    pub(crate) fn paste(&mut self, times: u8, replace: bool) -> Option<Typed> {
+        let clip = self.clipboard.clone()?;
+        let mut typed = self.tool(Command::Paste(oxiguitar_edit::Paste {
+            clip,
+            times,
+            replace,
+        }))?;
+        match self.selection.take() {
+            Some(Selection::Beats { from, .. }) => {
+                typed.caret = Caret {
+                    bar: from.0,
+                    beat: from.1,
+                    ..typed.caret
+                };
+            }
+            Some(Selection::Bars { tracks, bars }) => {
+                if let Some(score) = self.score.as_ref() {
+                    let at = typed.caret.to_staff(score, tracks.0, 0);
+                    typed.caret = Caret {
+                        bar: bars.0,
+                        beat: 0,
+                        ..at
+                    };
+                }
+            }
+            None => {}
+        }
+        typed.selection = None;
+        self.anchor = None;
+        Some(typed)
+    }
+
+    /// The score's sections, in order: each one's bar and how the Go to
+    /// Section menu names it ("A Verse — bar 5").
+    pub(crate) fn sections(&self) -> Vec<(usize, String)> {
+        let Some(score) = self.score.as_ref() else {
+            return Vec::new();
+        };
+        score
+            .master_bars
+            .iter()
+            .enumerate()
+            .filter_map(|(i, b)| {
+                let m = b.marker.as_ref()?;
+                let name = format!("{} {}", m.letter.trim(), m.text.trim());
+                let name = name.trim();
+                let name = if name.is_empty() { "Section" } else { name };
+                Some((i, format!("{name} — bar {}", i + 1)))
+            })
+            .collect()
+    }
+
+    /// The caret to the start of `bar`, on its staff.
+    pub(crate) fn go_to_bar(&mut self, bar: usize) -> bool {
+        let Some(c) = self.caret else {
+            return false;
+        };
+        self.go_to(StaffBar {
+            track: c.track,
+            staff: c.staff,
+            bar,
+        })
+    }
+
+    /// Something has been copied.
+    pub(crate) fn has_clip(&self) -> bool {
+        self.clipboard.is_some()
     }
 
     /// The caret's beat as the palette shows it.
@@ -1091,6 +1217,48 @@ mod tests {
         // Tab leaves the standard staff.
         e.key(Key::Tab, false, false);
         assert_eq!(e.height(), None);
+    }
+
+    #[test]
+    fn copy_cut_and_paste() {
+        let mut e = editing(1, &[0]);
+        assert!(e.paste(1, false).is_none(), "nothing copied yet");
+        assert!(e.copy());
+        let t = e.paste(2, true).unwrap();
+        assert!(matches!(
+            &t.command,
+            Command::Paste(p) if p.times == 2 && p.replace
+        ));
+        // With a selection, the paste goes to its start and the selection
+        // goes.
+        e.key(Key::Right, false, false);
+        e.key(Key::Right, true, false);
+        e.key(Key::Right, true, false);
+        let t = e.paste(1, false).unwrap();
+        assert_eq!((t.caret.bar, t.caret.beat), (0, 1));
+        assert!(e.selection().is_none());
+        e.key(Key::Right, true, false);
+        let t = e.cut().unwrap();
+        assert_eq!(t.command, Command::Cut);
+        assert!(t.selection.is_some(), "the cut takes the selection");
+        assert!(e.selection().is_none());
+        assert_eq!(clip_key("v", true, true, false), Some(ClipKey::Special));
+        assert_eq!(clip_key("c", false, false, false), None);
+    }
+
+    #[test]
+    fn sections_to_go_to() {
+        let mut e = editing(1, &[0]);
+        let mut s = (*e.score.clone().unwrap()).clone();
+        s.master_bars[2].marker = Some(oxiguitar_model::Marker {
+            letter: "B".into(),
+            text: "Chorus".into(),
+            ..Default::default()
+        });
+        e.changed(Arc::new(s));
+        assert_eq!(e.sections(), [(2, "B Chorus — bar 3".to_owned())]);
+        assert!(e.go_to_bar(2));
+        assert_eq!(e.caret().unwrap().bar, 2);
     }
 
     #[test]

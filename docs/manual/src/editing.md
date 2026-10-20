@@ -86,6 +86,19 @@ The **Bar** dialog (also **Edit → Bar…** and the palette's Clef, Key Signatu
 
 The palette's **Repeat Start**, **Repeat Close**, **Free Time** and **Double Bar Line** switch those at once, and light up when the caret's bar has them; **Triplet** lights up on a triplet beat.
 
+## Copy, cut and paste
+
+OxiGuitar keeps its own clipboard: copying and pasting work inside OxiGuitar, not with other programs.
+
+- **Copy** (Ctrl + C) copies the selected beats or, with nothing selected, the beat at the caret. A selection across tracks copies whole bars of each selected track, with what the bars carry (time and key signatures, repeats, sections, tempo changes).
+- **Cut** (Ctrl + X) copies, then takes the beats out of their voice, or the bars out of every track.
+- **Paste** (Ctrl + V) puts what was copied in at the caret, or at the start of the selection. Beats go into the caret's voice before its beat; a bar that then holds more than its time signature is marked red. Bars go in before the caret's bar, in every track: the tracks that were copied, from the caret's track down, get their bars, and the others get empty bars.
+- **Special Paste** (Ctrl + Shift + V) pastes several times, or replaces what is there instead of inserting. Beats then take the place of as much music as they last, and what they don't cover of the last beat they replace stays as rests. Bars then take the place of the bars from the caret's on, and bars are added at the end when needed.
+
+Beats and bars paste into any track. Between a drum track and a pitched one only the rhythm carries over, as rests. Notes on strings the track hasn't got are left out. Chord names go with their diagrams.
+
+**Edit → Go to Section** lists the score's sections and moves the caret to the one you choose.
+
 ## Undo and redo
 
 **Edit → Undo** (Ctrl + Z) and **Edit → Redo** (Ctrl + Y), or the arrows in the toolbar, undo and redo every change, as many times as you like. The menu names the change: "Undo Infer Key Signatures".

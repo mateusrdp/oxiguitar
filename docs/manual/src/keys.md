@@ -21,6 +21,7 @@
 | 0 to 9, Enter, R, − / +, Shift + . / Ctrl + ., L / Shift + L, Backspace, Shift + Delete, Ctrl + Shift + Delete, Ctrl + Insert, Alt + arrows, Alt + 1 to 4, / | Enter notes ([Entering notes](editing.md#entering-notes)) |
 | Insert, Ctrl + Delete, [ and ], \| | Insert and delete bars, repeats, free time ([Bars](editing.md#bars)) |
 | Ctrl + T, Ctrl + K, Ctrl + /, D, Shift + Insert | The Bar dialog ([Bars](editing.md#bars)) |
+| Ctrl + C, Ctrl + X, Ctrl + V, Ctrl + Shift + V | Copy, cut, paste, Special Paste ([Copy, cut and paste](editing.md#copy-cut-and-paste)) |
 | Ctrl + Z / Ctrl + Y | Undo / redo |
 | F4 | The next bar that doesn't add up |
 | Ctrl + mouse wheel | Zoom the interface in or out |

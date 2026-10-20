@@ -141,6 +141,11 @@ pub enum Command {
     /// Everything the Bar dialog sets, as one change: each part that
     /// differs from the caret's bar, as its own command would set it.
     Bar(Box<crate::BarState>),
+    /// The selection (or the caret's beat) taken out: beats deleted from
+    /// their voice, bars from every track (Ctrl + X, after copying).
+    Cut,
+    /// The clipboard pasted at the caret (Ctrl + V, Ctrl + Shift + V).
+    Paste(crate::Paste),
 }
 
 impl Command {
@@ -189,6 +194,8 @@ impl Command {
             Command::DoubleBar => "Double Bar Line",
             Command::FreeTime => "Free Time",
             Command::Bar(_) => "Bar Properties",
+            Command::Cut => "Cut",
+            Command::Paste(_) => "Paste",
         }
     }
 }
@@ -220,6 +227,9 @@ pub fn apply(
         return append_bar(score, history, caret);
     }
     if let Some(edited) = crate::bars::apply(score, history, caret, selection, &command) {
+        return edited;
+    }
+    if let Some(edited) = crate::clip::apply(score, history, caret, selection, &command) {
         return edited;
     }
     let label = command.label();
@@ -412,7 +422,7 @@ fn append_bar(score: &mut Score, history: &mut History, c: Caret) -> Option<Edit
 
 /// A bar as files keep it: a voice after the first that holds no notes or
 /// rests is an empty placeholder, and none follows the last used voice.
-fn tidy(bar: &mut Bar) {
+pub(crate) fn tidy(bar: &mut Bar) {
     for v in bar.voices.iter_mut().skip(1) {
         if v.is_empty() {
             v.beats.clear();
@@ -657,7 +667,9 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Section(_)
         | Command::DoubleBar
         | Command::FreeTime
-        | Command::Bar(_) => None,
+        | Command::Bar(_)
+        | Command::Cut
+        | Command::Paste(_) => None,
         Command::Tuplet(t) => {
             let targets = targets(score, c, selection);
             let off = staff
@@ -843,7 +855,7 @@ fn make_rest(beat: &mut Beat) {
 }
 
 /// Empty voices up to `voice`, so the caret's voice exists.
-fn grow_voices(bar: &mut Bar, voice: usize) {
+pub(crate) fn grow_voices(bar: &mut Bar, voice: usize) {
     while bar.voices.len() <= voice {
         bar.voices.push(Voice::default());
     }
@@ -973,7 +985,7 @@ fn settle_dynamic(beat: &mut Beat, dynamic: Dynamic) {
 /// Rests that fill `gap` (whole notes) exactly, longest first, each a
 /// plain value or dotted once; `None` for a gap no such rests fill (in a
 /// tuplet, say).
-fn rests_for(gap: oxiguitar_model::Ratio) -> Option<Vec<Duration>> {
+pub(crate) fn rests_for(gap: oxiguitar_model::Ratio) -> Option<Vec<Duration>> {
     const VALUES: [NoteValue; 7] = [
         NoteValue::Whole,
         NoteValue::Half,

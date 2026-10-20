@@ -486,6 +486,7 @@ fn main() -> Result<(), slint::PlatformError> {
         "Alt + Shift + Up / Down: a semitone up / down;  Alt + Up / Down: the same note on the string above / below",
         "On the standard staff: click a line or space, Up / Down to move it, Enter to put a note there;  Alt + 1 to 4: move the beat to that voice;  Ctrl + Shift + Delete: clear the beat;  Right at the end: add a bar",
         "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + T, Ctrl + K, D: the Bar dialog",
+        "Ctrl + C, Ctrl + X, Ctrl + V: copy, cut, paste;  Ctrl + Shift + V: Special Paste (several times, or replacing)",
         "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
@@ -552,6 +553,10 @@ fn main() -> Result<(), slint::PlatformError> {
         match name.as_str() {
             "bar-dialog" => return open_edit_dialog(&a, editing::Dialog::Bar),
             "tuplet-dialog" => return open_edit_dialog(&a, editing::Dialog::Tuplet),
+            "cut" => return clipboard(&a, editing::ClipKey::Cut),
+            "copy" => return clipboard(&a, editing::ClipKey::Copy),
+            "paste" => return clipboard(&a, editing::ClipKey::Paste),
+            "special-paste" => return clipboard(&a, editing::ClipKey::Special),
             _ => {}
         }
         let Some(command) = editing::menu_command(name.as_str()) else {
@@ -572,6 +577,22 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_bar_dialog_done(move |ok| bar_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_paste_dialog_done(move |ok| paste_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_go_to_section(move |i| {
+        let bar = {
+            let s = a.borrow();
+            s.editing
+                .sections()
+                .get(usize::try_from(i).unwrap_or(usize::MAX))
+                .map(|(b, _)| *b)
+        };
+        let moved = bar.is_some_and(|b| a.borrow_mut().editing.go_to_bar(b));
+        if moved {
+            caret_moved(&a);
+        }
+    });
     ui.on_tuplet_usual(|n| i32::from(bar_form::usual_in_time_of(u8::try_from(n).unwrap_or(3))));
     ui.set_bar_key_names(strings(bar_form::key_names()));
     ui.set_bar_clef_names(strings(
@@ -670,6 +691,10 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_edit_key(move |name, shift, ctrl, alt| {
+        if let Some(k) = editing::clip_key(name.as_str(), shift, ctrl, alt) {
+            clipboard(&a, k);
+            return true;
+        }
         if let Some(d) = editing::dialog_key(name.as_str(), shift, ctrl, alt) {
             open_edit_dialog(&a, d);
             return true;
@@ -1717,6 +1742,7 @@ fn handle(app: &Shared, event: Event) {
             sync_areas(app);
             set_tools(&ui, &tool_rows(&tools));
             ui.set_has_score(true);
+            sync_sections(app);
             {
                 let mut s = app.borrow_mut();
                 s.shell.set_item(item::EXPORT_PDF, Some(true), None);
@@ -1773,6 +1799,7 @@ fn handle(app: &Shared, event: Event) {
                 }
                 s.bad = bad;
             }
+            sync_sections(app);
             sync_edit_state(app, &edit);
             if caret.is_some() {
                 caret_moved(app);
@@ -2548,6 +2575,67 @@ fn bar_dialog_done(app: &Shared, ok: bool) {
         .tool(oxiguitar_edit::Command::Bar(Box::new(state)));
     if let Some(t) = typed {
         send_typed(app, t);
+    }
+}
+
+/// Edit → Go to Section lists the score's sections.
+fn sync_sections(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let names = app
+        .borrow()
+        .editing
+        .sections()
+        .into_iter()
+        .map(|(_, n)| n)
+        .collect();
+    ui.set_sections(strings(names));
+}
+
+/// Copy, cut, paste, or Special Paste's dialog.
+fn clipboard(app: &Shared, key: editing::ClipKey) {
+    let typed = match key {
+        editing::ClipKey::Copy => {
+            app.borrow_mut().editing.copy();
+            return;
+        }
+        editing::ClipKey::Cut => app.borrow_mut().editing.cut(),
+        editing::ClipKey::Paste => app.borrow_mut().editing.paste(1, false),
+        editing::ClipKey::Special => {
+            let Some(ui) = app.borrow().ui.upgrade() else {
+                return;
+            };
+            if app.borrow().editing.has_clip() && app.borrow().question.is_none() {
+                ui.set_paste_dialog_shown(true);
+            }
+            return;
+        }
+    };
+    if let Some(t) = typed {
+        send_typed(app, t);
+        sync_caret(app, false);
+    }
+}
+
+/// Special Paste closed: on OK, the clipboard pasted as asked.
+fn paste_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_paste_dialog_shown(false);
+    ui.invoke_focus_page();
+    if !ok {
+        return;
+    }
+    let times = u8::try_from(ui.get_paste_times().clamp(1, 99)).unwrap_or(1);
+    let typed = app
+        .borrow_mut()
+        .editing
+        .paste(times, ui.get_paste_replace());
+    if let Some(t) = typed {
+        send_typed(app, t);
+        sync_caret(app, false);
     }
 }
 

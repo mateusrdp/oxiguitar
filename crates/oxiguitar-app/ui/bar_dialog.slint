@@ -273,3 +273,35 @@ export component TupletDialog inherits Rectangle {
         }
     }
 }
+
+export component PasteDialog inherits Rectangle {
+    in-out property <int> times: 1;
+    in-out property <bool> replace: false;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Special Paste";
+        card-width: 380px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Text { text: "Paste"; vertical-alignment: center; font-size: 12px; }
+                SpinBox {
+                    minimum: 1;
+                    maximum: 99;
+                    value: root.times;
+                    edited(v) => { root.times = v; }
+                }
+                Text { text: "times"; vertical-alignment: center; font-size: 12px; }
+            }
+            CheckBox {
+                text: "Replace what is there, instead of inserting";
+                checked: root.replace;
+                toggled => { root.replace = self.checked; }
+            }
+        }
+    }
+}

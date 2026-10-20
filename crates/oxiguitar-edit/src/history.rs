@@ -317,6 +317,13 @@ impl History {
         touched
     }
 
+    /// Gives the last change another name (a cut is a delete, named so).
+    pub(crate) fn rename_last(&mut self, label: &str) {
+        if let Some(c) = self.done.last_mut() {
+            label.clone_into(&mut c.label);
+        }
+    }
+
     /// Undoes the last change. Returns its name and what it touched, or
     /// `None` when there is nothing to undo.
     pub fn undo(&mut self, score: &mut Score) -> Option<(String, Touched)> {
