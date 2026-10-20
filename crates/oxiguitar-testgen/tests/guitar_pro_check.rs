@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! `fixtures/guitar-pro-check/` holds what the .gp writer makes of every
+//! `fixtures/guitar-pro-check/` holds what the .gp and .gp5 writers make of every
 //! reference song and of the test song in every format, kept in the
 //! repository for checking in Guitar Pro (Mateus, 20 Oct 2026; see
 //! CONTRIBUTING.md). This test keeps them current: each reads back as the
@@ -44,18 +44,27 @@ fn the_files_for_guitar_pro_are_current() {
     }
     sources.sort();
     let check = root.join("fixtures/guitar-pro-check");
-    let kept = std::fs::read_dir(&check)
-        .unwrap()
-        .filter_map(|e| Some(e.ok()?.path()))
-        .filter(|p| p.extension().is_some_and(|x| x == "gp"))
-        .count();
-    assert_eq!(kept, sources.len(), "one file per source, no others");
+    let kept = |ext: &str| {
+        std::fs::read_dir(&check)
+            .unwrap()
+            .filter_map(|e| Some(e.ok()?.path()))
+            .filter(|p| p.extension().is_some_and(|x| x == ext))
+            .count()
+    };
+    assert_eq!(kept("gp"), sources.len(), "one .gp per source, no others");
+    assert_eq!(kept("gp5"), sources.len(), "one .gp5 per source, no others");
     let mut stale = Vec::new();
     for (source, name) in &sources {
         let written = oxiguitar_formats::write_gp(&read(source)).unwrap();
         let now = oxiguitar_formats::read(&written.data).unwrap().score;
         if read(&check.join(name)) != now {
             stale.push(name.clone());
+        }
+        let name5 = format!("{}5", name);
+        let written = oxiguitar_formats::write_gp5(&read(source)).unwrap();
+        let now = oxiguitar_formats::read(&written.data).unwrap().score;
+        if read(&check.join(&name5)) != now {
+            stale.push(name5);
         }
     }
     assert!(

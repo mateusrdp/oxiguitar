@@ -106,6 +106,13 @@ fn the_fixtures_add_up() {
     for (path, score) in all
         .iter()
         .filter(|(p, _)| !p.to_string_lossy().contains("guitar-pro-7.6"))
+        // The .gp5 files there are made with named losses (conversions.txt:
+        // Guitar Pro 5 holds one dot, three tuplets of a few kinds), and
+        // a bar can come out short. Their sources are checked.
+        .filter(|(p, _)| {
+            !(p.to_string_lossy().contains("guitar-pro-check")
+                && p.extension().is_some_and(|x| x == "gp5"))
+        })
     {
         let check = BarCheck::of(score);
         assert!(

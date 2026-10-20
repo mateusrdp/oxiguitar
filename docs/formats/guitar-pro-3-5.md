@@ -28,7 +28,7 @@ Text is in the writer's Windows code page, in practice Windows-1252. We take val
 5. GP5.10 only: **RSE master effect:** int volume, int unknown, 11 equaliser bytes.
 6. GP5: **page setup:** 7 ints (page size, margins, score size %), short header/footer flags, 10 int-byte-size strings (templates).
 7. **Tempo, key:** GP3: int tempo, int key. GP4: int tempo, int key, signed-byte octave. GP5: int-byte-size tempo name, int tempo, bool tempo-hidden (5.10 only), signed-byte key, int octave.
-8. **MIDI channels:** 64 × 12 bytes (int program, volume, balance, chorus, reverb, phaser, tremolo, 2 unused).
+8. **MIDI channels:** 64 × 12 bytes (int program, volume, balance, chorus, reverb, phaser, tremolo, 2 unused). Volume and balance run 0 to 16 (balance 8 is the middle): we read them as sixteenths of the full range, and the writer keeps sixteen steps. A track's flags short has 0x10 solo and 0x20 mute (GP5).
 9. GP5: **directions:** 19 shorts, each a 1-based bar number or −1, in this order: coda, double coda, segno, segno segno, fine, da capo, d.c. al coda, d.c. al double coda, d.c. al fine, dal segno, d.s. al coda, d.s. al double coda, d.s. al fine, d.s.s., d.s.s. al coda, d.s.s. al double coda, d.s.s. al fine, to coda, to double coda. Then int master reverb.
 10. int **bar count**, int **track count**.
 11. **Bar headers** × bar count.
@@ -93,7 +93,7 @@ GP5 ends each beat with a short of flags; if 0x0800 is set, one more byte (secon
 
 GP3: one flag byte. 0x01 vibrato and 0x04/0x08 natural/artificial harmonic apply to every note of the beat; 0x02 wide vibrato; 0x10 fade in; 0x20 tap/slap/pop byte, then an int (whammy dip depth when the byte is 0); 0x40 stroke.
 
-GP4/5: two flag bytes. 0x02 wide vibrato, 0x10 fade in, 0x20 tap/slap/pop byte, 0x40 stroke (two signed bytes, down then up in GP4, up then down in GP5; speed 1–6), second byte 0x04 whammy curve (bend format), 0x02 pick stroke (byte: 1 up, 2 down), 0x01 rasgueado (no data).
+GP4/5: two flag bytes. 0x02 wide vibrato, 0x10 fade in, 0x20 tap/slap/pop byte, 0x40 stroke (two signed bytes, down then up in GP4, up then down in GP5; speed 1–6: 1 or less is a 128th, 2 a 64th, 3 a 32nd, 4 a 16th, 5 an 8th, 6 a quarter. alphaTab reads each one step shorter), second byte 0x04 whammy curve (bend format), 0x02 pick stroke (byte: 1 up, 2 down), 0x01 rasgueado (no data).
 
 ### Mix-table change
 
@@ -124,3 +124,14 @@ A bool says whether the "new" layout follows.
 - **GP4/5 new layout:** bool sharp, 3 blank, bytes root, type, extension, ints bass, tonality, bool add, byte-size string (22) name, 3 bytes alterations, int first fret, 7 ints frets, byte barre count, 3 × 5 barre bytes, 7 bools omissions, 1 blank, 7 signed bytes fingering, bool show. GP5 always uses this layout.
 
 Frets: −1 not played, 0 open.
+
+## Writing GP5 (M3 slice 7)
+
+The writer (`gp/write.rs`) makes version 5.10 and holds what the reader reads. What it cannot hold is named as a loss (a warning, FMT-3); what it holds in another shape is named as information. A file read and written again is exactly the same score, and what it writes is read back the same by the reader, so the second trip is exact (`tests/gp5_round_trip.rs`).
+
+- **Layout.** As above, in the order the reader takes: the title block, lyrics, RSE master, page setup, tempo, key, 64 channels, directions and their counts, the master bars (time signature, repeats, marker, key, beams, alternate ending, triplet feel), the tracks, then every bar's two voices. A voice with no beats is one empty quarter beat.
+- **Strings and drums.** The model keeps no string for a drum, so the writer gives each drum its own string on the track and a tied drum the string where the same drum was last struck; the file ties a note to the one before it on its string. A tie that cannot be written that way is written as a new note and named.
+- **Tracks without strings** (pianos and the like) are written as a guitar's tablature with notes placed by pitch, and named.
+- **Tempo changes** are mix-table changes on the first track's beat at that position; a change not at the start of a beat is left out and named.
+- **Text** is Windows-1252; other characters are written as ? and named. Text beyond 255 characters is cut and named.
+- **Information, not loss:** dynamic markings are written as the notes' dynamics; tremolo picking and let ring on a beat are written on each note; short track names are left out; volume and pan are kept to sixteen steps.

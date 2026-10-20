@@ -1,8 +1,8 @@
-# Files for checking the .gp writer
+# Files for checking the .gp and .gp5 writers
 
-What OxiGuitar's .gp writer (the Guitar Pro 7–8 plugin) makes of every reference song (`../reference/`, listed with what each tests in `../reference/README.md`) and of the test song in every format (`../gp/`, as `test-song-from-EXT.gp`). `conversions.txt` lists what each conversion lost: nothing, so far. Each file also says what it tests in its score information (Instructions).
+What OxiGuitar's .gp and .gp5 writers (the Guitar Pro 7–8 and Guitar Pro 5 plugins) make of every reference song (`../reference/`, listed with what each tests in `../reference/README.md`) and of the test song in every format (`../gp/`, as `test-song-from-EXT.gp`), each as a .gp and as a .gp5. `conversions.txt` lists what each conversion lost: nothing, so far. Each file also says what it tests in its score information (Instructions).
 
-They are kept so anyone can open them in Guitar Pro, or any program that reads .gp, in whatever version and on whatever system they have, and tell us what looks wrong. See "Checking what OxiGuitar writes" in `CONTRIBUTING.md`. `scripts/guitar-pro-check.sh` writes them again; the test `guitar_pro_check` (in `oxiguitar-testgen`) fails while they are out of date. Made by us; GPL-3.0-or-later.
+They are kept so anyone can open them in Guitar Pro, or any program that reads .gp or .gp5, in whatever version and on whatever system they have, and tell us what looks wrong. See "Checking what OxiGuitar writes" in `CONTRIBUTING.md`. `scripts/guitar-pro-check.sh` writes them again; the test `guitar_pro_check` (in `oxiguitar-testgen`) fails while they are out of date. Made by us; GPL-3.0-or-later.
 
 ## Checks so far
 

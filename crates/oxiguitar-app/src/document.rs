@@ -942,8 +942,8 @@ mod tests {
     #[test]
     fn a_file_no_plugin_writes_is_saved_beside_it_as_gp() {
         let dir = scratch("save-beside");
-        let path = dir.join("song.gp5");
-        std::fs::copy(fixture("gp5"), &path).unwrap();
+        let path = dir.join("song.gp4");
+        std::fs::copy(fixture("gp4"), &path).unwrap();
         let mut doc = open(&path).unwrap();
         let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
         assert!(prepared.ask());
@@ -952,7 +952,7 @@ mod tests {
         let (heading, lines) = prepared.question(&doc.path);
         assert_eq!(heading, "Save song.gp?");
         assert!(
-            lines[0].starts_with("No installed plugin writes Guitar Pro 5 files, so it is saved in OxiGuitar's fullest format, Guitar Pro 7–8, as song.gp. song.gp5 stays as it was."),
+            lines[0].starts_with("No installed plugin writes Guitar Pro 4 files, so it is saved in OxiGuitar's fullest format, Guitar Pro 7–8, as song.gp. song.gp4 stays as it was."),
             "{lines:?}"
         );
         let before = std::fs::read(&path).unwrap();
@@ -960,7 +960,7 @@ mod tests {
         assert_eq!(
             std::fs::read(&path).unwrap(),
             before,
-            "the .gp5 is untouched"
+            "the .gp4 is untouched"
         );
         assert_eq!(doc.path, dir.join("song.gp"));
         assert_eq!(doc.name(), "song.gp");
@@ -997,6 +997,39 @@ mod tests {
         doc.save(&prepared).unwrap();
         assert!(to.exists());
         assert_eq!(doc.path, to);
+    }
+
+    #[test]
+    fn a_gp5_file_is_saved_as_itself_and_save_as_gp5_names_its_losses() {
+        let dir = scratch("save-gp5");
+        let path = dir.join("song.gp5");
+        std::fs::copy(fixture("gp5"), &path).unwrap();
+        let mut doc = open(&path).unwrap();
+        // Written over, a .gp5 file stays a .gp5 file.
+        let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
+        assert_eq!(prepared.path, path);
+        assert_eq!(prepared.format.id, "gp5");
+        assert!(prepared.instead.is_none());
+        doc.save(&prepared).unwrap();
+        assert_eq!(doc.path, path);
+
+        // A free-time bar, which a .gp5 file can't hold, is named.
+        let mut doc = open(&fixture("gp")).unwrap();
+        Arc::make_mut(&mut doc.score).master_bars[0].free_time = true;
+        let gp5 = SaveFormat::writable(crate::test_plugins())
+            .into_iter()
+            .find(|f| f.id == "gp5")
+            .unwrap();
+        let to = dir.join("copy.gp5");
+        let prepared = doc
+            .prepare_save(crate::test_plugins(), Some((to.clone(), gp5)))
+            .unwrap();
+        assert!(prepared.ask());
+        let (_, lines) = prepared.question(&doc.path);
+        assert_eq!(lines[0], "Guitar Pro 5 files can't hold:", "{lines:?}");
+        assert!(lines.iter().any(|l| l.contains("free time")), "{lines:?}");
+        doc.save(&prepared).unwrap();
+        assert_eq!(open(&to).unwrap().format.id, "gp5");
     }
 
     #[test]

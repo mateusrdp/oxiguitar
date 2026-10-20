@@ -9,6 +9,11 @@
 //! places where those sources disagree.
 
 mod effects;
+#[cfg(feature = "gp5")]
+mod write;
+
+#[cfg(feature = "gp5")]
+pub(crate) use write::write as write_gp5;
 
 use oxiguitar_model::{
     Bar, Beat, BeatKind, ChordDiagram, Clef, Color, Direction, Duration, Dynamic, GraceKind,
@@ -44,12 +49,27 @@ impl Version {
 
 const V5_00: Version = Version(5, 0);
 
+/// The steps of a MIDI channel's volume and balance in the channel table.
+pub(crate) const CHANNEL_STEPS: f32 = 16.0;
+
 /// What one MIDI channel of the file's 64-channel table holds.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 struct Channel {
     program: i32,
     volume: u8,
     balance: u8,
+}
+
+impl Default for Channel {
+    /// A track whose channel the file doesn't have: Guitar Pro's usual
+    /// volume (13 of 16) and the middle of the pan.
+    fn default() -> Channel {
+        Channel {
+            program: 0,
+            volume: 13,
+            balance: 8,
+        }
+    }
 }
 
 /// A grace note waiting to be turned into a grace beat before its main beat.
@@ -525,14 +545,16 @@ impl Reader<'_> {
             .copied()
             .unwrap_or_default();
         let percussion = flags & 0x01 != 0 || channel == 10;
+        // The channel table counts in sixteenths: 16 is full volume and
+        // 8 the middle of the pan (confirmed on the corpus, where a typical
+        // track has volume 14 and balance 8). Mute and solo are track flags
+        // in Guitar Pro 5 only.
         let mix = Mix {
-            volume: f32::from(ch.volume.min(127)) / 127.0,
-            pan: (f32::from(ch.balance.min(127)) - 64.0) / 64.0,
-            ..Mix::default()
-        };
-        let mix = Mix {
-            pan: mix.pan.clamp(-1.0, 1.0),
-            ..mix
+            volume: (f32::from(ch.volume.min(16)) / CHANNEL_STEPS).clamp(0.0, 1.0),
+            pan: ((f32::from(ch.balance.min(16)) - CHANNEL_STEPS / 2.0) / (CHANNEL_STEPS / 2.0))
+                .clamp(-1.0, 1.0),
+            mute: self.is(5) && flags & 0x20 != 0,
+            solo: self.is(5) && flags & 0x10 != 0,
         };
         Ok(Track {
             name,

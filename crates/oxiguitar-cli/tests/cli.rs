@@ -191,17 +191,17 @@ fn convert_writes_a_gp_file_and_names_its_losses() {
         "{info}"
     );
 
-    // No plugin writes .gp5 yet; a file without an extension is bad usage.
+    // No plugin writes .gp4 yet; a file without an extension is bad usage.
     let gp5 = cli()
         .arg("convert")
         .arg(fixture("oxiguitar-test-song.gp"))
-        .arg(dir.join("song.gp5"))
+        .arg(dir.join("song.gp4"))
         .output()
         .unwrap();
     assert_eq!(gp5.status.code(), Some(1));
     assert!(
         String::from_utf8_lossy(&gp5.stderr)
-            .contains("no installed plugin writes .gp5 files (they write .gp)")
+            .contains("no installed plugin writes .gp4 files (they write .gp, .gp5)")
     );
     let bare = cli()
         .arg("convert")

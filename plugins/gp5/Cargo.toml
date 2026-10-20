@@ -1,6 +1,6 @@
 [package]
 name = "oxiguitar-gp5-plugin"
-description = "The OxiGuitar format plugin for Guitar Pro 5: reads Guitar Pro 5 files (.gp5)."
+description = "The OxiGuitar format plugin for Guitar Pro 5: reads and writes Guitar Pro 5 files (.gp5)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

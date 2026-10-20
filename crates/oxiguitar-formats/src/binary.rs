@@ -146,17 +146,46 @@ pub(crate) fn decode_text(bytes: &[u8]) -> String {
     bytes.iter().map(|&b| cp1252(b)).collect()
 }
 
+/// What Windows-1252 puts at 0x80 to 0x9F; the rest is Latin-1.
+const CP1252_HIGH: [char; 32] = [
+    '€', '\u{81}', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', '\u{8D}', 'Ž', '\u{8F}',
+    '\u{90}', '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', '\u{9D}', 'ž', 'Ÿ',
+];
+
 fn cp1252(b: u8) -> char {
-    // 0x80..=0x9F differ from Latin-1; everything else maps directly.
-    const HIGH: [char; 32] = [
-        '€', '\u{81}', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', '\u{8D}', 'Ž',
-        '\u{8F}', '\u{90}', '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', '\u{9D}',
-        'ž', 'Ÿ',
-    ];
     match b {
-        0x80..=0x9F => HIGH.get(usize::from(b - 0x80)).copied().unwrap_or('?'),
+        0x80..=0x9F => CP1252_HIGH
+            .get(usize::from(b - 0x80))
+            .copied()
+            .unwrap_or('?'),
         _ => char::from(b),
     }
+}
+
+/// Encodes text for an older binary format, as Guitar Pro 3–5 write it:
+/// Windows-1252, one byte a character. A character it doesn't have becomes
+/// `?`; the flag says whether that happened.
+#[cfg(feature = "gp5")]
+pub(crate) fn encode_text(text: &str) -> (Vec<u8>, bool) {
+    let mut replaced = false;
+    let bytes = text
+        .chars()
+        .map(|c| {
+            let code = u32::from(c);
+            let byte = match code {
+                0..=0x7F | 0xA0..=0xFF => u8::try_from(code).ok(),
+                _ => CP1252_HIGH
+                    .iter()
+                    .position(|h| *h == c)
+                    .and_then(|i| u8::try_from(i + 0x80).ok()),
+            };
+            byte.unwrap_or_else(|| {
+                replaced = true;
+                b'?'
+            })
+        })
+        .collect();
+    (bytes, replaced)
 }
 
 #[cfg(test)]
@@ -175,6 +204,19 @@ mod tests {
         let e = c.u8().unwrap_err();
         assert_eq!(e.kind, ReadErrorKind::UnexpectedEnd);
         assert_eq!(e.offset, Some(8));
+    }
+
+    #[test]
+    #[cfg(feature = "gp5")]
+    fn text_is_written_as_windows_1252() {
+        let (bytes, replaced) = encode_text("Tarde em Itapuã – “não”");
+        assert!(!replaced);
+        assert_eq!(decode_text(&bytes), "Tarde em Itapuã – “não”");
+        // Not UTF-8, so it reads back as Windows-1252.
+        assert!(std::str::from_utf8(&bytes).is_err());
+        let (bytes, replaced) = encode_text("日本");
+        assert!(replaced);
+        assert_eq!(bytes, b"??");
     }
 
     #[test]

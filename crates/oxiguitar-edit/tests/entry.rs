@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use oxiguitar_edit::{Caret, Command, History, Selection, apply};
+use oxiguitar_model::BeatKind;
 use oxiguitar_model::Score;
 
 /// A small, fixed random sequence (xorshift), so a failure repeats.
@@ -606,4 +607,115 @@ fn every_edit_is_saved_and_read_back_equal() {
         compared += 1;
     }
     assert!(compared >= 40, "only {compared} files compared");
+}
+
+/// The beats as the file holds them, one line each, with where each note is
+/// and whether it is tied (the effects are held in other shapes the
+/// writer names, and checked by the round-trip test of the formats crate)
+/// and notes in any order:
+/// drums carry no string in the model, so the order of a beat's notes is
+/// nothing.
+fn notes_of(score: &Score) -> Vec<String> {
+    let mut lines = Vec::new();
+    for (t, track) in score.tracks.iter().enumerate() {
+        for (s, staff) in track.staves.iter().enumerate() {
+            for (b, bar) in staff.bars.iter().enumerate() {
+                for (v, voice) in bar.voices.iter().enumerate() {
+                    // A voice with nothing in it and one with an empty beat
+                    // are the same.
+                    let beats = voice.beats.iter().filter(|b| b.kind != BeatKind::Empty);
+                    for (i, beat) in beats.enumerate() {
+                        let mut notes: Vec<String> = beat
+                            .notes
+                            .iter()
+                            .map(|n| format!("{:?} {}", n.place, n.tie))
+                            .collect();
+                        notes.sort();
+                        lines.push(format!(
+                            "track {t} staff {s} bar {b} voice {v} beat {i}: {:?} {:?} {}",
+                            beat.kind,
+                            beat.duration,
+                            notes.join(" ")
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    lines
+}
+
+fn first_line_apart(a: &[String], b: &[String]) -> String {
+    for (x, y) in a.iter().zip(b) {
+        if x != y {
+            return format!("{x}\n  vs {y}");
+        }
+    }
+    format!("{} beats vs {}", a.len(), b.len())
+}
+
+#[test]
+fn every_edit_is_saved_as_gp5_and_read_back_equal() {
+    let mut compared = 0;
+    let mut exact = 0;
+    // A few edits keep many files within what .gp5 holds, and then they
+    // come back note for note; many edits go beyond it, and then what is
+    // named lost is all that is lost.
+    for (i, (path, steps)) in fixtures()
+        .into_iter()
+        .enumerate()
+        .flat_map(|(i, p)| [(i, p.clone(), 5), (i, p, 600)])
+        .map(|(i, p, n)| (i, (p, n)))
+    {
+        let Some(score) = read(&path) else {
+            continue;
+        };
+        // Start from the score as a .gp5 file holds it, which comes back
+        // exactly (crates/oxiguitar-formats/tests/gp5_round_trip.rs).
+        let Ok(first) = oxiguitar_formats::write_gp5(&score) else {
+            continue;
+        };
+        let mut score = oxiguitar_formats::read(&first.data).unwrap().score;
+        let mut history = History::new();
+        random_edits(&mut score, &mut history, 0x3b9a_ca07 + i as u64, steps);
+
+        let written = oxiguitar_formats::write_gp5(&score).unwrap();
+        let back = oxiguitar_formats::read(&written.data).unwrap().score;
+        if std::env::var("GP5_TRACE").is_ok() {
+            for e in written.losses.entries() {
+                eprintln!("{}: {:?}", path.display(), e.message);
+            }
+        }
+        if written.losses.warning_count() == 0 {
+            // Nothing was named lost: every note comes back.
+            let (a, b) = (notes_of(&score), notes_of(&back));
+            assert!(
+                a == b,
+                "{}: saved as .gp5 without a loss, read back different: {}",
+                path.display(),
+                first_line_apart(&a, &b)
+            );
+            exact += 1;
+        }
+        // Whatever it lost, what was read back is held as it is.
+        let again = oxiguitar_formats::write_gp5(&back).unwrap();
+        assert_eq!(
+            again.losses.warning_count(),
+            0,
+            "{}: {:?}",
+            path.display(),
+            again.losses.entries()
+        );
+        let third = oxiguitar_formats::read(&again.data).unwrap().score;
+        let (x, y) = (notes_of(&back), notes_of(&third));
+        assert!(
+            x == y,
+            "{}: second round trip: {}",
+            path.display(),
+            first_line_apart(&x, &y)
+        );
+        compared += 1;
+    }
+    assert!(compared > 40, "only {compared} files were compared");
+    assert!(exact > 10, "only {exact} saved without a loss");
 }
