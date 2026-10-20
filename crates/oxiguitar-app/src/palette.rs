@@ -19,8 +19,11 @@
 //! No window code here: the window shows [`GROUPS`] and asks [`Palette`]
 //! which groups are collapsed.
 
+use crate::editing::AtCaret;
 use crate::icons::{Face, Fit, Pen, S, VALUES, glyph};
 use oxiguitar_display::smufl::glyph::Glyph;
+use oxiguitar_edit::Command;
+use oxiguitar_model::NoteValue;
 
 /// One tool.
 #[derive(Clone, Copy, Debug)]
@@ -79,16 +82,57 @@ pub(crate) fn tip(name: &str) -> String {
     format!("{name} (comes with the editor)")
 }
 
-/// The tools that work already, with their shortcut (Guitar Pro 8's):
-/// the voice buttons, which pick the caret's voice (M3 slice 1).
-pub(crate) fn working(id: &str) -> Option<&'static str> {
-    Some(match id {
+/// The tools that work already, with their shortcut (Guitar Pro 8's) if
+/// they have one: the voice buttons, which pick the caret's voice (M3
+/// slice 1), and note entry's (slice 3).
+pub(crate) fn working(id: &str) -> Option<Option<&'static str>> {
+    Some(Some(match id {
         "voice-1" => "Ctrl + 1",
         "voice-2" => "Ctrl + 2",
         "voice-3" => "Ctrl + 3",
         "voice-4" => "Ctrl + 4",
+        "rest" => "R",
+        "dotted" => "Shift + .",
+        "double-dotted" => "Ctrl + .",
+        "tie" => "L",
+        _ if command_of(id).is_some() => return Some(None),
+        _ => return None,
+    }))
+}
+
+/// The edit a note-entry tool makes at the caret.
+pub(crate) fn command_of(id: &str) -> Option<Command> {
+    Some(match id {
+        "whole" => Command::Value(NoteValue::Whole),
+        "half" => Command::Value(NoteValue::Half),
+        "quarter" => Command::Value(NoteValue::Quarter),
+        "eighth" => Command::Value(NoteValue::Eighth),
+        "16th" => Command::Value(NoteValue::Sixteenth),
+        "32nd" => Command::Value(NoteValue::ThirtySecond),
+        "64th" => Command::Value(NoteValue::SixtyFourth),
+        "rest" => Command::Rest,
+        "dotted" => Command::Dot,
+        "double-dotted" => Command::DoubleDot,
+        "tie" => Command::Tie,
         _ => return None,
     })
+}
+
+/// Whether a working tool shows as on for the caret's beat `at`: the
+/// caret's voice, the beat's note value, dots, rest, the caret's note
+/// tied.
+pub(crate) fn checked(id: &str, at: &AtCaret) -> bool {
+    if let Some(v) = voice_of(id) {
+        return at.voice == v;
+    }
+    match command_of(id) {
+        Some(Command::Value(v)) => at.value == Some(v),
+        Some(Command::Rest) => at.rest,
+        Some(Command::Dot) => at.dots == 1,
+        Some(Command::DoubleDot) => at.dots == 2,
+        Some(Command::Tie) => at.tied,
+        _ => false,
+    }
 }
 
 /// The voice a voice button picks, from 0.
@@ -101,7 +145,8 @@ pub(crate) fn voice_of(id: &str) -> Option<usize> {
 /// and that it comes with the editor.
 pub(crate) fn tool_tip(id: &str, name: &str) -> String {
     match working(id) {
-        Some(keys) => format!("{name} ({keys})"),
+        Some(Some(keys)) => format!("{name} ({keys})"),
+        Some(None) => name.to_owned(),
         None => tip(name),
     }
 }
@@ -1195,12 +1240,50 @@ mod tests {
             tool_tip("voice-2", "Edit Voice 2"),
             "Edit Voice 2 (Ctrl + 2)"
         );
-        assert_eq!(tool_tip("rest", "Rest"), "Rest (comes with the editor)");
+        assert_eq!(tool_tip("rest", "Rest"), "Rest (R)");
+        assert_eq!(tool_tip("half", "Half Note"), "Half Note");
+        assert_eq!(tool_tip("bend", "Bend"), "Bend (comes with the editor)");
+        let at = AtCaret {
+            voice: 1,
+            value: Some(NoteValue::Eighth),
+            dots: 1,
+            rest: false,
+            tied: true,
+        };
+        for (id, on) in [
+            ("voice-2", true),
+            ("voice-1", false),
+            ("eighth", true),
+            ("quarter", false),
+            ("dotted", true),
+            ("double-dotted", false),
+            ("rest", false),
+            ("tie", true),
+            ("bend", false),
+        ] {
+            assert_eq!(checked(id, &at), on, "{id}");
+        }
         assert_eq!(voice_of("voice-4"), Some(3));
         assert_eq!(voice_of("voice-5"), None);
         assert_eq!(voice_of("multivoice"), None);
         // Every working tool is in the palette.
-        for id in ["voice-1", "voice-2", "voice-3", "voice-4"] {
+        for id in [
+            "voice-1",
+            "voice-2",
+            "voice-3",
+            "voice-4",
+            "whole",
+            "half",
+            "quarter",
+            "eighth",
+            "16th",
+            "32nd",
+            "64th",
+            "rest",
+            "dotted",
+            "double-dotted",
+            "tie",
+        ] {
             assert!(tools().any(|(_, t)| t.id == id), "{id}");
         }
     }

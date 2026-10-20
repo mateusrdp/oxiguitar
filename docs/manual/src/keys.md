@@ -17,6 +17,7 @@
 | Arrow keys, Home, End, Tab, Ctrl + Up / Down, Ctrl + 1 to 4 | Move the caret ([Editing](editing.md)) |
 | Shift + those keys, Ctrl + Shift + Left / Right | Select |
 | Ctrl + A / Escape | Select everything / drop the selection |
+| 0 to 9, R, − / +, Shift + . / Ctrl + ., L / Shift + L, Backspace, Shift + Delete, Ctrl + Insert, Alt + arrows | Enter notes ([Entering notes](editing.md#entering-notes)) |
 | Ctrl + Z / Ctrl + Y | Undo / redo |
 | F4 | The next bar that doesn't add up |
 | Ctrl + mouse wheel | Zoom the interface in or out |

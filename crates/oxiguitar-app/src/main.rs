@@ -55,7 +55,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use i_slint_backend_winit::winit::event::{
     ElementState, MouseScrollDelta, WindowEvent as WinitEvent,
@@ -472,6 +472,9 @@ fn main() -> Result<(), slint::PlatformError> {
         "Ctrl + Home / Ctrl + End: the first / last bar;  Tab / Shift + Tab: the next / previous staff;  Ctrl + Up / Ctrl + Down: the previous / next track",
         "Shift + the arrows, Home, End: select;  Ctrl + Shift + Left / Right: select by bar;  Ctrl + A: select all;  Escape: drop the selection",
         "Ctrl + 1 to Ctrl + 4: voice 1 to 4;  Ctrl + Z / Ctrl + Y: undo / redo;  F4: the next bar that doesn't add up (shown in red)",
+        "0 to 9: a fret on the caret's string (two digits in a row: 10 to 24);  R: rest;  − / +: longer / shorter;  Shift + . / Ctrl + .: dot / double dot",
+        "L / Shift + L: tie the note / the beat;  Backspace: delete the note;  Shift + Delete: delete the beat;  Ctrl + Insert: insert a beat",
+        "Alt + Shift + Up / Down: a semitone up / down;  Alt + Up / Down: the same note on the string above / below",
         "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
@@ -606,6 +609,20 @@ fn main() -> Result<(), slint::PlatformError> {
         taken
     });
     let a = app.clone();
+    ui.on_edit_key(move |name, shift, ctrl, alt| {
+        let typed = a
+            .borrow_mut()
+            .editing
+            .typed(name.as_str(), shift, ctrl, alt, Instant::now());
+        match typed {
+            Some(t) => {
+                send_typed(&a, t);
+                true
+            }
+            None => false,
+        }
+    });
+    let a = app.clone();
     ui.on_undo(move || a.borrow().worker.send(Request::Undo));
     let a = app.clone();
     ui.on_redo(move || a.borrow().worker.send(Request::Redo));
@@ -649,6 +666,13 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_palette_tool_clicked(move |id| {
+        if let Some(command) = palette::command_of(id.as_str()) {
+            let typed = a.borrow_mut().editing.tool(command);
+            if let Some(t) = typed {
+                send_typed(&a, t);
+            }
+            return;
+        }
         let Some(v) = palette::voice_of(id.as_str()) else {
             return;
         };
@@ -1664,13 +1688,26 @@ fn handle(app: &Shared, event: Event) {
             }
         }
         Event::SaveFailed => app.borrow_mut().after_save = None,
-        Event::Changed { score, edit, bad } => {
+        Event::Changed {
+            score,
+            edit,
+            bad,
+            caret,
+        } => {
             {
                 let mut s = app.borrow_mut();
                 s.editing.changed(score);
+                if let Some(c) = caret {
+                    s.editing.edited(c);
+                }
                 s.bad = bad;
             }
             sync_edit_state(app, &edit);
+            if caret.is_some() {
+                caret_moved(app);
+            } else {
+                sync_caret(app, false);
+            }
         }
         Event::Engraved {
             engraving,
@@ -1786,6 +1823,15 @@ fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
 
 /// The caret or the selection moved: draw them, keep the caret in view,
 /// and tell the plugins that listen.
+/// Sends a command typed at the caret to the worker.
+fn send_typed(app: &Shared, t: editing::Typed) {
+    app.borrow().worker.send(Request::Edit {
+        command: t.command,
+        caret: t.caret,
+        selection: t.selection,
+    });
+}
+
 fn caret_moved(app: &Shared) {
     sync_caret(app, true);
     let s = app.borrow();
@@ -1837,7 +1883,7 @@ fn sync_caret(app: &Shared, scroll: bool) {
             .unwrap_or(-1),
     );
     ui.set_bad_bars(s.editing.any_shown(&s.bad));
-    sync_voice_buttons(&ui, s.editing.voice());
+    sync_palette_state(&ui, s.editing.at_caret());
     if let (true, Some(b)) = (scroll, column) {
         let px = PX_PER_PT * s.zoom;
         let x0 = ui.get_origin_x() + b.x * px;
@@ -2060,7 +2106,7 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
             }
         })
         .collect();
-    let voice = s.editing.voice();
+    let at = s.editing.at_caret();
     drop(s);
     if fresh {
         ui.set_palette_groups(ModelRc::new(VecModel::from(groups)));
@@ -2069,12 +2115,12 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
             model.set_row_data(g, row);
         }
     }
-    sync_voice_buttons(ui, voice);
+    sync_palette_state(ui, at);
 }
 
-/// The palette's voice buttons: usable with a score open, the caret's
-/// voice highlighted.
-fn sync_voice_buttons(ui: &AppWindow, voice: Option<usize>) {
+/// The palette's working tools: usable with a score open, highlighted as
+/// the caret's beat is (its voice, value, dots, rest, tie).
+fn sync_palette_state(ui: &AppWindow, at: Option<editing::AtCaret>) {
     let groups = ui.get_palette_groups();
     for g in 0..groups.row_count() {
         let Some(group) = groups.row_data(g) else {
@@ -2084,10 +2130,13 @@ fn sync_voice_buttons(ui: &AppWindow, voice: Option<usize>) {
             let Some(mut row) = group.tools.row_data(i) else {
                 continue;
             };
-            let Some(v) = palette::voice_of(row.id.as_str()) else {
+            if palette::working(row.id.as_str()).is_none() {
                 continue;
-            };
-            let (enabled, checked) = (voice.is_some(), voice == Some(v));
+            }
+            let (enabled, checked) = (
+                at.is_some(),
+                at.is_some_and(|at| palette::checked(row.id.as_str(), &at)),
+            );
             if (row.enabled, row.checked) != (enabled, checked) {
                 row.enabled = enabled;
                 row.checked = checked;

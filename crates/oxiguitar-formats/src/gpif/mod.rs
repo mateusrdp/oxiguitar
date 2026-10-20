@@ -675,8 +675,14 @@ impl<'a> Reader<'a> {
             .unwrap_or_default()
             .split_whitespace()
             .collect();
+        // Voices keep their places (voice 3 stays voice 3, stems down): an
+        // unused voice before a used one is an empty placeholder, unused
+        // voices after the last used one are left out. A voice is used
+        // when it holds a note or a rest; the first voice is kept as read.
+        let mut slots: Vec<Option<Voice>> = Vec::new();
         for (vi, id) in ids.iter().take(4).enumerate() {
             if *id == "-1" {
+                slots.push(None);
                 continue;
             }
             let Some(voice_el) = self.index.voices.get(id).copied() else {
@@ -684,14 +690,19 @@ impl<'a> Reader<'a> {
                     "a voice refers to data the file does not contain and was left out",
                     self.here(),
                 );
+                slots.push(None);
                 continue;
             };
             self.voice_key.1 = vi;
             let voice = self.voice(voice_el, ctx, &sctx);
-            if vi == 0 || bar.voices.is_empty() || !voice.is_empty() {
-                bar.voices.push(voice);
-            }
+            slots.push(Some(voice).filter(|v| vi == 0 || !v.is_empty()));
         }
+        let used = slots.iter().rposition(Option::is_some).map_or(1, |i| i + 1);
+        bar.voices = slots
+            .into_iter()
+            .take(used)
+            .map(Option::unwrap_or_default)
+            .collect();
         if bar.voices.is_empty() {
             bar.voices.push(Voice::default());
         }

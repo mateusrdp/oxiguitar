@@ -798,6 +798,9 @@ export component AppWindow inherits Window {
     // answering whether the editor took it.
     callback page-pressed(length, length, bool);
     callback caret-key(string, bool, bool) -> bool;
+    // Note entry: a key typed at the caret, with Shift, Ctrl and Alt,
+    // answering whether it was one (editing.rs, `Editing::typed`).
+    callback edit-key(string, bool, bool, bool) -> bool;
     callback undo();
     callback redo();
     callback next-bad-bar();
@@ -943,6 +946,9 @@ export component AppWindow inherits Window {
                 : event.text == Key.Tab ? "tab"
                 : event.text == Key.Backtab ? "backtab"
                 : event.text == Key.Escape ? "escape"
+                : event.text == Key.Backspace ? "backspace"
+                : event.text == Key.Delete ? "delete"
+                : event.text == Key.Insert ? "insert"
                 : event.text;
             if (event.text == Key.Escape) {
                 // Closes the Help popups (a click anywhere does too).
@@ -950,6 +956,9 @@ export component AppWindow inherits Window {
                 about-popup.close();
             }
             if (root.has-score && !event.modifiers.alt && root.caret-key(name, event.modifiers.shift, event.modifiers.control)) {
+                return accept;
+            }
+            if (root.has-score && root.edit-key(name, event.modifiers.shift, event.modifiers.control, event.modifiers.alt)) {
                 return accept;
             }
             if (event.modifiers.control || event.modifiers.alt || event.text == Key.Escape) {

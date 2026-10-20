@@ -17,12 +17,17 @@
 //! Ctrl + A selects everything.
 
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use oxiguitar_display::Rect;
-use oxiguitar_edit::{Caret, Selection, StaffBar};
+use oxiguitar_edit::{Caret, Command, Selection, StaffBar};
 use oxiguitar_host::api::event::{Position, Selection as PluginSelection, Selection2};
 use oxiguitar_layout::{Found, Hits, Spot};
-use oxiguitar_model::Score;
+use oxiguitar_model::{BeatKind, NoteValue, Score};
+
+/// How soon a second digit must follow the first to make a two-digit
+/// fret.
+const SECOND_DIGIT: Duration = Duration::from_millis(1000);
 
 /// The keys the editor takes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -77,6 +82,35 @@ pub(crate) struct Editing {
     /// Where Shift was first held, while a selection grows.
     anchor: Option<Caret>,
     selection: Option<Selection>,
+    /// The last digit typed, where and when, for a two-digit fret.
+    digit: Option<(Caret, u8, Instant)>,
+}
+
+/// A key's digit, 0 to 9.
+fn digit(name: &str) -> Option<u8> {
+    match name.as_bytes() {
+        [d @ b'0'..=b'9'] => Some(d - b'0'),
+        _ => None,
+    }
+}
+
+/// What the palette shows of the caret's beat: its voice, note value, dots,
+/// whether it is a rest, whether the caret's note is tied.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct AtCaret {
+    pub(crate) voice: usize,
+    pub(crate) value: Option<NoteValue>,
+    pub(crate) dots: u8,
+    pub(crate) rest: bool,
+    pub(crate) tied: bool,
+}
+
+/// A command typed at the caret, as the worker takes it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Typed {
+    pub(crate) command: Command,
+    pub(crate) caret: Caret,
+    pub(crate) selection: Option<Selection>,
 }
 
 impl Editing {
@@ -134,6 +168,111 @@ impl Editing {
     #[cfg(test)]
     pub(crate) fn shown(&self) -> &[usize] {
         &self.shown
+    }
+
+    /// After an edit: the caret where the edit left it.
+    pub(crate) fn edited(&mut self, caret: Caret) {
+        self.caret = self
+            .score
+            .as_ref()
+            .and_then(|s| caret.clamp(s))
+            .or(Some(caret));
+        self.anchor = None;
+        self.selection = None;
+    }
+
+    /// Note entry (Guitar Pro 8's keys, `oxiguitar_edit::Command`): the
+    /// command a key typed at the caret makes, with Shift, Ctrl and Alt as
+    /// held, at `now` (a second digit soon after the first makes a two-digit
+    /// fret). `None` when the key isn't one.
+    pub(crate) fn typed(
+        &mut self,
+        name: &str,
+        shift: bool,
+        ctrl: bool,
+        alt: bool,
+        now: Instant,
+    ) -> Option<Typed> {
+        let caret = self.caret?;
+        let score = self.score.clone()?;
+        let last = self.digit.take();
+        let command = match (name, ctrl, alt) {
+            (d, false, false) if digit(d).is_some() => {
+                let n = digit(d)?;
+                let frets = score
+                    .tracks
+                    .get(caret.track)
+                    .and_then(|t| t.staves.get(caret.staff))
+                    .map_or(0, |s| s.fret_count);
+                let joined = last
+                    .filter(|(c, d, at)| {
+                        *c == caret
+                            && *d > 0
+                            && now.duration_since(*at) < SECOND_DIGIT
+                            && d * 10 + n <= frets
+                    })
+                    .map(|(_, d, _)| d * 10 + n);
+                match joined {
+                    Some(fret) => Command::Fret { fret, again: true },
+                    None => {
+                        self.digit = Some((caret, n, now));
+                        Command::Fret {
+                            fret: n,
+                            again: false,
+                        }
+                    }
+                }
+            }
+            ("r" | "R", false, false) => Command::Rest,
+            ("-" | "_", false, false) => Command::Longer,
+            ("+" | "=", false, false) => Command::Shorter,
+            (".", false, false) if shift => Command::Dot,
+            (">", false, false) => Command::Dot,
+            (".", true, false) => Command::DoubleDot,
+            ("l", false, false) if !shift => Command::Tie,
+            ("l" | "L", false, false) => Command::TieBeat,
+            ("backspace" | "delete", false, false) if !shift => Command::DeleteNote,
+            ("delete", false, false) => Command::DeleteBeats,
+            ("insert", true, false) => Command::InsertBeat,
+            ("up", false, true) if shift => Command::SemitoneUp,
+            ("down", false, true) if shift => Command::SemitoneDown,
+            ("up", false, true) => Command::StringUp,
+            ("down", false, true) => Command::StringDown,
+            _ => return None,
+        };
+        Some(Typed {
+            command,
+            caret,
+            selection: self.selection,
+        })
+    }
+
+    /// A palette tool's command at the caret, on the selection.
+    pub(crate) fn tool(&mut self, command: Command) -> Option<Typed> {
+        self.digit = None;
+        Some(Typed {
+            command,
+            caret: self.caret?,
+            selection: self.selection,
+        })
+    }
+
+    /// The caret's beat as the palette shows it.
+    pub(crate) fn at_caret(&self) -> Option<AtCaret> {
+        let c = self.caret?;
+        let score = self.score.as_ref()?;
+        let beat = c.voice_in(score).and_then(|v| v.beats.get(c.beat));
+        Some(AtCaret {
+            voice: c.voice,
+            value: beat.map(|b| b.duration.value),
+            dots: beat.map_or(0, |b| b.duration.dots),
+            rest: beat.is_some_and(|b| b.kind == BeatKind::Rest),
+            tied: beat.is_some_and(|b| {
+                b.notes
+                    .iter()
+                    .any(|n| n.tie && n.string().is_none_or(|s| s == c.string))
+            }),
+        })
     }
 
     /// A key, with Shift and Ctrl as held. Returns whether it was the
@@ -257,11 +396,6 @@ impl Editing {
         self.selection = None;
         self.anchor = None;
         true
-    }
-
-    /// The caret's voice, from 0, for the palette's voice buttons.
-    pub(crate) fn voice(&self) -> Option<usize> {
-        self.caret.map(|c| c.voice)
     }
 
     /// The track selected in the track list: the caret's.
@@ -646,6 +780,93 @@ mod tests {
         assert_eq!(e.next_bad(&bad), Some(at(2, 1)), "round to the start");
         assert!(!e.any_shown(&[at(1, 0)]));
         assert_eq!(e.next_bad(&[]), None);
+    }
+
+    #[test]
+    fn keys_typed_at_the_caret_are_note_entry() {
+        let mut e = editing(1, &[0]);
+        let t0 = Instant::now();
+        let typed = |e: &mut Editing, name: &str, shift, ctrl, alt, ms| {
+            e.typed(
+                name,
+                shift,
+                ctrl,
+                alt,
+                t0 + std::time::Duration::from_millis(ms),
+            )
+            .map(|t| t.command)
+        };
+        assert_eq!(
+            typed(&mut e, "1", false, false, false, 0),
+            Some(Command::Fret {
+                fret: 1,
+                again: false
+            })
+        );
+        assert_eq!(
+            typed(&mut e, "2", false, false, false, 400),
+            Some(Command::Fret {
+                fret: 12,
+                again: true
+            }),
+            "a second digit soon after: fret 12"
+        );
+        assert_eq!(
+            typed(&mut e, "3", false, false, false, 600),
+            Some(Command::Fret {
+                fret: 3,
+                again: false
+            }),
+            "a third digit starts again"
+        );
+        assert_eq!(
+            typed(&mut e, "5", false, false, false, 2000),
+            Some(Command::Fret {
+                fret: 5,
+                again: false
+            }),
+            "too late for a second digit"
+        );
+        assert_eq!(
+            typed(&mut e, "9", false, false, false, 2100),
+            Some(Command::Fret {
+                fret: 9,
+                again: false
+            }),
+            "59 is past the frets"
+        );
+        for (name, shift, ctrl, alt, command) in [
+            ("r", false, false, false, Command::Rest),
+            ("-", false, false, false, Command::Longer),
+            ("+", false, false, false, Command::Shorter),
+            ("=", false, false, false, Command::Shorter),
+            (".", true, false, false, Command::Dot),
+            (".", false, true, false, Command::DoubleDot),
+            ("l", false, false, false, Command::Tie),
+            ("L", true, false, false, Command::TieBeat),
+            ("backspace", false, false, false, Command::DeleteNote),
+            ("delete", true, false, false, Command::DeleteBeats),
+            ("insert", false, true, false, Command::InsertBeat),
+            ("up", true, false, true, Command::SemitoneUp),
+            ("down", false, false, true, Command::StringDown),
+        ] {
+            assert_eq!(
+                typed(&mut e, name, shift, ctrl, alt, 0),
+                Some(command),
+                "{name}"
+            );
+        }
+        assert_eq!(typed(&mut e, "x", false, false, false, 0), None);
+        assert_eq!(
+            typed(&mut e, "1", false, true, false, 0),
+            None,
+            "Ctrl + 1 is a voice"
+        );
+        let at = e.at_caret().unwrap();
+        assert_eq!(
+            (at.voice, at.value, at.rest),
+            (0, Some(NoteValue::Quarter), false)
+        );
     }
 
     #[test]

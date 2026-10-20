@@ -168,10 +168,17 @@ impl Hits {
             .iter()
             .min_by(|a, b| a.distance(y).total_cmp(&b.distance(y)))?;
         let bar = staff.bars.iter().find(|b| x >= b.start && x < b.end)?;
-        let beat = bar
-            .voice(voice)
-            .min_by(|a, b| (a.x - x).abs().total_cmp(&(b.x - x).abs()))
-            .map(|b| b.beat);
+        // Past the last beat's column: the place after it, where typing
+        // adds a beat (the caret keeps to the last beat when the bar is
+        // full).
+        let last = bar.voice(voice).last();
+        let beat = match last {
+            Some(l) if x > l.x + l.width.max(8.0) * 0.5 => Some(l.beat + 1),
+            _ => bar
+                .voice(voice)
+                .min_by(|a, b| (a.x - x).abs().total_cmp(&(b.x - x).abs()))
+                .map(|b| b.beat),
+        };
         Some(Spot {
             track: staff.track,
             staff: staff.staff,
@@ -204,10 +211,20 @@ impl Hits {
                 let Some(b) = s.bars.iter().find(|b| b.bar == bar) else {
                     continue;
                 };
-                let (x, w) = b
-                    .voice(voice)
-                    .find(|h| h.beat == beat)
-                    .map_or((b.notes + 4.0, 8.0), |h| (h.x, h.width));
+                // A beat the bar doesn't have is the place after the
+                // voice's last beat (where typing adds one), or the bar's
+                // start in a voice with no beats.
+                let (x, w) = b.voice(voice).find(|h| h.beat == beat).map_or_else(
+                    || {
+                        b.voice(voice)
+                            .filter(|h| h.beat < beat)
+                            .last()
+                            .map_or((b.notes + 4.0, 8.0), |h| {
+                                ((h.x + h.width.max(8.0)).min(b.end - 5.0), 8.0)
+                            })
+                    },
+                    |h| (h.x, h.width),
+                );
                 let half = (w * 0.5).clamp(4.0, 12.0);
                 // The column covers every view of the staff (a grand
                 // staff's hands and its tablature).

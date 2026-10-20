@@ -1,6 +1,6 @@
 # Editing
 
-OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, undo a tool, and find the bars that don't add up. Entering notes comes next.
+OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, undo, and find the bars that don't add up. Bars, copy and paste, tracks and effects come next.
 
 ## The caret
 
@@ -16,11 +16,39 @@ A box over the page shows where the next edit goes: a beat of one voice, and on 
 | Ctrl + Up / Ctrl + Down | The previous / next track shown; with a single track on the page, the previous / next track of the song takes its place |
 | Ctrl + 1 to Ctrl + 4 | Voice 1 to 4, at the same moment of the bar (or the voice buttons at the top of the palette) |
 
+When a voice is shorter than its bar, the caret has one more place after its last beat: typing there adds a beat. Click past a short voice's last note to go there.
+
 The page scrolls to keep the caret in view. The palette's voice buttons, 1 to 4 at its top, show which voice the caret is in. A click on a track's name in the Tracks tab selects that track and moves the caret to it; the selected track's name is highlighted.
 
 ## Selecting
 
 Hold **Shift** with the arrows, Home or End, or Shift + click, to select from where the caret was. **Ctrl + Shift + Left / Right** selects bar by bar. Within one voice of one staff a selection is a run of beats; once it reaches another track it takes whole bars of every track in between. **Ctrl + A** (Edit → Select All) selects everything, and **Escape** drops the selection.
+
+## Entering notes
+
+Type at the caret, with Guitar Pro 8's keys:
+
+| Keys | Does |
+| --- | --- |
+| 0 to 9 | Puts that fret on the caret's string. Two digits in a row, within a second, make one fret (1 then 2 is fret 12); a fret past the instrument's last is not taken |
+| R | Makes the beat a rest |
+| − / + | Makes the beat longer / shorter, from a whole note to a sixty-fourth |
+| Shift + . / Ctrl + . | Dots the beat once / twice; again takes the dots off |
+| L | Ties the note on the caret's string to the note before it on that string (or unties it) |
+| Shift + L | Ties every note of the beat before into the caret's beat (or unties them) |
+| Backspace (or Delete) | Deletes the note on the caret's string; a beat left without notes becomes a rest |
+| Shift + Delete | Deletes the beat, or the selected beats |
+| Ctrl + Insert | Inserts a rest as long as the caret's beat, before it |
+| Alt + Shift + Up / Down | Moves the note a semitone up / down on its string |
+| Alt + Up / Down | Moves the note to the string above / below, at the same pitch |
+
+A beat added after a voice's last beat is as long as the beat before it. Typing into a voice that the bar doesn't have yet starts that voice. Note lengths, dots, semitones and deleting beats act on every selected beat when a run of beats is selected.
+
+The palette's **Note** group works too: the whole to sixty-fourth note buttons set the beat's length, and Rest, Dotted Note, Double-Dotted Note and Tie do what their keys do. They light up to show the caret's beat: its length, its dots, whether it is a rest, whether its note is tied.
+
+A tied note always plays the fret of the note it continues: change that note and its ties follow. Notes of a drum track are drum sounds, not frets; entering them comes later.
+
+Every change can be undone. After typing, the bars that don't add up are checked again (see below).
 
 ## Undo and redo
 
