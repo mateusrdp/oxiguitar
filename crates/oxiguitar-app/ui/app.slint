@@ -547,6 +547,64 @@ component Placeholder inherits Rectangle {
     }
 }
 
+// One voice of the caret's bar in the Inspector (inspector.rs).
+export struct InspectorVoice {
+    name: string,
+    count: string,
+    state: string,
+    // 0 full, 1 short, 2 too long, 3 nothing to compare.
+    fill: int,
+    entered: int,
+    current: bool,
+}
+
+// The Inspector: the caret's bar, each voice's beats against the time
+// signature (Mateus, 20 Oct 2026).
+component Inspector inherits Rectangle {
+    in property <string> heading;
+    in property <string> unit;
+    in property <string> caret;
+    in property <[InspectorVoice]> voices;
+    ScrollView {
+        VerticalLayout {
+            padding: 12px;
+            spacing: 6px;
+            alignment: start;
+            Text { text: root.heading; font-size: 14px; font-weight: 700; }
+            Text { text: root.unit; font-size: 11px; color: Palette.foreground.transparentize(0.4); wrap: word-wrap; }
+            for v in root.voices : Rectangle {
+                border-radius: 4px;
+                background: v.current ? Look.accent.transparentize(0.85) : transparent;
+                VerticalLayout {
+                    padding: 6px;
+                    spacing: 2px;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        Text { text: v.name; font-size: 12px; font-weight: v.current ? 700 : 400; }
+                        Text { text: v.count; font-size: 12px; horizontal-alignment: right; horizontal-stretch: 1; }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        Text {
+                            text: v.state;
+                            font-size: 11px;
+                            color: v.fill == 0 ? Look.accent : v.fill == 1 ? Look.warning : v.fill == 2 ? Look.error : Palette.foreground.transparentize(0.4);
+                        }
+                        Text {
+                            text: v.entered == 1 ? "1 beat entered" : v.entered + " beats entered";
+                            font-size: 11px;
+                            horizontal-alignment: right;
+                            horizontal-stretch: 1;
+                            color: Palette.foreground.transparentize(0.4);
+                        }
+                    }
+                }
+            }
+            Text { text: root.caret; font-size: 11px; color: Palette.foreground.transparentize(0.4); wrap: word-wrap; }
+        }
+    }
+}
+
 // A small framed note that closes when clicked anywhere.
 component InfoPopup inherits PopupWindow {
     in property <string> heading;
@@ -824,6 +882,12 @@ export component AppWindow inherits Window {
     // logical pixels, with Shift; a key by name, with Shift and Ctrl,
     // answering whether the editor took it.
     callback page-pressed(length, length, bool);
+    callback page-double-clicked(length, length);
+    // The Inspector's view of the caret's bar (inspector.rs).
+    in property <string> inspector-heading;
+    in property <string> inspector-unit;
+    in property <string> inspector-caret;
+    in property <[InspectorVoice]> inspector-voices;
     callback caret-key(string, bool, bool) -> bool;
     // Note entry: a key typed at the caret, with Shift, Ctrl and Alt,
     // answering whether it was one (editing.rs, `Editing::typed`).
@@ -1233,6 +1297,8 @@ export component AppWindow inherits Window {
                                     root.page-pressed(self.mouse-x, self.mouse-y, e.modifiers.shift);
                                 }
                             }
+                            // On a time signature: the Bar dialog for its bar.
+                            double-clicked => { root.page-double-clicked(self.mouse-x, self.mouse-y); }
                         }
                         // The selection and the caret, over the tiles: moving
                         // them redraws no tile.
@@ -1321,7 +1387,13 @@ export component AppWindow inherits Window {
                     }
                     Rectangle {
                         background: Palette.alternate-background;
-                        if root.right-area.active-id == "inspector" : Placeholder { text: "The properties of the selected notes and bars come with the editor."; }
+                        if root.right-area.active-id == "inspector" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats."; }
+                        if root.right-area.active-id == "inspector" && root.has-score : Inspector {
+                            heading: root.inspector-heading;
+                            unit: root.inspector-unit;
+                            caret: root.inspector-caret;
+                            voices: root.inspector-voices;
+                        }
                         if root.right-area.plugin : PluginTab {
                     rows: root.right-plugin-rows;
                     message: root.right-plugin-message;

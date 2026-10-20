@@ -70,6 +70,8 @@ pub struct BarHits {
     /// The clef this view of the bar is written in (a grand staff's hands
     /// have their own).
     pub clef: Clef,
+    /// Where its time signature is drawn, left to right, if it shows one.
+    pub time_signature: Option<(f32, f32)>,
     /// Its beats, every voice, as drawn.
     pub beats: Vec<BeatHit>,
 }
@@ -215,6 +217,32 @@ impl Hits {
                 .then(|| staff.step_at(y))
                 .flatten()
                 .map(|s| (s, bar.clef)),
+        })
+    }
+
+    /// The bar whose time signature is drawn at (`x`, `y`) on sheet
+    /// `sheet`, with its track and staff: what a double-click there edits.
+    pub fn time_signature_at(&self, sheet: usize, x: f32, y: f32) -> Option<Spot> {
+        let system = self
+            .systems
+            .iter()
+            .find(|s| s.sheet == sheet && y >= s.top && y <= s.bottom)?;
+        system.staves.iter().find_map(|staff| {
+            if y < staff.top - 4.0 || y > staff.bottom + 4.0 {
+                return None;
+            }
+            let bar = staff.bars.iter().find(|b| {
+                b.time_signature
+                    .is_some_and(|(l, r)| x >= l - 3.0 && x <= r + 3.0)
+            })?;
+            Some(Spot {
+                track: staff.track,
+                staff: staff.staff,
+                bar: bar.bar,
+                beat: None,
+                string: None,
+                step: None,
+            })
         })
     }
 
@@ -409,6 +437,10 @@ impl SystemHits {
                 b.start += dx;
                 b.notes += dx;
                 b.end += dx;
+                if let Some((l, r)) = b.time_signature.as_mut() {
+                    *l += dx;
+                    *r += dx;
+                }
                 for h in &mut b.beats {
                     h.x += dx;
                 }
@@ -429,6 +461,7 @@ mod tests {
             notes: start + 5.0,
             end: start + 100.0,
             clef: Clef::Treble8vb,
+            time_signature: (bar == 1).then_some((start + 1.0, start + 4.0)),
             beats: (0..4)
                 .map(|i| BeatHit {
                     voice: 0,
@@ -511,6 +544,12 @@ mod tests {
         assert_eq!((whole.x, whole.right()), (100.0, 200.0));
         let (_, part) = m.span(2, 0, 0, Some((0, 1, 2))).unwrap();
         assert!(part.x < 35.0 && part.right() > 60.0 && part.right() <= 85.0);
+        let ts = m.time_signature_at(0, 102.5, 140.0).unwrap();
+        assert_eq!((ts.track, ts.bar), (2, 1));
+        assert!(
+            m.time_signature_at(0, 30.0, 140.0).is_none(),
+            "bar 0 shows none"
+        );
         let moved = m.systems[0].clone().placed(3, 10.0, 20.0);
         assert_eq!(moved.sheet, 3);
         assert_eq!(moved.staves[0].bars[0].beats[0].x, 20.0);

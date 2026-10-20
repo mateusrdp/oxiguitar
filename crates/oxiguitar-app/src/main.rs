@@ -37,6 +37,7 @@ mod document;
 mod editing;
 mod footer;
 mod icons;
+mod inspector;
 mod manager;
 mod palette;
 mod plugin_tabs;
@@ -88,9 +89,9 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, BarFields, BoxItem, FooterRow, ManagerRow, PaletteGroupRow,
-    PaletteToolRow, PluginManagerWindow, PluginRow, PluginWidget, TileItem, ToolRow,
-    ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    AppWindow, AreaState, BarFields, BoxItem, FooterRow, InspectorVoice, ManagerRow,
+    PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow, PluginWidget, TileItem,
+    ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -642,6 +643,8 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_page_pressed(move |x, y, shift| page_pressed(&a, x, y, shift));
+    let a = app.clone();
+    ui.on_page_double_clicked(move |x, y| page_double_clicked(&a, x, y));
     let a = app.clone();
     ui.on_caret_key(move |name, shift, ctrl| {
         let Some(key) = editing::Key::from_name(name.as_str()) else {
@@ -1895,28 +1898,37 @@ fn sync_edit_state(app: &Shared, edit: &document::EditState) {
 /// A press on the page, at (`x`, `y`) in the viewport's logical pixels:
 /// the caret goes there (with Shift, the selection grows to it).
 fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
-    let Some(ui) = app.borrow().ui.upgrade() else {
-        return;
-    };
-    let moved = {
-        let mut s = app.borrow_mut();
-        let px = PX_PER_PT * s.zoom;
-        let (cx, cy) = ((x - ui.get_origin_x()) / px, (y - ui.get_origin_y()) / px);
-        let sheet = s
-            .sheets
-            .rects
-            .iter()
-            .enumerate()
-            .find(|(_, r)| cx >= r.x && cx < r.right() && cy >= r.y && cy < r.bottom())
-            .map(|(i, r)| (i, r.x, r.y));
-        match sheet {
-            Some((i, ox, oy)) => s.editing.press_at(i, cx - ox, cy - oy, shift),
-            None => false,
-        }
-    };
+    let moved = on_sheet(app, x, y)
+        .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.press_at(i, sx, sy, shift));
     if moved {
         caret_moved(app);
     }
+}
+
+/// A double-click on the page: on a time signature, the caret goes to its
+/// bar and the Bar dialog opens there (Mateus, 20 Oct 2026).
+fn page_double_clicked(app: &Shared, x: f32, y: f32) {
+    let on_time = on_sheet(app, x, y)
+        .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.time_signature_at(i, sx, sy));
+    if on_time {
+        caret_moved(app);
+        open_edit_dialog(app, editing::Dialog::Bar);
+    }
+}
+
+/// A point of the canvas, in logical pixels, as the sheet under it and the
+/// point on that sheet, in points.
+fn on_sheet(app: &Shared, x: f32, y: f32) -> Option<(usize, f32, f32)> {
+    let ui = app.borrow().ui.upgrade()?;
+    let s = app.borrow();
+    let px = PX_PER_PT * s.zoom;
+    let (cx, cy) = ((x - ui.get_origin_x()) / px, (y - ui.get_origin_y()) / px);
+    s.sheets
+        .rects
+        .iter()
+        .enumerate()
+        .find(|(_, r)| cx >= r.x && cx < r.right() && cy >= r.y && cy < r.bottom())
+        .map(|(i, r)| (i, cx - r.x, cy - r.y))
 }
 
 /// The caret or the selection moved: draw them, keep the caret in view,
@@ -1945,6 +1957,7 @@ fn sync_caret(app: &Shared, scroll: bool) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
+    sync_inspector(app, &ui);
     let s = app.borrow();
     // A box on sheet `sheet`, in canvas points.
     let place = |sheet: usize, r: Rect| -> Option<BoxItem> {
@@ -2576,6 +2589,38 @@ fn bar_dialog_done(app: &Shared, ok: bool) {
     if let Some(t) = typed {
         send_typed(app, t);
     }
+}
+
+/// The Inspector shows the caret's bar: each voice's beats against the
+/// time signature.
+fn sync_inspector(app: &Shared, ui: &AppWindow) {
+    let view = app.borrow().editing.bar_view();
+    let Some(v) = view else {
+        ui.set_inspector_heading(SharedString::new());
+        ui.set_inspector_voices(ModelRc::default());
+        return;
+    };
+    ui.set_inspector_heading(v.heading.into());
+    ui.set_inspector_unit(v.unit.into());
+    ui.set_inspector_caret(v.caret.into());
+    let rows: Vec<InspectorVoice> = v
+        .voices
+        .into_iter()
+        .map(|r| InspectorVoice {
+            name: r.name.into(),
+            count: r.count.into(),
+            state: r.state.into(),
+            fill: match r.fill {
+                inspector::Fill::Full => 0,
+                inspector::Fill::Short => 1,
+                inspector::Fill::Long => 2,
+                inspector::Fill::Unknown => 3,
+            },
+            entered: i32::try_from(r.entered).unwrap_or(i32::MAX),
+            current: r.current,
+        })
+        .collect();
+    ui.set_inspector_voices(ModelRc::new(VecModel::from(rows)));
 }
 
 /// Edit → Go to Section lists the score's sections.

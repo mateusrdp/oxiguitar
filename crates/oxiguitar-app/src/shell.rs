@@ -208,7 +208,8 @@ impl Default for Shell {
                 Area::new(vec![Tab::new("player", "Player")], false),
                 Area::new(vec![Tab::new("tracks", "Tracks")], false),
                 Area::new(vec![Tab::new("palette", "Palette")], false),
-                Area::new(vec![Tab::new("inspector", "Inspector")], true),
+                // Open: it shows the caret's bar (Mateus, 20 Oct 2026).
+                Area::new(vec![Tab::new("inspector", "Inspector")], false),
             ],
         }
     }
@@ -248,7 +249,8 @@ mod tests {
         assert_eq!(shell.area(Side::Top).active_id(), "player");
         assert_eq!(shell.area(Side::Bottom).active_id(), "tracks");
         assert_eq!(shell.area(Side::Left).active_id(), "palette");
-        assert!(!shell.area(Side::Left).collapsed && shell.area(Side::Right).collapsed);
+        // The Inspector starts open: it shows the caret's bar.
+        assert!(!shell.area(Side::Left).collapsed && !shell.area(Side::Right).collapsed);
         assert!(!shell.area(Side::Top).collapsed);
         // No Mixer tab: the mixer's controls sit in each track's row.
         let ids: Vec<&str> = shell
