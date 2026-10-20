@@ -36,6 +36,7 @@ mod bend_form;
 mod canvas;
 mod document;
 mod editing;
+mod effect_form;
 mod footer;
 mod icons;
 mod inspector;
@@ -91,9 +92,9 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorVoice, ManagerRow,
-    PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow, PluginWidget, TileItem,
-    ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
+    AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField, InspectorVoice,
+    ManagerRow, PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow, PluginWidget,
+    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -616,6 +617,21 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_bend_released(move || bend_edit(&a, bend_form::BendForm::release));
     let a = app.clone();
     ui.on_bend_dialog_done(move |ok| bend_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_inspector_changed(move |id, value| {
+        let action = a.borrow().editing.field_changed(id.as_str(), value);
+        match action {
+            Some(effect_form::Action::Edit(command)) => {
+                let typed = a.borrow_mut().editing.tool(command);
+                if let Some(t) = typed {
+                    send_typed(&a, t);
+                }
+            }
+            Some(effect_form::Action::Bend) => open_edit_dialog(&a, editing::Dialog::Bend),
+            Some(effect_form::Action::Whammy) => open_edit_dialog(&a, editing::Dialog::Whammy),
+            None => {}
+        }
+    });
     ui.set_track_instrument_names(strings(
         track_form::INSTRUMENTS
             .iter()
@@ -2845,6 +2861,27 @@ fn track_list_changed(app: &Shared, tracks: &[TrackInfo], was: &[Option<usize>])
 /// The Inspector shows the caret's bar: each voice's beats against the
 /// time signature.
 fn sync_inspector(app: &Shared, ui: &AppWindow) {
+    let fields = app.borrow().editing.effect_fields();
+    ui.set_inspector_fields(ModelRc::new(VecModel::from(
+        fields
+            .into_iter()
+            .map(|f| InspectorField {
+                id: f.id.into(),
+                label: f.label.into(),
+                kind: match f.kind {
+                    effect_form::Kind::Heading => 0,
+                    effect_form::Kind::Switch => 1,
+                    effect_form::Kind::Choice => 2,
+                    effect_form::Kind::Number => 3,
+                    effect_form::Kind::Button => 4,
+                },
+                value: f.value,
+                options: strings(f.options),
+                min: f.min,
+                max: f.max,
+            })
+            .collect::<Vec<_>>(),
+    )));
     let view = app.borrow().editing.bar_view();
     let Some(v) = view else {
         ui.set_inspector_heading(SharedString::new());
