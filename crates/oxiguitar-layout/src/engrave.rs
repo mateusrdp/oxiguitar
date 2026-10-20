@@ -584,6 +584,7 @@ fn system_hits(
                 start: bx.start,
                 notes: bx.notes,
                 end: bx.end,
+                clef: plan.clef,
                 beats,
             });
         }
@@ -591,7 +592,7 @@ fn system_hits(
         staves.push(StaffHits {
             track: v.track,
             staff: v.staff,
-            standard: band.std_top,
+            standard: band.std_top.map(|t| (t, p.sp)),
             tablature: band.tab_top.map(|t| (t, tg, strings)),
             top: band.std_top.or(band.tab_top).unwrap_or(band.top),
             bottom: band.bottom,

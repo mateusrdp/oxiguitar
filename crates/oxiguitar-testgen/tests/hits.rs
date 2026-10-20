@@ -37,7 +37,8 @@ fn every_note_is_where_the_map_says() {
                             }
                             for n in &b.notes {
                                 let string = n.string().unwrap_or(1);
-                                let Some(found) = hits.find(ti, si, bi, vi, beat, string) else {
+                                let Some(found) = hits.find(ti, si, bi, vi, beat, string, None)
+                                else {
                                     panic!("{}: track {ti} bar {bi} voice {vi} beat {beat}", r.name)
                                 };
                                 checked += 1;

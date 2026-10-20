@@ -29,7 +29,15 @@ impl Rng {
     }
 }
 
-const COMMANDS: [Command; 17] = [
+const COMMANDS: [Command; 25] = [
+    Command::MoveBeatLeft,
+    Command::MoveBeatRight,
+    Command::ClearBeats,
+    Command::ClearBar,
+    Command::MoveToVoice(1),
+    Command::RemoveUnusedVoices,
+    Command::AppendBar,
+    Command::Pitch(oxiguitar_model::Pitch(62)),
     Command::Value(oxiguitar_model::NoteValue::Sixteenth),
     Command::StringUp,
     Command::Fret {

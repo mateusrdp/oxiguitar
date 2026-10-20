@@ -26,6 +26,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use oxiguitar_model::{Score, Track};
 
 pub use hits::{BarHits, BeatHit, Found, Hits, Spot, StaffHits, SystemHits};
+pub use pitch::pitch_at_step;
 
 mod draw;
 mod effects;

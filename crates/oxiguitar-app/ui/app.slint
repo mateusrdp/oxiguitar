@@ -762,6 +762,9 @@ export component AppWindow inherits Window {
     in property <[string]> about-lines;
 
     callback open-file();
+    callback new-file();
+    // The Edit menu's note items, by name (editing.rs, `menu_command`).
+    callback edit-command(string);
     callback save();
     callback save-as();
     // The question over the window (saving, unsaved changes).
@@ -855,6 +858,7 @@ export component AppWindow inherits Window {
     MenuBar {
         Menu {
             title: "File";
+            MenuItem { title: "New"; shortcut: @keys(Control + N); activated => { root.new-file(); } }
             MenuItem { title: "Open…"; shortcut: @keys(Control + O); activated => { root.open-file(); } }
             MenuItem { title: "Save"; enabled: root.has-score; shortcut: @keys(Control + S); activated => { root.save(); } }
             MenuItem { title: "Save As…"; enabled: root.has-score; shortcut: @keys(Control + Shift + S); activated => { root.save-as(); } }
@@ -873,6 +877,23 @@ export component AppWindow inherits Window {
             MenuItem { title: root.redo-title; enabled: root.can-redo; shortcut: @keys(Control + Y); activated => { root.redo(); } }
             MenuSeparator { }
             MenuItem { title: "Select All"; enabled: root.has-score; shortcut: @keys(Control + A); activated => { root.caret-key("a", false, true); } }
+            MenuSeparator { }
+            // Note entry's keys are taken on the page (editing.rs); these
+            // items name them, and do the same.
+            MenuItem { title: "Insert Beat (Ctrl + Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-beat"); } }
+            MenuItem { title: "Delete Beats (Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-beats"); } }
+            MenuItem { title: "Clear Beats (Ctrl + Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("clear-beats"); } }
+            MenuItem { title: "Clear Bar"; enabled: root.has-score; activated => { root.edit-command("clear-bar"); } }
+            MenuItem { title: "Move Beat Left"; enabled: root.has-score; activated => { root.edit-command("move-left"); } }
+            MenuItem { title: "Move Beat Right"; enabled: root.has-score; activated => { root.edit-command("move-right"); } }
+            Menu {
+                title: "Move Beat to Voice";
+                MenuItem { title: "Voice 1 (Alt + 1)"; enabled: root.has-score; activated => { root.edit-command("voice-1"); } }
+                MenuItem { title: "Voice 2 (Alt + 2)"; enabled: root.has-score; activated => { root.edit-command("voice-2"); } }
+                MenuItem { title: "Voice 3 (Alt + 3)"; enabled: root.has-score; activated => { root.edit-command("voice-3"); } }
+                MenuItem { title: "Voice 4 (Alt + 4)"; enabled: root.has-score; activated => { root.edit-command("voice-4"); } }
+            }
+            MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
         }
         Menu {
             title: "View";
