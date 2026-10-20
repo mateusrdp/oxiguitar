@@ -145,6 +145,22 @@ impl Theme {
         },
     };
 
+    /// For PDFs (Mateus, 20 Oct 2026: "PDF exports should be rendered fully
+    /// black"): everything in pure black on white, the muted marks too,
+    /// and nothing translucent.
+    pub const PRINT: Theme = Theme {
+        ink: Rgba::rgb(0, 0, 0),
+        page: Rgba::rgb(0xff, 0xff, 0xff),
+        accent: Rgba::rgb(0, 0, 0),
+        muted: Rgba::rgb(0, 0, 0),
+        warning: Rgba {
+            r: 0xff,
+            g: 0xff,
+            b: 0xff,
+            a: 0,
+        },
+    };
+
     /// Light notation on a dark page (VIEW-8).
     pub const DARK: Theme = Theme {
         ink: Rgba::rgb(0xe6, 0xe6, 0xe6),
@@ -408,6 +424,41 @@ impl DisplayList {
         self.items.push(item);
     }
 
+    /// How many items the list holds: where the next one goes.
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    /// Whether the list holds no item.
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    /// Greys out the items from `start` on: their ink becomes muted (the
+    /// editor greys the voices the caret isn't in). Knock-outs and
+    /// highlights keep their paint.
+    pub fn mute_from(&mut self, start: usize) {
+        let mute = |p: &mut Paint| {
+            if *p == Paint::Ink {
+                *p = Paint::Muted;
+            }
+        };
+        for item in self.items.iter_mut().skip(start) {
+            match item {
+                Item::Glyphs(run) => mute(&mut run.paint),
+                Item::Line { paint, .. } | Item::Rect { paint, .. } => mute(paint),
+                Item::Path { fill, stroke, .. } => {
+                    if let Some(f) = fill {
+                        mute(f);
+                    }
+                    if let Some((_, s)) = stroke {
+                        mute(s);
+                    }
+                }
+            }
+        }
+    }
+
     /// Append a line.
     pub fn line(&mut self, from: Point, to: Point, width: f32, paint: Paint) {
         self.push(Item::Line {
@@ -449,6 +500,32 @@ impl DisplayList {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn muting_greys_ink_from_a_point() {
+        let mut l = DisplayList::a4();
+        l.line(Point::new(0.0, 0.0), Point::new(1.0, 0.0), 1.0, Paint::Ink);
+        let start = l.len();
+        l.line(Point::new(0.0, 1.0), Point::new(1.0, 1.0), 1.0, Paint::Ink);
+        l.push(Item::Rect {
+            rect: Rect::new(0.0, 0.0, 1.0, 1.0),
+            paint: Paint::Page,
+        });
+        l.mute_from(start);
+        let paints: Vec<Paint> = l
+            .items
+            .iter()
+            .map(|i| match i {
+                Item::Line { paint, .. } | Item::Rect { paint, .. } => *paint,
+                _ => Paint::Accent,
+            })
+            .collect();
+        assert_eq!(paints, [Paint::Ink, Paint::Muted, Paint::Page]);
+        assert_eq!(
+            Theme::PRINT.resolve(Paint::Muted),
+            Theme::PRINT.resolve(Paint::Ink)
+        );
+    }
+
     use super::*;
 
     #[test]

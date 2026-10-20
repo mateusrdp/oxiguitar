@@ -244,7 +244,7 @@ fn moved(
     }
     let mut order: Vec<(Note, Option<Pitch>)> = pitched;
     if !t.keep_fingering {
-        // Highest pitch first, each on the highest free string it fits.
+        // Highest pitch first, so a chord keeps its order across strings.
         order.sort_by_key(|(_, p)| std::cmp::Reverse(p.map_or(0, |p| p.0)));
     }
     for (n, p) in order {
@@ -269,8 +269,13 @@ fn moved(
                 let own = n.string().unwrap_or(1);
                 options.sort_by_key(|&(s, f)| (s.abs_diff(own), f));
             } else {
-                // The highest string it fits, at the lowest fret.
-                options.sort_by_key(|&(s, f)| (s, f));
+                // Where the hand was: the fret nearest the note's old
+                // one, then the higher string.
+                let was = match n.place {
+                    NotePlace::Fretted { fret, .. } => fret,
+                    NotePlace::Pitched(_) => 0,
+                };
+                options.sort_by_key(|&(s, f)| (f.abs_diff(was), s));
             }
             options.first().copied()
         });
@@ -409,6 +414,45 @@ mod tests {
         assert!(
             s.master_bars[0].key_signature.fifths == 0,
             "one track: the key stays"
+        );
+    }
+
+    #[test]
+    fn new_frets_stay_where_the_hand_was() {
+        let mut s = new_score();
+        let mut h = History::new();
+        // A run in fifth position: A and C on the high E, E on the B.
+        for (beat, string, fret) in [(0, 1, 5), (1, 1, 8), (2, 2, 5)] {
+            let c = Caret { string, ..at(beat) };
+            run(
+                &mut s,
+                &mut h,
+                c,
+                None,
+                Command::Fret { fret, again: false },
+            )
+            .unwrap();
+        }
+        // A step of C major up: B, D and F. F stays on the B string at
+        // fret 6 rather than going to the first fret of the high E.
+        run(
+            &mut s,
+            &mut h,
+            at(0),
+            None,
+            up(1, true, false, Scope::Track),
+        )
+        .unwrap();
+        assert_eq!(
+            places(&s)[..3],
+            [
+                vec![NotePlace::Fretted { string: 1, fret: 7 }],
+                vec![NotePlace::Fretted {
+                    string: 1,
+                    fret: 10
+                }],
+                vec![NotePlace::Fretted { string: 2, fret: 6 }],
+            ]
         );
     }
 

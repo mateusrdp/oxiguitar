@@ -6,7 +6,7 @@
 //! one does not fit; the other layouts put them all on one long sheet.
 
 use oxiguitar_display::{DisplayList, Paint, Path, Point};
-use oxiguitar_model::{ChordDiagram, Pitch, Score, Staff};
+use oxiguitar_model::{ChordDiagram, Score, Staff};
 
 use crate::Options;
 use crate::draw::Painter;
@@ -76,7 +76,7 @@ pub(crate) fn header(
         let Some(staff) = track.staves.get(v.staff) else {
             continue;
         };
-        let mut line = tuning_text(staff);
+        let mut line = tuning_text(staff, track.instrument.is_bass());
         if line.is_empty() {
             continue;
         }
@@ -264,29 +264,18 @@ fn circle(list: &mut DisplayList, cx: f32, cy: f32, r: f32, filled: bool) {
     }
 }
 
-/// "Standard tuning", or the open strings from the lowest, such as
-/// "Tuning: D A D G B E".
-fn tuning_text(staff: &Staff) -> String {
+/// "Standard tuning" for a guitar's or bass's E Standard, else the
+/// tuning's compact name ("Tuning: Drop D", "Tuning: E♭ Standard",
+/// "Tuning: D A D G A D"; `oxiguitar_model::tuning`).
+fn tuning_text(staff: &Staff, bass: bool) -> String {
     if staff.tuning.is_empty() {
         return String::new();
     }
-    if staff.tuning == Staff::standard_guitar_tuning() {
+    let name = oxiguitar_model::tuning::name(&staff.tuning, bass);
+    if name == "E Standard" {
         return "Standard tuning".to_owned();
     }
-    let names: Vec<String> = staff.tuning.iter().rev().map(|p| letter(*p)).collect();
-    format!("Tuning: {}", names.join(" "))
-}
-
-/// A pitch's letter name without octave, sharps for black keys.
-fn letter(p: Pitch) -> String {
-    const NAMES: [&str; 12] = [
-        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-    ];
-    NAMES
-        .get(usize::from(p.0 % 12))
-        .copied()
-        .unwrap_or("C")
-        .to_owned()
+    format!("Tuning: {name}")
 }
 
 /// Room kept at the foot of each page for the page number, in points.
@@ -414,6 +403,7 @@ pub(crate) fn sheet(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use oxiguitar_model::Pitch;
 
     #[test]
     fn tunings() {
@@ -421,10 +411,10 @@ mod tests {
             tuning: Staff::standard_guitar_tuning(),
             ..Staff::default()
         };
-        assert_eq!(tuning_text(&staff), "Standard tuning");
+        assert_eq!(tuning_text(&staff, false), "Standard tuning");
         if let Some(low) = staff.tuning.last_mut() {
             *low = Pitch(38);
         }
-        assert_eq!(tuning_text(&staff), "Tuning: D A D G B E");
+        assert_eq!(tuning_text(&staff, false), "Tuning: Drop D");
     }
 }

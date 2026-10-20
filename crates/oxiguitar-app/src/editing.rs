@@ -265,7 +265,6 @@ impl Editing {
         self.caret
     }
 
-    #[cfg(test)]
     pub(crate) fn selection(&self) -> Option<Selection> {
         self.selection
     }
@@ -394,6 +393,11 @@ impl Editing {
             format!("Bars {}–{}", first + 1, last + 1)
         };
         Some((state, heading))
+    }
+
+    /// The score the caret is in.
+    pub(crate) fn score(&self) -> Option<Arc<Score>> {
+        self.score.clone()
     }
 
     /// The Inspector's view of the caret's bar.
@@ -694,6 +698,17 @@ impl Editing {
             Some(spot) => self.press(spot, shift),
             None => false,
         }
+    }
+
+    /// A right-click at (`x`, `y`) on sheet `sheet`, before the page's
+    /// menu opens: inside the selection it stays, so its commands act on
+    /// it; elsewhere the caret goes there as for a press.
+    pub(crate) fn menu_press_at(&mut self, sheet: usize, x: f32, y: f32) -> bool {
+        let inside = self
+            .selection_boxes()
+            .iter()
+            .any(|(i, r)| *i == sheet && x >= r.x && x < r.right() && y >= r.y && y < r.bottom());
+        !inside && self.press_at(sheet, x, y, false)
     }
 
     /// A click on a track's row: the track is selected, and the caret goes
@@ -1057,6 +1072,20 @@ mod tests {
         let spot = e.hits.hit(0, 260.0, 230.0, 0).unwrap();
         e.press(spot, true);
         assert!(matches!(e.selection(), Some(Selection::Bars { .. })));
+    }
+
+    #[test]
+    fn a_right_click_keeps_the_selection_it_falls_in() {
+        let mut e = editing(2, &[0, 1]);
+        e.key(Key::Right, true, false);
+        e.key(Key::Right, true, false);
+        let (sheet, r) = e.selection_boxes()[0];
+        let (x, y) = (r.x + r.width / 2.0, r.y + r.height / 2.0);
+        assert!(!e.menu_press_at(sheet, x, y), "inside: nothing moves");
+        assert!(e.selection().is_some());
+        assert!(e.menu_press_at(0, 236.0, 112.0), "outside: a press");
+        assert_eq!(e.selection(), None);
+        assert_eq!(e.caret().unwrap().bar, 2);
     }
 
     #[test]

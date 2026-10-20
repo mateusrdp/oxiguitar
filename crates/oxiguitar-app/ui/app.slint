@@ -12,7 +12,7 @@
 
 import { Slider, ScrollView, Palette, ComboBox, Button } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
-import { BarDialog, BarFields, PasteDialog, TupletDialog } from "bar_dialog.slint";
+import { BarDialog, BarFields, PasteDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -852,6 +852,28 @@ export component AppWindow inherits Window {
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
     callback paste-dialog-done(bool);
+    // The track dialog and Transpose… (track_form.rs).
+    in property <bool> track-dialog-shown: false;
+    in property <string> track-heading;
+    in-out property <TrackFields> track-fields;
+    in property <[string]> track-instrument-names;
+    in property <[string]> track-string-counts;
+    in property <[string]> track-key-names;
+    in property <[string]> track-pattern-names;
+    in property <string> track-preview;
+    in property <bool> track-invalid;
+    callback track-form-changed();
+    callback track-dialog-done(bool);
+    in property <bool> transpose-dialog-shown: false;
+    in property <string> transpose-heading;
+    in-out property <int> transpose-amount;
+    in-out property <bool> transpose-steps;
+    in-out property <bool> transpose-keep;
+    callback transpose-dialog-done(bool);
+    // A track row's right-click menu: the row and what was chosen.
+    callback track-menu(int, string);
+    // The page's right-click menu.
+    callback page-menu(string);
     // The score's sections, for Edit → Go to Section.
     in property <[string]> sections;
     callback go-to-section(int);
@@ -883,6 +905,8 @@ export component AppWindow inherits Window {
     // answering whether the editor took it.
     callback page-pressed(length, length, bool);
     callback page-double-clicked(length, length);
+    // A right-click on the page, before its menu opens.
+    callback page-menu-pressed(length, length);
     // The Inspector's view of the caret's bar (inspector.rs).
     in property <string> inspector-heading;
     in property <string> inspector-unit;
@@ -998,6 +1022,10 @@ export component AppWindow inherits Window {
             MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
             MenuItem { title: "Bar… (Ctrl + T)"; enabled: root.has-score; activated => { root.edit-command("bar-dialog"); } }
             MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
+            MenuSeparator { }
+            MenuItem { title: "Track Properties…"; enabled: root.has-score; activated => { root.edit-command("track-properties"); } }
+            MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
+            MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
         }
         Menu {
             title: "View";
@@ -1033,6 +1061,7 @@ export component AppWindow inherits Window {
             MenuSeparator {}
             // Guitar Pro 8's "Check bar duration" key.
             MenuItem { title: "Next Bar That Doesn't Add Up"; enabled: root.bad-bars; shortcut: @keys(F4); activated => { root.next-bad-bar(); } }
+            MenuItem { title: "Transpose…"; enabled: root.has-score; activated => { root.edit-command("transpose-all"); } }
             MenuSeparator {}
             MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
         }
@@ -1296,9 +1325,32 @@ export component AppWindow inherits Window {
                                     keys.focus();
                                     root.page-pressed(self.mouse-x, self.mouse-y, e.modifiers.shift);
                                 }
+                                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                                    keys.focus();
+                                    root.page-menu-pressed(self.mouse-x, self.mouse-y);
+                                    page-menu-area.show({ x: self.mouse-x, y: self.mouse-y });
+                                }
                             }
                             // On a time signature: the Bar dialog for its bar.
                             double-clicked => { root.page-double-clicked(self.mouse-x, self.mouse-y); }
+                        }
+                        // Right-click on the page: the selection's commands. The
+                        // TouchArea above opens it once the caret has moved.
+                        page-menu-area := ContextMenuArea {
+                            enabled: false;
+                            x: 0;
+                            y: 0;
+                            width: flick.viewport-width;
+                            height: flick.viewport-height;
+                            Menu {
+                                MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
+                                MenuItem { title: "Bar…"; activated => { root.page-menu("bar"); } }
+                                MenuItem { title: "Track Properties…"; activated => { root.page-menu("track"); } }
+                                MenuSeparator { }
+                                MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
+                                MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
+                                MenuItem { title: "Paste"; activated => { root.page-menu("paste"); } }
+                            }
                         }
                         // The selection and the caret, over the tiles: moving
                         // them redraws no tile.
@@ -1463,6 +1515,21 @@ export component AppWindow inherits Window {
                                 TouchArea {
                                     mouse-cursor: pointer;
                                     clicked => { root.track-selected(i); }
+                                }
+                                // Right-click: the track's own commands
+                                // (docs/design/ui.md, "The track dialog").
+                                ContextMenuArea {
+                                    Menu {
+                                        MenuItem { title: "Properties…"; activated => { root.track-menu(i, "properties"); } }
+                                        MenuItem { title: "Transpose…"; activated => { root.track-menu(i, "transpose"); } }
+                                        MenuSeparator { }
+                                        MenuItem { title: "Add Track"; activated => { root.track-menu(i, "add"); } }
+                                        MenuItem { title: "Duplicate"; activated => { root.track-menu(i, "duplicate"); } }
+                                        MenuItem { title: "Move Up"; enabled: i > 0; activated => { root.track-menu(i, "up"); } }
+                                        MenuItem { title: "Move Down"; enabled: i < root.tracks.length - 1; activated => { root.track-menu(i, "down"); } }
+                                        MenuSeparator { }
+                                        MenuItem { title: "Delete…"; enabled: root.tracks.length > 1; activated => { root.track-menu(i, "delete"); } }
+                                    }
                                 }
                             }
                             NotationButton {
@@ -1644,6 +1711,31 @@ export component AppWindow inherits Window {
         times <=> root.paste-times;
         replace <=> root.paste-replace;
         done(ok) => { root.paste-dialog-done(ok); }
+    }
+
+    if root.track-dialog-shown : TrackDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.track-heading;
+        fields <=> root.track-fields;
+        instrument-names: root.track-instrument-names;
+        string-counts: root.track-string-counts;
+        key-names: root.track-key-names;
+        pattern-names: root.track-pattern-names;
+        preview: root.track-preview;
+        invalid: root.track-invalid;
+        changed => { root.track-form-changed(); }
+        done(ok) => { root.track-dialog-done(ok); }
+    }
+
+    if root.transpose-dialog-shown : TransposeDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.transpose-heading;
+        amount <=> root.transpose-amount;
+        steps <=> root.transpose-steps;
+        keep-fingering <=> root.transpose-keep;
+        done(ok) => { root.transpose-dialog-done(ok); }
     }
 
     if root.question-shown : Question {

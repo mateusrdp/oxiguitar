@@ -165,6 +165,10 @@ pub struct Options {
     /// that don't add up, shown on screen in translucent red (M3). Empty
     /// for a PDF, which shows what the file says.
     pub marked: BTreeSet<(usize, usize, usize)>,
+    /// The editor's voice (0 to 3): the notes of every other voice are
+    /// greyed out, as Guitar Pro's editor shows them (Mateus, 20 Oct
+    /// 2026). `None` (prints, PDF) shows every voice in ink.
+    pub active_voice: Option<usize>,
 }
 
 /// Which notations a track shows (VIEW-1).
@@ -236,6 +240,7 @@ impl Default for Options {
             dynamics: true,
             notation: BTreeMap::new(),
             marked: BTreeSet::new(),
+            active_voice: None,
         }
     }
 }
@@ -280,7 +285,17 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
         let systems = system::break_systems(score, &views, &plans, &painter, width);
         let drawn: Vec<engrave::DrawnSystem> = systems
             .iter()
-            .map(|s| engrave::system(score, &views, &plans, s, &painter, &options.marked))
+            .map(|s| {
+                engrave::system(
+                    score,
+                    &views,
+                    &plans,
+                    s,
+                    &painter,
+                    &options.marked,
+                    options.active_voice,
+                )
+            })
             .collect();
         let tallest = drawn.iter().map(|d| d.height).fold(0.0, f32::max);
         if layout.has_pages()

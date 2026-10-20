@@ -320,11 +320,16 @@ fn replace(
     } else if !keep_pitches && matches!(n.place, NotePlace::Fretted { .. }) {
         return None;
     }
-    // Another string the beat leaves free, the lowest fret first.
+    // Another string the beat leaves free, the fret nearest where the
+    // hand was first.
+    let was = match n.place {
+        NotePlace::Fretted { fret, .. } => fret,
+        NotePlace::Pitched(_) => 0,
+    };
     (1..=strings)
         .filter(|s| free(*s))
         .filter_map(|s| fret_on(s).map(|f| (s, f)))
-        .min_by_key(|&(s, f)| (f, s))
+        .min_by_key(|&(s, f)| (f.abs_diff(was), s))
         .map(|(string, fret)| NotePlace::Fretted { string, fret })
 }
 

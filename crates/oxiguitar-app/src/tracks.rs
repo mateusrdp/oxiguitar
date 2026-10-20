@@ -67,6 +67,51 @@ impl Tracks {
         }
     }
 
+    /// The track list after tracks were added, deleted, moved or changed
+    /// (M3 slice 5). `was[i]` is where track `i` was before, if it was
+    /// there: shown tracks stay shown wherever they went, with `caret`
+    /// (the caret's track) shown too when it is new; a track keeps its
+    /// notation unless it gained or lost strings. A caret left on a hidden
+    /// track moves to a shown one ([`Tracks::nearest_shown`]).
+    pub(crate) fn refit(
+        &self,
+        defaults: Vec<Notation>,
+        can_tab: Vec<bool>,
+        was: &[Option<usize>],
+        caret: usize,
+    ) -> Tracks {
+        let mut fresh = Tracks::new(defaults, can_tab);
+        let before = |i: usize| was.get(i).copied().flatten();
+        for (i, n) in fresh.notation.iter_mut().enumerate() {
+            if let Some(o) = before(i)
+                && self.can_tab.get(o) == fresh.can_tab.get(i)
+                && let Some(old) = self.notation.get(o)
+            {
+                *n = *old;
+            }
+        }
+        let len = fresh.notation.len();
+        let mut shown: Vec<usize> = (0..len)
+            .filter(|i| before(*i).is_some_and(|o| self.shown.contains(&o)))
+            .collect();
+        if caret < len && before(caret).is_none() {
+            shown.push(caret);
+            shown.sort_unstable();
+        }
+        if !shown.is_empty() {
+            fresh.shown = shown;
+        }
+        fresh
+    }
+
+    /// The shown track nearest `track`, the earlier one on a tie.
+    pub(crate) fn nearest_shown(&self, track: usize) -> Option<usize> {
+        self.shown
+            .iter()
+            .copied()
+            .min_by_key(|i| (i.abs_diff(track), *i))
+    }
+
     pub(crate) fn len(&self) -> usize {
         self.notation.len()
     }
@@ -232,6 +277,68 @@ impl Mixer {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_changed_list_keeps_what_it_can() {
+        let both = Notation {
+            standard: true,
+            tablature: true,
+        };
+        let mut t = Tracks::new(vec![both, both, both], vec![true; 3]);
+        t.toggle_tablature(0);
+        // A track added after the first, with the caret on it.
+        let added = t.refit(
+            vec![both; 4],
+            vec![true; 4],
+            &[Some(0), None, Some(1), Some(2)],
+            1,
+        );
+        assert_eq!(added.shown(), [0, 1]);
+        assert_eq!(added.row(0).tablature, t.row(0).tablature, "kept");
+        // The first deleted: the added one, shown, moves up to 0, and the
+        // hidden ones stay hidden though they moved up too.
+        let deleted = added.refit(
+            vec![both; 3],
+            vec![true; 3],
+            &[Some(1), Some(2), Some(3)],
+            0,
+        );
+        assert_eq!(deleted.shown(), [0]);
+        // A caret left on a hidden track is not a reason to show it.
+        let gone = added.refit(
+            vec![both; 3],
+            vec![true; 3],
+            &[Some(0), Some(2), Some(3)],
+            2,
+        );
+        assert_eq!(gone.shown(), [0]);
+        assert_eq!(gone.nearest_shown(2), Some(0));
+        // A shown track moved down goes on being shown where it went.
+        let mut two = Tracks::new(vec![both; 3], vec![true; 3]);
+        two.switch_to(2);
+        let moved = two.refit(
+            vec![both; 3],
+            vec![true; 3],
+            &[Some(0), Some(2), Some(1)],
+            1,
+        );
+        assert_eq!(moved.shown(), [1]);
+        // Strings gone: the default notation.
+        let piano = t.refit(
+            vec![
+                Notation {
+                    standard: true,
+                    tablature: false,
+                },
+                both,
+                both,
+            ],
+            vec![false, true, true],
+            &[Some(0), Some(1), Some(2)],
+            0,
+        );
+        assert!(!piano.row(0).tablature);
+    }
+
     use super::*;
 
     const STD: Notation = Notation {

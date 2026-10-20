@@ -49,6 +49,7 @@ mod speed;
 mod test_support;
 #[cfg(test)]
 use test_support::test_plugins;
+mod track_form;
 mod tracks;
 mod worker;
 
@@ -75,7 +76,7 @@ use slint::{
 };
 
 use crate::canvas::{Sheets, TILE};
-use crate::document::{FULLEST, OpenScore, SaveFormat, Settings, ToolEntry};
+use crate::document::{FULLEST, OpenScore, SaveFormat, Settings, ToolEntry, TrackInfo};
 use crate::footer::{Footer, level_code};
 use crate::plugin_tabs::TabThread;
 use crate::prefs::ViewPrefs;
@@ -91,7 +92,7 @@ mod ui {
 use ui::{
     AppWindow, AreaState, BarFields, BoxItem, FooterRow, InspectorVoice, ManagerRow,
     PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow, PluginWidget, TileItem,
-    ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -195,6 +196,8 @@ struct App {
     question: Option<Asked>,
     /// The bar the open Bar dialog was opened on, as it was.
     bar_dialog: Option<oxiguitar_edit::BarState>,
+    /// What the open Transpose dialog applies to.
+    transpose_scope: Option<oxiguitar_edit::Scope>,
     /// What to do once the score is saved (after "Save the changes…?").
     after_save: Option<Then>,
 }
@@ -207,6 +210,10 @@ enum Asked {
     Save { elsewhere: bool },
     /// Save the changes before going on to this?
     Unsaved(Then),
+    /// Apply this edit, which leaves notes out?
+    Apply(editing::Typed),
+    /// Delete this track?
+    DeleteTrack(editing::Typed),
 }
 
 /// What waits on the answer to "Save the changes…?".
@@ -467,6 +474,7 @@ fn main() -> Result<(), slint::PlatformError> {
         save_formats,
         question: None,
         bar_dialog: None,
+        transpose_scope: None,
         after_save: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
@@ -558,6 +566,10 @@ fn main() -> Result<(), slint::PlatformError> {
             "copy" => return clipboard(&a, editing::ClipKey::Copy),
             "paste" => return clipboard(&a, editing::ClipKey::Paste),
             "special-paste" => return clipboard(&a, editing::ClipKey::Special),
+            "track-properties" => return open_track_dialog(&a),
+            "add-track" => return track_action(&a, "add"),
+            "transpose-selection" => return open_transpose(&a, oxiguitar_edit::Scope::Selection),
+            "transpose-all" => return open_transpose(&a, oxiguitar_edit::Scope::All),
             _ => {}
         }
         let Some(command) = editing::menu_command(name.as_str()) else {
@@ -580,6 +592,60 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_paste_dialog_done(move |ok| paste_dialog_done(&a, ok));
+    ui.set_track_instrument_names(strings(
+        track_form::INSTRUMENTS
+            .iter()
+            .map(|n| (*n).to_owned())
+            .collect(),
+    ));
+    ui.set_track_string_counts(strings(
+        track_form::STRING_COUNTS
+            .iter()
+            .map(|n| {
+                if *n == 0 {
+                    "None".to_owned()
+                } else {
+                    n.to_string()
+                }
+            })
+            .collect(),
+    ));
+    ui.set_track_key_names(strings(
+        (0..12u8)
+            .map(|k| oxiguitar_model::tuning::key_name(k).to_owned())
+            .collect(),
+    ));
+    ui.set_track_pattern_names(strings(
+        oxiguitar_model::tuning::Pattern::ALL
+            .iter()
+            .map(|p| p.label().to_owned())
+            .collect(),
+    ));
+    let a = app.clone();
+    ui.on_track_form_changed(move || track_form_changed(&a));
+    let a = app.clone();
+    ui.on_track_dialog_done(move |ok| track_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_transpose_dialog_done(move |ok| transpose_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_track_menu(move |i, action| {
+        let i = usize::try_from(i).unwrap_or(0);
+        let moved = a.borrow_mut().editing.select_track(i);
+        if moved {
+            caret_moved(&a);
+        }
+        track_action(&a, action.as_str());
+    });
+    let a = app.clone();
+    ui.on_page_menu(move |action| match action.as_str() {
+        "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
+        "bar" => open_edit_dialog(&a, editing::Dialog::Bar),
+        "track" => open_track_dialog(&a),
+        "cut" => clipboard(&a, editing::ClipKey::Cut),
+        "copy" => clipboard(&a, editing::ClipKey::Copy),
+        "paste" => clipboard(&a, editing::ClipKey::Paste),
+        _ => {}
+    });
     let a = app.clone();
     ui.on_go_to_section(move |i| {
         let bar = {
@@ -645,6 +711,8 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_page_pressed(move |x, y, shift| page_pressed(&a, x, y, shift));
     let a = app.clone();
     ui.on_page_double_clicked(move |x, y| page_double_clicked(&a, x, y));
+    let a = app.clone();
+    ui.on_page_menu_pressed(move |x, y| page_menu_pressed(&a, x, y));
     let a = app.clone();
     ui.on_caret_key(move |name, shift, ctrl| {
         let Some(key) = editing::Key::from_name(name.as_str()) else {
@@ -1712,27 +1780,7 @@ fn handle(app: &Shared, event: Event) {
                 s.tile_model.clear();
                 s.old_tile_model.clear();
             }
-            let rows: Vec<TrackRow> = tracks
-                .iter()
-                .enumerate()
-                .map(|(i, t)| {
-                    let row = app.borrow().tracks.row(i);
-                    TrackRow {
-                        name: t.name.as_str().into(),
-                        shown: row.shown,
-                        standard: row.standard,
-                        tablature: row.tablature,
-                        can_tab: t.can_tab,
-                        volume: t.mix.volume,
-                        pan: t.mix.pan,
-                        mute: t.mix.mute,
-                        solo: t.mix.solo,
-                        wave: tracks::waveform(&t.activity).into(),
-                        bars: i32::try_from(t.activity.len()).unwrap_or(i32::MAX),
-                    }
-                })
-                .collect();
-            ui.set_tracks(ModelRc::new(VecModel::from(rows)));
+            ui.set_tracks(ModelRc::new(VecModel::from(track_rows(app, &tracks))));
             // Room for the tracks, up to five rows; the splitter changes it.
             ui.set_bottom_height(28.0 * tracks.len().clamp(1, 5) as f32 + 12.0);
             {
@@ -1793,6 +1841,7 @@ fn handle(app: &Shared, event: Event) {
             edit,
             bad,
             caret,
+            tracks,
         } => {
             {
                 let mut s = app.borrow_mut();
@@ -1801,6 +1850,9 @@ fn handle(app: &Shared, event: Event) {
                     s.editing.edited(c);
                 }
                 s.bad = bad;
+            }
+            if let Some((tracks, was)) = tracks {
+                track_list_changed(app, &tracks, &was);
             }
             sync_sections(app);
             sync_edit_state(app, &edit);
@@ -1905,6 +1957,16 @@ fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
     }
 }
 
+/// A right-click on the page, before its menu: the caret goes there unless
+/// the click is inside the selection.
+fn page_menu_pressed(app: &Shared, x: f32, y: f32) {
+    let moved = on_sheet(app, x, y)
+        .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.menu_press_at(i, sx, sy));
+    if moved {
+        caret_moved(app);
+    }
+}
+
 /// A double-click on the page: on a time signature, the caret goes to its
 /// bar and the Bar dialog opens there (Mateus, 20 Oct 2026).
 fn page_double_clicked(app: &Shared, x: f32, y: f32) {
@@ -1944,11 +2006,26 @@ fn send_typed(app: &Shared, t: editing::Typed) {
 
 fn caret_moved(app: &Shared) {
     sync_caret(app, true);
+    follow_voice(app);
     let s = app.borrow();
     s.worker.send(Request::Selection(
         s.editing.for_plugins(),
         s.editing.for_plugins2(),
     ));
+}
+
+/// The page greys out the voices the caret isn't in: a new voice is a new
+/// engraving (Mateus, 20 Oct 2026).
+fn follow_voice(app: &Shared) {
+    let mut s = app.borrow_mut();
+    let Some(voice) = s.editing.at_caret().map(|a| a.voice) else {
+        return;
+    };
+    if s.settings.active_voice != Some(voice) && s.track_count > 0 {
+        s.settings.active_voice = Some(voice);
+        let settings = s.settings.clone();
+        s.worker.send(Request::Engrave(settings));
+    }
 }
 
 /// Draws the caret and the selection over the page, highlights the
@@ -2591,6 +2668,65 @@ fn bar_dialog_done(app: &Shared, ok: bool) {
     }
 }
 
+/// The track list's rows.
+fn track_rows(app: &Shared, tracks: &[TrackInfo]) -> Vec<TrackRow> {
+    let s = app.borrow();
+    tracks
+        .iter()
+        .enumerate()
+        .map(|(i, t)| {
+            let row = s.tracks.row(i);
+            let mix = s.mixer.get(i);
+            TrackRow {
+                name: t.name.as_str().into(),
+                shown: row.shown,
+                standard: row.standard,
+                tablature: row.tablature,
+                can_tab: t.can_tab,
+                volume: mix.volume,
+                pan: mix.pan,
+                mute: mix.mute,
+                solo: mix.solo,
+                wave: tracks::waveform(&t.activity).into(),
+                bars: i32::try_from(t.activity.len()).unwrap_or(i32::MAX),
+            }
+        })
+        .collect()
+}
+
+/// An edit added, deleted, moved, renamed or restrung tracks: the track
+/// list and the page follow, keeping what they can (`Tracks::refit`).
+fn track_list_changed(app: &Shared, tracks: &[TrackInfo], was: &[Option<usize>]) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    {
+        let mut s = app.borrow_mut();
+        let caret = s.editing.track().unwrap_or(0);
+        s.track_count = tracks.len();
+        s.tracks = s.tracks.refit(
+            tracks.iter().map(|t| t.default_notation).collect(),
+            tracks.iter().map(|t| t.can_tab).collect(),
+            was,
+            caret,
+        );
+        // The caret left on a hidden track (its own was deleted): to the
+        // nearest shown one.
+        if let Some(to) = s.tracks.nearest_shown(caret)
+            && !s.tracks.shown().contains(&caret)
+        {
+            s.editing.select_track(to);
+        }
+        s.mixer = Mixer::new(tracks.iter().map(|t| t.mix).collect());
+        s.settings.tracks = s.tracks.shown();
+        s.settings.notation = s.tracks.notation();
+        let settings = s.settings.clone();
+        s.worker.send(Request::Engrave(settings));
+    }
+    ui.set_tracks(ModelRc::new(VecModel::from(track_rows(app, tracks))));
+    sync_tracks(app);
+}
+
 /// The Inspector shows the caret's bar: each voice's beats against the
 /// time signature.
 fn sync_inspector(app: &Shared, ui: &AppWindow) {
@@ -2636,6 +2772,253 @@ fn sync_sections(app: &Shared) {
         .map(|(_, n)| n)
         .collect();
     ui.set_sections(strings(names));
+}
+
+/// A track command from its row's menu (or the Edit menu), on the caret's
+/// track.
+fn track_action(app: &Shared, action: &str) {
+    use oxiguitar_edit::Command;
+    let command = match action {
+        "properties" => return open_track_dialog(app),
+        "transpose" => return open_transpose(app, oxiguitar_edit::Scope::Track),
+        "add" => Command::AddTrack,
+        "duplicate" => Command::DuplicateTrack,
+        "up" => Command::MoveTrackUp,
+        "down" => Command::MoveTrackDown,
+        "delete" => {
+            let typed = app.borrow_mut().editing.tool(Command::DeleteTrack);
+            let name = {
+                let s = app.borrow();
+                let score = s.editing.score();
+                let t = s.editing.track().unwrap_or(0);
+                score
+                    .and_then(|sc| sc.tracks.get(t).map(|t| t.name.clone()))
+                    .unwrap_or_default()
+            };
+            if let Some(t) = typed {
+                ask(
+                    app,
+                    Asked::DeleteTrack(t),
+                    &format!("Delete the track {name}?"),
+                    &["Its notes go with it. Undo brings it back.".to_owned()],
+                    &["Delete", "Cancel"],
+                );
+            }
+            return;
+        }
+        _ => return,
+    };
+    let typed = app.borrow_mut().editing.tool(command);
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// Opens the track dialog on the caret's track.
+fn open_track_dialog(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() {
+        return;
+    }
+    let (score, track) = {
+        let s = app.borrow();
+        (s.editing.score(), s.editing.track())
+    };
+    let (Some(score), Some(t)) = (score, track) else {
+        return;
+    };
+    let Some(track) = score.tracks.get(t) else {
+        return;
+    };
+    let f = track_form::TrackForm::of(track);
+    ui.set_track_heading(format!("Track {}: {}", t + 1, track.name).into());
+    ui.set_track_fields(track_fields(&f));
+    ui.set_track_preview(f.preview().into());
+    ui.set_track_invalid(false);
+    ui.set_track_dialog_shown(true);
+}
+
+fn track_fields(f: &track_form::TrackForm) -> TrackFields {
+    TrackFields {
+        name: f.name.as_str().into(),
+        short_name: f.short_name.as_str().into(),
+        instrument: f.instrument,
+        strings: f.strings,
+        key: f.key,
+        pattern: f.pattern,
+        notes: f.notes.as_str().into(),
+        capo: f.capo,
+        frets: f.frets,
+        keep_pitches: f.keep_pitches,
+    }
+}
+
+fn track_form(f: &TrackFields) -> track_form::TrackForm {
+    track_form::TrackForm {
+        name: f.name.to_string(),
+        short_name: f.short_name.to_string(),
+        instrument: f.instrument,
+        strings: f.strings,
+        key: f.key,
+        pattern: f.pattern,
+        notes: f.notes.to_string(),
+        capo: f.capo,
+        frets: f.frets,
+        keep_pitches: f.keep_pitches,
+    }
+}
+
+/// A field of the track dialog changed: what the tuning comes to.
+fn track_form_changed(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let f = track_form(&ui.get_track_fields());
+    ui.set_track_invalid(f.to_settings().is_err());
+    ui.set_track_preview(
+        f.to_settings()
+            .err()
+            .filter(|e| e.starts_with("A track"))
+            .unwrap_or_else(|| f.preview())
+            .into(),
+    );
+}
+
+/// The track dialog closed: on OK, its settings as one change, after a
+/// question when notes can't be kept.
+fn track_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if !ok {
+        ui.set_track_dialog_shown(false);
+        ui.invoke_focus_page();
+        return;
+    }
+    let settings = match track_form(&ui.get_track_fields()).to_settings() {
+        Ok(s) => s,
+        Err(e) => {
+            // The dialog stays open, saying why.
+            ui.set_track_preview(e.into());
+            ui.set_track_invalid(true);
+            return;
+        }
+    };
+    ui.set_track_dialog_shown(false);
+    ui.invoke_focus_page();
+    let (score, track) = {
+        let s = app.borrow();
+        (s.editing.score(), s.editing.track())
+    };
+    let lost = match (&score, track) {
+        (Some(sc), Some(t)) => oxiguitar_edit::notes_lost(sc, t, &settings),
+        _ => 0,
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::TrackProperties(Box::new(settings)));
+    let Some(t) = typed else {
+        return;
+    };
+    if lost > 0 {
+        ask(
+            app,
+            Asked::Apply(t),
+            &format!(
+                "{lost} {} can't be kept",
+                if lost == 1 { "note" } else { "notes" }
+            ),
+            &["No string can play them with these strings and capo, so they are left out. Undo brings them back.".to_owned()],
+            &["Apply", "Cancel"],
+        );
+    } else {
+        send_typed(app, t);
+    }
+}
+
+/// Opens Transpose… for the caret's track, the selection or every track.
+fn open_transpose(app: &Shared, scope: oxiguitar_edit::Scope) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() || app.borrow().editing.track().is_none() {
+        return;
+    }
+    let heading = match scope {
+        oxiguitar_edit::Scope::Track => {
+            let s = app.borrow();
+            let name = s
+                .editing
+                .score()
+                .zip(s.editing.track())
+                .and_then(|(sc, t)| sc.tracks.get(t).map(|t| t.name.clone()))
+                .unwrap_or_default();
+            format!("Transpose {name}")
+        }
+        oxiguitar_edit::Scope::Selection => {
+            if app.borrow().editing.selection().is_some() {
+                "Transpose the selection".to_owned()
+            } else {
+                "Transpose the beat".to_owned()
+            }
+        }
+        oxiguitar_edit::Scope::All => "Transpose every track".to_owned(),
+    };
+    app.borrow_mut().transpose_scope = Some(scope);
+    ui.set_transpose_heading(heading.into());
+    ui.set_transpose_amount(0);
+    ui.set_transpose_dialog_shown(true);
+}
+
+/// Transpose… closed: on OK, the transposition as one change, after a
+/// question when notes can't be kept.
+fn transpose_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_transpose_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(scope) = app.borrow_mut().transpose_scope.take() else {
+        return;
+    };
+    if !ok {
+        return;
+    }
+    let Some(t) = track_form::transposition(
+        ui.get_transpose_amount(),
+        ui.get_transpose_steps(),
+        ui.get_transpose_keep(),
+        scope,
+    ) else {
+        return;
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Transpose(t));
+    let Some(typed) = typed else {
+        return;
+    };
+    let lost = app.borrow().editing.score().map_or(0, |sc| {
+        oxiguitar_edit::notes_lost_transposing(&sc, typed.caret, typed.selection, &t)
+    });
+    if lost > 0 {
+        ask(
+            app,
+            Asked::Apply(typed),
+            &format!(
+                "{lost} {} can't be kept",
+                if lost == 1 { "note" } else { "notes" }
+            ),
+            &["No string can play them at their new pitch, so they are left out. Undo brings them back.".to_owned()],
+            &["Apply", "Cancel"],
+        );
+    } else {
+        send_typed(app, typed);
+    }
 }
 
 /// Copy, cut, paste, or Special Paste's dialog.
@@ -2734,6 +3117,8 @@ fn question_answered(app: &Shared, i: i32) {
         }
         (Asked::Unsaved(then), 1) => go_on(app, then),
         (Asked::Unsaved(_), _) => {}
+        (Asked::Apply(t) | Asked::DeleteTrack(t), 0) => send_typed(app, t),
+        (Asked::Apply(_) | Asked::DeleteTrack(_), _) => {}
     }
 }
 

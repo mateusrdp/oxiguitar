@@ -305,3 +305,185 @@ export component PasteDialog inherits Rectangle {
         }
     }
 }
+
+// The track dialog's fields (`track_form::TrackForm`).
+export struct TrackFields {
+    name: string,
+    short-name: string,
+    instrument: int,
+    strings: int,
+    key: int,
+    pattern: int,
+    notes: string,
+    capo: int,
+    frets: int,
+    keep-pitches: bool,
+}
+
+// The track dialog (slice 5): name, instrument, strings and tuning as a
+// key and a pattern, capo and frets. `changed` asks for the preview again.
+export component TrackDialog inherits Rectangle {
+    in property <string> heading: "Track";
+    in-out property <TrackFields> fields;
+    in property <[string]> instrument-names;
+    in property <[string]> string-counts;
+    in property <[string]> key-names;
+    in property <[string]> pattern-names;
+    // What the tuning comes to, or why it is wrong.
+    in property <string> preview;
+    // A note or a tuning that can't be: OK does nothing.
+    in property <bool> invalid;
+    callback changed();
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 680px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Name"; }
+                LineEdit {
+                    horizontal-stretch: 1;
+                    text: root.fields.name;
+                    edited(t) => { root.fields.name = t; root.changed(); }
+                }
+                LineEdit {
+                    width: 90px;
+                    placeholder-text: "Short";
+                    text: root.fields.short-name;
+                    edited(t) => { root.fields.short-name = t; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Instrument"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.instrument-names;
+                    current-index: root.fields.instrument;
+                    selected => { root.fields.instrument = self.current-index; root.changed(); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Strings"; }
+                ComboBox {
+                    width: 100px;
+                    model: root.string-counts;
+                    current-index: root.fields.strings;
+                    selected => { root.fields.strings = self.current-index; root.changed(); }
+                }
+                Text { text: "Capo"; vertical-alignment: center; font-size: 12px; }
+                SpinBox {
+                    width: 110px;
+                    minimum: 0;
+                    maximum: 24;
+                    value: root.fields.capo;
+                    edited(v) => { root.fields.capo = v; root.changed(); }
+                }
+                Text { text: "Frets"; vertical-alignment: center; font-size: 12px; }
+                SpinBox {
+                    width: 110px;
+                    minimum: 12;
+                    maximum: 36;
+                    value: root.fields.frets;
+                    edited(v) => { root.fields.frets = v; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Tuning"; }
+                ComboBox {
+                    width: 90px;
+                    model: root.key-names;
+                    current-index: root.fields.key;
+                    selected => { root.fields.key = self.current-index; root.changed(); }
+                }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.pattern-names;
+                    current-index: root.fields.pattern;
+                    selected => { root.fields.pattern = self.current-index; root.changed(); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Notes, lowest first"; }
+                LineEdit {
+                    horizontal-stretch: 1;
+                    enabled: root.fields.pattern == 4;
+                    placeholder-text: "D2 A2 D3 G3 A3 D4";
+                    text: root.fields.notes;
+                    edited(t) => { root.fields.notes = t; root.changed(); }
+                }
+            }
+            Text {
+                text: root.preview;
+                font-size: 12px;
+                wrap: word-wrap;
+                color: root.invalid ? #d9534f : Palette.foreground.transparentize(0.4);
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "If the strings change"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: ["Keep the notes' pitches (new frets)", "Keep the frets (the notes change)"];
+                    current-index: root.fields.keep-pitches ? 0 : 1;
+                    selected => { root.fields.keep-pitches = self.current-index == 0; }
+                }
+            }
+        }
+    }
+}
+
+// Transpose… (slice 5): by semitones or by steps of the key, keeping the
+// fingering or finding new frets. The heading names what it applies to.
+export component TransposeDialog inherits Rectangle {
+    in property <string> heading: "Transpose";
+    in-out property <int> amount: 0;
+    in-out property <bool> steps: false;
+    in-out property <bool> keep-fingering: true;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 440px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Text { text: "By"; vertical-alignment: center; font-size: 12px; }
+                SpinBox {
+                    minimum: -24;
+                    maximum: 24;
+                    value: root.amount;
+                    edited(v) => { root.amount = v; }
+                }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: ["semitones", "steps of the key"];
+                    current-index: root.steps ? 1 : 0;
+                    selected => { root.steps = self.current-index == 1; }
+                }
+            }
+            Text {
+                text: "Up is positive, down negative. Steps of the key keep the music in its key.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+            CheckBox {
+                text: "Keep the fingering (else find new frets)";
+                checked: root.keep-fingering;
+                toggled => { root.keep-fingering = self.checked; }
+            }
+        }
+    }
+}
