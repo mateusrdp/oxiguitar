@@ -13,8 +13,10 @@
 //! and Ctrl + Down to the previous and next track.
 //!
 //! A voice with no beats in a bar still has one place for the caret, beat
-//! 0, where entering a note will start the voice. Voices go from 0 to 3
-//! (EDIT-3) whether or not a bar has them yet.
+//! 0, where entering a note will start the voice; a voice shorter than its
+//! bar has one more place after its last beat, where entering a note adds
+//! a beat, as in Guitar Pro. Voices go from 0 to 3 (EDIT-3) whether or not
+//! a bar has them yet.
 
 use oxiguitar_model::{Ratio, Score, Voice};
 
@@ -135,9 +137,32 @@ impl Caret {
     }
 
     /// How many places the caret has in its bar and voice: one per beat,
-    /// and one in a voice with no beats.
+    /// one more after the last beat while the voice is shorter than its bar
+    /// (or the bar is in free time), and one in a voice with no beats.
     fn places(self, score: &Score) -> usize {
-        self.voice_in(score).map_or(0, |v| v.beats.len()).max(1)
+        let beats = self.voice_in(score).map_or(0, |v| v.beats.len());
+        (beats + usize::from(self.room_after(score))).max(1)
+    }
+
+    /// Whether the caret's voice has beats and room after them: it is
+    /// shorter than its bar, or the bar is in free time.
+    fn room_after(self, score: &Score) -> bool {
+        let Some(v) = self.voice_in(score).filter(|v| !v.beats.is_empty()) else {
+            return false;
+        };
+        let Some(mb) = score.master_bars.get(self.bar) else {
+            return false;
+        };
+        if mb.free_time {
+            return true;
+        }
+        matches!((v.length(), mb.expected_length()), (Some(l), Some(w)) if l < w)
+    }
+
+    /// Whether the caret is after its voice's last beat (or in a voice with
+    /// no beats), where typing adds a beat, as in Guitar Pro.
+    pub fn at_end(self, score: &Score) -> bool {
+        self.beat >= self.voice_in(score).map_or(0, |v| v.beats.len())
     }
 
     fn strings(self, score: &Score) -> u8 {
@@ -443,6 +468,24 @@ pub(crate) mod tests {
         let d = c.next_beat(&s);
         assert_eq!((d.bar, d.beat), (1, 0), "one place per bar");
         assert_eq!(d.prev_beat(&s).beat, 0);
+    }
+
+    #[test]
+    fn a_short_voice_has_a_place_after_its_last_beat() {
+        let q = NoteValue::Quarter;
+        let mut s = score(1, 2);
+        s.tracks[0].staves[0].bars[0] = bar(&[q, q]);
+        let c = Caret::at_start(&s, 0).unwrap();
+        let end = c.bar_end(&s);
+        assert_eq!(end.beat, 2, "after the second quarter");
+        assert!(end.at_end(&s));
+        assert!(!c.at_end(&s));
+        assert_eq!(end.next_beat(&s).bar, 1);
+        assert_eq!(c.to_bar(&s, 1).prev_beat(&s).beat, 2);
+        // A full bar has no such place; a bar in free time always has one.
+        assert_eq!(c.to_bar(&s, 1).bar_end(&s).beat, 3);
+        s.master_bars[1].free_time = true;
+        assert_eq!(c.to_bar(&s, 1).bar_end(&s).beat, 4);
     }
 
     #[test]

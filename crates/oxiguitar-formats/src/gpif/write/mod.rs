@@ -279,14 +279,17 @@ fn clef_name(c: Clef) -> (&'static str, Option<bool>) {
     }
 }
 
-/// The written voices of a bar: its first voice always, the others when
-/// they hold more than placeholders (`BeatKind::Empty`), up to four.
+/// The written voices of a bar, up to four: the first when it has beats,
+/// the others when they hold more than placeholders (`BeatKind::Empty`).
+/// The rest are written as no voice.
 fn written_voices(bar: &Bar) -> impl Iterator<Item = (usize, &oxiguitar_model::Voice)> {
-    bar.voices
-        .iter()
-        .enumerate()
-        .take(4)
-        .filter(|(i, v)| *i == 0 || !v.is_empty())
+    bar.voices.iter().enumerate().take(4).filter(|(i, v)| {
+        if *i == 0 {
+            !v.beats.is_empty()
+        } else {
+            !v.is_empty()
+        }
+    })
 }
 
 impl<'s> Writer<'s> {
@@ -897,16 +900,12 @@ impl<'s> Writer<'s> {
             "-1".to_owned(),
             "-1".to_owned(),
         ];
-        // A bar without beats is written as Guitar Pro 6 writes it, with
-        // no voice at all: MuseScore fills an empty voice with notes from
-        // elsewhere. The reader reads either as one empty voice.
-        let written: Vec<(usize, &oxiguitar_model::Voice)> =
-            if bar.voices.iter().all(|v| v.beats.is_empty()) {
-                Vec::new()
-            } else {
-                written_voices(bar).collect()
-            };
-        for (vi, voice) in written {
+        // A voice nobody uses is written as no voice ("-1"), as Guitar Pro
+        // 6 wrote it, so the voices after it keep their places, and a bar
+        // without beats has no voice at all (MuseScore fills an empty
+        // voice with notes from elsewhere). The reader reads them back as
+        // empty placeholders, or leaves them out after the last used one.
+        for (vi, voice) in written_voices(bar) {
             let mut beat_ids = Vec::with_capacity(voice.beats.len());
             for (bj, beat) in voice.beats.iter().enumerate() {
                 self.in_last_beat = self.last_noted.get(&(slot, vi)) == Some(&(self.place.0, bj));
@@ -920,13 +919,6 @@ impl<'s> Writer<'s> {
             if let Some(slot) = voice_ids.get_mut(vi) {
                 *slot = id.to_string();
             }
-        }
-        // The reader moves a voice up when the one before it is unused.
-        let unused = |v: &String| v == "-1";
-        if let Some(gap) = voice_ids.iter().skip(1).position(unused)
-            && voice_ids.iter().skip(gap + 2).any(|v| !unused(v))
-        {
-            self.loss("a voice after an unused voice moves up to take its place");
         }
         let id = self.bars.len();
         self.bars.push(format!(

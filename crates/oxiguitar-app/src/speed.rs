@@ -15,6 +15,11 @@
 //! first run of whichever test opens a file first, so each test holds its
 //! first run, as well as its best, to the budget.
 //!
+//! The typing budget (M3 slice 3): a note typed into that score is on the
+//! screen within 100 ms, from the key to the last tile of the view drawn
+//! again, through the same worker: the edit, the engraving of the whole
+//! score, the view's tiles.
+//!
 //! Only optimised builds are held to the budget: `cargo test --release -p
 //! oxiguitar-app speed -- --nocapture` (CI's "Speed budget" job). A debug
 //! build runs the same steps and prints its times.
@@ -37,6 +42,9 @@ const BUDGET: Duration = Duration::from_secs(1);
 const VIEW: (f32, f32) = (1280.0, 610.0);
 /// A high-resolution screen: twice the pixels, four times the tiles.
 const SCALE_FACTOR: f32 = 2.0;
+
+/// The typing budget, from the key to the last tile of the view.
+const TYPING: Duration = Duration::from_millis(100);
 
 /// How long each step took, from the request to open the file.
 #[derive(Debug, Clone, Copy)]
@@ -167,6 +175,108 @@ fn check(name: &str, all_tracks: bool) {
                 t.tiles
             );
         }
+    }
+}
+
+/// Has the worker draw the view's tiles of engraving `engraving`, and
+/// waits for them. Returns how many there were.
+fn draw_view(worker: &Worker, rx: &Receiver<Event>, engraving: u64, rects: Vec<Rect>) -> usize {
+    let px = crate::PX_PER_PT;
+    let sheets = Sheets {
+        lists: Vec::new(),
+        rects,
+    };
+    let (near, _) = Sheets::around(Rect::new(0.0, 0.0, VIEW.0 / px, VIEW.1 / px));
+    let wanted = sheets.tiles_for(near, px * SCALE_FACTOR);
+    worker.send(Request::Tiles {
+        engraving,
+        paint: engraving,
+        scale: px * SCALE_FACTOR,
+        dark: false,
+        tiles: wanted.clone(),
+    });
+    for _ in &wanted {
+        assert!(matches!(next(rx), Event::Tile { .. }), "expected a tile");
+    }
+    wanted.len()
+}
+
+#[test]
+fn a_note_typed_shows_within_the_typing_budget() {
+    let path = score_file("typing-budget.gp");
+    let (tx, rx) = channel();
+    let worker = Worker::start(
+        crate::test_plugins().clone(),
+        OpenScore::default(),
+        move |e| {
+            let _ = tx.send(e);
+        },
+    );
+    worker.send(Request::Open(path.clone()));
+    let (score, tracks) = match next(&rx) {
+        Event::Opened { score, tracks, .. } => (score, tracks),
+        other => panic!("expected the score, got {other:?}"),
+    };
+    let rows = Tracks::new(
+        tracks.iter().map(|t| t.default_notation).collect(),
+        tracks.iter().map(|t| t.can_tab).collect(),
+    );
+    worker.send(Request::Engrave(Settings {
+        tracks: rows.shown(),
+        notation: rows.notation(),
+        screen_width: (VIEW.0 - crate::CANVAS_PAD) / crate::PX_PER_PT,
+        ..Settings::default()
+    }));
+    let Event::Engraved {
+        engraving, sheets, ..
+    } = next(&rx)
+    else {
+        panic!("expected an engraving");
+    };
+    draw_view(&worker, &rx, engraving, sheets);
+
+    // Frets typed along the first bars of the first track, each timed
+    // from the key to the view drawn again.
+    let mut caret = oxiguitar_edit::Caret::at_start(&score, 0).expect("a caret");
+    let mut times = Vec::new();
+    for fret in 0..10u8 {
+        let start = Instant::now();
+        worker.send(Request::Edit {
+            command: oxiguitar_edit::Command::Fret { fret, again: false },
+            caret,
+            selection: None,
+        });
+        match next(&rx) {
+            Event::Changed { caret: Some(c), .. } => caret = c.next_beat(&score),
+            other => panic!("expected the change, got {other:?}"),
+        }
+        let (engraving, sheets) = loop {
+            match next(&rx) {
+                Event::Engraved {
+                    engraving, sheets, ..
+                } => break (engraving, sheets),
+                Event::Tools(_) | Event::Message(..) => {}
+                other => panic!("expected an engraving, got {other:?}"),
+            }
+        };
+        draw_view(&worker, &rx, engraving, sheets);
+        times.push(start.elapsed());
+    }
+    let _ = std::fs::remove_dir_all(path.parent().unwrap_or(&path));
+    times.sort();
+    let median = times[times.len() / 2];
+    println!(
+        "typing: median {median:?}, fastest {:?}, slowest {:?} (10 frets)",
+        times[0],
+        times[times.len() - 1]
+    );
+    if cfg!(debug_assertions) {
+        println!("  debug build: the budget of {TYPING:?} is checked in release builds only");
+    } else {
+        assert!(
+            median < TYPING,
+            "a typed note took {median:?} (median) to show, over the budget of {TYPING:?}"
+        );
     }
 }
 

@@ -120,12 +120,17 @@ fn normal(s: &Score) -> Score {
                 if percussion {
                     bar.clef = oxiguitar_model::Clef::Neutral;
                 }
-                // Voices holding only placeholders are not written.
-                let mut i = 0;
-                bar.voices.retain(|v| {
-                    i += 1;
-                    i == 1 || !v.is_empty()
-                });
+                // Voices holding only placeholders are not written: they
+                // come back as empty voices, or not at all after the last
+                // used one.
+                for v in bar.voices.iter_mut().skip(1) {
+                    if v.is_empty() {
+                        *v = Voice::default();
+                    }
+                }
+                while bar.voices.len() > 1 && bar.voices.last() == Some(&Voice::default()) {
+                    bar.voices.pop();
+                }
                 for v in &mut bar.voices {
                     normal_voice(v, &map);
                 }

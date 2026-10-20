@@ -15,6 +15,8 @@
 //!   A command says which parts of the score it changes ([`Region`]); only
 //!   those are copied, before and after, so undoing a note costs a bar, not
 //!   the score.
+//! - [`apply`]: note entry, each [`Command`] typed at the caret one
+//!   undoable change.
 //! - [`BarCheck`]: the bars whose beats don't add up to their time
 //!   signature. Every bar is checked once when a file opens; after that only
 //!   the bars an edit touched ([`Touched`]), nothing more (Mateus, 19 Oct
@@ -24,10 +26,12 @@
 
 mod caret;
 mod check;
+mod entry;
 mod history;
 mod selection;
 
 pub use caret::{Caret, StaffBar, VOICES, beat_at, onsets};
 pub use check::{BarCheck, adds_up};
+pub use entry::{Command, Edited, apply};
 pub use history::{Change, History, Region, Touched};
 pub use selection::{Selection, Span};

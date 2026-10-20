@@ -17,7 +17,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::JoinHandle;
 
 use oxiguitar_display::{Rect, Theme};
-use oxiguitar_edit::StaffBar;
+use oxiguitar_edit::{Caret, Command, Selection, StaffBar};
 use oxiguitar_host::api::event::{Event as PluginEvent, Selection as PluginSelection, Selection2};
 use oxiguitar_host::{Level, Plugins};
 use oxiguitar_layout::Hits;
@@ -51,6 +51,13 @@ pub(crate) enum Request {
     /// Apply the Tools menu's tool with this index, as one undoable
     /// command.
     ApplyTool(usize),
+    /// Note entry: a command typed at the caret, on the selection where
+    /// the command takes one.
+    Edit {
+        command: Command,
+        caret: Caret,
+        selection: Option<Selection>,
+    },
     /// Edit → Undo.
     Undo,
     /// Edit → Redo.
@@ -125,11 +132,13 @@ pub(crate) enum Event {
         sheets: Vec<Rect>,
         hits: Arc<Hits>,
     },
-    /// The score changed (a tool, an undo, a redo).
+    /// The score changed (an edit, a tool, an undo, a redo).
     Changed {
         score: Arc<Score>,
         edit: EditState,
         bad: Vec<StaffBar>,
+        /// Where the caret goes after an edit typed at it.
+        caret: Option<Caret>,
     },
     /// One tile, premultiplied RGBA, `canvas::TILE` pixels square.
     Tile {
@@ -226,6 +235,8 @@ struct State {
     raster: Raster,
     /// A save waiting for the user's answer.
     pending_save: Option<Prepared>,
+    /// An edit left its engraving to the edit after it.
+    stale: bool,
 }
 
 fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &dyn Fn(Event)) {
@@ -243,6 +254,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
         open: open_score,
         revision: 0,
         settings: Settings::default(),
+        stale: false,
         sheets: Sheets::default(),
         engraving: 0,
         raster: Raster::new(),
@@ -265,6 +277,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 Request::Open(_)
                 | Request::Engrave(_)
                 | Request::ApplyTool(_)
+                | Request::Edit { .. }
                 | Request::Undo
                 | Request::Redo => true,
                 Request::Selection(..) => false,
@@ -329,9 +342,27 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 sink(Event::Tools(doc.tools()));
                 sink(Event::Message(Level::Info, report));
                 if changed {
-                    changed_score(&mut st, sink);
+                    changed_score(&mut st, None, sink);
                 }
                 engrave(&mut st, sink);
+            }
+            Request::Edit {
+                command,
+                caret,
+                selection,
+            } => {
+                let Some(doc) = st.doc.as_mut() else {
+                    continue;
+                };
+                if let Some(caret) = doc.edit(command, caret, selection) {
+                    changed_score(&mut st, Some(caret), sink);
+                    st.stale = true;
+                }
+                // Typing ahead: the last edit engraves.
+                pending.extend(rx.try_iter());
+                if st.stale && !superseded(&pending, false) {
+                    engrave(&mut st, sink);
+                }
             }
             Request::Undo | Request::Redo => {
                 let Some(doc) = st.doc.as_mut() else {
@@ -344,7 +375,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 };
                 if done.is_some() {
                     sink(Event::Tools(doc.tools()));
-                    changed_score(&mut st, sink);
+                    changed_score(&mut st, None, sink);
                     engrave(&mut st, sink);
                 }
             }
@@ -375,7 +406,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
                 doc.apply_change(&name, *score);
                 sink(Event::Tools(doc.tools()));
-                changed_score(&mut st, sink);
+                changed_score(&mut st, None, sink);
                 engrave(&mut st, sink);
             }
             Request::PluginTool(plugin, tool) => {
@@ -521,6 +552,7 @@ fn engrave(st: &mut State, sink: &dyn Fn(Event)) {
     let Some(doc) = st.doc.as_ref() else {
         return;
     };
+    st.stale = false;
     let engraved = st.engraver.engrave(&doc.score, &st.settings, doc.marked());
     st.sheets = Sheets::stack(engraved.pages);
     st.engraving += 1;
@@ -533,7 +565,7 @@ fn engrave(st: &mut State, sink: &dyn Fn(Event)) {
 
 /// The open score changed: plugins hear of it (pushing never waits), then
 /// the window.
-fn changed_score(st: &mut State, sink: &dyn Fn(Event)) {
+fn changed_score(st: &mut State, caret: Option<Caret>, sink: &dyn Fn(Event)) {
     let Some(doc) = st.doc.as_ref() else {
         return;
     };
@@ -546,6 +578,7 @@ fn changed_score(st: &mut State, sink: &dyn Fn(Event)) {
         score: doc.score.clone(),
         edit: doc.edit_state(),
         bad: doc.check.iter().collect(),
+        caret,
     });
 }
 

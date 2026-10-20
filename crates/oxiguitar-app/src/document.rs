@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use oxiguitar_display::smufl::Metadata;
 use oxiguitar_display::{DisplayList, FontSet, Theme};
-use oxiguitar_edit::{BarCheck, History, Region};
+use oxiguitar_edit::{BarCheck, Caret, Command, History, Region, Selection};
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::message::{Level as LogLevel, LogEntry};
 use oxiguitar_layout::{Engraved, Layout, Notation, Options, Paper, engrave};
@@ -377,6 +377,21 @@ impl Document {
             self.check.update(&self.score, &touched);
         }
         (format!("{}: {}", tool.name(), outcome.report), changed)
+    }
+
+    /// Note entry: `command` typed at `caret` (on `selection`'s beats where
+    /// it takes them), one change the user can undo. The caret after it, or
+    /// `None` when the command doesn't apply there and nothing changed.
+    pub(crate) fn edit(
+        &mut self,
+        command: Command,
+        caret: Caret,
+        selection: Option<Selection>,
+    ) -> Option<Caret> {
+        let score = Arc::make_mut(&mut self.score);
+        let edited = oxiguitar_edit::apply(score, &mut self.history, caret, selection, command)?;
+        self.check.update(&self.score, &edited.touched);
+        Some(edited.caret)
     }
 
     /// A plugin's change, the whole score changed, as one command named
