@@ -114,6 +114,62 @@ fn commands() -> Vec<Command> {
             text: "Chorus".into(),
             color: oxiguitar_model::Color::default(),
         })),
+        Command::AddTrack,
+        Command::DuplicateTrack,
+        Command::DeleteTrack,
+        Command::MoveTrackUp,
+        Command::MoveTrackDown,
+        Command::TrackProperties(Box::new(oxiguitar_edit::TrackSettings {
+            name: "Retuned".into(),
+            short_name: "Rt.".into(),
+            instrument: oxiguitar_model::Instrument::default(),
+            capo: 1,
+            fret_count: 22,
+            tuning: oxiguitar_model::tuning::tuning(
+                oxiguitar_model::tuning::Pattern::Drop,
+                2,
+                6,
+                false,
+            )
+            .unwrap(),
+            keep_pitches: true,
+        })),
+        Command::TrackProperties(Box::new(oxiguitar_edit::TrackSettings {
+            name: "Seven".into(),
+            short_name: String::new(),
+            instrument: oxiguitar_model::Instrument {
+                midi_program: 30,
+                percussion: false,
+            },
+            capo: 0,
+            fret_count: 24,
+            tuning: oxiguitar_model::tuning::tuning(
+                oxiguitar_model::tuning::Pattern::Standard,
+                4,
+                7,
+                false,
+            )
+            .unwrap(),
+            keep_pitches: false,
+        })),
+        Command::Transpose(oxiguitar_edit::Transposition {
+            amount: 3,
+            diatonic: false,
+            keep_fingering: true,
+            scope: oxiguitar_edit::Scope::Track,
+        }),
+        Command::Transpose(oxiguitar_edit::Transposition {
+            amount: -2,
+            diatonic: true,
+            keep_fingering: false,
+            scope: oxiguitar_edit::Scope::Selection,
+        }),
+        Command::Transpose(oxiguitar_edit::Transposition {
+            amount: -5,
+            diatonic: false,
+            keep_fingering: false,
+            scope: oxiguitar_edit::Scope::All,
+        }),
         Command::Cut,
         paste(1, false),
         paste(1, true),
@@ -306,7 +362,26 @@ fn every_edit_is_saved_and_read_back_equal() {
                     }
                 }
             }
-            panic!("{}: read back differently", path.display());
+            // Elsewhere than the bars: the first line that differs.
+            let (x, y) = (format!("{score:#?}"), format!("{back:#?}"));
+            let at = x
+                .lines()
+                .zip(y.lines())
+                .position(|(a, b)| a != b)
+                .unwrap_or(0);
+            let around = |s: &str| {
+                s.lines()
+                    .skip(at.saturating_sub(6))
+                    .take(8)
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            };
+            panic!(
+                "{}: read back differently at line {at}:\n{}\n--- read back:\n{}",
+                path.display(),
+                around(&x),
+                around(&y)
+            );
         }
         compared += 1;
     }

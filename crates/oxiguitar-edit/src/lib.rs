@@ -31,6 +31,8 @@ mod clip;
 mod entry;
 mod history;
 mod selection;
+mod tracks;
+mod transpose;
 
 pub use bars::BarState;
 pub use caret::{Caret, StaffBar, VOICES, beat_at, onsets};
@@ -39,3 +41,7 @@ pub use clip::{Clip, ClipTrack, Paste, copy};
 pub use entry::{Command, Edited, apply, new_score};
 pub use history::{Change, History, Region, Touched};
 pub use selection::{Selection, Span};
+pub use tracks::{TrackSettings, notes_lost};
+/// How many notes a transposition would leave out.
+pub use transpose::notes_lost as notes_lost_transposing;
+pub use transpose::{Scope, Transposition};

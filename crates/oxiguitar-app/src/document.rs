@@ -31,6 +31,9 @@ pub(crate) struct Settings {
     pub(crate) screen_width: f32,
     /// Each track's notation, from the track list.
     pub(crate) notation: BTreeMap<usize, Notation>,
+    /// The caret's voice: the other voices are greyed out on the screen
+    /// (never in a PDF).
+    pub(crate) active_voice: Option<usize>,
 }
 
 impl Default for Settings {
@@ -42,6 +45,7 @@ impl Default for Settings {
             dynamics: true,
             screen_width: 800.0,
             notation: BTreeMap::new(),
+            active_voice: Some(0),
         }
     }
 }
@@ -55,6 +59,7 @@ impl Settings {
             tracks: self.tracks.clone(),
             dynamics: self.dynamics,
             notation: self.notation.clone(),
+            active_voice: self.active_voice,
             ..Options::default().with_paper(self.paper)
         }
     }
@@ -704,12 +709,13 @@ impl Engraver {
     ) -> Result<(Vec<u8>, usize), String> {
         let paged = Settings {
             layout: Layout::Page,
+            active_voice: None,
             ..settings.clone()
         };
-        // A PDF shows what the file says: no marks.
+        // A PDF shows what the file says: no marks, every voice in ink.
         let pages = self.engrave(&doc.score, &paged, BTreeSet::new()).pages;
         let refs: Vec<&DisplayList> = pages.iter().collect();
-        let bytes = oxiguitar_render::to_pdf(&refs, &self.fonts, &Theme::LIGHT, &doc.title())
+        let bytes = oxiguitar_render::to_pdf(&refs, &self.fonts, &Theme::PRINT, &doc.title())
             .map_err(|e| e.to_string())?;
         Ok((bytes, pages.len()))
     }

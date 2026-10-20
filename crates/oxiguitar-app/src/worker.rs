@@ -143,6 +143,9 @@ pub(crate) enum Event {
         bad: Vec<StaffBar>,
         /// Where the caret goes after an edit typed at it.
         caret: Option<Caret>,
+        /// The tracks again, when the edit added, removed, moved, renamed
+        /// or restrung any, with where each was before ([`was`]).
+        tracks: Option<(Vec<TrackInfo>, Vec<Option<usize>>)>,
     },
     /// One tile, premultiplied RGBA, `canvas::TILE` pixels square.
     Tile {
@@ -241,6 +244,27 @@ struct State {
     pending_save: Option<Prepared>,
     /// An edit left its engraving to the edit after it.
     stale: bool,
+    /// What the window's track list shows of each track (name, sound,
+    /// strings), to send the list again when an edit changes it.
+    track_shape: Vec<(String, u8, bool, usize)>,
+}
+
+/// What the track list shows of each track.
+fn track_shape(score: &Score) -> Vec<(String, u8, bool, usize)> {
+    score
+        .tracks
+        .iter()
+        .map(|t| {
+            (
+                t.name.clone(),
+                t.instrument.midi_program,
+                t.instrument.percussion,
+                t.staves
+                    .first()
+                    .map_or(0, oxiguitar_model::Staff::string_count),
+            )
+        })
+        .collect()
 }
 
 fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &dyn Fn(Event)) {
@@ -263,6 +287,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
         engraving: 0,
         raster: Raster::new(),
         pending_save: None,
+        track_shape: Vec::new(),
     };
     let mut pending: VecDeque<Request> = VecDeque::new();
     loop {
@@ -350,10 +375,11 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 let (report, changed) = doc.apply_tool(i);
                 sink(Event::Tools(doc.tools()));
                 sink(Event::Message(Level::Info, report));
-                if changed {
-                    changed_score(&mut st, None, sink);
+                if changed && changed_score(&mut st, None, sink) {
+                    st.stale = true;
+                } else {
+                    engrave(&mut st, sink);
                 }
-                engrave(&mut st, sink);
             }
             Request::Edit {
                 command,
@@ -363,13 +389,15 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 let Some(doc) = st.doc.as_mut() else {
                     continue;
                 };
+                let mut wait = false;
                 if let Some(caret) = doc.edit(command, caret, selection) {
-                    changed_score(&mut st, Some(caret), sink);
+                    wait = changed_score(&mut st, Some(caret), sink);
                     st.stale = true;
                 }
-                // Typing ahead: the last edit engraves.
+                // Typing ahead: the last edit engraves. A changed track list
+                // waits for the window's settings (`changed_score`).
                 pending.extend(rx.try_iter());
-                if st.stale && !superseded(&pending, false) {
+                if st.stale && !wait && !superseded(&pending, false) {
                     engrave(&mut st, sink);
                 }
             }
@@ -384,8 +412,11 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 };
                 if done.is_some() {
                     sink(Event::Tools(doc.tools()));
-                    changed_score(&mut st, None, sink);
-                    engrave(&mut st, sink);
+                    if changed_score(&mut st, None, sink) {
+                        st.stale = true;
+                    } else {
+                        engrave(&mut st, sink);
+                    }
                 }
             }
             Request::Save(to) => save(&mut st, to, sink),
@@ -415,8 +446,11 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
                 doc.apply_change(&name, *score);
                 sink(Event::Tools(doc.tools()));
-                changed_score(&mut st, None, sink);
-                engrave(&mut st, sink);
+                if changed_score(&mut st, None, sink) {
+                    st.stale = true;
+                } else {
+                    engrave(&mut st, sink);
+                }
             }
             Request::PluginTool(plugin, tool) => {
                 let tools = st.plugins.tools();
@@ -491,6 +525,7 @@ fn opened(st: &mut State, doc: Document, folder: Option<PathBuf>, sink: &dyn Fn(
         name: doc.name(),
         untitled: doc.untitled,
     });
+    st.track_shape = track_shape(&doc.score);
     st.doc = Some(doc);
     st.pending_save = None;
 }
@@ -576,28 +611,82 @@ fn engrave(st: &mut State, sink: &dyn Fn(Event)) {
     });
 }
 
+/// Where each of the `new` tracks was among the `old` ones, matching what
+/// the track list shows of them: the same place if it is still there,
+/// else the nearest place that was; an added track was nowhere. When the
+/// count is unchanged, a track that changed (renamed, restrung) stays put.
+fn was<T: PartialEq>(old: &[T], new: &[T]) -> Vec<Option<usize>> {
+    let mut used = vec![false; old.len()];
+    let mut was: Vec<Option<usize>> = vec![None; new.len()];
+    for (j, t) in new.iter().enumerate() {
+        if old.get(j) == Some(t) && !used[j] {
+            used[j] = true;
+            was[j] = Some(j);
+        }
+    }
+    for (j, t) in new.iter().enumerate() {
+        if was[j].is_some() {
+            continue;
+        }
+        let near = (0..old.len())
+            .filter(|i| !used[*i] && old[*i] == *t)
+            .min_by_key(|i| i.abs_diff(j));
+        if let Some(i) = near {
+            used[i] = true;
+            was[j] = Some(i);
+        }
+    }
+    if old.len() == new.len() {
+        for (j, w) in was.iter_mut().enumerate() {
+            if w.is_none() && !used[j] {
+                used[j] = true;
+                *w = Some(j);
+            }
+        }
+    }
+    was
+}
+
 /// The open score changed: plugins hear of it (pushing never waits), then
-/// the window.
-fn changed_score(st: &mut State, caret: Option<Caret>, sink: &dyn Fn(Event)) {
+/// the window. True when the track list changed: the window answers with
+/// the tracks to show (`Request::Engrave`), so engraving waits for that
+/// rather than draw the old tracks' places.
+fn changed_score(st: &mut State, caret: Option<Caret>, sink: &dyn Fn(Event)) -> bool {
     let Some(doc) = st.doc.as_ref() else {
-        return;
+        return false;
     };
     st.revision += 1;
     st.open.set(Some(doc.score.clone()), st.revision);
     st.plugins.push(PluginEvent::ScoreChanged {
         revision: st.revision,
     });
+    let shape = track_shape(&doc.score);
+    let tracks = (shape != st.track_shape).then(|| (doc.tracks(), was(&st.track_shape, &shape)));
     sink(Event::Changed {
         score: doc.score.clone(),
         edit: doc.edit_state(),
         bad: doc.check.iter().collect(),
         caret,
+        tracks,
     });
+    let changed = shape != st.track_shape;
+    st.track_shape = shape;
+    changed
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tracks_are_followed_where_they_went() {
+        let (a, b, c, d) = ("A", "B", "C", "D");
+        assert_eq!(was(&[a, b, c, d], &[a, b, d]), [Some(0), Some(1), Some(3)]);
+        assert_eq!(was(&[a, b, c], &[a, c, b]), [Some(0), Some(2), Some(1)]);
+        assert_eq!(was(&[a, b], &[a, b, "B (copy)"]), [Some(0), Some(1), None]);
+        assert_eq!(was(&[a, b], &[a, "Renamed"]), [Some(0), Some(1)]);
+        assert_eq!(was(&[a, a, b], &[a, b]), [Some(0), Some(2)]);
+    }
 
     /// Bytes in one tile.
     const TILE_BYTES: usize = (TILE * TILE * 4) as usize;
@@ -894,6 +983,27 @@ mod tests {
                 break c;
             }
         };
+        // Adding a track sends the track list again.
+        worker.send(Request::Edit {
+            command: Command::AddTrack,
+            caret,
+            selection: None,
+        });
+        loop {
+            if let Event::Changed { tracks, .. } = next(&rx) {
+                let (tracks, was) = tracks.expect("the track list again");
+                assert_eq!(tracks.len(), 2);
+                assert_eq!(was, [Some(0), None], "the new track added last");
+                break;
+            }
+        }
+        worker.send(Request::Undo);
+        loop {
+            if let Event::Changed { tracks, .. } = next(&rx) {
+                assert_eq!(tracks.map(|(t, _)| t.len()), Some(1));
+                break;
+            }
+        }
         // Right at the end of the score: a second bar.
         worker.send(Request::Edit {
             command: Command::AppendBar,

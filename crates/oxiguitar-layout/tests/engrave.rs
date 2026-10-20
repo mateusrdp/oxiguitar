@@ -810,3 +810,42 @@ fn marked_bars_are_laid_in_red() {
     });
     assert_eq!(overlapping_before.count(), 0);
 }
+
+/// The editor greys out every voice but its own (Mateus, 20 Oct 2026); a
+/// print greys out none.
+#[test]
+fn other_voices_are_greyed_out_for_the_editor() {
+    use oxiguitar_display::Paint;
+    let (fonts, meta) = setup();
+    let score = read(&root().join("fixtures/reference/two-voices.gp"));
+    let muted = |active: Option<usize>| -> usize {
+        let e = engrave(
+            &score,
+            &fonts,
+            &meta,
+            &Options {
+                active_voice: active,
+                ..Options::default()
+            },
+        );
+        e.pages
+            .iter()
+            .flat_map(|p| &p.items)
+            .filter(|i| match i {
+                Item::Glyphs(r) => r.paint == Paint::Muted,
+                Item::Line { paint, .. } | Item::Rect { paint, .. } => *paint == Paint::Muted,
+                Item::Path { fill, stroke, .. } => {
+                    *fill == Some(Paint::Muted) || stroke.is_some_and(|(_, p)| p == Paint::Muted)
+                }
+            })
+            .count()
+    };
+    let none = muted(None);
+    let first = muted(Some(0));
+    let second = muted(Some(1));
+    // Voice 1 holds most of the notes, so editing voice 2 greys out more.
+    assert!(first > none, "{first} > {none}");
+    assert!(second > first, "{second} > {first}");
+    // A voice the song doesn't use greys out both.
+    assert!(muted(Some(3)) > second);
+}

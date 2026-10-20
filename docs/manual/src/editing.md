@@ -1,6 +1,6 @@
 # Editing
 
-OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, undo, and find the bars that don't add up. Bars, copy and paste, tracks and effects come next.
+OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, undo, and find the bars that don't add up. Effects come next.
 
 ## The caret
 
@@ -18,7 +18,7 @@ A box over the page shows where the next edit goes: a beat of one voice, and on 
 
 When a voice is shorter than its bar, the caret has one more place after its last beat: typing there adds a beat. Click past a short voice's last note to go there.
 
-The page scrolls to keep the caret in view. The palette's voice buttons, 1 to 4 at its top, show which voice the caret is in. A click on a track's name in the Tracks tab selects that track and moves the caret to it; the selected track's name is highlighted.
+The page scrolls to keep the caret in view. Only the caret's voice is drawn in full ink; the other voices are greyed, so you see which notes you are editing (a PDF prints them all in black). The palette's voice buttons, 1 to 4 at its top, show which voice the caret is in. A click on a track's name in the Tracks tab selects that track and moves the caret to it; the selected track's name is highlighted.
 
 ## Selecting
 
@@ -99,6 +99,16 @@ OxiGuitar keeps its own clipboard: copying and pasting work inside OxiGuitar, no
 Beats and bars paste into any track. Between a drum track and a pitched one only the rhythm carries over, as rests. Notes on strings the track hasn't got are left out. Chord names go with their diagrams.
 
 **Edit → Go to Section** lists the score's sections and moves the caret to the one you choose.
+
+## Transposing
+
+**Transpose…** moves notes up or down, by semitones or by **steps of the key**, which keeps the music in its key (C, D, E up a step in C major become D, E, F). There are three ways in:
+
+- **Right-click on the page → Transpose…**, or **Edit → Transpose Selection…**: the selection, or the caret's beat when nothing is selected. A right-click outside the selection first moves the caret there.
+- **Right-click on a track's name → Transpose…**: the whole track.
+- **Tools → Transpose…**: every track, with the key signatures.
+
+Up is a positive number, down a negative one. **Keep the fingering** keeps each note on its string and moves its fret; otherwise each note goes to the fret nearest the one it had, so a run stays where your hand is. Notes that no string can play any more are left out, after a question saying how many. Drum tracks are never transposed. Undo brings everything back.
 
 ## Undo and redo
 

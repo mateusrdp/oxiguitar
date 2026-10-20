@@ -153,6 +153,7 @@ pub(crate) fn system(
     spec: &SystemSpec,
     p: &Painter<'_>,
     marked: &BTreeSet<(usize, usize, usize)>,
+    active_voice: Option<usize>,
 ) -> DrawnSystem {
     let sp = p.sp;
     let tg = TAB_GAP * sp;
@@ -383,6 +384,7 @@ pub(crate) fn system(
             view: v,
             tg,
             right,
+            active_voice,
         };
         ctx.staff_lines(&mut list, spec.indent, right);
         ctx.clefs_and_key(&mut list, spec.indent, clef, fifths);
@@ -624,11 +626,21 @@ struct Ctx<'a> {
     tg: f32,
     /// The system's right edge: text never runs past it.
     right: f32,
+    /// The editor's voice: the others are greyed out.
+    active_voice: Option<usize>,
 }
 
 impl Ctx<'_> {
     fn sp(&self) -> f32 {
         self.p.sp
+    }
+
+    /// Greys out what voice `voice` drew from item `start` on, unless it is
+    /// the editor's voice.
+    fn dim(&self, list: &mut DisplayList, voice: usize, start: usize) {
+        if self.active_voice.is_some_and(|a| a != voice) {
+            list.mute_from(start);
+        }
     }
 
     fn line_t(&self) -> f32 {
@@ -874,6 +886,7 @@ impl Ctx<'_> {
         let stem_t = p.ed().stem_thickness * sp;
 
         for (vi, beats) in plan.voices.iter().enumerate() {
+            let start = list.len();
             let groups = plan.groups.get(vi).map_or(&[][..], Vec::as_slice);
             let xs: Vec<Option<f32>> = beats
                 .iter()
@@ -943,6 +956,7 @@ impl Ctx<'_> {
             }
             self.tuplets(list, beats, &xs, &stems, top, hw);
             self.std_graces(list, beats, &xs, top);
+            self.dim(list, vi, start);
         }
     }
 
@@ -1381,7 +1395,9 @@ impl Ctx<'_> {
                 continue;
             };
             let groups = plan.groups.get(vi).map_or(&[][..], Vec::as_slice);
+            let start = list.len();
             self.tab_voice(list, beats, groups, grid, bx, top, voice_stems_up(vi));
+            self.dim(list, vi, start);
         }
     }
 
@@ -1548,7 +1564,8 @@ impl Ctx<'_> {
     fn tab_bar(&self, list: &mut DisplayList, plan: &BarPlan, grid: &BarGrid, bx: &BarX, top: f32) {
         let step = grace_step(self.p, self.tg);
         let sp = self.sp();
-        for beats in &plan.voices {
+        for (vi, beats) in plan.voices.iter().enumerate() {
+            let start = list.len();
             // Grace notes: small numbers before their main note.
             for (i, b) in beats.iter().enumerate() {
                 if b.grace.is_none() {
@@ -1588,6 +1605,7 @@ impl Ctx<'_> {
                     }
                 }
             }
+            self.dim(list, vi, start);
         }
     }
 

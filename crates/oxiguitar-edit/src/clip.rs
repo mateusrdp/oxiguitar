@@ -374,8 +374,18 @@ fn paste_bars(
                         Some(bars) => bars
                             .iter()
                             .map(|b| Bar {
-                                // A bar keeps its clef in its own track.
-                                clef: if clip.from == ti { b.clef } else { clef },
+                                // A bar keeps its clef where the track
+                                // sounds in the same octave (Guitar Pro
+                                // holds the octave per track); else it
+                                // takes the track's, and drums theirs.
+                                clef: if !to_drums
+                                    && !clip.drums
+                                    && low_octave(b.clef) == low_octave(clef)
+                                {
+                                    b.clef
+                                } else {
+                                    clef
+                                },
                                 voices: b
                                     .voices
                                     .iter()
@@ -465,6 +475,14 @@ fn paste_bars(
         touched,
         caret: caret.clamp(score).unwrap_or(c),
     })
+}
+
+/// A clef sounding an octave below what it shows (a guitar's or bass's).
+fn low_octave(c: oxiguitar_model::Clef) -> bool {
+    matches!(
+        c,
+        oxiguitar_model::Clef::Treble8vb | oxiguitar_model::Clef::Bass8vb
+    )
 }
 
 /// An empty bar in `clef`.

@@ -217,7 +217,8 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         let pages: Vec<_> = engraved.pages.iter().collect();
         let title = score.info.title.trim();
         let title = if title.is_empty() { "OxiGuitar" } else { title };
-        match to_pdf(&pages, &fonts, &theme, title) {
+        // A PDF is printed: pure black, whatever the pictures' theme.
+        match to_pdf(&pages, &fonts, &Theme::PRINT, title) {
             Ok(bytes) => {
                 if let Err(e) = std::fs::write(&path, bytes) {
                     eprintln!("oxiguitar-cli: {path}: {e}");

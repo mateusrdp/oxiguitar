@@ -6,6 +6,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- Tracks (M3 slice 5): a right-click on a track's name gives its menu, with Properties…, Transpose…, Add Track, Duplicate, Move Up, Move Down and Delete… (after a question). The track dialog (also Edit → Track Properties…) sets the name and short name, instrument, strings (3 to 10), tuning as a key and a pattern (Standard, Drop, Open D style, Open G style) or any notes, capo and frets, as one change; changing the strings keeps the notes' pitches or their frets, and a question says how many notes no string can play before leaving them out. Tunings are named compactly at the top of the page ("Tuning: Drop D"). Shown tracks stay shown when tracks are added, deleted or moved.
+- Transposition (M3 slice 5), by semitones or by steps of the key, keeping the fingering or finding new frets near the old ones: the selection or the caret's beat (right-click on the page, or Edit → Transpose Selection…), a track (its menu), or every track with its key signatures (Tools → Transpose…). Drum tracks are never transposed.
+- A right-click on the page gives the selection's commands: Transpose…, Bar…, Track Properties…, Cut, Copy and Paste. Outside the selection it first moves the caret there.
+- Only the caret's voice is drawn in full ink; the other voices are greyed, on screen only (Mateus, 20 Oct 2026).
 - The Inspector shows the caret's bar: for each voice, how many beats it holds against the time signature, in the signature's own unit ("3½ of 4"), whether it is full, short or too long and by how much, and how many beats were entered; and on which beat the caret's beat starts (Mateus, 20 Oct 2026). The Inspector now starts open.
 - A double-click on a time signature opens the Bar dialog for its bar.
 - Copy, cut and paste (M3 slice 4), OxiGuitar's own: beats copy within a voice and bars across tracks, Ctrl + V inserts at the caret, and Special Paste (Ctrl + Shift + V) pastes several times or replaces. Between drum and pitched tracks only the rhythm carries over. Edit → Go to Section moves the caret to a section.
@@ -31,6 +35,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
+- PDFs, from the window and from `oxiguitar-cli render`, are drawn in pure black on white, with no grey or colour (Mateus, 20 Oct 2026).
 - The .gp writer keeps a slide from a voice's last note to no note, as players slide off a note to nothing (Mateus, 20 Oct 2026); it used to leave it out as a loss, because MuseScore 4 crashes on it. The MuseScore check now leaves such files out and names MuseScore's bug.
 - The .gp writer marks the note a hammer-on or pull-off goes to (`HopoDestination`), as Guitar Pro does: Guitar Pro 7.6 drew two arcs over each without it (Mateus's check, 20 Oct 2026).
 - Each reference song says what it tests in its score information (Instructions), and `fixtures/guitar-pro-check/` keeps what the .gp writer makes of every reference song and of the test song in every format, for anyone to check in Guitar Pro or other programs (`CONTRIBUTING.md`, "Checking what OxiGuitar writes"; `scripts/guitar-pro-check.sh` writes them, a test keeps them current).
