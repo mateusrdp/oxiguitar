@@ -1,5 +1,7 @@
 # Builds the GUI-toolkit spikes (spikes/gui, ADR 0004) on every target with the
-# minimum supported Rust, to show which toolkits build where. Advisory only:
+# minimum supported Rust, to show which toolkits build where; and runs the
+# audio spikes (spikes/audio, spikes/nam-bench; M4) on every target, printing
+# their measurements as notices and in the job summary. Advisory only:
 # not part of ci-success, so a spike can never block a merge. The Linux x86_64
 # binaries are kept for 14 days under the Actions tab so they can be tried
 # without building.
@@ -80,3 +82,101 @@ jobs:
             spikes/gui/target/release/spike-egui
           retention-days: 14
           if-no-files-found: error
+
+  audio:
+    name: Audio spikes (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, os: ubuntu-24.04, exe: "", nam2: true }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, exe: "", nam2: false }
+          - { name: windows-x86_64, os: windows-2025, exe: ".exe", nam2: true }
+          - { name: windows-arm64, os: windows-11-arm, exe: ".exe", nam2: false }
+          - { name: macos-arm64, os: macos-15, exe: "", nam2: false }
+    defaults:
+      run:
+        shell: bash
+    env:
+      # NeuralAmpModelerCore's example models (MIT), at a fixed commit.
+      NAM_MODELS: https://raw.githubusercontent.com/sdatkinson/NeuralAmpModelerCore/0b3d3c97b0859a3a8c92a8628c4dd89a25eb5842/example_models
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+      - name: The machine
+        run: |
+          case "${{ runner.os }}" in
+            Linux) cpu="$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2)" ;;
+            macOS) cpu="$(sysctl -n machdep.cpu.brand_string)" ;;
+            Windows) cpu="$(powershell -NoProfile -Command '(Get-CimInstance Win32_Processor).Name')" ;;
+          esac
+          echo "::notice title=CPU (${{ matrix.name }})::$cpu"
+          echo "**${{ matrix.name }}**: $cpu" >> "$GITHUB_STEP_SUMMARY"
+      - name: Models
+        run: |
+          mkdir -p "$RUNNER_TEMP/nam"
+          for m in wavenet_a1_standard lstm; do
+            curl -fsSL -o "$RUNNER_TEMP/nam/$m.nam" "$NAM_MODELS/$m.nam"
+          done
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fluid-soundfont-gm musescore-general-soundfont-small libasound2-dev libpipewire-0.3-dev libclang-dev
+      - name: The sound sets the system ships
+        run: |
+          cd spikes/audio
+          cargo build --release
+          spike="target/release/audio-spike${{ matrix.exe }}"
+          case "${{ runner.os }}" in
+            Windows) files="C:/Windows/System32/drivers/gm.dls" ;;
+            macOS) files="/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls" ;;
+            Linux) files="$(ls /usr/share/sounds/sf2/*.sf2 /usr/share/sounds/sf3/*.sf3 2>/dev/null | tr '\n' ' ')" ;;
+          esac
+          for f in $files; do
+            case "$f" in
+              *.dls) line="$("$spike" dls "$f")" ;;
+              *) line="$(ls -lL "$f" | awk '{print $5}') bytes: $f" ;;
+            esac
+            echo "::notice title=Sound set (${{ matrix.name }})::$line"
+            echo "- $line" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - name: SoundFont engines
+        if: runner.os == 'Linux'
+        run: |
+          cd spikes/audio
+          spike=target/release/audio-spike
+          out="$RUNNER_TEMP/aud"; mkdir -p "$out"
+          for sf in /usr/share/sounds/sf2/FluidR3_GM.sf2 /usr/share/sounds/sf3/MuseScore_General_Lite.sf3; do
+            for e in rusty/64 rusty/8 oxi; do
+              line="$("$spike" render "$e" "$sf" "$out/x.wav" 2>&1 | tail -1)"
+              echo "::notice title=Synth (${{ matrix.name }})::$line"
+              echo "- $line" >> "$GITHUB_STEP_SUMMARY"
+            done
+          done
+          for e in rusty/64 rusty/8 oxi; do
+            line="$("$spike" timing "$e" /usr/share/sounds/sf2/FluidR3_GM.sf2)"
+            echo "::notice title=Timing (${{ matrix.name }})::$line"
+          done
+          line="$("$spike" pipeline /usr/share/sounds/sf2/FluidR3_GM.sf2 "$RUNNER_TEMP/nam/wavenet_a1_standard.nam" "$out/p.wav" 2>&1 | tail -1)"
+          echo "::notice title=Pipeline (${{ matrix.name }})::$line"
+          echo "- $line" >> "$GITHUB_STEP_SUMMARY"
+          cargo build --release --features devices
+      - name: NAM engines
+        run: |
+          cd spikes/nam-bench
+          if [ "${{ matrix.nam2 }}" = true ]; then
+            # NeuralAmpModeler-rs needs Rust 1.99 and the x86-64-v3 baseline.
+            rustup toolchain install 1.99.0 --profile minimal
+            RUSTFLAGS="-C target-cpu=x86-64-v3" cargo +1.99.0 build --release --features nam2
+          else
+            cargo build --release
+          fi
+          for m in wavenet_a1_standard lstm; do
+            "target/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam" | while IFS= read -r line; do
+              echo "::notice title=NAM $m (${{ matrix.name }})::$line"
+              echo "- $m: $line" >> "$GITHUB_STEP_SUMMARY"
+            done
+          done
