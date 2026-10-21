@@ -332,14 +332,18 @@ impl Reader<'_> {
     }
 }
 
-/// Guitar Pro stroke speeds, from 1 (fastest) to 6.
-fn stroke_speed(v: i8) -> NoteValue {
+/// Guitar Pro stroke speeds: 1 is a 128th, 2 a 64th, 3 a 32nd (the speed
+/// Guitar Pro starts with, as the corpus shows and as Guitar Pro 7's
+/// default of 120 ticks is a 32nd), 4 a 16th, 5 an 8th and 6 a quarter.
+/// (alphaTab reads each one step shorter; PyGuitarPro and TuxGuitar agree
+/// with this table.)
+pub(super) fn stroke_speed(v: i8) -> NoteValue {
     match v {
-        1 | 2 => NoteValue::OneTwentyEighth,
-        3 => NoteValue::SixtyFourth,
-        4 => NoteValue::ThirtySecond,
-        5 => NoteValue::Sixteenth,
-        6 => NoteValue::Eighth,
+        ..=1 => NoteValue::OneTwentyEighth,
+        2 => NoteValue::SixtyFourth,
+        3 => NoteValue::ThirtySecond,
+        4 => NoteValue::Sixteenth,
+        5 => NoteValue::Eighth,
         _ => NoteValue::Quarter,
     }
 }

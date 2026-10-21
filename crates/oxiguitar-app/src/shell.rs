@@ -191,7 +191,7 @@ impl Default for Shell {
                     "File",
                     vec![
                         ToolbarItem::new(item::OPEN, "open", "Open… (Ctrl + O)", true),
-                        ToolbarItem::new(item::SAVE, "save", "Save (comes with the editor)", false),
+                        ToolbarItem::new(item::SAVE, "save", "Save (Ctrl + S)", false),
                         ToolbarItem::new(item::EXPORT_PDF, "export", "Export PDF…", false),
                     ],
                 ),
@@ -199,8 +199,8 @@ impl Default for Shell {
                     "edit",
                     "Edit",
                     vec![
-                        ToolbarItem::new(item::UNDO, "undo", "Undo (comes with the editor)", false),
-                        ToolbarItem::new(item::REDO, "redo", "Redo (comes with the editor)", false),
+                        ToolbarItem::new(item::UNDO, "undo", "Undo (Ctrl + Z)", false),
+                        ToolbarItem::new(item::REDO, "redo", "Redo (Ctrl + Y)", false),
                     ],
                 ),
             ],
@@ -208,7 +208,13 @@ impl Default for Shell {
                 Area::new(vec![Tab::new("player", "Player")], false),
                 Area::new(vec![Tab::new("tracks", "Tracks")], false),
                 Area::new(vec![Tab::new("palette", "Palette")], false),
-                Area::new(vec![Tab::new("inspector", "Inspector")], true),
+                // Open: it shows the caret's bar (Mateus, 20 Oct 2026).
+                // The song's information beside it, as Guitar Pro 8's Song
+                // Inspector (Mateus, 20 Oct 2026).
+                Area::new(
+                    vec![Tab::new("inspector", "Inspector"), Tab::new("song", "Song")],
+                    false,
+                ),
             ],
         }
     }
@@ -248,7 +254,8 @@ mod tests {
         assert_eq!(shell.area(Side::Top).active_id(), "player");
         assert_eq!(shell.area(Side::Bottom).active_id(), "tracks");
         assert_eq!(shell.area(Side::Left).active_id(), "palette");
-        assert!(!shell.area(Side::Left).collapsed && shell.area(Side::Right).collapsed);
+        // The Inspector starts open: it shows the caret's bar.
+        assert!(!shell.area(Side::Left).collapsed && !shell.area(Side::Right).collapsed);
         assert!(!shell.area(Side::Top).collapsed);
         // No Mixer tab: the mixer's controls sit in each track's row.
         let ids: Vec<&str> = shell
@@ -257,7 +264,7 @@ mod tests {
             .flat_map(|a| &a.tabs)
             .map(|t| t.id.as_str())
             .collect();
-        assert_eq!(ids, ["player", "tracks", "palette", "inspector"]);
+        assert_eq!(ids, ["player", "tracks", "palette", "inspector", "song"]);
         let ids: Vec<&str> = shell.toolbar.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(ids, ["file", "edit"]);
         assert_eq!(Side::from_index(3), Some(Side::Right));

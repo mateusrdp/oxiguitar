@@ -3452,6 +3452,7 @@ version = "0.2.0"
 dependencies = [
  "i-slint-backend-winit",
  "oxiguitar-display",
+ "oxiguitar-edit",
  "oxiguitar-host",
  "oxiguitar-layout",
  "oxiguitar-model",
@@ -3487,6 +3488,14 @@ dependencies = [
  "serde",
  "serde_json",
  "skrifa 0.42.1",
+]
+
+[[package]]
+name = "oxiguitar-edit"
+version = "0.2.0"
+dependencies = [
+ "oxiguitar-formats",
+ "oxiguitar-model",
 ]
 
 [[package]]
@@ -3634,6 +3643,7 @@ dependencies = [
  "oxiguitar-plugin-test",
  "oxiguitar-render",
  "png",
+ "quick-xml 0.42.0",
  "tiny-skia 0.12.0",
  "zip",
 ]

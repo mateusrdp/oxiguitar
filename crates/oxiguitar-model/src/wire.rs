@@ -2,16 +2,19 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Converting between the model and the score as it crosses the plugin
-//! interface (`oxiguitar_plugin_api::score`, version 1).
+//! interface: version 1 (`oxiguitar_plugin_api::score`) and version 2
+//! (`score2`, interface 1.2), which is version 1 with lists of extensions.
 //!
-//! The two have the same shape today, so nothing is lost either way
-//! (`tests/wire.rs` in `oxiguitar-formats` checks this on every fixture).
+//! Version 2 has room for the whole model, so nothing is lost either way
+//! (`tests/wire.rs` in `oxiguitar-formats` checks this on every fixture);
+//! version 1 lacks what the model gained since (free time).
 //! Every model struct is taken apart field by field (and every wire struct
 //! built field by field), so a field added to either doesn't compile here until someone decides how it crosses the
 //! interface: in a new version of the wire score, never by changing
 //! version 1.
 
 use oxiguitar_plugin_api::score as w;
+use oxiguitar_plugin_api::score2 as w2;
 
 use crate::*;
 
@@ -61,6 +64,33 @@ pub fn from_wire(score: w::Score) -> Result<Score, String> {
             .map(|(i, t)| track_from(t).map_err(|e| format!("track {}: {e}", i + 1)))
             .collect::<Result<_, _>>()?,
     })
+}
+
+/// The wire form of `score`, version 2 (interface 1.2): version 1, with
+/// what the model holds beyond it as extensions.
+pub fn to_wire2(score: &Score) -> w2::Score2 {
+    let mut out = w2::Score2::from_v1(to_wire(score));
+    for (m, w) in score.master_bars.iter().zip(&mut out.master_bars) {
+        if m.free_time {
+            w.ext.push(w2::MasterBarExt::FreeTime);
+        }
+    }
+    out
+}
+
+/// The model form of a score, version 2, a plugin sent: as [`from_wire`],
+/// with the extensions.
+pub fn from_wire2(score: w2::Score2) -> Result<Score, String> {
+    let free: Vec<bool> = score
+        .master_bars
+        .iter()
+        .map(w2::MasterBar2::free_time)
+        .collect();
+    let mut out = from_wire(score.to_v1())?;
+    for (m, free) in out.master_bars.iter_mut().zip(free) {
+        m.free_time = free;
+    }
+    Ok(out)
 }
 
 fn index_to(i: usize) -> u32 {
@@ -148,6 +178,8 @@ fn master_bar_to(b: &MasterBar) -> w::MasterBar {
         triplet_feel,
         tempo_changes,
         directions,
+        // Not in version 1: an extension of version 2 (to_wire2).
+        free_time: _,
     } = b;
     w::MasterBar {
         time_signature: w::TimeSignature {
@@ -260,6 +292,8 @@ fn master_bar_from(b: w::MasterBar) -> Result<MasterBar, String> {
             })
             .collect::<Result<_, String>>()?,
         directions: directions.into_iter().map(direction_from).collect(),
+        // Version 2's extension (from_wire2).
+        free_time: false,
     })
 }
 

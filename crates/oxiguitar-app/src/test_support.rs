@@ -64,6 +64,20 @@ impl oxiguitar_host::Core for Recorder {
     fn score(&self) -> Option<oxiguitar_host::api::score::Score> {
         self.open.wire()
     }
+
+    fn score2(&self) -> Option<(u64, oxiguitar_host::api::score2::Score2)> {
+        self.open.wire2()
+    }
+
+    fn apply(
+        &self,
+        plugin: &str,
+        revision: u64,
+        name: String,
+        score: oxiguitar_host::api::score2::Score2,
+    ) -> Result<(), String> {
+        self.open.apply(plugin, revision, name, score)
+    }
 }
 
 /// The test plugin's `.oxp` file, built once for the whole test program:

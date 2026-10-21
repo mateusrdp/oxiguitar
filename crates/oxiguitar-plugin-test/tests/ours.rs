@@ -141,7 +141,7 @@ fn through_plugins(data: &[u8]) -> Outcome {
         text.strip_prefix(&prefix)
             .map_or(text.clone(), str::to_owned)
     })?;
-    let score = oxiguitar_model::wire::from_wire(read.score)?;
+    let score = oxiguitar_model::wire::from_wire2(read.score)?;
     Ok((score, read.log))
 }
 

@@ -1,0 +1,878 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+// The Bar dialog and Custom N-tuplet (M3 slice 4), over the window like
+// the Question: nothing behind them takes clicks or keys. Their fields come
+// from and go back to `bar_form.rs`.
+
+import { Button, CheckBox, ComboBox, LineEdit, SpinBox, ScrollView, Palette } from "std-widgets.slint";
+
+// The Bar dialog's single fields (`bar_form::BarForm`).
+export struct BarFields {
+    numerator: int,
+    denominator: int,
+    key: int,
+    minor: bool,
+    clef: int,
+    tempo: int,
+    feel: int,
+    repeat-start: bool,
+    repeat-count: int,
+    letter: string,
+    section: string,
+    double-bar: bool,
+    free-time: bool,
+}
+
+// A dimmed backdrop and a card, with Enter for OK and Escape for Cancel.
+component Card inherits Rectangle {
+    in property <length> card-width: 560px;
+    // Whether the card takes the keyboard (Enter, Escape) when it opens;
+    // a card whose field takes it instead says no.
+    in property <bool> takes-focus: true;
+    in property <string> heading;
+    callback done(bool);
+    background: #00000060;
+    TouchArea { }
+    keys := FocusScope {
+        init => {
+            if (root.takes-focus) {
+                self.focus();
+            }
+        }
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.done(false);
+                return accept;
+            }
+            if (event.text == Key.Return) {
+                root.done(true);
+                return accept;
+            }
+            accept
+        }
+    }
+    Rectangle {
+        width: min(root.card-width, root.width - 40px);
+        height: min(box.preferred-height, root.height - 40px);
+        background: Palette.background;
+        border-color: Palette.border;
+        border-width: 1px;
+        border-radius: 6px;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000060;
+        box := VerticalLayout {
+            padding: 18px;
+            spacing: 12px;
+            Text { text: root.heading; font-size: 15px; font-weight: 700; }
+            ScrollView {
+                preferred-height: min(content.preferred-height, root.height - 160px);
+                content := VerticalLayout {
+                    padding-right: 12px;
+                    @children
+                }
+            }
+            HorizontalLayout {
+                alignment: end;
+                spacing: 8px;
+                Button { text: "OK"; primary: true; clicked => { root.done(true); } }
+                Button { text: "Cancel"; clicked => { root.done(false); } }
+            }
+        }
+    }
+}
+
+// A label in the dialog's first column.
+component Label inherits Text {
+    font-size: 12px;
+    vertical-alignment: center;
+    min-width: 120px;
+}
+
+export component BarDialog inherits Rectangle {
+    in-out property <BarFields> fields;
+    in-out property <[bool]> endings;
+    in-out property <[bool]> directions;
+    in property <[string]> key-names;
+    in property <[string]> clef-names;
+    in property <[string]> feel-names;
+    in property <[string]> direction-names;
+    // From the second bar on: the tempo is a change at the bar's start.
+    in property <string> heading: "Bar";
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 600px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Time signature"; }
+                SpinBox {
+                    minimum: 1;
+                    maximum: 32;
+                    value: root.fields.numerator;
+                    edited(v) => { root.fields.numerator = v; }
+                }
+                Text { text: "/"; vertical-alignment: center; }
+                ComboBox {
+                    model: ["1", "2", "4", "8", "16", "32"];
+                    current-index: root.fields.denominator;
+                    selected => { root.fields.denominator = self.current-index; }
+                }
+                CheckBox {
+                    text: "Free time";
+                    checked: root.fields.free-time;
+                    toggled => { root.fields.free-time = self.checked; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Key"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.key-names;
+                    current-index: root.fields.key;
+                    selected => { root.fields.key = self.current-index; }
+                }
+                ComboBox {
+                    model: ["Major", "Minor"];
+                    current-index: root.fields.minor ? 1 : 0;
+                    selected => { root.fields.minor = self.current-index == 1; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Clef"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.clef-names;
+                    current-index: root.fields.clef;
+                    selected => { root.fields.clef = self.current-index; }
+                }
+                Label { text: "Tempo"; min-width: 0; }
+                SpinBox {
+                    minimum: 1;
+                    maximum: 2000;
+                    value: root.fields.tempo;
+                    edited(v) => { root.fields.tempo = v; }
+                }
+                Text { text: "♩ a minute"; vertical-alignment: center; font-size: 12px; }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Feel"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.feel-names;
+                    current-index: root.fields.feel;
+                    selected => { root.fields.feel = self.current-index; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Repeat"; }
+                CheckBox {
+                    text: "Opens";
+                    checked: root.fields.repeat-start;
+                    toggled => { root.fields.repeat-start = self.checked; }
+                }
+                CheckBox {
+                    text: "Closes, played";
+                    checked: root.fields.repeat-count >= 2;
+                    toggled => { root.fields.repeat-count = self.checked ? 2 : 0; }
+                }
+                SpinBox {
+                    enabled: root.fields.repeat-count >= 2;
+                    minimum: 2;
+                    maximum: 99;
+                    value: max(2, root.fields.repeat-count);
+                    edited(v) => { root.fields.repeat-count = v; }
+                }
+                Text { text: "times"; vertical-alignment: center; font-size: 12px; }
+            }
+            HorizontalLayout {
+                spacing: 4px;
+                Label { text: "Alternate endings"; }
+                for on[i] in root.endings : CheckBox {
+                    text: i + 1;
+                    checked: on;
+                    toggled => { root.endings[i] = self.checked; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Section"; }
+                LineEdit {
+                    width: 56px;
+                    placeholder-text: "A";
+                    text: root.fields.letter;
+                    edited(t) => { root.fields.letter = t; }
+                }
+                LineEdit {
+                    horizontal-stretch: 1;
+                    placeholder-text: "Verse";
+                    text: root.fields.section;
+                    edited(t) => { root.fields.section = t; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+                Label { text: "Bar line"; }
+                CheckBox {
+                    text: "Double bar line";
+                    checked: root.fields.double-bar;
+                    toggled => { root.fields.double-bar = self.checked; }
+                }
+            }
+            Label { text: "Directions"; }
+            // Three columns, placed by hand (a grid layout can't repeat).
+            directions-box := Rectangle {
+                property <length> line: 28px;
+                height: ceil(root.direction-names.length / 3) * self.line;
+                for name[i] in root.direction-names : CheckBox {
+                    x: mod(i, 3) * directions-box.width / 3;
+                    y: floor(i / 3) * directions-box.line;
+                    width: directions-box.width / 3;
+                    text: name;
+                    checked: root.directions[i];
+                    toggled => { root.directions[i] = self.checked; }
+                }
+            }
+        }
+    }
+}
+
+export component TupletDialog inherits Rectangle {
+    in-out property <int> notes: 3;
+    in-out property <int> in-time-of: 2;
+    // The usual "in the time of" for a number of notes (`bar_form.rs`).
+    pure callback usual(int) -> int;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Custom N-tuplet";
+        card-width: 360px;
+        done(ok) => { root.done(ok); }
+        HorizontalLayout {
+            spacing: 8px;
+            SpinBox {
+                minimum: 2;
+                maximum: 32;
+                value: root.notes;
+                edited(v) => {
+                    root.notes = v;
+                    root.in-time-of = root.usual(v);
+                }
+            }
+            Text { text: "notes in the time of"; vertical-alignment: center; font-size: 12px; }
+            SpinBox {
+                minimum: 1;
+                maximum: 32;
+                value: root.in-time-of;
+                edited(v) => { root.in-time-of = v; }
+            }
+        }
+    }
+}
+
+export component PasteDialog inherits Rectangle {
+    in-out property <int> times: 1;
+    in-out property <bool> replace: false;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Special Paste";
+        card-width: 380px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Text { text: "Paste"; vertical-alignment: center; font-size: 12px; }
+                SpinBox {
+                    minimum: 1;
+                    maximum: 99;
+                    value: root.times;
+                    edited(v) => { root.times = v; }
+                }
+                Text { text: "times"; vertical-alignment: center; font-size: 12px; }
+            }
+            CheckBox {
+                text: "Replace what is there, instead of inserting";
+                checked: root.replace;
+                toggled => { root.replace = self.checked; }
+            }
+        }
+    }
+}
+
+// The track dialog's fields (`track_form::TrackForm`).
+export struct TrackFields {
+    name: string,
+    short-name: string,
+    instrument: int,
+    strings: int,
+    key: int,
+    pattern: int,
+    notes: string,
+    capo: int,
+    frets: int,
+    keep-pitches: bool,
+}
+
+// The track dialog (slice 5): name, instrument, strings and tuning as a
+// key and a pattern, capo and frets. `changed` asks for the preview again.
+export component TrackDialog inherits Rectangle {
+    in property <string> heading: "Track";
+    in-out property <TrackFields> fields;
+    in property <[string]> instrument-names;
+    in property <[string]> string-counts;
+    in property <[string]> key-names;
+    in property <[string]> pattern-names;
+    // What the tuning comes to, or why it is wrong.
+    in property <string> preview;
+    // A note or a tuning that can't be: OK does nothing.
+    in property <bool> invalid;
+    callback changed();
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 680px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Name"; }
+                LineEdit {
+                    horizontal-stretch: 1;
+                    text: root.fields.name;
+                    edited(t) => { root.fields.name = t; root.changed(); }
+                }
+                LineEdit {
+                    width: 90px;
+                    placeholder-text: "Short";
+                    text: root.fields.short-name;
+                    edited(t) => { root.fields.short-name = t; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Instrument"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.instrument-names;
+                    current-index: root.fields.instrument;
+                    selected => { root.fields.instrument = self.current-index; root.changed(); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Strings"; }
+                ComboBox {
+                    width: 100px;
+                    model: root.string-counts;
+                    current-index: root.fields.strings;
+                    selected => { root.fields.strings = self.current-index; root.changed(); }
+                }
+                Text { text: "Capo"; vertical-alignment: center; font-size: 12px; }
+                SpinBox {
+                    width: 110px;
+                    minimum: 0;
+                    maximum: 24;
+                    value: root.fields.capo;
+                    edited(v) => { root.fields.capo = v; root.changed(); }
+                }
+                Text { text: "Frets"; vertical-alignment: center; font-size: 12px; }
+                SpinBox {
+                    width: 110px;
+                    minimum: 12;
+                    maximum: 36;
+                    value: root.fields.frets;
+                    edited(v) => { root.fields.frets = v; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Tuning"; }
+                ComboBox {
+                    width: 90px;
+                    model: root.key-names;
+                    current-index: root.fields.key;
+                    selected => { root.fields.key = self.current-index; root.changed(); }
+                }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.pattern-names;
+                    current-index: root.fields.pattern;
+                    selected => { root.fields.pattern = self.current-index; root.changed(); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Notes, lowest first"; }
+                LineEdit {
+                    horizontal-stretch: 1;
+                    enabled: root.fields.pattern == 4;
+                    placeholder-text: "D2 A2 D3 G3 A3 D4";
+                    text: root.fields.notes;
+                    edited(t) => { root.fields.notes = t; root.changed(); }
+                }
+            }
+            Text {
+                text: root.preview;
+                font-size: 12px;
+                wrap: word-wrap;
+                color: root.invalid ? #d9534f : Palette.foreground.transparentize(0.4);
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "If the strings change"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: ["Keep the notes' pitches (new frets)", "Keep the frets (the notes change)"];
+                    current-index: root.fields.keep-pitches ? 0 : 1;
+                    selected => { root.fields.keep-pitches = self.current-index == 0; }
+                }
+            }
+        }
+    }
+}
+
+// Transpose… (slice 5): by semitones or by steps of the key, keeping the
+// fingering or finding new frets. The heading names what it applies to.
+export component TransposeDialog inherits Rectangle {
+    in property <string> heading: "Transpose";
+    in-out property <int> amount: 0;
+    in-out property <bool> steps: false;
+    in-out property <bool> keep-fingering: true;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 440px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Text { text: "By"; vertical-alignment: center; font-size: 12px; }
+                SpinBox {
+                    minimum: -24;
+                    maximum: 24;
+                    value: root.amount;
+                    edited(v) => { root.amount = v; }
+                }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: ["semitones", "steps of the key"];
+                    current-index: root.steps ? 1 : 0;
+                    selected => { root.steps = self.current-index == 1; }
+                }
+            }
+            Text {
+                text: "Up is positive, down negative. Steps of the key keep the music in its key.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+            CheckBox {
+                text: "Keep the fingering (else find new frets)";
+                checked: root.keep-fingering;
+                toggled => { root.keep-fingering = self.checked; }
+            }
+        }
+    }
+}
+
+// A point of a bend curve on the editor's grid (`bend_form::Point`).
+export struct GridPoint {
+    col: int,
+    row: int,
+}
+
+// The bend and whammy-bar editor (M3 slice 6; `bend_form.rs`): a type, a
+// pitch, and a curve whose points are dragged on a grid of twelfths of the
+// note by quarter tones.
+export component BendDialog inherits Rectangle {
+    in property <string> heading: "Bend";
+    in property <[string]> types;
+    in property <[string]> amounts;
+    in-out property <int> kind;
+    in-out property <int> amount;
+    // The lowest and highest rows (quarter tones).
+    in property <int> low: 0;
+    in property <int> high: 12;
+    in property <[GridPoint]> points;
+    // The curve as SVG path data, 10 units a cell.
+    in property <string> path;
+    callback kind-picked(int);
+    callback amount-picked(int);
+    callback pressed(float, float);
+    callback dragged(float, float);
+    callback released();
+    callback done(bool);
+    property <length> grid-w: 360px;
+    property <length> grid-h: 240px;
+    property <length> cell-w: self.grid-w / 12;
+    property <length> cell-h: self.grid-h / (self.high - self.low);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 460px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 10px;
+            HorizontalLayout {
+                spacing: 8px;
+                ComboBox {
+                    model: root.types;
+                    current-index <=> root.kind;
+                    selected => { root.kind-picked(self.current-index); }
+                }
+                ComboBox {
+                    model: root.amounts;
+                    current-index <=> root.amount;
+                    selected => { root.amount-picked(self.current-index); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 6px;
+                // Whole tones up the side.
+                Rectangle {
+                    width: 34px;
+                    height: root.grid-h;
+                    for i in (root.high - root.low) / 4 + 1 : Text {
+                        property <int> tones: (root.high - i * 4) / 4;
+                        x: 0;
+                        y: i * 4 * root.cell-h - 7px;
+                        width: 30px;
+                        horizontal-alignment: right;
+                        font-size: 11px;
+                        color: Palette.foreground;
+                        opacity: 0.7;
+                        text: self.tones == 0 ? "0" : self.tones < 0 ? "−" + (-self.tones) : self.tones;
+                    }
+                }
+                Rectangle {
+                    width: root.grid-w;
+                    height: root.grid-h;
+                    background: Palette.alternate-background;
+                    border-color: Palette.border;
+                    border-width: 1px;
+                    for i in 13 : Rectangle {
+                        x: i * root.cell-w;
+                        y: 0;
+                        width: 1px;
+                        height: root.grid-h;
+                        background: Palette.border;
+                        opacity: mod(i, 3) == 0 ? 0.9 : 0.4;
+                    }
+                    for i in root.high - root.low + 1 : Rectangle {
+                        x: 0;
+                        y: i * root.cell-h;
+                        width: root.grid-w;
+                        height: root.high - i == 0 ? 2px : 1px;
+                        background: Palette.border;
+                        opacity: mod(root.high - i, 4) == 0 ? 0.9 : 0.35;
+                    }
+                    Path {
+                        x: 0;
+                        y: 0;
+                        width: root.grid-w;
+                        height: root.grid-h;
+                        commands: root.path;
+                        viewbox-x: 0;
+                        viewbox-y: 0;
+                        viewbox-width: 120;
+                        viewbox-height: (root.high - root.low) * 10;
+                        fit: fill;
+                        stroke: #2e9d5b;
+                        stroke-width: 2px;
+                    }
+                    for p in root.points : Rectangle {
+                        x: p.col * root.cell-w - 5px;
+                        y: (root.high - p.row) * root.cell-h - 5px;
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 5px;
+                        background: #2e9d5b;
+                    }
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        pointer-event(e) => {
+                            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                                root.pressed(self.mouse-x / root.cell-w, root.high - self.mouse-y / root.cell-h);
+                            }
+                            if (e.kind == PointerEventKind.up) {
+                                root.released();
+                            }
+                        }
+                        moved => {
+                            if (self.pressed) {
+                                root.dragged(self.mouse-x / root.cell-w, root.high - self.mouse-y / root.cell-h);
+                            }
+                        }
+                    }
+                }
+            }
+            Text {
+                text: "Drag the points: time across the note, pitch up the side in quarter tones. Enter applies; Escape cancels.";
+                font-size: 11px;
+                wrap: word-wrap;
+                opacity: 0.7;
+            }
+        }
+    }
+}
+
+// Text above a beat (M3 slice 6): one line; empty for none.
+export component TextDialog inherits Rectangle {
+    in-out property <string> text;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Text";
+        card-width: 400px;
+        takes-focus: false;
+        done(ok) => { root.done(ok); }
+        // Escape cancels from the field too.
+        FocusScope {
+            key-pressed(event) => {
+                if (event.text == Key.Escape) {
+                    root.done(false);
+                    return accept;
+                }
+                reject
+            }
+            LineEdit {
+                text <=> root.text;
+                placeholder-text: "Text above the beat";
+                init => { self.focus(); }
+                accepted => { root.done(true); }
+            }
+        }
+    }
+}
+
+// An alteration's tickbox in the chord dialog.
+export struct AltBox {
+    label: string,
+    on: bool,
+}
+
+// The chord dialog (M3 slice 6; `chord_form.rs`): Guitar Pro 8's Chord
+// window, with its builder.
+export component ChordDialog inherits Rectangle {
+    in-out property <string> name;
+    in property <[string]> library;
+    in property <[string]> roots;
+    in-out property <int> root-index;
+    in property <[string]> triads;
+    in-out property <int> triad-index;
+    in property <[string]> extensions;
+    in-out property <int> extension-index;
+    in property <[string]> basses;
+    in-out property <int> bass-index;
+    in property <[AltBox]> alterations;
+    // Strings, and each string's dot, low to high: the row (0 the first
+    // fret shown), -1 open, -2 not played, -3 off the grid.
+    in property <int> strings: 6;
+    in property <[int]> dots;
+    in-out property <int> first-fret: 1;
+    in property <int> last-fret: 24;
+    in property <[string]> voicings;
+    in property <bool> show-diagram: true;
+    callback name-typed(string);
+    callback library-picked(int);
+    callback root-picked(int);
+    callback triad-picked(int);
+    callback extension-picked(int);
+    callback bass-picked(int);
+    callback alteration-toggled(int, bool);
+    callback grid-clicked(int, int);
+    callback head-clicked(int);
+    callback scrolled(int);
+    callback voicing-picked(int);
+    callback show-toggled(bool);
+    callback remove();
+    callback done(bool);
+    property <length> cell-w: 28px;
+    property <length> cell-h: 30px;
+    property <length> grid-w: (root.strings - 1) * root.cell-w;
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Chord";
+        card-width: 720px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 10px;
+            HorizontalLayout {
+                spacing: 8px;
+                Text { text: "Name"; font-size: 12px; vertical-alignment: center; }
+                LineEdit {
+                    text <=> root.name;
+                    edited(t) => { root.name-typed(t); }
+                    accepted => { root.done(true); }
+                }
+                if root.library.length > 0 : ComboBox {
+                    min-width: 150px;
+                    model: root.library;
+                    current-index: -1;
+                    current-value: "The track's chords";
+                    selected => { root.library-picked(self.current-index); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 6px;
+                ComboBox { model: root.roots; current-index <=> root.root-index; selected => { root.root-picked(self.current-index); } }
+                ComboBox { model: root.triads; current-index <=> root.triad-index; selected => { root.triad-picked(self.current-index); } }
+                ComboBox { model: root.extensions; current-index <=> root.extension-index; selected => { root.extension-picked(self.current-index); } }
+                HorizontalLayout {
+                    spacing: 4px;
+                    Text { text: "Bass"; font-size: 12px; vertical-alignment: center; }
+                    ComboBox { model: root.basses; current-index <=> root.bass-index; selected => { root.bass-picked(self.current-index); } }
+                }
+            }
+            HorizontalLayout {
+                spacing: 4px;
+                for a[i] in root.alterations : CheckBox {
+                    text: a.label;
+                    checked: a.on;
+                    toggled => { root.alteration-toggled(i, self.checked); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 16px;
+                alignment: start;
+                if root.strings > 1 : VerticalLayout {
+                    spacing: 4px;
+                    alignment: start;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        CheckBox {
+                            text: "Show the diagram";
+                            checked: root.show-diagram;
+                            toggled => { root.show-toggled(self.checked); }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        Text { text: "First fret"; font-size: 12px; vertical-alignment: center; }
+                        SpinBox {
+                            width: 80px;
+                            minimum: 1;
+                            maximum: root.last-fret;
+                            value <=> root.first-fret;
+                            edited(v) => { root.scrolled(v); }
+                        }
+                    }
+                    Rectangle {
+                        width: root.grid-w + 2 * root.cell-w;
+                        height: 5 * root.cell-h + 26px;
+                        opacity: root.show-diagram ? 1 : 0.4;
+                        // Open and not-played marks above the strings.
+                        for d[i] in root.dots : Rectangle {
+                            x: root.cell-w + i * root.cell-w - 10px;
+                            y: 0;
+                            width: 20px;
+                            height: 20px;
+                            Text {
+                                text: d == -1 ? "o" : d == -2 ? "×" : "";
+                                font-size: 14px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                            TouchArea { clicked => { root.head-clicked(i); } }
+                        }
+                        Rectangle {
+                            x: root.cell-w;
+                            y: 24px;
+                            width: root.grid-w;
+                            height: 5 * root.cell-h;
+                            // The nut, or the first fret's number.
+                            Rectangle {
+                                y: 0;
+                                height: root.first-fret == 1 ? 4px : 1px;
+                                background: Palette.foreground;
+                            }
+                            if root.first-fret > 1 : Text {
+                                x: -root.cell-w;
+                                y: root.cell-h / 2 - 8px;
+                                width: root.cell-w - 4px;
+                                horizontal-alignment: right;
+                                text: root.first-fret;
+                                font-size: 11px;
+                            }
+                            for i in 6 : Rectangle {
+                                y: i * root.cell-h;
+                                height: 1px;
+                                background: Palette.foreground;
+                                opacity: 0.6;
+                            }
+                            for i in root.strings : Rectangle {
+                                x: i * root.cell-w;
+                                width: 1px;
+                                background: Palette.foreground;
+                                opacity: 0.6;
+                            }
+                            for d[i] in root.dots : Rectangle {
+                                visible: d >= 0;
+                                x: i * root.cell-w - 9px;
+                                y: max(d, 0) * root.cell-h + root.cell-h / 2 - 9px;
+                                width: 18px;
+                                height: 18px;
+                                border-radius: 9px;
+                                background: Palette.foreground;
+                            }
+                            TouchArea {
+                                x: -root.cell-w / 2;
+                                width: root.grid-w + root.cell-w;
+                                clicked => {
+                                    root.grid-clicked(
+                                        clamp(round((self.mouse-x - root.cell-w / 2) / root.cell-w), 0, root.strings - 1),
+                                        clamp(floor(self.mouse-y / root.cell-h), 0, 4));
+                                }
+                            }
+                        }
+                    }
+                }
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: start;
+                    if root.voicings.length > 0 : Text { text: "Ways to play it, low string first"; font-size: 12px; }
+                    for v[i] in root.voicings : Rectangle {
+                        height: 24px;
+                        width: 170px;
+                        border-radius: 4px;
+                        background: touch.has-hover ? Palette.control-background : transparent;
+                        Text {
+                            x: 6px;
+                            text: v;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                        }
+                        touch := TouchArea { clicked => { root.voicing-picked(i); } }
+                    }
+                }
+            }
+            HorizontalLayout {
+                alignment: start;
+                Button { text: "Remove the chord"; clicked => { root.remove(); } }
+            }
+        }
+    }
+}

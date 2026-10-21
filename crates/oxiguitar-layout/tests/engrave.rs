@@ -751,3 +751,101 @@ fn keyboards_get_a_grand_staff_and_tab_only_when_asked() {
         "piano as tab only"
     );
 }
+
+/// Bars that don't add up are marked in translucent red on the staves they
+/// belong to, and nowhere else; the same score without marks has none (a
+/// PDF shows what the file says).
+#[test]
+fn marked_bars_are_laid_in_red() {
+    use oxiguitar_display::Paint;
+    let (fonts, meta) = setup();
+    let score = read(&root().join("fixtures/gp/oxiguitar-test-song.gp5"));
+    let warnings = |e: &Engraved| -> Vec<oxiguitar_display::Rect> {
+        e.pages
+            .iter()
+            .flat_map(|p| &p.items)
+            .filter_map(|i| match i {
+                Item::Rect {
+                    rect,
+                    paint: Paint::Warning,
+                } => Some(*rect),
+                _ => None,
+            })
+            .collect()
+    };
+    let plain = engrave(&score, &fonts, &meta, &Options::default());
+    assert!(warnings(&plain).is_empty());
+    let options = Options {
+        marked: [(0, 0, 1), (5, 0, 1)].into_iter().collect(),
+        ..Options::default()
+    };
+    let marked = engrave(&score, &fonts, &meta, &options);
+    let rects = warnings(&marked);
+    assert_eq!(rects.len(), 1, "only the shown track's bar");
+    // The mark covers the bar the map gives for bar 2.
+    let bar = marked.hits.systems[0].staves[0]
+        .bars
+        .iter()
+        .find(|b| b.bar == 1)
+        .expect("bar 2 in the first system");
+    assert!((rects[0].x - bar.start).abs() < 0.01 && (rects[0].right() - bar.end).abs() < 0.01);
+    // Drawn under the notation: nothing that overlaps it comes before it.
+    let items = &marked.pages[0].items;
+    let at = items
+        .iter()
+        .position(|i| {
+            matches!(
+                i,
+                Item::Rect {
+                    paint: Paint::Warning,
+                    ..
+                }
+            )
+        })
+        .expect("the mark");
+    let r = rects[0];
+    let overlapping_before = items[..at].iter().filter(|i| {
+        let b = i.bounds();
+        b.x < r.right() && r.x < b.right() && b.y < r.bottom() && r.y < b.bottom()
+    });
+    assert_eq!(overlapping_before.count(), 0);
+}
+
+/// The editor greys out every voice but its own (Mateus, 20 Oct 2026); a
+/// print greys out none.
+#[test]
+fn other_voices_are_greyed_out_for_the_editor() {
+    use oxiguitar_display::Paint;
+    let (fonts, meta) = setup();
+    let score = read(&root().join("fixtures/reference/two-voices.gp"));
+    let muted = |active: Option<usize>| -> usize {
+        let e = engrave(
+            &score,
+            &fonts,
+            &meta,
+            &Options {
+                active_voice: active,
+                ..Options::default()
+            },
+        );
+        e.pages
+            .iter()
+            .flat_map(|p| &p.items)
+            .filter(|i| match i {
+                Item::Glyphs(r) => r.paint == Paint::Muted,
+                Item::Line { paint, .. } | Item::Rect { paint, .. } => *paint == Paint::Muted,
+                Item::Path { fill, stroke, .. } => {
+                    *fill == Some(Paint::Muted) || stroke.is_some_and(|(_, p)| p == Paint::Muted)
+                }
+            })
+            .count()
+    };
+    let none = muted(None);
+    let first = muted(Some(0));
+    let second = muted(Some(1));
+    // Voice 1 holds most of the notes, so editing voice 2 greys out more.
+    assert!(first > none, "{first} > {none}");
+    assert!(second > first, "{second} > {first}");
+    // A voice the song doesn't use greys out both.
+    assert!(muted(Some(3)) > second);
+}

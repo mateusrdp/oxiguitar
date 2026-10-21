@@ -94,6 +94,35 @@ pub(crate) fn staff_step(diatonic: i32, clef: Clef) -> i32 {
     diatonic - bottom
 }
 
+/// The sounding pitch at staff step `step` (0 the bottom line, 8 the top
+/// line) in `clef`, as the key signature alters that line or space, on a
+/// staff transposed by `transposition`: what a note entered there sounds.
+/// `None` outside MIDI's range.
+pub fn pitch_at_step(step: i32, clef: Clef, key: KeySignature, transposition: i8) -> Option<Pitch> {
+    const NATURAL: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
+    // Letters (C = 0) in the order the key signature alters them.
+    const SHARPS_ORDER: [i32; 7] = [3, 0, 4, 1, 5, 2, 6];
+    const FLATS_ORDER: [i32; 7] = [6, 2, 5, 1, 4, 0, 3];
+    let diatonic = staff_step(0, clef).checked_neg()?.checked_add(step)?;
+    let letter = diatonic.rem_euclid(7);
+    let octave = diatonic.div_euclid(7);
+    let n = usize::from(key.fifths.unsigned_abs()).min(7);
+    let alter = if key.fifths > 0 && SHARPS_ORDER.get(..n)?.contains(&letter) {
+        1
+    } else if key.fifths < 0 && FLATS_ORDER.get(..n)?.contains(&letter) {
+        -1
+    } else {
+        0
+    };
+    let written = octave * 12 + NATURAL.get(usize::try_from(letter).ok()?)? + alter;
+    let octave_clef = match clef {
+        Clef::Treble8vb | Clef::Bass8vb => 12,
+        _ => 0,
+    };
+    let sounding = written - i32::from(transposition) - octave_clef;
+    u8::try_from(sounding).ok().filter(|p| *p <= 127).map(Pitch)
+}
+
 /// Staff steps of the key signature's accidentals, in order, for a clef.
 pub(crate) fn key_signature_steps(key: KeySignature, clef: Clef) -> Vec<(i32, i8)> {
     // Treble clef positions: sharps F C G D A E B, flats B E A D G C F.
@@ -214,6 +243,21 @@ mod tests {
         assert_eq!(staff_step(s.diatonic, Clef::Treble), -2);
         // Bass clef: G2 (43) is the bottom line.
         assert_eq!(staff_step(spell(43, key(0)).diatonic, Clef::Bass), 0);
+        // Back from a step: the guitar's treble 8vb bottom line (E4 written)
+        // sounds E3; in G major the top line is F sharp.
+        assert_eq!(
+            pitch_at_step(0, Clef::Treble8vb, key(0), 0),
+            Some(Pitch(52))
+        );
+        assert_eq!(pitch_at_step(8, Clef::Treble, key(1), 0), Some(Pitch(78)));
+        assert_eq!(pitch_at_step(4, Clef::Treble, key(-2), 0), Some(Pitch(70)));
+        assert_eq!(pitch_at_step(0, Clef::Bass, key(0), 0), Some(Pitch(43)));
+        for p in 30..90u8 {
+            let s = staff_step(spell(i32::from(p), key(0)).diatonic, Clef::Treble);
+            if spell(i32::from(p), key(0)).alter == 0 {
+                assert_eq!(pitch_at_step(s, Clef::Treble, key(0), 0), Some(Pitch(p)));
+            }
+        }
     }
 
     #[test]

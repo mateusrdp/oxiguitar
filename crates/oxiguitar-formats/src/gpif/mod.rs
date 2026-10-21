@@ -15,6 +15,8 @@
 //! `docs/formats/guitar-pro-6-8.md`.
 
 mod effects;
+#[cfg(feature = "gp")]
+pub(crate) mod write;
 
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -128,11 +130,57 @@ struct StaffContext {
 #[derive(Clone, Debug, Default)]
 struct TrackContext {
     percussion: bool,
+    /// Guitar Pro names the instrument as one without frets (a piano, a
+    /// violin, a voice): see [`NOT_FRETTED`].
+    not_fretted: bool,
     /// Octaves the written part sits above or below the sounding one
     /// (-1 for guitar and bass).
     octave_shift: i32,
     staves: Vec<StaffContext>,
 }
+
+/// Guitar Pro 7–8's instrument types (`<InstrumentSet><Type>`) of
+/// instruments without frets (from the instruments Guitar Pro 7.6 offers,
+/// `docs/formats/guitar-pro-sounds.md`; "other" is what our writer once
+/// wrote). Any type not listed may have strings.
+pub(crate) const NOT_FRETTED: &[&str] = &[
+    "acousticPiano",
+    "electricPiano",
+    "harpsichord",
+    "celesta",
+    "electricOrgan",
+    "keySynthesizer",
+    "leadSynthesizer",
+    "padSynthesizer",
+    "seqSynthesizer",
+    "brassSynthesizer",
+    "bassSynthesizer",
+    "synthBass",
+    "xylophone",
+    "vibraphone",
+    "timpani",
+    "violin",
+    "viola",
+    "cello",
+    "contrabass",
+    "harp",
+    "voice",
+    "choir",
+    "flute",
+    "piccolo",
+    "recorder",
+    "oboe",
+    "englishHorn",
+    "clarinet",
+    "bassoon",
+    "saxophone",
+    "trumpet",
+    "trombone",
+    "frenchHorn",
+    "tuba",
+    "harmonica",
+    "other",
+];
 
 pub(super) struct Reader<'a> {
     root: Element<'a>,
@@ -315,6 +363,7 @@ impl<'a> Reader<'a> {
             .path(&["MidiConnection", "PrimaryChannel"])
             .or_else(|| gm.and_then(|g| g.child("PrimaryChannel")))
             .and_then(|c| num::<u8>(c.text()));
+        ctx.not_fretted = set_type.is_some_and(|t| NOT_FRETTED.contains(&t));
         ctx.percussion = set_type.is_some_and(|t| t == "drumKit")
             || gp6_ref.is_some_and(|r| r.starts_with("drmkt"))
             || (set_type.is_none() && gp6_ref.is_none() && channel == Some(9));
@@ -427,7 +476,15 @@ impl<'a> Reader<'a> {
                 .filter(|p| *p <= 127)
                 .collect();
             // Drum kits store a tuning of zeros; that is no tuning at all.
-            if !tctx.percussion && pitches.iter().any(|p| *p != 0) {
+            // Guitar Pro gives every other track a tuning, a piano too (a
+            // guitar's, and a five-string bass's on its second staff): an
+            // instrument without frets shown without tablature has no
+            // strings, and its notes are read by pitch. One shown with
+            // tablature (a keyboard part from a Guitar Pro 5 file) keeps
+            // them.
+            let tab_shown = notation_flags.is_none_or(|f| f & 2 != 0);
+            let default_only = tctx.not_fretted && !tab_shown;
+            if !tctx.percussion && !default_only && pitches.iter().any(|p| *p != 0) {
                 if pitches.len() > MAX_STRINGS {
                     self.log.warn(
                         format!(
@@ -585,12 +642,7 @@ impl<'a> Reader<'a> {
                 format!("bar {}", self.place.0),
             );
         }
-        if el.child("FreeTime").is_some() {
-            self.log.info(
-                "free-time bars are read as ordinary bars",
-                format!("bar {}", self.place.0),
-            );
-        }
+        mb.free_time = el.child("FreeTime").is_some();
         mb
     }
 
@@ -678,8 +730,14 @@ impl<'a> Reader<'a> {
             .unwrap_or_default()
             .split_whitespace()
             .collect();
+        // Voices keep their places (voice 3 stays voice 3, stems down): an
+        // unused voice before a used one is an empty placeholder, unused
+        // voices after the last used one are left out. A voice is used
+        // when it holds a note or a rest; the first voice is kept as read.
+        let mut slots: Vec<Option<Voice>> = Vec::new();
         for (vi, id) in ids.iter().take(4).enumerate() {
             if *id == "-1" {
+                slots.push(None);
                 continue;
             }
             let Some(voice_el) = self.index.voices.get(id).copied() else {
@@ -687,14 +745,19 @@ impl<'a> Reader<'a> {
                     "a voice refers to data the file does not contain and was left out",
                     self.here(),
                 );
+                slots.push(None);
                 continue;
             };
             self.voice_key.1 = vi;
             let voice = self.voice(voice_el, ctx, &sctx);
-            if vi == 0 || bar.voices.is_empty() || !voice.is_empty() {
-                bar.voices.push(voice);
-            }
+            slots.push(Some(voice).filter(|v| vi == 0 || !v.is_empty()));
         }
+        let used = slots.iter().rposition(Option::is_some).map_or(1, |i| i + 1);
+        bar.voices = slots
+            .into_iter()
+            .take(used)
+            .map(Option::unwrap_or_default)
+            .collect();
         if bar.voices.is_empty() {
             bar.voices.push(Voice::default());
         }
@@ -964,15 +1027,12 @@ fn color(text: &str) -> Color {
 fn mix(el: Element<'_>) -> Mix {
     let mut m = Mix::default();
     if let Some(params) = el.path(&["RSE", "ChannelStrip", "Parameters"]) {
-        let p: Vec<f32> = params
-            .text()
-            .split_whitespace()
-            .filter_map(num::<f32>)
-            .filter(|v| v.is_finite())
-            .collect();
+        // In f64, so every f32 volume and pan has a value that reads back
+        // as it (the .gp writer's).
+        let p: Vec<f64> = params.text().split_whitespace().filter_map(float).collect();
         if let (Some(pan), Some(vol)) = (p.get(11), p.get(12)) {
-            m.pan = (pan * 2.0 - 1.0).clamp(-1.0, 1.0);
-            m.volume = vol.clamp(0.0, 1.0);
+            m.pan = ((pan * 2.0 - 1.0) as f32).clamp(-1.0, 1.0);
+            m.volume = (*vol as f32).clamp(0.0, 1.0);
         }
     }
     match el.child_text("PlaybackState") {
@@ -984,13 +1044,25 @@ fn mix(el: Element<'_>) -> Mix {
 }
 
 /// A chord diagram item. GPIF numbers strings from the lowest (0) and counts
-/// frets from the diagram's base fret.
+/// frets from the diagram's base fret, 0 being an open string (an E chord
+/// at the seventh fret has its low E open: base 6, fret 0).
 fn chord_diagram(item: Element<'_>, track_strings: usize) -> ChordDiagram {
     let name = item.attr("name").unwrap_or_default().to_owned();
-    let Some(diagram) = item.child("Diagram") else {
+    // A diagram Guitar Pro is told not to show is a name only.
+    let shown = |d: &Element<'_>| {
+        !d.children_named("Property")
+            .any(|p| p.attr("name") == Some("ShowDiagram") && p.attr("value") == Some("false"))
+    };
+    let Some(diagram) = item.child("Diagram").filter(shown) else {
+        let base = item
+            .child("Diagram")
+            .and_then(|d| d.attr("baseFret"))
+            .and_then(num::<u8>)
+            .unwrap_or(0)
+            .min(MAX_FRET);
         return ChordDiagram {
             name,
-            first_fret: 1,
+            first_fret: base + 1,
             frets: Vec::new(),
         };
     };
@@ -1015,7 +1087,12 @@ fn chord_diagram(item: Element<'_>, track_strings: usize) -> ChordDiagram {
         if s < strings
             && let Some(slot) = frets.get_mut(strings - 1 - s)
         {
-            *slot = Some(base.saturating_add(fret).min(MAX_FRET));
+            // Fret 0 is an open string wherever the diagram starts.
+            *slot = Some(if fret == 0 {
+                0
+            } else {
+                base.saturating_add(fret).min(MAX_FRET)
+            });
         }
     }
     ChordDiagram {

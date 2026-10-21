@@ -85,6 +85,21 @@ jobs:
           path: test-plugin/
           retention-days: 14
           if-no-files-found: error
+      # Files for checking the .gp writer in Guitar Pro (Mateus, with Guitar
+      # Pro 7.6): every reference song and the test song in every format,
+      # written as .gp by this build's plugin, with what each lost.
+      - name: Files for Guitar Pro
+        if: matrix.name == 'linux-x86_64'
+        run: |
+          scripts/guitar-pro-check.sh guitar-pro-check
+          cp fixtures/guitar-pro-check/README.md guitar-pro-check/
+      - if: matrix.name == 'linux-x86_64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: guitar-pro-check
+          path: guitar-pro-check/
+          retention-days: 14
+          if-no-files-found: error
 
   macos:
     name: Build (macos-universal)

@@ -31,6 +31,7 @@ oxiguitar-model = { workspace = true, features = ["wire"] }
 # Plugin canvases as display lists (`wire`).
 oxiguitar-display = { workspace = true, features = ["wire"] }
 oxiguitar-layout.workspace = true
+oxiguitar-edit.workspace = true
 oxiguitar-render.workspace = true
 oxiguitar-tools.workspace = true
 oxiguitar-host.workspace = true

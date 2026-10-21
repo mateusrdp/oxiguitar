@@ -4,6 +4,7 @@
 //! `oxiguitar-cli`: inspect, convert and test score files without a window.
 //! Files are read by the format plugins installed for the app.
 
+mod convert;
 mod info;
 mod plugins;
 mod render;
@@ -22,6 +23,11 @@ Commands:
   detect <file>...           Print the format of each file and the plugin
                              that reads it, recognised from its contents
                              rather than its extension
+  convert <file> <new file>  Read a file and write it in the format the new
+                             file's extension names (.gp), through the
+                             format plugins; prints what the new file can't
+                             hold (its losses) and notes on what Guitar Pro
+                             does differently
   render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
          [--layout page|vertical|horizontal|parchment] [--width PT]
          [--paper a4|letter] [--tracks 1,2|all] [--staff-space PT]
@@ -47,10 +53,11 @@ Commands:
   version                    Print the version and exit
   help                       Print this help
 
-Files are read by the format plugins in the app's plugin folders (or those
-settings.json lists); nothing is created or changed there.
+Files are read and written by the format plugins in the app's plugin folders
+(or those settings.json lists); nothing is created or changed there.
 
-Exit status: 0 if every file was read, 1 if any could not be, 2 on bad usage.";
+Exit status: 0 if every file was read (and written), 1 if any could not be,
+2 on bad usage.";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -58,6 +65,7 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("info") => info::run(rest),
         Some("detect") => info::detect(rest),
+        Some("convert") => convert::run(rest),
         Some("render") => render::run(rest),
         Some("specimen") => specimen::run(rest),
         Some("tools") => tools::list(),

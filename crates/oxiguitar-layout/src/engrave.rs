@@ -9,14 +9,15 @@
 //! present when the system uses it, so they never overlap the notes or one
 //! another (VIEW-7).
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
-use oxiguitar_display::{DisplayList, Paint, Path, Point, Rect};
+use oxiguitar_display::{DisplayList, Item, Paint, Path, Point, Rect};
 use oxiguitar_model::{BeatKind, Clef, Direction, GraceKind, NoteValue, Ratio, Score, Tuplet};
 
 use crate::draw::{G, Painter, accidental_glyph, glyphs};
 use crate::effects;
 use crate::grid::BarGrid;
+use crate::hits::{BarHits, BeatHit, StaffHits, SystemHits};
 use crate::pitch::key_signature_steps;
 use crate::plan::{
     BarPlan, BeatInfo, GRACE_SCALE, Lanes, chord_name_size, grace_step, notehead, rest_glyph,
@@ -35,6 +36,8 @@ const TAB_RHYTHM: f32 = 3.0;
 pub(crate) struct DrawnSystem {
     pub(crate) list: DisplayList,
     pub(crate) height: f32,
+    /// Where its staves, bars and beats are, from its origin.
+    pub(crate) hits: SystemHits,
 }
 
 /// Where one bar sits in its system.
@@ -87,6 +90,8 @@ pub(crate) struct Band {
     pub(crate) dynamics: Option<f32>,
     /// Baselines of the lyric lines, by line number.
     pub(crate) lyrics: Vec<f32>,
+    /// Where the first lyric line's baseline is, or would be.
+    lyric_first: f32,
 }
 
 /// The kinds of effect lane, nearest the staff first.
@@ -149,6 +154,8 @@ pub(crate) fn system(
     plans: &Plans,
     spec: &SystemSpec,
     p: &Painter<'_>,
+    marked: &BTreeSet<(usize, usize, usize)>,
+    active_voice: Option<usize>,
 ) -> DrawnSystem {
     let sp = p.sp;
     let tg = TAB_GAP * sp;
@@ -271,25 +278,26 @@ pub(crate) fn system(
         let std_top = v.show_std.then_some(top);
         // Under the staff (or under the tab and its rhythm): dynamics, then
         // lyrics.
-        let under_lines = |from: f32| -> (Option<f32>, Vec<f32>, f32) {
+        let under_lines = |from: f32| -> (Option<f32>, Vec<f32>, f32, f32) {
             let mut y = from;
             let dynamics = has_dynamics.then(|| {
                 y += 2.6 * sp;
                 y - 0.6 * sp
             });
+            let first = y + 2.4 * sp - 0.5 * sp;
             let lyrics = (0..lyric_lines)
                 .map(|_| {
                     y += 2.4 * sp;
                     y - 0.5 * sp
                 })
                 .collect();
-            (dynamics, lyrics, y)
+            (dynamics, lyrics, y, first)
         };
         let std_bottom = top + 4.0 * sp + below_std;
-        let (mut dynamics, mut lyrics, after_std) = if v.show_std {
+        let (mut dynamics, mut lyrics, after_std, mut lyric_first) = if v.show_std {
             under_lines(std_bottom)
         } else {
-            (None, Vec::new(), std_bottom)
+            (None, Vec::new(), std_bottom, std_bottom)
         };
         let tab_top = v.show_tab.then_some(if v.show_std {
             after_std + 2.0 * sp + lanes_height
@@ -327,9 +335,10 @@ pub(crate) fn system(
             after_std - bottom + 1.5 * sp
         };
         if !v.show_std {
-            let (d, l, end) = under_lines(bottom + after - 1.0 * sp);
+            let (d, l, end, first) = under_lines(bottom + after - 1.0 * sp);
             dynamics = d;
             lyrics = l;
+            lyric_first = first;
             after = end - bottom + 1.0 * sp;
         }
         bands.push(Band {
@@ -341,12 +350,29 @@ pub(crate) fn system(
             lanes,
             dynamics,
             lyrics,
+            lyric_first,
         });
         cursor = bottom + after + 2.5 * sp;
     }
     let height = (cursor - 2.5 * sp).max(0.0);
 
     let mut list = DisplayList::new(right, height);
+    // Bars that don't add up (`Options::marked`), laid under everything
+    // else so the notation stays readable on them.
+    for (v, band) in views.iter().zip(&bands) {
+        for bx in &bars {
+            if marked.contains(&(v.track, v.staff, bx.index)) {
+                let top = band.std_top.or(band.tab_top).unwrap_or(band.top) - sp;
+                list.push(Item::Rect {
+                    rect: Rect::new(bx.start, top, bx.end - bx.start, band.bottom + sp - top),
+                    paint: Paint::Warning,
+                });
+            }
+        }
+    }
+    let mut hits = system_hits(score, views, plans, &bands, &bars, p, height);
+    // Where each bar's time signature is drawn, for the editor.
+    let mut times: HashMap<usize, (f32, f32)> = HashMap::new();
     let mut ties: HashMap<(usize, usize, u8), (f32, f32)> = HashMap::new();
     for (vi, (v, band)) in views.iter().zip(&bands).enumerate() {
         let vplans = plans.bars.get(vi);
@@ -363,6 +389,7 @@ pub(crate) fn system(
             view: v,
             tg,
             right,
+            active_voice,
         };
         ctx.staff_lines(&mut list, spec.indent, right);
         ctx.clefs_and_key(&mut list, spec.indent, clef, fifths);
@@ -384,7 +411,9 @@ pub(crate) fn system(
             let Some(grid) = plans.grids.get(bx.index) else {
                 continue;
             };
-            ctx.bar_start(&mut list, bx, k == 0, plan.clef);
+            if let Some(range) = ctx.bar_start(&mut list, bx, k == 0, plan.clef) {
+                times.insert(bx.index, range);
+            }
             if let Some(top) = band.std_top {
                 ctx.std_bar(&mut list, plan, grid, bx, top, vi, &mut ties);
             }
@@ -490,7 +519,108 @@ pub(crate) fn system(
         let y = (first.top + last.bottom) / 2.0 + 0.35 * size;
         p.text_right(&mut list, &label, size, room, y, Paint::Ink);
     }
-    DrawnSystem { list, height }
+    for b in hits.staves.iter_mut().flat_map(|s| &mut s.bars) {
+        b.time_signature = times.get(&b.bar).copied();
+    }
+    DrawnSystem { list, height, hits }
+}
+
+/// Where every shown staff, bar and beat of a system is, for the editor.
+fn system_hits(
+    score: &Score,
+    views: &[View],
+    plans: &Plans,
+    bands: &[Band],
+    bars: &[BarX],
+    p: &Painter<'_>,
+    height: f32,
+) -> SystemHits {
+    let tg = TAB_GAP * p.sp;
+    let step = grace_step(p, tg);
+    let mut staves = Vec::with_capacity(views.len());
+    for (vi, (v, band)) in views.iter().zip(bands).enumerate() {
+        let model = score
+            .tracks
+            .get(v.track)
+            .and_then(|t| t.staves.get(v.staff));
+        let mut bar_hits = Vec::with_capacity(bars.len());
+        for bx in bars {
+            let (Some(plan), Some(grid)) = (
+                plans.bars.get(vi).and_then(|b| b.get(bx.index)),
+                plans.grids.get(bx.index),
+            ) else {
+                continue;
+            };
+            let mut beats = Vec::new();
+            for (voice, list) in plan.voices.iter().enumerate() {
+                // A grand staff's hands may stand a rest in for a voice the
+                // hand doesn't play: only beats that are the model's own
+                // are named.
+                let own = model
+                    .and_then(|m| m.bars.get(bx.index))
+                    .and_then(|b| b.voices.get(voice))
+                    .is_some_and(|mv| mv.beats.len() == list.len());
+                if !own {
+                    continue;
+                }
+                let first = beats.len();
+                for (beat, b) in list.iter().enumerate() {
+                    let Some(onset) = b.onset else { continue };
+                    let ci = grid.index_of(onset);
+                    let x = bx.cols.get(ci).copied().unwrap_or(bx.notes);
+                    let next = bx.cols.get(ci + 1).copied().unwrap_or(bx.end);
+                    beats.push(BeatHit {
+                        voice,
+                        beat,
+                        x,
+                        width: (next - x).max(1.0),
+                    });
+                }
+                // Grace beats sit left of their main beat.
+                for (beat, b) in list.iter().enumerate() {
+                    if b.onset.is_some() {
+                        continue;
+                    }
+                    let main = beat + b.grace_rank;
+                    let Some(m) = beats[first..].iter().find(|h| h.beat == main).copied() else {
+                        continue;
+                    };
+                    beats.push(BeatHit {
+                        voice,
+                        beat,
+                        x: m.x - b.grace_rank as f32 * step,
+                        width: step,
+                    });
+                }
+            }
+            bar_hits.push(BarHits {
+                bar: bx.index,
+                start: bx.start,
+                notes: bx.notes,
+                end: bx.end,
+                clef: plan.clef,
+                time_signature: None,
+                beats,
+            });
+        }
+        let strings = u8::try_from(v.strings).unwrap_or(u8::MAX);
+        staves.push(StaffHits {
+            track: v.track,
+            staff: v.staff,
+            standard: band.std_top.map(|t| (t, p.sp)),
+            tablature: band.tab_top.map(|t| (t, tg, strings)),
+            top: band.std_top.or(band.tab_top).unwrap_or(band.top),
+            bottom: band.bottom,
+            lyrics: (band.lyric_first, 2.4 * p.sp),
+            bars: bar_hits,
+        });
+    }
+    SystemHits {
+        sheet: 0,
+        top: 0.0,
+        bottom: height,
+        staves,
+    }
 }
 
 /// What every drawing step of one view needs.
@@ -502,11 +632,21 @@ struct Ctx<'a> {
     tg: f32,
     /// The system's right edge: text never runs past it.
     right: f32,
+    /// The editor's voice: the others are greyed out.
+    active_voice: Option<usize>,
 }
 
 impl Ctx<'_> {
     fn sp(&self) -> f32 {
         self.p.sp
+    }
+
+    /// Greys out what voice `voice` drew from item `start` on, unless it is
+    /// the editor's voice.
+    fn dim(&self, list: &mut DisplayList, voice: usize, start: usize) {
+        if self.active_voice.is_some_and(|a| a != voice) {
+            list.mute_from(start);
+        }
     }
 
     fn line_t(&self) -> f32 {
@@ -578,12 +718,18 @@ impl Ctx<'_> {
     /// What opens a bar before its notes. At the start of a system: time
     /// signature, then start-repeat sign (the system prefix shows clef and
     /// key). Elsewhere: start-repeat sign, key change, time signature.
-    fn bar_start(&self, list: &mut DisplayList, bx: &BarX, first_in_system: bool, clef: Clef) {
+    /// Returns where the time signature is, left to right, if it is drawn.
+    fn bar_start(
+        &self,
+        list: &mut DisplayList,
+        bx: &BarX,
+        first_in_system: bool,
+        clef: Clef,
+    ) -> Option<(f32, f32)> {
         let p = self.p;
         let sp = self.sp();
-        let Some(mb) = self.score.master_bars.get(bx.index) else {
-            return;
-        };
+        let mb = self.score.master_bars.get(bx.index)?;
+        let mut time = None;
         let previous = bx
             .index
             .checked_sub(1)
@@ -649,11 +795,13 @@ impl Ctx<'_> {
                     top + 0.73 * h,
                 );
             }
+            time = Some((x, x + w));
             x += w + sp;
         }
         if first_in_system && mb.repeat_start {
             self.repeat_start(list, x);
         }
+        time
     }
 
     /// A start-repeat sign whose thick line begins at `x`; returns its right
@@ -744,6 +892,7 @@ impl Ctx<'_> {
         let stem_t = p.ed().stem_thickness * sp;
 
         for (vi, beats) in plan.voices.iter().enumerate() {
+            let start = list.len();
             let groups = plan.groups.get(vi).map_or(&[][..], Vec::as_slice);
             let xs: Vec<Option<f32>> = beats
                 .iter()
@@ -813,6 +962,7 @@ impl Ctx<'_> {
             }
             self.tuplets(list, beats, &xs, &stems, top, hw);
             self.std_graces(list, beats, &xs, top);
+            self.dim(list, vi, start);
         }
     }
 
@@ -1251,7 +1401,9 @@ impl Ctx<'_> {
                 continue;
             };
             let groups = plan.groups.get(vi).map_or(&[][..], Vec::as_slice);
+            let start = list.len();
             self.tab_voice(list, beats, groups, grid, bx, top, voice_stems_up(vi));
+            self.dim(list, vi, start);
         }
     }
 
@@ -1418,7 +1570,8 @@ impl Ctx<'_> {
     fn tab_bar(&self, list: &mut DisplayList, plan: &BarPlan, grid: &BarGrid, bx: &BarX, top: f32) {
         let step = grace_step(self.p, self.tg);
         let sp = self.sp();
-        for beats in &plan.voices {
+        for (vi, beats) in plan.voices.iter().enumerate() {
+            let start = list.len();
             // Grace notes: small numbers before their main note.
             for (i, b) in beats.iter().enumerate() {
                 if b.grace.is_none() {
@@ -1458,6 +1611,7 @@ impl Ctx<'_> {
                     }
                 }
             }
+            self.dim(list, vi, start);
         }
     }
 

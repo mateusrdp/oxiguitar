@@ -25,6 +25,7 @@ oxiguitar-display = { path = "crates/oxiguitar-display" }
 oxiguitar-layout = { path = "crates/oxiguitar-layout" }
 oxiguitar-render = { path = "crates/oxiguitar-render" }
 oxiguitar-tools = { path = "crates/oxiguitar-tools" }
+oxiguitar-edit = { path = "crates/oxiguitar-edit" }
 oxiguitar-host = { path = "crates/oxiguitar-host" }
 oxiguitar-testgen = { path = "crates/oxiguitar-testgen" }
 oxiguitar-plugin-api = { path = "crates/oxiguitar-plugin-api" }

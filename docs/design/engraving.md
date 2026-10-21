@@ -45,7 +45,7 @@ The engraver shows what the file says and never second-guesses it: a tab that le
    - **Grace notes:** small notes before their main note, stem up, slashed when played before the beat, slurred to the main note; small fret numbers on the tab. Spacing makes room for them.
    - **Under the staff:**
      - Dynamics are shown where the first voice's dynamic *marking* changes from Guitar Pro's default *mf*, unless `Options::dynamics` is off (`--no-dynamics`). Only Guitar Pro 6–8 store markings (a beat property); Guitar Pro 3–5 only store a velocity per note, which is not a marking and is never shown.
-     - Lyrics go one line per verse, one syllable per sung beat (tied notes continue the syllable). Spacing keeps syllables apart.
+     - Lyrics go one line per verse, one syllable per sung beat (tied notes continue the syllable). Spacing keeps syllables apart. As in Guitar Pro, a space or a hyphen starts the next syllable and each further one leaves a beat empty (a run of line breaks counts as one space), a plus joins two words on one beat, and text in square brackets is a comment that isn't drawn (M3 slice 6; `oxiguitar_model::lyrics`).
    - With several tracks, each track's name stands left of its staves: the full name on the first system, the short name after, shortened with "…" past a fifth of the line.
 6. **Pages and sheets** (`page.rs`), by layout (below). The header (title, subtitle, artist, album, credits on the right, tuning and capo on the left) goes at the top (VIEW-6), the copyright at the foot of page one or of the sheet.
 

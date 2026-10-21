@@ -57,13 +57,14 @@ use oxiguitar_plugin_api::abi::Status;
 use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::event::{Event, EventKind};
 use oxiguitar_plugin_api::manifest::{
-    Environment, FormatSpec, InstrumentSpec, Manifest, ServiceSpec,
+    Environment, FormatSpec, InstrumentSpec, Manifest, ServiceSpec, ToolSpec,
 };
 use oxiguitar_plugin_api::message::{
     Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, LogEntry, Request, decode,
     encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
+use oxiguitar_plugin_api::score2::Score2;
 use oxiguitar_plugin_api::signature::Sniff;
 use oxiguitar_plugin_api::tab::{TabContent, TabEvent, TabSpec};
 use serde_json::Value;
@@ -99,6 +100,28 @@ pub trait Core: Send + Sync {
     /// default has none.
     fn score(&self) -> Option<Score> {
         None
+    }
+
+    /// The open score, version 2, and its revision (as score events give
+    /// it), or `None` when none is open (interface 1.2). The default has
+    /// none.
+    fn score2(&self) -> Option<(u64, Score2)> {
+        None
+    }
+
+    /// The plugin named `plugin` hands back the open score changed
+    /// (interface 1.2): record it as one undoable change named `name`,
+    /// unless the score has changed since `revision`. The error is a
+    /// sentence for the plugin. The default has no score to change.
+    fn apply(
+        &self,
+        plugin: &str,
+        revision: u64,
+        name: String,
+        score: Score2,
+    ) -> Result<(), String> {
+        let _ = (plugin, revision, name, score);
+        Err("no score is open".to_owned())
     }
 
     /// The plugin `id` failed and is withdrawn for the rest of the session:
@@ -261,6 +284,16 @@ pub struct TabId {
     pub tab: String,
 }
 
+/// A tool a plugin adds to the Tools menu (interface 1.2).
+#[derive(Clone, Copy, Debug)]
+pub struct ToolRef<'a> {
+    /// The plugin.
+    pub plugin: &'a Found,
+    /// The tool, as its manifest declares it.
+    pub spec: &'a ToolSpec,
+    index: usize,
+}
+
 /// A tab a plugin adds to the window.
 #[derive(Clone, Copy, Debug)]
 pub struct TabRef<'a> {
@@ -358,8 +391,10 @@ impl std::error::Error for Unrecognised {}
 /// What a format plugin read.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ReadScore {
-    /// The score, as plugins see it (the app converts it to its model).
-    pub score: Score,
+    /// The score, as plugins see it, version 2 (the app converts it to its
+    /// model). A plugin built for an interface before 1.2 reads version 1,
+    /// given here as version 2 with no extensions.
+    pub score: Score2,
     /// What the reader couldn't carry over faithfully (FMT-2).
     pub log: Vec<LogEntry>,
 }
@@ -662,24 +697,60 @@ impl Plugins {
                 data: Blob::borrowed(data),
             },
         )? {
-            Answer::Read { score, log } => Ok(ReadScore { score: *score, log }),
+            Answer::Read { score, log } => Ok(ReadScore {
+                score: Score2::from_v1(*score),
+                log,
+            }),
+            Answer::Read2 { score, log } => Ok(ReadScore { score: *score, log }),
             other => Err(self.unexpected(format.index, &other)),
         }
     }
 
-    /// Writes `score` with the plugin that owns `format`.
-    pub fn write(&self, format: FormatRef<'_>, score: &Score) -> Result<WrittenFile, Error> {
-        match self.request(
-            format.index,
-            &Request::Write {
+    /// Writes `score` with the plugin that owns `format`. A plugin built
+    /// for interface 1.2 or later gets the score version 2, without what
+    /// its version doesn't know; an older one gets version 1, and what
+    /// version 1 can't hold is added to the losses.
+    pub fn write(&self, format: FormatRef<'_>, score: &Score2) -> Result<WrittenFile, Error> {
+        let minor = format
+            .plugin
+            .manifest
+            .as_ref()
+            .map_or(0, |m| m.interface.minor);
+        let mut lost = Vec::new();
+        let request = if minor >= 2 {
+            let mut score = score.clone();
+            score.keep_known(minor);
+            Request::Write2 {
                 format: format.spec.id.clone(),
-                score: Box::new(score.clone()),
-            },
-        )? {
-            Answer::Written { data, losses } => Ok(WrittenFile {
-                data: data.into_vec(),
-                losses,
-            }),
+                score: Box::new(score),
+            }
+        } else {
+            let name = format.plugin.name();
+            lost = score
+                .extensions_used()
+                .into_iter()
+                .map(|(what, bar, count)| LogEntry {
+                    level: oxiguitar_plugin_api::message::Level::Warning,
+                    message: format!(
+                        "{what} can't be passed to {name}, made for an older OxiGuitar"
+                    ),
+                    place: format!("bar {bar}"),
+                    count: u32::try_from(count).unwrap_or(u32::MAX),
+                })
+                .collect();
+            Request::Write {
+                format: format.spec.id.clone(),
+                score: Box::new(score.to_v1()),
+            }
+        };
+        match self.request(format.index, &request)? {
+            Answer::Written { data, mut losses } => {
+                losses.extend(lost);
+                Ok(WrittenFile {
+                    data: data.into_vec(),
+                    losses,
+                })
+            }
             other => Err(self.unexpected(format.index, &other)),
         }
     }
@@ -777,6 +848,35 @@ impl Plugins {
             return Err(Error::not_found("that plugin isn't one of these"));
         }
         self.request(index, request)
+    }
+
+    /// Every tool the ready plugins add, in plugin order. Only plugins
+    /// built for interface 1.2 or later have tools.
+    pub fn tools(&self) -> Vec<ToolRef<'_>> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(2))
+            .flat_map(|(index, plugin, m)| {
+                m.tools.iter().map(move |spec| ToolRef {
+                    plugin,
+                    spec,
+                    index,
+                })
+            })
+            .collect()
+    }
+
+    /// Runs a plugin's tool, loading the plugin if needed; returns what it
+    /// says it did, a sentence for the footer (or nothing).
+    pub fn run_tool(&self, tool: ToolRef<'_>) -> Result<String, Error> {
+        match self.request(
+            tool.index,
+            &Request::Tool {
+                tool: tool.spec.id.clone(),
+            },
+        )? {
+            Answer::Report(report) => Ok(report),
+            other => Err(self.unexpected(tool.index, &other)),
+        }
     }
 
     /// Every tab the ready plugins add, in plugin order. Only plugins built
@@ -916,9 +1016,16 @@ impl Plugins {
 
     fn deliver(&self, event: &Event) {
         let kind = event.kind();
+        // The selection comes in two forms: plugins built for 1.2 or later
+        // get the editor's, older ones the one they know.
+        let for_version = |m: &Manifest| match event {
+            Event::Selection(_) => !m.knows_minor(2),
+            Event::Selection2(_) => m.knows_minor(2),
+            _ => true,
+        };
         let subscribers: Vec<usize> = self
             .ready()
-            .filter(|(_, _, m)| m.wants(kind))
+            .filter(|(_, _, m)| m.wants(kind) && for_version(m))
             .map(|(index, _, _)| index)
             .collect();
         for index in subscribers {
@@ -1154,6 +1261,8 @@ impl Plugins {
             Answer::Service(_) => "a service's output",
             Answer::Tab(_) => "a tab's contents",
             Answer::Done => "\"done\"",
+            Answer::Read2 { .. } => "a score",
+            Answer::Report(_) => "a report",
         };
         self.fail(
             index,
@@ -1210,6 +1319,26 @@ impl Plugins {
                 }
             }
             HostRequest::Score => Ok(HostAnswer::Score(self.0.core.score().map(Box::new))),
+            HostRequest::Score2 => {
+                let (revision, score) = match self.0.core.score2() {
+                    Some((revision, mut score)) => {
+                        score.keep_known(manifest.interface.minor);
+                        (revision, Some(Box::new(score)))
+                    }
+                    None => (0, None),
+                };
+                Ok(HostAnswer::Score2 { revision, score })
+            }
+            HostRequest::Apply {
+                revision,
+                name,
+                score,
+            } => self
+                .0
+                .core
+                .apply(&manifest.name, revision, name, *score)
+                .map(|()| HostAnswer::Done)
+                .map_err(|why| Error::new(ErrorKind::Invalid, why)),
             HostRequest::Settings => {
                 let mine = match self.0.settings.get(&manifest.id) {
                     Some(v @ Value::Object(_)) => v,

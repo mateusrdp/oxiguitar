@@ -66,6 +66,8 @@ The template's reader:
 
 The score crosses the interface as its own types, `oxiguitar_plugin::score` (version 1 of the wire score). They mirror OxiGuitar's model field for field, but belong to the interface: the model can change as the editor grows, and these don't.
 
+A plugin built for interface 1.2 can read and write version 2 instead (`oxiguitar_plugin::score2`), which holds what OxiGuitar added since, such as bars in free time, as lists of extensions ([Interface versions](versions.md)). Implement `FormatReader2` and `FormatWriter2` and hand them out from `reader2` and `writer2`; with both versions, the SDK uses version 2. A plugin with only a version-1 writer still gets every score: what version 1 can't hold is added to its losses.
+
 ```text
 Score
 ├── info: ScoreInfo          title, subtitle, artist, album, words, music, …

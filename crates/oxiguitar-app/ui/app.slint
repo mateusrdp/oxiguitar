@@ -10,8 +10,9 @@
 // add theirs to the same lists (docs/design/plugins.md). The score is drawn
 // by our renderer on the worker thread and shown here as tiles.
 
-import { Slider, ScrollView, Palette, ComboBox } from "std-widgets.slint";
+import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget } from "plugin_tab.slint";
+import { AltBox, BarDialog, BarFields, BendDialog, ChordDialog, GridPoint, PasteDialog, TextDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -21,6 +22,16 @@ export struct TileItem {
     x: length,
     y: length,
     size: length,
+}
+
+// A box over the page, in canvas points (the editor's caret and selection;
+// editing.rs). The window places it with the origin and the zoom, so it
+// follows resizing and zooming by itself.
+export struct BoxItem {
+    x: float,
+    y: float,
+    w: float,
+    h: float,
 }
 
 export struct TrackRow {
@@ -50,6 +61,8 @@ export struct PaletteToolRow {
     icon: image,
     tip: string,
     enabled: bool,
+    // On (the caret's voice, for the voice buttons).
+    checked: bool,
 }
 
 export struct PaletteGroupRow {
@@ -102,6 +115,9 @@ global Look {
     out property <color> on-canvas: #ffffff80;
     out property <color> warning: #d39a2c;
     out property <color> error: #d9534f;
+    // The caret, the selection and the selected track: the score's accent,
+    // between its light and dark pages' greens so it reads on both.
+    out property <color> accent: #3aa55f;
 }
 
 // A level's dot in the footer.
@@ -281,12 +297,17 @@ component PaletteButton inherits Rectangle {
     in property <image> icon;
     in property <string> tip;
     in property <bool> enabled;
+    in property <bool> checked;
     callback clicked();
 
     width: 32px;
     height: 32px;
     border-radius: 4px;
-    background: touch.has-hover && root.enabled ? Palette.control-background : transparent;
+    background: root.checked ? Look.accent.transparentize(0.6)
+        : touch.has-hover && root.enabled ? Palette.control-background : transparent;
+    border-width: root.checked ? 1px : 0;
+    border-color: Look.accent;
+    accessible-checked: root.checked;
     accessible-role: button;
     accessible-label: root.tip;
     accessible-enabled: root.enabled;
@@ -309,11 +330,46 @@ component PaletteButton inherits Rectangle {
 // The palette: its groups under headings that collapse and expand with a
 // click, each group's buttons wrapping to the area's width (ui.md,
 // "Palette").
+// The palette's search field (M3 slice 6; Ctrl + F): it filters the tools
+// by name. Escape clears it; Enter goes back to the page.
+component PaletteSearch inherits Rectangle {
+    in-out property <string> query;
+    // Raised by one to take the keyboard (Ctrl + F).
+    in property <int> focus-requests;
+    callback searched(string);
+    callback done(bool);
+    changed focus-requests => { edit.focus(); }
+    height: self.preferred-height;
+    FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.done(true);
+                return accept;
+            }
+            reject
+        }
+        HorizontalLayout {
+            padding: 6px;
+            padding-bottom: 2px;
+            edit := LineEdit {
+                text <=> root.query;
+                placeholder-text: "Search (Ctrl + F)";
+                edited(t) => { root.searched(t); }
+                accepted => { root.done(false); }
+            }
+        }
+    }
+}
+
 component PaletteView inherits ScrollView {
     in property <[PaletteGroupRow]> groups;
+    // While searching, the tools found, in one grid.
+    in property <bool> searching;
+    in property <[PaletteToolRow]> found;
     in property <image> chevron-open;
     in property <image> chevron-closed;
     callback group-clicked(int);
+    callback tool-clicked(string);
     property <length> cell: 34px;
     property <int> columns: max(1, floor((self.visible-width - 12px) / root.cell));
 
@@ -322,7 +378,26 @@ component PaletteView inherits ScrollView {
         padding: 6px;
         padding-top: 4px;
         spacing: 2px;
+        if root.searching && root.found.length == 0 : Text {
+            text: "No tool has that name";
+            font-size: 11px;
+            color: Palette.foreground.transparentize(0.4);
+        }
+        if root.searching : Rectangle {
+            height: ceil(root.found.length / root.columns) * root.cell;
+            for tool[i] in root.found : PaletteButton {
+                x: mod(i, root.columns) * root.cell;
+                y: floor(i / root.columns) * root.cell;
+                icon: tool.icon;
+                tip: tool.tip;
+                enabled: tool.enabled;
+                checked: tool.checked;
+                clicked => { root.tool-clicked(tool.id); }
+            }
+        }
         for group[g] in root.groups : VerticalLayout {
+            visible: !root.searching;
+            height: root.searching ? 0 : self.preferred-height;
             spacing: 2px;
             Rectangle {
                 height: 22px;
@@ -357,6 +432,8 @@ component PaletteView inherits ScrollView {
                     icon: tool.icon;
                     tip: tool.tip;
                     enabled: tool.enabled;
+                    checked: tool.checked;
+                    clicked => { root.tool-clicked(tool.id); }
                 }
             }
         }
@@ -523,6 +600,168 @@ component Placeholder inherits Rectangle {
     }
 }
 
+// One voice of the caret's bar in the Inspector (inspector.rs).
+export struct InspectorVoice {
+    name: string,
+    count: string,
+    state: string,
+    // 0 full, 1 short, 2 too long, 3 nothing to compare.
+    fill: int,
+    entered: int,
+    current: bool,
+}
+
+// One row of the Inspector's note and beat (effect_form.rs).
+export struct InspectorField {
+    id: string,
+    label: string,
+    // 0 heading, 1 tickbox, 2 drop-down, 3 number, 4 button.
+    kind: int,
+    value: int,
+    options: [string],
+    min: int,
+    max: int,
+}
+
+// The Inspector: the caret's bar, each voice's beats against the time
+// signature (Mateus, 20 Oct 2026); then the caret's note and beat, whose
+// effects and values it changes (M3 slice 6).
+component Inspector inherits Rectangle {
+    in property <string> heading;
+    in property <string> unit;
+    in property <string> caret;
+    in property <[InspectorVoice]> voices;
+    in property <[InspectorField]> fields;
+    callback field-changed(string, int);
+    scroll := ScrollView {
+        VerticalLayout {
+            width: scroll.visible-width;
+            padding: 12px;
+            spacing: 6px;
+            alignment: start;
+            Text { text: root.heading; font-size: 14px; font-weight: 700; }
+            Text { text: root.unit; font-size: 11px; color: Palette.foreground.transparentize(0.4); wrap: word-wrap; }
+            for v in root.voices : Rectangle {
+                border-radius: 4px;
+                background: v.current ? Look.accent.transparentize(0.85) : transparent;
+                VerticalLayout {
+                    padding: 6px;
+                    spacing: 2px;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        Text { text: v.name; font-size: 12px; font-weight: v.current ? 700 : 400; }
+                        Text { text: v.count; font-size: 12px; horizontal-alignment: right; horizontal-stretch: 1; }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        Text {
+                            text: v.state;
+                            font-size: 11px;
+                            color: v.fill == 0 ? Look.accent : v.fill == 1 ? Look.warning : v.fill == 2 ? Look.error : Palette.foreground.transparentize(0.4);
+                        }
+                        Text {
+                            text: v.entered == 1 ? "1 beat entered" : v.entered + " beats entered";
+                            font-size: 11px;
+                            horizontal-alignment: right;
+                            horizontal-stretch: 1;
+                            color: Palette.foreground.transparentize(0.4);
+                        }
+                    }
+                }
+            }
+            Text { text: root.caret; font-size: 11px; color: Palette.foreground.transparentize(0.4); wrap: word-wrap; }
+            for f in root.fields : VerticalLayout {
+                if f.kind == 0 : Text {
+                    text: f.label;
+                    font-size: 13px;
+                    font-weight: 700;
+                }
+                if f.kind == 1 : CheckBox {
+                    text: f.label;
+                    checked: f.value == 1;
+                    toggled => { root.field-changed(f.id, self.checked ? 1 : 0); }
+                }
+                if f.kind == 2 : HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+                    ComboBox {
+                        min-width: 60px;
+                        horizontal-stretch: 1;
+                        model: f.options;
+                        current-index: f.value;
+                        selected => { root.field-changed(f.id, self.current-index); }
+                    }
+                }
+                if f.kind == 3 : HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+                    SpinBox {
+                        min-width: 60px;
+                        horizontal-stretch: 1;
+                        minimum: f.min;
+                        maximum: f.max;
+                        value: f.value;
+                        edited(v) => { root.field-changed(f.id, v); }
+                    }
+                }
+                if f.kind == 4 : HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; }
+                    Text { text: f.options[0]; font-size: 12px; vertical-alignment: center; horizontal-stretch: 1; }
+                    Button { text: "Edit…"; clicked => { root.field-changed(f.id, 0); } }
+                }
+            }
+        }
+    }
+}
+
+// One field of the Song tab.
+export struct SongField {
+    id: string,
+    label: string,
+    text: string,
+    multiline: bool,
+}
+
+// The Song tab (M3 slice 6; Mateus, 20 Oct 2026: as Guitar Pro 8's Song
+// Inspector): the score's information, in Guitar Pro's order. A field is
+// set when Enter is pressed in it or the keyboard leaves it.
+component SongView inherits Rectangle {
+    in property <[SongField]> fields;
+    callback edited(string, string);
+    scroll := ScrollView {
+        VerticalLayout {
+            width: scroll.visible-width;
+            padding: 12px;
+            spacing: 6px;
+            alignment: start;
+            for f in root.fields : VerticalLayout {
+                spacing: 2px;
+                Text { text: f.label; font-size: 11px; color: Palette.foreground.transparentize(0.35); }
+                if !f.multiline : LineEdit {
+                    text: f.text;
+                    accepted(t) => { root.edited(f.id, t); }
+                    changed has-focus => {
+                        if (!self.has-focus) {
+                            root.edited(f.id, self.text);
+                        }
+                    }
+                }
+                if f.multiline : TextEdit {
+                    height: 72px;
+                    text: f.text;
+                    wrap: word-wrap;
+                    changed has-focus => {
+                        if (!self.has-focus) {
+                            root.edited(f.id, self.text);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // A small framed note that closes when clicked anywhere.
 component InfoPopup inherits PopupWindow {
     in property <string> heading;
@@ -544,6 +783,64 @@ component InfoPopup inherits PopupWindow {
     }
 }
 
+// A question over the whole window (saving, unsaved changes): a heading,
+// lines of text, and buttons, the first the default (Enter) and the last
+// the way out (Escape). Nothing behind it can be clicked while it shows.
+component Question inherits Rectangle {
+    in property <string> heading;
+    in property <[string]> lines;
+    in property <[string]> buttons;
+    callback answered(int);
+    background: #00000060;
+    TouchArea { }
+    keys := FocusScope {
+        init => { self.focus(); }
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.answered(root.buttons.length - 1);
+                return accept;
+            }
+            if (event.text == Key.Return) {
+                root.answered(0);
+                return accept;
+            }
+            accept
+        }
+    }
+    Rectangle {
+        width: min(520px, root.width - 40px);
+        height: min(box.preferred-height, root.height - 40px);
+        background: Palette.background;
+        border-color: Palette.border;
+        border-width: 1px;
+        border-radius: 6px;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000060;
+        box := VerticalLayout {
+            padding: 18px;
+            spacing: 10px;
+            Text { text: root.heading; font-size: 15px; font-weight: 700; wrap: word-wrap; }
+            ScrollView {
+                min-height: min(lines-box.preferred-height, 40px);
+                preferred-height: min(lines-box.preferred-height, 320px);
+                lines-box := VerticalLayout {
+                    spacing: 4px;
+                    for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+                }
+            }
+            HorizontalLayout {
+                alignment: end;
+                spacing: 8px;
+                for b[i] in root.buttons : Button {
+                    text: b;
+                    primary: i == 0;
+                    clicked => { root.answered(i); }
+                }
+            }
+        }
+    }
+}
+
 // A rounded pill floating over the canvas.
 component Pill inherits Rectangle {
     height: 26px;
@@ -554,7 +851,10 @@ component Pill inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
-    title: "OxiGuitar";
+    // "song.gp — OxiGuitar", with a dot while the score differs from the
+    // file (main.rs).
+    in property <string> window-title: "OxiGuitar";
+    title: root.window-title;
     // The window icon for X11, Windows and macOS. Wayland ignores it and
     // takes the icon of the desktop entry named by the app id (main.rs).
     icon: @image-url("../../../assets/icon/png/oxiguitar-256.png");
@@ -573,6 +873,24 @@ export component AppWindow inherits Window {
     // Tiles from before a zoom or a new engraving, shown under the new ones
     // until those cover the view (main.rs).
     in property <[TileItem]> old-tiles;
+    // Logical pixels per canvas point (the score zoom).
+    in property <float> pt-scale: 1.333;
+    // The editor (M3): the caret's column over its staves, the box around
+    // its string on the tablature, and the selection, in canvas points.
+    in property <bool> caret-shown: false;
+    in property <BoxItem> caret;
+    in property <bool> string-shown: false;
+    in property <BoxItem> caret-string;
+    in property <[BoxItem]> selection-boxes;
+    // The track the caret is in, highlighted in the track list.
+    in property <int> selected-track: -1;
+    // The Edit menu and the toolbar's Undo and Redo.
+    in property <bool> can-undo: false;
+    in property <bool> can-redo: false;
+    in property <string> undo-title: "Undo";
+    in property <string> redo-title: "Redo";
+    // Some shown bar doesn't add up: Tools → Next Bar That Doesn't Add Up.
+    in property <bool> bad-bars: false;
     out property <length> view-x: -flick.viewport-x;
     out property <length> view-y: -flick.viewport-y;
     out property <length> view-width: flick.visible-width;
@@ -612,7 +930,7 @@ export component AppWindow inherits Window {
     in-out property <bool> dark-interface: true;
     init => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
     changed dark-interface => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
-    in-out property <bool> dynamics: true;
+    in-out property <bool> dynamics: false;
 
     // The shell (shell.rs): the toolbar and the four areas, numbered
     // 0 top, 1 bottom, 2 left, 3 right. The View menu's ticks show or hide
@@ -636,6 +954,7 @@ export component AppWindow inherits Window {
     in property <[ToolRow]> tools;
     in property <[PaletteGroupRow]> palette-groups;
     callback palette-group-clicked(int);
+    callback palette-tool-clicked(string);
 
     // The player (top area). Off until an output plugin is installed.
     in property <bool> player-available: false;
@@ -659,12 +978,118 @@ export component AppWindow inherits Window {
     in property <[string]> about-lines;
 
     callback open-file();
+    callback new-file();
+    // The Edit menu's note items, by name (editing.rs, `menu_command`).
+    callback edit-command(string);
+    callback save();
+    callback save-as();
+    // The question over the window (saving, unsaved changes).
+    in property <bool> question-shown: false;
+    in property <string> question-heading;
+    in property <[string]> question-lines;
+    in property <[string]> question-buttons;
+    callback question-answered(int);
+    // The Bar dialog and Custom N-tuplet (bar_form.rs).
+    in property <bool> bar-dialog-shown: false;
+    in-out property <BarFields> bar-fields;
+    in-out property <[bool]> bar-endings;
+    in-out property <[bool]> bar-directions;
+    in property <[string]> bar-key-names;
+    in property <[string]> bar-clef-names;
+    in property <[string]> bar-feel-names;
+    in property <[string]> bar-direction-names;
+    in property <string> bar-heading: "Bar";
+    callback bar-dialog-done(bool);
+    in property <bool> tuplet-dialog-shown: false;
+    in-out property <int> tuplet-notes: 3;
+    in-out property <int> tuplet-in-time-of: 2;
+    pure callback tuplet-usual(int) -> int;
+    callback tuplet-dialog-done(bool);
+    // The bend and whammy-bar editor (bend_form.rs).
+    in property <bool> bend-dialog-shown: false;
+    in property <string> bend-heading: "Bend";
+    in property <[string]> bend-types;
+    in property <[string]> bend-amounts;
+    in-out property <int> bend-kind;
+    in-out property <int> bend-amount;
+    in property <int> bend-low: 0;
+    in property <int> bend-high: 12;
+    in property <[GridPoint]> bend-points;
+    in property <string> bend-path;
+    callback bend-kind-picked(int);
+    callback bend-amount-picked(int);
+    callback bend-pressed(float, float);
+    callback bend-dragged(float, float);
+    callback bend-released();
+    callback bend-dialog-done(bool);
+    // Text, lyrics and chords (M3 slice 6).
+    in property <bool> text-dialog-shown: false;
+    in-out property <string> text-dialog-text;
+    callback text-dialog-done(bool);
+    // Lyrics typed on the page (Ctrl + T): a field under the beat, at
+    // canvas points (lyric-x the beat's middle, lyric-y the baseline).
+    in property <bool> lyric-shown: false;
+    in property <float> lyric-x;
+    in property <float> lyric-y;
+    in property <float> lyric-size: 10;
+    in-out property <string> lyric-text;
+    callback lyric-key(string, string);
+    in property <bool> chord-dialog-shown: false;
+    in-out property <string> chord-name;
+    in property <[string]> chord-library;
+    in property <[string]> chord-roots;
+    in-out property <int> chord-root;
+    in property <[string]> chord-triads;
+    in-out property <int> chord-triad;
+    in property <[string]> chord-extensions;
+    in-out property <int> chord-extension;
+    in property <[string]> chord-basses;
+    in-out property <int> chord-bass;
+    in property <[AltBox]> chord-alterations;
+    in property <int> chord-strings: 6;
+    in property <[int]> chord-dots;
+    in-out property <int> chord-first-fret: 1;
+    in property <int> chord-last-fret: 24;
+    in property <[string]> chord-voicings;
+    in property <bool> chord-show-diagram: true;
+    callback chord-changed(string, int, string);
+    callback chord-dialog-done(bool);
+    in property <bool> paste-dialog-shown: false;
+    in-out property <int> paste-times: 1;
+    in-out property <bool> paste-replace: false;
+    callback paste-dialog-done(bool);
+    // The track dialog and Transpose… (track_form.rs).
+    in property <bool> track-dialog-shown: false;
+    in property <string> track-heading;
+    in-out property <TrackFields> track-fields;
+    in property <[string]> track-instrument-names;
+    in property <[string]> track-string-counts;
+    in property <[string]> track-key-names;
+    in property <[string]> track-pattern-names;
+    in property <string> track-preview;
+    in property <bool> track-invalid;
+    callback track-form-changed();
+    callback track-dialog-done(bool);
+    in property <bool> transpose-dialog-shown: false;
+    in property <string> transpose-heading;
+    in-out property <int> transpose-amount;
+    in-out property <bool> transpose-steps;
+    in-out property <bool> transpose-keep;
+    callback transpose-dialog-done(bool);
+    // A track row's right-click menu: the row and what was chosen.
+    callback track-menu(int, string);
+    // The page's right-click menu.
+    callback page-menu(string);
+    // The score's sections, for Edit → Go to Section.
+    in property <[string]> sections;
+    callback go-to-section(int);
+    // Gives the keyboard back to the page (after a question).
+    public function focus-page() { keys.focus(); }
     callback export-pdf();
     callback quit();
     callback settings-changed();
     callback canvas-changed();
     callback zoom-moved(float);
-    callback track-solo(int);
     callback standard-clicked(int);
     callback tablature-clicked(int);
     in property <image> standard-icon;
@@ -681,6 +1106,36 @@ export component AppWindow inherits Window {
     callback toolbar-activated(string);
     callback tab-clicked(int, int);
     callback open-plugin-manager();
+    // The editor (editing.rs): a press on the page, in the viewport's
+    // logical pixels, with Shift; a key by name, with Shift and Ctrl,
+    // answering whether the editor took it.
+    callback page-pressed(length, length, bool);
+    callback page-double-clicked(length, length);
+    // A right-click on the page, before its menu opens.
+    callback page-menu-pressed(length, length);
+    // The Inspector's view of the caret's bar (inspector.rs).
+    in property <string> inspector-heading;
+    in property <string> inspector-unit;
+    in property <string> inspector-caret;
+    in property <[InspectorVoice]> inspector-voices;
+    in property <[InspectorField]> inspector-fields;
+    // The Song tab: the score's information (M3 slice 6).
+    in property <[SongField]> song-fields;
+    callback song-edited(string, string);
+    // The palette's search.
+    in-out property <string> palette-query;
+    in property <int> palette-search-requests;
+    in property <[PaletteToolRow]> palette-found;
+    callback palette-searched(string);
+    callback inspector-changed(string, int);
+    callback caret-key(string, bool, bool) -> bool;
+    // Note entry: a key typed at the caret, with Shift, Ctrl and Alt,
+    // answering whether it was one (editing.rs, `Editing::typed`).
+    callback edit-key(string, bool, bool, bool) -> bool;
+    callback undo();
+    callback redo();
+    callback next-bad-bar();
+    callback track-selected(int);
     // Plugins' tabs (plugin_tab.slint), by area number (0 top, 1 bottom,
     // 2 left, 3 right): their rows, or a message instead; what the user does
     // to their widgets; a canvas's room.
@@ -731,7 +1186,10 @@ export component AppWindow inherits Window {
     MenuBar {
         Menu {
             title: "File";
+            MenuItem { title: "New"; shortcut: @keys(Control + N); activated => { root.new-file(); } }
             MenuItem { title: "Open…"; shortcut: @keys(Control + O); activated => { root.open-file(); } }
+            MenuItem { title: "Save"; enabled: root.has-score; shortcut: @keys(Control + S); activated => { root.save(); } }
+            MenuItem { title: "Save As…"; enabled: root.has-score; shortcut: @keys(Control + Shift + S); activated => { root.save-as(); } }
             MenuItem { title: "Export PDF…"; enabled: root.has-score; activated => { root.export-pdf(); } }
             Menu {
                 title: "Paper Size";
@@ -740,6 +1198,53 @@ export component AppWindow inherits Window {
             }
             MenuSeparator { }
             MenuItem { title: "Quit"; shortcut: @keys(Control + Q); activated => { root.quit(); } }
+        }
+        Menu {
+            title: "Edit";
+            MenuItem { title: root.undo-title; enabled: root.can-undo; shortcut: @keys(Control + Z); activated => { root.undo(); } }
+            MenuItem { title: root.redo-title; enabled: root.can-redo; shortcut: @keys(Control + Y); activated => { root.redo(); } }
+            MenuSeparator { }
+            MenuItem { title: "Select All"; enabled: root.has-score; shortcut: @keys(Control + A); activated => { root.caret-key("a", false, true); } }
+            MenuSeparator { }
+            MenuItem { title: "Cut (Ctrl + X)"; enabled: root.has-score; activated => { root.edit-command("cut"); } }
+            MenuItem { title: "Copy (Ctrl + C)"; enabled: root.has-score; activated => { root.edit-command("copy"); } }
+            MenuItem { title: "Paste (Ctrl + V)"; enabled: root.has-score; activated => { root.edit-command("paste"); } }
+            MenuItem { title: "Special Paste… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("special-paste"); } }
+            MenuSeparator { }
+            Menu {
+                title: "Go to Section";
+                if root.sections.length == 0 : MenuItem { title: "No sections"; enabled: false; }
+                for s[i] in root.sections : MenuItem { title: s; activated => { root.go-to-section(i); } }
+            }
+            MenuSeparator { }
+            // Note entry's keys are taken on the page (editing.rs); these
+            // items name them, and do the same.
+            MenuItem { title: "Insert Beat (Ctrl + Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-beat"); } }
+            MenuItem { title: "Delete Beats (Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-beats"); } }
+            MenuItem { title: "Clear Beats (Ctrl + Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("clear-beats"); } }
+            MenuItem { title: "Clear Bar"; enabled: root.has-score; activated => { root.edit-command("clear-bar"); } }
+            MenuItem { title: "Move Beat Left"; enabled: root.has-score; activated => { root.edit-command("move-left"); } }
+            MenuItem { title: "Move Beat Right"; enabled: root.has-score; activated => { root.edit-command("move-right"); } }
+            Menu {
+                title: "Move Beat to Voice";
+                MenuItem { title: "Voice 1 (Alt + 1)"; enabled: root.has-score; activated => { root.edit-command("voice-1"); } }
+                MenuItem { title: "Voice 2 (Alt + 2)"; enabled: root.has-score; activated => { root.edit-command("voice-2"); } }
+                MenuItem { title: "Voice 3 (Alt + 3)"; enabled: root.has-score; activated => { root.edit-command("voice-3"); } }
+                MenuItem { title: "Voice 4 (Alt + 4)"; enabled: root.has-score; activated => { root.edit-command("voice-4"); } }
+            }
+            MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
+            MenuSeparator { }
+            MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
+            MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
+            MenuItem { title: "Bar… (Ctrl + K)"; enabled: root.has-score; activated => { root.edit-command("bar-dialog"); } }
+            MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
+            MenuItem { title: "Chord… (A)"; enabled: root.has-score; activated => { root.edit-command("chord-dialog"); } }
+            MenuItem { title: "Text… (Shift + T)"; enabled: root.has-score; activated => { root.edit-command("text-dialog"); } }
+            MenuItem { title: "Type Lyrics (Ctrl + T)"; enabled: root.has-score; activated => { root.edit-command("lyrics"); } }
+            MenuSeparator { }
+            MenuItem { title: "Track Properties…"; enabled: root.has-score; activated => { root.edit-command("track-properties"); } }
+            MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
+            MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
         }
         Menu {
             title: "View";
@@ -773,6 +1278,10 @@ export component AppWindow inherits Window {
                 activated => { root.tool-picked(i); }
             }
             MenuSeparator {}
+            // Guitar Pro 8's "Check bar duration" key.
+            MenuItem { title: "Next Bar That Doesn't Add Up"; enabled: root.bad-bars; shortcut: @keys(F4); activated => { root.next-bad-bar(); } }
+            MenuItem { title: "Transpose…"; enabled: root.has-score; activated => { root.edit-command("transpose-all"); } }
+            MenuSeparator {}
             MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
         }
         Menu {
@@ -799,13 +1308,33 @@ export component AppWindow inherits Window {
 
     keys := FocusScope {
         key-pressed(event) => {
-            if (event.modifiers.control || event.modifiers.alt) {
-                return reject;
-            }
+            // The editor's keys first (editing.rs): the caret and the
+            // selection, as Guitar Pro 8 moves its cursor.
+            let name = event.text == Key.LeftArrow ? "left"
+                : event.text == Key.RightArrow ? "right"
+                : event.text == Key.UpArrow ? "up"
+                : event.text == Key.DownArrow ? "down"
+                : event.text == Key.Home ? "home"
+                : event.text == Key.End ? "end"
+                : event.text == Key.Tab ? "tab"
+                : event.text == Key.Backtab ? "backtab"
+                : event.text == Key.Escape ? "escape"
+                : event.text == Key.Backspace ? "backspace"
+                : event.text == Key.Delete ? "delete"
+                : event.text == Key.Insert ? "insert"
+                : event.text;
             if (event.text == Key.Escape) {
                 // Closes the Help popups (a click anywhere does too).
                 shortcuts-popup.close();
                 about-popup.close();
+            }
+            if (root.has-score && !event.modifiers.alt && root.caret-key(name, event.modifiers.shift, event.modifiers.control)) {
+                return accept;
+            }
+            if (root.has-score && root.edit-key(name, event.modifiers.shift, event.modifiers.control, event.modifiers.alt)) {
+                return accept;
+            }
+            if (event.modifiers.control || event.modifiers.alt || event.text == Key.Escape) {
                 return reject;
             }
             if (event.text == Key.PageDown || event.text == " ") {
@@ -953,11 +1482,28 @@ export component AppWindow inherits Window {
                     }
                     Rectangle {
                         background: Palette.alternate-background;
-                        if root.left-area.active-id == "palette" : PaletteView {
+                        if root.left-area.active-id == "palette" : VerticalLayout {
+                          PaletteSearch {
+                            query <=> root.palette-query;
+                            focus-requests: root.palette-search-requests;
+                            searched(q) => { root.palette-searched(q); }
+                            done(clear) => {
+                                if (clear) {
+                                    root.palette-query = "";
+                                    root.palette-searched("");
+                                }
+                                root.focus-page();
+                            }
+                          }
+                          PaletteView {
                             groups: root.palette-groups;
+                            searching: root.palette-query != "";
+                            found: root.palette-found;
                             chevron-open: @image-url("../../../assets/icons/ui/chevron-down.svg");
                             chevron-closed: @image-url("../../../assets/icons/ui/chevron-right.svg");
                             group-clicked(g) => { root.palette-group-clicked(g); }
+                            tool-clicked(id) => { root.palette-tool-clicked(id); }
+                          }
                         }
                         if root.left-area.plugin : PluginTab {
                     rows: root.left-plugin-rows;
@@ -1002,6 +1548,128 @@ export component AppWindow inherits Window {
                             height: t.size;
                             source: t.image;
                             image-rendering: pixelated;
+                        }
+                        // A press puts the caret there (main.rs, page_pressed).
+                        TouchArea {
+                            x: 0;
+                            y: 0;
+                            width: flick.viewport-width;
+                            height: flick.viewport-height;
+                            pointer-event(e) => {
+                                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                                    keys.focus();
+                                    root.page-pressed(self.mouse-x, self.mouse-y, e.modifiers.shift);
+                                }
+                                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                                    keys.focus();
+                                    root.page-menu-pressed(self.mouse-x, self.mouse-y);
+                                    page-menu-area.show({ x: self.mouse-x, y: self.mouse-y });
+                                }
+                            }
+                            // On a time signature: the Bar dialog for its bar.
+                            double-clicked => { root.page-double-clicked(self.mouse-x, self.mouse-y); }
+                        }
+                        // Right-click on the page: the selection's commands. The
+                        // TouchArea above opens it once the caret has moved.
+                        page-menu-area := ContextMenuArea {
+                            enabled: false;
+                            x: 0;
+                            y: 0;
+                            width: flick.viewport-width;
+                            height: flick.viewport-height;
+                            Menu {
+                                MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
+                                MenuItem { title: "Bar…"; activated => { root.page-menu("bar"); } }
+                                MenuItem { title: "Track Properties…"; activated => { root.page-menu("track"); } }
+                                MenuSeparator { }
+                                MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
+                                MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
+                                MenuItem { title: "Paste"; activated => { root.page-menu("paste"); } }
+                            }
+                        }
+                        // The selection and the caret, over the tiles: moving
+                        // them redraws no tile.
+                        for b in root.selection-boxes : Rectangle {
+                            x: root.origin-x + b.x * root.pt-scale * 1px;
+                            y: root.origin-y + b.y * root.pt-scale * 1px;
+                            width: b.w * root.pt-scale * 1px;
+                            height: b.h * root.pt-scale * 1px;
+                            background: Look.accent.transparentize(0.8);
+                        }
+                        if root.caret-shown : Rectangle {
+                            x: root.origin-x + root.caret.x * root.pt-scale * 1px;
+                            y: root.origin-y + root.caret.y * root.pt-scale * 1px;
+                            width: root.caret.w * root.pt-scale * 1px;
+                            height: root.caret.h * root.pt-scale * 1px;
+                            background: Look.accent.transparentize(0.88);
+                            border-color: Look.accent.transparentize(0.4);
+                            border-width: 1px;
+                            border-radius: 2px;
+                        }
+                        if root.string-shown : Rectangle {
+                            x: root.origin-x + root.caret-string.x * root.pt-scale * 1px;
+                            y: root.origin-y + root.caret-string.y * root.pt-scale * 1px;
+                            width: root.caret-string.w * root.pt-scale * 1px;
+                            height: root.caret-string.h * root.pt-scale * 1px;
+                            border-color: Look.accent;
+                            border-width: 1.5px;
+                            border-radius: 2px;
+                        }
+                        // Lyrics typed on the page (M3 slice 6, as in
+                        // MuseScore): space and hyphen go to the next beat.
+                        if root.lyric-shown : lyric-box := Rectangle {
+                            property <length> size: root.lyric-size * root.pt-scale * 1px;
+                            x: root.origin-x + root.lyric-x * root.pt-scale * 1px - self.width / 2;
+                            y: root.origin-y + root.lyric-y * root.pt-scale * 1px - self.size * 1.1;
+                            width: max(lyric-input.preferred-width + 10px, 3 * self.size);
+                            height: self.size * 1.5;
+                            background: root.dark-page ? #1e1f22 : #ffffff;
+                            border-color: Look.accent;
+                            border-width: 1px;
+                            border-radius: 2px;
+                            FocusScope {
+                                capture-key-pressed(event) => {
+                                    if (event.text == " ") {
+                                        root.lyric-key("space", lyric-input.text);
+                                        return accept;
+                                    }
+                                    if (event.text == "-") {
+                                        root.lyric-key("hyphen", lyric-input.text);
+                                        return accept;
+                                    }
+                                    if (event.text == Key.UpArrow) {
+                                        root.lyric-key("up", lyric-input.text);
+                                        return accept;
+                                    }
+                                    if (event.text == Key.DownArrow) {
+                                        root.lyric-key("down", lyric-input.text);
+                                        return accept;
+                                    }
+                                    if (event.text == Key.Backspace && lyric-input.text == "") {
+                                        root.lyric-key("back", "");
+                                        return accept;
+                                    }
+                                    if (event.text == Key.Escape || event.text == Key.Return) {
+                                        root.lyric-key("done", lyric-input.text);
+                                        return accept;
+                                    }
+                                    reject
+                                }
+                                lyric-input := TextInput {
+                                    x: 5px;
+                                    width: lyric-box.width - 10px;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: center;
+                                    text <=> root.lyric-text;
+                                    font-size: lyric-box.size;
+                                    color: root.dark-page ? #e6e6e6 : #1a1a1a;
+                                    single-line: true;
+                                    init => {
+                                        self.focus();
+                                        self.set-selection-offsets(0, 999);
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -1062,7 +1730,20 @@ export component AppWindow inherits Window {
                     }
                     Rectangle {
                         background: Palette.alternate-background;
-                        if root.right-area.active-id == "inspector" : Placeholder { text: "The properties of the selected notes and bars come with the editor."; }
+                        if root.right-area.active-id == "inspector" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats."; }
+                        if root.right-area.active-id == "inspector" && root.has-score : Inspector {
+                            heading: root.inspector-heading;
+                            unit: root.inspector-unit;
+                            caret: root.inspector-caret;
+                            voices: root.inspector-voices;
+                            fields: root.inspector-fields;
+                            field-changed(id, v) => { root.inspector-changed(id, v); }
+                        }
+                        if root.right-area.active-id == "song" && !root.has-score : Placeholder { text: "Open a file or start a new one: its title, artist and the rest show here."; }
+                        if root.right-area.active-id == "song" && root.has-score : SongView {
+                            fields: root.song-fields;
+                            edited(id, text) => { root.song-edited(id, text); }
+                        }
                         if root.right-area.plugin : PluginTab {
                     rows: root.right-plugin-rows;
                     message: root.right-plugin-message;
@@ -1099,8 +1780,9 @@ export component AppWindow inherits Window {
                 background: Palette.alternate-background;
                 if root.bottom-area.active-id == "tracks" && !root.has-score : Placeholder { text: "The tracks of the open score appear here."; }
                 // Track list: each track's notation buttons show it (both
-                // off hides it); click a name to show that track alone. No
-                // show tick: the buttons do that (Mateus, 17 Oct 2026).
+                // off hides it); a click on a name selects the track for the
+                // editor (Mateus, 19 Oct 2026). No show tick: the buttons do
+                // that (Mateus, 17 Oct 2026).
                 if root.bottom-area.active-id == "tracks" && root.has-score : ScrollView {
                     VerticalLayout {
                         alignment: start;
@@ -1117,9 +1799,11 @@ export component AppWindow inherits Window {
                             height: 28px;
                             Rectangle {
                                 width: 200px;
+                                border-radius: 3px;
+                                background: i == root.selected-track ? Look.accent.transparentize(0.75) : transparent;
                                 Text {
-                                    x: 0;
-                                    width: parent.width;
+                                    x: 4px;
+                                    width: parent.width - 8px;
                                     text: track.name;
                                     font-size: 12px;
                                     font-weight: track.shown ? 600 : 400;
@@ -1128,7 +1812,22 @@ export component AppWindow inherits Window {
                                 }
                                 TouchArea {
                                     mouse-cursor: pointer;
-                                    clicked => { root.track-solo(i); }
+                                    clicked => { root.track-selected(i); }
+                                }
+                                // Right-click: the track's own commands
+                                // (docs/design/ui.md, "The track dialog").
+                                ContextMenuArea {
+                                    Menu {
+                                        MenuItem { title: "Properties…"; activated => { root.track-menu(i, "properties"); } }
+                                        MenuItem { title: "Transpose…"; activated => { root.track-menu(i, "transpose"); } }
+                                        MenuSeparator { }
+                                        MenuItem { title: "Add Track"; activated => { root.track-menu(i, "add"); } }
+                                        MenuItem { title: "Duplicate"; activated => { root.track-menu(i, "duplicate"); } }
+                                        MenuItem { title: "Move Up"; enabled: i > 0; activated => { root.track-menu(i, "up"); } }
+                                        MenuItem { title: "Move Down"; enabled: i < root.tracks.length - 1; activated => { root.track-menu(i, "down"); } }
+                                        MenuSeparator { }
+                                        MenuItem { title: "Delete…"; enabled: root.tracks.length > 1; activated => { root.track-menu(i, "delete"); } }
+                                    }
                                 }
                             }
                             NotationButton {
@@ -1279,5 +1978,133 @@ export component AppWindow inherits Window {
                 }
             }
         }
+    }
+
+    if root.bar-dialog-shown : BarDialog {
+        width: root.width;
+        height: root.height;
+        fields <=> root.bar-fields;
+        endings: root.bar-endings;
+        directions: root.bar-directions;
+        key-names: root.bar-key-names;
+        clef-names: root.bar-clef-names;
+        feel-names: root.bar-feel-names;
+        direction-names: root.bar-direction-names;
+        heading: root.bar-heading;
+        done(ok) => { root.bar-dialog-done(ok); }
+    }
+
+    if root.tuplet-dialog-shown : TupletDialog {
+        width: root.width;
+        height: root.height;
+        notes <=> root.tuplet-notes;
+        in-time-of <=> root.tuplet-in-time-of;
+        usual(n) => { return root.tuplet-usual(n); }
+        done(ok) => { root.tuplet-dialog-done(ok); }
+    }
+
+    if root.bend-dialog-shown : BendDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.bend-heading;
+        types: root.bend-types;
+        amounts: root.bend-amounts;
+        kind <=> root.bend-kind;
+        amount <=> root.bend-amount;
+        low: root.bend-low;
+        high: root.bend-high;
+        points: root.bend-points;
+        path: root.bend-path;
+        kind-picked(i) => { root.bend-kind-picked(i); }
+        amount-picked(i) => { root.bend-amount-picked(i); }
+        pressed(c, r) => { root.bend-pressed(c, r); }
+        dragged(c, r) => { root.bend-dragged(c, r); }
+        released => { root.bend-released(); }
+        done(ok) => { root.bend-dialog-done(ok); }
+    }
+
+    if root.text-dialog-shown : TextDialog {
+        width: root.width;
+        height: root.height;
+        text <=> root.text-dialog-text;
+        done(ok) => { root.text-dialog-done(ok); }
+    }
+
+    if root.chord-dialog-shown : ChordDialog {
+        width: root.width;
+        height: root.height;
+        name <=> root.chord-name;
+        library: root.chord-library;
+        roots: root.chord-roots;
+        root-index <=> root.chord-root;
+        triads: root.chord-triads;
+        triad-index <=> root.chord-triad;
+        extensions: root.chord-extensions;
+        extension-index <=> root.chord-extension;
+        basses: root.chord-basses;
+        bass-index <=> root.chord-bass;
+        alterations: root.chord-alterations;
+        strings: root.chord-strings;
+        dots: root.chord-dots;
+        first-fret <=> root.chord-first-fret;
+        last-fret: root.chord-last-fret;
+        voicings: root.chord-voicings;
+        show-diagram: root.chord-show-diagram;
+        name-typed(t) => { root.chord-changed("name", 0, t); }
+        library-picked(i) => { root.chord-changed("library", i, ""); }
+        root-picked(i) => { root.chord-changed("root", i, ""); }
+        triad-picked(i) => { root.chord-changed("triad", i, ""); }
+        extension-picked(i) => { root.chord-changed("extension", i, ""); }
+        bass-picked(i) => { root.chord-changed("bass", i, ""); }
+        alteration-toggled(i, on) => { root.chord-changed(on ? "alt-on" : "alt-off", i, ""); }
+        grid-clicked(string, row) => { root.chord-changed("grid", string * 100 + row, ""); }
+        head-clicked(i) => { root.chord-changed("head", i, ""); }
+        scrolled(v) => { root.chord-changed("first", v, ""); }
+        voicing-picked(i) => { root.chord-changed("voicing", i, ""); }
+        show-toggled(on) => { root.chord-changed("show", on ? 1 : 0, ""); }
+        remove => { root.chord-changed("remove", 0, ""); }
+        done(ok) => { root.chord-dialog-done(ok); }
+    }
+
+    if root.paste-dialog-shown : PasteDialog {
+        width: root.width;
+        height: root.height;
+        times <=> root.paste-times;
+        replace <=> root.paste-replace;
+        done(ok) => { root.paste-dialog-done(ok); }
+    }
+
+    if root.track-dialog-shown : TrackDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.track-heading;
+        fields <=> root.track-fields;
+        instrument-names: root.track-instrument-names;
+        string-counts: root.track-string-counts;
+        key-names: root.track-key-names;
+        pattern-names: root.track-pattern-names;
+        preview: root.track-preview;
+        invalid: root.track-invalid;
+        changed => { root.track-form-changed(); }
+        done(ok) => { root.track-dialog-done(ok); }
+    }
+
+    if root.transpose-dialog-shown : TransposeDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.transpose-heading;
+        amount <=> root.transpose-amount;
+        steps <=> root.transpose-steps;
+        keep-fingering <=> root.transpose-keep;
+        done(ok) => { root.transpose-dialog-done(ok); }
+    }
+
+    if root.question-shown : Question {
+        width: root.width;
+        height: root.height;
+        heading: root.question-heading;
+        lines: root.question-lines;
+        buttons: root.question-buttons;
+        answered(i) => { root.question-answered(i); }
     }
 }

@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The Guitar Pro 7–8 format plugin (`gp.oxp`, id `oxiguitar.gp`): reads Guitar Pro 7 and 8 files (.gp).
+//! The Guitar Pro 7–8 format plugin (`gp.oxp`, id `oxiguitar.gp`): reads
+//! and writes Guitar Pro 7 and 8 files (.gp).
 //!
 //! A thin crate over `oxiguitar-formats`, built with that crate's `gp`
-//! reader only. The host recognises a file as this format from the
+//! reader and writer only. The host recognises a file as this format from the
 //! signatures in `manifest.json`, without loading the plugin.
 
-use oxiguitar_plugin::{Error, FormatReader, Host, Plugin, Read};
+use oxiguitar_plugin::{Error, FormatReader2, FormatWriter2, Host, Plugin, Read2, Written, score2};
 
 /// The format's id in `manifest.json`.
 pub const FORMAT: &str = "gp";
@@ -21,14 +22,25 @@ impl Plugin for Gp {
         Ok(Gp)
     }
 
-    fn reader(&self, format: &str) -> Option<&dyn FormatReader> {
-        (format == FORMAT).then_some(self as &dyn FormatReader)
+    // Interface 1.2: the score version 2, which holds free time.
+    fn reader2(&self, format: &str) -> Option<&dyn FormatReader2> {
+        (format == FORMAT).then_some(self as &dyn FormatReader2)
+    }
+
+    fn writer2(&self, format: &str) -> Option<&dyn FormatWriter2> {
+        (format == FORMAT).then_some(self as &dyn FormatWriter2)
     }
 }
 
-impl FormatReader for Gp {
-    fn read(&self, data: &[u8]) -> Result<Read, Error> {
-        oxiguitar_formats::plugin::read(data)
+impl FormatReader2 for Gp {
+    fn read(&self, data: &[u8]) -> Result<Read2, Error> {
+        oxiguitar_formats::plugin::read2(data)
+    }
+}
+
+impl FormatWriter2 for Gp {
+    fn write(&self, score: &score2::Score2) -> Result<Written, Error> {
+        oxiguitar_formats::plugin::write_gp(score)
     }
 }
 
@@ -52,10 +64,25 @@ mod tests {
         // alone (its .oxp file), which oxiguitar-plugin-test checks: tested
         // with other plugins, the formats crate has their readers too.
         let plugin = Gp::start(Host::detached()).unwrap();
-        let reader = plugin.reader(FORMAT).unwrap();
+        let reader = plugin.reader2(FORMAT).unwrap();
         let read = reader.read(&fixture("gp")).unwrap();
         assert_eq!(read.score.info.title, "OxiGuitar Test Song");
-        assert!(plugin.reader("gp-something-else").is_none());
+        assert!(plugin.reader2("gp-something-else").is_none());
+    }
+
+    #[test]
+    fn writes_what_it_reads() {
+        let plugin = Gp::start(Host::detached()).unwrap();
+        let read = plugin
+            .reader2(FORMAT)
+            .unwrap()
+            .read(&fixture("gp"))
+            .unwrap();
+        let written = plugin.writer2(FORMAT).unwrap().write(&read.score).unwrap();
+        assert!(written.losses.is_empty(), "{:?}", written.losses);
+        let again = plugin.reader2(FORMAT).unwrap().read(&written.data).unwrap();
+        assert_eq!(again.score, read.score);
+        assert!(plugin.writer2("gp5").is_none());
     }
 
     #[test]

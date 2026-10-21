@@ -6,11 +6,12 @@
 //! one does not fit; the other layouts put them all on one long sheet.
 
 use oxiguitar_display::{DisplayList, Paint, Path, Point};
-use oxiguitar_model::{ChordDiagram, Pitch, Score, Staff};
+use oxiguitar_model::{ChordDiagram, Score, Staff};
 
 use crate::Options;
 use crate::draw::Painter;
 use crate::engrave::DrawnSystem;
+use crate::hits::SystemHits;
 use crate::system::View;
 
 /// The header, drawn from the top of the content area.
@@ -75,7 +76,7 @@ pub(crate) fn header(
         let Some(staff) = track.staves.get(v.staff) else {
             continue;
         };
-        let mut line = tuning_text(staff);
+        let mut line = tuning_text(staff, track.instrument.is_bass());
         if line.is_empty() {
             continue;
         }
@@ -263,29 +264,18 @@ fn circle(list: &mut DisplayList, cx: f32, cy: f32, r: f32, filled: bool) {
     }
 }
 
-/// "Standard tuning", or the open strings from the lowest, such as
-/// "Tuning: D A D G B E".
-fn tuning_text(staff: &Staff) -> String {
+/// "Standard tuning" for a guitar's or bass's E Standard, else the
+/// tuning's compact name ("Tuning: Drop D", "Tuning: E♭ Standard",
+/// "Tuning: D A D G A D"; `oxiguitar_model::tuning`).
+fn tuning_text(staff: &Staff, bass: bool) -> String {
     if staff.tuning.is_empty() {
         return String::new();
     }
-    if staff.tuning == Staff::standard_guitar_tuning() {
+    let name = oxiguitar_model::tuning::name(&staff.tuning, bass);
+    if name == "E Standard" {
         return "Standard tuning".to_owned();
     }
-    let names: Vec<String> = staff.tuning.iter().rev().map(|p| letter(*p)).collect();
-    format!("Tuning: {}", names.join(" "))
-}
-
-/// A pitch's letter name without octave, sharps for black keys.
-fn letter(p: Pitch) -> String {
-    const NAMES: [&str; 12] = [
-        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-    ];
-    NAMES
-        .get(usize::from(p.0 % 12))
-        .copied()
-        .unwrap_or("C")
-        .to_owned()
+    format!("Tuning: {name}")
 }
 
 /// Room kept at the foot of each page for the page number, in points.
@@ -298,8 +288,9 @@ pub(crate) fn assemble(
     systems: Vec<DrawnSystem>,
     p: &Painter<'_>,
     o: &Options,
-) -> Vec<DisplayList> {
+) -> (Vec<DisplayList>, Vec<SystemHits>) {
     let bottom = o.page_height - o.margin - FOOTER;
+    let mut hits = Vec::with_capacity(systems.len());
     let gap = 3.5 * p.sp;
     let new_page = || DisplayList::new(o.page_width, o.page_height);
     let mut pages = vec![new_page()];
@@ -327,6 +318,7 @@ pub(crate) fn assemble(
             page.items
                 .extend(s.list.items.iter().map(|i| i.offset(o.margin, y)));
         }
+        hits.push(s.hits.placed(pages.len() - 1, o.margin, y));
         y += s.height + gap;
         on_page += 1;
     }
@@ -350,7 +342,7 @@ pub(crate) fn assemble(
             );
         }
     }
-    pages
+    (pages, hits)
 }
 
 /// Puts the header and every system on one long sheet: stacked down it
@@ -364,8 +356,9 @@ pub(crate) fn sheet(
     p: &Painter<'_>,
     o: &Options,
     width: f32,
-) -> DisplayList {
+) -> (DisplayList, Vec<SystemHits>) {
     let gap = 3.5 * p.sp;
+    let mut hits = Vec::with_capacity(systems.len());
     let widest = systems.iter().map(|s| s.list.width).fold(0.0, f32::max);
     let width = if o.layout == crate::Layout::Horizontal {
         widest + 2.0 * o.margin
@@ -392,6 +385,7 @@ pub(crate) fn sheet(
     for (n, s) in systems.into_iter().enumerate() {
         list.items
             .extend(s.list.items.iter().map(|i| i.offset(o.margin, y)));
+        hits.push(s.hits.placed(0, o.margin, y));
         y += s.height;
         if n + 1 < count {
             y += gap;
@@ -403,12 +397,13 @@ pub(crate) fn sheet(
         p.text_centred(&mut list, copyright, 8.0, width / 2.0, y, Paint::Muted);
     }
     list.height = y + o.margin;
-    list
+    (list, hits)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use oxiguitar_model::Pitch;
 
     #[test]
     fn tunings() {
@@ -416,10 +411,10 @@ mod tests {
             tuning: Staff::standard_guitar_tuning(),
             ..Staff::default()
         };
-        assert_eq!(tuning_text(&staff), "Standard tuning");
+        assert_eq!(tuning_text(&staff, false), "Standard tuning");
         if let Some(low) = staff.tuning.last_mut() {
             *low = Pitch(38);
         }
-        assert_eq!(tuning_text(&staff), "Tuning: D A D G B E");
+        assert_eq!(tuning_text(&staff, false), "Tuning: Drop D");
     }
 }

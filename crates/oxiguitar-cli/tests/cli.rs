@@ -162,6 +162,57 @@ fn without_plugins_nothing_opens() {
 }
 
 #[test]
+fn convert_writes_a_gp_file_and_names_its_losses() {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("convert");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("song.gp");
+    let run = cli()
+        .arg("convert")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(
+        run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+    let text = String::from_utf8(run.stdout).unwrap();
+    assert!(
+        text.contains("(Guitar Pro 5) →") && text.contains("(Guitar Pro 7–8)"),
+        "{text}"
+    );
+    // What we wrote reads back through the plugin.
+    let info = cli().arg("info").arg(&out).output().unwrap();
+    let info = String::from_utf8(info.stdout).unwrap();
+    assert!(
+        info.contains("Format:      Guitar Pro 7–8") && info.contains("OxiGuitar Test Song"),
+        "{info}"
+    );
+
+    // No plugin writes .gp4 yet; a file without an extension is bad usage.
+    let gp5 = cli()
+        .arg("convert")
+        .arg(fixture("oxiguitar-test-song.gp"))
+        .arg(dir.join("song.gp4"))
+        .output()
+        .unwrap();
+    assert_eq!(gp5.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&gp5.stderr)
+            .contains("no installed plugin writes .gp4 files (they write .gp, .gp5)")
+    );
+    let bare = cli()
+        .arg("convert")
+        .arg(fixture("oxiguitar-test-song.gp"))
+        .arg(dir.join("song"))
+        .output()
+        .unwrap();
+    assert_eq!(bare.status.code(), Some(2));
+}
+
+#[test]
 fn bad_usage_exits_with_2() {
     let out = cli().arg("frobnicate").output().unwrap();
     assert_eq!(out.status.code(), Some(2));

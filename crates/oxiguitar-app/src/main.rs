@@ -31,21 +31,29 @@
 #[cfg(not(any(feature = "wayland", feature = "x11")))]
 compile_error!("build oxiguitar-app with the `wayland` feature (the default) or `x11`");
 
+mod bar_form;
+mod bend_form;
 mod canvas;
+mod chord_form;
 mod document;
+mod editing;
+mod effect_form;
 mod footer;
 mod icons;
+mod inspector;
 mod manager;
 mod palette;
 mod plugin_tabs;
 mod prefs;
 mod shell;
+mod song;
 #[cfg(test)]
 mod speed;
 #[cfg(test)]
 mod test_support;
 #[cfg(test)]
 use test_support::test_plugins;
+mod track_form;
 mod tracks;
 mod worker;
 
@@ -54,7 +62,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use i_slint_backend_winit::winit::event::{
     ElementState, MouseScrollDelta, WindowEvent as WinitEvent,
@@ -72,7 +80,7 @@ use slint::{
 };
 
 use crate::canvas::{Sheets, TILE};
-use crate::document::{OpenScore, Settings, ToolEntry};
+use crate::document::{FULLEST, OpenScore, SaveFormat, Settings, ToolEntry, TrackInfo};
 use crate::footer::{Footer, level_code};
 use crate::plugin_tabs::TabThread;
 use crate::prefs::ViewPrefs;
@@ -86,9 +94,10 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AppWindow, AreaState, FooterRow, ManagerRow, PaletteGroupRow, PaletteToolRow,
-    PluginManagerWindow, PluginRow, PluginWidget, TileItem, ToolRow, ToolbarItemRow,
-    ToolbarSectionRow, TrackRow,
+    AltBox, AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField,
+    InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow,
+    PluginWidget, SongField, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields,
+    TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -177,6 +186,56 @@ struct App {
     /// once opened (hidden, not dropped, when closed).
     plugins: oxiguitar_host::Plugins,
     manager: Option<PluginManagerWindow>,
+    /// The editor: the caret and the selection over the page.
+    editing: editing::Editing,
+    /// The bars that don't add up, every track's.
+    bad: Vec<oxiguitar_edit::StaffBar>,
+    /// The open file's name, and whether the score differs from it.
+    doc_name: Option<String>,
+    modified: bool,
+    /// The score was made with File → New and has no file yet.
+    untitled: bool,
+    /// The formats the installed plugins write, for File → Save As.
+    save_formats: Vec<SaveFormat>,
+    /// The question over the window, if one shows.
+    question: Option<Asked>,
+    /// The bar the open Bar dialog was opened on, as it was.
+    bar_dialog: Option<oxiguitar_edit::BarState>,
+    /// The bend or whammy-bar editor, while it is open.
+    bend_dialog: Option<bend_form::BendForm>,
+    /// The chord dialog, while it is open.
+    chord_dialog: Option<chord_form::ChordForm>,
+    /// What the open Transpose dialog applies to.
+    transpose_scope: Option<oxiguitar_edit::Scope>,
+    /// What to do once the score is saved (after "Save the changes…?").
+    after_save: Option<Then>,
+}
+
+/// What the question over the window asks.
+#[derive(Clone, Debug, PartialEq)]
+enum Asked {
+    /// Write the file despite what it loses, or under another name? With
+    /// `elsewhere`, the buttons are Save, Save As… and Cancel.
+    Save { elsewhere: bool },
+    /// Save the changes before going on to this?
+    Unsaved(Then),
+    /// Apply this edit, which leaves notes out?
+    Apply(editing::Typed),
+    /// Delete this track?
+    DeleteTrack(editing::Typed),
+}
+
+/// What waits on the answer to "Save the changes…?".
+#[derive(Clone, Debug, PartialEq)]
+enum Then {
+    /// File → New.
+    New,
+    /// File → Open's dialog.
+    OpenDialog,
+    /// This file (dropped on the window).
+    Open(PathBuf),
+    /// Quit.
+    Quit,
 }
 
 /// A plugin tab's last contents (or why it can't be shown) and its
@@ -209,6 +268,9 @@ type Shared = Rc<RefCell<App>>;
 thread_local! {
     /// The app, for events arriving from the worker thread.
     static APP: RefCell<Option<Shared>> = const { RefCell::new(None) };
+    /// The plugins' tools for the Tools menu, after the core's: (plugin id,
+    /// tool id, menu entry).
+    static PLUGIN_TOOLS: RefCell<Vec<(String, String, String)>> = const { RefCell::new(Vec::new()) };
 }
 
 /// What the window does for plugins: shows their footer messages, shows
@@ -240,6 +302,20 @@ impl oxiguitar_host::Core for WindowCore {
 
     fn score(&self) -> Option<oxiguitar_host::api::score::Score> {
         self.open.wire()
+    }
+
+    fn score2(&self) -> Option<(u64, oxiguitar_host::api::score2::Score2)> {
+        self.open.wire2()
+    }
+
+    fn apply(
+        &self,
+        plugin: &str,
+        revision: u64,
+        name: String,
+        score: oxiguitar_host::api::score2::Score2,
+    ) -> Result<(), String> {
+        self.open.apply(plugin, revision, name, score)
     }
 
     fn withdrawn(&self, id: &str) {
@@ -339,6 +415,7 @@ fn main() -> Result<(), slint::PlatformError> {
         oxiguitar_host::start(oxiguitar_host::Folders::here(), display_system(), core)
     };
     let open_extensions = startup.plugins.read_extensions();
+    let save_formats = SaveFormat::writable(&startup.plugins);
     let mut shell = Shell::default();
     plugin_tabs::add_to(&mut shell, &startup.plugins);
     // Only when a plugin has tabs.
@@ -398,21 +475,49 @@ fn main() -> Result<(), slint::PlatformError> {
         plugin_views: Default::default(),
         plugins: startup.plugins.clone(),
         manager: None,
+        editing: editing::Editing::default(),
+        bad: Vec::new(),
+        doc_name: None,
+        modified: false,
+        untitled: false,
+        save_formats,
+        question: None,
+        bar_dialog: None,
+        bend_dialog: None,
+        chord_dialog: None,
+        transpose_scope: None,
+        after_save: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
     measure_palette();
 
     ui.set_shortcut_lines(lines(&[
-        "Ctrl + O: open a file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
+        "Ctrl + N: a new score;  Ctrl + O: open a file;  Ctrl + S: save it;  Ctrl + Shift + S: save it as another file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
         "Escape or a click: close this note",
         "Mouse wheel over the page: scroll it;  Shift + wheel: zoom the page around the pointer",
-        "Arrow keys, Page Up / Page Down, Home / End, the scroll bars: scroll the page",
+        "Page Up / Page Down, the scroll bars: scroll the page;  with no score open, the arrow keys too",
+        "A click on the page puts the caret there; Shift + click selects up to it",
+        "Left / Right: the previous / next beat;  Up / Down: the string above / below;  Home / End: the bar's first / last beat",
+        "Ctrl + Home / Ctrl + End: the first / last bar;  Tab / Shift + Tab: the next / previous staff;  Ctrl + Up / Ctrl + Down: the previous / next track",
+        "Shift + the arrows, Home, End: select;  Ctrl + Shift + Left / Right: select by bar;  Ctrl + A: select all;  Escape: drop the selection",
+        "Ctrl + 1 to Ctrl + 4: voice 1 to 4;  Ctrl + Z / Ctrl + Y: undo / redo;  F4: the next bar that doesn't add up (shown in red)",
+        "0 to 9: a fret on the caret's string (two digits in a row: 10 to 24);  R: rest;  − / +: longer / shorter;  Shift + . / Ctrl + .: dot / double dot",
+        "L / Shift + L: tie the note / the beat;  Backspace: delete the note;  Shift + Delete: delete the beat;  Ctrl + Insert: insert a beat",
+        "Alt + Shift + Up / Down: a semitone up / down;  Alt + Up / Down: the same note on the string above / below",
+        "On the standard staff: click a line or space, Up / Down to move it, Enter to put a note there;  Alt + 1 to 4: move the beat to that voice;  Ctrl + Shift + Delete: clear the beat;  Right at the end: add a bar",
+        "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + K, Ctrl + /, D: the Bar dialog;  A: a chord;  Shift + T: text above the beat",
+        "Ctrl + T: type lyrics under the beat (Space or − the next note, Backspace back, Up / Down another verse, Enter done)",
+        "Ctrl + F: search the palette (Escape empties it, Enter goes back to the score)",
+        "Effects: X dead, O ghost, ; and : accent and heavy accent, ! staccato, H hammer-on, S / Alt + S / Shift + S legato / shift slide / slide out down, V vibrato, P / Shift + P palm mute (note / beat), I let ring",
+        "Y natural harmonic, Ctrl + Alt + Y artificial, Alt + P pinch, Alt + T tapped;  N trill;  \": tremolo picking;  T or ) tapping;  $ slap;  ( left-hand tapping;  < fade in;  G / Ctrl + Alt + G grace note",
+        "Ctrl + D / Ctrl + U: brush down / up;  Shift + D / Shift + U: pick stroke down / up;  Ctrl + Alt + W: wide vibrato;  B: bend;  Ctrl + Alt + V: whammy bar",
+        "Ctrl + C, Ctrl + X, Ctrl + V: copy, cut, paste;  Ctrl + Shift + V: Special Paste (several times, or replacing)",
         "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
         "Ctrl + mouse wheel: zoom the interface",
         "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
         "Panels: click a tab's name to open it, the open tab's name (or the chevron) to collapse its panel",
         "Footer: click it to see every message; the chevron folds it back",
-        "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to show that track alone",
+        "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to select the track",
         "Tools → Plugins: every plugin file, and a tickbox to enable or disable each from the next start;  oxiguitar --safe-mode starts without any plugin",
     ]));
     let mut about = vec![
@@ -426,6 +531,17 @@ fn main() -> Result<(), slint::PlatformError> {
     ];
     about.extend(about_folders(&startup.inventory.folders, args.safe_mode));
     ui.set_about_lines(lines(&about.iter().map(String::as_str).collect::<Vec<_>>()));
+    PLUGIN_TOOLS.with(|t| {
+        *t.borrow_mut() = startup
+            .plugins
+            .tools()
+            .iter()
+            .filter_map(|t| {
+                let plugin = t.plugin.manifest.as_ref()?.id.clone();
+                Some((plugin, t.spec.id.clone(), t.spec.name.clone()))
+            })
+            .collect();
+    });
     set_tools(&ui, &tool_rows(&default_tools()));
 
     ui.set_player_available(!startup.inventory.instruments.is_empty());
@@ -454,12 +570,213 @@ fn main() -> Result<(), slint::PlatformError> {
     sync_shell(&app);
 
     let a = app.clone();
-    ui.on_open_file(move || open_dialog(&a));
+    ui.on_open_file(move || unless_unsaved(&a, Then::OpenDialog));
+    let a = app.clone();
+    ui.on_new_file(move || unless_unsaved(&a, Then::New));
+    let a = app.clone();
+    ui.on_edit_command(move |name| {
+        match name.as_str() {
+            "bar-dialog" => return open_edit_dialog(&a, editing::Dialog::Bar),
+            "tuplet-dialog" => return open_edit_dialog(&a, editing::Dialog::Tuplet),
+            "chord-dialog" => return open_edit_dialog(&a, editing::Dialog::Chord),
+            "text-dialog" => return open_edit_dialog(&a, editing::Dialog::Text),
+            "lyrics" => return open_edit_dialog(&a, editing::Dialog::Lyrics),
+            "cut" => return clipboard(&a, editing::ClipKey::Cut),
+            "copy" => return clipboard(&a, editing::ClipKey::Copy),
+            "paste" => return clipboard(&a, editing::ClipKey::Paste),
+            "special-paste" => return clipboard(&a, editing::ClipKey::Special),
+            "track-properties" => return open_track_dialog(&a),
+            "add-track" => return track_action(&a, "add"),
+            "transpose-selection" => return open_transpose(&a, oxiguitar_edit::Scope::Selection),
+            "transpose-all" => return open_transpose(&a, oxiguitar_edit::Scope::All),
+            _ => {}
+        }
+        let Some(command) = editing::menu_command(name.as_str()) else {
+            return;
+        };
+        let typed = a.borrow_mut().editing.tool(command);
+        if let Some(t) = typed {
+            send_typed(&a, t);
+        }
+    });
+    let a = app.clone();
+    ui.on_save(move || save(&a));
+    let a = app.clone();
+    ui.on_save_as(move || save_as_dialog(&a));
+    let a = app.clone();
+    ui.on_question_answered(move |i| question_answered(&a, i));
+    let a = app.clone();
+    ui.on_bar_dialog_done(move |ok| bar_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_paste_dialog_done(move |ok| paste_dialog_done(&a, ok));
+    ui.set_bend_amounts(strings(bend_form::amounts()));
+    let a = app.clone();
+    ui.on_bend_kind_picked(move |i| {
+        bend_edit(&a, |f| {
+            f.pick_kind(usize::try_from(i).unwrap_or(usize::MAX))
+        })
+    });
+    let a = app.clone();
+    ui.on_bend_amount_picked(move |i| bend_edit(&a, |f| f.pick_amount(i + 1)));
+    let a = app.clone();
+    ui.on_bend_pressed(move |c, r| bend_edit(&a, |f| f.press(c, r)));
+    let a = app.clone();
+    ui.on_bend_dragged(move |c, r| bend_edit(&a, |f| f.drag(c, r)));
+    let a = app.clone();
+    ui.on_bend_released(move || bend_edit(&a, bend_form::BendForm::release));
+    let a = app.clone();
+    ui.on_bend_dialog_done(move |ok| bend_dialog_done(&a, ok));
+    ui.set_chord_roots(strings(chord_form::note_names()));
+    ui.set_chord_triads(strings(chord_form::triad_names()));
+    ui.set_chord_extensions(strings(chord_form::extension_names()));
+    ui.set_chord_basses(strings(chord_form::bass_names()));
+    let a = app.clone();
+    ui.on_chord_changed(move |kind, value, text| {
+        chord_changed(&a, kind.as_str(), value, text.as_str())
+    });
+    let a = app.clone();
+    ui.on_chord_dialog_done(move |ok| chord_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_text_dialog_done(move |ok| {
+        let Some(ui) = a.borrow().ui.upgrade() else {
+            return;
+        };
+        ui.set_text_dialog_shown(false);
+        ui.invoke_focus_page();
+        if ok {
+            let text = ui.get_text_dialog_text().to_string();
+            edit_at_caret(&a, oxiguitar_edit::Command::Text(text));
+        }
+    });
+    let a = app.clone();
+    ui.on_song_edited(move |id, text| {
+        let info = a.borrow().editing.score().map(|s| s.info.clone());
+        let Some(mut info) = info else {
+            return;
+        };
+        if song::set(&mut info, id.as_str(), text.as_str()) {
+            edit_at_caret(&a, oxiguitar_edit::Command::Info(Box::new(info)));
+        }
+    });
+    let a = app.clone();
+    ui.on_palette_searched(move |_| {
+        if let Some(ui) = a.borrow().ui.upgrade() {
+            sync_found(&ui);
+        }
+    });
+    let a = app.clone();
+    ui.on_lyric_key(move |key, text| lyric_key(&a, key.as_str(), text.as_str()));
+    let a = app.clone();
+    ui.on_inspector_changed(move |id, value| {
+        let action = a.borrow().editing.field_changed(id.as_str(), value);
+        match action {
+            Some(effect_form::Action::Edit(command)) => {
+                let typed = a.borrow_mut().editing.tool(command);
+                if let Some(t) = typed {
+                    send_typed(&a, t);
+                }
+            }
+            Some(effect_form::Action::Bend) => open_edit_dialog(&a, editing::Dialog::Bend),
+            Some(effect_form::Action::Whammy) => open_edit_dialog(&a, editing::Dialog::Whammy),
+            Some(effect_form::Action::Chord) => open_edit_dialog(&a, editing::Dialog::Chord),
+            Some(effect_form::Action::Text) => open_edit_dialog(&a, editing::Dialog::Text),
+            None => {}
+        }
+    });
+    ui.set_track_instrument_names(strings(
+        track_form::INSTRUMENTS
+            .iter()
+            .map(|n| (*n).to_owned())
+            .collect(),
+    ));
+    ui.set_track_string_counts(strings(
+        track_form::STRING_COUNTS
+            .iter()
+            .map(|n| {
+                if *n == 0 {
+                    "None".to_owned()
+                } else {
+                    n.to_string()
+                }
+            })
+            .collect(),
+    ));
+    ui.set_track_key_names(strings(
+        (0..12u8)
+            .map(|k| oxiguitar_model::tuning::key_name(k).to_owned())
+            .collect(),
+    ));
+    ui.set_track_pattern_names(strings(
+        oxiguitar_model::tuning::Pattern::ALL
+            .iter()
+            .map(|p| p.label().to_owned())
+            .collect(),
+    ));
+    let a = app.clone();
+    ui.on_track_form_changed(move || track_form_changed(&a));
+    let a = app.clone();
+    ui.on_track_dialog_done(move |ok| track_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_transpose_dialog_done(move |ok| transpose_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_track_menu(move |i, action| {
+        let i = usize::try_from(i).unwrap_or(0);
+        let moved = a.borrow_mut().editing.select_track(i);
+        if moved {
+            caret_moved(&a);
+        }
+        track_action(&a, action.as_str());
+    });
+    let a = app.clone();
+    ui.on_page_menu(move |action| match action.as_str() {
+        "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
+        "bar" => open_edit_dialog(&a, editing::Dialog::Bar),
+        "track" => open_track_dialog(&a),
+        "cut" => clipboard(&a, editing::ClipKey::Cut),
+        "copy" => clipboard(&a, editing::ClipKey::Copy),
+        "paste" => clipboard(&a, editing::ClipKey::Paste),
+        _ => {}
+    });
+    let a = app.clone();
+    ui.on_go_to_section(move |i| {
+        let bar = {
+            let s = a.borrow();
+            s.editing
+                .sections()
+                .get(usize::try_from(i).unwrap_or(usize::MAX))
+                .map(|(b, _)| *b)
+        };
+        let moved = bar.is_some_and(|b| a.borrow_mut().editing.go_to_bar(b));
+        if moved {
+            caret_moved(&a);
+        }
+    });
+    ui.on_tuplet_usual(|n| i32::from(bar_form::usual_in_time_of(u8::try_from(n).unwrap_or(3))));
+    ui.set_bar_key_names(strings(bar_form::key_names()));
+    ui.set_bar_clef_names(strings(
+        bar_form::CLEFS
+            .iter()
+            .map(|(n, _)| (*n).to_owned())
+            .collect(),
+    ));
+    ui.set_bar_feel_names(strings(
+        bar_form::FEELS
+            .iter()
+            .map(|(n, _)| (*n).to_owned())
+            .collect(),
+    ));
+    ui.set_bar_direction_names(strings(
+        bar_form::DIRECTIONS
+            .iter()
+            .map(|(n, _)| (*n).to_owned())
+            .collect(),
+    ));
     let a = app.clone();
     ui.on_export_pdf(move || export_dialog(&a));
-    ui.on_quit(|| {
-        let _ = slint::quit_event_loop();
-    });
+    let a = app.clone();
+    ui.on_quit(move || unless_unsaved(&a, Then::Quit));
     let a = app.clone();
     ui.on_settings_changed(move || settings_changed(&a));
     let a = app.clone();
@@ -477,9 +794,105 @@ fn main() -> Result<(), slint::PlatformError> {
         sync_tracks(&a);
     });
     let a = app.clone();
-    ui.on_track_solo(move |i| {
-        a.borrow_mut().tracks.solo(i as usize);
-        sync_tracks(&a);
+    ui.on_track_selected(move |i| {
+        let moved = usize::try_from(i).is_ok_and(|i| a.borrow_mut().editing.select_track(i));
+        if moved {
+            caret_moved(&a);
+        }
+    });
+    let a = app.clone();
+    ui.on_page_pressed(move |x, y, shift| page_pressed(&a, x, y, shift));
+    let a = app.clone();
+    ui.on_page_double_clicked(move |x, y| page_double_clicked(&a, x, y));
+    let a = app.clone();
+    ui.on_page_menu_pressed(move |x, y| page_menu_pressed(&a, x, y));
+    let a = app.clone();
+    ui.on_caret_key(move |name, shift, ctrl| {
+        let Some(key) = editing::Key::from_name(name.as_str()) else {
+            return false;
+        };
+        // With one track on the page, Ctrl + Up and Down show the previous
+        // or next track in its place, as Guitar Pro's single-track view.
+        if ctrl && !shift && matches!(key, editing::Key::Up | editing::Key::Down) {
+            let target = {
+                let s = a.borrow();
+                let shown = s.tracks.shown();
+                match (shown.as_slice(), s.editing.track()) {
+                    ([only], Some(t)) if *only == t => {
+                        if key == editing::Key::Down {
+                            (t + 1 < s.tracks.len()).then_some(t + 1)
+                        } else {
+                            t.checked_sub(1)
+                        }
+                    }
+                    _ => None,
+                }
+            };
+            if let Some(t) = target {
+                {
+                    let mut s = a.borrow_mut();
+                    s.tracks.switch_to(t);
+                    s.editing.select_track(t);
+                }
+                sync_tracks(&a);
+                caret_moved(&a);
+                return true;
+            }
+        }
+        // Right at the very end of the score adds a bar, as Guitar Pro.
+        if key == editing::Key::Right && !shift && !ctrl {
+            let typed = a.borrow_mut().editing.at_the_end();
+            if let Some(t) = typed {
+                send_typed(&a, t);
+                return true;
+            }
+        }
+        let taken = a.borrow_mut().editing.key(key, shift, ctrl);
+        if taken {
+            caret_moved(&a);
+        }
+        taken
+    });
+    let a = app.clone();
+    ui.on_edit_key(move |name, shift, ctrl, alt| {
+        if ctrl && !alt && !shift && matches!(name.as_str(), "f" | "F") {
+            search_palette(&a);
+            return true;
+        }
+        if let Some(k) = editing::clip_key(name.as_str(), shift, ctrl, alt) {
+            clipboard(&a, k);
+            return true;
+        }
+        if let Some(d) = editing::dialog_key(name.as_str(), shift, ctrl, alt) {
+            open_edit_dialog(&a, d);
+            return true;
+        }
+        let typed = a
+            .borrow_mut()
+            .editing
+            .typed(name.as_str(), shift, ctrl, alt, Instant::now());
+        match typed {
+            Some(t) => {
+                send_typed(&a, t);
+                true
+            }
+            None => false,
+        }
+    });
+    let a = app.clone();
+    ui.on_undo(move || a.borrow().worker.send(Request::Undo));
+    let a = app.clone();
+    ui.on_redo(move || a.borrow().worker.send(Request::Redo));
+    let a = app.clone();
+    ui.on_next_bad_bar(move || {
+        let moved = {
+            let mut s = a.borrow_mut();
+            let next = s.editing.next_bad(&s.bad);
+            next.is_some_and(|b| s.editing.go_to(b))
+        };
+        if moved {
+            caret_moved(&a);
+        }
     });
     let a = app.clone();
     ui.on_mixer_volume(move |i, v| {
@@ -509,8 +922,41 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
     let a = app.clone();
+    ui.on_palette_tool_clicked(move |id| {
+        if let Some(d) = palette::dialog_of(id.as_str()) {
+            open_edit_dialog(&a, d);
+            return;
+        }
+        if let Some(command) = palette::command_of(id.as_str()) {
+            let typed = a.borrow_mut().editing.tool(command);
+            if let Some(t) = typed {
+                send_typed(&a, t);
+            }
+            return;
+        }
+        let Some(v) = palette::voice_of(id.as_str()) else {
+            return;
+        };
+        let moved = a
+            .borrow_mut()
+            .editing
+            .key(editing::Key::Voice(v), false, true);
+        if moved {
+            caret_moved(&a);
+        }
+    });
+    let a = app.clone();
     ui.on_tool_picked(move |i| {
-        a.borrow().worker.send(Request::ApplyTool(i as usize));
+        let i = usize::try_from(i).unwrap_or(usize::MAX);
+        let ours = oxiguitar_tools::all().len();
+        let request = match i.checked_sub(ours) {
+            None => Request::ApplyTool(i),
+            Some(j) => match PLUGIN_TOOLS.with(|t| t.borrow().get(j).cloned()) {
+                Some((plugin, tool, _)) => Request::PluginTool(plugin, tool),
+                None => return,
+            },
+        };
+        a.borrow().worker.send(request);
     });
     let a = app.clone();
     ui.on_toolbar_activated(move |id| toolbar_activated(&a, id.as_str()));
@@ -555,7 +1001,13 @@ fn main() -> Result<(), slint::PlatformError> {
     // Closing the main window ends the program, even with the plugin
     // manager's window open (the event loop would otherwise wait for the
     // last window).
-    ui.window().on_close_requested(|| {
+    // With unsaved changes, the window asks first and stays.
+    let a = app.clone();
+    ui.window().on_close_requested(move || {
+        if a.borrow().modified {
+            unless_unsaved(&a, Then::Quit);
+            return slint::CloseRequestResponse::KeepWindowShown;
+        }
         let _ = slint::quit_event_loop();
         slint::CloseRequestResponse::HideWindow
     });
@@ -641,8 +1093,16 @@ fn reason_phrase(why: &str) -> String {
     }
 }
 
+/// The Tools menu: the core's tools, then the plugins' (interface 1.2).
 fn set_tools(ui: &AppWindow, rows: &[ToolRow]) {
-    ui.set_tools(ModelRc::new(VecModel::from(rows.to_vec())));
+    let mut rows = rows.to_vec();
+    PLUGIN_TOOLS.with(|t| {
+        rows.extend(t.borrow().iter().map(|(_, _, name)| ToolRow {
+            title: name.as_str().into(),
+            enabled: true,
+        }));
+    });
+    ui.set_tools(ModelRc::new(VecModel::from(rows)));
 }
 
 /// A message for the footer.
@@ -1368,9 +1828,11 @@ fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
 /// A toolbar button was clicked.
 fn toolbar_activated(app: &Shared, id: &str) {
     match id {
-        item::OPEN => open_dialog(app),
+        item::OPEN => unless_unsaved(app, Then::OpenDialog),
+        item::SAVE => save(app),
         item::EXPORT_PDF => export_dialog(app),
-        // Save, Undo and Redo come with the editor; they are greyed out.
+        item::UNDO => app.borrow().worker.send(Request::Undo),
+        item::REDO => app.borrow().worker.send(Request::Redo),
         _ => {}
     }
 }
@@ -1382,19 +1844,31 @@ fn handle(app: &Shared, event: Event) {
     };
     match event {
         Event::Opened {
+            score,
+            edit,
+            bad,
             tracks,
             tools,
             pdf_name,
             folder,
+            name,
+            untitled,
         } => {
             {
                 let mut s = app.borrow_mut();
+                s.doc_name = Some(name);
+                s.untitled = untitled;
+                s.after_save = None;
                 s.track_count = tracks.len();
                 s.tracks = Tracks::new(
                     tracks.iter().map(|t| t.default_notation).collect(),
                     tracks.iter().map(|t| t.can_tab).collect(),
                 );
                 s.mixer = Mixer::new(tracks.iter().map(|t| t.mix).collect());
+                let first = s.tracks.shown().first().copied().unwrap_or(0);
+                s.editing.opened(score, first);
+                ui.set_lyric_shown(false);
+                s.bad = bad;
                 s.settings.tracks = s.tracks.shown();
                 s.settings.notation = s.tracks.notation();
                 s.pdf_name = pdf_name;
@@ -1404,27 +1878,7 @@ fn handle(app: &Shared, event: Event) {
                 s.tile_model.clear();
                 s.old_tile_model.clear();
             }
-            let rows: Vec<TrackRow> = tracks
-                .iter()
-                .enumerate()
-                .map(|(i, t)| {
-                    let row = app.borrow().tracks.row(i);
-                    TrackRow {
-                        name: t.name.as_str().into(),
-                        shown: row.shown,
-                        standard: row.standard,
-                        tablature: row.tablature,
-                        can_tab: t.can_tab,
-                        volume: t.mix.volume,
-                        pan: t.mix.pan,
-                        mute: t.mix.mute,
-                        solo: t.mix.solo,
-                        wave: tracks::waveform(&t.activity).into(),
-                        bars: i32::try_from(t.activity.len()).unwrap_or(i32::MAX),
-                    }
-                })
-                .collect();
-            ui.set_tracks(ModelRc::new(VecModel::from(rows)));
+            ui.set_tracks(ModelRc::new(VecModel::from(track_rows(app, &tracks))));
             // Room for the tracks, up to five rows; the splitter changes it.
             ui.set_bottom_height(28.0 * tracks.len().clamp(1, 5) as f32 + 12.0);
             {
@@ -1437,14 +1891,80 @@ fn handle(app: &Shared, event: Event) {
             sync_areas(app);
             set_tools(&ui, &tool_rows(&tools));
             ui.set_has_score(true);
-            app.borrow_mut()
-                .shell
-                .set_item(item::EXPORT_PDF, Some(true), None);
+            sync_sections(app);
+            {
+                let mut s = app.borrow_mut();
+                s.shell.set_item(item::EXPORT_PDF, Some(true), None);
+                s.shell.set_item(item::SAVE, Some(true), None);
+            }
             sync_toolbar(app);
+            sync_edit_state(app, &edit);
             ui.invoke_scroll_to(0.0, 0.0);
             settings_changed(app);
         }
-        Event::Engraved { engraving, sheets } => {
+        Event::AskSave {
+            heading,
+            lines,
+            elsewhere,
+        } => {
+            let buttons: &[&str] = if elsewhere {
+                &["Save", "Save As…", "Cancel"]
+            } else {
+                &["Save", "Cancel"]
+            };
+            ask(app, Asked::Save { elsewhere }, &heading, &lines, buttons);
+        }
+        Event::Saved {
+            name,
+            edit,
+            pdf_name,
+            folder,
+        } => {
+            let then = {
+                let mut s = app.borrow_mut();
+                s.doc_name = Some(name);
+                s.untitled = false;
+                s.pdf_name = pdf_name;
+                s.folder = folder;
+                s.after_save.take()
+            };
+            sync_edit_state(app, &edit);
+            if let Some(then) = then {
+                go_on(app, then);
+            }
+        }
+        Event::SaveFailed => app.borrow_mut().after_save = None,
+        Event::Changed {
+            score,
+            edit,
+            bad,
+            caret,
+            tracks,
+        } => {
+            {
+                let mut s = app.borrow_mut();
+                s.editing.changed(score);
+                if let Some(c) = caret {
+                    s.editing.edited(c);
+                }
+                s.bad = bad;
+            }
+            if let Some((tracks, was)) = tracks {
+                track_list_changed(app, &tracks, &was);
+            }
+            sync_sections(app);
+            sync_edit_state(app, &edit);
+            if caret.is_some() {
+                caret_moved(app);
+            } else {
+                sync_caret(app, false);
+            }
+        }
+        Event::Engraved {
+            engraving,
+            sheets,
+            hits,
+        } => {
             {
                 let mut s = app.borrow_mut();
                 s.engraving = engraving;
@@ -1452,10 +1972,16 @@ fn handle(app: &Shared, event: Event) {
                     lists: Vec::new(),
                     rects: sheets,
                 };
+                s.editing.engraved(hits);
                 retire_tiles(&mut s, 1.0);
             }
             set_content_size(app, &ui);
+            sync_caret(app, false);
             canvas_changed(app);
+            // The field for lyrics follows its beat to where it is now.
+            if ui.get_lyric_shown() {
+                show_lyric(app, &ui, ui.get_lyric_text().to_string());
+            }
         }
         Event::Tile {
             engraving,
@@ -1487,6 +2013,207 @@ fn handle(app: &Shared, event: Event) {
         }
         Event::Tools(tools) => set_tools(&ui, &tool_rows(&tools)),
         Event::Message(level, text) => message(app, level, text),
+    }
+}
+
+/// What the Edit menu and the toolbar say about undo and redo.
+fn sync_edit_state(app: &Shared, edit: &document::EditState) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let title = |verb: &str, name: &Option<String>| match name {
+        Some(n) => format!("{verb} {n}"),
+        None => verb.to_owned(),
+    };
+    ui.set_can_undo(edit.undo.is_some());
+    ui.set_can_redo(edit.redo.is_some());
+    ui.set_undo_title(title("Undo", &edit.undo).into());
+    ui.set_redo_title(title("Redo", &edit.redo).into());
+    let window_title = {
+        let mut s = app.borrow_mut();
+        s.modified = edit.modified;
+        match &s.doc_name {
+            Some(name) if edit.modified => format!("• {name} — OxiGuitar"),
+            Some(name) => format!("{name} — OxiGuitar"),
+            None => "OxiGuitar".to_owned(),
+        }
+    };
+    ui.set_window_title(window_title.into());
+    {
+        let mut s = app.borrow_mut();
+        s.shell
+            .set_item(item::UNDO, Some(edit.undo.is_some()), None);
+        s.shell
+            .set_item(item::REDO, Some(edit.redo.is_some()), None);
+    }
+    sync_toolbar(app);
+}
+
+/// A press on the page, at (`x`, `y`) in the viewport's logical pixels:
+/// the caret goes there (with Shift, the selection grows to it).
+fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
+    // A click elsewhere ends typing lyrics, keeping what was typed.
+    let typing = app
+        .borrow()
+        .ui
+        .upgrade()
+        .map(|ui| (ui.get_lyric_shown(), ui.get_lyric_text().to_string()));
+    if let Some((true, text)) = typing {
+        lyric_key(app, "done", &text);
+    }
+    let moved = on_sheet(app, x, y)
+        .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.press_at(i, sx, sy, shift));
+    if moved {
+        caret_moved(app);
+    }
+}
+
+/// A right-click on the page, before its menu: the caret goes there unless
+/// the click is inside the selection.
+fn page_menu_pressed(app: &Shared, x: f32, y: f32) {
+    let moved = on_sheet(app, x, y)
+        .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.menu_press_at(i, sx, sy));
+    if moved {
+        caret_moved(app);
+    }
+}
+
+/// A double-click on the page: on a time signature, the caret goes to its
+/// bar and the Bar dialog opens there (Mateus, 20 Oct 2026).
+fn page_double_clicked(app: &Shared, x: f32, y: f32) {
+    let on_time = on_sheet(app, x, y)
+        .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.time_signature_at(i, sx, sy));
+    if on_time {
+        caret_moved(app);
+        open_edit_dialog(app, editing::Dialog::Bar);
+    }
+}
+
+/// A point of the canvas, in logical pixels, as the sheet under it and the
+/// point on that sheet, in points.
+fn on_sheet(app: &Shared, x: f32, y: f32) -> Option<(usize, f32, f32)> {
+    let ui = app.borrow().ui.upgrade()?;
+    let s = app.borrow();
+    let px = PX_PER_PT * s.zoom;
+    let (cx, cy) = ((x - ui.get_origin_x()) / px, (y - ui.get_origin_y()) / px);
+    s.sheets
+        .rects
+        .iter()
+        .enumerate()
+        .find(|(_, r)| cx >= r.x && cx < r.right() && cy >= r.y && cy < r.bottom())
+        .map(|(i, r)| (i, cx - r.x, cy - r.y))
+}
+
+/// The caret or the selection moved: draw them, keep the caret in view,
+/// and tell the plugins that listen.
+/// Sends a command typed at the caret to the worker.
+fn send_typed(app: &Shared, t: editing::Typed) {
+    app.borrow().worker.send(Request::Edit {
+        command: t.command,
+        caret: t.caret,
+        selection: t.selection,
+    });
+}
+
+fn caret_moved(app: &Shared) {
+    sync_caret(app, true);
+    follow_voice(app);
+    let s = app.borrow();
+    s.worker.send(Request::Selection(
+        s.editing.for_plugins(),
+        s.editing.for_plugins2(),
+    ));
+}
+
+/// The page greys out the voices the caret isn't in: a new voice is a new
+/// engraving (Mateus, 20 Oct 2026).
+fn follow_voice(app: &Shared) {
+    let mut s = app.borrow_mut();
+    let Some(voice) = s.editing.at_caret().map(|a| a.voice) else {
+        return;
+    };
+    if s.settings.active_voice != Some(voice) && s.track_count > 0 {
+        s.settings.active_voice = Some(voice);
+        let settings = s.settings.clone();
+        s.worker.send(Request::Engrave(settings));
+    }
+}
+
+/// Draws the caret and the selection over the page, highlights the
+/// caret's track, and, when `scroll`, scrolls the caret into view.
+fn sync_caret(app: &Shared, scroll: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    sync_inspector(app, &ui);
+    let s = app.borrow();
+    // A box on sheet `sheet`, in canvas points.
+    let place = |sheet: usize, r: Rect| -> Option<BoxItem> {
+        let o = s.sheets.rects.get(sheet)?;
+        Some(BoxItem {
+            x: o.x + r.x,
+            y: o.y + r.y,
+            w: r.width,
+            h: r.height,
+        })
+    };
+    let found = s.editing.caret_box();
+    let column = found.and_then(|f| place(f.sheet, f.column));
+    // On the standard staff, the caret's line or space; else its string.
+    let string = found.and_then(|f| f.step.or(f.string).and_then(|r| place(f.sheet, r)));
+    ui.set_caret_shown(column.is_some());
+    if let Some(b) = &column {
+        ui.set_caret(b.clone());
+    }
+    ui.set_string_shown(string.is_some());
+    if let Some(b) = string {
+        ui.set_caret_string(b);
+    }
+    let boxes: Vec<BoxItem> = s
+        .editing
+        .selection_boxes()
+        .into_iter()
+        .filter_map(|(sheet, r)| place(sheet, r))
+        .collect();
+    ui.set_selection_boxes(ModelRc::new(VecModel::from(boxes)));
+    ui.set_selected_track(
+        s.editing
+            .track()
+            .and_then(|t| i32::try_from(t).ok())
+            .unwrap_or(-1),
+    );
+    ui.set_bad_bars(s.editing.any_shown(&s.bad));
+    sync_palette_state(&ui, s.editing.at_caret());
+    if let (true, Some(b)) = (scroll, column) {
+        let px = PX_PER_PT * s.zoom;
+        let x0 = ui.get_origin_x() + b.x * px;
+        let y0 = ui.get_origin_y() + b.y * px;
+        let (x1, y1) = (x0 + b.w * px, y0 + b.h * px);
+        let (vx, vy) = (ui.get_view_x(), ui.get_view_y());
+        let (vw, vh) = (ui.get_view_width(), ui.get_view_height());
+        let margin = 24.0;
+        let nx = if x0 < vx + margin {
+            x0 - margin
+        } else if x1 > vx + vw - margin {
+            (x1 - vw + margin).min(x0 - margin)
+        } else {
+            vx
+        };
+        // Off screen (a jump such as F4): the caret's staves go to the
+        // middle of the view. Near an edge: just enough to show them.
+        let ny = if y1 < vy || y0 > vy + vh {
+            y0 - (vh - (y1 - y0)).max(0.0) / 2.0
+        } else if y0 < vy + margin {
+            y0 - margin
+        } else if y1 > vy + vh - margin {
+            (y1 - vh + margin).min(y0 - margin)
+        } else {
+            vy
+        };
+        if (nx - vx).abs() > 0.5 || (ny - vy).abs() > 0.5 {
+            drop(s);
+            ui.invoke_scroll_to(nx, ny);
+        }
     }
 }
 
@@ -1663,8 +2390,9 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
                     .map(|t| PaletteToolRow {
                         id: t.id.into(),
                         icon: images.next().unwrap_or_default(),
-                        tip: palette::tip(t.name).into(),
+                        tip: palette::tool_tip(t.id, t.name).into(),
                         enabled: false,
+                        checked: false,
                     })
                     .collect();
                 ModelRc::new(VecModel::from(rows))
@@ -1678,12 +2406,49 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
             }
         })
         .collect();
+    let at = s.editing.at_caret();
     drop(s);
     if fresh {
         ui.set_palette_groups(ModelRc::new(VecModel::from(groups)));
     } else {
         for (g, row) in groups.into_iter().enumerate() {
             model.set_row_data(g, row);
+        }
+    }
+    sync_palette_state(ui, at);
+}
+
+/// The palette's working tools: usable with a score open, highlighted as
+/// the caret's beat is (its voice, value, dots, rest, tie).
+fn sync_palette_state(ui: &AppWindow, at: Option<editing::AtCaret>) {
+    sync_palette_rows(ui, at);
+    if !ui.get_palette_query().is_empty() {
+        sync_found(ui);
+    }
+}
+
+fn sync_palette_rows(ui: &AppWindow, at: Option<editing::AtCaret>) {
+    let groups = ui.get_palette_groups();
+    for g in 0..groups.row_count() {
+        let Some(group) = groups.row_data(g) else {
+            continue;
+        };
+        for i in 0..group.tools.row_count() {
+            let Some(mut row) = group.tools.row_data(i) else {
+                continue;
+            };
+            if palette::working(row.id.as_str()).is_none() {
+                continue;
+            }
+            let (enabled, checked) = (
+                at.is_some(),
+                at.is_some_and(|at| palette::checked(row.id.as_str(), &at)),
+            );
+            if (row.enabled, row.checked) != (enabled, checked) {
+                row.enabled = enabled;
+                row.checked = checked;
+                group.tools.set_row_data(i, row);
+            }
         }
     }
 }
@@ -1845,6 +2610,7 @@ fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
         s.paint += 1;
         retire_tiles(&mut s, zoom / old);
     }
+    ui.set_pt_scale(PX_PER_PT * zoom);
     set_content_size(app, &ui);
     let k = zoom / old;
     ui.invoke_scroll_to(
@@ -1857,6 +2623,1093 @@ fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
     } else {
         canvas_changed(app);
     }
+}
+
+/// Goes on to `then`, asking first whether to save the changes when the
+/// score differs from its file.
+fn unless_unsaved(app: &Shared, then: Then) {
+    let name = {
+        let s = app.borrow();
+        if s.question.is_some() {
+            return;
+        }
+        s.modified.then(|| s.doc_name.clone().unwrap_or_default())
+    };
+    match name {
+        Some(name) => ask(
+            app,
+            Asked::Unsaved(then),
+            &format!("Save the changes to {name}?"),
+            &["They are lost if you don't.".to_owned()],
+            &["Save", "Don't Save", "Cancel"],
+        ),
+        None => go_on(app, then),
+    }
+}
+
+/// Does what waited on the unsaved-changes question.
+fn go_on(app: &Shared, then: Then) {
+    match then {
+        Then::New => app.borrow().worker.send(Request::New),
+        Then::OpenDialog => open_dialog(app),
+        Then::Open(path) => app.borrow().worker.send(Request::Open(path)),
+        Then::Quit => {
+            let _ = slint::quit_event_loop();
+        }
+    }
+}
+
+/// Shows the question over the window.
+fn ask(app: &Shared, asked: Asked, heading: &str, lines: &[String], buttons: &[&str]) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    app.borrow_mut().question = Some(asked);
+    ui.set_question_heading(heading.into());
+    ui.set_question_lines(ModelRc::new(VecModel::from(
+        lines
+            .iter()
+            .map(|l| SharedString::from(l.as_str()))
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_question_buttons(ModelRc::new(VecModel::from(
+        buttons
+            .iter()
+            .map(|b| SharedString::from(*b))
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_question_shown(true);
+}
+
+/// A list of strings for the window.
+fn strings(list: Vec<String>) -> ModelRc<SharedString> {
+    ModelRc::new(VecModel::from(
+        list.into_iter().map(SharedString::from).collect::<Vec<_>>(),
+    ))
+}
+
+/// Opens the Bar dialog or Custom N-tuplet at the caret.
+fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() {
+        return;
+    }
+    match dialog {
+        editing::Dialog::Bar => {
+            let Some((state, heading)) = app.borrow().editing.bar_state() else {
+                return;
+            };
+            let f = bar_form::BarForm::of(&state);
+            ui.set_bar_fields(BarFields {
+                numerator: f.numerator,
+                denominator: f.denominator,
+                key: f.key,
+                minor: f.minor,
+                clef: f.clef,
+                tempo: f.tempo,
+                feel: f.feel,
+                repeat_start: f.repeat_start,
+                repeat_count: f.repeat_count,
+                letter: f.letter.into(),
+                section: f.section.into(),
+                double_bar: f.double_bar,
+                free_time: f.free_time,
+            });
+            ui.set_bar_endings(ModelRc::new(VecModel::from(f.endings)));
+            ui.set_bar_directions(ModelRc::new(VecModel::from(f.directions)));
+            ui.set_bar_heading(heading.into());
+            app.borrow_mut().bar_dialog = Some(state);
+            ui.set_bar_dialog_shown(true);
+        }
+        editing::Dialog::Tuplet => {
+            if app.borrow().editing.bar_state().is_none() {
+                return;
+            }
+            let t = app
+                .borrow()
+                .editing
+                .beat_tuplet()
+                .unwrap_or(oxiguitar_model::Tuplet {
+                    notes: 5,
+                    in_time_of: 4,
+                });
+            ui.set_tuplet_notes(i32::from(t.notes));
+            ui.set_tuplet_in_time_of(i32::from(t.in_time_of));
+            ui.set_tuplet_dialog_shown(true);
+        }
+        editing::Dialog::Bend | editing::Dialog::Whammy => {
+            let whammy = dialog == editing::Dialog::Whammy;
+            let here = {
+                let s = app.borrow();
+                if whammy {
+                    s.editing.whammy_here()
+                } else {
+                    s.editing.bend_here()
+                }
+            };
+            let Some(curve) = here else {
+                return;
+            };
+            let form = bend_form::BendForm::open(curve.as_ref(), whammy);
+            ui.set_bend_heading(if whammy { "Whammy Bar" } else { "Bend" }.into());
+            sync_bend(&ui, &form);
+            app.borrow_mut().bend_dialog = Some(form);
+            ui.set_bend_dialog_shown(true);
+        }
+        editing::Dialog::Chord => {
+            let Some(form) = app.borrow().editing.chord_form() else {
+                return;
+            };
+            ui.set_chord_last_fret(i32::from(form.frets_max()));
+            sync_chord(&ui, &form);
+            app.borrow_mut().chord_dialog = Some(form);
+            ui.set_chord_dialog_shown(true);
+        }
+        editing::Dialog::Text => {
+            let Some(text) = app.borrow().editing.beat_text() else {
+                return;
+            };
+            ui.set_text_dialog_text(text.into());
+            ui.set_text_dialog_shown(true);
+        }
+        editing::Dialog::Lyrics => {
+            let started = app.borrow_mut().editing.start_lyrics();
+            if let Some((_, text)) = started {
+                show_lyric(app, &ui, text);
+            }
+        }
+    }
+}
+
+/// Ctrl + F: the palette shows, and its search field takes the keyboard.
+fn search_palette(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    {
+        let mut s = app.borrow_mut();
+        let area = s.shell.area_mut(Side::Left);
+        if let Some(i) = area.tabs.iter().position(|t| t.id == "palette") {
+            area.active = i;
+        }
+        area.collapsed = false;
+        area.shown = true;
+    }
+    sync_areas(app);
+    ui.set_left_shown(true);
+    ui.set_palette_search_requests(ui.get_palette_search_requests() + 1);
+}
+
+/// Shows the field where lyrics are typed, holding `text`, under the beat
+/// it types at; hidden when nothing is typed there.
+fn show_lyric(app: &Shared, ui: &AppWindow, text: String) {
+    let spot = {
+        let s = app.borrow();
+        s.editing.lyric_spot().and_then(|(sheet, x, y, gap)| {
+            let o = s.sheets.rects.get(sheet)?;
+            Some((o.x + x, o.y + y, gap))
+        })
+    };
+    match spot {
+        Some((x, y, gap)) => {
+            ui.set_lyric_x(x);
+            ui.set_lyric_y(y);
+            // The engraver's lyric size: 1.9 staff spaces, its lines 2.4
+            // apart.
+            ui.set_lyric_size(gap * 1.9 / 2.4);
+            ui.set_lyric_text(text.into());
+            ui.set_lyric_shown(true);
+        }
+        None => ui.set_lyric_shown(false),
+    }
+    caret_moved(app);
+}
+
+/// A key that ends a syllable typed on the page.
+fn lyric_key(app: &Shared, key: &str, text: &str) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let key = match key {
+        "space" => editing::LyricKey::Space,
+        "hyphen" => editing::LyricKey::Hyphen,
+        "back" => editing::LyricKey::Back,
+        "up" => editing::LyricKey::Up,
+        "down" => editing::LyricKey::Down,
+        _ => editing::LyricKey::Done,
+    };
+    let (edit, next) = app.borrow_mut().editing.lyric_key(key, text);
+    if let Some(t) = edit {
+        send_typed(app, t);
+    }
+    match next {
+        Some((_, text)) => show_lyric(app, &ui, text),
+        None => {
+            ui.set_lyric_shown(false);
+            ui.invoke_focus_page();
+        }
+    }
+}
+
+/// An edit at the caret (or on the selection), as a tool makes it.
+fn edit_at_caret(app: &Shared, command: oxiguitar_edit::Command) {
+    let typed = app.borrow_mut().editing.tool(command);
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// Shows the chord dialog's state.
+fn sync_chord(ui: &AppWindow, f: &chord_form::ChordForm) {
+    use oxiguitar_edit::harmony::{Extension, Triad, alt};
+    ui.set_chord_name(f.name.as_str().into());
+    ui.set_chord_library(strings(f.library.iter().map(|d| d.name.clone()).collect()));
+    let c = f.chord;
+    let index = |i: Option<usize>| i.and_then(|i| i32::try_from(i).ok()).unwrap_or(-1);
+    ui.set_chord_root(index(c.map(|c| c.root)));
+    ui.set_chord_triad(index(
+        c.and_then(|c| Triad::ALL.iter().position(|t| *t == c.triad)),
+    ));
+    ui.set_chord_extension(index(
+        c.and_then(|c| Extension::ALL.iter().position(|e| *e == c.extension)),
+    ));
+    ui.set_chord_bass(index(c.map(|c| c.bass.map_or(0, |b| b + 1))));
+    let bits = c.map_or(0, |c| c.alterations);
+    ui.set_chord_alterations(ModelRc::new(VecModel::from(
+        alt::NAMES
+            .iter()
+            .map(|(bit, name)| AltBox {
+                label: name.replace('b', "♭").replace('#', "♯").into(),
+                on: bits & bit != 0,
+            })
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_chord_strings(i32::try_from(f.strings()).unwrap_or(0));
+    ui.set_chord_dots(ModelRc::new(VecModel::from(f.dots())));
+    ui.set_chord_first_fret(i32::from(f.first_fret));
+    ui.set_chord_voicings(strings(
+        f.voicings
+            .iter()
+            .map(|v| chord_form::ChordForm::shape_text(v))
+            .collect(),
+    ));
+    ui.set_chord_show_diagram(f.show_diagram);
+}
+
+/// A change in the chord dialog: `kind` names what, `value` and `text`
+/// carry it.
+fn chord_changed(app: &Shared, kind: &str, value: i32, text: &str) {
+    use oxiguitar_edit::harmony::{Extension, Triad, alt};
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if kind == "remove" {
+        ui.set_chord_dialog_shown(false);
+        ui.invoke_focus_page();
+        app.borrow_mut().chord_dialog = None;
+        edit_at_caret(app, oxiguitar_edit::Command::Chord(None));
+        return;
+    }
+    let i = usize::try_from(value).unwrap_or(0);
+    let form = {
+        let mut s = app.borrow_mut();
+        let Some(f) = s.chord_dialog.as_mut() else {
+            return;
+        };
+        let bit = alt::NAMES.get(i).map_or(0, |(b, _)| *b);
+        match kind {
+            "name" => f.type_name(text),
+            "library" => f.pick_library(i),
+            "root" => f.build(|c| c.root = i),
+            "triad" => f.build(|c| c.triad = Triad::ALL.get(i).copied().unwrap_or(c.triad)),
+            "extension" => {
+                f.build(|c| c.extension = Extension::ALL.get(i).copied().unwrap_or(c.extension))
+            }
+            "bass" => f.build(|c| c.bass = i.checked_sub(1)),
+            "alt-on" => f.build(|c| c.alterations |= bit),
+            "alt-off" => f.build(|c| c.alterations &= !bit),
+            "grid" => {
+                let strings = f.strings();
+                let low = i / 100;
+                if let Some(high_first) = strings.checked_sub(low + 1) {
+                    f.click_grid(high_first, u8::try_from(i % 100).unwrap_or(0));
+                }
+            }
+            "head" => {
+                if let Some(high_first) = f.strings().checked_sub(i + 1) {
+                    f.click_head(high_first);
+                }
+            }
+            "first" => f.scroll(u8::try_from(i).unwrap_or(1)),
+            "voicing" => f.pick_voicing(i),
+            "show" => f.show_diagram = value != 0,
+            _ => {}
+        }
+        f.clone()
+    };
+    sync_chord(&ui, &form);
+}
+
+/// The chord dialog closed: on OK, its diagram on the caret's beat.
+fn chord_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_chord_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(form) = app.borrow_mut().chord_dialog.take() else {
+        return;
+    };
+    if ok {
+        edit_at_caret(app, oxiguitar_edit::Command::Chord(form.diagram()));
+    }
+}
+
+/// Shows the bend editor's state.
+fn sync_bend(ui: &AppWindow, f: &bend_form::BendForm) {
+    let types: &[&str] = if f.whammy {
+        &bend_form::WHAMMY_TYPES
+    } else {
+        &bend_form::BEND_TYPES
+    };
+    // "Custom" last, always, so the list never changes under the box.
+    let mut names: Vec<String> = types.iter().map(|t| (*t).to_owned()).collect();
+    names.push("Custom".to_owned());
+    let kind = f.kind.unwrap_or(types.len());
+    if ui.get_bend_types().row_count() != names.len() {
+        ui.set_bend_types(strings(names));
+    }
+    ui.set_bend_kind(i32::try_from(kind).unwrap_or(0));
+    ui.set_bend_amount(f.amount - 1);
+    let (low, high) = f.rows();
+    ui.set_bend_low(low);
+    ui.set_bend_high(high);
+    ui.set_bend_points(ModelRc::new(VecModel::from(
+        f.points
+            .iter()
+            .map(|p| GridPoint {
+                col: p.col,
+                row: p.row,
+            })
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_bend_path(f.path().into());
+}
+
+/// A change in the bend editor.
+fn bend_edit(app: &Shared, edit: impl FnOnce(&mut bend_form::BendForm)) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let form = {
+        let mut s = app.borrow_mut();
+        let Some(f) = s.bend_dialog.as_mut() else {
+            return;
+        };
+        edit(f);
+        f.clone()
+    };
+    sync_bend(&ui, &form);
+}
+
+/// The bend editor closed: on OK, a changed curve is one change at the
+/// caret (or on the selection).
+fn bend_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_bend_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(form) = app.borrow_mut().bend_dialog.take() else {
+        return;
+    };
+    if !ok || !form.changed {
+        return;
+    }
+    let command = if form.whammy {
+        oxiguitar_edit::Command::Whammy(form.bend())
+    } else {
+        oxiguitar_edit::Command::Bend(form.bend())
+    };
+    let typed = app.borrow_mut().editing.tool(command);
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// The Bar dialog closed: on OK, what it sets is one change at the caret.
+fn bar_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_bar_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(was) = app.borrow_mut().bar_dialog.take() else {
+        return;
+    };
+    if !ok {
+        return;
+    }
+    let f = ui.get_bar_fields();
+    let form = bar_form::BarForm {
+        numerator: f.numerator,
+        denominator: f.denominator,
+        key: f.key,
+        minor: f.minor,
+        clef: f.clef,
+        tempo: f.tempo,
+        feel: f.feel,
+        repeat_start: f.repeat_start,
+        repeat_count: f.repeat_count,
+        letter: f.letter.to_string(),
+        section: f.section.to_string(),
+        double_bar: f.double_bar,
+        free_time: f.free_time,
+        endings: ui.get_bar_endings().iter().collect(),
+        directions: ui.get_bar_directions().iter().collect(),
+    };
+    let state = form.to_state(&was);
+    if state == was {
+        return;
+    }
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Bar(Box::new(state)));
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// The track list's rows.
+fn track_rows(app: &Shared, tracks: &[TrackInfo]) -> Vec<TrackRow> {
+    let s = app.borrow();
+    tracks
+        .iter()
+        .enumerate()
+        .map(|(i, t)| {
+            let row = s.tracks.row(i);
+            let mix = s.mixer.get(i);
+            TrackRow {
+                name: t.name.as_str().into(),
+                shown: row.shown,
+                standard: row.standard,
+                tablature: row.tablature,
+                can_tab: t.can_tab,
+                volume: mix.volume,
+                pan: mix.pan,
+                mute: mix.mute,
+                solo: mix.solo,
+                wave: tracks::waveform(&t.activity).into(),
+                bars: i32::try_from(t.activity.len()).unwrap_or(i32::MAX),
+            }
+        })
+        .collect()
+}
+
+/// An edit added, deleted, moved, renamed or restrung tracks: the track
+/// list and the page follow, keeping what they can (`Tracks::refit`).
+fn track_list_changed(app: &Shared, tracks: &[TrackInfo], was: &[Option<usize>]) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    {
+        let mut s = app.borrow_mut();
+        let caret = s.editing.track().unwrap_or(0);
+        s.track_count = tracks.len();
+        s.tracks = s.tracks.refit(
+            tracks.iter().map(|t| t.default_notation).collect(),
+            tracks.iter().map(|t| t.can_tab).collect(),
+            was,
+            caret,
+        );
+        // The caret left on a hidden track (its own was deleted): to the
+        // nearest shown one.
+        if let Some(to) = s.tracks.nearest_shown(caret)
+            && !s.tracks.shown().contains(&caret)
+        {
+            s.editing.select_track(to);
+        }
+        s.mixer = Mixer::new(tracks.iter().map(|t| t.mix).collect());
+        s.settings.tracks = s.tracks.shown();
+        s.settings.notation = s.tracks.notation();
+        let settings = s.settings.clone();
+        s.worker.send(Request::Engrave(settings));
+    }
+    ui.set_tracks(ModelRc::new(VecModel::from(track_rows(app, tracks))));
+    sync_tracks(app);
+}
+
+/// The Inspector shows the caret's bar: each voice's beats against the
+/// time signature.
+/// The Song tab: each field changed in place, so one being typed in keeps
+/// its place and cursor.
+fn sync_song(app: &Shared, ui: &AppWindow) {
+    let fields = app
+        .borrow()
+        .editing
+        .score()
+        .map(|s| song::fields(&s.info))
+        .unwrap_or_default();
+    let rows: Vec<SongField> = fields
+        .into_iter()
+        .map(|f| SongField {
+            id: f.id.into(),
+            label: f.label.into(),
+            text: f.text.into(),
+            multiline: f.multiline,
+        })
+        .collect();
+    let model = ui.get_song_fields();
+    if model.row_count() != rows.len() {
+        ui.set_song_fields(ModelRc::new(VecModel::from(rows)));
+        return;
+    }
+    for (i, row) in rows.into_iter().enumerate() {
+        if model.row_data(i).is_some_and(|r| r.text != row.text) {
+            model.set_row_data(i, row);
+        }
+    }
+}
+
+/// The palette's search: the tools whose names hold the words typed, as
+/// the palette shows them (enabled, lit).
+fn sync_found(ui: &AppWindow) {
+    let query = ui.get_palette_query().to_lowercase();
+    if query.trim().is_empty() {
+        ui.set_palette_found(ModelRc::default());
+        return;
+    }
+    let groups = ui.get_palette_groups();
+    let mut found = Vec::new();
+    for (g, group) in palette::GROUPS.iter().enumerate() {
+        let Some(row) = groups.row_data(g) else {
+            continue;
+        };
+        for (i, t) in group.tools.iter().enumerate() {
+            if palette::matches(t.name, &query)
+                && let Some(tool) = row.tools.row_data(i)
+            {
+                found.push(tool);
+            }
+        }
+    }
+    ui.set_palette_found(ModelRc::new(VecModel::from(found)));
+}
+
+fn sync_inspector(app: &Shared, ui: &AppWindow) {
+    sync_song(app, ui);
+    let fields = app.borrow().editing.effect_fields();
+    ui.set_inspector_fields(ModelRc::new(VecModel::from(
+        fields
+            .into_iter()
+            .map(|f| InspectorField {
+                id: f.id.into(),
+                label: f.label.into(),
+                kind: match f.kind {
+                    effect_form::Kind::Heading => 0,
+                    effect_form::Kind::Switch => 1,
+                    effect_form::Kind::Choice => 2,
+                    effect_form::Kind::Number => 3,
+                    effect_form::Kind::Button => 4,
+                },
+                value: f.value,
+                options: strings(f.options),
+                min: f.min,
+                max: f.max,
+            })
+            .collect::<Vec<_>>(),
+    )));
+    let view = app.borrow().editing.bar_view();
+    let Some(v) = view else {
+        ui.set_inspector_heading(SharedString::new());
+        ui.set_inspector_voices(ModelRc::default());
+        return;
+    };
+    ui.set_inspector_heading(v.heading.into());
+    ui.set_inspector_unit(v.unit.into());
+    ui.set_inspector_caret(v.caret.into());
+    let rows: Vec<InspectorVoice> = v
+        .voices
+        .into_iter()
+        .map(|r| InspectorVoice {
+            name: r.name.into(),
+            count: r.count.into(),
+            state: r.state.into(),
+            fill: match r.fill {
+                inspector::Fill::Full => 0,
+                inspector::Fill::Short => 1,
+                inspector::Fill::Long => 2,
+                inspector::Fill::Unknown => 3,
+            },
+            entered: i32::try_from(r.entered).unwrap_or(i32::MAX),
+            current: r.current,
+        })
+        .collect();
+    ui.set_inspector_voices(ModelRc::new(VecModel::from(rows)));
+}
+
+/// Edit → Go to Section lists the score's sections.
+fn sync_sections(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let names = app
+        .borrow()
+        .editing
+        .sections()
+        .into_iter()
+        .map(|(_, n)| n)
+        .collect();
+    ui.set_sections(strings(names));
+}
+
+/// A track command from its row's menu (or the Edit menu), on the caret's
+/// track.
+fn track_action(app: &Shared, action: &str) {
+    use oxiguitar_edit::Command;
+    let command = match action {
+        "properties" => return open_track_dialog(app),
+        "transpose" => return open_transpose(app, oxiguitar_edit::Scope::Track),
+        "add" => Command::AddTrack,
+        "duplicate" => Command::DuplicateTrack,
+        "up" => Command::MoveTrackUp,
+        "down" => Command::MoveTrackDown,
+        "delete" => {
+            let typed = app.borrow_mut().editing.tool(Command::DeleteTrack);
+            let name = {
+                let s = app.borrow();
+                let score = s.editing.score();
+                let t = s.editing.track().unwrap_or(0);
+                score
+                    .and_then(|sc| sc.tracks.get(t).map(|t| t.name.clone()))
+                    .unwrap_or_default()
+            };
+            if let Some(t) = typed {
+                ask(
+                    app,
+                    Asked::DeleteTrack(t),
+                    &format!("Delete the track {name}?"),
+                    &["Its notes go with it. Undo brings it back.".to_owned()],
+                    &["Delete", "Cancel"],
+                );
+            }
+            return;
+        }
+        _ => return,
+    };
+    let typed = app.borrow_mut().editing.tool(command);
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// Opens the track dialog on the caret's track.
+fn open_track_dialog(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() {
+        return;
+    }
+    let (score, track) = {
+        let s = app.borrow();
+        (s.editing.score(), s.editing.track())
+    };
+    let (Some(score), Some(t)) = (score, track) else {
+        return;
+    };
+    let Some(track) = score.tracks.get(t) else {
+        return;
+    };
+    let f = track_form::TrackForm::of(track);
+    ui.set_track_heading(format!("Track {}: {}", t + 1, track.name).into());
+    ui.set_track_fields(track_fields(&f));
+    ui.set_track_preview(f.preview().into());
+    ui.set_track_invalid(false);
+    ui.set_track_dialog_shown(true);
+}
+
+fn track_fields(f: &track_form::TrackForm) -> TrackFields {
+    TrackFields {
+        name: f.name.as_str().into(),
+        short_name: f.short_name.as_str().into(),
+        instrument: f.instrument,
+        strings: f.strings,
+        key: f.key,
+        pattern: f.pattern,
+        notes: f.notes.as_str().into(),
+        capo: f.capo,
+        frets: f.frets,
+        keep_pitches: f.keep_pitches,
+    }
+}
+
+fn track_form(f: &TrackFields) -> track_form::TrackForm {
+    track_form::TrackForm {
+        name: f.name.to_string(),
+        short_name: f.short_name.to_string(),
+        instrument: f.instrument,
+        strings: f.strings,
+        key: f.key,
+        pattern: f.pattern,
+        notes: f.notes.to_string(),
+        capo: f.capo,
+        frets: f.frets,
+        keep_pitches: f.keep_pitches,
+    }
+}
+
+/// A field of the track dialog changed: what the tuning comes to.
+fn track_form_changed(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let f = track_form(&ui.get_track_fields());
+    ui.set_track_invalid(f.to_settings().is_err());
+    ui.set_track_preview(
+        f.to_settings()
+            .err()
+            .filter(|e| e.starts_with("A track"))
+            .unwrap_or_else(|| f.preview())
+            .into(),
+    );
+}
+
+/// The track dialog closed: on OK, its settings as one change, after a
+/// question when notes can't be kept.
+fn track_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if !ok {
+        ui.set_track_dialog_shown(false);
+        ui.invoke_focus_page();
+        return;
+    }
+    let settings = match track_form(&ui.get_track_fields()).to_settings() {
+        Ok(s) => s,
+        Err(e) => {
+            // The dialog stays open, saying why.
+            ui.set_track_preview(e.into());
+            ui.set_track_invalid(true);
+            return;
+        }
+    };
+    ui.set_track_dialog_shown(false);
+    ui.invoke_focus_page();
+    let (score, track) = {
+        let s = app.borrow();
+        (s.editing.score(), s.editing.track())
+    };
+    let lost = match (&score, track) {
+        (Some(sc), Some(t)) => oxiguitar_edit::notes_lost(sc, t, &settings),
+        _ => 0,
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::TrackProperties(Box::new(settings)));
+    let Some(t) = typed else {
+        return;
+    };
+    if lost > 0 {
+        ask(
+            app,
+            Asked::Apply(t),
+            &format!(
+                "{lost} {} can't be kept",
+                if lost == 1 { "note" } else { "notes" }
+            ),
+            &["No string can play them with these strings and capo, so they are left out. Undo brings them back.".to_owned()],
+            &["Apply", "Cancel"],
+        );
+    } else {
+        send_typed(app, t);
+    }
+}
+
+/// Opens Transpose… for the caret's track, the selection or every track.
+fn open_transpose(app: &Shared, scope: oxiguitar_edit::Scope) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() || app.borrow().editing.track().is_none() {
+        return;
+    }
+    let heading = match scope {
+        oxiguitar_edit::Scope::Track => {
+            let s = app.borrow();
+            let name = s
+                .editing
+                .score()
+                .zip(s.editing.track())
+                .and_then(|(sc, t)| sc.tracks.get(t).map(|t| t.name.clone()))
+                .unwrap_or_default();
+            format!("Transpose {name}")
+        }
+        oxiguitar_edit::Scope::Selection => {
+            if app.borrow().editing.selection().is_some() {
+                "Transpose the selection".to_owned()
+            } else {
+                "Transpose the beat".to_owned()
+            }
+        }
+        oxiguitar_edit::Scope::All => "Transpose every track".to_owned(),
+    };
+    app.borrow_mut().transpose_scope = Some(scope);
+    ui.set_transpose_heading(heading.into());
+    ui.set_transpose_amount(0);
+    ui.set_transpose_dialog_shown(true);
+}
+
+/// Transpose… closed: on OK, the transposition as one change, after a
+/// question when notes can't be kept.
+fn transpose_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_transpose_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(scope) = app.borrow_mut().transpose_scope.take() else {
+        return;
+    };
+    if !ok {
+        return;
+    }
+    let Some(t) = track_form::transposition(
+        ui.get_transpose_amount(),
+        ui.get_transpose_steps(),
+        ui.get_transpose_keep(),
+        scope,
+    ) else {
+        return;
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Transpose(t));
+    let Some(typed) = typed else {
+        return;
+    };
+    let lost = app.borrow().editing.score().map_or(0, |sc| {
+        oxiguitar_edit::notes_lost_transposing(&sc, typed.caret, typed.selection, &t)
+    });
+    if lost > 0 {
+        ask(
+            app,
+            Asked::Apply(typed),
+            &format!(
+                "{lost} {} can't be kept",
+                if lost == 1 { "note" } else { "notes" }
+            ),
+            &["No string can play them at their new pitch, so they are left out. Undo brings them back.".to_owned()],
+            &["Apply", "Cancel"],
+        );
+    } else {
+        send_typed(app, typed);
+    }
+}
+
+/// Copy, cut, paste, or Special Paste's dialog.
+fn clipboard(app: &Shared, key: editing::ClipKey) {
+    let typed = match key {
+        editing::ClipKey::Copy => {
+            app.borrow_mut().editing.copy();
+            return;
+        }
+        editing::ClipKey::Cut => app.borrow_mut().editing.cut(),
+        editing::ClipKey::Paste => app.borrow_mut().editing.paste(1, false),
+        editing::ClipKey::Special => {
+            let Some(ui) = app.borrow().ui.upgrade() else {
+                return;
+            };
+            if app.borrow().editing.has_clip() && app.borrow().question.is_none() {
+                ui.set_paste_dialog_shown(true);
+            }
+            return;
+        }
+    };
+    if let Some(t) = typed {
+        send_typed(app, t);
+        sync_caret(app, false);
+    }
+}
+
+/// Special Paste closed: on OK, the clipboard pasted as asked.
+fn paste_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_paste_dialog_shown(false);
+    ui.invoke_focus_page();
+    if !ok {
+        return;
+    }
+    let times = u8::try_from(ui.get_paste_times().clamp(1, 99)).unwrap_or(1);
+    let typed = app
+        .borrow_mut()
+        .editing
+        .paste(times, ui.get_paste_replace());
+    if let Some(t) = typed {
+        send_typed(app, t);
+        sync_caret(app, false);
+    }
+}
+
+/// Custom N-tuplet closed: on OK, the beats go into that tuplet.
+fn tuplet_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_tuplet_dialog_shown(false);
+    ui.invoke_focus_page();
+    if !ok {
+        return;
+    }
+    let Some(t) = bar_form::tuplet(ui.get_tuplet_notes(), ui.get_tuplet_in_time_of()) else {
+        return;
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Tuplet(t));
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// The user answered the question: button `i`, the last being Cancel.
+fn question_answered(app: &Shared, i: i32) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_question_shown(false);
+    ui.invoke_focus_page();
+    let Some(asked) = app.borrow_mut().question.take() else {
+        return;
+    };
+    match (asked, i) {
+        (Asked::Save { .. }, 0) => app.borrow().worker.send(Request::ConfirmSave),
+        (Asked::Save { elsewhere: true }, 1) => {
+            // What waits on the save keeps waiting, for the file chosen.
+            app.borrow().worker.send(Request::CancelSave);
+            save_as_dialog(app);
+        }
+        (Asked::Save { .. }, _) => {
+            let mut s = app.borrow_mut();
+            s.after_save = None;
+            s.worker.send(Request::CancelSave);
+        }
+        (Asked::Unsaved(then), 0) => {
+            app.borrow_mut().after_save = Some(then);
+            save(app);
+        }
+        (Asked::Unsaved(then), 1) => go_on(app, then),
+        (Asked::Unsaved(_), _) => {}
+        (Asked::Apply(t) | Asked::DeleteTrack(t), 0) => send_typed(app, t),
+        (Asked::Apply(_) | Asked::DeleteTrack(_), _) => {}
+    }
+}
+
+/// File → Save: the file the score came from, in its own format unless
+/// that loses part of the score (the worker asks then).
+fn save(app: &Shared) {
+    // A new score has no file yet: Save asks for a name, as Save As.
+    if app.borrow().untitled {
+        save_as_dialog(app);
+        return;
+    }
+    app.borrow().worker.send(Request::Save(None));
+}
+
+/// File → Save As…: any name, in a format the plugins write, chosen by the
+/// name's extension (Guitar Pro 7–8's .gp when it has none).
+fn save_as_dialog(app: &Shared) {
+    if let Some(problem) = no_dialogs() {
+        app.borrow_mut().after_save = None;
+        message(app, Level::Warning, problem);
+        return;
+    }
+    let (folder, stem, formats, sender) = {
+        let s = app.borrow();
+        let stem = s
+            .doc_name
+            .as_deref()
+            .map(|n| {
+                std::path::Path::new(n)
+                    .file_stem()
+                    .map_or_else(|| n.to_owned(), |x| x.to_string_lossy().into_owned())
+            })
+            .unwrap_or_else(|| "score".to_owned());
+        (
+            s.folder.clone(),
+            stem,
+            s.save_formats.clone(),
+            s.worker.sender(),
+        )
+    };
+    if formats.is_empty() {
+        app.borrow_mut().after_save = None;
+        message(
+            app,
+            Level::Error,
+            "No installed plugin writes files, so nothing can be saved.".to_owned(),
+        );
+        return;
+    }
+    // The fullest format first, as the default.
+    let mut formats = formats;
+    formats.sort_by_key(|f| f.id != FULLEST);
+    let pick = move || {
+        let first = formats.first().and_then(|f| f.extensions.first()).cloned();
+        let mut dialog = rfd::FileDialog::new()
+            .set_title("Save As")
+            .set_file_name(format!("{stem}.{}", first.as_deref().unwrap_or("gp")));
+        for f in &formats {
+            dialog = dialog.add_filter(&f.name, &f.extensions);
+        }
+        if let Some(f) = folder {
+            dialog = dialog.set_directory(f);
+        }
+        let Some(mut path) = dialog.save_file() else {
+            // Nothing waits on a save that won't happen (quitting after
+            // "Save the changes…?", say).
+            let _ = slint::invoke_from_event_loop(|| {
+                if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                    app.borrow_mut().after_save = None;
+                }
+            });
+            return;
+        };
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(str::to_ascii_lowercase);
+        let format = ext
+            .as_deref()
+            .and_then(|e| {
+                formats
+                    .iter()
+                    .find(|f| f.extensions.iter().any(|x| x.eq_ignore_ascii_case(e)))
+            })
+            .or(formats.first());
+        let Some(format) = format else {
+            return;
+        };
+        if !format
+            .extensions
+            .iter()
+            .any(|x| ext.as_deref().is_some_and(|e| x.eq_ignore_ascii_case(e)))
+            && let Some(e) = format.extensions.first()
+        {
+            path.set_extension(e);
+        }
+        let _ = sender.send(Request::Save(Some((path, format.id.clone()))));
+    };
+    run_dialog(pick);
 }
 
 /// File → Open: the system's dialog, off the UI thread where the system
@@ -1981,7 +3834,12 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                 // first, as File → Open opens one file.
                 if !s.drop_pending {
                     s.drop_pending = true;
-                    s.worker.send(Request::Open(path.clone()));
+                    // Once this event is done with the app: unsaved
+                    // changes are asked about first.
+                    let (a2, path) = (a.clone(), path.clone());
+                    slint::Timer::single_shot(Duration::ZERO, move || {
+                        unless_unsaved(&a2, Then::Open(path));
+                    });
                     let a = a.clone();
                     slint::Timer::single_shot(Duration::from_millis(100), move || {
                         a.borrow_mut().drop_pending = false;

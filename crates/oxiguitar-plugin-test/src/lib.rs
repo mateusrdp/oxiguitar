@@ -284,13 +284,19 @@ pub fn check(oxp: &Path) -> Report {
         }
     }
     for format in manifest.formats.iter().filter(|f| f.write) {
-        let answer = plugins.send(
-            found,
-            &Request::Write {
+        // Version 2 of the score for a plugin built for interface 1.2.
+        let request = if manifest.knows_minor(2) {
+            Request::Write2 {
+                format: format.id.clone(),
+                score: Box::default(),
+            }
+        } else {
+            Request::Write {
                 format: format.id.clone(),
                 score: Box::new(Score::default()),
-            },
-        );
+            }
+        };
+        let answer = plugins.send(found, &request);
         report.check(
             format!("format {}: writing an empty score answers", format.id),
             match answer {
@@ -346,6 +352,7 @@ pub fn check(oxp: &Path) -> Report {
     let events = [
         (EventKind::Score, Event::ScoreOpened { revision: 1 }),
         (EventKind::Selection, Event::Selection(None)),
+        (EventKind::Selection, Event::Selection2(None)),
         (
             EventKind::Playback,
             Event::Playback(Playback {
@@ -376,6 +383,17 @@ pub fn check(oxp: &Path) -> Report {
                     .ok()
                     .and_then(|m| m.last().cloned())
                     .unwrap_or_default())
+            },
+        );
+    }
+    // Tools (interface 1.2), with no score open.
+    for tool in plugins.tools() {
+        let answer = plugins.run_tool(tool);
+        report.check(
+            format!("tool {}: it runs with no score open", tool.spec.id),
+            match answer {
+                Ok(_) => Ok(()),
+                Err(e) => not_a_crash(&e),
             },
         );
     }

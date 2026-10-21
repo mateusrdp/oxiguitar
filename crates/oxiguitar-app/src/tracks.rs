@@ -8,10 +8,11 @@
 //! track (Mateus, 16 Oct 2026); a hidden track comes back, in the notation
 //! of the button clicked, when either button is clicked. There is no
 //! separate show tick: the buttons do that job, so the two can't disagree
-//! (Mateus, 17 Oct 2026). Clicking a name shows that track alone; clicking
-//! a button on another track adds it, so several tracks can be shown at
-//! once without a separate "Multitrack" switch (Mateus, 17 Oct 2026). The
-//! last shown track cannot be hidden.
+//! (Mateus, 17 Oct 2026). A button on another track adds it, so several
+//! tracks can be shown at once without a separate "Multitrack" switch
+//! (Mateus, 17 Oct 2026). A click on a track's name selects it for the
+//! editor and changes nothing here (Mateus, 19 Oct 2026). The last shown
+//! track cannot be hidden.
 
 use std::collections::BTreeMap;
 
@@ -64,6 +65,51 @@ impl Tracks {
             notation,
             can_tab,
         }
+    }
+
+    /// The track list after tracks were added, deleted, moved or changed
+    /// (M3 slice 5). `was[i]` is where track `i` was before, if it was
+    /// there: shown tracks stay shown wherever they went, with `caret`
+    /// (the caret's track) shown too when it is new; a track keeps its
+    /// notation unless it gained or lost strings. A caret left on a hidden
+    /// track moves to a shown one ([`Tracks::nearest_shown`]).
+    pub(crate) fn refit(
+        &self,
+        defaults: Vec<Notation>,
+        can_tab: Vec<bool>,
+        was: &[Option<usize>],
+        caret: usize,
+    ) -> Tracks {
+        let mut fresh = Tracks::new(defaults, can_tab);
+        let before = |i: usize| was.get(i).copied().flatten();
+        for (i, n) in fresh.notation.iter_mut().enumerate() {
+            if let Some(o) = before(i)
+                && self.can_tab.get(o) == fresh.can_tab.get(i)
+                && let Some(old) = self.notation.get(o)
+            {
+                *n = *old;
+            }
+        }
+        let len = fresh.notation.len();
+        let mut shown: Vec<usize> = (0..len)
+            .filter(|i| before(*i).is_some_and(|o| self.shown.contains(&o)))
+            .collect();
+        if caret < len && before(caret).is_none() {
+            shown.push(caret);
+            shown.sort_unstable();
+        }
+        if !shown.is_empty() {
+            fresh.shown = shown;
+        }
+        fresh
+    }
+
+    /// The shown track nearest `track`, the earlier one on a tie.
+    pub(crate) fn nearest_shown(&self, track: usize) -> Option<usize> {
+        self.shown
+            .iter()
+            .copied()
+            .min_by_key(|i| (i.abs_diff(track), *i))
     }
 
     pub(crate) fn len(&self) -> usize {
@@ -119,9 +165,11 @@ impl Tracks {
         );
     }
 
-    /// Show track `i` alone.
-    pub(crate) fn solo(&mut self, i: usize) {
-        if i < self.len() {
+    /// Shows track `i` in place of the only one shown: Ctrl + Up and
+    /// Ctrl + Down with a single track on the page, as in Guitar Pro's
+    /// single-track view (Mateus, 19 Oct 2026).
+    pub(crate) fn switch_to(&mut self, i: usize) {
+        if i < self.len() && self.shown.len() == 1 {
             self.shown = vec![i];
         }
     }
@@ -229,6 +277,68 @@ impl Mixer {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_changed_list_keeps_what_it_can() {
+        let both = Notation {
+            standard: true,
+            tablature: true,
+        };
+        let mut t = Tracks::new(vec![both, both, both], vec![true; 3]);
+        t.toggle_tablature(0);
+        // A track added after the first, with the caret on it.
+        let added = t.refit(
+            vec![both; 4],
+            vec![true; 4],
+            &[Some(0), None, Some(1), Some(2)],
+            1,
+        );
+        assert_eq!(added.shown(), [0, 1]);
+        assert_eq!(added.row(0).tablature, t.row(0).tablature, "kept");
+        // The first deleted: the added one, shown, moves up to 0, and the
+        // hidden ones stay hidden though they moved up too.
+        let deleted = added.refit(
+            vec![both; 3],
+            vec![true; 3],
+            &[Some(1), Some(2), Some(3)],
+            0,
+        );
+        assert_eq!(deleted.shown(), [0]);
+        // A caret left on a hidden track is not a reason to show it.
+        let gone = added.refit(
+            vec![both; 3],
+            vec![true; 3],
+            &[Some(0), Some(2), Some(3)],
+            2,
+        );
+        assert_eq!(gone.shown(), [0]);
+        assert_eq!(gone.nearest_shown(2), Some(0));
+        // A shown track moved down goes on being shown where it went.
+        let mut two = Tracks::new(vec![both; 3], vec![true; 3]);
+        two.switch_to(2);
+        let moved = two.refit(
+            vec![both; 3],
+            vec![true; 3],
+            &[Some(0), Some(2), Some(1)],
+            1,
+        );
+        assert_eq!(moved.shown(), [1]);
+        // Strings gone: the default notation.
+        let piano = t.refit(
+            vec![
+                Notation {
+                    standard: true,
+                    tablature: false,
+                },
+                both,
+                both,
+            ],
+            vec![false, true, true],
+            &[Some(0), Some(1), Some(2)],
+            0,
+        );
+        assert!(!piano.row(0).tablature);
+    }
+
     use super::*;
 
     const STD: Notation = Notation {
@@ -294,9 +404,19 @@ mod tests {
     }
 
     #[test]
+    fn ctrl_up_and_down_switch_a_single_track() {
+        let mut t = guitar_piano_drums();
+        t.switch_to(2);
+        assert_eq!(t.shown(), vec![2]);
+        t.toggle_standard(0);
+        t.switch_to(1);
+        assert_eq!(t.shown(), vec![0, 2], "only with one track shown");
+    }
+
+    #[test]
     fn drums_have_no_tab() {
         let mut t = guitar_piano_drums();
-        t.solo(2);
+        t.toggle_standard(2);
         t.toggle_tablature(2);
         assert!(!t.row(2).tablature);
         assert!(t.row(2).standard);
@@ -306,11 +426,11 @@ mod tests {
     fn several_tracks_shown_via_their_own_buttons() {
         let mut t = guitar_piano_drums();
         assert_eq!(t.shown(), vec![0]);
-        t.solo(1);
-        assert_eq!(t.shown(), vec![1]);
         // A button on another track adds it: no separate multitrack switch.
         t.toggle_standard(2);
-        assert_eq!(t.shown(), vec![1, 2]);
+        assert_eq!(t.shown(), vec![0, 2]);
+        t.toggle_standard(1);
+        assert_eq!(t.shown(), vec![0, 1, 2], "in score order");
         assert_eq!(t.notation().len(), 3);
     }
 

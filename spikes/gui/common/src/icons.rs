@@ -75,6 +75,7 @@ const WHITE: Theme = Theme {
     },
     accent: Rgba::rgb(255, 255, 255),
     muted: Rgba::rgb(255, 255, 255),
+    warning: Rgba::rgb(255, 255, 255),
 };
 
 fn font_and_text(face: Face) -> (FontId, String) {

@@ -8,7 +8,9 @@
 //! The groups and their tools follow Guitar Pro 8's editing palette, in its
 //! order, as its user guide lists them (guitar-pro.com/docs/gp8, "Editing
 //! Palette Symbols", checked 19 Oct 2026): the voice and mode buttons at its
-//! top, then the bar, note, effect, notation and automation symbols. The
+//! top, then the bar, note, effect and notation symbols, less the automation
+//! group, Timer and the stem-direction tools (Mateus, 19 Oct 2026: stems go by
+//! voice only, odd voices up and even voices down). The
 //! names are the guide's; every icon is our own drawing (UI-3), made with
 //! our renderer from Bravura's symbols, the interface font, lines and
 //! curves (`icons.rs`). Shortcuts come with the editor, checked against the
@@ -17,8 +19,11 @@
 //! No window code here: the window shows [`GROUPS`] and asks [`Palette`]
 //! which groups are collapsed.
 
+use crate::editing::AtCaret;
 use crate::icons::{Face, Fit, Pen, S, VALUES, glyph};
 use oxiguitar_display::smufl::glyph::Glyph;
+use oxiguitar_edit::{Command, Effect};
+use oxiguitar_model::{Dynamic, NoteValue};
 
 /// One tool.
 #[derive(Clone, Copy, Debug)]
@@ -72,9 +77,211 @@ const fn dynamic(id: &'static str, name: &'static str, g: Glyph) -> Tool {
     }
 }
 
-/// The tooltip of a tool, or of anything else that waits for the editor.
-pub(crate) fn tip(name: &str) -> String {
-    format!("{name} (comes with the editor)")
+/// The tools that work already, with their shortcut (Guitar Pro 8's) if
+/// they have one: the voice buttons, which pick the caret's voice (M3
+/// slice 1), and note entry's (slice 3).
+pub(crate) fn working(id: &str) -> Option<Option<&'static str>> {
+    Some(Some(match id {
+        "voice-1" => "Ctrl + 1",
+        "voice-2" => "Ctrl + 2",
+        "voice-3" => "Ctrl + 3",
+        "voice-4" => "Ctrl + 4",
+        "rest" => "R",
+        "dotted" => "Shift + .",
+        "double-dotted" => "Ctrl + .",
+        "tie" => "L",
+        "triplet" => "/",
+        "repeat-start" => "[",
+        "repeat-close" => "]",
+        "free-time" => "|",
+        "key-signature" => "Ctrl + K",
+        "rhythmic-interpretation" => "Ctrl + /",
+        "directions" => "D",
+        "bend" => "B",
+        "chord" => "A",
+        "text" => "Shift + T",
+        "lyrics" => "Ctrl + T",
+        "whammy" => "Ctrl + Alt + V",
+        "dead" => "X",
+        "ghost" => "O",
+        "accent" => ";",
+        "heavy-accent" => ":",
+        "staccato" => "!",
+        "hammer" => "H",
+        "left-hand-tapping" => "(",
+        "legato-slide" => "S",
+        "shift-slide" => "Alt + S",
+        "slide-out-down" => "Shift + S",
+        "vibrato" => "V",
+        "palm-mute" => "P",
+        "let-ring" => "I",
+        "natural-harmonic" => "Y",
+        "artificial-harmonic" => "Ctrl + Alt + Y",
+        "trill" => "N",
+        "tremolo-picking" => "\"",
+        "wide-bridge-vibrato" => "Ctrl + Alt + W",
+        "fade-in" => "<",
+        "tapping" => "T",
+        "slap" => "$",
+        "brush-down" => "Ctrl + D",
+        "brush-up" => "Ctrl + U",
+        "pickstroke-down" => "Shift + D",
+        "pickstroke-up" => "Shift + U",
+        "grace-before" => "G",
+        "grace-on" => "Ctrl + Alt + G",
+        "semitone-up" => "Alt + Shift + Up",
+        "semitone-down" => "Alt + Shift + Down",
+        "multiple-ties" => "Shift + L",
+        "section" => "Shift + Insert",
+        _ if command_of(id).is_some() || dialog_of(id).is_some() => return Some(None),
+        _ => return None,
+    }))
+}
+
+/// The edit a note-entry tool makes at the caret.
+pub(crate) fn command_of(id: &str) -> Option<Command> {
+    Some(match id {
+        "whole" => Command::Value(NoteValue::Whole),
+        "half" => Command::Value(NoteValue::Half),
+        "quarter" => Command::Value(NoteValue::Quarter),
+        "eighth" => Command::Value(NoteValue::Eighth),
+        "16th" => Command::Value(NoteValue::Sixteenth),
+        "32nd" => Command::Value(NoteValue::ThirtySecond),
+        "64th" => Command::Value(NoteValue::SixtyFourth),
+        "rest" => Command::Rest,
+        "dotted" => Command::Dot,
+        "double-dotted" => Command::DoubleDot,
+        "tie" => Command::Tie,
+        "triplet" => Command::Tuplet(oxiguitar_model::Tuplet::TRIPLET),
+        "repeat-start" => Command::RepeatStart,
+        "repeat-close" => Command::RepeatEnd,
+        "free-time" => Command::FreeTime,
+        "double-bar" => Command::DoubleBar,
+        "semitone-up" => Command::SemitoneUp,
+        "semitone-down" => Command::SemitoneDown,
+        "multiple-ties" => Command::TieBeat,
+        "ppp" => Command::Dynamic(Dynamic::PPP),
+        "pp" => Command::Dynamic(Dynamic::PP),
+        "p" => Command::Dynamic(Dynamic::P),
+        "mp" => Command::Dynamic(Dynamic::MP),
+        "mf" => Command::Dynamic(Dynamic::MF),
+        "f" => Command::Dynamic(Dynamic::F),
+        "ff" => Command::Dynamic(Dynamic::FF),
+        "fff" => Command::Dynamic(Dynamic::FFF),
+        _ => return effect_of(id).map(Command::Effect),
+    })
+}
+
+/// The effect an effect tool switches (M3 slice 6).
+pub(crate) fn effect_of(id: &str) -> Option<Effect> {
+    use oxiguitar_edit::HarmonicKind as H;
+    use oxiguitar_model::{BeatTechnique, GraceKind, Slide, StrokeDirection};
+    Some(match id {
+        "ghost" => Effect::Ghost,
+        "accent" => Effect::Accent,
+        "heavy-accent" => Effect::HeavyAccent,
+        "staccato" => Effect::Staccato,
+        "let-ring" => Effect::LetRing,
+        "palm-mute" => Effect::PalmMute,
+        "dead" => Effect::Dead,
+        "natural-harmonic" => Effect::Harmonic(H::Natural),
+        "artificial-harmonic" => Effect::Harmonic(H::Artificial),
+        "fade-in" => Effect::FadeIn,
+        "grace-before" => Effect::Grace(GraceKind::BeforeBeat),
+        "grace-on" => Effect::Grace(GraceKind::OnBeat),
+        "hammer" => Effect::HammerPull,
+        "tremolo-picking" => Effect::TremoloPicking,
+        "left-hand-tapping" => Effect::LeftHandTap,
+        "legato-slide" => Effect::Slide(Slide::Legato),
+        "shift-slide" => Effect::Slide(Slide::Shift),
+        "slide-in-below" => Effect::Slide(Slide::InFromBelow),
+        "slide-in-above" => Effect::Slide(Slide::InFromAbove),
+        "slide-out-down" => Effect::Slide(Slide::OutDown),
+        "slide-out-up" => Effect::Slide(Slide::OutUp),
+        "trill" => Effect::Trill,
+        "vibrato" => Effect::Vibrato,
+        "wide-bridge-vibrato" => Effect::WideVibrato,
+        "brush-down" => Effect::Brush(StrokeDirection::Down),
+        "brush-up" => Effect::Brush(StrokeDirection::Up),
+        "pickstroke-down" => Effect::PickStroke(StrokeDirection::Down),
+        "pickstroke-up" => Effect::PickStroke(StrokeDirection::Up),
+        "tapping" => Effect::Technique(BeatTechnique::Tap),
+        "slap" => Effect::Technique(BeatTechnique::Slap),
+        "pop" => Effect::Technique(BeatTechnique::Pop),
+        _ => return None,
+    })
+}
+
+/// The dialog a tool opens at the caret: the bar's tools open the Bar
+/// dialog, Custom N-tuplet its own.
+pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
+    use crate::editing::Dialog;
+    Some(match id {
+        "clef"
+        | "key-signature"
+        | "time-signature"
+        | "rhythmic-interpretation"
+        | "alternate-endings"
+        | "directions"
+        | "section" => Dialog::Bar,
+        "tuplet" => Dialog::Tuplet,
+        "bend" => Dialog::Bend,
+        "chord" | "chords" => Dialog::Chord,
+        "text" => Dialog::Text,
+        "lyrics" => Dialog::Lyrics,
+        "whammy" => Dialog::Whammy,
+        _ => return None,
+    })
+}
+
+/// Whether a working tool shows as on for the caret's beat `at`: the
+/// caret's voice, the beat's note value, dots, rest, the caret's note
+/// tied.
+pub(crate) fn checked(id: &str, at: &AtCaret) -> bool {
+    if let Some(v) = voice_of(id) {
+        return at.voice == v;
+    }
+    match command_of(id) {
+        Some(Command::Value(v)) => at.value == Some(v),
+        Some(Command::Rest) => at.rest,
+        Some(Command::Dot) => at.dots == 1,
+        Some(Command::DoubleDot) => at.dots == 2,
+        Some(Command::Tie) => at.tied,
+        Some(Command::Tuplet(_)) => at.triplet,
+        Some(Command::RepeatStart) => at.repeat_start,
+        Some(Command::RepeatEnd) => at.repeat_end,
+        Some(Command::DoubleBar) => at.double_bar,
+        Some(Command::FreeTime) => at.free_time,
+        Some(Command::Effect(e)) => at.has(e),
+        Some(Command::Dynamic(d)) => at.dynamic == Some(d),
+        _ => false,
+    }
+}
+
+/// The voice a voice button picks, from 0.
+pub(crate) fn voice_of(id: &str) -> Option<usize> {
+    let n: usize = id.strip_prefix("voice-")?.parse().ok()?;
+    (1..=4).contains(&n).then(|| n - 1)
+}
+
+/// A tool's tooltip: its name and shortcut once it works, else its name
+/// and that it comes with the editor.
+pub(crate) fn tool_tip(id: &str, name: &str) -> String {
+    match working(id) {
+        Some(Some(keys)) => format!("{name} ({keys})"),
+        Some(None) => name.to_owned(),
+        // Every tool that doesn't work yet is beyond TAB-1 and comes with
+        // Guitar Pro 8's notation, in M5.
+        None => format!("{name} (comes in M5)"),
+    }
+}
+
+/// Whether a tool named `name` is one the palette's search for `query`
+/// (lower case) finds: every word typed is in the name ("slide" finds the
+/// six slides, "nat harm" the natural harmonic).
+pub(crate) fn matches(name: &str, query: &str) -> bool {
+    let name = name.to_lowercase();
+    query.split_whitespace().all(|word| name.contains(word))
 }
 
 /// Which groups are collapsed. Every group starts expanded.
@@ -437,19 +644,8 @@ pub(crate) const GROUPS: &[Group] = &[
             tool("chord", "Chord", Face::Drawn(chord)),
             tool("slash", "Slash", Face::Drawn(slash)),
             tool("barre", "Extended Barre", Face::Drawn(barre)),
-            tool("timer", "Timer", Face::Drawn(timer)),
             tool("text", "Text", Face::Text("Aa")),
             tool("section", "Section", Face::Drawn(section)),
-            tool(
-                "stems-auto",
-                "Automatic Stem Direction",
-                Face::Drawn(stems_auto),
-            ),
-            tool(
-                "stems-invert",
-                "Inverted Stem Direction",
-                Face::Drawn(stems_inverted),
-            ),
             tool("beams-auto", "Automatic Beaming", Face::Drawn(beams_auto)),
             tool("beams-force", "Force Beaming", Face::Drawn(beams_force)),
             tool("beams-break", "Break Beaming", Face::Drawn(beams_break)),
@@ -459,28 +655,6 @@ pub(crate) const GROUPS: &[Group] = &[
                 Face::Drawn(beams_break_secondary),
             ),
             tool("tuplet-groups", "Force Groups", Face::Drawn(force_groups)),
-        ],
-    },
-    Group {
-        title: "Automation",
-        tools: &[
-            tool("tempo", "Tempo Automation", Face::Drawn(tempo)),
-            tool(
-                "master-volume",
-                "Master Track Volume Automation",
-                Face::Drawn(master_volume),
-            ),
-            tool(
-                "master-pan",
-                "Master Track Pan Automation",
-                Face::Drawn(master_pan),
-            ),
-            tool(
-                "track-volume",
-                "Track Volume Automation",
-                Face::Drawn(track_volume),
-            ),
-            tool("track-pan", "Track Pan Automation", Face::Drawn(track_pan)),
         ],
     },
 ];
@@ -513,13 +687,6 @@ fn stem_x(x: f32) -> f32 {
 fn note_up(p: &mut Pen<'_>, x: f32, y: f32, len: f32) {
     head(p, x, y);
     p.line(stem_x(x), y - 0.17 * S, stem_x(x), y - len, STEM);
-}
-
-/// A notehead with its stem down.
-fn note_down(p: &mut Pen<'_>, x: f32, y: f32, len: f32) {
-    head(p, x, y);
-    let sx = x + STEM / 2.0;
-    p.line(sx, y + 0.17 * S, sx, y + len, STEM);
 }
 
 /// A beam from `x0` to `x1`, its top at `y`.
@@ -1128,30 +1295,10 @@ fn barre(p: &mut Pen<'_>) {
     p.line(end, y - LINE / 2.0, end, y + 0.8 * S, LINE);
 }
 
-fn timer(p: &mut Pen<'_>) {
-    p.circle(0.0, 0.0, 1.6 * S, LINE);
-    p.rect(-0.35 * S, -2.35 * S, 0.7 * S, 0.5 * S);
-    p.line(0.0, 0.0, 0.0, -1.05 * S, LINE);
-    p.line(0.0, 0.0, 0.75 * S, 0.45 * S, LINE);
-}
-
 fn section(p: &mut Pen<'_>) {
     let side = 2.6 * S;
     p.frame(0.0, 0.0, side, side, LINE * 0.9);
     label(p, "A", side / 2.0, side / 2.0, LABEL);
-}
-
-fn stems_auto(p: &mut Pen<'_>) {
-    // Stems follow the notes: up from the low one, down from the high one.
-    note_up(p, 0.0, 1.0 * S, 3.0 * S);
-    note_down(p, 1.9 * S, -S, 3.0 * S);
-}
-
-fn stems_inverted(p: &mut Pen<'_>) {
-    note_down(p, 0.0, -S, 3.0 * S);
-    let x = 2.3 * S;
-    arrow(p, x, 0.0, x, -2.4 * S);
-    arrow(p, x, -0.6 * S, x, 1.8 * S);
 }
 
 fn beams_auto(p: &mut Pen<'_>) {
@@ -1183,23 +1330,6 @@ fn force_groups(p: &mut Pen<'_>) {
     three(p, stem_x(4.0 * gap), -3.6 * S, 0.75);
 }
 
-// Automation: what is controlled, over the controlled value as a line with
-// points.
-
-/// The envelope under a symbol, from x = 0.
-fn envelope(p: &mut Pen<'_>) {
-    let pts = [
-        (0.0, 2.6 * S),
-        (1.1 * S, 2.6 * S),
-        (2.1 * S, 1.2 * S),
-        (3.4 * S, 1.2 * S),
-    ];
-    p.polyline(&pts, 0.18 * S);
-    for (px, py) in pts {
-        p.circle(px, py, 0.32 * S, 0.0);
-    }
-}
-
 /// A loudspeaker facing right, centred on `y`, `k` times its size.
 pub(crate) fn speaker(p: &mut Pen<'_>, x: f32, y: f32, k: f32) {
     let s = S * k;
@@ -1211,45 +1341,6 @@ pub(crate) fn speaker(p: &mut Pen<'_>, x: f32, y: f32, k: f32) {
         .line_to(x + 0.6 * s, y + 0.5 * s)
         .close();
     p.fill(cone);
-}
-
-/// Left and right with a point between, centred on `x`: pan.
-fn balance(p: &mut Pen<'_>, x: f32, y: f32) {
-    p.text_centred("L", x - 1.15 * S, y + 0.55 * S, 1.5 * S);
-    p.text_centred("R", x + 1.15 * S, y + 0.55 * S, 1.5 * S);
-    p.circle(x, y, 0.3 * S, 0.0);
-}
-
-/// The master track's mark, right of a symbol.
-fn master(p: &mut Pen<'_>, x: f32) {
-    p.text("M", x, -0.1 * S, 1.3 * S);
-}
-
-fn tempo(p: &mut Pen<'_>) {
-    p.sym_scaled(NOTE_QUARTER, 1.2 * S, 0.0, 0.7);
-    envelope(p);
-}
-
-fn track_volume(p: &mut Pen<'_>) {
-    speaker(p, 0.9 * S, -0.5 * S, 0.8);
-    envelope(p);
-}
-
-fn master_volume(p: &mut Pen<'_>) {
-    speaker(p, 0.5 * S, -0.5 * S, 0.8);
-    master(p, 2.1 * S);
-    envelope(p);
-}
-
-fn track_pan(p: &mut Pen<'_>) {
-    balance(p, 1.7 * S, -0.4 * S);
-    envelope(p);
-}
-
-fn master_pan(p: &mut Pen<'_>) {
-    balance(p, 1.3 * S, -0.4 * S);
-    master(p, 3.0 * S);
-    envelope(p);
 }
 
 #[cfg(test)]
@@ -1267,23 +1358,100 @@ mod tests {
         let titles: Vec<&str> = GROUPS.iter().map(|g| g.title).collect();
         assert_eq!(
             titles,
-            [
-                "Voices and modes",
-                "Bar",
-                "Note",
-                "Effects",
-                "Notation",
-                "Automation"
-            ]
+            ["Voices and modes", "Bar", "Note", "Effects", "Notation"]
         );
-        // As many tools as the GP8 guide lists for each group.
+        // As many tools as the GP8 guide lists for each group, less the
+        // automation group, Timer and both stem-direction tools.
         let counts: Vec<usize> = GROUPS.iter().map(|g| g.tools.len()).collect();
-        assert_eq!(counts, [8, 16, 34, 56, 13, 5]);
+        assert_eq!(counts, [8, 16, 34, 56, 10]);
         let mut ids: Vec<&str> = tools().map(|(_, t)| t.id).collect();
         ids.sort_unstable();
         ids.dedup();
         assert_eq!(ids.len(), tools().count(), "tool ids are unique");
-        assert_eq!(tip("Rest"), "Rest (comes with the editor)");
+        assert_eq!(
+            tool_tip("voice-2", "Edit Voice 2"),
+            "Edit Voice 2 (Ctrl + 2)"
+        );
+        assert_eq!(tool_tip("rest", "Rest"), "Rest (R)");
+        assert_eq!(tool_tip("half", "Half Note"), "Half Note");
+        assert_eq!(tool_tip("bend", "Bend"), "Bend (B)");
+        let slides = tools().filter(|(_, t)| matches(t.name, "slide")).count();
+        assert_eq!(slides, 6);
+        assert!(matches("Natural Harmonic", "nat harm"));
+        assert!(!matches("Natural Harmonic", "pinch"));
+        assert_eq!(tool_tip("chord", "Chord"), "Chord (A)");
+        assert_eq!(tool_tip("lyrics", "Lyrics"), "Lyrics (Ctrl + T)");
+        assert_eq!(tool_tip("fermata", "Fermata"), "Fermata (comes in M5)");
+        assert_eq!(command_of("ff"), Some(Command::Dynamic(Dynamic::FF)));
+        assert_eq!(
+            command_of("shift-slide"),
+            Some(Command::Effect(Effect::Slide(
+                oxiguitar_model::Slide::Shift
+            )))
+        );
+        let at = AtCaret {
+            voice: 1,
+            value: Some(NoteValue::Eighth),
+            dots: 1,
+            rest: false,
+            tied: true,
+            repeat_end: true,
+            ..AtCaret::default()
+        };
+        for (id, on) in [
+            ("voice-2", true),
+            ("voice-1", false),
+            ("eighth", true),
+            ("quarter", false),
+            ("dotted", true),
+            ("double-dotted", false),
+            ("rest", false),
+            ("tie", true),
+            ("bend", false),
+            ("triplet", false),
+            ("repeat-close", true),
+            ("repeat-start", false),
+        ] {
+            assert_eq!(checked(id, &at), on, "{id}");
+        }
+        assert_eq!(voice_of("voice-4"), Some(3));
+        assert_eq!(voice_of("voice-5"), None);
+        assert_eq!(voice_of("multivoice"), None);
+        // Every working tool is in the palette.
+        for id in [
+            "voice-1",
+            "voice-2",
+            "voice-3",
+            "voice-4",
+            "whole",
+            "half",
+            "quarter",
+            "eighth",
+            "16th",
+            "32nd",
+            "64th",
+            "rest",
+            "dotted",
+            "double-dotted",
+            "tie",
+            "triplet",
+            "tuplet",
+            "repeat-start",
+            "repeat-close",
+            "free-time",
+            "double-bar",
+            "clef",
+            "key-signature",
+            "time-signature",
+            "rhythmic-interpretation",
+            "alternate-endings",
+            "directions",
+        ] {
+            assert!(tools().any(|(_, t)| t.id == id), "{id}");
+            assert!(working(id).is_some(), "{id} works");
+        }
+        assert_eq!(tool_tip("triplet", "Triplet"), "Triplet (/)");
+        assert_eq!(dialog_of("tuplet"), Some(crate::editing::Dialog::Tuplet));
     }
 
     #[test]
