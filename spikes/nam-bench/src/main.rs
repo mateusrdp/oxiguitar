@@ -75,6 +75,7 @@ fn main() {
     {
         use neural_amp_modeler_rs::common::diagnostics::SystemSnapshot;
         use neural_amp_modeler_rs::loader::{LoadOptions, load_and_build_model};
+        use neural_amp_modeler_rs::models::NamModel as _;
         let sys = SystemSnapshot::capture();
         let mut pair = load_and_build_model(std::path::Path::new(model), &sys, false, LoadOptions::default()).unwrap();
         println!("NeuralAmpModeler-rs: {} {}", pair.architecture, pair.topology);

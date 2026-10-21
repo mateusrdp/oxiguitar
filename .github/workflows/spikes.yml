@@ -90,15 +90,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: linux-x86_64, os: ubuntu-24.04, exe: "", nam2: true }
-          - { name: linux-arm64, os: ubuntu-24.04-arm, exe: "", nam2: false }
-          - { name: windows-x86_64, os: windows-2025, exe: ".exe", nam2: true }
-          - { name: windows-arm64, os: windows-11-arm, exe: ".exe", nam2: false }
-          - { name: macos-arm64, os: macos-15, exe: "" , nam2: false }
+          - { name: linux-x86_64, os: ubuntu-24.04, exe: "" }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, exe: "" }
+          - { name: windows-x86_64, os: windows-2025, exe: ".exe" }
+          - { name: windows-arm64, os: windows-11-arm, exe: ".exe" }
+          - { name: macos-arm64, os: macos-15, exe: "" }
     defaults:
       run:
         shell: bash
     env:
+      CARGO_TERM_COLOR: never
       # NeuralAmpModelerCore's example models (MIT), at a fixed commit.
       NAM_MODELS: https://raw.githubusercontent.com/sdatkinson/NeuralAmpModelerCore/0b3d3c97b0859a3a8c92a8628c4dd89a25eb5842/example_models
     steps:
@@ -108,18 +109,21 @@ jobs:
           toolchain: ${{ env.MSRV }}
       - name: Set up
         run: |
-          # run TITLE COMMAND...: each output line becomes a notice; a
+          # run TITLE COMMAND...: each line the command prints becomes a
+          # notice (GitHub keeps at most ten a step, so steps stay small); a
           # failure becomes an error with the output's last lines, and the
           # job goes on (CI logs can't be read from Claude's sessions).
+          # quiet TITLE COMMAND...: the same, silent when it works (builds).
           cat > "$RUNNER_TEMP/run.sh" <<'SH'
           title="$1"; shift
           if out="$("$@" 2>&1)"; then
+            [ "$QUIET" = 1 ] && exit 0
             printf '%s\n' "$out" | grep -v '^ *$' | grep -v '^ALSA lib' | while IFS= read -r line; do
               echo "::notice title=$title::$line"
               echo "- **$title**: $line" >> "$GITHUB_STEP_SUMMARY"
             done
           else
-            echo "::error title=$title::$(printf '%s' "$out" | grep -v '^ *Compiling\|^ *Downloaded\|^ *Downloading' | tail -n 12 | tr '\n' ' ' | cut -c1-1500)"
+            echo "::error title=$title::$(printf '%s' "$out" | grep -v '^ *Compiling\|^ *Downloaded\|^ *Downloading\|^ *Updating' | tail -n 12 | tr '\n' ' ' | cut -c1-1500)"
           fi
           SH
           chmod +x "$RUNNER_TEMP/run.sh"
@@ -129,6 +133,7 @@ jobs:
             Windows) cpu="$(powershell -NoProfile -Command '(Get-CimInstance Win32_Processor).Name')" ;;
           esac
           echo "::notice title=CPU (${{ matrix.name }})::$cpu"
+          echo "**${{ matrix.name }}**: $cpu" >> "$GITHUB_STEP_SUMMARY"
           mkdir -p "$RUNNER_TEMP/nam"
           for m in wavenet_a1_standard lstm; do
             curl -fsSL -o "$RUNNER_TEMP/nam/$m.nam" "$NAM_MODELS/$m.nam"
@@ -137,44 +142,48 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fluid-soundfont-gm musescore-general-soundfont-small libasound2-dev libpipewire-0.3-dev libclang-dev
-      - name: The sound sets the system ships, and the synthesisers
+      - name: Build
         run: |
-          run="$RUNNER_TEMP/run.sh"
-          cd spikes/audio
-          "$run" "Build audio spike (${{ matrix.name }})" cargo build --release
-          spike="target/release/audio-spike${{ matrix.exe }}"
-          case "${{ runner.os }}" in
-            Windows) "$run" "Sound set (${{ matrix.name }})" "$spike" dls "C:/Windows/System32/drivers/gm.dls" ;;
-            macOS) "$run" "Sound set (${{ matrix.name }})" "$spike" dls "/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls" ;;
-          esac
+          QUIET=1 "$RUNNER_TEMP/run.sh" "Build audio spike (${{ matrix.name }})" cargo build --release --manifest-path spikes/audio/Cargo.toml
+          QUIET=1 "$RUNNER_TEMP/run.sh" "Build nam-bench (${{ matrix.name }})" cargo build --release --manifest-path spikes/nam-bench/Cargo.toml
           if [ "${{ runner.os }}" = Linux ]; then
-            out="$RUNNER_TEMP/aud"; mkdir -p "$out"
-            for sf in /usr/share/sounds/sf2/FluidR3_GM.sf2 /usr/share/sounds/sf3/MuseScore_General_Lite.sf3; do
-              for e in rusty/64 rusty/8 oxi; do
-                "$run" "Synth (${{ matrix.name }})" "$spike" render "$e" "$sf" "$out/x.wav"
-              done
-            done
-            for e in rusty/64 rusty/8 oxi; do
-              "$run" "Timing (${{ matrix.name }})" "$spike" timing "$e" /usr/share/sounds/sf2/FluidR3_GM.sf2
-            done
-            for m in wavenet_a1_standard lstm; do
-              "$run" "Pipeline $m (${{ matrix.name }})" "$spike" pipeline /usr/share/sounds/sf2/FluidR3_GM.sf2 "$RUNNER_TEMP/nam/$m.nam" "$out/p.wav"
-            done
-            "$run" "cpal with ALSA and PipeWire (${{ matrix.name }})" cargo build --release --features devices
+            QUIET=1 "$RUNNER_TEMP/run.sh" "Build cpal with ALSA and PipeWire (${{ matrix.name }})" cargo build --release --manifest-path spikes/audio/Cargo.toml --features devices
           fi
-      - name: NAM engines
+      - name: The sound set the system ships
+        if: runner.os != 'Linux'
         run: |
-          run="$RUNNER_TEMP/run.sh"
-          cd spikes/nam-bench
-          "$run" "Build nam-rs (${{ matrix.name }})" cargo build --release
-          for m in wavenet_a1_standard lstm; do
-            "$run" "NAM $m (${{ matrix.name }})" "target/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam"
-          done
-          if [ "${{ matrix.nam2 }}" = true ]; then
-            # NeuralAmpModeler-rs needs Rust 1.99 and the x86-64-v3 baseline.
-            rustup toolchain install 1.99.0 --profile minimal > /dev/null
-            RUSTFLAGS="-C target-cpu=x86-64-v3" CARGO_TARGET_DIR=target/nam2 "$run" "Build NeuralAmpModeler-rs (${{ matrix.name }})" cargo +1.99.0 build --release --features nam2
-            for m in wavenet_a1_standard lstm; do
-              "$run" "NAM both $m (${{ matrix.name }})" "target/nam2/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam"
+          if [ "${{ runner.os }}" = Windows ]; then f="C:/Windows/System32/drivers/gm.dls"; else f="/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls"; fi
+          "$RUNNER_TEMP/run.sh" "Sound set (${{ matrix.name }})" "spikes/audio/target/release/audio-spike${{ matrix.exe }}" dls "$f"
+      - name: SoundFont synthesisers
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p "$RUNNER_TEMP/aud"
+          for sf in /usr/share/sounds/sf2/FluidR3_GM.sf2 /usr/share/sounds/sf3/MuseScore_General_Lite.sf3; do
+            for e in rusty/64 rusty/8 oxi; do
+              "$RUNNER_TEMP/run.sh" "Synth (${{ matrix.name }})" spikes/audio/target/release/audio-spike render "$e" "$sf" "$RUNNER_TEMP/aud/x.wav"
             done
-          fi
+          done
+      - name: Timing and the whole chain
+        if: runner.os == 'Linux'
+        run: |
+          for e in rusty/64 rusty/8 oxi; do
+            "$RUNNER_TEMP/run.sh" "Timing (${{ matrix.name }})" spikes/audio/target/release/audio-spike timing "$e" /usr/share/sounds/sf2/FluidR3_GM.sf2
+          done
+          for m in wavenet_a1_standard lstm; do
+            "$RUNNER_TEMP/run.sh" "Pipeline $m (${{ matrix.name }})" spikes/audio/target/release/audio-spike pipeline /usr/share/sounds/sf2/FluidR3_GM.sf2 "$RUNNER_TEMP/nam/$m.nam" "$RUNNER_TEMP/aud/p.wav"
+          done
+      - name: NAM with nam-rs
+        run: |
+          for m in wavenet_a1_standard lstm; do
+            "$RUNNER_TEMP/run.sh" "NAM $m (${{ matrix.name }})" "spikes/nam-bench/target/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam"
+          done
+      - name: NAM with NeuralAmpModeler-rs too
+        # Linux x86_64 only: it needs Rust 1.99, the x86-64-v3 baseline, and
+        # Linux's libc (it doesn't build on Windows).
+        if: matrix.name == 'linux-x86_64'
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal > /dev/null
+          RUSTFLAGS="-C target-cpu=x86-64-v3" CARGO_TARGET_DIR=spikes/nam-bench/target/nam2 QUIET=1 "$RUNNER_TEMP/run.sh" "Build NeuralAmpModeler-rs" cargo +1.99.0 build --release --features nam2 --manifest-path spikes/nam-bench/Cargo.toml
+          for m in wavenet_a1_standard lstm; do
+            "$RUNNER_TEMP/run.sh" "NAM both $m (${{ matrix.name }})" spikes/nam-bench/target/nam2/release/nam-bench "$RUNNER_TEMP/nam/$m.nam"
+          done
