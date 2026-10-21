@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-21
+
+Milestone M3 (the editor) is complete: OxiGuitar edits everything TuxGuitar does, and more, and saves as .gp and .gp5. Plugin interface 1.2 is frozen with this release.
+
 ### Added
 
 - Writing Guitar Pro 5 files (.gp5; M3 slice 7): the Guitar Pro 5 plugin now writes as well as reads (plugin interface 1.2), and Save and Save As… write .gp5, so a .gp5 file is saved as itself. Version 5.10, which Guitar Pro 5 and every later version, and TuxGuitar, open. What it can't hold is named with the first bar and track, as for .gp (FMT-3): extra staves and more than two voices, tuplets beyond the common ones, double dots, free time, section letters, tempo names and gradual tempos, left-hand tapping, text beyond 255 characters or Windows-1252, and more. Drums, tracks without strings and the second round trip are exact. Over the corpus, all 104 files are written and read back equal or with their loss named: 96 exactly and 8 with named losses, and every Guitar Pro 5 file of it comes back exactly (`cargo test -p oxiguitar-formats --test gp5_round_trip`). The editing gates run for .gp5 too, and `fixtures/guitar-pro-check/` holds every reference song as .gp5 as well as .gp, for checking in Guitar Pro.
