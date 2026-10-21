@@ -35,7 +35,7 @@ How can you help, you ask?
 1. **USE IT!** Let us know what you think in the discussion pages! Report bugs when you find them!
 2. **TELL YOUR FRIENDS!** The more people using it and getting involved the better!
 3. **GET YOUR HANDS DIRTY!** This is open-source! So, are you a good dev too? SWEET, how about you help us squash a few bugs? Had a wild idea? Go and write a plugin for it or something! Implement a new feature to make the core better! I don’t know! Follow your dreams or whatever! You have the source code, don't you?
-4. **BUY ME A DRINK** to say thanks and/or **CHIP IN TO BUY MORE TOKENS**. Cause yeah, this takes time and resources. And Dario Amodei’s butt lift isn’t paying for itself 🤣.
+4. **BUY ME A DRINK** to say thanks and/or **CHIP IN TO BUY MORE USAGE TOKENS**. Cause yeah, this takes time and resources. And Dario Amodei’s butt lift isn’t paying for itself 🤣.
 
 [![Donate with PayPal](assets/paypal-donate-button.png)](https://www.paypal.com/donate/?business=4QYDZY4RP8V8L&no_recurring=0&item_name=Thanks+heaps!+You+rock!&currency_code=AUD&source=qr)
 <img src="assets/DonationQRCode.png" alt="OxiGuitar Donation QR Code (PayPal)">
