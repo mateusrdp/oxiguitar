@@ -1,0 +1,22 @@
+[package]
+name = "nam-bench"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "GPL-3.0-or-later"
+
+# The two NAM engines on the same input: nam-rs (MIT, portable) and
+# NeuralAmpModeler-rs (Apache-2.0, x86-64-v3 only, Rust 1.99+). Built apart
+# from the audio spike because the second refuses to compile without
+# RUSTFLAGS="-C target-cpu=x86-64-v3", and anywhere but x86_64.
+[workspace]
+
+[dependencies]
+nam-rs = "0.4.0"
+
+NeuralAmpModeler-rs = { version = "1.0.1", default-features = false, optional = true }
+
+[features]
+# NeuralAmpModeler-rs: x86_64 only, Rust 1.99 or newer, and
+# RUSTFLAGS="-C target-cpu=x86-64-v3".
+nam2 = ["dep:NeuralAmpModeler-rs"]
