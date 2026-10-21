@@ -44,6 +44,9 @@ Milestone M3 (the editor) is complete: OxiGuitar edits everything TuxGuitar does
 
 ### Fixed
 
+- Right-click on a track → Properties, Transpose or Delete crashed the app on Windows: the command now runs after the menu has closed (issue #102). Edit → Delete Track… is added.
+- The Inspector counts a voice as Guitar Pro 8 does: "1.5/4", green when the bar is full and red when short or too long, and lists "notes and rests" entered instead of "beats" (issue #104).
+- A selected rest's Dynamic drop-down filled the Inspector; it is a normal drop-down again (issue #105).
 - Guitar Pro 3, 4 and 5 files: a track's volume and pan were read on the wrong scale (they run 0 to 16, not 0 to 127), brush strokes were read one speed too fast (a 16th was read as an 8th), and mute and solo of a Guitar Pro 5 track were not read (found by the .gp5 writer's round trips, 21 Oct 2026). (alphaTab reads the brush speeds one step shorter than Guitar Pro 5 writes them.)
 - A file holding a bend at the very end of the possible range no longer stops OxiGuitar when it is saved as .gp (found by fuzzing, 21 Oct 2026).
 
