@@ -94,7 +94,7 @@ jobs:
           - { name: linux-arm64, os: ubuntu-24.04-arm, exe: "", nam2: false }
           - { name: windows-x86_64, os: windows-2025, exe: ".exe", nam2: true }
           - { name: windows-arm64, os: windows-11-arm, exe: ".exe", nam2: false }
-          - { name: macos-arm64, os: macos-15, exe: "", nam2: false }
+          - { name: macos-arm64, os: macos-15, exe: "" , nam2: false }
     defaults:
       run:
         shell: bash
@@ -106,17 +106,29 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.MSRV }}
-      - name: The machine
+      - name: Set up
         run: |
+          # run TITLE COMMAND...: each output line becomes a notice; a
+          # failure becomes an error with the output's last lines, and the
+          # job goes on (CI logs can't be read from Claude's sessions).
+          cat > "$RUNNER_TEMP/run.sh" <<'SH'
+          title="$1"; shift
+          if out="$("$@" 2>&1)"; then
+            printf '%s\n' "$out" | grep -v '^ *$' | grep -v '^ALSA lib' | while IFS= read -r line; do
+              echo "::notice title=$title::$line"
+              echo "- **$title**: $line" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "::error title=$title::$(printf '%s' "$out" | grep -v '^ *Compiling\|^ *Downloaded\|^ *Downloading' | tail -n 12 | tr '\n' ' ' | cut -c1-1500)"
+          fi
+          SH
+          chmod +x "$RUNNER_TEMP/run.sh"
           case "${{ runner.os }}" in
             Linux) cpu="$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2)" ;;
             macOS) cpu="$(sysctl -n machdep.cpu.brand_string)" ;;
             Windows) cpu="$(powershell -NoProfile -Command '(Get-CimInstance Win32_Processor).Name')" ;;
           esac
           echo "::notice title=CPU (${{ matrix.name }})::$cpu"
-          echo "**${{ matrix.name }}**: $cpu" >> "$GITHUB_STEP_SUMMARY"
-      - name: Models
-        run: |
           mkdir -p "$RUNNER_TEMP/nam"
           for m in wavenet_a1_standard lstm; do
             curl -fsSL -o "$RUNNER_TEMP/nam/$m.nam" "$NAM_MODELS/$m.nam"
@@ -125,58 +137,44 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fluid-soundfont-gm musescore-general-soundfont-small libasound2-dev libpipewire-0.3-dev libclang-dev
-      - name: The sound sets the system ships
+      - name: The sound sets the system ships, and the synthesisers
         run: |
+          run="$RUNNER_TEMP/run.sh"
           cd spikes/audio
-          cargo build --release
+          "$run" "Build audio spike (${{ matrix.name }})" cargo build --release
           spike="target/release/audio-spike${{ matrix.exe }}"
           case "${{ runner.os }}" in
-            Windows) files="C:/Windows/System32/drivers/gm.dls" ;;
-            macOS) files="/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls" ;;
-            Linux) files="$(ls /usr/share/sounds/sf2/*.sf2 /usr/share/sounds/sf3/*.sf3 2>/dev/null | tr '\n' ' ')" ;;
+            Windows) "$run" "Sound set (${{ matrix.name }})" "$spike" dls "C:/Windows/System32/drivers/gm.dls" ;;
+            macOS) "$run" "Sound set (${{ matrix.name }})" "$spike" dls "/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls" ;;
           esac
-          for f in $files; do
-            case "$f" in
-              *.dls) line="$("$spike" dls "$f")" ;;
-              *) line="$(ls -lL "$f" | awk '{print $5}') bytes: $f" ;;
-            esac
-            echo "::notice title=Sound set (${{ matrix.name }})::$line"
-            echo "- $line" >> "$GITHUB_STEP_SUMMARY"
-          done
-      - name: SoundFont engines
-        if: runner.os == 'Linux'
-        run: |
-          cd spikes/audio
-          spike=target/release/audio-spike
-          out="$RUNNER_TEMP/aud"; mkdir -p "$out"
-          for sf in /usr/share/sounds/sf2/FluidR3_GM.sf2 /usr/share/sounds/sf3/MuseScore_General_Lite.sf3; do
-            for e in rusty/64 rusty/8 oxi; do
-              line="$("$spike" render "$e" "$sf" "$out/x.wav" 2>&1 | tail -1)"
-              echo "::notice title=Synth (${{ matrix.name }})::$line"
-              echo "- $line" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ runner.os }}" = Linux ]; then
+            out="$RUNNER_TEMP/aud"; mkdir -p "$out"
+            for sf in /usr/share/sounds/sf2/FluidR3_GM.sf2 /usr/share/sounds/sf3/MuseScore_General_Lite.sf3; do
+              for e in rusty/64 rusty/8 oxi; do
+                "$run" "Synth (${{ matrix.name }})" "$spike" render "$e" "$sf" "$out/x.wav"
+              done
             done
-          done
-          for e in rusty/64 rusty/8 oxi; do
-            line="$("$spike" timing "$e" /usr/share/sounds/sf2/FluidR3_GM.sf2)"
-            echo "::notice title=Timing (${{ matrix.name }})::$line"
-          done
-          line="$("$spike" pipeline /usr/share/sounds/sf2/FluidR3_GM.sf2 "$RUNNER_TEMP/nam/wavenet_a1_standard.nam" "$out/p.wav" 2>&1 | tail -1)"
-          echo "::notice title=Pipeline (${{ matrix.name }})::$line"
-          echo "- $line" >> "$GITHUB_STEP_SUMMARY"
-          cargo build --release --features devices
+            for e in rusty/64 rusty/8 oxi; do
+              "$run" "Timing (${{ matrix.name }})" "$spike" timing "$e" /usr/share/sounds/sf2/FluidR3_GM.sf2
+            done
+            for m in wavenet_a1_standard lstm; do
+              "$run" "Pipeline $m (${{ matrix.name }})" "$spike" pipeline /usr/share/sounds/sf2/FluidR3_GM.sf2 "$RUNNER_TEMP/nam/$m.nam" "$out/p.wav"
+            done
+            "$run" "cpal with ALSA and PipeWire (${{ matrix.name }})" cargo build --release --features devices
+          fi
       - name: NAM engines
         run: |
+          run="$RUNNER_TEMP/run.sh"
           cd spikes/nam-bench
+          "$run" "Build nam-rs (${{ matrix.name }})" cargo build --release
+          for m in wavenet_a1_standard lstm; do
+            "$run" "NAM $m (${{ matrix.name }})" "target/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam"
+          done
           if [ "${{ matrix.nam2 }}" = true ]; then
             # NeuralAmpModeler-rs needs Rust 1.99 and the x86-64-v3 baseline.
-            rustup toolchain install 1.99.0 --profile minimal
-            RUSTFLAGS="-C target-cpu=x86-64-v3" cargo +1.99.0 build --release --features nam2
-          else
-            cargo build --release
-          fi
-          for m in wavenet_a1_standard lstm; do
-            "target/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam" | while IFS= read -r line; do
-              echo "::notice title=NAM $m (${{ matrix.name }})::$line"
-              echo "- $m: $line" >> "$GITHUB_STEP_SUMMARY"
+            rustup toolchain install 1.99.0 --profile minimal > /dev/null
+            RUSTFLAGS="-C target-cpu=x86-64-v3" CARGO_TARGET_DIR=target/nam2 "$run" "Build NeuralAmpModeler-rs (${{ matrix.name }})" cargo +1.99.0 build --release --features nam2
+            for m in wavenet_a1_standard lstm; do
+              "$run" "NAM both $m (${{ matrix.name }})" "target/nam2/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam"
             done
-          done
+          fi
