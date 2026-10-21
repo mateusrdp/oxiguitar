@@ -139,6 +139,18 @@ pub fn write_gp(score: &Score) -> Result<Written, String> {
     })
 }
 
+/// Writes `score` as a Guitar Pro 5 file (.gp5), version 5.10. Fails only
+/// for a score that isn't whole: no tracks, no bars, or a staff missing
+/// bars. What Guitar Pro 5 can't hold is in the losses.
+#[cfg(feature = "gp5")]
+pub fn write_gp5(score: &Score) -> Result<Written, String> {
+    let w = gp::write_gp5(score)?;
+    Ok(Written {
+        data: w.data,
+        losses: w.losses,
+    })
+}
+
 #[cfg(any(feature = "gp3", feature = "gp4", feature = "gp5"))]
 fn read_binary(data: &[u8], format: Format) -> Result<Imported, ReadError> {
     let mut r = gp::read(data, &format)?;

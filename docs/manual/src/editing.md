@@ -158,7 +158,7 @@ The palette's **dynamics**, ppp to fff, set the dynamic of the caret's beat, or 
 
 Under the caret's bar, the **Inspector** shows the note on the caret's string and its beat, and changes them. The tickboxes switch effects as their keys do (on a selection, on every selected note or beat). The drop-downs and numbers set what the keys only start at a default: the accent, how the note slides in and out, the harmonic and how far up an artificial or tapped harmonic sounds, the trill's speed (sixteenths, thirty-seconds or sixty-fourths) and the fret it trills with, the fingers of the left and right hands, the dynamic, the speed of tremolo picking, grace notes, the brush and how long it takes, the pick stroke, and tapping, slapping or popping. **Edit…** beside the bend and the whammy bar opens their editor. On a rest only its dynamic shows. Each change is one step to undo.
 
-A .gp file keeps trills in sixteenths only: saving a faster trill as .gp names it among what the file can't hold.
+A .gp file keeps trills in sixteenths only: saving a faster trill as .gp names it among what the file can't hold. A .gp5 file keeps them at any of its speeds.
 
 ## Chords, text and lyrics
 

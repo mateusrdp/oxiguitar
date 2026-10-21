@@ -10,73 +10,73 @@ Where OxiGuitar goes past TuxGuitar (four voices to its two, any tuplet to its l
 
 ### Notes and rhythm (slice 3; tuplets in slice 4)
 
-- [ ] Notes entered on the tablature: a fret number on a string, two-digit frets (EDIT-2)
-- [ ] Notes entered on the standard staff: a pitch, its string chosen for the lowest playable fret near the caret's string (EDIT-2)
-- [ ] Chords: several notes in one beat
-- [ ] Rests; inserting a rest before the caret; deleting a note or a rest
-- [ ] Note values from whole to 64th; dotted and double-dotted
-- [ ] Tied notes
-- [ ] Tuplets: the Triplet tool and its shortcut; Custom N-tuplet for any n in the time of m (EDIT-10; TuxGuitar offers 3:2, 5:4, 6:4, 7:4, 9:8 to 13:8)
-- [ ] Four voices per staff (EDIT-3; TuxGuitar has two), moving a beat to another voice
-- [ ] Semitone up and down; the other spelling of a note (enharmonic); a note moved to the next string up or down at the same pitch
-- [ ] Moving beats left and right
-- [ ] Clearing a beat and a bar; removing a voice nobody uses
-- [ ] Bars that don't add up: marked, listed one by one (TuxGuitar's "measure errors" dialog does this, with a fix button; OxiGuitar marks them in red and walks through them, slice 1)
+- [x] Notes entered on the tablature: a fret number on a string, two-digit frets (EDIT-2)
+- [x] Notes entered on the standard staff: a pitch, its string chosen for the lowest playable fret near the caret's string (EDIT-2)
+- [x] Chords: several notes in one beat
+- [x] Rests; inserting a rest before the caret; deleting a note or a rest
+- [x] Note values from whole to 64th; dotted and double-dotted
+- [x] Tied notes
+- [x] Tuplets: the Triplet tool and its shortcut; Custom N-tuplet for any n in the time of m (EDIT-10; TuxGuitar offers 3:2, 5:4, 6:4, 7:4, 9:8 to 13:8)
+- [x] Four voices per staff (EDIT-3; TuxGuitar has two), moving a beat to another voice
+- [x] Semitone up and down; the other spelling of a note (enharmonic); a note moved to the next string up or down at the same pitch
+- [x] Moving beats left and right
+- [x] Clearing a beat and a bar; removing a voice nobody uses
+- [x] Bars that don't add up: marked, listed one by one (TuxGuitar's "measure errors" dialog does this, with a fix button; OxiGuitar marks them in red and walks through them, slice 1)
 
-Built in slice 3 so far (each waits for .gp5 in slice 7 to be ticked): frets typed on the tablature with two-digit frets, chords, rests, inserting and deleting beats and notes, note values whole to 64th from the keys and the palette, dots, ties (note and beat), voices started by typing in them, semitones, the same note on the next string; then pitches entered on the standard staff (Enter at the caret's line or space, the string with the lowest fret nearest the caret's), File → New, a bar added by Right at the end, moving beats left and right and to another voice, clearing beats and bars, removing unused voices.
+Built in slice 3: frets typed on the tablature with two-digit frets, chords, rests, inserting and deleting beats and notes, note values whole to 64th from the keys and the palette, dots, ties (note and beat), voices started by typing in them, semitones, the same note on the next string; then pitches entered on the standard staff (Enter at the caret's line or space, the string with the lowest fret nearest the caret's), File → New, a bar added by Right at the end, moving beats left and right and to another voice, clearing beats and bars, removing unused voices.
 
 ### Bars and structure (slice 4)
 
-Built in slice 4 so far (each waits for .gp5 in slice 7 to be ticked): inserting and deleting bars; time and key signatures, clefs, tempo, triplet feel, repeats with a count, alternate endings 1 to 8, directions, sections, double bar lines and free time, from the keys, the palette and the Bar dialog; the Triplet tool and Custom N-tuplet; copy, cut and paste with Special Paste, and Edit → Go to Section.
+Built in slice 4: inserting and deleting bars; time and key signatures, clefs, tempo, triplet feel, repeats with a count, alternate endings 1 to 8, directions, sections, double bar lines and free time, from the keys, the palette and the Bar dialog; the Triplet tool and Custom N-tuplet; copy, cut and paste with Special Paste, and Edit → Go to Section.
 
-- [ ] Inserting and deleting bars
-- [ ] Time signature, key signature, clef and tempo changes from any bar (EDIT-6)
-- [ ] Triplet feel
-- [ ] Repeat start and end with a count; alternate endings (EDIT-7)
-- [ ] Segno, coda, D.S., D.C., fine and the "al" forms (EDIT-7; not in TuxGuitar)
-- [ ] Sections (markers), with a list to jump between them
-- [ ] Double bar lines; free time
-- [ ] Copy, cut and paste of beats and bars; special paste: how many times, insert or replace, across voices and tracks (EDIT-6)
-- [ ] Select all; extending the selection by beat, bar and to the start and end
+- [x] Inserting and deleting bars
+- [x] Time signature, key signature, clef and tempo changes from any bar (EDIT-6)
+- [x] Triplet feel
+- [x] Repeat start and end with a count; alternate endings (EDIT-7)
+- [x] Segno, coda, D.S., D.C., fine and the "al" forms (EDIT-7; not in TuxGuitar)
+- [x] Sections (markers), with a list to jump between them
+- [x] Double bar lines; free time
+- [x] Copy, cut and paste of beats and bars; special paste: how many times, insert or replace, across voices and tracks (EDIT-6)
+- [x] Select all; extending the selection by beat, bar and to the start and end
 
 ### Tracks and the score (slices 1, 5 and 6)
 
-Built in slice 5 (each waits for .gp5 in slice 7 to be ticked): adding, duplicating, removing and moving tracks; the track dialog; restringing keeping the pitches or the frets; transposition, all three ways. Built in slice 6: the score's information (the Song tab) and lyrics typed on the page.
+Built in slice 5: adding, duplicating, removing and moving tracks; the track dialog; restringing keeping the pitches or the frets; transposition, all three ways. Built in slice 6: the score's information (the Song tab) and lyrics typed on the page.
 
-- [ ] Adding, duplicating, removing (after a question) and reordering tracks
-- [ ] Track properties: name, instrument, capo; strings (3 to 10) and tuning, as a key and a pattern (Standard, Drop, Open with the root low, Open with the fifth low, Other) (EDIT-4)
-- [ ] Changing strings or tuning on a track with notes, keeping the pitches or the frets
-- [ ] Transposition, chromatic and diatonic, keeping the fingering or finding new frets (EDIT-8), three ways: a track (right-click on its row), a selection (right-click on it in the page), every track (Tools → Transpose…)
-- [ ] Score information: title, subtitle, artist, album, words, music, copyright, transcriber, instructions, notices
-- [ ] Lyrics of a track
-- [ ] Track selection by a click on its row (slice 1); mute and solo follow with the player (M4)
+- [x] Adding, duplicating, removing (after a question) and reordering tracks
+- [x] Track properties: name, instrument, capo; strings (3 to 10) and tuning, as a key and a pattern (Standard, Drop, Open with the root low, Open with the fifth low, Other) (EDIT-4)
+- [x] Changing strings or tuning on a track with notes, keeping the pitches or the frets
+- [x] Transposition, chromatic and diatonic, keeping the fingering or finding new frets (EDIT-8), three ways: a track (right-click on its row), a selection (right-click on it in the page), every track (Tools → Transpose…)
+- [x] Score information: title, subtitle, artist, album, words, music, copyright, transcriber, instructions, notices
+- [x] Lyrics of a track
+- [x] Track selection by a click on its row (slice 1); mute and solo follow with the player (M4)
 
 ### Effects (slice 6; TAB-1)
 
-Built in slice 6 so far (each waits for .gp5 in slice 7 to be ticked): every effect below, from its key and the palette, on the caret's note or beat or on a selection; the bend and whammy-bar editor; dynamics from the palette; chord diagrams with Guitar Pro 8's builder, and text. The values (trill fret and speed, tremolo speed, brush speed, harmonic kind and fret, fingering) start at a default and the Inspector changes them. Lyrics of a track (above, under Tracks and the score) too, typed on the page.
+Built in slice 6: every effect below, from its key and the palette, on the caret's note or beat or on a selection; the bend and whammy-bar editor; dynamics from the palette; chord diagrams with Guitar Pro 8's builder, and text. The values (trill fret and speed, tremolo speed, brush speed, harmonic kind and fret, fingering) start at a default and the Inspector changes them. Lyrics of a track (above, under Tracks and the score) too, typed on the page.
 
-- [ ] Dead note, ghost note, accent, heavy accent, staccato
-- [ ] Hammer-on and pull-off
-- [ ] Slides: shift, legato, in from below and above, out down and up
-- [ ] Bends, with a curve editor and presets; whammy bar, with its curve
-- [ ] Vibrato (note), wide vibrato (beat)
-- [ ] Harmonics: natural, artificial, tapped, pinch, semi
-- [ ] Palm mute, let ring
-- [ ] Trill (the other fret, the speed), tremolo picking (the speed)
-- [ ] Grace notes, before and on the beat
-- [ ] Tapping, slapping, popping
-- [ ] Fade in
-- [ ] Brush strokes up and down (with their speed); pick strokes up and down
-- [ ] Dynamics, ppp to fff
-- [ ] Chord names with their diagrams (a chord editor)
-- [ ] Free text on a beat
+- [x] Dead note, ghost note, accent, heavy accent, staccato
+- [x] Hammer-on and pull-off
+- [x] Slides: shift, legato, in from below and above, out down and up
+- [x] Bends, with a curve editor and presets; whammy bar, with its curve
+- [x] Vibrato (note), wide vibrato (beat)
+- [x] Harmonics: natural, artificial, tapped, pinch, semi
+- [x] Palm mute, let ring
+- [x] Trill (the other fret, the speed), tremolo picking (the speed)
+- [x] Grace notes, before and on the beat
+- [x] Tapping, slapping, popping
+- [x] Fade in
+- [x] Brush strokes up and down (with their speed); pick strokes up and down
+- [x] Dynamics, ppp to fff
+- [x] Chord names with their diagrams (a chord editor)
+- [x] Free text on a beat
 
 ### Files (slices 2 and 7)
 
-- [ ] Save and Save As: .gp (the default) and .gp5; a file is saved in its own format unless that format would lose something, and then as .gp (Mateus, 19 Oct 2026). .gp done in slice 2; .gp5 in slice 7
+- [x] Save and Save As: .gp (the default) and .gp5; a file is saved in its own format unless that format would lose something, and then as .gp (Mateus, 19 Oct 2026). .gp in slice 2, .gp5 in slice 7
 - [x] Losses named before writing (FMT-3), and what the opened file had that OxiGuitar couldn't keep (FMT-2) (slice 2)
 - [x] A question before closing or opening over unsaved changes (slice 2)
-- [ ] File → New
+- [x] File → New
 - Not planned: TuxGuitar also writes Guitar Pro 3 and 4 and its own .tg; OxiGuitar writes .gp and .gp5 only (the brief: Guitar Pro 3–4 are read only).
 
 ## Editing rules

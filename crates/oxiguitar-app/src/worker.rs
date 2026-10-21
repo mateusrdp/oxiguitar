@@ -856,16 +856,16 @@ mod tests {
             std::env::temp_dir().join(format!("oxiguitar-worker-save-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        let gp5 = dir.join("song.gp5");
+        let gp4 = dir.join("song.gp4");
         std::fs::copy(
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5"),
-            &gp5,
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp4"),
+            &gp4,
         )
         .unwrap();
-        worker.send(Request::Open(gp5));
+        worker.send(Request::Open(gp4));
         while !matches!(next(&rx), Event::Opened { .. }) {}
 
-        // No plugin writes .gp5: Save asks before writing song.gp.
+        // No plugin writes .gp4: Save asks before writing song.gp.
         worker.send(Request::Save(None));
         let Event::AskSave { heading, .. } = next(&rx) else {
             panic!("expected a question")
