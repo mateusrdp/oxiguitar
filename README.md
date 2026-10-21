@@ -2,33 +2,52 @@
 
 <p align="center"><img src="assets/icon/oxiguitar-placeholder.svg" alt="OxiGuitar placeholder icon: a green guitar pick with OxG on it" width="96"></p>
 
-**OxiGuitar** is a free, open-source guitar tablature and score viewer, editor and player for Windows, macOS and Linux, written entirely in Rust.
+**OxiGuitar** is a Free, Open-Source fully modular guitar tablature and score viewer, editor and player for Windows, macOS and Linux.
 
-It opens Guitar Pro files (.gp, .gpx, .gp5, and the older .gp3 and .gp4), shows them as standard notation and tablature, lets you edit them, and saves them as .gp or .gp5. Playback comes next. Every file format is a plugin, so MuseScore, MusicXML, ABC and MIDI files will come as plugins too. Its layout follows Guitar Pro 8 closely, so it feels familiar; every icon and piece of artwork is our own.
+It is written entirely in Rust. Why Rust you'd ask? Because what do you get when you *Oxi*dise METAL 🤘? RUST! And because it’s very fast, of course. We don’t just *want* - we *need* great performance. First because we respect your hardware and your time (especially in this gawd damned economy), and second because we need a lot of grunt to give you a good experience with all the cool features we want in.
 
-> **Status: v0.5.0, the editor (milestone M3), published as a pre-release on 21 October 2026.** OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It does not play yet: the player (milestone M4) is what we are building now, and v1.0 follows it. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
+It opens most industry standard files (currently Guitar Pro, MuseScore, MusicXML and ABC planned), because no one wants to have to rewrite their entire tab collection they’ve been diligently maintaining since the 90’s just to be able to use Mat's fancy f\*cking app. It needs to be useful from the get-go. It shows them as standard notation and tablature and allows you to play, edit and save them. Every input/output format is a plugin, so you can write your own if we still don’t support what you need.
 
-## What it does today
+We support a wide variety of typesetting tools, and try to stay aligned with the music industry standard. Because what's the point of opening your fancy tabs and not being able to display all the work you put in it, right?
 
-- **Opens** Guitar Pro 3 to 8 files and shows them in four layouts, with standard notation and tablature, a dark page, the track list (F8) and PDF export.
-- **Edits** everything TuxGuitar edits, with Guitar Pro 8's keys: notes on the tablature or the staff, rests, durations, ties, tuplets, four voices, every effect of Guitar Pro's tablature (bends with their editor, slides, harmonics, palm mute, vibrato and the rest), chord diagrams with a chord builder, lyrics typed on the page, text, bars and their signatures, repeats and endings, tracks and tunings, transposition of a selection, a track or the whole song, copy and paste, and unlimited undo. The Inspector shows and changes the note and beat under the caret; bars that don't add up are marked in red.
-- **Saves** as .gp (Guitar Pro 7 and 8) or .gp5 (Guitar Pro 5), and says before saving what a format can't hold.
-- **Plugins**: file formats, tools and tabs are plugins, and anyone can write one (see [Writing plugins](#writing-plugins)).
+Playback is also big. We all like to play along with our favorite songs, don’t always have a band, and can’t always find a good backing track. So this is KEY. And we want quality here, because no one wants to be playing along to a cheap CASIO keyboard from the 90's operated by the neighbor’s toddler who just learnt a few chords and where that dumb arse automatic drumkit is! This is NOT a glorified metronome! Like file formats, every output method is a plugin. The most basic is your PC’s MIDI synthesizer, which uses whatever sound fonts you have installed. But we REALLY recommend that you get yourself some better ones – it makes a massive difference. We do have a few suggestions of nice free ones, with instructions on how to download, install and use them with OxiGuitar. We’re also planning on some BIG tones, using the famed *Neural Amp Modeler (NAM)* for some juicy realistic guitar tones. Compose your song, get yourself a sweet profile online (or capture your own rig with their software!) and you’ll have a pretty decent backing track to rock with real quick!
 
 ## Privacy
 
-OxiGuitar never uploads anything. No telemetry, no analytics, no automatic crash reports, no accounts, no background requests — not a single bit. It downloads nothing either: better sounds and plugins are files you get yourself and put in a folder, and the manual says where. The only network use ever planned is an update check you start yourself. If it crashes, it writes a log to your disk and tells you where it is; sending it to us is up to you.
+OxiGuitar values your privacy first. It never uploads anything. No telemetry, no analytics, no automatic crash reports, no accounts, no background requests — not a single bit of data. It downloads nothing either: better sounds and plugins are files you get yourself and put in a folder, and the manual says where. The only network use ever planned is an update check you start yourself. If it crashes, it writes a log to your disk and tells you where it is; sending it to us is up to you. A CI test even runs OxiGuitar under a system-call tracer and fails if it ever tries to open a network connection to keep us honest. We don’t collect your data EVER. Because friends do **not** look at their friends’ browser histories.
 
-A CI test runs OxiGuitar under a system-call tracer and fails if it ever tries to open a network connection.
+**THAT SAID**, these promises cover the OxiGuitar core and the plugins we publish, and nothing else: we make no promises about plugins you get from anywhere else. Because again, OxiGuitar is fully modular, open-source and encourages the community to collaborate! **Anyone** can write plugins for it! **Be careful where you get your plugins from!** It’s **your** responsibility to check, and so you should! Ours is open-source, so you can peek inside anytime to see that there’s nothing funky in there and can even compile your own builds if you’re extra-paranoid and don’t trust GitHub with compiling even after reading the build scripts!
 
-These promises cover OxiGuitar and the plugins we publish, and nothing else: we make no promises about plugins you get from anywhere else.
+## Status
+
+**v0.5.0, the editor (milestone M3), published as a pre-release on 21 October 2026.**
+
+OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). But it does not play anything yet: the player (milestone M4) is what we are building now, and v1.0 follows it. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
+
+## How to get involved
+
+I’m a pretty good computer scientist and software engineer myself but this is all vibe-coded at the moment, just to get a headstart. Get the grunt work out of the way, and get something working quick. Cause, you know, I have a life, a full time job, and not a lot of time or money to spare (f\*ck, I even like to play the guitar when I can!). But I promise I have been VERY strict with Claude – if the machines turn on us, it *might* be because I have been so mean to them, just saying. Once we get something good out, we REALLY wanna have this all code reviewed by humans. De-slopify this sh\*t! Meanwhile we REALLY wanna have this all at least thoroughly tested by humans. Because Claude and I are doing all we can with what we have.
+
+That’s where **you** come in 🫵.
+
+How can you help, you ask?
+
+1. **USE IT!** Let us know what you think in the discussion pages! Report bugs when you find them!
+2. **TELL YOUR FRIENDS!** The more people using it and getting involved the better!
+3. **GET YOUR HANDS DIRTY!** This is open-source! So, are you a good dev too? SWEET, how about you help us squash a few bugs? Had a wild idea? Go and write a plugin for it or something! Implement a new feature to make the core better! I don’t know! Follow your dreams or whatever! You have the source code, don't you?
+4. **BUY ME A DRINK** to say thanks and/or **CHIP IN TO BUY MORE USAGE TOKENS**. Cause yeah, this takes time and resources. And Dario Amodei’s butt lift isn’t paying for itself 🤣.
+
+[![Donate with PayPal](assets/paypal-donate-button.png)](https://www.paypal.com/donate/?business=4QYDZY4RP8V8L&no_recurring=0&item_name=Thanks+heaps!+You+rock!&currency_code=AUD&source=qr)
+<img src="assets/DonationQRCode.png" alt="OxiGuitar Donation QR Code (PayPal)">
+
+# Nerd Section
 
 ## Supported systems
 
 | System | Versions | CPUs |
 | --- | --- | --- |
-| Windows | 10 and later | x86_64, ARM64 |
-| Linux | current distributions with glibc 2.39 or newer: Debian trixie and sid, Ubuntu 24.04+, Fedora 40+ | x86_64, ARM64 |
+| Windows | 10 and later | x86\_64, ARM64 |
+| Linux | current distributions with glibc 2.39 or newer: Debian trixie and sid, Ubuntu 24.04+, Fedora 40+ | x86\_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
 Each [release](https://github.com/mateusrdp/oxiguitar/releases) has two kinds of download, and you need one of each:
@@ -45,14 +64,14 @@ Every release carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Gu
 None of the packages is code-signed yet, so the first launch shows a warning:
 
 - **Windows:** SmartScreen says "Windows protected your PC". Click **More info**, then **Run anyway**.
-- **macOS:** right-click (or Control-click) the app, choose **Open**, then **Open** again. On recent macOS versions you may instead need **System Settings → Privacy & Security → Open Anyway**.
+- **macOS:** right-click (or Control-click) the app, choose **Open**, then **Open** again. On recent macOS versions you may instead need **System Settings → Privacy \& Security → Open Anyway**.
 - **Linux AppImage:** make it executable (`chmod +x OxiGuitar-*.AppImage`), then run it.
 
 ## Building from source
 
 You need Rust 1.97 or newer. On Debian sid everything comes from apt:
 
-```sh
+```
 sudo apt install git build-essential pkg-config rustc cargo rustfmt rust-clippy \
   libfontconfig1-dev libxkbcommon-dev libwayland-dev
 git clone https://github.com/mateusrdp/oxiguitar.git
@@ -68,7 +87,7 @@ The program opens files only through format plugins (one per format, `.oxp` file
 
 Run the desktop app, optionally with a file to open:
 
-```sh
+```
 cargo run --release -p oxiguitar-app -- path/to/your/song.gp
 ```
 
@@ -78,7 +97,7 @@ File → New starts a score; the [manual's Editing page](https://mateusrdp.githu
 
 Try the command-line tool, which reads files through the same plugins (Guitar Pro 3 to 8: .gp3, .gp4, .gp5, .gpx, .gp) and engraves them into PNG pages and a PDF:
 
-```sh
+```
 cargo run --release -p oxiguitar-cli -- info fixtures/gp/oxiguitar-test-song.gp
 cargo run --release -p oxiguitar-cli -- info --bars path/to/your/song.gp5
 cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --png page --pdf song.pdf
@@ -93,7 +112,7 @@ Every file format, tool and tab in OxiGuitar is a plugin: one `.oxp` file, a nat
 
 ## Testers wanted
 
-The maintainer tests by hand on x86_64 Debian sid only. Everything else — **Windows, macOS, other Linux distributions, and any ARM64 machine** — is built and tested automatically, but nobody has clicked through it yet. If you can try test builds on one of those systems, please say hello in [Discussions](https://github.com/mateusrdp/oxiguitar/discussions) or open an issue with what you find.
+The maintainer tests by hand on x86\_64 Debian sid only. Everything else — **Windows, macOS, other Linux distributions, and any ARM64 machine** — is built and tested automatically, but nobody has clicked through it yet. If you can try test builds on one of those systems, please say hello in [Discussions](https://github.com/mateusrdp/oxiguitar/discussions) or open an issue with what you find.
 
 Test builds of every change on `develop` (the program for each system, its plugins, and the songs we write as .gp and .gp5 for checking in Guitar Pro) are under the [Actions](https://github.com/mateusrdp/oxiguitar/actions/workflows/builds.yml) tab, kept for 14 days (you need to be signed in to GitHub to download them). Packages of the latest state are made by hand under [Release packages](https://github.com/mateusrdp/oxiguitar/actions/workflows/release.yml), kept just as long.
 
