@@ -11,8 +11,8 @@ On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so tha
 | M0 Foundations | — | **Done** (16 Oct 2026) |
 | M1 Viewer | v0.1 | **Done** (17 Oct 2026; v0.1.0 published as a pre-release, 18 Oct 2026) |
 | M2 Plugin system and window shell | v0.2 | **Done** (19 Oct 2026; v0.2.0 published as a pre-release, 19 Oct 2026) |
-| M3 Editor | v0.5 | **Done** (21 Oct 2026; the develop → main PR #101 merged; v0.5.0 to be tagged by Mateus) |
-| M4 Player | **v1.0** | Not started |
+| M3 Editor | v0.5 | **Done** (21 Oct 2026; v0.5.0 published as a pre-release, 21 Oct 2026) |
+| M4 Player | **v1.0** | Planning (21 Oct 2026) |
 | M5 Guitar Pro 8 notation and editing parity | | Not started |
 | M6 Format plugins: MusicXML, ABC, MuseScore, MIDI files | | Not started |
 | M7 Realistic guitar through NAM (plugin) | | Not started |
