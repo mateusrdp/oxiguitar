@@ -37,7 +37,7 @@ You keep the copyright on what you contribute. Your name goes in [CREDITS.md](CR
 - **Minimum Rust version:** the rustc in Debian unstable, currently 1.97. Don't use newer language or library features; CI tests that version and the latest stable.
 - **Exact time.** Durations are exact fractions; never use floating point for musical time.
 - **Edits are commands.** Every change to a score goes through a reversible command, so undo and redo always work.
-- **Privacy.** No telemetry, analytics, crash uploads or background requests, ever. Network code may run only after the user asks for a download. CI enforces this (NET-5).
+- **Privacy.** No telemetry, analytics, crash uploads or background requests, ever, and no downloads: sound sets, models and plugins are files the user places (Mateus, 21 Oct 2026). The only network use planned is an update check the user starts. CI enforces this (NET-5).
 
 ## Known platform gaps
 

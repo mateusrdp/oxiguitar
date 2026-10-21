@@ -16,7 +16,7 @@ One plugin can add any mix of these. Tools for the Tools menu, other exports (PN
 
 ## What a plugin is not
 
-- **Not sandboxed.** A plugin is native code running inside OxiGuitar, with the user's rights: it can read files, open network connections, start threads. OxiGuitar's privacy promises (no telemetry, never upload, download only when the user asks) cover the app and the plugins we publish, not yours. Make your own promises, keep them, and say them plainly where people download your plugin.
+- **Not sandboxed.** A plugin is native code running inside OxiGuitar, with the user's rights: it can read files, open network connections, start threads. OxiGuitar's privacy promises (no telemetry, never upload, never download) cover the app and the plugins we publish, not yours. Make your own promises, keep them, and say them plainly where people download your plugin.
 - **Not a way to change the score behind the core's back.** A plugin reads the score the core gives it. Edits will go through the core as undoable commands, when the editor comes (OxiGuitar 0.5).
 - **Not a script.** It is compiled Rust, built for each system you want to support ([Building for every system](building.md)).
 - **Not unloaded.** Once loaded, it stays in memory until OxiGuitar quits. Disabling it in Tools → Plugins takes effect at the next start.
