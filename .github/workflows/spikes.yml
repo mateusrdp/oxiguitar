@@ -125,7 +125,7 @@ jobs:
           SH
           chmod +x "$RUNNER_TEMP/run.sh"
           case "${{ runner.os }}" in
-            Linux) cpu="$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2)" ;;
+            Linux) cpu="$(lscpu | sed -n 's/^Model name: *//p' | head -n1)" ;;
             macOS) cpu="$(sysctl -n machdep.cpu.brand_string)" ;;
             Windows) cpu="$(powershell -NoProfile -Command '(Get-CimInstance Win32_Processor).Name')" ;;
           esac
