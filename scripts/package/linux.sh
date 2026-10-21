@@ -34,8 +34,7 @@
 #         dist/oxiguitar-plugins-basic_VERSION_ARCH.deb,
 #         dist/oxiguitar-plugins-basic-VERSION-1.ARCH.rpm,
 #         dist/OxiGuitar-plugins-basic-VERSION-linux-ARCH.zip (the .oxp
-#         files, flat, and a README) and
-#         dist/oxp/oxiguitar-NAME-VERSION-linux-ARCH.oxp
+#         files, flat, and a README)
 #
 # Only the .deb and the .rpm register the Guitar Pro file types (UI-4); the
 # AppImage registers nothing (the manual shows how to do it by hand).
@@ -416,13 +415,6 @@ files. OxiGuitar alone opens no file; it finds these in
     rm -f "$zip"
     (cd "$zdir" && python3 -m zipfile -c "$zip" ./*)
     echo "Built $zip"
-
-    # Each plugin on its own: dist/oxp/oxiguitar-gp5-VERSION-linux-ARCH.oxp.
-    install -d "$dist/oxp"
-    for f in "$plugins"/*.oxp; do
-        install -m644 "$f" "$dist/oxp/oxiguitar-$(basename "$f" .oxp)-$version-linux-$arch.oxp"
-    done
-    echo "Built $(ls "$dist/oxp" | wc -l) plugin files in $dist/oxp"
 }
 
 case "$what" in

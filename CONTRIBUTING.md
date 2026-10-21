@@ -110,6 +110,7 @@ Every format is its own plugin; the core recognises no format itself (docs/desig
 4. Add small public fixtures and tests; `cargo test -p oxiguitar-plugin-test --test ours` checks the plugin against the contract and the in-process reader. Run the private corpus locally if you have it.
 5. Writers come with round-trip tests (FMT-4) and loss warnings for lossy formats (FMT-3).
 6. A new fuzz target for the reader, and the plugin in `fuzz/fuzz_targets/plugin_dispatch.rs`.
+7. If the plugin joins the basic set we publish, it goes into each system's plugins zip (`OxiGuitar-plugins-basic-VERSION-SYSTEM-ARCH.zip`) and the `oxiguitar-plugins-basic` .deb and .rpm by itself; raise the plugin counts the release workflow checks (`.github/workflows/release.yml`) and add it to the list in `scripts/package/plugins-README.txt`. Releases attach no plugin on its own (docs/design/plugins.md, "Distribution").
 
 ## Adding an effect
 
