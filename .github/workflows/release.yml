@@ -3,8 +3,10 @@
 # deprecated: oxiguitar-x11; x86_64 and ARM64) and a universal .dmg (macOS),
 # none of them code-signed. The core packages hold no plugins: the basic
 # plugins come apart (Mateus, 18 Oct 2026), as oxiguitar-plugins-basic (.deb,
-# .rpm; Suggested by the core), a zip for each system, and each plugin's own
-# file for each target, all attached to the release.
+# .rpm; Suggested by the core) and one zip for each system, attached to the
+# release. Plugins are not attached one by one (Mateus, 21 Oct 2026: too many
+# files, and users didn't know which to take); the release notes open with
+# which two files a user needs.
 #
 # - A pushed v* tag (only Mateus creates them) builds everything and attaches
 #   it, with SHA256SUMS, to a draft release for him to check and publish.
@@ -105,7 +107,7 @@ jobs:
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
       - run: cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
       # Our plugins (target/lib/oxiguitar/plugins/), packaged apart from the
-      # core: oxiguitar-plugins-basic, a zip, and each plugin on its own.
+      # core: oxiguitar-plugins-basic and a zip.
       - run: scripts/build-plugins.sh
       - uses: actions/download-artifact@v8
         with:
@@ -197,7 +199,6 @@ jobs:
           mkdir -p "$home/plugins" "$RUNNER_TEMP/empty-home"
           unzip -q dist/OxiGuitar-plugins-basic-*-linux-*.zip -d "$home/plugins"
           test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 5
-          test "$(ls dist/oxp/*.oxp | wc -l)" -eq 5
           for build in wayland x11; do
             if [ "$build" = wayland ]; then
               appimage="$(ls dist/OxiGuitar-[0-9]*.AppImage)"
@@ -273,13 +274,6 @@ jobs:
           archive: false
           retention-days: 14
           if-no-files-found: error
-      # Each plugin on its own, together in one (zipped) artifact.
-      - uses: actions/upload-artifact@v7
-        with:
-          name: oxp-linux-${{ matrix.arch }}
-          path: dist/oxp/*.oxp
-          retention-days: 14
-          if-no-files-found: error
 
   windows:
     name: Windows (${{ matrix.arch }})
@@ -341,15 +335,12 @@ jobs:
           $plugins = Get-ChildItem target/release/plugins/*.oxp
           if ($plugins.Count -ne 5) { throw 'expected our five plugins' }
           $pdir = "dist/plugins-basic"
-          New-Item -ItemType Directory -Force $pdir, dist/oxp | Out-Null
+          New-Item -ItemType Directory -Force $pdir | Out-Null
           Copy-Item $plugins $pdir
           Copy-Item scripts/package/plugins-README.txt "$pdir/README.txt"
           $pzip = "dist/OxiGuitar-plugins-basic-$env:VERSION-windows-${{ matrix.arch }}.zip"
           Compress-Archive -Path "$pdir/*" -DestinationPath $pzip
           Get-Item $pzip
-          foreach ($p in $plugins) {
-            Copy-Item $p "dist/oxp/oxiguitar-$($p.BaseName)-$env:VERSION-windows-${{ matrix.arch }}.oxp"
-          }
       - name: Test the zips
         shell: pwsh
         run: |
@@ -375,12 +366,6 @@ jobs:
         with:
           path: dist/OxiGuitar-plugins-basic-*.zip
           archive: false
-          retention-days: 14
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v7
-        with:
-          name: oxp-windows-${{ matrix.arch }}
-          path: dist/oxp/*.oxp
           retention-days: 14
           if-no-files-found: error
 
@@ -449,7 +434,6 @@ jobs:
             codesign --verify "$plugin"
           done
           OXIGUITAR_HOME="$home" "$cli" info "$SAMPLE" > /dev/null
-          test "$(ls dist/oxp/*.oxp | wc -l)" -eq 5
           hdiutil detach "$mount"
       - uses: actions/upload-artifact@v7
         with:
@@ -461,12 +445,6 @@ jobs:
         with:
           path: dist/OxiGuitar-plugins-basic-*.zip
           archive: false
-          retention-days: 14
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v7
-        with:
-          name: oxp-macos-universal
-          path: dist/oxp/*.oxp
           retention-days: 14
           if-no-files-found: error
 
@@ -495,20 +473,14 @@ jobs:
           path: dist
           merge-multiple: true
           skip-decompress: true
-      # Each plugin on its own: these artifacts are zipped, so unpacked here.
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: oxp-*
-          path: dist
-          merge-multiple: true
       - name: Check the packages
         run: |
           # Each kind of file, by name. The core: a .deb, an .rpm and an
           # AppImage of each Linux build (Wayland, X11) for each Linux
           # architecture, a zip for each Windows architecture and the
           # universal .dmg. The basic plugins: a .deb and an .rpm for each
-          # Linux architecture, a zip for each of the five targets, and each
-          # plugin's own file for each of them.
+          # Linux architecture and a zip for each of the five targets; no
+          # plugin on its own.
           find dist -mindepth 1 -maxdepth 1 -printf '%y %s %f\n' | sort -k3
           if find dist -mindepth 1 -maxdepth 1 ! -type f | grep -q .; then
             echo "::error::dist/ holds something that is not a file" >&2
@@ -533,8 +505,8 @@ jobs:
           expect 2 'OxiGuitar-[0-9]*-windows-*.zip' 'Windows core zip'
           expect 1 '*.dmg' '.dmg'
           expect 5 'OxiGuitar-plugins-basic-*.zip' 'plugin zip'
-          expect 25 '*.oxp' 'plugin file'
-          expect 49 '*' 'files in all'
+          expect 0 '*.oxp' 'plugin on its own'
+          expect 24 '*' 'files in all'
           for f in dist/OxiGuitar-[0-9]*-windows-*.zip; do
             unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
             unzip -l "$f" | grep -q 'oxiguitar.exe' || { echo "::error::$f has no oxiguitar.exe" >&2; exit 1; }
@@ -549,16 +521,19 @@ jobs:
       - name: Release notes
         if: github.ref_type == 'tag'
         run: |
-          # The version's section of CHANGELOG.md, without its heading.
+          # Which files to take (scripts/package/release-notes.md), then the
+          # version's section of CHANGELOG.md, without its heading.
+          sed "s/@VERSION@/$VERSION/g" scripts/package/release-notes.md > notes.md
           awk -v v="$VERSION" '
             index($0, "## [" v "]") == 1 { on = 1; next }
             on && /^## / { exit }
             on { print }
-          ' CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then
+          ' CHANGELOG.md > changes.md
+          if ! grep -q '[^[:space:]]' changes.md; then
             echo "CHANGELOG.md has no section \"## [$VERSION]\"" >&2
             exit 1
           fi
+          cat changes.md >> notes.md
       - name: Create the draft release
         if: github.ref_type == 'tag'
         run: |

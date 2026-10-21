@@ -35,7 +35,7 @@ At start, the line at the bottom of the window says what is missing:
 - **No output plugin is installed, so the player is off.** The player's buttons stay greyed out until a plugin that makes sound is installed.
 - **No read/write plugins are installed.** OxiGuitar can open and save files only through format plugins, so nothing can be opened. Install the basic plugins ([Installing](installing.md)); if they are installed, this message means they aren't in a folder OxiGuitar searches (Help → About lists those; see `plugin_folders` above).
 
-Both messages say where to download plugins: [the releases page](https://github.com/mateusrdp/oxiguitar/releases). Put the files in your plugins folder.
+Both messages say where to download plugins: [the releases page](https://github.com/mateusrdp/oxiguitar/releases), where each release has one zip of our plugins for each system (`OxiGuitar-plugins-basic-VERSION-SYSTEM-ARCH.zip`; on Debian, Ubuntu and Fedora the `oxiguitar-plugins-basic` package). Unzip it into your plugins folder: the `.oxp` files go directly in the folder, not in a subfolder.
 
 ## The plugin manager
 
