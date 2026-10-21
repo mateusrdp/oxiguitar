@@ -4,6 +4,12 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Fixed
+
+- Right-click on a track → Properties, Transpose or Delete crashed the app on Windows: the command now runs after the menu has closed (issue #102). Edit → Delete Track… is added.
+- The Inspector counts a voice as Guitar Pro 8 does: "1.5/4", green when the bar is full and red when short or too long, and lists "notes and rests" entered instead of "beats" (issue #104).
+- A selected rest's Dynamic drop-down filled the Inspector; it is a normal drop-down again (issue #105).
+
 ## [0.5.0] - 2026-10-21
 
 Milestone M3 (the editor) is complete: OxiGuitar edits everything TuxGuitar does, and more, and saves as .gp and .gp5. Plugin interface 1.2 is frozen with this release.

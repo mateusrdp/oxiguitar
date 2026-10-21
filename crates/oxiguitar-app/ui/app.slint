@@ -689,8 +689,13 @@ component Inspector inherits Rectangle {
                 }
                 if f.kind == 2 : HorizontalLayout {
                     spacing: 6px;
+                    // A row is as tall as its drop-down needs, however few
+                    // rows the Inspector has (issue #105: a rest's one
+                    // field filled the pane).
+                    max-height: 40px;
                     Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
                     ComboBox {
+                        vertical-stretch: 0;
                         min-width: 60px;
                         horizontal-stretch: 1;
                         model: f.options;

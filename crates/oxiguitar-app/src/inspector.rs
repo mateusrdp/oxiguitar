@@ -316,14 +316,14 @@ mod tests {
         assert_eq!(v.voices.len(), 2);
         assert_eq!(
             (v.voices[0].count.as_str(), v.voices[0].state.as_str()),
-            ("3 of 4", "1 beat short")
+            ("3/4", "1 beat short")
         );
         assert_eq!(v.voices[0].fill, Fill::Short);
         assert!(v.voices[0].current);
         assert_eq!(v.voices[0].entered, 3);
         assert_eq!(
             (v.voices[1].count.as_str(), v.voices[1].state.as_str()),
-            ("5 of 4", "1 beat too long")
+            ("5/4", "1 beat too long")
         );
         assert_eq!(v.caret, "The caret's beat starts on beat 4");
 
@@ -356,7 +356,7 @@ mod tests {
         )
         .unwrap();
         let v = bar_view(&s, at(0, 3, 0)).unwrap();
-        assert_eq!(v.voices[0].count, "3⅓ of 4");
+        assert_eq!(v.voices[0].count, "3.33/4");
         assert_eq!(v.voices[0].state, "⅔ beat short");
 
         // 6/8 counts eighths; an empty voice under the caret has its row.
@@ -369,7 +369,7 @@ mod tests {
         assert_eq!(v.voices.len(), 3);
         assert_eq!(v.voices[2].state, "Empty");
         assert!(v.voices[2].current);
-        assert_eq!(v.voices[0].count, "6⅔ of 6");
+        assert_eq!(v.voices[0].count, "6.67/8");
         s.master_bars[0].free_time = true;
         assert_eq!(
             bar_view(&s, at(0, 0, 0)).unwrap().voices[0].state,
