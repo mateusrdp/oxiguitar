@@ -186,14 +186,25 @@ Each slice is one or more pull requests into develop, with every gate green, a t
 
 ## M4 — Player (v1.0)
 
+The plan, proposed 21 Oct 2026 for Mateus's approval, with the audio spike's measurements: [docs/design/player.md](docs/design/player.md). Mateus's answers (21 Oct 2026): the app plays out of the box with whatever sound set the system has (Windows' gm.dls, macOS's CoreAudio set, a Linux distribution's SoundFont), bundles none and downloads none; better sets are files the user places in a `soundfonts` folder, and the footer links to the manual's page on getting them; the sound plugin's settings window (from the plugin manager) picks sets for guitars, basses, drums and the rest, globally; the sound must be exactly what the cursor shows, for exactly the written duration (people play along); the signal is built to feed NAM later (per-track NAM settings in the track dialog, added by the NAM plugin, M7); SFZ before v1.0 if it isn't a big job, else v1.1; a release for testers as soon as playback is stable.
+
 - In the core: score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); the transport in the top area (play, play selection, stop, pause, rewind, count-in, loop, audible and visual metronome, PLAY-5); the follow cursor; the mixer (PLAY-6), in each Tracks row rather than a tab of its own; the output choice.
-- As plugins: the MIDI instrument (a SoundFont synthesiser, PLAY-1, with downloads of better SoundFonts at the user's request, PLAY-8), audio-device plugins per system, WAV export (PLAY-7). Instruments declare the classes of instrument they play.
+- As plugins: the sound-set instrument (SF2, SF3, DLS and SFZ; PLAY-1), reading the system's sets and the user's `soundfonts` folder, never downloading (PLAY-8 as changed on 21 Oct 2026), audio-device plugins per system, WAV export (PLAY-7). Instruments declare the classes of instrument they play.
 - v1.0's minimum: the Guitar Pro 7+ format plugin reading and writing, and the basic MIDI player, in `oxiguitar-plugins-basic`.
 
 - A slide from a note to no note (a voice's last note, or before a rest) plays as a slide off the note: down toward the open string, up toward the last fret, fading out (Mateus, 20 Oct 2026: it is common on stringed instruments and must stay allowed; the player gives it a direction).
 - Instruments declared by a plugin built for an interface before the instrument interface's are ignored by the player (Mateus, 19 Oct 2026: the `instruments` manifest key stays in 1.0, and this rule avoids rework). Until then no plugin counts as an output.
 
-Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes; golden-file tests cover event output; the practice tools work on every reference song; with no instrument installed the transport is greyed out and the footer says where to get one.
+### M4's slices (proposed 21 Oct 2026)
+
+1. **The timeline**: the score as events at their samples (playing order, tempo, feel, count-in, metronome, every TAB-1 effect), and the map back to beats. Golden files.
+2. **Interface 1.3, audio devices and the engine**: instruments, audio-device services (PipeWire, ALSA, WASAPI, CoreAudio through cpal), the scheduler, mixer and audio clock, plugin settings windows, footer links; the contract suite's real-time checks.
+3. **The sound-set plugin**: SF2, SF3 and DLS through rustysynth; the `soundfonts` folders; its settings window; effects as MIDI. Out of the box on every system.
+4. **The window**: transport, follow cursor, loop, count-in, metronome and visual metronome, speed, live mixer; the footer's link to better sounds; the manual's pages. Then a release for testers.
+5. **The SFZ sampler** (or v1.1).
+6. **WAV export**, the milestone's gates, then v1.0.
+
+Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes (the cursor shows the sample being heard); golden-file tests cover event output; the practice tools work on every reference song; it plays out of the box on Windows, macOS and Linux with the system's own sound set; with no instrument or sound set the transport is greyed out and the footer says where to get one.
 
 ## Later milestones
 

@@ -1,0 +1,117 @@
+# The player (M4)
+
+How OxiGuitar plays a score: what the core does, what plugins do, which libraries do the work, and how the sound stays exactly on what the cursor shows. **Status: proposed (21 Oct 2026), for Mateus's approval.** The measurements behind it are in "The spike" below; the code is `spikes/audio/` and `spikes/nam-bench/`.
+
+## What matters most
+
+People play along with OxiGuitar, as with a backing track. So (Mateus, 21 Oct 2026):
+
+- **The sound is exactly what the cursor shows, for exactly the written duration.** Every note starts on the sample the score puts it on and stops on the sample it ends; the cursor shows the beat being heard, not the beat being computed; nothing drifts, however long the song.
+- **Nothing stutters.** The audio thread never waits: it allocates no memory, takes no locks and makes no system calls (the brief's rule), and everything it needs is loaded and in memory before Play.
+- **It plays out of the box.** With nothing installed beyond OxiGuitar and its basic plugins, it plays with the sound set the system already has. Better sounds are files the user places in a folder; OxiGuitar downloads nothing (Mateus, 21 Oct 2026, replacing PLAY-8's download button). Whenever it plays with a system's basic set, the footer says so and links to the manual's page on getting better sounds.
+- **The best sound we can get**, since this signal later feeds NAM: the better the source, the better the modelled guitar. Quality comes before disk size.
+
+## The chain
+
+```
+ score ──► TIMELINE (core) ──► SCHEDULER (core, audio thread) ──► INSTRUMENT per track (plugin)
+           every event at its                                      SoundFont plugin: SF2, SF3, DLS
+           sample, tempo map,                                      (rustysynth), SFZ (our sampler)
+           repeats, feel, count-in,                                         │ a buffer per track
+           metronome                                                        ▼
+                                                                   EFFECTS per track (plugin, M7:
+                                                                   NAM + cabinet IR on guitars)
+                                                                            │
+ cursor ◄── AUDIO CLOCK (core) ◄── AUDIO DEVICE (plugin, cpal) ◄── MIXER (core: volume, pan,
+           samples played,         PipeWire, ALSA, WASAPI,         mute, solo, metronome)
+           minus latency           CoreAudio
+```
+
+- **The timeline (core, off the audio thread).** The score becomes a list of events, each at an exact sample: notes with their string, fret, pitch, velocity, length and every effect (bend curves, slides, vibrato, palm mute, harmonics, dead and ghost notes, let ring, tremolo picking, trills, grace notes, strokes), tempo changes, repeats and jumps in playing order, swing and triplet feel, the count-in and the metronome's clicks. It also keeps the map back from sample to beat, for the cursor. It is built when a file opens and updated where an edit touches, so Play never waits for it. Golden-file tests cover it (the milestone's gate).
+- **The scheduler (core, audio thread).** Each device callback, it hands every instrument the events that fall in the callback, split at their samples, from queues filled ahead (lock-free, single producer and consumer). Loop, speed (25 to 200 %, by re-timing the events, so the pitch never changes) and seeking are messages on the same queues.
+- **Instruments (plugins).** An instrument renders the tracks given to it, each into its own buffer, from events that carry the notes' meaning rather than MIDI: a SoundFont instrument turns them into MIDI-like control (one channel per string, so a bend moves one string; programs for palm mute, harmonics and dead notes where the set has them), with a helper in the SDK every instrument can share; an SFZ instrument can pick articulations from them; M7's guitar takes them as they are.
+- **Effects (plugins, M7).** After the instrument, each track can pass through a chain of effects, such as NAM and a cabinet impulse response on a guitar track. The interface for it comes with M7, but M4 already renders each track apart so that it can be inserted without rework.
+- **The mixer (core).** Volume, pan, mute and solo per track (the Tracks rows), the metronome, the master level.
+- **Audio devices (plugins).** One per system's audio API, each built with only its own code (ADR 0008, "no dead code"): PipeWire and ALSA on Linux, WASAPI on Windows, CoreAudio on macOS, all through cpal. The stream opens at 48 kHz, NAM's rate, which PipeWire, WASAPI and CoreAudio convert themselves when the hardware runs at another; where a device refuses 48 kHz, the core converts.
+
+## Staying in sync
+
+- **One clock: the audio device's.** The core counts the samples it has handed the device. The sample being heard is that count minus the device's delay to the speaker (cpal reports, for every callback, when its first sample will be played) minus the latency the instruments and effects declare (a resampler's, an oversampler's; NAM adds none). The cursor shows the beat at that sample, through the timeline's map. No timer and no wall clock decide where the music is.
+- **The cursor moves on every frame the window draws while playing**, computed afresh from the audio clock each time, so it never drifts and never runs ahead. It can't be finer than the screen (16.7 ms at 60 Hz), but the sound is sample-exact. When nothing plays, nothing runs: no polling.
+- **Notes start on their sample.** The core splits every callback at each event. rustysynth renders in blocks and starts a note at the next block boundary, so it runs with blocks of 8 samples: a note starts at most 7 samples (0.15 ms) late, measured, against up to 63 samples (1.3 ms) with its default 64. Our SFZ sampler starts notes on their exact sample. Every note's length comes from the timeline, so durations are exact too.
+- **No stutter.** Sounds are loaded when a file opens (or when its sounds change), not on Play, and their memory is touched page by page then, so the audio thread never waits for the disk or a page fault. The contract suite fails an instrument that allocates, locks or waits during rendering. Playback starts within 100 ms (the milestone's gate).
+
+## Sounds
+
+- **Sound sets are files in a folder, like plugins.** A `soundfonts` folder sits beside `plugins` in the user's folder: `~/.local/share/oxiguitar/soundfonts/` on Linux, `%APPDATA%\OxiGuitar\soundfonts\` on Windows, `~/Library/Application Support/OxiGuitar/soundfonts/` on macOS, `soundfonts/` in `OXIGUITAR_HOME`. OxiGuitar creates it at start, as it does `plugins`. Put an `.sf2`, `.sf3` or `.dls` file in it, or an SFZ instrument's folder (its `.sfz` files with their samples); nothing else is needed.
+- **The system's own sets are read too**, never written: on Linux `/usr/share/sounds/sf2`, `/usr/share/sounds/sf3` and `/usr/share/soundfonts` (FluidR3, MuseScore General, TimGM6mb and others from the distribution's packages); on Windows `C:\Windows\System32\drivers\gm.dls`, the General MIDI set every Windows has; on macOS the General MIDI set in CoreAudio (`gs_instruments.dls`). So it plays out of the box everywhere. The `oxiguitar-plugins-basic` .deb and .rpm **recommend** a General MIDI sound set package (`fluid-soundfont-gm` or `musescore-general-soundfont-small` on Debian and Ubuntu; `fluid-soundfont-gm` on Fedora), which the package manager installs unless told not to.
+- **Choosing.** The sound plugin's settings window (opened from the plugin manager: Tools → Plugins…, the plugin's Settings…) lists every set found, with its folder, and picks one for guitars, one for basses, one for drums and one for everything else. The choice is global, for every file (Mateus, 21 Oct 2026). Until the user picks, the best set found is used: a set in the user's folder before the system's, the larger before the smaller.
+- **The way to better sound is always in sight.** Whenever playback uses only a system's basic set, the footer says once, as a warning, that better sounds can be installed, with a link to the manual's "Better sounds" page, which says what to get, where from, its licence and size, and where to put it, by instrument (guitars, basses, drums), with the DI guitar set for NAM.
+- **What we recommend** (kept in `claude/sound-research.md` and the manual; all free to use; none bundled): MuseScore General and FluidR3 (MIT) for everything; FreePats' guitars (CC0, with a raw DI bank), Karoryfer's Black and Green Guitars and Shinyguitar (CC0); Karoryfer's basses (CC0); SM Drums (public domain), Naked Drums (CC BY 4.0), Karoryfer's drums (CC0). Before the manual names them, Mateus listens to renders of the reference songs with each.
+
+## Libraries
+
+| Job | Choice | Why |
+| --- | --- | --- |
+| SF2 synthesis | **rustysynth** 1.3.8 (MIT, no dependencies, released 20 Oct 2026) | Maintained, small, fast (140–270× real time for three tracks here), allocation-free while rendering (measured), within about 2 dB of FluidSynth's spectrum on four General MIDI sets. Gap: it ignores the modulators a set defines in its file (only the standard ones apply); sets that rely on them (GeneralUser GS) may sound off. If listening shows it, we add modulators to rustysynth upstream. |
+| SF3 | rustysynth, after decoding the Ogg Vorbis samples into an in-memory SF2 (lewton, MIT OR Apache-2.0) | Measured: MuseScore General Lite (40 MB) becomes a 216 MB SF2 in 6 s on one slow core, done when the set is first loaded, in parallel on real machines, and plays like FluidSynth's render of the .sf3. |
+| DLS (Windows, macOS) | Our reader, turning DLS into an in-memory SF2 for rustysynth (DLS articulations map to SF2 generators; FluidSynth 2.5's DLS loader, LGPL, is the reference) | So both play out of the box. Checked on GitHub's Windows and macOS runners, which have the sets. |
+| SFZ | **Our own sampler** | No Rust SFZ engine fits: xsynth (LGPL-3.0) leaves out modulation envelopes and LFOs, sofiza is a parser from 2022. The best free guitars, basses and drums are SFZ: round robins, velocity layers, release samples, key switches, choke groups. WAV (hound), FLAC (claxon) and Ogg (lewton) samples. Sample-exact starts. |
+| Alternative synthesiser | OxiSynth 0.1.0 (LGPL-2.1, FluidSynth's design) | Closest to FluidSynth in the spike (0.3–1.9 dB), honours modulators, reads SF3; but one release, quiet since May 2025, fixed 64-sample blocks (1.3 ms late at worst) and 9× slower to load FluidR3. Kept as the fallback. |
+| Audio devices | **cpal** 0.18 (Apache-2.0; Debian packages cpal, lewton and hound) | Every system's API, PipeWire included; reports when each buffer will be heard. Measured: rendering three tracks inside its callback, no allocation. |
+| NAM (M7) | Decided in M7 after the speed test on every system (the brief's rule); see "NAM" below | |
+
+All of them speak plain `f32` sample buffers, planar or interleaved: the synthesiser fills a track's left and right buffers, NAM processes a mono buffer in place, cpal takes interleaved frames. They fit without conversion beyond copying, and the spike runs the whole chain in 64-sample callbacks with no allocation.
+
+## NAM (for M7)
+
+Two pure-Rust engines exist, both run NAM's `.nam` files, both allocation-free on the audio thread (measured for nam-rs):
+
+- **nam-rs** 0.4.0 (MIT; serde, serde_json, thiserror): WaveNet A1 and A2, LSTM, slimmable models; matches NAM's reference within 1e-5 per sample; plain Rust, so it builds for every target we ship. Measured: an LSTM model at 75–85× real time; NAM's standard WaveNet model at about 2× real time on the spike's virtual machine, a heavy load per guitar track there (see the CI numbers below for real machines).
+- **NeuralAmpModeler-rs** 1.0.1 (Apache-2.0): hand-written AVX2/AVX-512 kernels, plus cabinet IR convolution, resampling and oversampling; but x86_64 with the x86-64-v3 baseline only (it refuses to compile for ARM64 or Apple Silicon), Rust 1.99 or newer (we build with 1.97, Debian's), several yanked releases this month. The spike's workflow builds it with Rust 1.99 on x86_64 runners to compare speed.
+
+If NeuralAmpModeler-rs proves much faster, it can be the x86_64 build of the NAM plugin, with nam-rs on ARM64 and Apple Silicon (Mateus, 21 Oct 2026: a much better library on x86_64 alone is acceptable; others keep MIDI with better sound sets until the libraries catch up). The guitar signal for NAM: FreePats' DI bank through our SFZ sampler first; the brief's plucked-string model after.
+
+Per-track NAM settings (whether to use NAM, which model and impulse response) belong in the track dialog, added by the NAM plugin only when it is installed (Mateus, 21 Oct 2026); the interface for plugin sections in the track dialog comes with M7.
+
+## The plugin interface (1.3)
+
+Additions only, at the ends of enums, as every minor version (frozen with the release that brings them):
+
+- **Instruments.** The manifest's `instruments` key (in 1.0) comes alive; the SDK's `Instrument` trait: `prepare` (off the audio thread: the tracks it plays, the sample rate, the largest callback; load what they need), `render` (on the audio thread: this callback's events per track, into a buffer per track), `latency`. Instruments declared by a plugin built for an interface before 1.3 are ignored (Mateus, 19 Oct 2026).
+- **Audio devices**, as services (`audio-device`): open a stream at a rate and callback size, call the host's render function from the device's callback with the delay to the speaker, report errors and device changes. The host picks the first available by priority, or the one settings.json pins.
+- **A settings window per plugin**, opened from the plugin manager's Settings… for plugins whose manifest asks for one, built from the same widgets as a plugin's tab (1.1), its values kept in the plugin's own part of settings.json.
+- **Footer messages with a link**, opened in the system's browser when clicked.
+- **The plugin's own folders**: its data folder (brief: "The plugin's own data folder", in the wishlist) and the sound-set folders, handed over by the host.
+- The contract suite checks every instrument for allocations, locks and waits while rendering, and that it keeps time (a note asked for at a sample starts there, within the instrument's declared resolution).
+
+## Slices
+
+Each slice is one or more pull requests into develop with every gate green, a test build on its branch and direct artifact links (with their expiry) for Mateus.
+
+1. **The timeline** (core, no window): the score as events at their samples, playing order with repeats, jumps and endings, tempo changes, feel, count-in and metronome; the map from sample back to beat; every TAB-1 effect as a note event (PLAY-3, PLAY-4). Gates: golden files over the fixtures and the corpus (`oxiguitar-cli events FILE`), and the timeline of the 300-bar song built well within the 100 ms start budget.
+2. **Interface 1.3, audio devices and the engine** (core): the scheduler, mixer and audio clock; the four audio-device plugins; the test plugin's instrument (a sine per note) through the contract suite's real-time checks; settings windows, footer links and the plugins' folders.
+3. **The SoundFont plugin**: SF2, SF3 and DLS through rustysynth (blocks of 8); the `soundfonts` folders and the system's; its settings window (a set for guitars, basses, drums and the rest); the effects in MIDI terms (PLAY-3). Windows and macOS play out of the box, checked on their CI runners; the .deb and .rpm recommend a sound set package.
+4. **The window**: the transport in the top area (play, play selection, pause, stop, rewind, loop a selection, count-in, metronome, visual metronome, speed 25–200 %; PLAY-5), the cursor following playback and scrolling the page, the mixer in each Tracks row (PLAY-6), the footer's warning and link, the manual's Playback and Better sounds pages. **Then a release for testers** (v0.9, Mateus to decide), as soon as it plays reliably.
+5. **The SFZ sampler**, in the same plugin, tested on the recommended guitars, basses and drums. If it proves a big job, it goes to v1.1 (Mateus, 21 Oct 2026).
+6. **WAV export** (PLAY-7, an export plugin), the milestone's gates (playback matches the written effects by ear on the reference songs; in sync over 10 minutes; practice tools on every reference song), then v1.0.
+
+## The spike
+
+`spikes/audio/` and `spikes/nam-bench/` (spikes/README.md says how to run them). Measured on the session's virtual machine (2 cores of a 2.8 GHz Xeon, shared), 21 Oct 2026; the spikes workflow repeats them on every target.
+
+- **Synthesisers**, a four-bar song with guitar (six channels, a bend), bass and drums, one synthesiser per track, 64-sample callbacks split at every event, 48 kHz:
+
+  | Set | rustysynth (64) | OxiSynth | Closeness to FluidSynth's render (envelope correlation; spectral distance) |
+  | --- | --- | --- | --- |
+  | TimGM6mb (6 MB) | 244× real time, load 5 ms | 255×, 55 ms | rustysynth 0.992, 2.2 dB; OxiSynth 0.996, 2.2 dB |
+  | FluidR3_GM (148 MB) | 155×, 105 ms | 104×, 898 ms | rustysynth 0.994, 2.3 dB; OxiSynth 0.997, 1.6 dB |
+  | MuseScore General Lite (SF3, 40 MB) | 163× (+6 s decoding) | 146× (+6 s) | rustysynth 0.991, 2.1 dB; OxiSynth 0.997, 0.3 dB |
+  | GeneralUser GS 2.0.3 (32 MB) | 253×, 27 ms | 191×, 340 ms | rustysynth 0.996, 2.1 dB; OxiSynth 0.996, 1.9 dB |
+
+  No allocation in either while playing. rustysynth with blocks of 16 runs at 115×, with 8 at 83–119×.
+- **Timing**: a note asked for n samples into a render starts up to `block − 1` samples late (rustysynth 64: up to 63; 32: 31; 16: 15; 8: 7; OxiSynth: 63).
+- **NAM** (nam-rs, 64-sample blocks, mono 48 kHz): LSTM example 75–85× real time; NAM's standard WaveNet 2.0–2.2× (median 590 µs of the 1333 µs a block lasts). No allocation.
+- **The whole chain** (three tracks through rustysynth, the guitar through NAM, mixed, interleaved), 64-sample callbacks: with the LSTM model, median 28 µs, 99th percentile 64 µs; with the standard WaveNet, median 592 µs, 99th percentile 1303 µs, which leaves no margin on this machine. No allocation.
+- **A live device** (cpal, ALSA's null device here): the song rendered inside the device's callbacks of 240 frames, worst 406 µs of 5000, no allocation.
+- **SF3**: decoding MuseScore General Lite's 1254 Ogg samples takes 6 s on one core; MuseScore's files leave odd chunks unpadded, which the reader allows for.
