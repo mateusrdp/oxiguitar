@@ -7,7 +7,7 @@ This guide shows how to write one, in Rust, with the SDK (`oxiguitar-plugin`). T
 ## What you need
 
 - Rust 1.97 or later ([rustup.rs](https://rustup.rs)).
-- OxiGuitar 0.2 or later, to try your plugin in the app ([the user manual](https://mateusrdp.github.io/oxiguitar/installing.html)).
+- OxiGuitar 0.5 or later (0.2 for a plugin on interface 1.0 or 1.1), to try your plugin in the app ([the user manual](https://mateusrdp.github.io/oxiguitar/installing.html)).
 - Nothing else: the SDK and the contract suite come through Cargo, and you write no `unsafe` code.
 
 ## The pages
