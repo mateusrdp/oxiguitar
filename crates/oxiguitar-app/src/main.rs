@@ -587,6 +587,7 @@ fn main() -> Result<(), slint::PlatformError> {
             "special-paste" => return clipboard(&a, editing::ClipKey::Special),
             "track-properties" => return open_track_dialog(&a),
             "add-track" => return track_action(&a, "add"),
+            "delete-track" => return track_action(&a, "delete"),
             "transpose-selection" => return open_transpose(&a, oxiguitar_edit::Scope::Selection),
             "transpose-all" => return open_transpose(&a, oxiguitar_edit::Scope::All),
             _ => {}
@@ -723,11 +724,17 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_track_menu(move |i, action| {
         let i = usize::try_from(i).unwrap_or(0);
-        let moved = a.borrow_mut().editing.select_track(i);
-        if moved {
-            caret_moved(&a);
-        }
-        track_action(&a, action.as_str());
+        let a = a.clone();
+        // After the menu has closed: the command rebuilds the track rows,
+        // which hold the menu, and on Windows that crashed the app while
+        // the menu's own callback was still running (issue #102).
+        slint::Timer::single_shot(Duration::ZERO, move || {
+            let moved = a.borrow_mut().editing.select_track(i);
+            if moved {
+                caret_moved(&a);
+            }
+            track_action(&a, action.as_str());
+        });
     });
     let a = app.clone();
     ui.on_page_menu(move |action| match action.as_str() {

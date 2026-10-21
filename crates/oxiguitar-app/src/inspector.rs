@@ -29,7 +29,8 @@ pub(crate) enum Fill {
 pub(crate) struct VoiceRow {
     /// "Voice 1".
     pub(crate) name: String,
-    /// How many beats it holds, of how many: "3½ of 4".
+    /// How much it holds against the time signature, as Guitar Pro 8 shows a
+    /// bar: "1.5/4" is a quarter and an eighth in 2/4 (issue #104).
     pub(crate) count: String,
     /// What is missing or too much: "Full", "½ beat short", "1¼ beats too
     /// long", "Empty".
@@ -84,7 +85,7 @@ pub(crate) fn bar_view(score: &Score, c: Caret) -> Option<BarView> {
         let have = (!empty).then(|| v.length().and_then(beats)).flatten();
         let (count, state, fill) = match have {
             None if empty => (
-                format!("0 of {}", ts.numerator),
+                format!("0/{}", ts.denominator),
                 "Empty".to_owned(),
                 Fill::Unknown,
             ),
@@ -99,7 +100,7 @@ pub(crate) fn bar_view(score: &Score, c: Caret) -> Option<BarView> {
                 Fill::Unknown,
             ),
             Some(n) => {
-                let count = format!("{} of {}", amount(n), ts.numerator);
+                let count = format!("{}/{}", decimal(n), ts.denominator);
                 match n.checked_sub(want) {
                     Some(d) if d.is_zero() => (count, "Full".to_owned(), Fill::Full),
                     Some(d) if d.numer() > 0 => (
@@ -131,7 +132,7 @@ pub(crate) fn bar_view(score: &Score, c: Caret) -> Option<BarView> {
     if c.voice >= bar.voices.len() {
         voices.push(VoiceRow {
             name: format!("Voice {}", c.voice + 1),
-            count: format!("0 of {}", ts.numerator),
+            count: format!("0/{}", ts.denominator),
             state: "Empty".to_owned(),
             fill: Fill::Unknown,
             entered: 0,
@@ -163,6 +164,16 @@ pub(crate) fn bar_view(score: &Score, c: Caret) -> Option<BarView> {
         voices,
         caret,
     })
+}
+
+/// A number of beats as a decimal: 4, 1.5, 3.33.
+fn decimal(n: Ratio) -> String {
+    if n.denom() == 1 {
+        return n.numer().to_string();
+    }
+    let x = (n.numer() as f64 / n.denom() as f64 * 100.0).round() / 100.0;
+    let text = format!("{x:.2}");
+    text.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
 /// "beat" or "beats", as an amount wants.
@@ -305,14 +316,14 @@ mod tests {
         assert_eq!(v.voices.len(), 2);
         assert_eq!(
             (v.voices[0].count.as_str(), v.voices[0].state.as_str()),
-            ("3 of 4", "1 beat short")
+            ("3/4", "1 beat short")
         );
         assert_eq!(v.voices[0].fill, Fill::Short);
         assert!(v.voices[0].current);
         assert_eq!(v.voices[0].entered, 3);
         assert_eq!(
             (v.voices[1].count.as_str(), v.voices[1].state.as_str()),
-            ("5 of 4", "1 beat too long")
+            ("5/4", "1 beat too long")
         );
         assert_eq!(v.caret, "The caret's beat starts on beat 4");
 
@@ -345,7 +356,7 @@ mod tests {
         )
         .unwrap();
         let v = bar_view(&s, at(0, 3, 0)).unwrap();
-        assert_eq!(v.voices[0].count, "3⅓ of 4");
+        assert_eq!(v.voices[0].count, "3.33/4");
         assert_eq!(v.voices[0].state, "⅔ beat short");
 
         // 6/8 counts eighths; an empty voice under the caret has its row.
@@ -358,7 +369,7 @@ mod tests {
         assert_eq!(v.voices.len(), 3);
         assert_eq!(v.voices[2].state, "Empty");
         assert!(v.voices[2].current);
-        assert_eq!(v.voices[0].count, "6⅔ of 6");
+        assert_eq!(v.voices[0].count, "6.67/8");
         s.master_bars[0].free_time = true;
         assert_eq!(
             bar_view(&s, at(0, 0, 0)).unwrap().voices[0].state,

@@ -2,7 +2,7 @@
   "interface": "1.0",
   "id": "oxiguitar.gp3",
   "name": "Guitar Pro 3",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "description": "Reads Guitar Pro 3 files (.gp3).",
   "authors": ["Mateus Rocha de Paula", "The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",
