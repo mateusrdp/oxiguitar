@@ -13,13 +13,13 @@ Each is one file in `src/`; you delete what you don't need.
 Copy the folder, hidden `.github/` included, to wherever you keep your projects. With git:
 
 ```sh
-git clone --depth 1 --branch v0.2.0 https://github.com/mateusrdp/oxiguitar
+git clone --depth 1 --branch v0.5.0 https://github.com/mateusrdp/oxiguitar
 cp -R oxiguitar/docs/plugins/template my-plugin
 rm -rf oxiguitar
 cd my-plugin
 ```
 
-The template's `Cargo.toml` takes the SDK and the contract suite from OxiGuitar's repository on GitHub, at the same tag, `v0.2.0` (Cargo downloads the repository the first time): plugins built with it load in OxiGuitar 0.2 and later. To build for a later OxiGuitar, change both tags.
+The template's `Cargo.toml` takes the SDK and the contract suite from OxiGuitar's repository on GitHub, at the same tag, `v0.5.0` (Cargo downloads the repository the first time). The copy in OxiGuitar 0.5.0 still names `v0.2.0`: change both to `v0.5.0`, which has interface 1.2 ([Interface versions](versions.md)). The template asks for interface 1.1, so what you build loads in OxiGuitar 0.2 and later; ask for 1.2 when you use its tools or the score version 2, and it needs 0.5. To build for a later OxiGuitar, change both tags.
 
 ## 2. Build and test it
 
