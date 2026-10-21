@@ -29,7 +29,8 @@ pub(crate) enum Fill {
 pub(crate) struct VoiceRow {
     /// "Voice 1".
     pub(crate) name: String,
-    /// How many beats it holds, of how many: "3½ of 4".
+    /// How much it holds against the time signature, as Guitar Pro 8 shows a
+    /// bar: "1.5/4" is a quarter and an eighth in 2/4 (issue #104).
     pub(crate) count: String,
     /// What is missing or too much: "Full", "½ beat short", "1¼ beats too
     /// long", "Empty".
@@ -84,7 +85,7 @@ pub(crate) fn bar_view(score: &Score, c: Caret) -> Option<BarView> {
         let have = (!empty).then(|| v.length().and_then(beats)).flatten();
         let (count, state, fill) = match have {
             None if empty => (
-                format!("0 of {}", ts.numerator),
+                format!("0/{}", ts.denominator),
                 "Empty".to_owned(),
                 Fill::Unknown,
             ),
@@ -99,7 +100,7 @@ pub(crate) fn bar_view(score: &Score, c: Caret) -> Option<BarView> {
                 Fill::Unknown,
             ),
             Some(n) => {
-                let count = format!("{} of {}", amount(n), ts.numerator);
+                let count = format!("{}/{}", decimal(n), ts.denominator);
                 match n.checked_sub(want) {
                     Some(d) if d.is_zero() => (count, "Full".to_owned(), Fill::Full),
                     Some(d) if d.numer() > 0 => (
@@ -131,7 +132,7 @@ pub(crate) fn bar_view(score: &Score, c: Caret) -> Option<BarView> {
     if c.voice >= bar.voices.len() {
         voices.push(VoiceRow {
             name: format!("Voice {}", c.voice + 1),
-            count: format!("0 of {}", ts.numerator),
+            count: format!("0/{}", ts.denominator),
             state: "Empty".to_owned(),
             fill: Fill::Unknown,
             entered: 0,
@@ -163,6 +164,16 @@ pub(crate) fn bar_view(score: &Score, c: Caret) -> Option<BarView> {
         voices,
         caret,
     })
+}
+
+/// A number of beats as a decimal: 4, 1.5, 3.33.
+fn decimal(n: Ratio) -> String {
+    if n.denom() == 1 {
+        return n.numer().to_string();
+    }
+    let x = (n.numer() as f64 / n.denom() as f64 * 100.0).round() / 100.0;
+    let text = format!("{x:.2}");
+    text.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
 /// "beat" or "beats", as an amount wants.

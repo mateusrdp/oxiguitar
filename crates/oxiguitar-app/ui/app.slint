@@ -650,7 +650,13 @@ component Inspector inherits Rectangle {
                     HorizontalLayout {
                         spacing: 6px;
                         Text { text: v.name; font-size: 12px; font-weight: v.current ? 700 : 400; }
-                        Text { text: v.count; font-size: 12px; horizontal-alignment: right; horizontal-stretch: 1; }
+                        Text {
+                            text: v.count;
+                            font-size: 12px;
+                            horizontal-alignment: right;
+                            horizontal-stretch: 1;
+                            color: v.fill == 0 ? Look.accent : v.fill == 1 ? Look.warning : v.fill == 2 ? Look.error : Palette.foreground;
+                        }
                     }
                     HorizontalLayout {
                         spacing: 6px;
@@ -660,7 +666,7 @@ component Inspector inherits Rectangle {
                             color: v.fill == 0 ? Look.accent : v.fill == 1 ? Look.warning : v.fill == 2 ? Look.error : Palette.foreground.transparentize(0.4);
                         }
                         Text {
-                            text: v.entered == 1 ? "1 beat entered" : v.entered + " beats entered";
+                            text: v.entered == 1 ? "1 note or rest" : v.entered + " notes and rests";
                             font-size: 11px;
                             horizontal-alignment: right;
                             horizontal-stretch: 1;
@@ -1244,6 +1250,7 @@ export component AppWindow inherits Window {
             MenuSeparator { }
             MenuItem { title: "Track Properties…"; enabled: root.has-score; activated => { root.edit-command("track-properties"); } }
             MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
+            MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
             MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
         }
         Menu {
