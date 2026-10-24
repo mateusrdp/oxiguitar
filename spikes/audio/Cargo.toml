@@ -16,7 +16,12 @@ hound = "3.5.1"
 midly = "0.5.3"
 cpal = { version = "0.18.2", optional = true }
 
+# The listening renders (src/amp.rs): x86_64 only, Rust 1.99 or newer and
+# RUSTFLAGS="-C target-cpu=x86-64-v3".
+NeuralAmpModeler-rs = { version = "1.0.1", default-features = false, optional = true }
+
 [features]
+nam2 = ["dep:NeuralAmpModeler-rs"]
 # The audio device check (needs the system audio libraries).
 devices = ["dep:cpal", "cpal/pipewire"]
 

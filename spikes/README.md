@@ -63,3 +63,5 @@ Does the chain **timed events → SoundFont synthesiser → NAM → audio device
 `nam-bench/`: both NAM engines on the same plucked-string input, 64-sample blocks. NeuralAmpModeler-rs (feature `nam2`) needs x86_64, Rust 1.99 and `RUSTFLAGS="-C target-cpu=x86-64-v3"`.
 
 The spikes workflow runs both on every target and prints the measurements as notices.
+
+`amp DI.sf2 GM.sf2 MODEL.nam CAB.wav OUT-DIR NAME` (feature `nam2`: x86_64, Rust 1.99, `RUSTFLAGS="-C target-cpu=x86-64-v3"`): the song's guitar from a DI sound set through NeuralAmpModeler-rs (amp model, then the cabinet impulse response through its convolution engine) over bass and drums, as 16-bit WAV files for listening; nam-rs runs the same model to compare speed and output. The spikes workflow's `listen` job, started by hand, renders FreePats' DI guitars through four amp captures and keeps them as the artifact `listening-di`.

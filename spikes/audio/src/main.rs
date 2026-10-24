@@ -4,6 +4,8 @@
 //! audio thread, and with sample-accurate timing? See README.md.
 
 mod alloc;
+#[cfg(feature = "nam2")]
+mod amp;
 mod engines;
 mod sf3;
 mod song;
@@ -17,7 +19,7 @@ use std::time::Instant;
 #[global_allocator]
 static GLOBAL: alloc::Counting = alloc::Counting;
 
-fn load_sf2_bytes(path: &str) -> Vec<u8> {
+pub(crate) fn load_sf2_bytes(path: &str) -> Vec<u8> {
     let raw = std::fs::read(path).unwrap_or_else(|e| panic!("{path}: {e}"));
     let t = Instant::now();
     let c = sf3::to_sf2(&raw).unwrap();
@@ -51,14 +53,14 @@ fn engine(kind: &str, sf: &[u8], rusty_font: &mut Option<Arc<rustysynth::SoundFo
 /// callbacks of `callback` samples. Returns each track's stereo buffer, the
 /// worst callback time, the total render time and the allocations counted
 /// during the timed part (events and renders after the first second).
-struct Stems {
-    tracks: Vec<(Vec<f32>, Vec<f32>)>,
+pub(crate) struct Stems {
+    pub(crate) tracks: Vec<(Vec<f32>, Vec<f32>)>,
     worst_callback_us: f64,
     total_s: f64,
     allocations: usize,
 }
 
-fn render_song(engines: &mut [Box<dyn Engine>], events: &[Event], callback: usize) -> Stems {
+pub(crate) fn render_song(engines: &mut [Box<dyn Engine>], events: &[Event], callback: usize) -> Stems {
     let len = song::length();
     let mut tracks: Vec<(Vec<f32>, Vec<f32>)> = (0..engines.len()).map(|_| (vec![0.0; len], vec![0.0; len])).collect();
     let mut next = 0;
@@ -126,7 +128,7 @@ fn read_wav_mono(path: &str) -> Vec<f32> {
     s.chunks(ch).map(|c| c.iter().sum::<f32>() / ch as f32).collect()
 }
 
-fn mix(tracks: &[(Vec<f32>, Vec<f32>)]) -> (Vec<f32>, Vec<f32>) {
+pub(crate) fn mix(tracks: &[(Vec<f32>, Vec<f32>)]) -> (Vec<f32>, Vec<f32>) {
     let len = tracks[0].0.len();
     let mut l = vec![0.0; len];
     let mut r = vec![0.0; len];
@@ -261,6 +263,8 @@ fn main() {
         }
         ["nam", model, input, out] => nam(model, input, out),
         ["pipeline", sf, model, out] => pipeline(sf, model, out),
+        #[cfg(feature = "nam2")]
+        ["amp", di, gm, model, ir, dir, name] => amp::run(di, gm, model, ir, dir, name),
         ["dls", path] => dls(path),
         #[cfg(feature = "devices")]
         ["devices"] => devices(),

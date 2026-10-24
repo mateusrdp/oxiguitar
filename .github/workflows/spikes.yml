@@ -188,3 +188,80 @@ jobs:
           for m in wavenet_a1_standard lstm; do
             "$RUNNER_TEMP/run.sh" "NAM both $m (${{ matrix.name }})" spikes/nam-bench/target/nam2/release/nam-bench "$RUNNER_TEMP/nam/$m.nam"
           done
+
+  # Listening renders for Mateus (started by hand): the song's guitar from
+  # FreePats' clean electric guitars (CC0; "Direct" is the raw DI), through
+  # NeuralAmpModeler-rs with four amp captures and Guitarix's cabinet IRs
+  # (GPL-2.0-or-later), with bass and drums from FluidR3. Kept 14 days as the
+  # artifact "listening-di".
+  listen:
+    name: Listening renders (NeuralAmpModeler-rs, DI guitar)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_TERM_COLOR: never
+      FREEPATS: https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html
+      NAM_MODELS_COMMIT: 944ca6718581c60cc5365586d2f378d740e181f3
+      GUITARIX_COMMIT: 666b564bb8a7194f200029fdbfbec2abe035f777
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.0"
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fluid-soundfont-gm p7zip-full
+      - name: The DI guitars, amp models and cabinets
+        run: |
+          set -euo pipefail
+          w="$RUNNER_TEMP/in"; mkdir -p "$w/freepats" "$w/sf2"
+          curl -fsSL "$FREEPATS" -o "$w/freepats.html"
+          # Every SF2 bank linked from the page, except the small ones.
+          grep -oiE 'href="[^"]+\.7z"' "$w/freepats.html" | sed -E 's/^href="//I; s/"$//' | grep -i 'sf2' | grep -vi 'small' | sort -u > "$w/links.txt"
+          while IFS= read -r link; do
+            case "$link" in http*) url="$link" ;; /*) url="https://freepats.zenvoid.org$link" ;; *) url="https://freepats.zenvoid.org/ElectricGuitar/$link" ;; esac
+            echo "::notice title=FreePats::$url"
+            curl -fsSL "$url" -o "$w/freepats/$(basename "$link")"
+          done < "$w/links.txt"
+          for a in "$w"/freepats/*.7z; do 7z x -y -o"$w/x" "$a" > /dev/null; done
+          find "$w/x" -iname '*.sf2' -exec cp {} "$w/sf2/" \;
+          ls -la "$w/sf2"
+          git clone -q --filter=blob:none https://github.com/pelennor2170/NAM_models "$w/nam"
+          git -C "$w/nam" checkout -q "$NAM_MODELS_COMMIT"
+          git init -q "$w/gx"
+          git -C "$w/gx" remote add origin https://github.com/brummer10/guitarix
+          git -C "$w/gx" fetch -q --depth 1 --filter=blob:none origin "$GUITARIX_COMMIT"
+          git -C "$w/gx" checkout -q FETCH_HEAD -- trunk/IR/BestPlugins_Amps
+      - name: Build
+        run: RUSTFLAGS="-C target-cpu=x86-64-v3" cargo +1.99.0 build --release --features nam2 --manifest-path spikes/audio/Cargo.toml
+      - name: Render
+        run: |
+          set -euo pipefail
+          w="$RUNNER_TEMP/in"; out="$RUNNER_TEMP/listening-di"; mkdir -p "$out"
+          spike=spikes/audio/target/release/audio-spike
+          ir="$w/gx/trunk/IR/BestPlugins_Amps"
+          gm=/usr/share/sounds/sf2/FluidR3_GM.sf2
+          for di in "$w"/sf2/*.sf2; do
+            n="$(basename "$di" .sf2 | tr ' ' '_')"
+            for pair in "Helga B 5150 BlockLetter - NoBoost|EVH 5150 III" "Phillipe P VOXAC15-TopBoost|Mesa Boogie Mark V" "Tim R Fender TwinVerb Norm Bright|Mesa Boogie Mark V" "Tim R JCM2000 Crunch|Marshall JMP 2203  Jose Arredondo mod"; do
+              m="${pair%%|*}"; c="${pair#*|}"
+              line="$("$spike" amp "$di" "$gm" "$w/nam/$m.nam" "$ir/$c.wav" "$out" "$n" 2>&1 | tail -n 1)"
+              echo "::notice title=amp $n::$line"
+            done
+          done
+          cat > "$out/README.txt" <<'TXT'
+          The song's guitar from each FreePats clean electric guitar bank (CC0;
+          the "Direct"/DI one is the raw pickup signal an amp model expects),
+          through NeuralAmpModeler-rs 1.0.1: amp capture, then a cabinet impulse
+          response (Guitarix's BestPlugins pack, GPL-2.0-or-later), with bass and
+          drums from FluidR3 (OxiSynth). "-guitar" alone, "-mix" with the band,
+          "-0-DI-dry" the input. Amp captures from github.com/pelennor2170/NAM_models
+          (no licence stated: for listening only).
+          TXT
+          ls -la "$out"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: listening-di
+          path: ${{ runner.temp }}/listening-di
+          retention-days: 14
+          if-no-files-found: error
