@@ -69,11 +69,12 @@ None of the packages is code-signed yet, so the first launch shows a warning:
 
 ## Building from source
 
-You need Rust 1.97 or newer. On Debian sid everything comes from apt:
+You need Rust 1.99 or newer, from [rustup](https://rustup.rs): distributions' own Rust packages are usually older. On Debian and Ubuntu:
 
 ```
-sudo apt install git build-essential pkg-config rustc cargo rustfmt rust-clippy \
+sudo apt install git build-essential pkg-config rustup \
   libfontconfig1-dev libxkbcommon-dev libwayland-dev
+rustup default stable
 git clone https://github.com/mateusrdp/oxiguitar.git
 cd oxiguitar
 cargo build --release
@@ -81,7 +82,7 @@ scripts/build-plugins.sh
 cargo test
 ```
 
-Elsewhere, install Rust from your system's packages or from [rustup.rs](https://rustup.rs). The last three packages are the system libraries the desktop app needs for fonts, keyboard and windows (the same names on Ubuntu). Playback, from milestone M4, will add the audio libraries (ALSA, and PipeWire's on Linux).
+Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The last three packages are the system libraries the desktop app needs for fonts, keyboard and windows (the same names on Ubuntu). Playback, from milestone M4, will add the audio libraries (ALSA, and PipeWire's on Linux).
 
 The program opens files only through format plugins (one per format, `.oxp` files). `scripts/build-plugins.sh` builds ours (Guitar Pro 3, 4, 5, 6 and 7–8) and puts them where a build from source looks for them (`target/lib/oxiguitar/plugins/` on Linux); run it again after changing a plugin or a reader. The release packages hold the program alone; ours come as `oxiguitar-plugins-basic` (.deb, .rpm) and as a zip for each system.
 

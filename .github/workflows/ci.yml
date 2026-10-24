@@ -19,8 +19,9 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
-  # Must match rust-version in Cargo.toml (Debian unstable's rustc).
-  MSRV: "1.97"
+  # Must match rust-version in Cargo.toml: the Rust we build with, from
+  # rustup, raised only on purpose (CONTRIBUTING.md, "Minimum Rust version").
+  MSRV: "1.99"
 
 jobs:
   fmt:
@@ -38,9 +39,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      # Lints run on the minimum supported Rust, the same rustc and clippy
-      # that Debian unstable ships, so CI and contributors' machines agree and
-      # a new upstream lint cannot turn CI red overnight.
+      # Lints run on the minimum supported Rust, so CI and contributors'
+      # machines agree and a new upstream lint cannot turn CI red overnight.
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.MSRV }}

@@ -11,7 +11,7 @@ exclude = ["spikes", "fuzz", "docs/plugins/template"]
 version = "0.5.0"
 edition = "2024"
 # Follows the rustc in Debian unstable, so apt's toolchain always builds OxiGuitar.
-rust-version = "1.97"
+rust-version = "1.99"
 license = "GPL-3.0-or-later"
 authors = ["Mateus Rocha de Paula", "The OxiGuitar contributors"]
 repository = "https://github.com/mateusrdp/oxiguitar"
