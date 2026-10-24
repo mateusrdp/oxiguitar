@@ -6,8 +6,8 @@ Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
  dh-cargo,
- cargo (>= 1.97),
- rustc (>= 1.97),
+ cargo (>= 1.99),
+ rustc (>= 1.99),
  python3:native,
  pkgconf,
  libfontconfig-dev,

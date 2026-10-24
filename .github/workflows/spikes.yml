@@ -23,8 +23,9 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  # Must match rust-version in Cargo.toml (Debian unstable's rustc).
-  MSRV: "1.97"
+  # Must match rust-version in Cargo.toml: the Rust we build with, from
+  # rustup, raised only on purpose (CONTRIBUTING.md, "Minimum Rust version").
+  MSRV: "1.99"
 
 jobs:
   gui:

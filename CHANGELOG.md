@@ -4,6 +4,11 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- Releases attach one zip of our plugins for each system (and the `oxiguitar-plugins-basic` .deb and .rpm) instead of every plugin as a file of its own, and the release notes open with which two files each system needs (Mateus, 21 Oct 2026).
+- Building OxiGuitar needs Rust 1.99, from rustup rather than a distribution's package (Mateus, 24 Oct 2026). Plugins built with the SDK of v0.5.0 still need only 1.97.
+
 ## [0.5.0] - 2026-10-21
 
 Milestone M3 (the editor) is complete: OxiGuitar edits everything TuxGuitar does, and more, and saves as .gp and .gp5. Plugin interface 1.2 is frozen with this release.

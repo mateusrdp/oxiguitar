@@ -59,10 +59,29 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg-dev
-      - run: scripts/debian/source.sh build
-      - name: Build dependencies from sid
+      # Debian builds with its own rustc. Since 24 Oct 2026 our minimum Rust
+      # comes from rustup and can be ahead of sid's (Mateus); until sid
+      # catches up, the build is skipped with a notice rather than failed.
+      - name: Is sid's rustc new enough?
+        id: rustc
+        run: |
+          need="$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)"
+          have="$(docker run --rm debian:sid bash -c 'apt-get update -qq > /dev/null && apt-cache policy rustc' | sed -n 's/^ *Candidate: \([0-9]*\.[0-9]*\).*/\1/p')"
+          echo "OxiGuitar needs rustc $need; Debian sid has $have."
+          if [ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -n1)" = "$need" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Debian sid's rustc is older than ours::OxiGuitar needs rustc $need; Debian sid has $have. The offline sid build waits until sid catches up (CONTRIBUTING.md, \"Minimum Rust version\")."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.rustc.outputs.ok == 'true'
+        uses: dtolnay/rust-toolchain@stable
+      - if: steps.rustc.outputs.ok == 'true'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg-dev
+      - if: steps.rustc.outputs.ok == 'true'
+        run: scripts/debian/source.sh build
+      - if: steps.rustc.outputs.ok == 'true'
+        name: Build dependencies from sid
         run: |
           docker run --name sid-build -v "$PWD/build:/build" -w /build debian:sid bash -euxc '
             apt-get update
@@ -70,7 +89,8 @@ jobs:
           '
           docker commit sid-build oxiguitar-sid-build
       # On failure, the log's last lines become an annotation.
-      - name: Build with no network
+      - if: steps.rustc.outputs.ok == 'true'
+        name: Build with no network
         run: |
           status=0
           docker run --rm --network none -v "$PWD/build:/build" oxiguitar-sid-build bash -euc '
@@ -87,7 +107,8 @@ jobs:
       # tags about the placeholder contact at the reserved .invalid domain
       # (docs/debian.md) and the one asking the first upload to close its
       # ITP bug, which isn't filed yet.
-      - name: Lintian
+      - if: steps.rustc.outputs.ok == 'true'
+        name: Lintian
         run: |
           docker run --rm -e GITHUB_ACTIONS -v "$PWD:/w" -w /w debian:sid bash -euc '
             apt-get update -qq
@@ -98,7 +119,8 @@ jobs:
               --allow initial-upload-closes-no-bugs \
               ./*.changes
           '
-      - name: Install them into a clean sid
+      - if: steps.rustc.outputs.ok == 'true'
+        name: Install them into a clean sid
         run: |
           docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euxc '
             apt-get update
@@ -111,7 +133,8 @@ jobs:
             man -w oxiguitar oxiguitar-cli
             OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar fixtures/gp/oxiguitar-test-song.gp
           '
-      - uses: actions/upload-artifact@v7
+      - if: steps.rustc.outputs.ok == 'true'
+        uses: actions/upload-artifact@v7
         with:
           name: debian-packages
           path: |
