@@ -179,12 +179,11 @@ jobs:
             "$RUNNER_TEMP/run.sh" "NAM $m (${{ matrix.name }})" "spikes/nam-bench/target/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam"
           done
       - name: NAM with NeuralAmpModeler-rs too
-        # Linux x86_64 only: it needs Rust 1.99, the x86-64-v3 baseline, and
-        # Linux's libc (it doesn't build on Windows).
+        # Linux x86_64 only: it needs the x86-64-v3 baseline and Linux's
+        # libc (it doesn't build on Windows or macOS).
         if: matrix.name == 'linux-x86_64'
         run: |
-          rustup toolchain install 1.99.0 --profile minimal > /dev/null
-          RUSTFLAGS="-C target-cpu=x86-64-v3" CARGO_TARGET_DIR=spikes/nam-bench/target/nam2 QUIET=1 "$RUNNER_TEMP/run.sh" "Build NeuralAmpModeler-rs" cargo +1.99.0 build --release --features nam2 --manifest-path spikes/nam-bench/Cargo.toml
+          RUSTFLAGS="-C target-cpu=x86-64-v3" CARGO_TARGET_DIR=spikes/nam-bench/target/nam2 QUIET=1 "$RUNNER_TEMP/run.sh" "Build NeuralAmpModeler-rs" cargo build --release --features nam2 --manifest-path spikes/nam-bench/Cargo.toml
           for m in wavenet_a1_standard lstm; do
             "$RUNNER_TEMP/run.sh" "NAM both $m (${{ matrix.name }})" spikes/nam-bench/target/nam2/release/nam-bench "$RUNNER_TEMP/nam/$m.nam"
           done
@@ -207,7 +206,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.99.0"
+          toolchain: ${{ env.MSRV }}
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fluid-soundfont-gm p7zip-full
@@ -233,7 +232,7 @@ jobs:
           git -C "$w/gx" fetch -q --depth 1 --filter=blob:none origin "$GUITARIX_COMMIT"
           git -C "$w/gx" checkout -q FETCH_HEAD -- trunk/IR/BestPlugins_Amps
       - name: Build
-        run: RUSTFLAGS="-C target-cpu=x86-64-v3" cargo +1.99.0 build --release --features nam2 --manifest-path spikes/audio/Cargo.toml
+        run: RUSTFLAGS="-C target-cpu=x86-64-v3" cargo build --release --features nam2 --manifest-path spikes/audio/Cargo.toml
       - name: Render
         run: |
           set -euo pipefail
