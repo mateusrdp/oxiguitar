@@ -21,6 +21,9 @@
 # warns on first launch (see the README).
 
 set -euo pipefail
+# CI logs can't be read from every place they're needed: a failing command
+# says itself, as an annotation.
+trap 'echo "::error::macos.sh line $LINENO: $BASH_COMMAND"' ERR
 
 version="${1:?usage: macos.sh VERSION}"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
