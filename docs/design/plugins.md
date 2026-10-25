@@ -46,7 +46,7 @@ As built (slice 4):
 │ [File ▢▢▢] [Edit ▢▢] [View ▢] [plugin section ▢▢▢]          (toolbar) │
 ├──────────────────────────────────────────────────────────────────────┤
 │ Player | tab | tab                                        top area ▾ │
-│  ⏮ ▶ ▶[] ❚❚ ■  count-in  loop  metronome     Output: (none)          │
+│  |<  >  >[]  ||  []  count-in  loop  metronome  Output: (none)       │
 ├────────────┬────────────────────────────────────────────┬────────────┤
 │ Palette|…  │                                            │ Inspector… │
 │            │                 the page                   │            │
