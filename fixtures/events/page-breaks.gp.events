@@ -1,0 +1,394 @@
+length 76.800000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.800000
+bar 3 pass 1 4.800000 7.200000
+bar 4 pass 1 7.200000 9.600000
+bar 5 pass 1 9.600000 12.000000
+bar 6 pass 1 12.000000 14.400000
+bar 7 pass 1 14.400000 16.800000
+bar 8 pass 1 16.800000 19.200000
+bar 9 pass 1 19.200000 21.600000
+bar 10 pass 1 21.600000 24.000000
+bar 11 pass 1 24.000000 26.400000
+bar 12 pass 1 26.400000 28.800000
+bar 13 pass 1 28.800000 31.200000
+bar 14 pass 1 31.200000 33.600000
+bar 15 pass 1 33.600000 36.000000
+bar 16 pass 1 36.000000 38.400000
+bar 17 pass 1 38.400000 40.800000
+bar 18 pass 1 40.800000 43.200000
+bar 19 pass 1 43.200000 45.600000
+bar 20 pass 1 45.600000 48.000000
+bar 21 pass 1 48.000000 50.400000
+bar 22 pass 1 50.400000 52.800000
+bar 23 pass 1 52.800000 55.200000
+bar 24 pass 1 55.200000 57.600000
+bar 25 pass 1 57.600000 60.000000
+bar 26 pass 1 60.000000 62.400000
+bar 27 pass 1 62.400000 64.800000
+bar 28 pass 1 64.800000 67.200000
+bar 29 pass 1 67.200000 69.600000
+bar 30 pass 1 69.600000 72.000000
+bar 31 pass 1 72.000000 74.400000
+bar 32 pass 1 74.400000 76.800000
+note 0.000000 0.300000 t1 s1 v1 b1 string 6 E2 vel 79
+note 0.300000 0.600000 t1 s1 v1 b2 string 6 E2 vel 79
+note 0.600000 0.900000 t1 s1 v1 b3 string 6 G2 vel 79
+note 0.900000 1.200000 t1 s1 v1 b4 string 6 E2 vel 79
+note 1.200000 1.500000 t1 s1 v1 b5 string 5 B2 vel 79
+note 1.500000 1.800000 t1 s1 v1 b6 string 5 A2 vel 79
+note 1.800000 2.100000 t1 s1 v1 b7 string 6 G2 vel 79
+note 2.100000 2.400000 t1 s1 v1 b8 string 6 E2 vel 79
+note 2.400000 3.000000 t1 s1 v1 b1 string 6 E2 vel 79
+note 2.400000 3.000000 t1 s1 v1 b1 string 5 B2 vel 79
+note 2.400000 3.000000 t1 s1 v1 b1 string 4 E3 vel 79
+note 3.000000 3.300000 t1 s1 v1 b2 string 4 E3 vel 79
+note 3.300000 3.600000 t1 s1 v1 b3 string 4 D3 vel 79
+note 3.600000 4.200000 t1 s1 v1 b4 string 5 B2 vel 79
+note 4.200000 4.800000 t1 s1 v1 b5 string 5 A2 vel 79
+note 4.800000 5.100000 t1 s1 v1 b1 string 3 A3 vel 79
+note 5.100000 5.400000 t1 s1 v1 b2 string 3 A3 vel 79
+note 5.400000 5.700000 t1 s1 v1 b3 string 3 G3 vel 79
+note 5.700000 6.000000 t1 s1 v1 b4 string 4 E3 vel 79
+note 6.000000 6.300000 t1 s1 v1 b5 string 4 D3 vel 79
+note 6.300000 6.600000 t1 s1 v1 b6 string 4 E3 vel 79
+note 6.600000 6.900000 t1 s1 v1 b7 string 5 A2 vel 79
+note 6.900000 7.200000 t1 s1 v1 b8 string 5 B2 vel 79
+note 7.200000 8.400000 t1 s1 v1 b1 string 6 E2 vel 79
+note 7.200000 8.400000 t1 s1 v1 b1 string 5 B2 vel 79
+note 7.200000 8.400000 t1 s1 v1 b1 string 4 E3 vel 79
+note 7.200000 8.400000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 7.200000 8.400000 t1 s1 v1 b1 string 2 B3 vel 79
+note 7.200000 8.400000 t1 s1 v1 b1 string 1 E4 vel 79
+note 9.600000 9.900000 t1 s1 v1 b1 string 6 E2 vel 79
+note 9.900000 10.200000 t1 s1 v1 b2 string 6 E2 vel 79
+note 10.200000 10.500000 t1 s1 v1 b3 string 6 G2 vel 79
+note 10.500000 10.800000 t1 s1 v1 b4 string 6 E2 vel 79
+note 10.800000 11.100000 t1 s1 v1 b5 string 5 B2 vel 79
+note 11.100000 11.400000 t1 s1 v1 b6 string 5 A2 vel 79
+note 11.400000 11.700000 t1 s1 v1 b7 string 6 G2 vel 79
+note 11.700000 12.000000 t1 s1 v1 b8 string 6 E2 vel 79
+note 12.000000 12.600000 t1 s1 v1 b1 string 6 E2 vel 79
+note 12.000000 12.600000 t1 s1 v1 b1 string 5 B2 vel 79
+note 12.000000 12.600000 t1 s1 v1 b1 string 4 E3 vel 79
+note 12.600000 12.900000 t1 s1 v1 b2 string 4 E3 vel 79
+note 12.900000 13.200000 t1 s1 v1 b3 string 4 D3 vel 79
+note 13.200000 13.800000 t1 s1 v1 b4 string 5 B2 vel 79
+note 13.800000 14.400000 t1 s1 v1 b5 string 5 A2 vel 79
+note 14.400000 14.700000 t1 s1 v1 b1 string 3 A3 vel 79
+note 14.700000 15.000000 t1 s1 v1 b2 string 3 A3 vel 79
+note 15.000000 15.300000 t1 s1 v1 b3 string 3 G3 vel 79
+note 15.300000 15.600000 t1 s1 v1 b4 string 4 E3 vel 79
+note 15.600000 15.900000 t1 s1 v1 b5 string 4 D3 vel 79
+note 15.900000 16.200000 t1 s1 v1 b6 string 4 E3 vel 79
+note 16.200000 16.500000 t1 s1 v1 b7 string 5 A2 vel 79
+note 16.500000 16.800000 t1 s1 v1 b8 string 5 B2 vel 79
+note 16.800000 18.000000 t1 s1 v1 b1 string 6 E2 vel 79
+note 16.800000 18.000000 t1 s1 v1 b1 string 5 B2 vel 79
+note 16.800000 18.000000 t1 s1 v1 b1 string 4 E3 vel 79
+note 16.800000 18.000000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 16.800000 18.000000 t1 s1 v1 b1 string 2 B3 vel 79
+note 16.800000 18.000000 t1 s1 v1 b1 string 1 E4 vel 79
+note 19.200000 19.500000 t1 s1 v1 b1 string 6 E2 vel 79
+note 19.500000 19.800000 t1 s1 v1 b2 string 6 E2 vel 79
+note 19.800000 20.100000 t1 s1 v1 b3 string 6 G2 vel 79
+note 20.100000 20.400000 t1 s1 v1 b4 string 6 E2 vel 79
+note 20.400000 20.700000 t1 s1 v1 b5 string 5 B2 vel 79
+note 20.700000 21.000000 t1 s1 v1 b6 string 5 A2 vel 79
+note 21.000000 21.300000 t1 s1 v1 b7 string 6 G2 vel 79
+note 21.300000 21.600000 t1 s1 v1 b8 string 6 E2 vel 79
+note 21.600000 22.200000 t1 s1 v1 b1 string 6 E2 vel 79
+note 21.600000 22.200000 t1 s1 v1 b1 string 5 B2 vel 79
+note 21.600000 22.200000 t1 s1 v1 b1 string 4 E3 vel 79
+note 22.200000 22.500000 t1 s1 v1 b2 string 4 E3 vel 79
+note 22.500000 22.800000 t1 s1 v1 b3 string 4 D3 vel 79
+note 22.800000 23.400000 t1 s1 v1 b4 string 5 B2 vel 79
+note 23.400000 24.000000 t1 s1 v1 b5 string 5 A2 vel 79
+note 24.000000 24.300000 t1 s1 v1 b1 string 3 A3 vel 79
+note 24.300000 24.600000 t1 s1 v1 b2 string 3 A3 vel 79
+note 24.600000 24.900000 t1 s1 v1 b3 string 3 G3 vel 79
+note 24.900000 25.200000 t1 s1 v1 b4 string 4 E3 vel 79
+note 25.200000 25.500000 t1 s1 v1 b5 string 4 D3 vel 79
+note 25.500000 25.800000 t1 s1 v1 b6 string 4 E3 vel 79
+note 25.800000 26.100000 t1 s1 v1 b7 string 5 A2 vel 79
+note 26.100000 26.400000 t1 s1 v1 b8 string 5 B2 vel 79
+note 26.400000 27.600000 t1 s1 v1 b1 string 6 E2 vel 79
+note 26.400000 27.600000 t1 s1 v1 b1 string 5 B2 vel 79
+note 26.400000 27.600000 t1 s1 v1 b1 string 4 E3 vel 79
+note 26.400000 27.600000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 26.400000 27.600000 t1 s1 v1 b1 string 2 B3 vel 79
+note 26.400000 27.600000 t1 s1 v1 b1 string 1 E4 vel 79
+note 28.800000 29.100000 t1 s1 v1 b1 string 6 E2 vel 79
+note 29.100000 29.400000 t1 s1 v1 b2 string 6 E2 vel 79
+note 29.400000 29.700000 t1 s1 v1 b3 string 6 G2 vel 79
+note 29.700000 30.000000 t1 s1 v1 b4 string 6 E2 vel 79
+note 30.000000 30.300000 t1 s1 v1 b5 string 5 B2 vel 79
+note 30.300000 30.600000 t1 s1 v1 b6 string 5 A2 vel 79
+note 30.600000 30.900000 t1 s1 v1 b7 string 6 G2 vel 79
+note 30.900000 31.200000 t1 s1 v1 b8 string 6 E2 vel 79
+note 31.200000 31.800000 t1 s1 v1 b1 string 6 E2 vel 79
+note 31.200000 31.800000 t1 s1 v1 b1 string 5 B2 vel 79
+note 31.200000 31.800000 t1 s1 v1 b1 string 4 E3 vel 79
+note 31.800000 32.100000 t1 s1 v1 b2 string 4 E3 vel 79
+note 32.100000 32.400000 t1 s1 v1 b3 string 4 D3 vel 79
+note 32.400000 33.000000 t1 s1 v1 b4 string 5 B2 vel 79
+note 33.000000 33.600000 t1 s1 v1 b5 string 5 A2 vel 79
+note 33.600000 33.900000 t1 s1 v1 b1 string 3 A3 vel 79
+note 33.900000 34.200000 t1 s1 v1 b2 string 3 A3 vel 79
+note 34.200000 34.500000 t1 s1 v1 b3 string 3 G3 vel 79
+note 34.500000 34.800000 t1 s1 v1 b4 string 4 E3 vel 79
+note 34.800000 35.100000 t1 s1 v1 b5 string 4 D3 vel 79
+note 35.100000 35.400000 t1 s1 v1 b6 string 4 E3 vel 79
+note 35.400000 35.700000 t1 s1 v1 b7 string 5 A2 vel 79
+note 35.700000 36.000000 t1 s1 v1 b8 string 5 B2 vel 79
+note 36.000000 37.200000 t1 s1 v1 b1 string 6 E2 vel 79
+note 36.000000 37.200000 t1 s1 v1 b1 string 5 B2 vel 79
+note 36.000000 37.200000 t1 s1 v1 b1 string 4 E3 vel 79
+note 36.000000 37.200000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 36.000000 37.200000 t1 s1 v1 b1 string 2 B3 vel 79
+note 36.000000 37.200000 t1 s1 v1 b1 string 1 E4 vel 79
+note 38.400000 38.700000 t1 s1 v1 b1 string 6 E2 vel 79
+note 38.700000 39.000000 t1 s1 v1 b2 string 6 E2 vel 79
+note 39.000000 39.300000 t1 s1 v1 b3 string 6 G2 vel 79
+note 39.300000 39.600000 t1 s1 v1 b4 string 6 E2 vel 79
+note 39.600000 39.900000 t1 s1 v1 b5 string 5 B2 vel 79
+note 39.900000 40.200000 t1 s1 v1 b6 string 5 A2 vel 79
+note 40.200000 40.500000 t1 s1 v1 b7 string 6 G2 vel 79
+note 40.500000 40.800000 t1 s1 v1 b8 string 6 E2 vel 79
+note 40.800000 41.400000 t1 s1 v1 b1 string 6 E2 vel 79
+note 40.800000 41.400000 t1 s1 v1 b1 string 5 B2 vel 79
+note 40.800000 41.400000 t1 s1 v1 b1 string 4 E3 vel 79
+note 41.400000 41.700000 t1 s1 v1 b2 string 4 E3 vel 79
+note 41.700000 42.000000 t1 s1 v1 b3 string 4 D3 vel 79
+note 42.000000 42.600000 t1 s1 v1 b4 string 5 B2 vel 79
+note 42.600000 43.200000 t1 s1 v1 b5 string 5 A2 vel 79
+note 43.200000 43.500000 t1 s1 v1 b1 string 3 A3 vel 79
+note 43.500000 43.800000 t1 s1 v1 b2 string 3 A3 vel 79
+note 43.800000 44.100000 t1 s1 v1 b3 string 3 G3 vel 79
+note 44.100000 44.400000 t1 s1 v1 b4 string 4 E3 vel 79
+note 44.400000 44.700000 t1 s1 v1 b5 string 4 D3 vel 79
+note 44.700000 45.000000 t1 s1 v1 b6 string 4 E3 vel 79
+note 45.000000 45.300000 t1 s1 v1 b7 string 5 A2 vel 79
+note 45.300000 45.600000 t1 s1 v1 b8 string 5 B2 vel 79
+note 45.600000 46.800000 t1 s1 v1 b1 string 6 E2 vel 79
+note 45.600000 46.800000 t1 s1 v1 b1 string 5 B2 vel 79
+note 45.600000 46.800000 t1 s1 v1 b1 string 4 E3 vel 79
+note 45.600000 46.800000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 45.600000 46.800000 t1 s1 v1 b1 string 2 B3 vel 79
+note 45.600000 46.800000 t1 s1 v1 b1 string 1 E4 vel 79
+note 48.000000 48.300000 t1 s1 v1 b1 string 6 E2 vel 79
+note 48.300000 48.600000 t1 s1 v1 b2 string 6 E2 vel 79
+note 48.600000 48.900000 t1 s1 v1 b3 string 6 G2 vel 79
+note 48.900000 49.200000 t1 s1 v1 b4 string 6 E2 vel 79
+note 49.200000 49.500000 t1 s1 v1 b5 string 5 B2 vel 79
+note 49.500000 49.800000 t1 s1 v1 b6 string 5 A2 vel 79
+note 49.800000 50.100000 t1 s1 v1 b7 string 6 G2 vel 79
+note 50.100000 50.400000 t1 s1 v1 b8 string 6 E2 vel 79
+note 50.400000 51.000000 t1 s1 v1 b1 string 6 E2 vel 79
+note 50.400000 51.000000 t1 s1 v1 b1 string 5 B2 vel 79
+note 50.400000 51.000000 t1 s1 v1 b1 string 4 E3 vel 79
+note 51.000000 51.300000 t1 s1 v1 b2 string 4 E3 vel 79
+note 51.300000 51.600000 t1 s1 v1 b3 string 4 D3 vel 79
+note 51.600000 52.200000 t1 s1 v1 b4 string 5 B2 vel 79
+note 52.200000 52.800000 t1 s1 v1 b5 string 5 A2 vel 79
+note 52.800000 53.100000 t1 s1 v1 b1 string 3 A3 vel 79
+note 53.100000 53.400000 t1 s1 v1 b2 string 3 A3 vel 79
+note 53.400000 53.700000 t1 s1 v1 b3 string 3 G3 vel 79
+note 53.700000 54.000000 t1 s1 v1 b4 string 4 E3 vel 79
+note 54.000000 54.300000 t1 s1 v1 b5 string 4 D3 vel 79
+note 54.300000 54.600000 t1 s1 v1 b6 string 4 E3 vel 79
+note 54.600000 54.900000 t1 s1 v1 b7 string 5 A2 vel 79
+note 54.900000 55.200000 t1 s1 v1 b8 string 5 B2 vel 79
+note 55.200000 56.400000 t1 s1 v1 b1 string 6 E2 vel 79
+note 55.200000 56.400000 t1 s1 v1 b1 string 5 B2 vel 79
+note 55.200000 56.400000 t1 s1 v1 b1 string 4 E3 vel 79
+note 55.200000 56.400000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 55.200000 56.400000 t1 s1 v1 b1 string 2 B3 vel 79
+note 55.200000 56.400000 t1 s1 v1 b1 string 1 E4 vel 79
+note 57.600000 57.900000 t1 s1 v1 b1 string 6 E2 vel 79
+note 57.900000 58.200000 t1 s1 v1 b2 string 6 E2 vel 79
+note 58.200000 58.500000 t1 s1 v1 b3 string 6 G2 vel 79
+note 58.500000 58.800000 t1 s1 v1 b4 string 6 E2 vel 79
+note 58.800000 59.100000 t1 s1 v1 b5 string 5 B2 vel 79
+note 59.100000 59.400000 t1 s1 v1 b6 string 5 A2 vel 79
+note 59.400000 59.700000 t1 s1 v1 b7 string 6 G2 vel 79
+note 59.700000 60.000000 t1 s1 v1 b8 string 6 E2 vel 79
+note 60.000000 60.600000 t1 s1 v1 b1 string 6 E2 vel 79
+note 60.000000 60.600000 t1 s1 v1 b1 string 5 B2 vel 79
+note 60.000000 60.600000 t1 s1 v1 b1 string 4 E3 vel 79
+note 60.600000 60.900000 t1 s1 v1 b2 string 4 E3 vel 79
+note 60.900000 61.200000 t1 s1 v1 b3 string 4 D3 vel 79
+note 61.200000 61.800000 t1 s1 v1 b4 string 5 B2 vel 79
+note 61.800000 62.400000 t1 s1 v1 b5 string 5 A2 vel 79
+note 62.400000 62.700000 t1 s1 v1 b1 string 3 A3 vel 79
+note 62.700000 63.000000 t1 s1 v1 b2 string 3 A3 vel 79
+note 63.000000 63.300000 t1 s1 v1 b3 string 3 G3 vel 79
+note 63.300000 63.600000 t1 s1 v1 b4 string 4 E3 vel 79
+note 63.600000 63.900000 t1 s1 v1 b5 string 4 D3 vel 79
+note 63.900000 64.200000 t1 s1 v1 b6 string 4 E3 vel 79
+note 64.200000 64.500000 t1 s1 v1 b7 string 5 A2 vel 79
+note 64.500000 64.800000 t1 s1 v1 b8 string 5 B2 vel 79
+note 64.800000 66.000000 t1 s1 v1 b1 string 6 E2 vel 79
+note 64.800000 66.000000 t1 s1 v1 b1 string 5 B2 vel 79
+note 64.800000 66.000000 t1 s1 v1 b1 string 4 E3 vel 79
+note 64.800000 66.000000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 64.800000 66.000000 t1 s1 v1 b1 string 2 B3 vel 79
+note 64.800000 66.000000 t1 s1 v1 b1 string 1 E4 vel 79
+note 67.200000 67.500000 t1 s1 v1 b1 string 6 E2 vel 79
+note 67.500000 67.800000 t1 s1 v1 b2 string 6 E2 vel 79
+note 67.800000 68.100000 t1 s1 v1 b3 string 6 G2 vel 79
+note 68.100000 68.400000 t1 s1 v1 b4 string 6 E2 vel 79
+note 68.400000 68.700000 t1 s1 v1 b5 string 5 B2 vel 79
+note 68.700000 69.000000 t1 s1 v1 b6 string 5 A2 vel 79
+note 69.000000 69.300000 t1 s1 v1 b7 string 6 G2 vel 79
+note 69.300000 69.600000 t1 s1 v1 b8 string 6 E2 vel 79
+note 69.600000 70.200000 t1 s1 v1 b1 string 6 E2 vel 79
+note 69.600000 70.200000 t1 s1 v1 b1 string 5 B2 vel 79
+note 69.600000 70.200000 t1 s1 v1 b1 string 4 E3 vel 79
+note 70.200000 70.500000 t1 s1 v1 b2 string 4 E3 vel 79
+note 70.500000 70.800000 t1 s1 v1 b3 string 4 D3 vel 79
+note 70.800000 71.400000 t1 s1 v1 b4 string 5 B2 vel 79
+note 71.400000 72.000000 t1 s1 v1 b5 string 5 A2 vel 79
+note 72.000000 72.300000 t1 s1 v1 b1 string 3 A3 vel 79
+note 72.300000 72.600000 t1 s1 v1 b2 string 3 A3 vel 79
+note 72.600000 72.900000 t1 s1 v1 b3 string 3 G3 vel 79
+note 72.900000 73.200000 t1 s1 v1 b4 string 4 E3 vel 79
+note 73.200000 73.500000 t1 s1 v1 b5 string 4 D3 vel 79
+note 73.500000 73.800000 t1 s1 v1 b6 string 4 E3 vel 79
+note 73.800000 74.100000 t1 s1 v1 b7 string 5 A2 vel 79
+note 74.100000 74.400000 t1 s1 v1 b8 string 5 B2 vel 79
+note 74.400000 75.600000 t1 s1 v1 b1 string 6 E2 vel 79
+note 74.400000 75.600000 t1 s1 v1 b1 string 5 B2 vel 79
+note 74.400000 75.600000 t1 s1 v1 b1 string 4 E3 vel 79
+note 74.400000 75.600000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 74.400000 75.600000 t1 s1 v1 b1 string 2 B3 vel 79
+note 74.400000 75.600000 t1 s1 v1 b1 string 1 E4 vel 79
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000
+click 4.800000 strong
+click 5.400000
+click 6.000000
+click 6.600000
+click 7.200000 strong
+click 7.800000
+click 8.400000
+click 9.000000
+click 9.600000 strong
+click 10.200000
+click 10.800000
+click 11.400000
+click 12.000000 strong
+click 12.600000
+click 13.200000
+click 13.800000
+click 14.400000 strong
+click 15.000000
+click 15.600000
+click 16.200000
+click 16.800000 strong
+click 17.400000
+click 18.000000
+click 18.600000
+click 19.200000 strong
+click 19.800000
+click 20.400000
+click 21.000000
+click 21.600000 strong
+click 22.200000
+click 22.800000
+click 23.400000
+click 24.000000 strong
+click 24.600000
+click 25.200000
+click 25.800000
+click 26.400000 strong
+click 27.000000
+click 27.600000
+click 28.200000
+click 28.800000 strong
+click 29.400000
+click 30.000000
+click 30.600000
+click 31.200000 strong
+click 31.800000
+click 32.400000
+click 33.000000
+click 33.600000 strong
+click 34.200000
+click 34.800000
+click 35.400000
+click 36.000000 strong
+click 36.600000
+click 37.200000
+click 37.800000
+click 38.400000 strong
+click 39.000000
+click 39.600000
+click 40.200000
+click 40.800000 strong
+click 41.400000
+click 42.000000
+click 42.600000
+click 43.200000 strong
+click 43.800000
+click 44.400000
+click 45.000000
+click 45.600000 strong
+click 46.200000
+click 46.800000
+click 47.400000
+click 48.000000 strong
+click 48.600000
+click 49.200000
+click 49.800000
+click 50.400000 strong
+click 51.000000
+click 51.600000
+click 52.200000
+click 52.800000 strong
+click 53.400000
+click 54.000000
+click 54.600000
+click 55.200000 strong
+click 55.800000
+click 56.400000
+click 57.000000
+click 57.600000 strong
+click 58.200000
+click 58.800000
+click 59.400000
+click 60.000000 strong
+click 60.600000
+click 61.200000
+click 61.800000
+click 62.400000 strong
+click 63.000000
+click 63.600000
+click 64.200000
+click 64.800000 strong
+click 65.400000
+click 66.000000
+click 66.600000
+click 67.200000 strong
+click 67.800000
+click 68.400000
+click 69.000000
+click 69.600000 strong
+click 70.200000
+click 70.800000
+click 71.400000
+click 72.000000 strong
+click 72.600000
+click 73.200000
+click 73.800000
+click 74.400000 strong
+click 75.000000
+click 75.600000
+click 76.200000

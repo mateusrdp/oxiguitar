@@ -308,3 +308,30 @@ fn tools_are_listed() {
     assert!(text.contains("infer-key-signatures"), "{text}");
     assert!(text.contains("Infer Key Signatures"), "{text}");
 }
+
+#[test]
+fn events_prints_the_score_as_it_plays() {
+    let out = cli()
+        .arg("events")
+        .arg(fixture("oxiguitar-test-song.gp"))
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = String::from_utf8(out.stdout).unwrap();
+    // The golden file was made from the same file by the play crate.
+    let golden = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/events/oxiguitar-test-song.gp.events"),
+    )
+    .unwrap();
+    assert_eq!(text, golden);
+    assert!(
+        text.starts_with("length ")
+            && text.contains("\nbar 1 pass 1 0.000000 ")
+            && text.contains("\nnote ")
+    );
+}

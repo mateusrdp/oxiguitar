@@ -23,6 +23,8 @@ oxiguitar\-cli \- print, convert and engrave guitar tablature files
 .IR file ]
 .RI [ options ]
 .br
+.BI "oxiguitar\-cli events " file
+.br
 .B oxiguitar\-cli tools
 .br
 .B oxiguitar\-cli specimen
@@ -71,6 +73,11 @@ and track it happens in, and notes on what Guitar Pro does differently.
 .TP
 .BI render " file"
 Engrave a score to PNG pages and/or a PDF.
+.TP
+.BI events " file"
+Print the score as it plays: the bars in playing order (repeats, endings,
+D.C. and D.S., codas) with their times in seconds, every note with its
+start, end, string, pitch, velocity and effects, and the metronome's clicks.
 .TP
 .B tools
 List the tools, as in the Tools menu of

@@ -1,0 +1,29 @@
+length 4.800000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.800000
+note 0.000000 0.600000 t1 s1 v1 b1 string 6 E2 vel 79
+note 0.000000 0.600000 t1 s1 v1 b1 string 5 B2 vel 79
+note 0.000000 0.600000 t1 s1 v1 b1 string 4 E3 vel 79
+note 0.600000 1.200000 t1 s1 v1 b2 string 6 F#2 vel 79
+note 0.600000 1.200000 t1 s1 v1 b2 string 5 C#3 vel 79
+note 0.600000 1.200000 t1 s1 v1 b2 string 4 F#3 vel 79
+note 1.200000 1.800000 t1 s1 v1 b3 string 6 G2 vel 79
+note 1.200000 1.800000 t1 s1 v1 b3 string 5 D3 vel 79
+note 1.200000 1.800000 t1 s1 v1 b3 string 4 G3 vel 79
+note 1.800000 2.400000 t1 s1 v1 b4 string 6 E2 vel 79
+note 1.800000 2.400000 t1 s1 v1 b4 string 5 B2 vel 79
+note 1.800000 2.400000 t1 s1 v1 b4 string 4 E3 vel 79
+note 2.400000 2.700000 t1 s1 v1 b1 string 1 F#4 vel 79
+note 2.700000 3.000000 t1 s1 v1 b2 string 2 E4 vel 79
+note 3.000000 3.300000 t1 s1 v1 b3 string 3 B3 vel 79
+note 3.300000 3.600000 t1 s1 v1 b4 string 4 E3 vel 79
+note 3.600000 4.800000 t1 s1 v1 b5 string 6 E2 vel 79
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000

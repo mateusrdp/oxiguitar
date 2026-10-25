@@ -1,0 +1,22 @@
+length 7.200000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.800000
+bar 3 pass 1 4.800000 7.200000
+note 0.000000 2.400000 t1 s1 v1 b1 string 3 D4 vel 79 pitch 0.000000:0 1.200000:-200 2.400000:-400
+note 2.400000 3.600000 t1 s1 v1 b1 string 2 E4 vel 79 fade-in
+note 2.400000 3.600000 t1 s1 v1 b1 string 1 A4 vel 79 fade-in
+note 4.800000 6.000000 t1 s1 v1 b1 string 6 E2 vel 79 pitch 4.800000:0 5.400000:-200 6.000000:-400
+note 6.000000 7.200000 t1 s1 v1 b2 string 4 E3 vel 79 fade-in
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000
+click 4.800000 strong
+click 5.400000
+click 6.000000
+click 6.600000

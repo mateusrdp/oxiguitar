@@ -1,0 +1,43 @@
+length 7.200000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.800000
+bar 3 pass 1 4.800000 7.200000
+note 0.000000 0.300000 t1 s1 v1 b1 string 6 E2 vel 79 dead
+note 0.300000 0.600000 t1 s1 v1 b2 string 6 E2 vel 79 dead
+note 0.600000 0.900000 t1 s1 v1 b3 string 6 E2 vel 79 palm-mute
+note 0.900000 1.200000 t1 s1 v1 b4 string 6 E2 vel 79 palm-mute
+note 1.200000 1.500000 t1 s1 v1 b5 string 6 E2 vel 79 palm-mute
+note 1.500000 1.800000 t1 s1 v1 b6 string 6 E2 vel 79 palm-mute
+note 1.800000 2.100000 t1 s1 v1 b7 string 5 B2 vel 47 ghost
+note 2.100000 2.400000 t1 s1 v1 b8 string 5 B2 vel 47 ghost
+note 2.400000 3.000000 t1 s1 v1 b1 string 3 A3 vel 47 ghost
+note 3.000000 3.600000 t1 s1 v1 b2 string 3 B3 vel 79
+note 3.600000 4.200000 t1 s1 v1 b3 string 6 E2 vel 79 dead
+note 3.600000 4.200000 t1 s1 v1 b3 string 5 A2 vel 79 dead
+note 3.600000 4.200000 t1 s1 v1 b3 string 4 D3 vel 79 dead
+note 4.200000 4.800000 t1 s1 v1 b4 string 3 A3 vel 79
+note 4.800000 4.950000 t1 s1 v1 b1 string 6 E2 vel 79 palm-mute
+note 4.950000 5.100000 t1 s1 v1 b2 string 6 E2 vel 79 palm-mute
+note 5.100000 5.250000 t1 s1 v1 b3 string 6 E2 vel 79 palm-mute
+note 5.250000 5.400000 t1 s1 v1 b4 string 6 E2 vel 79 palm-mute
+note 5.400000 5.550000 t1 s1 v1 b5 string 6 G2 vel 79 palm-mute
+note 5.550000 5.700000 t1 s1 v1 b6 string 6 G2 vel 79 palm-mute
+note 5.700000 5.850000 t1 s1 v1 b7 string 6 E2 vel 79 palm-mute
+note 5.850000 6.000000 t1 s1 v1 b8 string 6 E2 vel 79 palm-mute
+note 6.000000 6.300000 t1 s1 v1 b9 string 6 A2 vel 79
+note 6.300000 6.600000 t1 s1 v1 b10 string 6 G2 vel 79
+note 6.600000 6.900000 t1 s1 v1 b11 string 6 E2 vel 79 dead
+note 6.900000 7.200000 t1 s1 v1 b12 string 6 E2 vel 79
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000
+click 4.800000 strong
+click 5.400000
+click 6.000000
+click 6.600000

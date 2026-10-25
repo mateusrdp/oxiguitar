@@ -1,0 +1,100 @@
+length 19.761905
+count-in 2.666667 clicks 4
+bar 1 pass 1 0.000000 2.666667
+bar 2 pass 1 2.666667 5.333333
+bar 3 pass 1 5.333333 7.333333
+bar 4 pass 1 7.333333 9.333333
+bar 5 pass 1 9.333333 11.190476
+bar 6 pass 1 11.190476 12.904762
+bar 7 pass 1 12.904762 16.333333
+bar 8 pass 1 16.333333 19.761905
+note 0.000000 0.333333 t1 s1 v1 b1 string 6 E2 vel 79
+note 0.333333 0.666667 t1 s1 v1 b2 string 6 E2 vel 79
+note 0.666667 1.000000 t1 s1 v1 b3 string 6 G2 vel 79
+note 1.000000 1.333333 t1 s1 v1 b4 string 6 E2 vel 79
+note 1.333333 1.666667 t1 s1 v1 b5 string 5 B2 vel 79
+note 1.666667 2.000000 t1 s1 v1 b6 string 5 A2 vel 79
+note 2.000000 2.333333 t1 s1 v1 b7 string 6 G2 vel 79
+note 2.333333 2.666667 t1 s1 v1 b8 string 6 E2 vel 79
+note 2.666667 3.333333 t1 s1 v1 b1 string 6 E2 vel 79
+note 2.666667 3.333333 t1 s1 v1 b1 string 5 B2 vel 79
+note 2.666667 3.333333 t1 s1 v1 b1 string 4 E3 vel 79
+note 3.333333 3.666667 t1 s1 v1 b2 string 4 E3 vel 79
+note 3.666667 4.000000 t1 s1 v1 b3 string 4 D3 vel 79
+note 4.000000 4.666667 t1 s1 v1 b4 string 5 B2 vel 79
+note 4.666667 5.333333 t1 s1 v1 b5 string 5 A2 vel 79
+note 5.333333 5.583333 t1 s1 v1 b1 string 3 A3 vel 79
+note 5.583333 5.833333 t1 s1 v1 b2 string 3 A3 vel 79
+note 5.833333 6.083333 t1 s1 v1 b3 string 3 G3 vel 79
+note 6.083333 6.333333 t1 s1 v1 b4 string 4 E3 vel 79
+note 6.333333 6.583333 t1 s1 v1 b5 string 4 D3 vel 79
+note 6.583333 6.833333 t1 s1 v1 b6 string 4 E3 vel 79
+note 6.833333 7.083333 t1 s1 v1 b7 string 5 A2 vel 79
+note 7.083333 7.333333 t1 s1 v1 b8 string 5 B2 vel 79
+note 7.333333 8.333333 t1 s1 v1 b1 string 6 E2 vel 79
+note 7.333333 8.333333 t1 s1 v1 b1 string 5 B2 vel 79
+note 7.333333 8.333333 t1 s1 v1 b1 string 4 E3 vel 79
+note 7.333333 8.333333 t1 s1 v1 b1 string 3 G#3 vel 79
+note 7.333333 8.333333 t1 s1 v1 b1 string 2 B3 vel 79
+note 7.333333 8.333333 t1 s1 v1 b1 string 1 E4 vel 79
+note 9.333333 9.583333 t1 s1 v1 b1 string 6 E2 vel 79
+note 9.583333 9.833333 t1 s1 v1 b2 string 6 E2 vel 79
+note 9.833333 10.083333 t1 s1 v1 b3 string 6 G2 vel 79
+note 10.083333 10.333333 t1 s1 v1 b4 string 6 E2 vel 79
+note 10.333333 10.547619 t1 s1 v1 b5 string 5 B2 vel 79
+note 10.547619 10.761905 t1 s1 v1 b6 string 5 A2 vel 79
+note 10.761905 10.976190 t1 s1 v1 b7 string 6 G2 vel 79
+note 10.976190 11.190476 t1 s1 v1 b8 string 6 E2 vel 79
+note 11.190476 11.619048 t1 s1 v1 b1 string 6 E2 vel 79
+note 11.190476 11.619048 t1 s1 v1 b1 string 5 B2 vel 79
+note 11.190476 11.619048 t1 s1 v1 b1 string 4 E3 vel 79
+note 11.619048 11.833333 t1 s1 v1 b2 string 4 E3 vel 79
+note 11.833333 12.047619 t1 s1 v1 b3 string 4 D3 vel 79
+note 12.047619 12.476190 t1 s1 v1 b4 string 5 B2 vel 79
+note 12.476190 12.904762 t1 s1 v1 b5 string 5 A2 vel 79
+note 12.904762 13.333333 t1 s1 v1 b1 string 3 A3 vel 79
+note 13.333333 13.761905 t1 s1 v1 b2 string 3 A3 vel 79
+note 13.761905 14.190476 t1 s1 v1 b3 string 3 G3 vel 79
+note 14.190476 14.619048 t1 s1 v1 b4 string 4 E3 vel 79
+note 14.619048 15.047619 t1 s1 v1 b5 string 4 D3 vel 79
+note 15.047619 15.476190 t1 s1 v1 b6 string 4 E3 vel 79
+note 15.476190 15.904762 t1 s1 v1 b7 string 5 A2 vel 79
+note 15.904762 16.333333 t1 s1 v1 b8 string 5 B2 vel 79
+note 16.333333 18.047619 t1 s1 v1 b1 string 6 E2 vel 79
+note 16.333333 18.047619 t1 s1 v1 b1 string 5 B2 vel 79
+note 16.333333 18.047619 t1 s1 v1 b1 string 4 E3 vel 79
+note 16.333333 18.047619 t1 s1 v1 b1 string 3 G#3 vel 79
+note 16.333333 18.047619 t1 s1 v1 b1 string 2 B3 vel 79
+note 16.333333 18.047619 t1 s1 v1 b1 string 1 E4 vel 79
+click 0.000000 strong
+click 0.666667
+click 1.333333
+click 2.000000
+click 2.666667 strong
+click 3.333333
+click 4.000000
+click 4.666667
+click 5.333333 strong
+click 5.833333
+click 6.333333
+click 6.833333
+click 7.333333 strong
+click 7.833333
+click 8.333333
+click 8.833333
+click 9.333333 strong
+click 9.833333
+click 10.333333
+click 10.761905
+click 11.190476 strong
+click 11.619048
+click 12.047619
+click 12.476190
+click 12.904762 strong
+click 13.761905
+click 14.619048
+click 15.476190
+click 16.333333 strong
+click 17.190476
+click 18.047619
+click 18.904762

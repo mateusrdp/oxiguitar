@@ -1,0 +1,314 @@
+length 15.000000
+count-in 1.875000 clicks 4
+bar 1 pass 1 0.000000 1.875000
+bar 2 pass 1 1.875000 3.750000
+bar 3 pass 1 3.750000 5.625000
+bar 4 pass 1 5.625000 7.500000
+bar 5 pass 1 7.500000 9.375000
+bar 6 pass 1 9.375000 11.250000
+bar 7 pass 1 11.250000 13.125000
+bar 8 pass 1 13.125000 15.000000
+note 0.000000 0.234375 t1 s1 v1 b1 string 1 A4 vel 79
+note 0.000000 0.468750 t2 s1 v1 b1 string 6 E2 vel 79
+note 0.000000 0.468750 t2 s1 v1 b1 string 5 B2 vel 79
+note 0.000000 0.468750 t2 s1 v1 b1 string 4 E3 vel 79
+note 0.000000 0.234375 t3 s1 v1 b1 string 4 E1 vel 79
+note 0.000000 0.234375 t4 s1 v1 b1 C2 vel 79
+note 0.000000 0.234375 t4 s1 v1 b1 F#2 vel 79
+note 0.234375 0.468750 t1 s1 v1 b2 string 1 C5 vel 79
+note 0.234375 0.468750 t3 s1 v1 b2 string 4 E1 vel 79
+note 0.234375 0.468750 t4 s1 v1 b2 F#2 vel 79
+note 0.468750 0.703125 t1 s1 v1 b3 string 2 E4 vel 79
+note 0.468750 0.703125 t2 s1 v1 b2 string 6 E2 vel 79 palm-mute
+note 0.468750 0.703125 t3 s1 v1 b3 string 4 E1 vel 79
+note 0.468750 0.703125 t4 s1 v1 b3 D2 vel 79
+note 0.468750 0.703125 t4 s1 v1 b3 F#2 vel 79
+note 0.703125 0.937500 t1 s1 v1 b4 string 2 G4 vel 79
+note 0.703125 0.937500 t2 s1 v1 b3 string 6 E2 vel 79 palm-mute
+note 0.703125 0.937500 t3 s1 v1 b4 string 4 E1 vel 79
+note 0.703125 0.937500 t4 s1 v1 b4 F#2 vel 79
+note 0.937500 1.171875 t1 s1 v1 b5 string 3 C4 vel 79
+note 0.937500 1.406250 t2 s1 v1 b4 string 6 E2 vel 79
+note 0.937500 1.406250 t2 s1 v1 b4 string 5 B2 vel 79
+note 0.937500 1.406250 t2 s1 v1 b4 string 4 E3 vel 79
+note 0.937500 1.171875 t3 s1 v1 b5 string 4 G1 vel 79
+note 0.937500 1.171875 t4 s1 v1 b5 C2 vel 79
+note 0.937500 1.171875 t4 s1 v1 b5 F#2 vel 79
+note 1.171875 1.406250 t1 s1 v1 b6 string 3 D4 vel 79
+note 1.171875 1.406250 t3 s1 v1 b6 string 4 G1 vel 79
+note 1.171875 1.406250 t4 s1 v1 b6 C2 vel 79
+note 1.171875 1.406250 t4 s1 v1 b6 F#2 vel 79
+note 1.406250 1.640625 t1 s1 v1 b7 string 2 G4 vel 79 pitch 1.406250:0 1.523438:200 1.640625:200
+note 1.406250 1.640625 t2 s1 v1 b5 string 6 G2 vel 79 palm-mute
+note 1.406250 1.640625 t3 s1 v1 b7 string 4 G1 vel 79
+note 1.406250 1.640625 t4 s1 v1 b7 D2 vel 79
+note 1.406250 1.640625 t4 s1 v1 b7 F#2 vel 79
+note 1.640625 1.875000 t1 s1 v1 b8 string 1 A4 vel 79
+note 1.640625 1.875000 t2 s1 v1 b6 string 6 G2 vel 79 palm-mute
+note 1.640625 1.875000 t3 s1 v1 b8 string 4 G1 vel 79
+note 1.640625 1.875000 t4 s1 v1 b8 F#2 vel 79
+note 1.875000 2.343750 t1 s1 v1 b1 string 1 A4 vel 79 vibrato
+note 1.875000 2.812500 t2 s1 v1 b1 string 5 A2 vel 79
+note 1.875000 2.812500 t2 s1 v1 b1 string 4 E3 vel 79
+note 1.875000 2.812500 t2 s1 v1 b1 string 3 A3 vel 79
+note 1.875000 2.109375 t3 s1 v1 b1 string 3 A1 vel 79
+note 1.875000 2.109375 t4 s1 v1 b1 C2 vel 79
+note 1.875000 2.109375 t4 s1 v1 b1 C#3 vel 79
+note 2.109375 2.343750 t3 s1 v1 b2 string 3 A1 vel 79
+note 2.109375 2.343750 t4 s1 v1 b2 F#2 vel 79
+note 2.343750 2.812500 t1 s1 v1 b2 string 2 G4 vel 79
+note 2.343750 2.578125 t3 s1 v1 b3 string 3 A1 vel 79
+note 2.343750 2.578125 t4 s1 v1 b3 D2 vel 79
+note 2.343750 2.578125 t4 s1 v1 b3 F#2 vel 79
+note 2.578125 2.812500 t3 s1 v1 b4 string 3 A1 vel 79
+note 2.578125 2.812500 t4 s1 v1 b4 F#2 vel 79
+note 2.812500 3.750000 t1 s1 v1 b3 string 3 D4 vel 79
+note 2.812500 3.750000 t2 s1 v1 b2 string 6 G2 vel 79
+note 2.812500 3.750000 t2 s1 v1 b2 string 5 B2 vel 79
+note 2.812500 3.750000 t2 s1 v1 b2 string 4 D3 vel 79
+note 2.812500 3.046875 t3 s1 v1 b5 string 4 G1 vel 79
+note 2.812500 3.046875 t4 s1 v1 b5 C2 vel 79
+note 2.812500 3.046875 t4 s1 v1 b5 F#2 vel 79
+note 3.046875 3.281250 t3 s1 v1 b6 string 4 G1 vel 79
+note 3.046875 3.281250 t4 s1 v1 b6 F#2 vel 79
+note 3.281250 3.515625 t3 s1 v1 b7 string 4 G1 vel 79
+note 3.281250 3.515625 t4 s1 v1 b7 D2 vel 79
+note 3.281250 3.515625 t4 s1 v1 b7 F#2 vel 79
+note 3.515625 3.750000 t3 s1 v1 b8 string 4 G1 vel 79
+note 3.515625 3.750000 t4 s1 v1 b8 D2 vel 79
+note 3.750000 3.984375 t1 s1 v1 b1 string 1 A4 vel 79
+note 3.750000 4.218750 t2 s1 v1 b1 string 6 E2 vel 79
+note 3.750000 4.218750 t2 s1 v1 b1 string 5 B2 vel 79
+note 3.750000 4.218750 t2 s1 v1 b1 string 4 E3 vel 79
+note 3.750000 3.984375 t3 s1 v1 b1 string 4 E1 vel 79
+note 3.750000 3.984375 t4 s1 v1 b1 C2 vel 79
+note 3.750000 3.984375 t4 s1 v1 b1 F#2 vel 79
+note 3.984375 4.218750 t1 s1 v1 b2 string 1 C5 vel 79
+note 3.984375 4.218750 t3 s1 v1 b2 string 4 E1 vel 79
+note 3.984375 4.218750 t4 s1 v1 b2 F#2 vel 79
+note 4.218750 4.453125 t1 s1 v1 b3 string 2 E4 vel 79
+note 4.218750 4.453125 t2 s1 v1 b2 string 6 E2 vel 79 palm-mute
+note 4.218750 4.453125 t3 s1 v1 b3 string 4 E1 vel 79
+note 4.218750 4.453125 t4 s1 v1 b3 D2 vel 79
+note 4.218750 4.453125 t4 s1 v1 b3 F#2 vel 79
+note 4.453125 4.687500 t1 s1 v1 b4 string 2 G4 vel 79
+note 4.453125 4.687500 t2 s1 v1 b3 string 6 E2 vel 79 palm-mute
+note 4.453125 4.687500 t3 s1 v1 b4 string 4 E1 vel 79
+note 4.453125 4.687500 t4 s1 v1 b4 F#2 vel 79
+note 4.687500 4.921875 t1 s1 v1 b5 string 3 C4 vel 79
+note 4.687500 5.156250 t2 s1 v1 b4 string 6 E2 vel 79
+note 4.687500 5.156250 t2 s1 v1 b4 string 5 B2 vel 79
+note 4.687500 5.156250 t2 s1 v1 b4 string 4 E3 vel 79
+note 4.687500 4.921875 t3 s1 v1 b5 string 4 G1 vel 79
+note 4.687500 4.921875 t4 s1 v1 b5 C2 vel 79
+note 4.687500 4.921875 t4 s1 v1 b5 F#2 vel 79
+note 4.921875 5.156250 t1 s1 v1 b6 string 3 D4 vel 79
+note 4.921875 5.156250 t3 s1 v1 b6 string 4 G1 vel 79
+note 4.921875 5.156250 t4 s1 v1 b6 C2 vel 79
+note 4.921875 5.156250 t4 s1 v1 b6 F#2 vel 79
+note 5.156250 5.390625 t1 s1 v1 b7 string 2 G4 vel 79 pitch 5.156250:0 5.273438:200 5.390625:200
+note 5.156250 5.390625 t2 s1 v1 b5 string 6 G2 vel 79 palm-mute
+note 5.156250 5.390625 t3 s1 v1 b7 string 4 G1 vel 79
+note 5.156250 5.390625 t4 s1 v1 b7 D2 vel 79
+note 5.156250 5.390625 t4 s1 v1 b7 F#2 vel 79
+note 5.390625 5.625000 t1 s1 v1 b8 string 1 A4 vel 79
+note 5.390625 5.625000 t2 s1 v1 b6 string 6 G2 vel 79 palm-mute
+note 5.390625 5.625000 t3 s1 v1 b8 string 4 G1 vel 79
+note 5.390625 5.625000 t4 s1 v1 b8 F#2 vel 79
+note 5.625000 6.093750 t1 s1 v1 b1 string 1 A4 vel 79 vibrato
+note 5.625000 6.562500 t2 s1 v1 b1 string 5 A2 vel 79
+note 5.625000 6.562500 t2 s1 v1 b1 string 4 E3 vel 79
+note 5.625000 6.562500 t2 s1 v1 b1 string 3 A3 vel 79
+note 5.625000 5.859375 t3 s1 v1 b1 string 3 A1 vel 79
+note 5.625000 5.859375 t4 s1 v1 b1 C2 vel 79
+note 5.625000 5.859375 t4 s1 v1 b1 C#3 vel 79
+note 5.859375 6.093750 t3 s1 v1 b2 string 3 A1 vel 79
+note 5.859375 6.093750 t4 s1 v1 b2 F#2 vel 79
+note 6.093750 6.562500 t1 s1 v1 b2 string 2 G4 vel 79
+note 6.093750 6.328125 t3 s1 v1 b3 string 3 A1 vel 79
+note 6.093750 6.328125 t4 s1 v1 b3 D2 vel 79
+note 6.093750 6.328125 t4 s1 v1 b3 F#2 vel 79
+note 6.328125 6.562500 t3 s1 v1 b4 string 3 A1 vel 79
+note 6.328125 6.562500 t4 s1 v1 b4 F#2 vel 79
+note 6.562500 7.500000 t1 s1 v1 b3 string 3 D4 vel 79
+note 6.562500 7.500000 t2 s1 v1 b2 string 6 G2 vel 79
+note 6.562500 7.500000 t2 s1 v1 b2 string 5 B2 vel 79
+note 6.562500 7.500000 t2 s1 v1 b2 string 4 D3 vel 79
+note 6.562500 6.796875 t3 s1 v1 b5 string 4 G1 vel 79
+note 6.562500 6.796875 t4 s1 v1 b5 C2 vel 79
+note 6.562500 6.796875 t4 s1 v1 b5 F#2 vel 79
+note 6.796875 7.031250 t3 s1 v1 b6 string 4 G1 vel 79
+note 6.796875 7.031250 t4 s1 v1 b6 F#2 vel 79
+note 7.031250 7.265625 t3 s1 v1 b7 string 4 G1 vel 79
+note 7.031250 7.265625 t4 s1 v1 b7 D2 vel 79
+note 7.031250 7.265625 t4 s1 v1 b7 F#2 vel 79
+note 7.265625 7.500000 t3 s1 v1 b8 string 4 G1 vel 79
+note 7.265625 7.500000 t4 s1 v1 b8 D2 vel 79
+note 7.500000 7.734375 t1 s1 v1 b1 string 1 A4 vel 79
+note 7.500000 7.968750 t2 s1 v1 b1 string 6 E2 vel 79
+note 7.500000 7.968750 t2 s1 v1 b1 string 5 B2 vel 79
+note 7.500000 7.968750 t2 s1 v1 b1 string 4 E3 vel 79
+note 7.500000 7.734375 t3 s1 v1 b1 string 4 E1 vel 79
+note 7.500000 7.734375 t4 s1 v1 b1 C2 vel 79
+note 7.500000 7.734375 t4 s1 v1 b1 F#2 vel 79
+note 7.734375 7.968750 t1 s1 v1 b2 string 1 C5 vel 79
+note 7.734375 7.968750 t3 s1 v1 b2 string 4 E1 vel 79
+note 7.734375 7.968750 t4 s1 v1 b2 F#2 vel 79
+note 7.968750 8.203125 t1 s1 v1 b3 string 2 E4 vel 79
+note 7.968750 8.203125 t2 s1 v1 b2 string 6 E2 vel 79 palm-mute
+note 7.968750 8.203125 t3 s1 v1 b3 string 4 E1 vel 79
+note 7.968750 8.203125 t4 s1 v1 b3 D2 vel 79
+note 7.968750 8.203125 t4 s1 v1 b3 F#2 vel 79
+note 8.203125 8.437500 t1 s1 v1 b4 string 2 G4 vel 79
+note 8.203125 8.437500 t2 s1 v1 b3 string 6 E2 vel 79 palm-mute
+note 8.203125 8.437500 t3 s1 v1 b4 string 4 E1 vel 79
+note 8.203125 8.437500 t4 s1 v1 b4 F#2 vel 79
+note 8.437500 8.671875 t1 s1 v1 b5 string 3 C4 vel 79
+note 8.437500 8.906250 t2 s1 v1 b4 string 6 E2 vel 79
+note 8.437500 8.906250 t2 s1 v1 b4 string 5 B2 vel 79
+note 8.437500 8.906250 t2 s1 v1 b4 string 4 E3 vel 79
+note 8.437500 8.671875 t3 s1 v1 b5 string 4 G1 vel 79
+note 8.437500 8.671875 t4 s1 v1 b5 C2 vel 79
+note 8.437500 8.671875 t4 s1 v1 b5 F#2 vel 79
+note 8.671875 8.906250 t1 s1 v1 b6 string 3 D4 vel 79
+note 8.671875 8.906250 t3 s1 v1 b6 string 4 G1 vel 79
+note 8.671875 8.906250 t4 s1 v1 b6 C2 vel 79
+note 8.671875 8.906250 t4 s1 v1 b6 F#2 vel 79
+note 8.906250 9.140625 t1 s1 v1 b7 string 2 G4 vel 79 pitch 8.906250:0 9.023438:200 9.140625:200
+note 8.906250 9.140625 t2 s1 v1 b5 string 6 G2 vel 79 palm-mute
+note 8.906250 9.140625 t3 s1 v1 b7 string 4 G1 vel 79
+note 8.906250 9.140625 t4 s1 v1 b7 D2 vel 79
+note 8.906250 9.140625 t4 s1 v1 b7 F#2 vel 79
+note 9.140625 9.375000 t1 s1 v1 b8 string 1 A4 vel 79
+note 9.140625 9.375000 t2 s1 v1 b6 string 6 G2 vel 79 palm-mute
+note 9.140625 9.375000 t3 s1 v1 b8 string 4 G1 vel 79
+note 9.140625 9.375000 t4 s1 v1 b8 F#2 vel 79
+note 9.375000 9.843750 t1 s1 v1 b1 string 1 A4 vel 79 vibrato
+note 9.375000 10.312500 t2 s1 v1 b1 string 5 A2 vel 79
+note 9.375000 10.312500 t2 s1 v1 b1 string 4 E3 vel 79
+note 9.375000 10.312500 t2 s1 v1 b1 string 3 A3 vel 79
+note 9.375000 9.609375 t3 s1 v1 b1 string 3 A1 vel 79
+note 9.375000 9.609375 t4 s1 v1 b1 C2 vel 79
+note 9.375000 9.609375 t4 s1 v1 b1 C#3 vel 79
+note 9.609375 9.843750 t3 s1 v1 b2 string 3 A1 vel 79
+note 9.609375 9.843750 t4 s1 v1 b2 F#2 vel 79
+note 9.843750 10.312500 t1 s1 v1 b2 string 2 G4 vel 79
+note 9.843750 10.078125 t3 s1 v1 b3 string 3 A1 vel 79
+note 9.843750 10.078125 t4 s1 v1 b3 D2 vel 79
+note 9.843750 10.078125 t4 s1 v1 b3 F#2 vel 79
+note 10.078125 10.312500 t3 s1 v1 b4 string 3 A1 vel 79
+note 10.078125 10.312500 t4 s1 v1 b4 F#2 vel 79
+note 10.312500 11.250000 t1 s1 v1 b3 string 3 D4 vel 79
+note 10.312500 11.250000 t2 s1 v1 b2 string 6 G2 vel 79
+note 10.312500 11.250000 t2 s1 v1 b2 string 5 B2 vel 79
+note 10.312500 11.250000 t2 s1 v1 b2 string 4 D3 vel 79
+note 10.312500 10.546875 t3 s1 v1 b5 string 4 G1 vel 79
+note 10.312500 10.546875 t4 s1 v1 b5 C2 vel 79
+note 10.312500 10.546875 t4 s1 v1 b5 F#2 vel 79
+note 10.546875 10.781250 t3 s1 v1 b6 string 4 G1 vel 79
+note 10.546875 10.781250 t4 s1 v1 b6 F#2 vel 79
+note 10.781250 11.015625 t3 s1 v1 b7 string 4 G1 vel 79
+note 10.781250 11.015625 t4 s1 v1 b7 D2 vel 79
+note 10.781250 11.015625 t4 s1 v1 b7 F#2 vel 79
+note 11.015625 11.250000 t3 s1 v1 b8 string 4 G1 vel 79
+note 11.015625 11.250000 t4 s1 v1 b8 D2 vel 79
+note 11.250000 11.484375 t1 s1 v1 b1 string 1 A4 vel 79
+note 11.250000 11.718750 t2 s1 v1 b1 string 6 E2 vel 79
+note 11.250000 11.718750 t2 s1 v1 b1 string 5 B2 vel 79
+note 11.250000 11.718750 t2 s1 v1 b1 string 4 E3 vel 79
+note 11.250000 11.484375 t3 s1 v1 b1 string 4 E1 vel 79
+note 11.250000 11.484375 t4 s1 v1 b1 C2 vel 79
+note 11.250000 11.484375 t4 s1 v1 b1 F#2 vel 79
+note 11.484375 11.718750 t1 s1 v1 b2 string 1 C5 vel 79
+note 11.484375 11.718750 t3 s1 v1 b2 string 4 E1 vel 79
+note 11.484375 11.718750 t4 s1 v1 b2 F#2 vel 79
+note 11.718750 11.953125 t1 s1 v1 b3 string 2 E4 vel 79
+note 11.718750 11.953125 t2 s1 v1 b2 string 6 E2 vel 79 palm-mute
+note 11.718750 11.953125 t3 s1 v1 b3 string 4 E1 vel 79
+note 11.718750 11.953125 t4 s1 v1 b3 D2 vel 79
+note 11.718750 11.953125 t4 s1 v1 b3 F#2 vel 79
+note 11.953125 12.187500 t1 s1 v1 b4 string 2 G4 vel 79
+note 11.953125 12.187500 t2 s1 v1 b3 string 6 E2 vel 79 palm-mute
+note 11.953125 12.187500 t3 s1 v1 b4 string 4 E1 vel 79
+note 11.953125 12.187500 t4 s1 v1 b4 F#2 vel 79
+note 12.187500 12.421875 t1 s1 v1 b5 string 3 C4 vel 79
+note 12.187500 12.656250 t2 s1 v1 b4 string 6 E2 vel 79
+note 12.187500 12.656250 t2 s1 v1 b4 string 5 B2 vel 79
+note 12.187500 12.656250 t2 s1 v1 b4 string 4 E3 vel 79
+note 12.187500 12.421875 t3 s1 v1 b5 string 4 G1 vel 79
+note 12.187500 12.421875 t4 s1 v1 b5 C2 vel 79
+note 12.187500 12.421875 t4 s1 v1 b5 F#2 vel 79
+note 12.421875 12.656250 t1 s1 v1 b6 string 3 D4 vel 79
+note 12.421875 12.656250 t3 s1 v1 b6 string 4 G1 vel 79
+note 12.421875 12.656250 t4 s1 v1 b6 C2 vel 79
+note 12.421875 12.656250 t4 s1 v1 b6 F#2 vel 79
+note 12.656250 12.890625 t1 s1 v1 b7 string 2 G4 vel 79 pitch 12.656250:0 12.773438:200 12.890625:200
+note 12.656250 12.890625 t2 s1 v1 b5 string 6 G2 vel 79 palm-mute
+note 12.656250 12.890625 t3 s1 v1 b7 string 4 G1 vel 79
+note 12.656250 12.890625 t4 s1 v1 b7 D2 vel 79
+note 12.656250 12.890625 t4 s1 v1 b7 F#2 vel 79
+note 12.890625 13.125000 t1 s1 v1 b8 string 1 A4 vel 79
+note 12.890625 13.125000 t2 s1 v1 b6 string 6 G2 vel 79 palm-mute
+note 12.890625 13.125000 t3 s1 v1 b8 string 4 G1 vel 79
+note 12.890625 13.125000 t4 s1 v1 b8 F#2 vel 79
+note 13.125000 13.593750 t1 s1 v1 b1 string 1 A4 vel 79 vibrato
+note 13.125000 14.062500 t2 s1 v1 b1 string 5 A2 vel 79
+note 13.125000 14.062500 t2 s1 v1 b1 string 4 E3 vel 79
+note 13.125000 14.062500 t2 s1 v1 b1 string 3 A3 vel 79
+note 13.125000 13.359375 t3 s1 v1 b1 string 3 A1 vel 79
+note 13.125000 13.359375 t4 s1 v1 b1 C2 vel 79
+note 13.125000 13.359375 t4 s1 v1 b1 C#3 vel 79
+note 13.359375 13.593750 t3 s1 v1 b2 string 3 A1 vel 79
+note 13.359375 13.593750 t4 s1 v1 b2 F#2 vel 79
+note 13.593750 14.062500 t1 s1 v1 b2 string 2 G4 vel 79
+note 13.593750 13.828125 t3 s1 v1 b3 string 3 A1 vel 79
+note 13.593750 13.828125 t4 s1 v1 b3 D2 vel 79
+note 13.593750 13.828125 t4 s1 v1 b3 F#2 vel 79
+note 13.828125 14.062500 t3 s1 v1 b4 string 3 A1 vel 79
+note 13.828125 14.062500 t4 s1 v1 b4 F#2 vel 79
+note 14.062500 15.000000 t1 s1 v1 b3 string 3 D4 vel 79
+note 14.062500 15.000000 t2 s1 v1 b2 string 6 G2 vel 79
+note 14.062500 15.000000 t2 s1 v1 b2 string 5 B2 vel 79
+note 14.062500 15.000000 t2 s1 v1 b2 string 4 D3 vel 79
+note 14.062500 14.296875 t3 s1 v1 b5 string 4 G1 vel 79
+note 14.062500 14.296875 t4 s1 v1 b5 C2 vel 79
+note 14.062500 14.296875 t4 s1 v1 b5 F#2 vel 79
+note 14.296875 14.531250 t3 s1 v1 b6 string 4 G1 vel 79
+note 14.296875 14.531250 t4 s1 v1 b6 F#2 vel 79
+note 14.531250 14.765625 t3 s1 v1 b7 string 4 G1 vel 79
+note 14.531250 14.765625 t4 s1 v1 b7 D2 vel 79
+note 14.531250 14.765625 t4 s1 v1 b7 F#2 vel 79
+note 14.765625 15.000000 t3 s1 v1 b8 string 4 G1 vel 79
+note 14.765625 15.000000 t4 s1 v1 b8 D2 vel 79
+click 0.000000 strong
+click 0.468750
+click 0.937500
+click 1.406250
+click 1.875000 strong
+click 2.343750
+click 2.812500
+click 3.281250
+click 3.750000 strong
+click 4.218750
+click 4.687500
+click 5.156250
+click 5.625000 strong
+click 6.093750
+click 6.562500
+click 7.031250
+click 7.500000 strong
+click 7.968750
+click 8.437500
+click 8.906250
+click 9.375000 strong
+click 9.843750
+click 10.312500
+click 10.781250
+click 11.250000 strong
+click 11.718750
+click 12.187500
+click 12.656250
+click 13.125000 strong
+click 13.593750
+click 14.062500
+click 14.531250
