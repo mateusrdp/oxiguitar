@@ -1,0 +1,74 @@
+# Listening packs, by hand: every reference song (fixtures/reference/*.gp)
+# played into a WAV file by `oxiguitar-cli play --wav`, through our
+# SoundFont plugin, once with each General MIDI set Debian and Ubuntu
+# package: FluidR3 (fluid-soundfont-gm) and MuseScore General
+# (musescore-general-soundfont, the SoundFont 3 one, which the plugin
+# decodes). For Mateus's ears: each set is an artifact of its own, kept
+# 14 days. Run it from the Actions tab or with
+# `gh api -X POST repos/OWNER/REPO/actions/workflows/listening.yml/dispatches -f ref=BRANCH`.
+name: Listening pack
+
+on:
+  workflow_dispatch:
+  # Once more whenever this file changes in a pull request (a workflow
+  # can be dispatched only once it is on the default branch).
+  pull_request:
+    paths: [.github/workflows/listening.yml]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  render:
+    name: Render the reference songs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev libpipewire-0.3-dev libclang-dev \
+            fluid-soundfont-gm musescore-general-soundfont
+      - run: cargo build --release --locked -p oxiguitar-cli
+      - run: scripts/build-plugins.sh
+      - name: Render
+        run: |
+          set -euo pipefail
+          declare -A sets=(
+            [fluidr3]=/usr/share/sounds/sf2/FluidR3_GM.sf2
+            [musescore-general]=/usr/share/sounds/sf3/MuseScore_General_Full.sf3
+          )
+          for name in "${!sets[@]}"; do
+            set_file="$(readlink -f "${sets[$name]}")"
+            test -f "$set_file"
+            home="$RUNNER_TEMP/home-$name"
+            mkdir -p "$home/soundfonts" "listening/$name"
+            # The user's folder plays before the system's: this set alone.
+            ln -s "$set_file" "$home/soundfonts/"
+            for song in fixtures/reference/*.gp; do
+              out="listening/$name/$(basename "$song" .gp).wav"
+              OXIGUITAR_HOME="$home" target/release/oxiguitar-cli play "$song" --wav "$out" 2>&1 \
+                | grep -v 'basic sound set' || true
+              test -s "$out"
+            done
+            {
+              echo "Every reference song of OxiGuitar ${GITHUB_SHA::12}, played by the SoundFont"
+              echo "plugin with $(basename "$set_file") into WAV files (48 kHz, 16-bit stereo, dry,"
+              echo "each track at its file's mixer volume and pan), with two seconds after the end."
+            } > "listening/$name/README.txt"
+            echo "::notice title=$name::$(ls listening/$name/*.wav | wc -l) songs, $(du -sh listening/$name | cut -f1)"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: listening-fluidr3
+          path: listening/fluidr3
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: listening-musescore-general
+          path: listening/musescore-general
+          retention-days: 14
