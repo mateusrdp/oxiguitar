@@ -4,13 +4,13 @@
 
 **OxiGuitar** is a Free, Open-Source fully modular guitar tablature and score viewer, editor and player for Windows, macOS and Linux.
 
-It is written entirely in Rust. Why Rust you'd ask? Because what do you get when you *Oxi*dise METAL 🤘? RUST! And because it’s very fast, of course. We don’t just *want* - we *need* great performance. First because we respect your hardware and your time (especially in this gawd damned economy), and second because we need a lot of grunt to give you a good experience with all the cool features we want in.
+It is written entirely in Rust. Why Rust you'd ask? Because what do you get when you *Oxi*dise METAL \\m/? RUST! And because it’s very fast, of course. We don’t just *want* - we *need* great performance. First because we respect your hardware and your time (especially in this gawd damned economy), and second because we need a lot of grunt to give you a good experience with all the cool features we want in.
 
-It opens most industry standard files (currently Guitar Pro, MuseScore, MusicXML and ABC planned), because no one wants to have to rewrite their entire tab collection they’ve been diligently maintaining since the 90’s just to be able to use Mat's fancy f\*cking app. It needs to be useful from the get-go. It shows them as standard notation and tablature and allows you to play, edit and save them. Every input/output format is a plugin, so you can write your own if we still don’t support what you need.
+It opens the industry’s usual files (Guitar Pro 3 to 8 today; MuseScore, MusicXML, ABC and MIDI files are planned), because no one wants to have to rewrite their entire tab collection they’ve been diligently maintaining since the 90’s just to be able to use Mat's fancy f\*cking app. It needs to be useful from the get-go. It shows them as standard notation and tablature and allows you to play, edit and save them. Every input/output format is a plugin, so you can write your own if we still don’t support what you need.
 
 We support a wide variety of typesetting tools, and try to stay aligned with the music industry standard. Because what's the point of opening your fancy tabs and not being able to display all the work you put in it, right?
 
-Playback is also big. We all like to play along with our favorite songs, don’t always have a band, and can’t always find a good backing track. So this is KEY. And we want quality here, because no one wants to be playing along to a cheap CASIO keyboard from the 90's operated by the neighbor’s toddler who just learnt a few chords and where that dumb arse automatic drumkit is! This is NOT a glorified metronome! Like file formats, every output method is a plugin. The most basic is your PC’s MIDI synthesizer, which uses whatever sound fonts you have installed. But we REALLY recommend that you get yourself some better ones – it makes a massive difference. We do have a few suggestions of nice free ones, with instructions on how to download, install and use them with OxiGuitar. We’re also planning on some BIG tones, using the famed *Neural Amp Modeler (NAM)* for some juicy realistic guitar tones. Compose your song, get yourself a sweet profile online (or capture your own rig with their software!) and you’ll have a pretty decent backing track to rock with real quick!
+Playback is also big. We all like to play along with our favorite songs, don’t always have a band, and can’t always find a good backing track. So this is KEY. And we want quality here, because no one wants to be playing along to a cheap CASIO keyboard from the 90's operated by the neighbor’s toddler who just learnt a few chords and where that dumb arse automatic drumkit is! This is NOT a glorified metronome! Like file formats, every output method is a plugin. The most basic is a MIDI synthesizer that plays whatever sound fonts your computer already has (Windows and macOS come with one; on Linux it’s a package away). But we REALLY recommend that you get yourself some better ones – it makes a massive difference. We do have a few suggestions of nice free ones, with instructions on how to download, install and use them with OxiGuitar. And v1.0 brings some BIG tones too, using the famed *Neural Amp Modeler (NAM)* for some juicy realistic guitar tones. Compose your song, get yourself a sweet profile online (or capture your own rig with their software!) and you’ll have a pretty decent backing track to rock with real quick!
 
 ## Privacy
 
@@ -22,20 +22,20 @@ OxiGuitar values your privacy first. It never uploads anything. No telemetry, no
 
 **v0.5.0, the editor (milestone M3), published as a pre-release on 21 October 2026.**
 
-OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). But it does not play anything yet: the player (milestone M4) is what we are building now, and v1.0 follows it. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
+OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). But it does not play anything yet: the player (milestone M4, NAM included) is what we are building now, and v1.0 follows it. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## How to get involved
 
 I’m a pretty good computer scientist and software engineer myself but this is all vibe-coded at the moment, just to get a headstart. Get the grunt work out of the way, and get something working quick. Cause, you know, I have a life, a full time job, and not a lot of time or money to spare (f\*ck, I even like to play the guitar when I can!). But I promise I have been VERY strict with Claude – if the machines turn on us, it *might* be because I have been so mean to them, just saying. Once we get something good out, we REALLY wanna have this all code reviewed by humans. De-slopify this sh\*t! Meanwhile we REALLY wanna have this all at least thoroughly tested by humans. Because Claude and I are doing all we can with what we have.
 
-That’s where **you** come in 🫵.
+That’s where **you** come in. Yes, you.
 
 How can you help, you ask?
 
 1. **USE IT!** Let us know what you think in the discussion pages! Report bugs when you find them!
 2. **TELL YOUR FRIENDS!** The more people using it and getting involved the better!
 3. **GET YOUR HANDS DIRTY!** This is open-source! So, are you a good dev too? SWEET, how about you help us squash a few bugs? Had a wild idea? Go and write a plugin for it or something! Implement a new feature to make the core better! I don’t know! Follow your dreams or whatever! You have the source code, don't you?
-4. **BUY ME A DRINK** to say thanks and/or **CHIP IN TO BUY MORE USAGE TOKENS**. Cause yeah, this takes time and resources. And Dario Amodei’s butt lift isn’t paying for itself 🤣.
+4. **BUY ME A DRINK** to say thanks and/or **CHIP IN TO BUY MORE USAGE TOKENS**. Cause yeah, this takes time and resources. And Dario Amodei’s butt lift isn’t paying for itself.
 
 [![Donate with PayPal](assets/paypal-donate-button.png)](https://www.paypal.com/donate/?business=4QYDZY4RP8V8L&no_recurring=0&item_name=Thanks+heaps!+You+rock!&currency_code=AUD&source=qr)
 <img src="assets/DonationQRCode.png" alt="OxiGuitar Donation QR Code (PayPal)">
@@ -82,7 +82,7 @@ scripts/build-plugins.sh
 cargo test
 ```
 
-Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The last three packages are the system libraries the desktop app needs for fonts, keyboard and windows (the same names on Ubuntu). Playback, from milestone M4, will add the audio libraries (ALSA, and PipeWire's on Linux).
+Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The last three packages are the system libraries the desktop app needs for fonts, keyboard and windows. Playback, from milestone M4, will add the audio libraries (ALSA, and PipeWire's on Linux).
 
 The program opens files only through format plugins (one per format, `.oxp` files). `scripts/build-plugins.sh` builds ours (Guitar Pro 3, 4, 5, 6 and 7–8) and puts them where a build from source looks for them (`target/lib/oxiguitar/plugins/` on Linux); run it again after changing a plugin or a reader. The release packages hold the program alone; ours come as `oxiguitar-plugins-basic` (.deb, .rpm) and as a zip for each system.
 
@@ -123,7 +123,7 @@ Pull requests are welcome from day one. Read [CONTRIBUTING.md](CONTRIBUTING.md) 
 
 ## Donations
 
-Donations are welcome; details will follow here soon.
+See [How to get involved](#how-to-get-involved), point 4. The same PayPal link and QR code are in the app, under **Help → About**.
 
 ## License
 

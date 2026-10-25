@@ -790,6 +790,7 @@ component InfoPopup inherits PopupWindow {
             spacing: 6px;
             Text { text: root.heading; font-size: 14px; font-weight: 700; }
             for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+            @children
         }
     }
 }
@@ -987,6 +988,8 @@ export component AppWindow inherits Window {
 
     in property <[string]> shortcut-lines;
     in property <[string]> about-lines;
+    // Help → About's donation button (links.rs opens the page in the browser).
+    callback open-donation();
 
     callback open-file();
     callback new-file();
@@ -1314,6 +1317,39 @@ export component AppWindow inherits Window {
         y: 60px;
         heading: "OxiGuitar";
         lines: root.about-lines;
+        // A click on the button must reach it; a click outside closes.
+        close-policy: PopupClosePolicy.close-on-click-outside;
+        // Donations (Mateus, 25 Oct 2026; the README's "Buy me a drink").
+        Rectangle { height: 1px; background: Palette.border; }
+        Text {
+            text: "OxiGuitar is free. If it's useful to you, buy Mateus a drink, or chip in for the tokens that build it.";
+            font-size: 12px;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            spacing: 14px;
+            alignment: start;
+            // The QR code is black on transparent: on white, so it shows in the dark interface too.
+            Rectangle {
+                width: 104px;
+                height: 104px;
+                background: white;
+                border-radius: 4px;
+                Image { source: @image-url("../../../assets/DonationQRCode.png"); width: 96px; height: 96px; }
+            }
+            VerticalLayout {
+                alignment: center;
+                spacing: 6px;
+                Button {
+                    text: "Donate with PayPal";
+                    clicked => {
+                        root.open-donation();
+                        about-popup.close();
+                    }
+                }
+                Text { text: "or scan the code with your phone"; font-size: 11px; opacity: 0.7; }
+            }
+        }
     }
 
     forward-focus: keys;

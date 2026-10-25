@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- Help → About asks for donations: a **Donate with PayPal** button, which opens the page in your browser, and a QR code (Mateus, 25 Oct 2026). OxiGuitar still connects nowhere itself: the browser does, and only when you click.
+
 ### Changed
 
 - Releases attach one zip of our plugins for each system (and the `oxiguitar-plugins-basic` .deb and .rpm) instead of every plugin as a file of its own, and the release notes open with which two files each system needs (Mateus, 21 Oct 2026).
