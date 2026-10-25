@@ -7,6 +7,8 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
+use oxiguitar_plugin_api::manifest::SharedFolder;
+
 /// The environment variable that replaces the user folder: for tests, and
 /// for a portable copy that keeps everything beside itself.
 pub const HOME_VARIABLE: &str = "OXIGUITAR_HOME";
@@ -42,8 +44,10 @@ impl System {
 ///
 /// On Linux they follow the freedesktop XDG Base Directory convention
 /// (decided 18 Oct 2026): settings under the config home, plugins and
-/// their data under the data home. On macOS and Windows, and with
-/// `OXIGUITAR_HOME`, one folder holds all three.
+/// their data under the data home, the plugins' caches under the cache
+/// home. On macOS and Windows one folder holds settings, plugins and data,
+/// and caches go where the system keeps them; with `OXIGUITAR_HOME`, one
+/// folder holds everything.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Folders {
     /// Where settings.json lives.
@@ -52,6 +56,9 @@ pub struct Folders {
     pub data: PathBuf,
     /// The user's plugin folder, `plugins` inside the data folder.
     pub user_plugins: PathBuf,
+    /// Where the plugins' caches live (interface 1.3): what a plugin can
+    /// make again, which the system or the user may delete at any time.
+    pub cache: PathBuf,
     /// System plugin folders, which packages install into. OxiGuitar only
     /// reads them; it never creates or writes them.
     pub system_plugins: Vec<PathBuf>,
@@ -87,23 +94,32 @@ impl Folders {
                 None => Some(set("HOME")?.join(fallback)),
             }
         };
-        let (config, data) = match set(HOME_VARIABLE) {
-            Some(dir) => (dir.clone(), dir),
+        let (config, data, cache) = match set(HOME_VARIABLE) {
+            Some(dir) => (dir.clone(), dir.clone(), dir.join("cache")),
             None => match system {
                 System::Linux => (
                     xdg("XDG_CONFIG_HOME", ".config")?.join("oxiguitar"),
                     xdg("XDG_DATA_HOME", ".local/share")?.join("oxiguitar"),
+                    xdg("XDG_CACHE_HOME", ".cache")?.join("oxiguitar"),
                 ),
                 System::MacOs => {
-                    let dir = set("HOME")?
+                    let home = set("HOME")?;
+                    let dir = home
                         .join("Library")
                         .join("Application Support")
                         .join("OxiGuitar");
-                    (dir.clone(), dir)
+                    let cache = home.join("Library").join("Caches").join("OxiGuitar");
+                    (dir.clone(), dir, cache)
                 }
                 System::Windows => {
                     let dir = set("APPDATA")?.join("OxiGuitar");
-                    (dir.clone(), dir)
+                    // Caches stay on this machine (Local), not in the
+                    // roaming profile.
+                    let cache = set("LOCALAPPDATA")
+                        .map(|local| local.join("OxiGuitar"))
+                        .unwrap_or_else(|| dir.clone())
+                        .join("cache");
+                    (dir.clone(), dir, cache)
                 }
             },
         };
@@ -133,8 +149,39 @@ impl Folders {
             user_plugins: data.join("plugins"),
             config,
             data,
+            cache,
             system_plugins,
         })
+    }
+
+    /// The plugin `id`'s own data folder (interface 1.3).
+    pub fn plugin_data(&self, id: &str) -> PathBuf {
+        self.data.join("data").join(id)
+    }
+
+    /// The plugin `id`'s own cache folder (interface 1.3).
+    pub fn plugin_cache(&self, id: &str) -> PathBuf {
+        self.cache.join(id)
+    }
+
+    /// A shared folder, beside `plugins` in the data folder: `soundfonts`,
+    /// `nam` (interface 1.3).
+    pub fn shared(&self, folder: SharedFolder) -> PathBuf {
+        self.data.join(folder.name())
+    }
+
+    /// Makes sure the shared folders `wanted` exist, creating what is
+    /// missing; returns what was created.
+    pub fn ensure_shared(&self, wanted: &[SharedFolder]) -> std::io::Result<Vec<PathBuf>> {
+        let mut created = Vec::new();
+        for &folder in wanted {
+            let dir = self.shared(folder);
+            if !dir.is_dir() {
+                std::fs::create_dir_all(&dir)?;
+                created.push(dir);
+            }
+        }
+        Ok(created)
     }
 
     /// The settings file.
@@ -216,6 +263,19 @@ pub(crate) mod tests {
             vec![PathBuf::from("/usr/lib/oxiguitar/plugins")]
         );
         assert_eq!(f.default_plugin_folders()[0], f.user_plugins);
+        assert_eq!(f.cache, PathBuf::from("/home/mat/.cache/oxiguitar"));
+        assert_eq!(
+            f.plugin_data("me.nam"),
+            PathBuf::from("/home/mat/.local/share/oxiguitar/data/me.nam")
+        );
+        assert_eq!(
+            f.plugin_cache("me.nam"),
+            PathBuf::from("/home/mat/.cache/oxiguitar/me.nam")
+        );
+        assert_eq!(
+            f.shared(SharedFolder::Soundfonts),
+            PathBuf::from("/home/mat/.local/share/oxiguitar/soundfonts")
+        );
     }
 
     #[test]
@@ -248,6 +308,10 @@ pub(crate) mod tests {
         let support = PathBuf::from("/Users/mat/Library/Application Support/OxiGuitar");
         assert_eq!((&mac.config, &mac.data), (&support, &support));
         assert_eq!(
+            mac.cache,
+            PathBuf::from("/Users/mat/Library/Caches/OxiGuitar")
+        );
+        assert_eq!(
             mac.system_plugins[0],
             PathBuf::from("/Applications/OxiGuitar.app/Contents/PlugIns")
         );
@@ -265,6 +329,23 @@ pub(crate) mod tests {
             win.system_plugins,
             vec![PathBuf::from("D:/OxiGuitar/plugins")]
         );
+        assert_eq!(
+            win.cache,
+            PathBuf::from("C:/Users/mat/AppData/Roaming/OxiGuitar/cache")
+        );
+        let local = Folders::resolve(
+            System::Windows,
+            env(&[
+                ("APPDATA", "C:/Users/mat/AppData/Roaming"),
+                ("LOCALAPPDATA", "C:/Users/mat/AppData/Local"),
+            ]),
+            None,
+        )
+        .unwrap();
+        assert_eq!(
+            local.cache,
+            PathBuf::from("C:/Users/mat/AppData/Local/OxiGuitar/cache")
+        );
     }
 
     #[test]
@@ -281,6 +362,11 @@ pub(crate) mod tests {
         .unwrap();
         assert_eq!(f.config, PathBuf::from("/media/usb/og"));
         assert_eq!(f.user_plugins, PathBuf::from("/media/usb/og/plugins"));
+        assert_eq!(f.cache, PathBuf::from("/media/usb/og/cache"));
+        assert_eq!(
+            f.shared(SharedFolder::Nam),
+            PathBuf::from("/media/usb/og/nam")
+        );
         assert!(f.system_plugins.is_empty());
         assert!(Folders::resolve(System::Linux, env(&[]), None).is_none());
     }
@@ -303,6 +389,12 @@ pub(crate) mod tests {
             std::fs::read_to_string(f.settings()).unwrap(),
             "{\"mine\": 1}"
         );
+        let wanted = [SharedFolder::Soundfonts];
+        assert_eq!(
+            f.ensure_shared(&wanted).unwrap(),
+            vec![root.join("soundfonts")]
+        );
+        assert!(f.ensure_shared(&wanted).unwrap().is_empty());
         let _ = std::fs::remove_dir_all(&root);
     }
 

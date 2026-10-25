@@ -56,20 +56,28 @@
 //! of the session and carries on as if it weren't installed.
 
 pub use oxiguitar_plugin_api as api;
+pub use oxiguitar_plugin_api::class::InstrumentClass;
 pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
-pub use oxiguitar_plugin_api::message::{Availability, Error, ErrorKind, Level, LogEntry};
+pub use oxiguitar_plugin_api::manifest::SharedFolder;
+pub use oxiguitar_plugin_api::message::{
+    Availability, Error, ErrorKind, Level, LogEntry, TrackInfo,
+};
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
 pub use oxiguitar_plugin_api::tab::{
     Canvas, Pointer, PointerButton, PointerKind, Row, TabContent, TabEvent, Widget,
 };
+/// serde_json, as the SDK uses it: plugin settings and track sections'
+/// settings are its JSON objects, so a plugin needs no dependency of its
+/// own (interface 1.3).
+pub use serde_json;
 
 use std::sync::Arc;
 
 use oxiguitar_plugin_api::Blob;
 use oxiguitar_plugin_api::manifest::Manifest;
-use oxiguitar_plugin_api::message::{Answer, HostAnswer, HostRequest, Request};
+use oxiguitar_plugin_api::message::{Answer, HostAnswer, HostRequest, Link, Request};
 
 #[doc(hidden)]
 pub mod glue;
@@ -134,6 +142,69 @@ pub trait Plugin: Send + Sync + 'static {
     fn tool(&self, id: &str) -> Option<&dyn Tool> {
         let _ = id;
         None
+    }
+
+    /// The settings window, for a manifest with `settings_window`
+    /// (interface 1.3): standard widgets, as a tab has, in a window the
+    /// plugin manager opens. Keep what the user sets with
+    /// [`Host::set_settings`].
+    fn settings_window(&self) -> Option<&dyn Tab> {
+        None
+    }
+
+    /// The track dialog's section `id` (an id from the manifest's
+    /// `track_sections`; interface 1.3).
+    fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
+        let _ = id;
+        None
+    }
+}
+
+/// A section of the track dialog (interface 1.3): rows of widgets for one
+/// track, whose values the host keeps per track and saves beside the score
+/// (`song.gp.oxg`). The plugin keeps nothing itself: every call gets the
+/// track's settings, a JSON object (empty at first).
+pub trait TrackSection: Send + Sync {
+    /// What the section shows for `track` with `settings`.
+    fn content(
+        &self,
+        track: &TrackInfo,
+        settings: &serde_json::Map<String, serde_json::Value>,
+    ) -> TabContent;
+
+    /// The user used the widget `widget`: change `settings` to match. The
+    /// contents are asked for again afterwards. The default does nothing.
+    fn on(
+        &self,
+        track: &TrackInfo,
+        settings: &mut serde_json::Map<String, serde_json::Value>,
+        widget: &str,
+        event: TabEvent,
+    ) -> Result<(), Error> {
+        let _ = (track, settings, widget, event);
+        Ok(())
+    }
+}
+
+/// A plugin's folders (interface 1.3; [`Host::folders`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Folders {
+    /// Its own data folder, kept until the user deletes it.
+    pub data: std::path::PathBuf,
+    /// Its own cache folder, for what it can make again; the system or the
+    /// user may empty it at any time.
+    pub cache: std::path::PathBuf,
+    /// The shared folders its manifest lists, in the manifest's order.
+    pub shared: Vec<(SharedFolder, std::path::PathBuf)>,
+}
+
+impl Folders {
+    /// The shared folder `which`, if the manifest lists it.
+    pub fn shared(&self, which: SharedFolder) -> Option<&std::path::Path> {
+        self.shared
+            .iter()
+            .find(|(f, _)| *f == which)
+            .map(|(_, p)| p.as_path())
     }
 }
 
@@ -320,6 +391,62 @@ pub fn dispatch(plugin: &dyn Plugin, request: Request<'_>) -> Result<Answer<'sta
             plugin.event(&event);
             Ok(Answer::Done)
         }
+        Request::SettingsWindow => Ok(Answer::Tab(Box::new(find_settings(plugin)?.content()))),
+        Request::SettingsEvent { widget, event } => {
+            let window = find_settings(plugin)?;
+            window.on(&widget, event)?;
+            Ok(Answer::Tab(Box::new(window.content())))
+        }
+        Request::TrackSection {
+            section,
+            track,
+            settings,
+        } => {
+            let s = find_section(plugin, &section)?;
+            let map = settings_object(&settings)?;
+            Ok(Answer::TrackSection {
+                content: Box::new(s.content(&track, &map)),
+                settings,
+            })
+        }
+        Request::TrackSectionEvent {
+            section,
+            track,
+            settings,
+            widget,
+            event,
+        } => {
+            let s = find_section(plugin, &section)?;
+            let mut map = settings_object(&settings)?;
+            s.on(&track, &mut map, &widget, event)?;
+            let content = s.content(&track, &map);
+            Ok(Answer::TrackSection {
+                content: Box::new(content),
+                settings: serde_json::Value::Object(map).to_string(),
+            })
+        }
+    }
+}
+
+fn find_settings(plugin: &dyn Plugin) -> Result<&dyn Tab, Error> {
+    plugin
+        .settings_window()
+        .ok_or_else(|| Error::not_found("this plugin has no settings window"))
+}
+
+fn find_section<'p>(plugin: &'p dyn Plugin, id: &str) -> Result<&'p dyn TrackSection, Error> {
+    plugin
+        .track_section(id)
+        .ok_or_else(|| Error::not_found(format!("this plugin has no track section {id:?}")))
+}
+
+fn settings_object(json: &str) -> Result<serde_json::Map<String, serde_json::Value>, Error> {
+    match serde_json::from_str(json) {
+        Ok(serde_json::Value::Object(map)) => Ok(map),
+        _ => Err(Error::new(
+            ErrorKind::Invalid,
+            "a track's settings must be a JSON object",
+        )),
     }
 }
 
@@ -432,6 +559,41 @@ impl Host {
         }
     }
 
+    /// Shows a message in the footer with a link the user can click, which
+    /// opens `url` (an `https:` address) in the system's browser
+    /// (interface 1.3). As with [`Host::notify`], only warnings and errors
+    /// are shown, and a message that can't be shown is dropped.
+    pub fn notify_with_link(
+        &self,
+        level: Level,
+        text: impl Into<String>,
+        link_text: impl Into<String>,
+        url: impl Into<String>,
+    ) {
+        let _ = self.0.request(HostRequest::Notify2 {
+            level,
+            text: text.into(),
+            link: Link {
+                text: link_text.into(),
+                url: url.into(),
+            },
+        });
+    }
+
+    /// The plugin's folders (interface 1.3): its own data and cache
+    /// folders, created on first ask, and the shared folders its manifest
+    /// lists.
+    pub fn folders(&self) -> Result<Folders, Error> {
+        match self.0.request(HostRequest::Folders)? {
+            HostAnswer::Folders(f) => Ok(Folders {
+                data: f.data.into(),
+                cache: f.cache.into(),
+                shared: f.shared.into_iter().map(|(w, p)| (w, p.into())).collect(),
+            }),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// Asks the core to show the tab `tab` (an id from the manifest) again:
     /// it asks for [`Tab::content`] when the tab is next on screen. A
     /// request that can't be made is dropped.
@@ -489,6 +651,7 @@ impl HostServices for Detached {
     fn request(&self, request: HostRequest<'_>) -> Result<HostAnswer<'static>, Error> {
         match request {
             HostRequest::Notify { .. }
+            | HostRequest::Notify2 { .. }
             | HostRequest::SetSettings { .. }
             | HostRequest::Redraw { .. } => Ok(HostAnswer::Done),
             HostRequest::Settings => Ok(HostAnswer::Settings("{}".into())),
@@ -504,6 +667,7 @@ impl HostServices for Detached {
             HostRequest::Service { interface, .. } => Err(Error::not_found(format!(
                 "no service of {interface:?} (a detached host has none)"
             ))),
+            HostRequest::Folders => Err(Error::not_found("a detached host has no folders")),
         }
     }
 }
@@ -573,6 +737,40 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
     for t in &manifest.tools {
         if plugin.tool(&t.id).is_none() {
             out.push(format!("tool {:?} is declared, but not implemented", t.id));
+        }
+    }
+    match (manifest.settings_window, plugin.settings_window()) {
+        (true, None) => out.push("a settings window is declared, but not implemented".into()),
+        (false, Some(_)) => out.push(
+            "the plugin has a settings window, but the manifest doesn't declare settings_window"
+                .into(),
+        ),
+        (true, Some(window)) => {
+            for p in window.content().problems() {
+                out.push(format!("the settings window: {p}"));
+            }
+        }
+        (false, None) => {}
+    }
+    for s in &manifest.track_sections {
+        let Some(section) = plugin.track_section(&s.id) else {
+            out.push(format!(
+                "track section {:?} is declared, but not implemented",
+                s.id
+            ));
+            continue;
+        };
+        let class = InstrumentClass::ALL
+            .into_iter()
+            .find(|&c| s.shows_for(c))
+            .unwrap_or(InstrumentClass::Other);
+        let track = TrackInfo {
+            index: 0,
+            name: "Track 1".into(),
+            class,
+        };
+        for p in section.content(&track, &serde_json::Map::new()).problems() {
+            out.push(format!("track section {:?}: {p}", s.id));
         }
     }
     for t in &manifest.tabs {
@@ -776,7 +974,7 @@ mod tests {
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
         let later = ECHO.replace("\"1.0\"", "\"1.9\"");
-        assert!(check::<Echo>(&later, "0.1.0")[0].contains("this SDK is 1.2"));
+        assert!(check::<Echo>(&later, "0.1.0")[0].contains("this SDK is 1.3"));
     }
 
     /// A plugin of interface 1.2: a reader into the score version 2, a
@@ -982,6 +1180,127 @@ mod tests {
         assert_eq!(
             check::<Counter>(&missing, "0.1.0"),
             vec!["tab \"other\" is declared, but not implemented"]
+        );
+    }
+
+    /// A plugin with a settings window (the counter again) and a track
+    /// section holding a level per track.
+    struct Amp(Counter);
+
+    impl Plugin for Amp {
+        fn start(host: Host) -> Result<Amp, Error> {
+            Ok(Amp(Counter::start(host)?))
+        }
+
+        fn settings_window(&self) -> Option<&dyn Tab> {
+            Some(&self.0)
+        }
+
+        fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
+            (id == "amp").then_some(self as &dyn TrackSection)
+        }
+    }
+
+    impl TrackSection for Amp {
+        fn content(
+            &self,
+            track: &TrackInfo,
+            settings: &serde_json::Map<String, serde_json::Value>,
+        ) -> TabContent {
+            let level = settings
+                .get("level")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(1.0);
+            TabContent {
+                rows: vec![Row {
+                    widgets: vec![Widget::Slider {
+                        id: format!("level-{}", track.index),
+                        value: level as f32,
+                        min: 0.0,
+                        max: 1.0,
+                        enabled: true,
+                    }],
+                }],
+            }
+        }
+
+        fn on(
+            &self,
+            _track: &TrackInfo,
+            settings: &mut serde_json::Map<String, serde_json::Value>,
+            _widget: &str,
+            event: TabEvent,
+        ) -> Result<(), Error> {
+            if let TabEvent::Slid(v) = event {
+                settings.insert("level".into(), f64::from(v).into());
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn settings_windows_and_track_sections_answer() {
+        let amp = Amp::start(Host::detached()).unwrap();
+        assert_eq!(
+            text_of(dispatch(&amp, Request::SettingsWindow).unwrap()),
+            "0"
+        );
+        let click = Request::SettingsEvent {
+            widget: "more".into(),
+            event: TabEvent::Clicked,
+        };
+        assert_eq!(text_of(dispatch(&amp, click).unwrap()), "1");
+        let track = TrackInfo {
+            index: 3,
+            name: "Lead".into(),
+            class: InstrumentClass::Fretted,
+        };
+        let slid = Request::TrackSectionEvent {
+            section: "amp".into(),
+            track: track.clone(),
+            settings: r#"{"model":"5150"}"#.into(),
+            widget: "level-3".into(),
+            event: TabEvent::Slid(0.5),
+        };
+        match dispatch(&amp, slid).unwrap() {
+            Answer::TrackSection { content, settings } => {
+                assert_eq!(settings, r#"{"level":0.5,"model":"5150"}"#);
+                assert!(matches!(
+                    &content.rows[0].widgets[0],
+                    Widget::Slider { value, .. } if *value == 0.5
+                ));
+            }
+            other => panic!("{other:?}"),
+        }
+        let not_json = Request::TrackSection {
+            section: "amp".into(),
+            track,
+            settings: "[]".into(),
+        };
+        assert_eq!(
+            dispatch(&amp, not_json).unwrap_err().kind,
+            ErrorKind::Invalid
+        );
+        assert_eq!(
+            dispatch(&Echo, Request::SettingsWindow).unwrap_err().kind,
+            ErrorKind::NotFound
+        );
+
+        let manifest = r#"{
+            "interface": "1.3", "id": "test.amp", "name": "Amp", "version": "0.1.0",
+            "settings_window": true,
+            "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}]
+        }"#;
+        assert_eq!(check::<Amp>(manifest, "0.1.0"), Vec::<String>::new());
+        let neither = manifest
+            .replace("\"settings_window\": true,", "")
+            .replace("\"id\": \"amp\"", "\"id\": \"cab\"");
+        assert_eq!(
+            check::<Amp>(&neither, "0.1.0"),
+            vec![
+                "the plugin has a settings window, but the manifest doesn't declare settings_window",
+                "track section \"cab\" is declared, but not implemented",
+            ]
         );
     }
 

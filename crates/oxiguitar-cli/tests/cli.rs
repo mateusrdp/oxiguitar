@@ -210,6 +210,21 @@ fn convert_writes_a_gp_file_and_names_its_losses() {
         .output()
         .unwrap();
     assert_eq!(bare.status.code(), Some(2));
+
+    // The tracks' plugin settings beside the file go beside the new one.
+    let source = dir.join("with-settings.gp5");
+    std::fs::copy(fixture("oxiguitar-test-song.gp5"), &source).unwrap();
+    let kept = r#"{"oxiguitar": 1, "tracks": [{"name": "A", "plugins": {"me.p": {"x": 1}}}]}"#;
+    std::fs::write(dir.join("with-settings.gp5.oxg"), kept).unwrap();
+    let run = cli()
+        .arg("convert")
+        .arg(&source)
+        .arg(dir.join("with-settings.gp"))
+        .output()
+        .unwrap();
+    assert!(run.status.success());
+    let copied = std::fs::read_to_string(dir.join("with-settings.gp.oxg")).unwrap();
+    assert!(copied.contains("\"me.p\""), "{copied}");
 }
 
 #[test]

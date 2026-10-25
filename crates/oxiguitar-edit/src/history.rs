@@ -131,6 +131,7 @@ fn settings_of(track: &Track) -> Track {
         staves,
         chords,
         lyrics,
+        plugins,
     } = track;
     Track {
         name: name.clone(),
@@ -141,6 +142,9 @@ fn settings_of(track: &Track) -> Track {
         staves: staves.iter().map(staff_settings).collect(),
         chords: chords.clone(),
         lyrics: lyrics.clone(),
+        // Plugins' settings are the track's own: undone with the track
+        // dialog's change.
+        plugins: plugins.clone(),
     }
 }
 

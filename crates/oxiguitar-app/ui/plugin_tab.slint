@@ -136,6 +136,51 @@ component PluginWidgetView inherits HorizontalLayout {
     }
 }
 
+// A plugin's section of the track dialog (interface 1.3): its heading, and
+// its rows or a message instead (while the plugin is asked, or why it
+// can't be shown).
+export struct PluginSection {
+    title: string,
+    rows: [PluginRow],
+    message: string,
+}
+
+// A plugin's rows in a layout that takes their own height: a track
+// dialog's section (interface 1.3). No canvases.
+export component PluginRows inherits VerticalLayout {
+    in property <[PluginRow]> rows;
+    // Shown instead of the rows: while the plugin is asked, or why they
+    // can't be shown.
+    in property <string> message;
+    callback clicked(string);
+    callback toggled(string, bool);
+    callback slid(string, float);
+    callback edited(string, string);
+    callback chosen(string, int);
+    spacing: 6px;
+    if root.message != "" : Text {
+        text: root.message;
+        font-size: 12px;
+        wrap: word-wrap;
+        color: Palette.foreground.transparentize(0.4);
+    }
+    if root.message == "" : VerticalLayout {
+        spacing: 6px;
+        for row in root.rows : HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            for w in row.widgets : PluginWidgetView {
+                w: w;
+                clicked(id) => { root.clicked(id); }
+                toggled(id, on) => { root.toggled(id, on); }
+                slid(id, v) => { root.slid(id, v); }
+                edited(id, t) => { root.edited(id, t); }
+                chosen(id, i) => { root.chosen(id, i); }
+            }
+        }
+    }
+}
+
 export component PluginTab inherits Rectangle {
     in property <[PluginRow]> rows;
     // Shown instead of the rows: while the plugin is asked, or why its tab

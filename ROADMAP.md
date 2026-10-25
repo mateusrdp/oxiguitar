@@ -200,7 +200,7 @@ The plan, proposed 21 Oct 2026 for Mateus's approval, with the audio spike's mea
 Mateus's answers (25 Oct 2026): rustysynth for SF2 (we add fourth-order interpolation and file modulators, offered upstream); NAM through NeuralAmpModeler-rs on Linux x86_64 and nam-rs elsewhere; **the NAM plugin moves from M7 into v1.0**, since the spike showed the approach works.
 
 1. **The timeline**: the score as events at their samples (playing order, tempo, feel, count-in, metronome, every TAB-1 effect), and the map back to beats. Golden files. Built (25 Oct 2026): `oxiguitar-play` and `oxiguitar-cli events`; golden timelines of the 55 reference and test-song files in `fixtures/events/`; all 104 corpus files give sound timelines (Wish You Were Here plays 5:32, the record 5:34); the 300-bar band song's 28,078 notes in 13 ms.
-2. **Interface 1.3, audio devices and the engine**: instruments, effects, audio-device services (PipeWire, ALSA, WASAPI, CoreAudio through cpal), plugin sections in the track dialog, the scheduler, mixer and audio clock, plugin settings windows, footer links; the contract suite's real-time checks.
+2. **Interface 1.3, audio devices and the engine**: instruments, effects, audio-device services (PipeWire, ALSA, WASAPI, CoreAudio through cpal), plugin sections in the track dialog, the scheduler, mixer and audio clock, plugin settings windows, footer links; the contract suite's real-time checks. In three pull requests (Mateus, 25 Oct 2026: cpal as it is; track sections saved in `FILE.oxg`; no editing while playing; `oxiguitar-cli play` kept). Built so far: the interface off the audio thread (settings windows from the plugin manager, track-dialog sections saved in `song.gp3.oxg`, footer messages with an https link, the plugins' data, cache and shared folders), through the test plugin and the contract suite.
 3. **The SoundFont plugin**: SF2, SF3 and DLS through rustysynth (with our interpolation and modulators); the `soundfonts` folders; its settings window; effects as MIDI. Out of the box on every system.
 4. **The window**: transport, follow cursor, loop, count-in, metronome and visual metronome, speed, live mixer; the footer's link to better sounds; the manual's pages. Then a release for testers.
 5. **The NAM plugin**: amp models and cabinet IRs per track from the track dialog, on a DI sound set.
@@ -226,7 +226,6 @@ Things that would make contributors' and plugin authors' lives easier, none need
 
 - `Default` values or constructors for the wire score's types that have none (`MasterBar`, `Bar`, `Beat`, `Duration`, `Note`, `TimeSignature`, `KeySignature`), so a format reader doesn't spell out every field.
 - Constructors for tab widgets (`Widget::button("id", "Text")` and the like).
-- `oxiguitar_plugin::serde_json`, re-exported, so a plugin with settings needs no dependency of its own.
 - `oxiguitar-plugin-test --target TRIPLE`, and a universal macOS build, so the tool does what the template's `build-oxp.sh` does.
 - Sample files in the contract suite (`oxiguitar-plugin-test FILE.oxp --sample song.extab`): read each one through the plugin and check the score's shape, since today the suite feeds readers only damaged input.
-- The plugin's own data folder, handed to it by the host (a new host request), when the first plugin keeps data.
+

@@ -56,6 +56,9 @@ and takes the lock only to read or change `State`.
 | `call_service(interface, method, input)` | Calls the service OxiGuitar chose for `interface`, which the manifest must list under `requires` ([Services](services.md)) | 1.0 |
 | `redraw(tab)` | Asks the core to show one of the plugin's tabs again ([Tabs](tabs.md)) | 1.1 |
 | `score()` | The open score, or `None` ([Events](events.md)) | 1.1 |
+| `score2()`, `apply(revision, name, score)` | The open score version 2 with its revision, and a change to it the user can undo ([Tools](tools.md)) | 1.2 |
+| `notify_with_link(level, text, link_text, url)` | A footer message ending with a link that opens `url` in the browser; only `https:` addresses are shown | 1.3 |
+| `folders()` | The plugin's own data and cache folders and the shared folders its manifest lists ([Settings](settings.md)) | 1.3 |
 
 `Host::detached()` answers like a host with no window, no settings and no services: for unit tests.
 

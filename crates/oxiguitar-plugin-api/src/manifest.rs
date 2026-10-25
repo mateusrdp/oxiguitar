@@ -28,7 +28,9 @@
 //! }
 //! ```
 //!
-//! Interface 1.1 added `tabs` and `events`, 1.2 `tools`. Later minor
+//! Interface 1.1 added `tabs` and `events`, 1.2 `tools`, 1.3
+//! `settings_window`, `track_sections` and `folders` (and brought
+//! `instruments` to life). Later minor
 //! versions add keys for exporters and toolbar sections when plugins need
 //! them (docs/design/plugins.md, "What plugins contribute").
 
@@ -95,6 +97,69 @@ pub struct Manifest {
     /// The tools it adds to the Tools menu. Since interface 1.2.
     #[serde(default)]
     pub tools: Vec<ToolSpec>,
+    /// Whether it has a settings window, opened from the plugin manager's
+    /// Settings… (`Request::SettingsWindow`). Since interface 1.3.
+    #[serde(default)]
+    pub settings_window: bool,
+    /// The sections it adds to the track dialog. Since interface 1.3.
+    #[serde(default)]
+    pub track_sections: Vec<TrackSectionSpec>,
+    /// The folders it shares with the user and other plugins, which the
+    /// host creates at start and hands over (`HostRequest::Folders`).
+    /// Since interface 1.3.
+    #[serde(default)]
+    pub folders: Vec<SharedFolder>,
+}
+
+/// A section of the track dialog, as the manifest declares it: rows of
+/// widgets under a heading, for the tracks of the classes it names. What the
+/// user sets in it is kept per track, saved beside the score
+/// (`song.gp.oxg`), and handed to the plugin with every request about that
+/// track. Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrackSectionSpec {
+    /// The id requests name it by, unique in the plugin.
+    pub id: String,
+    /// The section's heading: a word or two.
+    pub title: String,
+    /// The classes of track it shows for; absent means every class.
+    #[serde(default)]
+    pub plays: Option<Vec<InstrumentClass>>,
+    /// Classes taken out of `plays`.
+    #[serde(default)]
+    pub does_not_play: Vec<InstrumentClass>,
+}
+
+impl TrackSectionSpec {
+    /// Whether this section shows for tracks of class `class`.
+    pub fn shows_for(&self, class: InstrumentClass) -> bool {
+        self.plays.as_ref().is_none_or(|p| p.contains(&class))
+            && !self.does_not_play.contains(&class)
+    }
+}
+
+/// A folder in the user's OxiGuitar folder that the user fills and plugins
+/// read: sound sets, amp models. Since interface 1.3.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SharedFolder {
+    /// `soundfonts`: sound sets (.sf2, .sf3, .dls, SFZ instruments' folders).
+    Soundfonts,
+    /// `nam`: amp models (.nam) and cabinet impulse responses (.wav).
+    Nam,
+}
+
+impl SharedFolder {
+    /// Every shared folder.
+    pub const ALL: [SharedFolder; 2] = [SharedFolder::Soundfonts, SharedFolder::Nam];
+
+    /// The folder's name in the user's OxiGuitar folder.
+    pub fn name(self) -> &'static str {
+        match self {
+            SharedFolder::Soundfonts => "soundfonts",
+            SharedFolder::Nam => "nam",
+        }
+    }
 }
 
 /// A tool, as the manifest declares it: an entry of the Tools menu that
@@ -228,6 +293,42 @@ impl Manifest {
             tools.push(&t.id);
             if t.name.trim().is_empty() {
                 out.push(format!("tool {:?}: the name is empty", t.id));
+            }
+        }
+        let mut sections: Vec<&str> = Vec::new();
+        for s in &self.track_sections {
+            if !is_id(&s.id) || sections.contains(&s.id.as_str()) {
+                out.push(format!(
+                    "track section {:?}: not a valid or unique id",
+                    s.id
+                ));
+            }
+            sections.push(&s.id);
+            if s.title.trim().is_empty() {
+                out.push(format!("track section {:?}: the title is empty", s.id));
+            }
+            if InstrumentClass::ALL.iter().all(|&c| !s.shows_for(c)) {
+                out.push(format!("track section {:?}: shows for no track", s.id));
+            }
+        }
+        for (i, f) in self.folders.iter().enumerate() {
+            if self.folders[..i].contains(f) {
+                out.push(format!("folder {:?}: listed twice", f.name()));
+            }
+        }
+        let since_1_3 = InterfaceVersion { major: 1, minor: 3 };
+        if self.interface < since_1_3 {
+            for (what, used) in [
+                ("a settings window needs", self.settings_window),
+                ("track sections need", !self.track_sections.is_empty()),
+                ("shared folders need", !self.folders.is_empty()),
+            ] {
+                if used {
+                    out.push(format!(
+                        "{what} interface {since_1_3}, and the manifest asks for {}",
+                        self.interface
+                    ));
+                }
             }
         }
         let since_1_2 = InterfaceVersion { major: 1, minor: 2 };
@@ -638,6 +739,36 @@ mod tests {
         ] {
             assert!(bad.parse::<Version>().is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn interface_1_3_keys_are_checked() {
+        let json = |interface: &str, extra: &str| {
+            format!(
+                r#"{{"interface": "{interface}", "id": "me.nam", "name": "NAM",
+                    "version": "0.1.0" {extra}}}"#
+            )
+        };
+        let keys = r#", "settings_window": true, "folders": ["nam", "soundfonts"],
+            "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}]"#;
+        let m: Manifest = serde_json::from_str(&json("1.3", keys)).unwrap();
+        assert!(m.problems().is_empty(), "{:?}", m.problems());
+        assert_eq!(m.folders, [SharedFolder::Nam, SharedFolder::Soundfonts]);
+        assert!(m.track_sections[0].shows_for(InstrumentClass::Fretted));
+        assert!(!m.track_sections[0].shows_for(InstrumentClass::Drums));
+        let old: Manifest = serde_json::from_str(&json("1.2", keys)).unwrap();
+        assert_eq!(
+            old.problems(),
+            [
+                "a settings window needs interface 1.3, and the manifest asks for 1.2",
+                "track sections need interface 1.3, and the manifest asks for 1.2",
+                "shared folders need interface 1.3, and the manifest asks for 1.2",
+            ]
+        );
+        let bad = r#", "folders": ["nam", "nam"],
+            "track_sections": [{"id": "Amp", "title": " ", "plays": []}]"#;
+        let m: Manifest = serde_json::from_str(&json("1.3", bad)).unwrap();
+        assert_eq!(m.problems().len(), 4, "{:?}", m.problems());
     }
 
     #[test]

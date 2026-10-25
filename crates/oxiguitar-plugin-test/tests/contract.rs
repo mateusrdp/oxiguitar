@@ -116,14 +116,21 @@ fn the_test_plugin_passes_the_contract() {
     assert!(report.ok(), "failed: {:#?}", report.failed);
     // 11 for formats and services; 2 tabs; 10 uses of the panel's widgets
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
-    // of event, the selection in both its forms; 1 tool.
+    // of event, the selection in both its forms; 2 tools; the settings
+    // window and its 2 widgets; the track section and its 2 widgets.
     assert_eq!(
         report.passed.len(),
-        11 + 2 + 10 + 4 + 1,
+        11 + 2 + 10 + 4 + 2 + 3 + 3,
         "{:#?}",
         report.passed
     );
-    assert!(report.messages.is_empty(), "{:?}", report.messages);
+    // The tool `link` says something on purpose.
+    assert_eq!(report.messages.len(), 1, "{:?}", report.messages);
+    assert!(
+        report.messages[0].contains("A footer message with a link"),
+        "{:?}",
+        report.messages
+    );
 }
 
 #[test]
@@ -812,7 +819,7 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
     // The test plugin's tool, from its manifest; the second plugin (1.1)
     // has none.
     let tools = plugins.tools();
-    assert_eq!(tools.len(), 1);
+    assert_eq!(tools.len(), 2);
     assert_eq!(tools[0].spec.name, "Mark the Title");
     assert_eq!(plugins.run_tool(tools[0]).unwrap(), "No score is open.");
 
@@ -937,4 +944,181 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
         "{said:?}"
     );
     assert!(!said.iter().any(|s| s.contains("Selection2")), "{said:?}");
+}
+
+/// The rest of the core for interface 1.3: footer messages with their
+/// links.
+#[derive(Default)]
+struct Linked(Mutex<Vec<Said>>);
+
+/// A footer message, and its link's words and address if it has one.
+type Said = (Level, String, Option<(String, String)>);
+
+impl Core for Linked {
+    fn notify(&self, level: Level, text: String) {
+        self.0.lock().unwrap().push((level, text, None));
+    }
+
+    fn notify_with_link(
+        &self,
+        level: Level,
+        text: String,
+        link: oxiguitar_host::api::message::Link,
+    ) {
+        self.0
+            .lock()
+            .unwrap()
+            .push((level, text, Some((link.text, link.url))));
+    }
+}
+
+#[test]
+fn interface_1_3_settings_windows_track_sections_links_and_folders() {
+    use oxiguitar_host::api::manifest::SharedFolder;
+    use oxiguitar_host::api::message::TrackInfo;
+    use oxiguitar_host::{Folders, System};
+
+    let dir = folder("one-three", &["test.oxp"]);
+    let home = dir.join("home");
+    let core = Arc::new(Linked::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        core.clone(),
+    );
+
+    // The shared folders come from the manifest alone.
+    assert_eq!(plugins.shared_folders(), [SharedFolder::Soundfonts]);
+    assert!(!plugins.found()[0].is_loaded());
+
+    // The settings window: its widgets change the plugin's own settings.
+    let found = plugins.with_settings_window()[0];
+    let content = plugins.settings_window(found).unwrap();
+    assert!(matches!(
+        &content.rows[0].widgets[0],
+        Widget::Toggle { on: false, .. }
+    ));
+    plugins
+        .settings_event(found, "greet", TabEvent::Toggled(true))
+        .unwrap();
+    let content = plugins
+        .settings_event(found, "name", TabEvent::Edited("Mateus".into()))
+        .unwrap();
+    assert!(matches!(
+        &content.rows[2].widgets[0],
+        Widget::Label { text, .. } if text == "Hello, Mateus."
+    ));
+    assert_eq!(
+        plugins.settings().get("oxiguitar.test"),
+        Some(serde_json::json!({"greet": true, "name": "Mateus"}))
+    );
+
+    // The track section: every class but drums, and the settings travel
+    // with every request; the plugin keeps none.
+    assert!(plugins.track_sections(InstrumentClass::Drums).is_empty());
+    let section = plugins.track_sections(InstrumentClass::Fretted)[0];
+    assert_eq!(section.spec.title, "Test section");
+    assert_eq!(section.plugin_id(), "oxiguitar.test");
+    let track = TrackInfo {
+        index: 1,
+        name: "Lead".into(),
+        class: InstrumentClass::Fretted,
+    };
+    let (content, settings) = plugins.track_section(section, &track, "{}").unwrap();
+    assert_eq!(settings, "{}");
+    assert!(matches!(
+        &content.rows[1].widgets[0],
+        Widget::Field { placeholder, .. } if placeholder == "A nickname for Lead"
+    ));
+    let (_, settings) = plugins
+        .track_section_event(section, &track, &settings, "level", TabEvent::Slid(0.25))
+        .unwrap();
+    assert_eq!(settings, r#"{"level":0.25}"#);
+    // A refused value: said in the footer, and the settings stay.
+    let (_, kept) = plugins
+        .track_section_event(
+            section,
+            &track,
+            &settings,
+            "nickname",
+            TabEvent::Edited("refuse".into()),
+        )
+        .unwrap();
+    assert_eq!(kept, settings);
+    assert!(
+        core.0
+            .lock()
+            .unwrap()
+            .last()
+            .unwrap()
+            .1
+            .contains("that nickname is refused"),
+        "{:?}",
+        core.0.lock().unwrap()
+    );
+
+    // Footer links: https only.
+    let tool = plugins
+        .tools()
+        .into_iter()
+        .find(|t| t.spec.id == "link")
+        .unwrap();
+    assert_eq!(plugins.run_tool(tool).unwrap(), "");
+    assert_eq!(
+        core.0.lock().unwrap().last().unwrap(),
+        &(
+            Level::Warning,
+            "Test plugin: A footer message with a link (a test).".to_owned(),
+            Some((
+                "The plugin guide".to_owned(),
+                "https://mateusrdp.github.io/oxiguitar/plugin-guide/".to_owned()
+            ))
+        )
+    );
+    // Anything else is refused (the SDK drops a message that can't be
+    // shown, so the footer hears nothing).
+    let said = core.0.lock().unwrap().len();
+    for refused in [
+        "http://example.org",
+        "file:///etc/passwd",
+        "https://",
+        "javascript:x",
+    ] {
+        plugins
+            .call_service("test-echo", "link", refused.as_bytes())
+            .unwrap();
+        assert_eq!(core.0.lock().unwrap().len(), said, "{refused}");
+    }
+    assert!(oxiguitar_host::is_https("https://example.org/a?b=c"));
+
+    // Folders: none until the host is given them; then the plugin's own,
+    // made on first ask, and the shared ones.
+    let e = plugins
+        .call_service("test-echo", "folders", b"")
+        .unwrap_err();
+    assert!(e.message.contains("keeps no folders"), "{e}");
+    let folders = Folders::resolve(
+        System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    plugins.use_folders(folders.clone());
+    let answer = plugins.call_service("test-echo", "folders", b"").unwrap();
+    let answer = String::from_utf8(answer).unwrap();
+    let lines: Vec<&str> = answer.lines().collect();
+    assert_eq!(
+        lines,
+        [
+            folders.plugin_data("oxiguitar.test").to_str().unwrap(),
+            folders.plugin_cache("oxiguitar.test").to_str().unwrap(),
+            folders.shared(SharedFolder::Soundfonts).to_str().unwrap(),
+        ]
+    );
+    assert_eq!(
+        std::fs::read_to_string(folders.plugin_data("oxiguitar.test").join("hello.txt")).unwrap(),
+        "hello\n"
+    );
+    assert!(folders.plugin_cache("oxiguitar.test").is_dir());
 }

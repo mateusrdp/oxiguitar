@@ -11,12 +11,16 @@
 //! asks for something. Requests already waiting when it wakes are merged:
 //! a canvas dragged on faster than its plugin answers gets the latest
 //! position, and each canvas is drawn once, at its latest size.
+//!
+//! The same thread asks for plugins' settings windows and their sections
+//! of the track dialog (interface 1.3): standard widgets, no canvas.
 
 use std::collections::HashMap;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::JoinHandle;
 
 use oxiguitar_display::{FontSet, Rgba, Theme};
+use oxiguitar_host::api::message::TrackInfo;
 use oxiguitar_host::api::tab::{Area, PointerKind, TabContent, TabEvent, Widget};
 use oxiguitar_host::{Plugins, TabId};
 use oxiguitar_render::{Raster, View};
@@ -153,6 +157,24 @@ pub(crate) enum Request {
     /// The interface became dark (`true`) or light: canvases are drawn
     /// again.
     Dark(bool),
+    /// The settings window of the plugin `plugin` (its id): what it shows,
+    /// after the user's `event` on one of its widgets if there is one.
+    Settings {
+        plugin: String,
+        event: Option<(String, TabEvent)>,
+    },
+    /// The track dialog's section `section` of the plugin `plugin`, for
+    /// `track` with its `settings` for that plugin: what it shows and the
+    /// settings, after the user's `event` if there is one. `dialog` tells
+    /// one opening of the dialog from the next.
+    Section {
+        dialog: u64,
+        track: TrackInfo,
+        plugin: String,
+        section: String,
+        settings: String,
+        event: Option<(String, TabEvent)>,
+    },
 }
 
 /// A canvas drawn, premultiplied RGBA.
@@ -176,6 +198,79 @@ pub(crate) enum Answer {
     },
     /// One canvas drawn again (a new size, or the theme changed).
     Canvas { tab: TabId, drawn: Drawn },
+    /// A settings window's contents, or why they can't be shown.
+    Settings {
+        plugin: String,
+        content: Result<TabContent, String>,
+    },
+    /// A track section's contents and the track's settings for its plugin,
+    /// or why they can't be shown.
+    Section {
+        dialog: u64,
+        plugin: String,
+        section: String,
+        answer: Result<(TabContent, String), String>,
+    },
+}
+
+/// Why a settings window or a track section can't be shown: they hold
+/// standard widgets only, never a canvas.
+fn without_canvas(content: &TabContent) -> Result<(), String> {
+    let canvas = content
+        .rows
+        .iter()
+        .flat_map(|r| &r.widgets)
+        .any(|w| matches!(w, Widget::Canvas(_)));
+    if canvas {
+        Err("it holds a canvas, which only a tab can show".to_owned())
+    } else {
+        Ok(())
+    }
+}
+
+/// The settings window of the plugin `id`, after `event`.
+fn settings_window(
+    plugins: &Plugins,
+    id: &str,
+    event: Option<(String, TabEvent)>,
+) -> Result<TabContent, String> {
+    let found = plugins
+        .with_settings_window()
+        .into_iter()
+        .find(|f| f.manifest.as_ref().is_some_and(|m| m.id == id))
+        .ok_or_else(|| format!("no usable plugin {id:?} has a settings window"))?;
+    let content = match event {
+        None => plugins.settings_window(found),
+        Some((widget, event)) => plugins.settings_event(found, &widget, event),
+    }
+    .map_err(|e| e.to_string())?;
+    without_canvas(&content)?;
+    Ok(content)
+}
+
+/// The track section `section` of the plugin `plugin`, after `event`.
+fn track_section(
+    plugins: &Plugins,
+    track: &TrackInfo,
+    plugin: &str,
+    section: &str,
+    settings: &str,
+    event: Option<(String, TabEvent)>,
+) -> Result<(TabContent, String), String> {
+    let found = plugins
+        .track_sections(track.class)
+        .into_iter()
+        .find(|s| s.plugin_id() == plugin && s.spec.id == section)
+        .ok_or_else(|| format!("no usable plugin {plugin:?} has a track section {section:?}"))?;
+    let answer = match event {
+        None => plugins.track_section(found, track, settings),
+        Some((widget, event)) => {
+            plugins.track_section_event(found, track, settings, &widget, event)
+        }
+    }
+    .map_err(|e| e.to_string())?;
+    without_canvas(&answer.0)?;
+    Ok(answer)
 }
 
 /// Merges the requests waiting: a drag on a canvas replaces the drag just
@@ -317,6 +412,27 @@ fn run(rx: &Receiver<Request>, plugins: &Plugins, mut dark: bool, sink: &dyn Fn(
                     }
                 }
                 Request::Dark(_) => {}
+                Request::Settings { plugin, event } => {
+                    let content = settings_window(plugins, &plugin, event);
+                    sink(Answer::Settings { plugin, content });
+                }
+                Request::Section {
+                    dialog,
+                    track,
+                    plugin,
+                    section,
+                    settings,
+                    event,
+                } => {
+                    let answer =
+                        track_section(plugins, &track, &plugin, &section, &settings, event);
+                    sink(Answer::Section {
+                        dialog,
+                        plugin,
+                        section,
+                        answer,
+                    });
+                }
             }
         }
     }
