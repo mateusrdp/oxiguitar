@@ -96,6 +96,11 @@ fn row(f: &Found, safe: bool, disabled: &[String]) -> Row {
     let toggles = matches!(f.state, State::Ready | State::Disabled | State::Replaced(_));
     let enabled = id.as_ref().is_some_and(|id| !disabled.contains(id));
     let mut state = match &f.state {
+        // A system library it needs isn't installed (`Plugins`' quiet
+        // withdrawal): it can't run here, rather than having failed.
+        State::Ready if f.failure().is_some_and(|w| w.starts_with("it needs ")) => {
+            format!("Can't run here: {}.", f.failure().unwrap_or_default())
+        }
         State::Ready if f.failure().is_some() => format!(
             "Stopped working and not used until OxiGuitar restarts: {}.",
             f.failure().unwrap_or_default()

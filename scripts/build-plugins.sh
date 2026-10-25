@@ -65,9 +65,22 @@ if [[ -n "$target" ]]; then
     args+=(--target "$target")
 fi
 
+# The system the plugins are for, as manifests' conditions name it.
+case "$system" in
+    *windows*) os=windows ;;
+    *apple*) os=macos ;;
+    *) os=linux ;;
+esac
+
 for dir in "$root"/plugins/*/; do
     name="$(basename "$dir")"
     [[ "$name" == test || "$name" == test-* ]] && continue
+    # A plugin for other systems only (an audio device's) isn't built: its
+    # manifest's "os" list doesn't name this one.
+    systems="$(tr -d '\n' < "$dir/manifest.json" | grep -o '"os"[[:space:]]*:[[:space:]]*\[[^]]*\]' || true)"
+    if [[ -n "$systems" && "$systems" != *"\"$os\""* ]]; then
+        continue
+    fi
     package="oxiguitar-$name-plugin"
     CARGO_TARGET_DIR="$root/target/oxp" cargo rustc --quiet -p "$package" "${args[@]}"
     library="$build_dir/$prefix${package//-/_}$suffix"

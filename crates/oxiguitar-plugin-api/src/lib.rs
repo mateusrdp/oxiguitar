@@ -62,6 +62,7 @@
 //! GPL-compatible licence (Mateus, 18 Oct 2026).
 
 pub mod abi;
+pub mod audio_device;
 pub mod class;
 pub mod display;
 pub mod event;

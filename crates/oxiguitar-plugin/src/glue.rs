@@ -40,14 +40,14 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use oxiguitar_plugin_api::abi::{
-    HOST_TABLE_V1_SIZE, HostTableV1, PLUGIN_TABLE_V1_SIZE, PluginTableV1, REALTIME_TABLE_V1_SIZE,
-    RawBytes, RawSink, Status,
+    HOST_TABLE_V1_0_SIZE, HOST_TABLE_V1_SIZE, HostTableV1, PLUGIN_TABLE_V1_SIZE, PluginTableV1,
+    REALTIME_TABLE_V1_SIZE, RawBytes, RawSink, Status,
 };
 use oxiguitar_plugin_api::message::{
     Error, ErrorKind, HostAnswer, HostRequest, Request, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::realtime::{
-    PitchPoint, ProcessCall, RealtimeTableV1, RenderCall, RtEvent,
+    HostRender, PitchPoint, ProcessCall, RealtimeTableV1, RenderCall, RtEvent,
 };
 
 use crate::audio::{Instance, Keeper, Piece};
@@ -239,6 +239,8 @@ impl Sink {
 struct HostTable {
     ctx: *const c_void,
     call: unsafe extern "C" fn(*const c_void, RawBytes, *mut RawSink) -> Status,
+    /// The host's `render`, for audio devices (interface 1.3).
+    render: Option<HostRender>,
 }
 
 // SAFETY: the host's table and its `ctx` may be used from any thread, at
@@ -262,20 +264,30 @@ impl HostTable {
         // `size` is the first field of a `repr(C)` table, present in every
         // version, and is read alone, before anything else is.
         let size = unsafe { (*table).size };
-        if size < HOST_TABLE_V1_SIZE {
+        if size < HOST_TABLE_V1_0_SIZE {
             return Err(Error::new(
                 ErrorKind::Unsupported,
-                format!("the host's table is {size} bytes, older than this plugin's interface"),
+                format!("the host's table is {size} bytes, older than interface 1.0's"),
             ));
         }
-        // SAFETY: the table is at least as large as `HostTableV1`, checked
-        // just above, so all its fields are there to read.
+        // SAFETY: the table holds at least interface 1.0's fields, checked
+        // just above, and `ctx` and `call` are among them.
         let (ctx, call) = unsafe { ((*table).ctx, (*table).call) };
-        Ok(HostTable { ctx, call })
+        // SAFETY: `render` is read only from a table that holds it (its
+        // size covers the whole of this version's table).
+        let render = (size >= HOST_TABLE_V1_SIZE).then(|| unsafe { (*table).render });
+        Ok(HostTable { ctx, call, render })
     }
 }
 
 impl HostServices for HostTable {
+    fn audio_out(&self) -> Option<AudioOut> {
+        self.render.map(|render| AudioOut {
+            ctx: self.ctx,
+            render,
+        })
+    }
+
     fn request(&self, request: HostRequest<'_>) -> Result<HostAnswer<'static>, Error> {
         let bytes = encode(&request).map_err(|e| Error::new(ErrorKind::Failed, e.to_string()))?;
         let mut answer: Vec<u8> = Vec::new();
@@ -547,5 +559,45 @@ unsafe impl GlobalAlloc for Counting {
         counted();
         // SAFETY: forwarded with the caller's guarantees.
         unsafe { System.realloc(ptr, layout, new_size) }
+    }
+}
+
+/// Where an audio device sends the core its buffers to fill (interface
+/// 1.3): the host's `render`, from the device's callback.
+#[derive(Clone, Copy, Debug)]
+pub struct AudioOut {
+    ctx: *const c_void,
+    render: HostRender,
+}
+
+// SAFETY: the host's table and its `ctx` may be used from any thread until
+// the process ends (the interface's contract); `render` is called under the
+// rules `AudioOut::render` states.
+unsafe impl Send for AudioOut {}
+// SAFETY: as for `Send`.
+unsafe impl Sync for AudioOut {}
+
+impl AudioOut {
+    /// Has the core fill `out`, interleaved frames of `channels` channels
+    /// for the stream `stream`, which reach the speaker `delay_ns`
+    /// nanoseconds from now. Call it only from the stream's audio callback,
+    /// and never after the stream was closed (the interface's rules).
+    pub fn render(&self, stream: u64, out: &mut [f32], channels: usize, delay_ns: u64) {
+        let channels = channels.max(1);
+        let frames = out.len() / channels;
+        // SAFETY: the host's `render` is valid until the process ends;
+        // `out` holds `frames * channels` floats, valid and ours for the
+        // call; the caller keeps the stream's rules (this method's
+        // contract).
+        unsafe {
+            (self.render)(
+                self.ctx,
+                stream,
+                out.as_mut_ptr(),
+                frames as u32,
+                channels as u32,
+                delay_ns,
+            );
+        }
     }
 }

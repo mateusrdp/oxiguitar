@@ -33,7 +33,9 @@
 //!   plugin's settings), the track dialog's section `test` for every track
 //!   but drums (a level slider and a name field, kept per track), the tool
 //!   `link`, "Show a Footer Link" (a warning in the footer with a link to
-//!   the plugin guide), and the shared folder `soundfonts`.
+//!   the plugin guide), and the shared folder `soundfonts`;
+//! - the audio device `fake` (interface 1.3, [`fake`]): an output with no
+//!   speaker, priority -100, so a real device always wins.
 //!
 //! `echo`'s methods exercise the host's side: `notify` and `settings` call
 //! the host's services, `via-host` calls `test-echo` back through the host
@@ -45,6 +47,7 @@
 //! `folders` writes `hello.txt` into the plugin's data folder and returns
 //! the data, cache and `soundfonts` folders, one per line.
 
+pub mod fake;
 pub mod sine;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -74,6 +77,7 @@ pub struct TestPlugin {
     mark: Mark,
     link: LinkTool,
     settings: SettingsWindow,
+    fake: fake::Fake,
 }
 
 /// The tool `link`.
@@ -290,6 +294,7 @@ impl Plugin for TestPlugin {
             mark: Mark { host: host.clone() },
             link: LinkTool { host: host.clone() },
             settings: SettingsWindow { host: host.clone() },
+            fake: fake::Fake::new(host.clone()),
             host,
         })
     }
@@ -346,6 +351,7 @@ impl Plugin for TestPlugin {
         match (interface, id) {
             ("test-echo", "echo" | "second" | "elsewhere") => Some(self),
             ("test-echo", "unavailable") => Some(&Unavailable),
+            ("audio-device", "fake") => Some(&self.fake),
             _ => None,
         }
     }

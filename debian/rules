@@ -28,7 +28,8 @@ release = target/$(DEB_HOST_RUST_TYPE)/release
 # The programs look for the system plugin folder beside themselves
 # (crates/oxiguitar-host/src/folders.rs): <bin>/../lib/oxiguitar/plugins.
 plugin_folder = target/$(DEB_HOST_RUST_TYPE)/lib/oxiguitar/plugins
-plugins = $(filter-out test test-second,$(notdir $(wildcard plugins/*)))
+# Not the test plugins, nor the audio devices of other systems.
+plugins = $(filter-out test test-second audio-wasapi audio-coreaudio,$(notdir $(wildcard plugins/*)))
 noto = /usr/share/fonts/truetype/noto/NotoSans-Regular.ttf
 app_id = io.github.mateusrdp.OxiGuitar
 
@@ -52,7 +53,7 @@ override_dh_auto_build:
 	set -e; for p in $(plugins); do \
 		CARGO_TARGET_DIR=target/oxp $(CARGO) rustc --release \
 			-p oxiguitar-$$p-plugin --features oxp --crate-type cdylib; \
-		install -Dm644 target/oxp/$(DEB_HOST_RUST_TYPE)/release/liboxiguitar_$${p}_plugin.so \
+		install -Dm644 target/oxp/$(DEB_HOST_RUST_TYPE)/release/liboxiguitar_$$(echo $$p | tr - _)_plugin.so \
 			$(plugin_folder)/$$p.oxp; \
 	done
 

@@ -235,8 +235,12 @@ pub struct RealtimeTableV1 {
 
 /// The audio device's request to the core from its callback
 /// ([`crate::abi::HostTableV1`]'s `render`, interface 1.3): fill `out`
-/// with `frames` interleaved frames of `channels` channels, which reach
-/// the speaker `delay_ns` nanoseconds after the call.
+/// with `frames` interleaved frames of `channels` channels for `stream`
+/// (the number the host gave the device when it opened the stream), which
+/// reach the speaker `delay_ns` nanoseconds after the call. `ctx` is the
+/// host table's. Called on the device's audio thread only, never for one
+/// stream from two threads at once, and never after the stream's `close`
+/// has returned.
 pub type HostRender = unsafe extern "C" fn(
     ctx: *const c_void,
     stream: u64,

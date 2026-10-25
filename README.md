@@ -73,7 +73,8 @@ You need Rust 1.99 or newer, from [rustup](https://rustup.rs): distributions' ow
 
 ```
 sudo apt install git build-essential pkg-config rustup \
-  libfontconfig1-dev libxkbcommon-dev libwayland-dev
+  libfontconfig1-dev libxkbcommon-dev libwayland-dev \
+  libasound2-dev libpipewire-0.3-dev libclang-dev
 rustup default stable
 git clone https://github.com/mateusrdp/oxiguitar.git
 cd oxiguitar

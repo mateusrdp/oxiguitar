@@ -13,6 +13,9 @@ Build-Depends:
  libfontconfig-dev,
  libxkbcommon-dev,
  libwayland-dev,
+ libasound2-dev,
+ libpipewire-0.3-dev,
+ libclang-dev,
  fonts-noto-core,
 Standards-Version: 4.7.2
 Homepage: https://github.com/mateusrdp/oxiguitar
@@ -51,8 +54,9 @@ Depends:
  ${shlibs:Depends},
 Enhances:
  oxiguitar,
-Description: Guitar Pro format plugins for OxiGuitar
+Description: Guitar Pro format and audio plugins for OxiGuitar
  The plugins the OxiGuitar project writes and recommends: one for each
  Guitar Pro format (3, 4, 5, 6 and 7-8), so OxiGuitar can open those
- files. OxiGuitar alone opens no file; it finds these in
+ files, and the ones that play its sound through PipeWire or ALSA.
+ OxiGuitar alone opens no file; it finds these in
  /usr/lib/oxiguitar/plugins.

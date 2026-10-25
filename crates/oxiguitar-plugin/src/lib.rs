@@ -559,6 +559,12 @@ pub struct Host(Arc<dyn HostServices>);
 pub trait HostServices: Send + Sync {
     /// Answers one request.
     fn request(&self, request: HostRequest<'_>) -> Result<HostAnswer<'static>, Error>;
+
+    /// Where an audio device's callback has the core fill its buffers
+    /// (interface 1.3); none by default.
+    fn audio_out(&self) -> Option<glue::AudioOut> {
+        None
+    }
 }
 
 impl std::fmt::Debug for Host {
@@ -668,6 +674,13 @@ impl Host {
             }),
             other => Err(unexpected(&other)),
         }
+    }
+
+    /// Where an audio device's callback has the core fill its buffers
+    /// (interface 1.3; `oxiguitar_plugin::api::audio_device`), or `None`
+    /// from a host without it.
+    pub fn audio_out(&self) -> Option<glue::AudioOut> {
+        self.0.audio_out()
     }
 
     /// Asks the core to show the tab `tab` (an id from the manifest) again:

@@ -288,6 +288,13 @@ pub struct ServiceRef<'a> {
     pub spec: &'a ServiceSpec,
 }
 
+impl ServiceRef<'_> {
+    /// The service's name, for the user: its manifest's, else its id.
+    pub fn name(&self) -> &str {
+        service_name(self.spec)
+    }
+}
+
 /// A plugin's tab, by the plugin's id and the tab's.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TabId {
@@ -1525,6 +1532,16 @@ impl Plugins {
                     result
                 });
                 if let Err(e) = result {
+                    // A system library the plugin needs isn't installed (the
+                    // PipeWire plugin without libpipewire): it can't run on
+                    // this system, which isn't a failure to tell about in
+                    // the footer; the plugin manager says why.
+                    if let Some(library) = missing_library(e) {
+                        return Err(self.unavailable(
+                            index,
+                            format!("it needs {library}, which isn't installed on this system"),
+                        ));
+                    }
                     return Err(self.fail(index, e.clone()));
                 }
                 result
@@ -1575,6 +1592,24 @@ impl Plugins {
             }
         }
         Error::new(ErrorKind::Failed, format!("{name} stopped working: {why}"))
+    }
+
+    /// Withdraws the plugin at `index` quietly: it can't run on this system
+    /// (`why`), which the plugin manager shows; the footer isn't told.
+    fn unavailable(&self, index: usize, why: String) -> Error {
+        let found = &self.0.found[index];
+        let name = found.name();
+        if found.failed.set(why.clone()).is_ok() {
+            self.chosen()
+                .retain(|_, choice| matches!(choice, Ok((i, _)) if *i != index));
+            if let Some(m) = &found.manifest {
+                self.0.core.withdrawn(&m.id);
+            }
+        }
+        Error::new(
+            ErrorKind::Unsupported,
+            format!("{name} can't run here: {why}"),
+        )
     }
 
     /// A plugin answered with something it wasn't asked for: a broken
@@ -1786,6 +1821,24 @@ pub fn is_https(url: &str) -> bool {
         && !url.chars().any(char::is_whitespace)
 }
 
+/// The system library a plugin couldn't be loaded without, from the
+/// loader's error, if that was the reason: the dynamic linker's words on
+/// Linux ("libpipewire-0.3.so.0: cannot open shared object file") and
+/// macOS ("Library not loaded: …").
+fn missing_library(error: &str) -> Option<String> {
+    if let Some(at) = error.find(": cannot open shared object file") {
+        let before = &error[..at];
+        let start = before.rfind(['(', ' ']).map_or(0, |i| i + 1);
+        return Some(before[start..].to_owned());
+    }
+    if let Some(at) = error.find("Library not loaded: ") {
+        let rest = &error[at + "Library not loaded: ".len()..];
+        let end = rest.find(['\n', ')', ' ']).unwrap_or(rest.len());
+        return Some(rest[..end].to_owned());
+    }
+    None
+}
+
 /// What a plugin file is, from its manifest alone.
 fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
     let (manifest, bytes, state) = match oxp::read_manifest(&path) {
@@ -1846,6 +1899,25 @@ impl From<oxiguitar_plugin_api::message::Level> for Level {
             L::Warning => Level::Warning,
             L::Error => Level::Error,
         }
+    }
+}
+
+#[cfg(test)]
+mod missing {
+    #[test]
+    fn a_missing_system_library_is_named() {
+        assert_eq!(
+            super::missing_library("it couldn't be loaded (libpipewire-0.3.so.0: cannot open shared object file: No such file or directory)").as_deref(),
+            Some("libpipewire-0.3.so.0")
+        );
+        assert_eq!(
+            super::missing_library("it couldn't be loaded (dlopen(x.oxp, 0x0005): Library not loaded: @rpath/libfoo.dylib\n  Referenced from: x)").as_deref(),
+            Some("@rpath/libfoo.dylib")
+        );
+        assert_eq!(
+            super::missing_library("it has no oxiguitar_plugin_v1 entry"),
+            None
+        );
     }
 }
 
