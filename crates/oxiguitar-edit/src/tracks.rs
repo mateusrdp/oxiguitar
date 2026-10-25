@@ -32,6 +32,9 @@ pub struct TrackSettings {
     /// When the strings, tuning or capo change: keep the notes' pitches
     /// (true) or their frets (false).
     pub keep_pitches: bool,
+    /// What plugins keep for the track, by plugin id (their sections of the
+    /// track dialog, plugin interface 1.3).
+    pub plugins: std::collections::BTreeMap<String, String>,
 }
 
 impl TrackSettings {
@@ -46,6 +49,7 @@ impl TrackSettings {
             fret_count: staff.map_or(24, |s| s.fret_count),
             tuning: staff.map(|s| s.tuning.clone()).unwrap_or_default(),
             keep_pitches: true,
+            plugins: track.plugins.clone(),
         }
     }
 }
@@ -198,6 +202,7 @@ fn properties(
     track.name.clone_from(&to.name);
     track.short_name.clone_from(&to.short_name);
     track.instrument = to.instrument;
+    track.plugins.clone_from(&to.plugins);
     restring(&mut track, to);
     let mut regions = vec![Region::Track(t)];
     let bars = score.bar_count();

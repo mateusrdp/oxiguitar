@@ -166,6 +166,9 @@ pub(crate) struct TrackForm {
     pub(crate) frets: i32,
     /// Keep the notes' pitches (else their frets) when the strings change.
     pub(crate) keep_pitches: bool,
+    /// What the plugins' sections of the dialog hold, by plugin id
+    /// (interface 1.3).
+    pub(crate) plugins: std::collections::BTreeMap<String, String>,
 }
 
 impl TrackForm {
@@ -195,6 +198,7 @@ impl TrackForm {
             capo: i32::from(s.capo),
             frets: i32::from(s.fret_count),
             keep_pitches: true,
+            plugins: s.plugins,
         }
     }
 
@@ -267,6 +271,7 @@ impl TrackForm {
             fret_count: u8::try_from(self.frets.clamp(12, 36)).unwrap_or(24),
             tuning: self.tuning()?,
             keep_pitches: self.keep_pitches,
+            plugins: self.plugins.clone(),
         })
     }
 }

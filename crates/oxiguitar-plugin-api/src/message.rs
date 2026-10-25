@@ -24,6 +24,13 @@
 //! [`Answer::Report`]) and edits ([`HostRequest::Apply`]). The host sends
 //! a plugin built for 1.2 or later [`Request::Write2`] instead of
 //! [`Request::Write`], and takes either answer to a [`Request::Read`].
+//!
+//! Interface 1.3 added settings windows ([`Request::SettingsWindow`],
+//! [`Request::SettingsEvent`]), sections of the track dialog
+//! ([`Request::TrackSection`], [`Request::TrackSectionEvent`],
+//! [`Answer::TrackSection`]), footer messages with a link
+//! ([`HostRequest::Notify2`]) and the plugin's folders
+//! ([`HostRequest::Folders`]).
 
 use std::fmt;
 
@@ -31,7 +38,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::Blob;
 use crate::abi::Status;
+use crate::class::InstrumentClass;
 use crate::event::Event;
+use crate::manifest::SharedFolder;
 use crate::score::Score;
 use crate::score2::Score2;
 use crate::tab::{TabContent, TabEvent};
@@ -180,6 +189,61 @@ pub enum Request<'a> {
         /// The tool's id.
         tool: String,
     },
+    /// What the plugin's settings window shows now (the manifest's
+    /// `settings_window`): asked when the user opens it from the plugin
+    /// manager. Answered with [`Answer::Tab`]. The plugin keeps what the
+    /// user sets with [`HostRequest::SetSettings`]. Since interface 1.3.
+    SettingsWindow,
+    /// The user used the widget `widget` of the settings window. Answered
+    /// with [`Answer::Tab`], the window's contents after it. Since
+    /// interface 1.3.
+    SettingsEvent {
+        /// The widget's id.
+        widget: String,
+        /// What the user did.
+        event: TabEvent,
+    },
+    /// What the track dialog's section `section` (an id from the manifest's
+    /// `track_sections`) shows for `track`, whose settings for this plugin
+    /// are `settings` (a JSON object, `{}` at first). Answered with
+    /// [`Answer::TrackSection`]. Since interface 1.3.
+    TrackSection {
+        /// The section's id.
+        section: String,
+        /// The track the dialog is open for.
+        track: TrackInfo,
+        /// The track's settings for this plugin, as JSON text.
+        settings: String,
+    },
+    /// The user used the widget `widget` of the section `section` for
+    /// `track`. Answered with [`Answer::TrackSection`]: the section's
+    /// contents and the track's settings after it. The dialog keeps them
+    /// until the user presses OK, which makes them one change the user can
+    /// undo; Cancel drops them. Since interface 1.3.
+    TrackSectionEvent {
+        /// The section's id.
+        section: String,
+        /// The track the dialog is open for.
+        track: TrackInfo,
+        /// The track's settings for this plugin, as the dialog holds them.
+        settings: String,
+        /// The widget's id.
+        widget: String,
+        /// What the user did.
+        event: TabEvent,
+    },
+}
+
+/// A track, as the track dialog's sections are told about it. Since
+/// interface 1.3.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrackInfo {
+    /// Its index in the score.
+    pub index: u32,
+    /// Its name.
+    pub name: String,
+    /// Its class of instrument.
+    pub class: InstrumentClass,
 }
 
 /// A plugin's answer to a [`Request`].
@@ -219,6 +283,14 @@ pub enum Answer<'a> {
     /// What a tool did, in a sentence for the footer ("Transposed 3
     /// tracks up a tone."); empty to say nothing. Since interface 1.2.
     Report(String),
+    /// What a section of the track dialog shows, and the track's settings
+    /// for this plugin. Since interface 1.3.
+    TrackSection {
+        /// The section's contents.
+        content: Box<TabContent>,
+        /// The track's settings for this plugin, a JSON object as text.
+        settings: String,
+    },
 }
 
 impl Answer<'_> {
@@ -236,6 +308,9 @@ impl Answer<'_> {
             Answer::Done => Answer::Done,
             Answer::Read2 { score, log } => Answer::Read2 { score, log },
             Answer::Report(r) => Answer::Report(r),
+            Answer::TrackSection { content, settings } => {
+                Answer::TrackSection { content, settings }
+            }
         }
     }
 }
@@ -394,6 +469,46 @@ pub enum HostRequest<'a> {
         /// The whole score, changed.
         score: Box<Score2>,
     },
+    /// Show a message in the footer, with a link the user can click to
+    /// open in the system's browser (an `https:` address; others are
+    /// refused). Answered with [`HostAnswer::Done`]. Since interface 1.3.
+    Notify2 {
+        /// How much it matters. The footer shows only warnings and errors.
+        level: Level,
+        /// One or two sentences.
+        text: String,
+        /// The link, after the text.
+        link: Link,
+    },
+    /// The plugin's folders: its own data and cache folders and the shared
+    /// folders its manifest lists. Answered with [`HostAnswer::Folders`].
+    /// Since interface 1.3.
+    Folders,
+}
+
+/// A link in a footer message. Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Link {
+    /// What the link says: a few words ("Better sounds").
+    pub text: String,
+    /// Where it goes: an `https:` address.
+    pub url: String,
+}
+
+/// A plugin's folders (paths as UTF-8 text). Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PluginFolders {
+    /// The plugin's own data folder, which only it uses: kept until the
+    /// user deletes it. Created when this is asked for.
+    pub data: String,
+    /// The plugin's own cache folder, in the system's place for caches:
+    /// for what it can make again (a decoded sound set), which the system
+    /// or the user may delete at any time. Created when this is asked for.
+    pub cache: String,
+    /// The shared folders the manifest lists, each with its path, in the
+    /// manifest's order. The user puts files there; the host creates them
+    /// at start.
+    pub shared: Vec<(SharedFolder, String)>,
 }
 
 /// The host's answer to a [`HostRequest`].
@@ -415,6 +530,8 @@ pub enum HostAnswer<'a> {
         /// The score.
         score: Option<Box<Score2>>,
     },
+    /// The plugin's folders. Since interface 1.3.
+    Folders(PluginFolders),
 }
 
 impl HostAnswer<'_> {
@@ -426,6 +543,7 @@ impl HostAnswer<'_> {
             HostAnswer::Service(b) => HostAnswer::Service(b.into_owned()),
             HostAnswer::Score(s) => HostAnswer::Score(s),
             HostAnswer::Score2 { revision, score } => HostAnswer::Score2 { revision, score },
+            HostAnswer::Folders(f) => HostAnswer::Folders(f),
         }
     }
 }
@@ -455,6 +573,70 @@ mod tests {
         );
         let bytes = encode(&error).unwrap();
         assert_eq!(decode::<Error>(&bytes).unwrap(), error);
+    }
+
+    #[test]
+    fn interface_1_3_messages_round_trip() {
+        let track = TrackInfo {
+            index: 2,
+            name: "Lead".into(),
+            class: InstrumentClass::Fretted,
+        };
+        let requests = [
+            Request::SettingsWindow,
+            Request::SettingsEvent {
+                widget: "on".into(),
+                event: TabEvent::Toggled(true),
+            },
+            Request::TrackSection {
+                section: "amp".into(),
+                track: track.clone(),
+                settings: "{}".into(),
+            },
+            Request::TrackSectionEvent {
+                section: "amp".into(),
+                track,
+                settings: r#"{"level":0.5}"#.into(),
+                widget: "level".into(),
+                event: TabEvent::Slid(0.25),
+            },
+        ];
+        for request in requests {
+            let bytes = encode(&request).unwrap();
+            assert_eq!(decode::<Request<'_>>(&bytes).unwrap(), request);
+        }
+        let answer = Answer::TrackSection {
+            content: Box::default(),
+            settings: "{}".into(),
+        };
+        assert_eq!(
+            decode::<Answer<'_>>(&encode(&answer).unwrap()).unwrap(),
+            answer
+        );
+        let host = [
+            HostRequest::Notify2 {
+                level: Level::Warning,
+                text: "Only a basic sound set plays.".into(),
+                link: Link {
+                    text: "Better sounds".into(),
+                    url: "https://example.org/sounds".into(),
+                },
+            },
+            HostRequest::Folders,
+        ];
+        for request in host {
+            let bytes = encode(&request).unwrap();
+            assert_eq!(decode::<HostRequest<'_>>(&bytes).unwrap(), request);
+        }
+        let folders = HostAnswer::Folders(PluginFolders {
+            data: "/d".into(),
+            cache: "/c".into(),
+            shared: vec![(SharedFolder::Soundfonts, "/s".into())],
+        });
+        assert_eq!(
+            decode::<HostAnswer<'_>>(&encode(&folders).unwrap()).unwrap(),
+            folders
+        );
     }
 
     #[test]

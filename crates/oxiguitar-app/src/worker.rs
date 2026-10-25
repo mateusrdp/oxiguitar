@@ -514,6 +514,9 @@ fn opened(st: &mut State, doc: Document, folder: Option<PathBuf>, sink: &dyn Fn(
     if let Some(warning) = doc.bad_bars_warning() {
         sink(Event::Message(Level::Warning, warning));
     }
+    if let Some(warning) = &doc.sidecar_problem {
+        sink(Event::Message(Level::Warning, warning.clone()));
+    }
     sink(Event::Opened {
         score: doc.score.clone(),
         edit: doc.edit_state(),
@@ -579,7 +582,10 @@ fn write_save(st: &mut State, prepared: &Prepared, sink: &dyn Fn(Event)) {
         return;
     };
     match doc.save(prepared) {
-        Ok(()) => {
+        Ok(warning) => {
+            if let Some(warning) = warning {
+                sink(Event::Message(Level::Error, warning));
+            }
             let name = doc.name();
             sink(Event::Message(Level::Info, format!("Saved {name}.")));
             sink(Event::Saved {

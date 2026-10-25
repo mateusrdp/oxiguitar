@@ -14,6 +14,7 @@ use oxiguitar_display::{DisplayList, FontSet, Theme};
 use oxiguitar_edit::{BarCheck, Caret, Command, History, Region, Selection};
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::message::{Level as LogLevel, LogEntry};
+use oxiguitar_host::sidecar::{Sidecar, TrackEntry};
 use oxiguitar_layout::{Engraved, Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::{Mix, Score};
 use oxiguitar_tools::Availability;
@@ -136,6 +137,9 @@ pub(crate) struct Document {
     pub(crate) check: BarCheck,
     /// A score made with File → New, not saved yet: Save asks for a name.
     pub(crate) untitled: bool,
+    /// Why the score's sidecar (`FILE.oxg`, the tracks' plugin settings)
+    /// couldn't be read when it opened, if it couldn't.
+    pub(crate) sidecar_problem: Option<String>,
 }
 
 /// What the Edit menu and the toolbar show about the history.
@@ -257,9 +261,22 @@ impl Document {
             .filter(|e| e.level != LogLevel::Info)
             .cloned()
             .collect();
-        let score = oxiguitar_model::wire::from_wire2(read.score).map_err(|e| {
+        let mut score = oxiguitar_model::wire::from_wire2(read.score).map_err(|e| {
             format!("{name}: the {plugin} plugin gave a score this OxiGuitar can't hold ({e}).")
         })?;
+        // What plugins keep per track lives beside the file (FILE.oxg).
+        let sidecar_problem = match Sidecar::read_for(path) {
+            Ok(Some(sidecar)) => {
+                let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
+                let settled = sidecar.settle(&names);
+                for (track, plugins) in score.tracks.iter_mut().zip(settled) {
+                    track.plugins = plugins;
+                }
+                None
+            }
+            Ok(None) => None,
+            Err(why) => Some(why),
+        };
         let check = BarCheck::of(&score);
         Ok(Document {
             path: path.to_owned(),
@@ -269,6 +286,7 @@ impl Document {
             history: History::new(),
             check,
             untitled: false,
+            sidecar_problem,
         })
     }
 
@@ -295,6 +313,7 @@ impl Document {
             score: Arc::new(score),
             history: History::new(),
             untitled: true,
+            sidecar_problem: None,
         }
     }
 
@@ -637,8 +656,10 @@ impl Document {
 
     /// Writes a prepared file: beside the old one first, then in its place,
     /// so a failure never leaves half a file. The document then belongs to
-    /// the new file. The error is a sentence for the footer.
-    pub(crate) fn save(&mut self, prepared: &Prepared) -> Result<(), String> {
+    /// the new file. The tracks' plugin settings go beside it (FILE.oxg):
+    /// if only they couldn't be saved, the answer is `Ok` with a sentence
+    /// saying so. The error is a sentence for the footer.
+    pub(crate) fn save(&mut self, prepared: &Prepared) -> Result<Option<String>, String> {
         let name = file_name(&prepared.path);
         let temp = prepared
             .path
@@ -649,6 +670,20 @@ impl Document {
             let _ = std::fs::remove_file(&temp);
             return Err(format!("Could not save {name}: {e}."));
         }
+        // The tracks' plugin settings, beside the file. The score itself is
+        // saved even if this fails; the error says so.
+        let sidecar = Sidecar {
+            tracks: self
+                .score
+                .tracks
+                .iter()
+                .map(|t| TrackEntry {
+                    name: t.name.clone(),
+                    plugins: t.plugins.clone(),
+                })
+                .collect(),
+        };
+        let kept = sidecar.write_for(&prepared.path);
         if prepared.path == self.path {
             self.opened_losses.clear();
         }
@@ -656,7 +691,7 @@ impl Document {
         self.format = prepared.format.clone();
         self.untitled = false;
         self.history.mark_saved();
-        Ok(())
+        Ok(kept.err())
     }
 
     /// The file's name, for the window's title ("Untitled" before a new
@@ -917,6 +952,52 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn the_tracks_plugin_settings_are_saved_beside_the_file() {
+        let dir = scratch("sidecar");
+        let path = dir.join("song.gp5");
+        std::fs::copy(fixture("gp5"), &path).unwrap();
+        let mut doc = open(&path).unwrap();
+        let mut settings = oxiguitar_edit::TrackSettings::of(&doc.score.tracks[0]);
+        settings
+            .plugins
+            .insert("oxiguitar.test".into(), r#"{"level":0.25}"#.into());
+        doc.edit(
+            Command::TrackProperties(Box::new(settings)),
+            Caret::at_start(&doc.score, 0).unwrap(),
+            None,
+        )
+        .unwrap();
+        // The settings change no score format: the file keeps its format.
+        let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
+        assert_eq!(prepared.path, path);
+        assert_eq!(doc.save(&prepared).unwrap(), None);
+        let sidecar = dir.join("song.gp5.oxg");
+        assert!(
+            std::fs::read_to_string(&sidecar)
+                .unwrap()
+                .contains("\"oxiguitar.test\""),
+        );
+        let again = open(&path).unwrap();
+        assert_eq!(
+            again.score.tracks[0]
+                .plugins
+                .get("oxiguitar.test")
+                .map(String::as_str),
+            Some(r#"{"level":0.25}"#)
+        );
+        assert_eq!(again.score, doc.score);
+        assert_eq!(again.sidecar_problem, None);
+        // Undo takes the settings back.
+        doc.undo();
+        assert!(doc.score.tracks[0].plugins.is_empty());
+        // A sidecar that can't be read: said, and the settings start empty.
+        std::fs::write(&sidecar, "{").unwrap();
+        let broken = open(&path).unwrap();
+        assert!(broken.score.tracks[0].plugins.is_empty());
+        assert!(broken.sidecar_problem.unwrap().contains("song.gp5.oxg"));
     }
 
     #[test]

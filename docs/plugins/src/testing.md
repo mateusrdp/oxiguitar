@@ -5,7 +5,7 @@
 In the template, `cargo test` runs three kinds of test:
 
 1. **Your unit tests**, on the plugin as an ordinary Rust library: call your reader on sample files, your tab's `on` and `content`, your service's `call`, with `Host::detached()` where a host is needed. The template's are in each module of `src/`.
-2. **`the_manifest_matches_the_plugin`**, which `export_plugin!` adds: the manifest is valid and has no unknown key, its interface is one the SDK has, its version is the crate's, every declared format, service and tab is implemented, and every tab's first contents can be shown.
+2. **`the_manifest_matches_the_plugin`**, which `export_plugin!` adds: the manifest is valid and has no unknown key, its interface is one the SDK has, its version is the crate's, every declared format, service, tab, tool, settings window and track section is implemented, and the first contents of every tab, settings window and track section can be shown.
 3. **The contract suite**, in `tests/contract.rs`:
 
    ```rust,ignore
@@ -21,7 +21,9 @@ In the template, `cargo test` runs three kinds of test:
    - every format it writes answers an empty score;
    - every service answers its probe;
    - every tab's contents can be shown, before and after a plausible use of each widget;
-   - every kind of event it subscribes to is taken without an error.
+   - every kind of event it subscribes to is taken without an error;
+   - every tool runs with no score open;
+   - its settings window and its track sections show contents that can be shown, before and after a plausible use of each widget, and a section hands back its track's settings as a JSON object.
 
 A test that loads a plugin file must build it once per test program and never rebuild it while it is loaded: a system loads a library file once per process (and Windows refuses to replace a loaded file). One contract test per crate, as in the template, keeps to that.
 

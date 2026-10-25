@@ -3,6 +3,8 @@
 
 //! Tracks, staves, tunings and instruments.
 
+use std::collections::BTreeMap;
+
 use crate::{Bar, Color, Pitch};
 
 /// One instrument part: a guitar, a bass, a drum kit, a piano.
@@ -24,6 +26,11 @@ pub struct Track {
     pub chords: Vec<ChordDiagram>,
     /// Lyrics lines.
     pub lyrics: Vec<LyricLine>,
+    /// What plugins keep for this track (the sections they add to the
+    /// track dialog, plugin interface 1.3): a JSON object as text, by
+    /// plugin id. No score format holds it: it is saved beside the score,
+    /// in `FILE.oxg` (`song.gp3.oxg`).
+    pub plugins: BTreeMap<String, String>,
 }
 
 /// What a track sounds like through General MIDI.

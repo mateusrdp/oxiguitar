@@ -6,6 +6,7 @@
 // from and go back to `bar_form.rs`.
 
 import { Button, CheckBox, ComboBox, LineEdit, SpinBox, ScrollView, Palette } from "std-widgets.slint";
+import { PluginRows, PluginSection } from "plugin_tab.slint";
 
 // The Bar dialog's single fields (`bar_form::BarForm`).
 export struct BarFields {
@@ -340,8 +341,16 @@ export component TrackDialog inherits Rectangle {
     in property <string> preview;
     // A note or a tuning that can't be: OK does nothing.
     in property <bool> invalid;
+    // The plugins' sections (interface 1.3), after the core's fields.
+    in property <[PluginSection]> sections;
     callback changed();
     callback done(bool);
+    // A widget of the section at the index was used.
+    callback section-clicked(int, string);
+    callback section-toggled(int, string, bool);
+    callback section-slid(int, string, float);
+    callback section-edited(int, string, string);
+    callback section-chosen(int, string, int);
     Card {
         width: root.width;
         height: root.height;
@@ -442,6 +451,25 @@ export component TrackDialog inherits Rectangle {
                     model: ["Keep the notes' pitches (new frets)", "Keep the frets (the notes change)"];
                     current-index: root.fields.keep-pitches ? 0 : 1;
                     selected => { root.fields.keep-pitches = self.current-index == 0; }
+                }
+            }
+            for section[i] in root.sections : VerticalLayout {
+                spacing: 2px;
+                Rectangle { height: 1px; background: Palette.border; }
+                Text {
+                    text: section.title;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: Palette.foreground;
+                }
+                PluginRows {
+                    rows: section.rows;
+                    message: section.message;
+                    clicked(id) => { root.section-clicked(i, id); }
+                    toggled(id, on) => { root.section-toggled(i, id, on); }
+                    slid(id, v) => { root.section-slid(i, id, v); }
+                    edited(id, t) => { root.section-edited(i, id, t); }
+                    chosen(id, n) => { root.section-chosen(i, id, n); }
                 }
             }
         }

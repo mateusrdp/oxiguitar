@@ -40,6 +40,9 @@ pub(crate) struct Row {
     pub(crate) changed: bool,
     /// Loaded now.
     pub(crate) loaded: bool,
+    /// The plugin's id when it is in use and has a settings window
+    /// (interface 1.3): the row's Settings… button opens it.
+    pub(crate) settings: Option<String>,
 }
 
 /// Whether any change waits for OxiGuitar to start again.
@@ -66,7 +69,17 @@ pub(crate) fn rows(plugins: &Plugins, disabled: &[String]) -> Vec<Row> {
     plugins
         .found()
         .iter()
-        .map(|f| row(f, plugins.safe_mode(), disabled))
+        .map(|f| {
+            let mut r = row(f, plugins.safe_mode(), disabled);
+            let has_window = plugins
+                .with_settings_window()
+                .iter()
+                .any(|w| std::ptr::eq(*w, f));
+            if has_window {
+                r.settings = f.manifest.as_ref().map(|m| m.id.clone());
+            }
+            r
+        })
         .collect()
 }
 
@@ -124,6 +137,7 @@ fn row(f: &Found, safe: bool, disabled: &[String]) -> Row {
         enabled,
         changed,
         loaded: f.is_loaded(),
+        settings: None,
     }
 }
 

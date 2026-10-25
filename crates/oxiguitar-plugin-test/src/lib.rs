@@ -19,10 +19,15 @@
 //!   and a plausible use of each widget (a click, a tick, the slider's
 //!   lowest value, an empty field, the first option, a press, drag and
 //!   release in the middle of a canvas) answers with contents it can draw;
-//! - every kind of event it subscribes to is delivered without an error.
+//! - every kind of event it subscribes to is delivered without an error;
+//! - every tool it adds (interface 1.2) runs with no score open;
+//! - its settings window and its sections of the track dialog (interface
+//!   1.3) show contents the core can draw, before and after a plausible use
+//!   of each widget, and a section hands back its track's settings as a
+//!   JSON object.
 //!
 //! Checks for instruments (no allocation, locks or waiting on the audio
-//! thread) come with the instrument interface (M4).
+//! thread) come with the instrument interface (M4, slice 2).
 //!
 //! The `oxiguitar-plugin-test` program runs the same checks from the
 //! command line, for plugin authors.
@@ -32,12 +37,13 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use oxiguitar_host::api::Blob;
+use oxiguitar_host::api::class::InstrumentClass;
 use oxiguitar_host::api::display::Point;
 use oxiguitar_host::api::event::{Event, EventKind, Playback, Position};
-use oxiguitar_host::api::message::{Answer, Error, Request};
+use oxiguitar_host::api::message::{Answer, Error, Request, TrackInfo};
 use oxiguitar_host::api::score::Score;
 use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
-use oxiguitar_host::{Core, Level, Plugins, SharedSettings, State};
+use oxiguitar_host::{Core, Folders, Level, Plugins, SharedSettings, State, System};
 
 /// Builds the plugin crate `package` of the workspace at `workspace` as
 /// `NAME.oxp` (with its `oxp` feature, as a `cdylib`), in the workspace's
@@ -204,6 +210,16 @@ pub fn check(oxp: &Path) -> Report {
         kept.clone(),
     );
     report.manifest_time = started.elapsed();
+    // The plugin's own folders and the shared ones, in the scratch folder.
+    let home = folder.join("home");
+    if let Some(folders) = Folders::resolve(
+        System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    ) {
+        let _ = folders.ensure_shared(&plugins.shared_folders());
+        plugins.use_folders(folders);
+    }
     let Some(found) = plugins.found().first() else {
         report.check(
             "the manifest reads without loading the plugin",
@@ -396,6 +412,69 @@ pub fn check(oxp: &Path) -> Report {
                 Err(e) => not_a_crash(&e),
             },
         );
+    }
+    // The settings window and the track dialog's sections (interface 1.3).
+    if let Some(found) = plugins.with_settings_window().first() {
+        let content = plugins.settings_window(found);
+        report.check(
+            "the settings window: its contents can be shown",
+            content.as_ref().map(drop).map_err(|e| e.message.clone()),
+        );
+        if let Ok(content) = content {
+            for (widget, event) in plausible_events(&content) {
+                let answer = plugins.settings_event(found, &widget, event.clone());
+                report.check(
+                    format!(
+                        "the settings window: {event:?} on {widget} answers with contents it can show"
+                    ),
+                    match answer {
+                        Ok(_) => Ok(()),
+                        Err(e) if e.message.contains("can't be shown") => Err(e.message),
+                        Err(e) => not_a_crash(&e),
+                    },
+                );
+            }
+        }
+    }
+    for class in InstrumentClass::ALL {
+        for section in plugins.track_sections(class) {
+            // Each section once, for the first class it shows for.
+            if InstrumentClass::ALL
+                .iter()
+                .take_while(|&&c| c != class)
+                .any(|&c| section.spec.shows_for(c))
+            {
+                continue;
+            }
+            let track = TrackInfo {
+                index: 0,
+                name: "Track 1".into(),
+                class,
+            };
+            let id = &section.spec.id;
+            let answer = plugins.track_section(section, &track, "{}");
+            report.check(
+                format!("track section {id}: its contents can be shown"),
+                answer.as_ref().map(drop).map_err(|e| e.message.clone()),
+            );
+            let Ok((content, settings)) = answer else {
+                continue;
+            };
+            for (widget, event) in plausible_events(&content) {
+                let answer =
+                    plugins.track_section_event(section, &track, &settings, &widget, event.clone());
+                report.check(
+                    format!(
+                        "track section {id}: {event:?} on {widget} answers with contents it can show and settings"
+                    ),
+                    match answer {
+                        Ok(_) => Ok(()),
+                        Err(e) if e.message.contains("can't be shown") => Err(e.message),
+                        Err(e) => not_a_crash(&e),
+                    },
+                );
+            }
+        }
     }
     report.messages = kept.0.lock().map(|m| m.clone()).unwrap_or_default();
     let _ = std::fs::remove_dir_all(&folder);

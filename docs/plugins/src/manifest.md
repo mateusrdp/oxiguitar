@@ -16,7 +16,7 @@ The template's:
 
 | Key | Required | What it is |
 | --- | --- | --- |
-| `interface` | yes | The interface version the plugin was built for, `"MAJOR.MINOR"`: `"1.0"`, or `"1.1"` for tabs and events ([Interface versions](versions.md)) |
+| `interface` | yes | The interface version the plugin was built for, `"MAJOR.MINOR"`: `"1.0"`, or the version that brought what it uses ([Interface versions](versions.md)) |
 | `id` | yes | Unique among all plugins: 1 to 64 lowercase letters and digits, in parts joined by single `.` or `-`. Start it with your own name (`jane.chord-finder`); ids starting `oxiguitar.` are ours. Never change it once released: settings and the disabled list refer to it |
 | `name` | yes | What users see, in the plugin manager and in footer messages |
 | `version` | yes | `MAJOR.MINOR.PATCH`, optionally `-PRERELEASE` (`1.2.0-beta.1`), equal to the crate's version. Of two files with the same `id`, the higher version is used |
@@ -31,6 +31,10 @@ The template's:
 | `instruments` | no | The instruments it offers the player ([Instruments](instruments.md)) |
 | `tabs` | no | Its tabs; interface 1.1 ([Tabs](tabs.md)) |
 | `events` | no | The kinds of event it wants: `"score"`, `"selection"`, `"playback"`; interface 1.1 ([Events](events.md)) |
+| `tools` | no | Its entries in the Tools menu; interface 1.2 ([Tools](tools.md)) |
+| `settings_window` | no | `true` for a settings window, opened from the plugin manager; interface 1.3 ([Settings](settings.md)) |
+| `track_sections` | no | Its sections of the track dialog; interface 1.3 ([Track sections](track-sections.md)) |
+| `folders` | no | The shared folders it reads, `"soundfonts"` and `"nam"`, which OxiGuitar creates at start; interface 1.3 ([Settings](settings.md)) |
 
 **Unknown keys are refused when you build and ignored when OxiGuitar reads.** The test `export_plugin!` adds fails on a key the SDK doesn't know, so a typing mistake (`"servces"`) shows up in `cargo test`. An older OxiGuitar reading a newer plugin's manifest skips keys it doesn't know, so new keys never stop a plugin from loading.
 

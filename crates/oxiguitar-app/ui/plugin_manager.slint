@@ -5,9 +5,12 @@
 // manager"): a separate, non-modal window listing every plugin file in the
 // plugin folders, with a tickbox to enable or disable each from the next
 // start. It copies, installs and removes nothing. The rows come from
-// manager.rs.
+// manager.rs. A plugin with a settings window (interface 1.3) has a
+// Settings… button, which opens it: the plugin's own widgets, in a window
+// of their own.
 
 import { Button, CheckBox, ScrollView, Palette } from "std-widgets.slint";
+import { PluginTab, PluginRow } from "plugin_tab.slint";
 
 export struct ManagerRow {
     name: string,
@@ -18,6 +21,8 @@ export struct ManagerRow {
     // A tickbox only for files that can be enabled or disabled.
     can-toggle: bool,
     enabled: bool,
+    // A Settings… button: the plugin is in use and has a settings window.
+    has-settings: bool,
 }
 
 export component PluginManagerWindow inherits Window {
@@ -43,6 +48,7 @@ export component PluginManagerWindow inherits Window {
     // it (plugins can't be unloaded while OxiGuitar runs).
     in property <bool> restart-needed;
     callback toggled(int, bool);
+    callback settings-clicked(int);
     callback close-clicked();
 
     background: Palette.background;
@@ -114,6 +120,13 @@ export component PluginManagerWindow inherits Window {
                                     color: Palette.foreground.transparentize(0.45);
                                 }
                             }
+                            if row.has-settings : VerticalLayout {
+                                alignment: start;
+                                Button {
+                                    text: "Settings…";
+                                    clicked => { root.settings-clicked(i); }
+                                }
+                            }
                         }
                     }
                 }
@@ -137,6 +150,61 @@ export component PluginManagerWindow inherits Window {
                 color: Palette.foreground;
             }
             if !root.restart-needed : Rectangle { horizontal-stretch: 1; }
+            Button {
+                text: "Close";
+                clicked => { root.close-clicked(); }
+            }
+        }
+    }
+}
+
+// A plugin's settings window (interface 1.3), opened from the plugin
+// manager: the plugin's widgets, which keep their values in the plugin's
+// own part of settings.json as the user changes them. One window, showing
+// one plugin at a time.
+export component PluginSettingsWindow inherits Window {
+    // "NAME Settings".
+    in property <string> window-title: "Settings";
+    title: root.window-title;
+    icon: @image-url("../../../assets/icon/png/oxiguitar-256.png");
+    preferred-width: 480px;
+    preferred-height: 320px;
+    min-width: 320px;
+    min-height: 160px;
+    default-font-family: "Noto Sans";
+
+    in property <bool> dark-interface: true;
+    init => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
+    changed dark-interface => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
+
+    in property <[PluginRow]> rows;
+    // Shown instead of the rows: while the plugin is asked, or why its
+    // window can't be shown.
+    in property <string> message;
+    callback clicked(string);
+    callback toggled(string, bool);
+    callback slid(string, float);
+    callback edited(string, string);
+    callback chosen(string, int);
+    callback close-clicked();
+
+    background: Palette.background;
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+        PluginTab {
+            vertical-stretch: 1;
+            rows: root.rows;
+            message: root.message;
+            clicked(id) => { root.clicked(id); }
+            toggled(id, on) => { root.toggled(id, on); }
+            slid(id, v) => { root.slid(id, v); }
+            edited(id, t) => { root.edited(id, t); }
+            chosen(id, n) => { root.chosen(id, n); }
+        }
+        HorizontalLayout {
+            alignment: end;
             Button {
                 text: "Close";
                 clicked => { root.close-clicked(); }

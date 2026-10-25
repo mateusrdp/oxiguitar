@@ -57,11 +57,12 @@ use oxiguitar_plugin_api::abi::Status;
 use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::event::{Event, EventKind};
 use oxiguitar_plugin_api::manifest::{
-    Environment, FormatSpec, InstrumentSpec, Manifest, ServiceSpec, ToolSpec,
+    Environment, FormatSpec, InstrumentSpec, Manifest, ServiceSpec, SharedFolder, ToolSpec,
+    TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
-    Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, LogEntry, Request, decode,
-    encode, outcome,
+    Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry, PluginFolders,
+    Request, TrackInfo, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::Score2;
@@ -70,6 +71,7 @@ use oxiguitar_plugin_api::tab::{TabContent, TabEvent, TabSpec};
 use serde_json::Value;
 
 use crate::events::Queue;
+use crate::folders::Folders;
 
 use crate::inventory::{ISSUES_URL, Level, PLUGINS_URL, plugin_files};
 use crate::loader::{self, Loaded};
@@ -88,6 +90,14 @@ pub const SERVICES_KEY: &str = "services";
 pub trait Core: Send + Sync {
     /// Shows `text` in the footer. `text` starts with the plugin's name.
     fn notify(&self, level: Level, text: String);
+
+    /// Shows `text` in the footer with `link`, which opens in the system's
+    /// browser when clicked (interface 1.3; the host has checked that it is
+    /// an `https:` address). The default, for programs without a window,
+    /// writes the address after the text.
+    fn notify_with_link(&self, level: Level, text: String, link: Link) {
+        self.notify(level, format!("{text} {}: {}", link.text, link.url));
+    }
 
     /// The plugin's tab `tab` has changed: ask for its contents
     /// ([`Plugins::tab_content`]) when it is next on screen. The default
@@ -160,6 +170,9 @@ struct Inner {
     /// The plugins that answered an event with an error: told once in the
     /// footer.
     failed_events: Mutex<Vec<usize>>,
+    /// OxiGuitar's folders, for the plugins' own folders and the shared
+    /// ones (interface 1.3); unset for programs that keep none.
+    folders: OnceLock<Folders>,
 }
 
 impl Drop for Inner {
@@ -292,6 +305,24 @@ pub struct ToolRef<'a> {
     /// The tool, as its manifest declares it.
     pub spec: &'a ToolSpec,
     index: usize,
+}
+
+/// A section a plugin adds to the track dialog (interface 1.3).
+#[derive(Clone, Copy, Debug)]
+pub struct SectionRef<'a> {
+    /// The plugin.
+    pub plugin: &'a Found,
+    /// The section, as its manifest declares it.
+    pub spec: &'a TrackSectionSpec,
+    index: usize,
+}
+
+impl SectionRef<'_> {
+    /// The id of the section's plugin, under which the track keeps its
+    /// settings.
+    pub fn plugin_id(&self) -> &str {
+        self.plugin.manifest.as_ref().map_or("", |m| m.id.as_str())
+    }
 }
 
 /// A tab a plugin adds to the window.
@@ -532,7 +563,29 @@ impl Plugins {
             chosen: Mutex::new(HashMap::new()),
             events: Arc::new(Queue::default()),
             failed_events: Mutex::new(Vec::new()),
+            folders: OnceLock::new(),
         }))
+    }
+
+    /// Gives the plugins OxiGuitar's folders, for their own data and cache
+    /// folders and the shared folders their manifests list (interface 1.3).
+    /// Without it, plugins asking for their folders get an error. Set once;
+    /// later calls change nothing.
+    pub fn use_folders(&self, folders: Folders) {
+        let _ = self.0.folders.set(folders);
+    }
+
+    /// The shared folders the ready plugins list in their manifests, each
+    /// once, so the host can create them at start (interface 1.3).
+    pub fn shared_folders(&self) -> Vec<SharedFolder> {
+        let mut out: Vec<SharedFolder> = self
+            .ready()
+            .filter(|(_, _, m)| m.knows_minor(3))
+            .flat_map(|(_, _, m)| m.folders.iter().copied())
+            .collect();
+        out.sort();
+        out.dedup();
+        out
     }
 
     /// Every plugin file found, in folder order and then by name.
@@ -968,6 +1021,175 @@ impl Plugins {
         }
     }
 
+    /// The ready plugins with a settings window (interface 1.3), in plugin
+    /// order.
+    pub fn with_settings_window(&self) -> Vec<&Found> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(3) && m.settings_window)
+            .map(|(_, f, _)| f)
+            .collect()
+    }
+
+    /// What the settings window of `plugin` (one of
+    /// [`Plugins::with_settings_window`]) shows now, loading it if needed.
+    pub fn settings_window(&self, plugin: &Found) -> Result<TabContent, Error> {
+        let index = self.settings_index(plugin)?;
+        self.window_answer(index, &Request::SettingsWindow)
+    }
+
+    /// Tells `plugin` that the user used the widget `widget` of its settings
+    /// window, and returns the window's contents after it.
+    pub fn settings_event(
+        &self,
+        plugin: &Found,
+        widget: &str,
+        event: TabEvent,
+    ) -> Result<TabContent, Error> {
+        let index = self.settings_index(plugin)?;
+        let answer = self.window_answer(
+            index,
+            &Request::SettingsEvent {
+                widget: widget.to_owned(),
+                event,
+            },
+        );
+        match answer {
+            // As for tabs: an ordinary error is said in the footer, and the
+            // window keeps showing what it shows now.
+            Err(e) if plugin.failure().is_none() => {
+                let name = plugin.name();
+                self.0.core.notify(Level::Warning, format!("{name}: {e}"));
+                self.window_answer(index, &Request::SettingsWindow)
+            }
+            answer => answer,
+        }
+    }
+
+    fn settings_index(&self, plugin: &Found) -> Result<usize, Error> {
+        let index = self.index_of(plugin);
+        let usable = self
+            .ready()
+            .any(|(i, _, m)| i == index && m.knows_minor(3) && m.settings_window);
+        if usable {
+            Ok(index)
+        } else {
+            Err(Error::not_found(format!(
+                "{} has no settings window that can be used",
+                plugin.name()
+            )))
+        }
+    }
+
+    fn window_answer(&self, index: usize, request: &Request<'_>) -> Result<TabContent, Error> {
+        match self.request(index, request)? {
+            Answer::Tab(content) => match content.problems().into_iter().next() {
+                None => Ok(*content),
+                Some(problem) => Err(self.fail(
+                    index,
+                    format!("its settings window can't be shown ({problem})"),
+                )),
+            },
+            other => Err(self.unexpected(index, &other)),
+        }
+    }
+
+    /// The sections the ready plugins add to the track dialog for a track
+    /// of class `class` (interface 1.3), in plugin order.
+    pub fn track_sections(&self, class: InstrumentClass) -> Vec<SectionRef<'_>> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(3))
+            .flat_map(|(index, plugin, m)| {
+                m.track_sections
+                    .iter()
+                    .filter(move |spec| spec.shows_for(class))
+                    .map(move |spec| SectionRef {
+                        plugin,
+                        spec,
+                        index,
+                    })
+            })
+            .collect()
+    }
+
+    /// What `section` shows for `track`, whose settings for the section's
+    /// plugin are `settings` (a JSON object), loading the plugin if needed:
+    /// the contents and the settings the plugin hands back.
+    pub fn track_section(
+        &self,
+        section: SectionRef<'_>,
+        track: &TrackInfo,
+        settings: &str,
+    ) -> Result<(TabContent, String), Error> {
+        self.section_answer(
+            section,
+            &Request::TrackSection {
+                section: section.spec.id.clone(),
+                track: track.clone(),
+                settings: settings.to_owned(),
+            },
+        )
+    }
+
+    /// Tells the plugin of `section` that the user used its widget `widget`
+    /// for `track`; returns the section's contents and the track's settings
+    /// after it. An ordinary error is said in the footer, and the settings
+    /// stay as they were.
+    pub fn track_section_event(
+        &self,
+        section: SectionRef<'_>,
+        track: &TrackInfo,
+        settings: &str,
+        widget: &str,
+        event: TabEvent,
+    ) -> Result<(TabContent, String), Error> {
+        let answer = self.section_answer(
+            section,
+            &Request::TrackSectionEvent {
+                section: section.spec.id.clone(),
+                track: track.clone(),
+                settings: settings.to_owned(),
+                widget: widget.to_owned(),
+                event,
+            },
+        );
+        match answer {
+            Err(e) if section.plugin.failure().is_none() => {
+                let name = section.plugin.name();
+                self.0.core.notify(Level::Warning, format!("{name}: {e}"));
+                self.track_section(section, track, settings)
+            }
+            answer => answer,
+        }
+    }
+
+    fn section_answer(
+        &self,
+        section: SectionRef<'_>,
+        request: &Request<'_>,
+    ) -> Result<(TabContent, String), Error> {
+        match self.request(section.index, request)? {
+            Answer::TrackSection { content, settings } => {
+                let problem = content.problems().into_iter().next().or_else(|| {
+                    match serde_json::from_str::<Value>(&settings) {
+                        Ok(Value::Object(_)) => None,
+                        _ => Some("its settings are not a JSON object".to_owned()),
+                    }
+                });
+                match problem {
+                    None => Ok((*content, settings)),
+                    Some(problem) => Err(self.fail(
+                        section.index,
+                        format!(
+                            "its track section {} can't be shown ({problem})",
+                            section.spec.title
+                        ),
+                    )),
+                }
+            }
+            other => Err(self.unexpected(section.index, &other)),
+        }
+    }
+
     /// Whether any ready plugin subscribes to events of `kind`, so the core
     /// can skip preparing events nobody hears.
     pub fn wants(&self, kind: EventKind) -> bool {
@@ -1263,6 +1485,7 @@ impl Plugins {
             Answer::Done => "\"done\"",
             Answer::Read2 { .. } => "a score",
             Answer::Report(_) => "a report",
+            Answer::TrackSection { .. } => "a track section",
         };
         self.fail(
             index,
@@ -1358,6 +1581,25 @@ impl Plugins {
                     "a plugin's settings must be a JSON object",
                 )),
             },
+            HostRequest::Notify2 { level, text, link } => {
+                if is_https(&link.url) {
+                    self.0.core.notify_with_link(
+                        level.into(),
+                        format!("{}: {text}", manifest.name),
+                        link,
+                    );
+                    Ok(HostAnswer::Done)
+                } else {
+                    Err(Error::new(
+                        ErrorKind::Invalid,
+                        format!(
+                            "a footer link must be an https: address, and {:?} isn't",
+                            link.url
+                        ),
+                    ))
+                }
+            }
+            HostRequest::Folders => self.plugin_folders(manifest).map(HostAnswer::Folders),
             HostRequest::Service {
                 interface,
                 method,
@@ -1383,6 +1625,60 @@ impl Plugins {
             Err(e) => (Status::PANICKED, e.to_string().into_bytes()),
         }
     }
+}
+
+impl Plugins {
+    /// The folders of the plugin with `manifest`, its own two created on
+    /// the way.
+    fn plugin_folders(&self, manifest: &Manifest) -> Result<PluginFolders, Error> {
+        let Some(folders) = self.0.folders.get() else {
+            return Err(Error::not_found(
+                "this program keeps no folders for plugins",
+            ));
+        };
+        let text = |path: &Path| {
+            path.to_str().map(str::to_owned).ok_or_else(|| {
+                Error::new(
+                    ErrorKind::Unsupported,
+                    format!("the folder {} is not UTF-8 text", path.display()),
+                )
+            })
+        };
+        let data = folders.plugin_data(&manifest.id);
+        let cache = folders.plugin_cache(&manifest.id);
+        for dir in [&data, &cache] {
+            std::fs::create_dir_all(dir).map_err(|e| {
+                Error::new(
+                    ErrorKind::Failed,
+                    format!("cannot create {}: {e}", dir.display()),
+                )
+            })?;
+        }
+        let shared = if manifest.knows_minor(3) {
+            manifest
+                .folders
+                .iter()
+                .map(|&f| Ok((f, text(&folders.shared(f))?)))
+                .collect::<Result<Vec<_>, Error>>()?
+        } else {
+            Vec::new()
+        };
+        Ok(PluginFolders {
+            data: text(&data)?,
+            cache: text(&cache)?,
+            shared,
+        })
+    }
+}
+
+/// Whether `url` is an `https:` address with a host: the only links the
+/// footer opens.
+pub fn is_https(url: &str) -> bool {
+    url.get(..8)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https://"))
+        && url.len() > 8
+        && !url[8..].starts_with('/')
+        && !url.chars().any(char::is_whitespace)
 }
 
 /// What a plugin file is, from its manifest alone.

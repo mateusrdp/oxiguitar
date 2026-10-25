@@ -13,6 +13,7 @@
 - [Services](services.md)
 - [Instruments](instruments.md)
 - [Settings](settings.md)
+- [Track sections](track-sections.md)
 - [Testing](testing.md)
 - [Building for every system](building.md)
 - [Installing and sharing](installing.md)

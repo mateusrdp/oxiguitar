@@ -28,10 +28,14 @@ When you save over the file the score came from, the list also names what OxiGui
 
 To try a file without changing it, use Save As.
 
+## Plugins' settings for each track
+
+Some plugins add their own settings to a track's **Properties…** (the NAM plugin's amp model, for example). No score format holds them, so OxiGuitar keeps them in a small file beside the score, named after it: `song.gp3` keeps them in `song.gp3.oxg`. Saving writes it and opening reads it; keep the two files together when you copy or share a song. Without the .oxg file the score opens as usual, with those settings empty. Guitar Pro and other programs ignore it.
+
 ## Before closing
 
 Opening another file, quitting, or closing the window with changes not yet saved asks first: **Save**, **Don't Save** (the changes are lost), or **Cancel**.
 
 ## From the command line
 
-`oxiguitar-cli convert song.gp song.gp5` writes a file in the format of the new file's extension and prints what it couldn't hold.
+`oxiguitar-cli convert song.gp song.gp5` writes a file in the format of the new file's extension and prints what it couldn't hold. It copies `song.gp.oxg`, if there is one, to `song.gp5.oxg`.
