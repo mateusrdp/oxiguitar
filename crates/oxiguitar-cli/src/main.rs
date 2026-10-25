@@ -53,14 +53,15 @@ Commands:
                              (start, end, string, pitch, velocity, effects)
                              and the metronome's clicks
   play <file> [--from BAR] [--loop FIRST-LAST] [--speed PERCENT]
-       [--count-in] [--metronome] [--tracks 1,3] [--device NAME]
+       [--count-in] [--metronome] [--tracks 1,3] [--device NAME | --wav FILE]
                              Play a score through the installed instrument
                              and audio-device plugins, printing each bar
                              as it is heard: from a bar, looping bars, at
                              25 to 200 % speed (the pitch stays), after a
                              bar of count-in, with the metronome, only some
                              tracks, on an output other than the
-                             system's default. Ctrl + C stops it
+                             system's default, or into a WAV file.
+                             Ctrl + C stops it
   tools                      List the tools (the app's Tools menu)
   specimen [--png FILE] [--pdf FILE] [--scale N] [--dark]
                              Draw the render spike's test page into a PNG

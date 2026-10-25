@@ -48,6 +48,7 @@ use oxiguitar_host::api::Blob;
 use oxiguitar_host::api::class::InstrumentClass;
 use oxiguitar_host::api::display::Point;
 use oxiguitar_host::api::event::{Event, EventKind, Playback, Position};
+use oxiguitar_host::api::manifest::SharedFolder;
 use oxiguitar_host::api::message::{
     Answer, Error, Prepare, PrepareEffect, PreparedTrack, Request, TrackInfo,
 };
@@ -120,6 +121,16 @@ pub fn build(
     Ok(oxp)
 }
 
+/// The sound set the suite puts in the `soundfonts` folder of every plugin
+/// whose manifest lists that folder: a SoundFont 2 file holding a looped
+/// 480 Hz sine with no envelope delay or attack, as a melodic preset (bank 0,
+/// program 0) and a drum kit (bank 128, program 0). Every note of it is
+/// heard from its first frame, so an instrument that plays from a sound set
+/// can show it keeps time. The SoundFont plugin's tests make it again and
+/// check this copy (`OXIGUITAR_BLESS=1 cargo test -p
+/// oxiguitar-soundfont-plugin` rewrites it).
+pub const TEST_SET: &[u8] = include_bytes!("test-sine.sf2");
+
 /// Our own plugins, shipped with OxiGuitar: each crate's package name and
 /// its file's name (`NAME.oxp`). Each lives in `plugins/NAME/` as
 /// `oxiguitar-NAME-plugin`; `plugins/test` is never shipped.
@@ -130,6 +141,11 @@ pub const OURS: &[(&str, &str)] = &[
     ("oxiguitar-gpx-plugin", "gpx"),
     ("oxiguitar-gp-plugin", "gp"),
 ];
+
+/// Our instrument plugins (interface 1.3), shipped with the format plugins:
+/// each crate's package name and its file's name. [`build_ours`] builds
+/// them too.
+pub const OUR_INSTRUMENTS: &[(&str, &str)] = &[("oxiguitar-soundfont-plugin", "soundfont")];
 
 /// Our audio-device plugins (interface 1.3), shipped with the format
 /// plugins: each crate's package name, its file's name and the system it
@@ -171,7 +187,7 @@ pub fn build_devices(workspace: &Path, release: bool) -> Result<(PathBuf, Vec<St
     Ok((folder, names))
 }
 
-/// Builds every plugin of [`OURS`], each on its own so it carries only its
+/// Builds every plugin of [`OURS`] and [`OUR_INSTRUMENTS`], each on its own so it carries only its
 /// own code (built together, Cargo would give each the features of all),
 /// and puts the files in the workspace's `target/oxp/ours-debug/` or
 /// `ours-release/`, replacing what was there. Returns that folder, a plugin
@@ -183,7 +199,7 @@ pub fn build_ours(workspace: &Path, release: bool) -> Result<PathBuf, String> {
         "ours-debug"
     });
     std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
-    for (package, name) in OURS {
+    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS) {
         let built = build(workspace, package, name, release)?;
         let to = folder.join(format!("{name}.oxp"));
         // A new file: a program that loaded the old one keeps its own.
@@ -269,7 +285,18 @@ pub fn check(oxp: &Path) -> Report {
         |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
         None,
     ) {
-        let _ = folders.ensure_shared(&plugins.shared_folders());
+        let shared = plugins.shared_folders();
+        let _ = folders.ensure_shared(&shared);
+        if shared.contains(&SharedFolder::Soundfonts) {
+            // A sound set for instruments that play from one: a looped sine,
+            // starting on its frame (TEST_SET).
+            let _ = std::fs::write(
+                folders
+                    .shared(SharedFolder::Soundfonts)
+                    .join("test-sine.sf2"),
+                TEST_SET,
+            );
+        }
         plugins.use_folders(folders);
     }
     let Some(found) = plugins.found().first() else {

@@ -350,3 +350,73 @@ fn events_prints_the_score_as_it_plays() {
             && text.contains("\nnote ")
     );
 }
+
+/// A home whose plugin folder holds our format and instrument plugins and
+/// whose `soundfonts` folder holds the contract suite's test set, which
+/// the SoundFont plugin plays before any set of the system's.
+fn sound_home() -> &'static Path {
+    static HOME: OnceLock<PathBuf> = OnceLock::new();
+    HOME.get_or_init(|| {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let built =
+            oxiguitar_plugin_test::build_ours(&workspace, false).expect("our plugins build");
+        let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-sound-home");
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(home.join("plugins")).unwrap();
+        std::fs::create_dir_all(home.join("soundfonts")).unwrap();
+        for (_, name) in oxiguitar_plugin_test::OURS
+            .iter()
+            .chain(oxiguitar_plugin_test::OUR_INSTRUMENTS)
+        {
+            let file = format!("{name}.oxp");
+            std::fs::copy(built.join(&file), home.join("plugins").join(&file)).unwrap();
+        }
+        std::fs::write(
+            home.join("soundfonts").join("test-sine.sf2"),
+            oxiguitar_plugin_test::TEST_SET,
+        )
+        .unwrap();
+        home
+    })
+}
+
+#[test]
+fn play_into_a_wav_file_needs_no_sound_card() {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("played.wav");
+    let _ = std::fs::remove_file(&out);
+    let o = Command::new(env!("CARGO_BIN_EXE_oxiguitar-cli"))
+        .env("OXIGUITAR_HOME", sound_home())
+        .arg("play")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .arg("--wav")
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let said = String::from_utf8_lossy(&o.stdout);
+    assert!(said.contains("with SoundFont"), "{said}");
+    let wav = std::fs::read(&out).unwrap();
+    assert_eq!(&wav[..4], b"RIFF");
+    assert_eq!(&wav[8..16], b"WAVEfmt ");
+    assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 48_000);
+    let samples: Vec<i16> = wav[44..]
+        .chunks_exact(2)
+        .map(|b| i16::from_le_bytes([b[0], b[1]]))
+        .collect();
+    assert!(samples.iter().any(|v| v.unsigned_abs() > 100), "silent");
+    // The song and two seconds after it.
+    let seconds = samples.len() as f64 / 2.0 / 48_000.0;
+    let events = cli()
+        .arg("events")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .output()
+        .unwrap();
+    let length: f64 = String::from_utf8_lossy(&events.stdout)
+        .lines()
+        .find_map(|l| l.strip_prefix("length ")?.trim().parse().ok())
+        .unwrap();
+    assert!(
+        (seconds - length - 2.0).abs() < 0.1,
+        "{seconds} s for a song of {length} s"
+    );
+}

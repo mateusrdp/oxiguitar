@@ -22,7 +22,7 @@ OxiGuitar values your privacy first. It never uploads anything. No telemetry, no
 
 **v0.5.0, the editor (milestone M3), published as a pre-release on 21 October 2026.**
 
-OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). But it does not play anything yet: the player (milestone M4, NAM included) is what we are building now, and v1.0 follows it. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
+OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). The window does not play anything yet: the player (milestone M4, NAM included) is what we are building now, and v1.0 follows it. The command-line tool already does: `oxiguitar-cli play` plays a score with the best SoundFont it finds (yours in the `soundfonts` folder, else your Linux distribution's; Windows' and macOS's own sets come next). See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## How to get involved
 
@@ -85,7 +85,7 @@ cargo test
 
 Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The `lib…-dev` packages are the system libraries OxiGuitar needs: fontconfig, xkbcommon and Wayland for fonts, keyboard and windows, and ALSA and PipeWire (with libclang, which builds PipeWire's bindings) for the audio-device plugins.
 
-The program opens files only through format plugins (one per format, `.oxp` files). `scripts/build-plugins.sh` builds ours (Guitar Pro 3, 4, 5, 6 and 7–8) and puts them where a build from source looks for them (`target/lib/oxiguitar/plugins/` on Linux); run it again after changing a plugin or a reader. The release packages hold the program alone; ours come as `oxiguitar-plugins-basic` (.deb, .rpm) and as a zip for each system.
+The program opens files only through format plugins (one per format, `.oxp` files). `scripts/build-plugins.sh` builds ours (Guitar Pro 3, 4, 5, 6 and 7–8, the SoundFont player and the audio outputs) and puts them where a build from source looks for them (`target/lib/oxiguitar/plugins/` on Linux); run it again after changing a plugin or a reader. The release packages hold the program alone; ours come as `oxiguitar-plugins-basic` (.deb, .rpm) and as a zip for each system.
 
 Run the desktop app, optionally with a file to open:
 
@@ -106,6 +106,7 @@ cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --png page -
 cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --tracks all --dark --pdf song-dark.pdf
 cargo run --release -p oxiguitar-cli -- render path/to/your/song.gp --tool infer-key-signatures --no-dynamics --pdf keys.pdf
 cargo run --release -p oxiguitar-cli -- convert path/to/your/song.gp3 song.gp
+cargo run --release -p oxiguitar-cli -- play path/to/your/song.gp --wav song.wav
 ```
 
 ## Writing plugins
