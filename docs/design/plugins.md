@@ -21,7 +21,7 @@ This document is the design, accepted by Mateus on 18 Oct 2026 with his answers 
 | The player's transport: play, play selection, stop, pause, rewind, count-in, loop, metronome; the cursor; turning the score into timed events (repeats, jumps, tempo, effects) | Sound: the MIDI synthesiser, NAM guitar, RSE banks, realistic drums |
 | The mixer: per-track volume, pan, mute and solo, and playback speed (instruments from several plugins are mixed here) | Audio devices (PipeWire, ALSA, CoreAudio, WASAPI) and MIDI devices |
 | settings.json, the plugin folders, the plugin host, and the **plugin manager** (Tools → Plugins; Mateus, 18 Oct 2026) | |
-| No format detection and no catalogue: what can be opened is what the installed plugins recognise (Mateus, 18 Oct 2026; "How the host loads and chooses") | Platform gaps we may fill one day: Wayland drops (ADR 0006), macOS open-document events (ADR 0007) |
+| No format detection and no catalogue: what can be opened is what the installed plugins recognise (Mateus, 18 Oct 2026; "How the host loads and chooses") | Platform gaps accepted for good: Wayland drops (ADR 0006), macOS open-document events (ADR 0007) |
 
 The core compiles per target, so a Windows build holds no Linux code. On Linux the windowing toolkit would carry both X11 and Wayland in one binary, so **there are two Linux builds of the core** (Mateus, 18 Oct 2026): a Wayland build, the main one, and an X11 build for desktops that still need it. X11 is deprecated from the start, as the desktops are leaving it, and the X11 build will be dropped. Each build enables only its own Slint and winit backend (`backend-winit-wayland` or `backend-winit-x11`), through a Cargo feature of `oxiguitar-app` (`wayland`, the default, or `x11`).
 
