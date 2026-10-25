@@ -131,6 +131,46 @@ pub const OURS: &[(&str, &str)] = &[
     ("oxiguitar-gp-plugin", "gp"),
 ];
 
+/// Our audio-device plugins (interface 1.3), shipped with the format
+/// plugins: each crate's package name, its file's name and the system it
+/// runs on (its manifest's `os`). Elsewhere each builds as a plugin whose
+/// service is never available, and isn't shipped.
+pub const OUR_DEVICES: &[(&str, &str, &str)] = &[
+    ("oxiguitar-audio-pipewire-plugin", "audio-pipewire", "linux"),
+    ("oxiguitar-audio-alsa-plugin", "audio-alsa", "linux"),
+    ("oxiguitar-audio-wasapi-plugin", "audio-wasapi", "windows"),
+    (
+        "oxiguitar-audio-coreaudio-plugin",
+        "audio-coreaudio",
+        "macos",
+    ),
+];
+
+/// Builds the plugins of [`OUR_DEVICES`] that run on this system into the
+/// workspace's `target/oxp/devices-debug/` or `devices-release/`, as
+/// [`build_ours`] does. Returns that folder and the files' names.
+pub fn build_devices(workspace: &Path, release: bool) -> Result<(PathBuf, Vec<String>), String> {
+    let folder = workspace.join("target").join("oxp").join(if release {
+        "devices-release"
+    } else {
+        "devices-debug"
+    });
+    std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
+    let mut names = Vec::new();
+    for (package, name, os) in OUR_DEVICES {
+        if *os != std::env::consts::OS {
+            continue;
+        }
+        let built = build(workspace, package, name, release)?;
+        let file = format!("{name}.oxp");
+        let to = folder.join(&file);
+        let _ = std::fs::remove_file(&to);
+        std::fs::copy(&built, &to).map_err(|e| format!("{}: {e}", to.display()))?;
+        names.push(file);
+    }
+    Ok((folder, names))
+}
+
 /// Builds every plugin of [`OURS`], each on its own so it carries only its
 /// own code (built together, Cargo would give each the features of all),
 /// and puts the files in the workspace's `target/oxp/ours-debug/` or
