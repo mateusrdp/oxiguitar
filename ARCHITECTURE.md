@@ -61,7 +61,7 @@ Crates marked with a later milestone do not exist yet. Throwaway experiments liv
 - **Small core, everything else a plugin** (from M2). The core never carries or loads code it cannot use on the machine it runs on; it compiles per target, and a plugin's code loads only when one of its contributions is used.
 - **Thin GUI.** All logic lives in toolkit-free crates, because Rust GUI toolkits change fast.
 - **Untrusted input.** Files come from anywhere. Readers never panic, never allocate without bounds checks, and report errors with the file and position.
-- **No network** except downloads the user starts (NET-1, NET-2). CI enforces this.
+- **No network** and no downloads; the only use planned is an update check the user starts (NET-1, NET-2, as changed on 21 Oct 2026). CI enforces this.
 - **No polling.** Code reacts to events or waits on something that wakes it; see CONTRIBUTING.md, "Design principles".
 
 ## Where decisions are recorded

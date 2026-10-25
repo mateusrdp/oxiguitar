@@ -30,4 +30,4 @@ What is settled, so you can plan:
 
   `plays` lists what it covers (absent: everything); `does_not_play` takes classes out. The player offers an instrument only for the tracks it plays.
 - **Audio crosses as raw sample buffers**, rendered on the audio thread: no allocation, no locks, no waiting there. The contract suite will check that.
-- **Large data** (SoundFonts, amplifier models) goes in the plugin's data folder, downloaded only when the user asks, through a consent dialog of the core's that comes with the first plugin needing it.
+- **Large data** (sound sets, amplifier models) is files the user puts in a folder, such as the `soundfonts` folder beside `plugins`; OxiGuitar and our plugins download nothing (Mateus, 21 Oct 2026). What a plugin makes from them (a cache) goes in its data folder. The player's design: [docs/design/player.md](https://github.com/mateusrdp/oxiguitar/blob/develop/docs/design/player.md).

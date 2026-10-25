@@ -37,7 +37,7 @@ You keep the copyright on what you contribute. Your name goes in [CREDITS.md](CR
 - **Minimum Rust version:** 1.99 (`rust-version` in `Cargo.toml`), built with Rust from [rustup](https://rustup.rs) rather than a distribution's package (Mateus, 24 Oct 2026). CI tests that version and the latest stable. Raise it only when something needs it, in a pull request of its own: Debian's archive builds with the rustc Debian unstable has (1.97 in October 2026), so before OxiGuitar can be uploaded there, unstable must have caught up with ours ([docs/debian.md](docs/debian.md)).
 - **Exact time.** Durations are exact fractions; never use floating point for musical time.
 - **Edits are commands.** Every change to a score goes through a reversible command, so undo and redo always work.
-- **Privacy.** No telemetry, analytics, crash uploads or background requests, ever. Network code may run only after the user asks for a download. CI enforces this (NET-5).
+- **Privacy.** No telemetry, analytics, crash uploads or background requests, ever, and no downloads: sound sets, models and plugins are files the user places (Mateus, 21 Oct 2026). The only network use planned is an update check the user starts. CI enforces this (NET-5).
 
 ## Known platform gaps
 
