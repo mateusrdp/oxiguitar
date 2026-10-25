@@ -3,8 +3,10 @@
 
 //! The engine allocates nothing while it plays: the real-time rule
 //! (docs/design/player.md, "Staying in sync"), counted by an instrumented
-//! global allocator. A test program of its own, with one test, so nothing
-//! else allocates while it counts.
+//! global allocator. A test program of its own, without the test harness
+//! (`harness = false`): the counter sees every thread, and the harness's
+//! own thread allocates while a test runs (it failed once on CI's Linux
+//! ARM64 that way, 4 allocations). Here only this thread runs.
 
 use std::alloc::System;
 
@@ -16,7 +18,11 @@ use common::{RATE, SIZES, rig, timeline};
 #[global_allocator]
 static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
 
-#[test]
+fn main() {
+    the_engine_allocates_nothing_while_it_plays();
+    println!("the engine allocates nothing while it plays: ok");
+}
+
 fn the_engine_allocates_nothing_while_it_plays() {
     let timeline = timeline();
     let (mut engine, mut control, _, schedule) = rig(&timeline, 1024);
