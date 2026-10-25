@@ -41,6 +41,7 @@ mod effect_form;
 mod footer;
 mod icons;
 mod inspector;
+mod links;
 mod manager;
 mod palette;
 mod plugin_tabs;
@@ -1005,6 +1006,12 @@ fn main() -> Result<(), slint::PlatformError> {
     install_plugin_tab_callbacks(&ui, &app);
     let a = app.clone();
     ui.on_open_plugin_manager(move || open_plugin_manager(&a));
+    let a = app.clone();
+    ui.on_open_donation(move || {
+        if let Err(e) = links::open(links::DONATE) {
+            message(&a, Level::Error, e);
+        }
+    });
     // Closing the main window ends the program, even with the plugin
     // manager's window open (the event loop would otherwise wait for the
     // last window).

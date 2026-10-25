@@ -2,7 +2,7 @@
 
 From top to bottom:
 
-- **Menus**: File, Edit, View, Tools, Help.
+- **Menus**: File, Edit, View, Tools, Help. **Help → About** says which version you have and where OxiGuitar looks for plugins; it also has a **Donate with PayPal** button (it opens the page in your browser) and a QR code to scan with your phone, if you'd like to buy Mateus a drink.
 - **Toolbar**: buttons in groups. File: Open, Save, Export PDF. Edit: Undo, Redo. **View → Toolbar** hides it. Plugins will add their own groups.
 - **Top panel**: the **Player** tab, with play, play selection, pause, stop and rewind, count-in, loop and metronome, and the choice of output (how the score will sound). They stay greyed out until an output plugin is installed ([Settings and plugins](plugins.md)).
 - **Left panel, the score, right panel.** The left panel holds the **palette**, every notation and effect tool of the editor as a button, in groups (voices and modes, bar, note, effects, notation); hover over one to see its name and key. Those that come with Guitar Pro 8's notation (M5) are greyed out and say so. Click a group's heading to fold it away or bring it back. The **search field** at its top (**Ctrl + F**) shows only the tools whose names hold the words you type ("slide", "nat harm"); **Escape** empties it, **Enter** goes back to the score. The right panel holds the **Inspector**, with the caret's bar, note and beat ([Editing](editing.md)), and the **Song** tab, with the score's information. The score sits on a dark background whatever the page colour, with its zoom slider in the corner ([Zoom](zoom.md)).
