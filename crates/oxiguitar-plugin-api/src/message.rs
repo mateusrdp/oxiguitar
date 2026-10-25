@@ -30,7 +30,10 @@
 //! ([`Request::TrackSection`], [`Request::TrackSectionEvent`],
 //! [`Answer::TrackSection`]), footer messages with a link
 //! ([`HostRequest::Notify2`]) and the plugin's folders
-//! ([`HostRequest::Folders`]).
+//! ([`HostRequest::Folders`]); then instruments and effects, prepared here
+//! ([`Request::Prepare`], [`Request::PrepareEffect`], [`Answer::Prepared`],
+//! [`Request::Release`]) and run on the audio thread
+//! ([`crate::realtime`]).
 
 use std::fmt;
 
@@ -232,6 +235,68 @@ pub enum Request<'a> {
         /// What the user did.
         event: TabEvent,
     },
+    /// Get the instrument `prepare.instrument` ready to play its tracks:
+    /// load their sounds now, off the audio thread. Answered with
+    /// [`Answer::Prepared`], an instance the audio thread renders
+    /// ([`crate::realtime::RealtimeTableV1::render`]). Since interface 1.3.
+    Prepare(Box<Prepare>),
+    /// Get the effect `prepare.effect` ready for one track. Answered with
+    /// [`Answer::Prepared`]. Since interface 1.3.
+    PrepareEffect(Box<PrepareEffect>),
+    /// The host is done with `instance` (it is no longer rendered): free
+    /// it. Answered with [`Answer::Done`]. Since interface 1.3.
+    Release {
+        /// The instance.
+        instance: u64,
+    },
+}
+
+/// What an instrument is prepared for. Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Prepare {
+    /// The instrument's id, from the manifest's `instruments`.
+    pub instrument: String,
+    /// The sample rate, in frames a second.
+    pub rate: u32,
+    /// The most frames one render call asks for.
+    pub frames: u32,
+    /// The tracks it plays, in the order of their buffers
+    /// ([`crate::realtime::RenderCall::outputs`]) and of
+    /// [`crate::realtime::RtNote::track`].
+    pub tracks: Vec<PreparedTrack>,
+}
+
+/// What an effect is prepared for. Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PrepareEffect {
+    /// The effect's id, from the manifest's `effects`.
+    pub effect: String,
+    /// The sample rate.
+    pub rate: u32,
+    /// The most frames one call asks for.
+    pub frames: u32,
+    /// The track it runs on.
+    pub track: PreparedTrack,
+}
+
+/// A track as an instrument or effect is prepared for it. Since interface
+/// 1.3.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PreparedTrack {
+    /// The track, as the track dialog's sections know it.
+    pub info: TrackInfo,
+    /// Its General MIDI program, 0 to 127.
+    pub program: u8,
+    /// A drum kit.
+    pub percussion: bool,
+    /// Its open strings' MIDI keys, highest string first; empty without
+    /// strings.
+    pub tuning: Vec<u8>,
+    /// Its capo's fret, 0 for none.
+    pub capo: u8,
+    /// The track's settings for this plugin (its track section), a JSON
+    /// object as text.
+    pub settings: String,
 }
 
 /// A track, as the track dialog's sections are told about it. Since
@@ -291,6 +356,17 @@ pub enum Answer<'a> {
         /// The track's settings for this plugin, a JSON object as text.
         settings: String,
     },
+    /// An instrument or effect, ready. Since interface 1.3.
+    Prepared {
+        /// The instance the audio thread names in its calls.
+        instance: u64,
+        /// The frames its sound comes late by.
+        latency: u32,
+        /// How many frames late a note may start, at most: a synthesiser
+        /// that renders in blocks starts notes on the next block (7 for
+        /// blocks of 8); 0 for one that starts every note on its frame.
+        resolution: u32,
+    },
 }
 
 impl Answer<'_> {
@@ -311,6 +387,15 @@ impl Answer<'_> {
             Answer::TrackSection { content, settings } => {
                 Answer::TrackSection { content, settings }
             }
+            Answer::Prepared {
+                instance,
+                latency,
+                resolution,
+            } => Answer::Prepared {
+                instance,
+                latency,
+                resolution,
+            },
         }
     }
 }

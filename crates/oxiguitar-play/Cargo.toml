@@ -11,10 +11,21 @@ publish.workspace = true
 
 [dependencies]
 oxiguitar-model.workspace = true
+# The notes as they cross to instrument plugins (`realtime`).
+oxiguitar-plugin-api.workspace = true
+rtrb.workspace = true
+# Instrument plugins as the engine's sources (`plugin_source`), for the app
+# and the command-line tool.
+oxiguitar-host = { workspace = true, optional = true }
+
+[features]
+host = ["dep:oxiguitar-host"]
 
 [dev-dependencies]
 oxiguitar-formats.workspace = true
 oxiguitar-testgen.workspace = true
+# Counts allocations in tests/engine_allocations.rs (MIT).
+stats_alloc = "0.1"
 
 [lints]
 workspace = true

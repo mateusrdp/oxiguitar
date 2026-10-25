@@ -28,7 +28,8 @@ The template's:
 | `requires` | no | The service interfaces it calls through the host ([Services](services.md)) |
 | `formats` | no | The file formats it reads or writes ([Formats](formats.md)) |
 | `services` | no | The services it implements ([Services](services.md)) |
-| `instruments` | no | The instruments it offers the player ([Instruments](instruments.md)) |
+| `instruments` | no | The instruments it offers the player; used from interface 1.3 ([Instruments](instruments.md)) |
+| `effects` | no | The effects it offers a track, after its instrument; interface 1.3 ([Instruments](instruments.md)) |
 | `tabs` | no | Its tabs; interface 1.1 ([Tabs](tabs.md)) |
 | `events` | no | The kinds of event it wants: `"score"`, `"selection"`, `"playback"`; interface 1.1 ([Events](events.md)) |
 | `tools` | no | Its entries in the Tools menu; interface 1.2 ([Tools](tools.md)) |

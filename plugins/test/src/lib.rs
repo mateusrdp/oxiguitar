@@ -15,9 +15,9 @@
 //!   only when settings.json pins it), `unavailable` (its probe says no,
 //!   though its priority is the highest that can run) and `elsewhere`
 //!   (only on Plan 9, so never chosen);
-//! - two instrument declarations, one playing only drums and one
-//!   everything but drums (the manifest alone: instruments get their
-//!   interface with the player, M4);
+//! - two instruments, one playing only drums and one everything but drums,
+//!   both a sine per note (interface 1.3: [`sine`]), and the effect `gain`,
+//!   which halves a track;
 //! - two tabs (interface 1.1): `panel`, in the bottom area, with one widget
 //!   of every kind and a canvas that marks where the pointer last went
 //!   down, and `side`, in the right area, with one line of text. `panel`'s
@@ -44,6 +44,8 @@
 //! `link` shows a footer warning linking to the address it is given, and
 //! `folders` writes `hello.txt` into the plugin's data folder and returns
 //! the data, cache and `soundfonts` folders, one per line.
+
+pub mod sine;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
@@ -306,6 +308,15 @@ impl Plugin for TestPlugin {
 
     fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
         (id == "test").then_some(&TestSection as &dyn TrackSection)
+    }
+
+    fn instrument(&self, id: &str) -> Option<&dyn oxiguitar_plugin::Instrument> {
+        matches!(id, "drums" | "no-drums")
+            .then_some(&sine::Sine as &dyn oxiguitar_plugin::Instrument)
+    }
+
+    fn effect(&self, id: &str) -> Option<&dyn oxiguitar_plugin::Effect> {
+        (id == "gain").then_some(&sine::Gain as &dyn oxiguitar_plugin::Effect)
     }
 
     fn tab(&self, id: &str) -> Option<&dyn Tab> {

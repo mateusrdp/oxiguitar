@@ -117,10 +117,11 @@ fn the_test_plugin_passes_the_contract() {
     // 11 for formats and services; 2 tabs; 10 uses of the panel's widgets
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
     // of event, the selection in both its forms; 2 tools; the settings
-    // window and its 2 widgets; the track section and its 2 widgets.
+    // window and its 2 widgets; the track section and its 2 widgets; 2
+    // instruments and an effect, 4 real-time checks each.
     assert_eq!(
         report.passed.len(),
-        11 + 2 + 10 + 4 + 2 + 3 + 3,
+        11 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4,
         "{:#?}",
         report.passed
     );
@@ -1121,4 +1122,124 @@ fn interface_1_3_settings_windows_track_sections_links_and_folders() {
         "hello\n"
     );
     assert!(folders.plugin_cache("oxiguitar.test").is_dir());
+}
+
+#[test]
+fn the_real_time_checks_catch_allocations_system_calls_and_late_notes() {
+    let dir = folder("realtime", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    // As it should be: every check passes.
+    let fine = oxiguitar_plugin_test::check_realtime(&plugins, "{}");
+    assert!(fine.ok(), "{:#?}", fine.failed);
+    assert_eq!(fine.passed.len(), 3 * 4, "{:#?}", fine.passed);
+
+    // Allocating and yielding its thread on every render: both are caught.
+    let bad = oxiguitar_plugin_test::check_realtime(&plugins, r#"{"misbehave": true}"#);
+    let failed = bad.failed.join("\n");
+    assert!(
+        failed.contains("allocates nothing while rendering"),
+        "{failed}"
+    );
+    if cfg!(target_os = "linux") {
+        assert!(
+            failed.contains("makes no system call while rendering"),
+            "{failed}"
+        );
+    }
+    // A note 20 frames late, past a resolution of 0.
+    let late = oxiguitar_plugin_test::check_realtime(&plugins, r#"{"late": 20}"#);
+    let failed = late.failed.join("\n");
+    assert!(
+        failed.contains("started on frame 20, later than its resolution of 0"),
+        "{failed}"
+    );
+}
+
+#[test]
+fn the_engine_plays_a_plugin_instrument_on_its_frames() {
+    use oxiguitar_host::api::message::{Prepare, PreparedTrack, TrackInfo};
+    use oxiguitar_play::plugin_source::PluginSource;
+    use oxiguitar_play::{Route, Schedule, Slot, Sources, Timeline, engine};
+
+    let dir = folder("engine", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
+        .unwrap()
+        .score;
+    let timeline = Timeline::new(&score);
+    let tracks = score.tracks.len();
+    let class = InstrumentClass::of(
+        score.tracks[0].instrument.midi_program,
+        score.tracks[0].instrument.percussion,
+    );
+    let instrument = plugins.playable(class)[0];
+    let prepared: Vec<PreparedTrack> = (0..tracks)
+        .map(|i| PreparedTrack {
+            info: TrackInfo {
+                index: i as u32,
+                name: score.tracks[i].name.clone(),
+                class,
+            },
+            program: score.tracks[i].instrument.midi_program,
+            percussion: false,
+            tuning: Vec::new(),
+            capo: 0,
+            settings: "{}".into(),
+        })
+        .collect();
+    let instance = plugins
+        .prepare(
+            instrument,
+            Prepare {
+                instrument: String::new(),
+                rate: 48_000,
+                frames: 512,
+                tracks: prepared,
+            },
+        )
+        .unwrap();
+    let routes: Vec<Option<Route>> = (0..tracks)
+        .map(|t| Some(Route { source: 0, slot: t }))
+        .collect();
+    let schedule = Arc::new(Schedule::new(&timeline, &routes, 1));
+    let (mut engine, mut control) = engine(48_000, 512);
+    let mut sources = Sources::new(vec![Slot::new(
+        Box::new(PluginSource::new(
+            instance,
+            (0..tracks).map(|_| Vec::new()).collect(),
+        )),
+        (0..tracks).collect(),
+        512,
+    )]);
+    sources.fit(&schedule);
+    control.set_schedule(schedule.clone());
+    control.set_sources(sources);
+    let first = timeline
+        .notes
+        .iter()
+        .map(|n| n.start)
+        .fold(f64::MAX, f64::min);
+    // Play from a little before the first note; the device's callbacks
+    // are 100 frames.
+    let from = (first - 0.01).max(0.0);
+    control.play(from, false);
+    let mut out = vec![0.0f32; 200];
+    let mut left: Vec<f32> = Vec::new();
+    for _ in 0..48 {
+        engine.render(&mut out, 2, 0);
+        left.extend(out.iter().step_by(2));
+    }
+    let expected = ((first - from) * 48_000.0 - 1e-6).ceil() as usize;
+    let heard = left.iter().position(|v| v.abs() > 1e-4).unwrap();
+    assert_eq!(heard, expected, "the first note starts on its frame");
+    assert!(left[..expected].iter().all(|v| *v == 0.0));
+    control.pause();
+    engine.render(&mut out, 2, 0);
+    // The sources go back to the window, which drops them: the plugin
+    // releases its instance.
+    control.set_sources(Sources::new(Vec::new()));
+    engine.render(&mut out, 2, 0);
+    control.collect();
 }

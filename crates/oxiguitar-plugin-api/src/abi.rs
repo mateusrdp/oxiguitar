@@ -100,6 +100,28 @@ pub struct PluginTableV1 {
     pub start: unsafe extern "C" fn(host: *const HostTableV1, answer: *mut RawSink) -> Status,
     /// Answers one encoded [`crate::message::Request`].
     pub call: unsafe extern "C" fn(request: RawBytes, answer: *mut RawSink) -> Status,
+    /// The functions the audio thread calls (interface 1.3): null for a
+    /// plugin with no instrument or effect. Read only when `size` covers
+    /// it and `interface_minor` is 3 or more.
+    pub realtime: *const crate::realtime::RealtimeTableV1,
+}
+
+/// Interface 1.0's plugin table: [`PluginTableV1`] up to `call`, which a
+/// host reads from a plugin built before interface 1.3 (whose table ends
+/// there).
+#[repr(C)]
+#[derive(Debug)]
+pub struct PluginTableV1_0 {
+    /// As [`PluginTableV1::size`].
+    pub size: u32,
+    /// As [`PluginTableV1::interface_minor`].
+    pub interface_minor: u32,
+    /// As [`PluginTableV1::manifest`].
+    pub manifest: RawBytes,
+    /// As [`PluginTableV1::start`].
+    pub start: unsafe extern "C" fn(host: *const HostTableV1, answer: *mut RawSink) -> Status,
+    /// As [`PluginTableV1::call`].
+    pub call: unsafe extern "C" fn(request: RawBytes, answer: *mut RawSink) -> Status,
 }
 
 /// What the host hands a plugin at start: the host's services, which the
@@ -123,6 +145,14 @@ pub type EntryV1 = unsafe extern "C" fn() -> *const PluginTableV1;
 
 /// `size_of::<PluginTableV1>()` as a `u32`, for the table's `size` field.
 pub const PLUGIN_TABLE_V1_SIZE: u32 = std::mem::size_of::<PluginTableV1>() as u32;
+
+/// The size of interface 1.0's plugin table, the smallest a host takes:
+/// everything before `realtime`.
+pub const PLUGIN_TABLE_V1_0_SIZE: u32 = std::mem::offset_of!(PluginTableV1, realtime) as u32;
+
+/// `size_of::<RealtimeTableV1>()` as a `u32`.
+pub const REALTIME_TABLE_V1_SIZE: u32 =
+    std::mem::size_of::<crate::realtime::RealtimeTableV1>() as u32;
 
 /// `size_of::<HostTableV1>()` as a `u32`, for the table's `size` field.
 pub const HOST_TABLE_V1_SIZE: u32 = std::mem::size_of::<HostTableV1>() as u32;

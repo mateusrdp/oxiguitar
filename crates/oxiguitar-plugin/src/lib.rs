@@ -80,7 +80,10 @@ use oxiguitar_plugin_api::manifest::Manifest;
 use oxiguitar_plugin_api::message::{Answer, HostAnswer, HostRequest, Link, Request};
 
 #[doc(hidden)]
+pub mod audio;
 pub mod glue;
+
+pub use audio::{Effect, Instrument, Piece, Processor, Renderer};
 
 /// A plugin: the one value an `.oxp` file holds. Built once when the host
 /// first needs one of its contributions, and kept until the program ends.
@@ -155,6 +158,20 @@ pub trait Plugin: Send + Sync + 'static {
     /// The track dialog's section `id` (an id from the manifest's
     /// `track_sections`; interface 1.3).
     fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
+        let _ = id;
+        None
+    }
+
+    /// The instrument `id` (an id from the manifest's `instruments`;
+    /// interface 1.3).
+    fn instrument(&self, id: &str) -> Option<&dyn audio::Instrument> {
+        let _ = id;
+        None
+    }
+
+    /// The effect `id` (an id from the manifest's `effects`; interface
+    /// 1.3).
+    fn effect(&self, id: &str) -> Option<&dyn audio::Effect> {
         let _ = id;
         None
     }
@@ -303,6 +320,28 @@ pub trait Service: Send + Sync {
 /// call through the interface, and what a host that builds plugins in
 /// calls directly.
 pub fn dispatch(plugin: &dyn Plugin, request: Request<'_>) -> Result<Answer<'static>, Error> {
+    dispatch_kept(plugin, request, &NoKeeper)
+}
+
+/// Keeps no instance: [`dispatch`] without the glue refuses to prepare.
+struct NoKeeper;
+
+impl audio::Keeper for NoKeeper {
+    fn keep(&self, _instance: audio::Instance) -> u64 {
+        0
+    }
+
+    fn release(&self, _id: u64) -> bool {
+        false
+    }
+}
+
+/// [`dispatch`], with prepared instruments and effects kept by `keeper`.
+pub fn dispatch_kept(
+    plugin: &dyn Plugin,
+    request: Request<'_>,
+    keeper: &dyn audio::Keeper,
+) -> Result<Answer<'static>, Error> {
     match request {
         Request::Read { format, data } => {
             if let Some(reader) = plugin.reader2(&format) {
@@ -425,6 +464,43 @@ pub fn dispatch(plugin: &dyn Plugin, request: Request<'_>) -> Result<Answer<'sta
                 settings: serde_json::Value::Object(map).to_string(),
             })
         }
+        Request::Prepare(p) => {
+            let instrument = plugin.instrument(&p.instrument).ok_or_else(|| {
+                Error::not_found(format!("this plugin has no instrument {:?}", p.instrument))
+            })?;
+            prepared(keeper, audio::Instance::Instrument(instrument.prepare(&p)?))
+        }
+        Request::PrepareEffect(p) => {
+            let effect = plugin.effect(&p.effect).ok_or_else(|| {
+                Error::not_found(format!("this plugin has no effect {:?}", p.effect))
+            })?;
+            prepared(keeper, audio::Instance::Effect(effect.prepare(&p)?))
+        }
+        Request::Release { instance } => {
+            if keeper.release(instance) {
+                Ok(Answer::Done)
+            } else {
+                Err(Error::not_found(format!("no instance {instance}")))
+            }
+        }
+    }
+}
+
+fn prepared(
+    keeper: &dyn audio::Keeper,
+    instance: audio::Instance,
+) -> Result<Answer<'static>, Error> {
+    let (latency, resolution) = (instance.latency(), instance.resolution());
+    match keeper.keep(instance) {
+        0 => Err(Error::new(
+            ErrorKind::Unsupported,
+            "instruments and effects run only from the plugin's .oxp file",
+        )),
+        id => Ok(Answer::Prepared {
+            instance: id,
+            latency,
+            resolution,
+        }),
     }
 }
 
@@ -734,6 +810,24 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
             ));
         }
     }
+    if manifest.knows_minor(3) {
+        for i in &manifest.instruments {
+            if plugin.instrument(&i.id).is_none() {
+                out.push(format!(
+                    "instrument {:?} is declared, but not implemented",
+                    i.id
+                ));
+            }
+        }
+        for e in &manifest.effects {
+            if plugin.effect(&e.id).is_none() {
+                out.push(format!(
+                    "effect {:?} is declared, but not implemented",
+                    e.id
+                ));
+            }
+        }
+    }
     for t in &manifest.tools {
         if plugin.tool(&t.id).is_none() {
             out.push(format!("tool {:?} is declared, but not implemented", t.id));
@@ -862,6 +956,12 @@ macro_rules! export_plugin {
                 *include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/manifest.json"));
 
             static TABLE: $crate::glue::Table = $crate::glue::table::<$plugin>(&MANIFEST);
+
+            // The system's allocator, counting what is allocated while the
+            // plugin renders (the real-time rule; the contract suite reads
+            // the count).
+            #[global_allocator]
+            static ALLOCATOR: $crate::glue::Counting = $crate::glue::Counting;
 
             /// The plugin's entry point (oxiguitar_plugin_api::ENTRY_SYMBOL).
             #[unsafe(no_mangle)]
@@ -1302,6 +1402,130 @@ mod tests {
                 "track section \"cab\" is declared, but not implemented",
             ]
         );
+    }
+
+    /// An instrument that writes its notes' keys into its first track.
+    struct Keys;
+
+    impl Plugin for Keys {
+        fn start(_host: Host) -> Result<Keys, Error> {
+            Ok(Keys)
+        }
+
+        fn instrument(&self, id: &str) -> Option<&dyn audio::Instrument> {
+            (id == "keys").then_some(self as &dyn audio::Instrument)
+        }
+    }
+
+    struct KeysRenderer;
+
+    impl audio::Instrument for Keys {
+        fn prepare(&self, p: &api::message::Prepare) -> Result<Box<dyn audio::Renderer>, Error> {
+            let _ = p;
+            Ok(Box::new(KeysRenderer))
+        }
+    }
+
+    impl audio::Renderer for KeysRenderer {
+        fn render(&mut self, piece: &mut Piece<'_, '_>) {
+            let key = piece
+                .events()
+                .first()
+                .map_or(0.0, |e| f32::from(e.note.key));
+            if let Some((l, _)) = piece.track(0) {
+                l.fill(key);
+            }
+        }
+
+        fn resolution(&self) -> u32 {
+            7
+        }
+    }
+
+    /// Keeps instances in a list: what a test does without the glue.
+    #[derive(Default)]
+    struct Listed(std::sync::Mutex<Vec<Option<audio::Instance>>>);
+
+    impl audio::Keeper for Listed {
+        fn keep(&self, instance: audio::Instance) -> u64 {
+            let mut l = self.0.lock().unwrap();
+            l.push(Some(instance));
+            l.len() as u64
+        }
+
+        fn release(&self, id: u64) -> bool {
+            let mut l = self.0.lock().unwrap();
+            l.get_mut(id as usize - 1).and_then(Option::take).is_some()
+        }
+    }
+
+    #[test]
+    fn instruments_are_prepared_kept_rendered_and_released() {
+        let keys = Keys::start(Host::detached()).unwrap();
+        let prepare = api::message::Prepare {
+            instrument: "keys".into(),
+            rate: 48_000,
+            frames: 64,
+            tracks: Vec::new(),
+        };
+        // Without the glue, nothing keeps an instance.
+        let e = dispatch(&keys, Request::Prepare(Box::new(prepare.clone()))).unwrap_err();
+        assert_eq!(e.kind, ErrorKind::Unsupported);
+        let listed = Listed::default();
+        let answer = dispatch_kept(&keys, Request::Prepare(Box::new(prepare.clone())), &listed);
+        assert_eq!(
+            answer,
+            Ok(Answer::Prepared {
+                instance: 1,
+                latency: 0,
+                resolution: 7
+            })
+        );
+        {
+            let mut l = listed.0.lock().unwrap();
+            let Some(audio::Instance::Instrument(r)) = l[0].as_mut() else {
+                panic!("an instrument");
+            };
+            let events = [audio::RtEvent {
+                kind: audio::RtEventKind::NOTE_ON,
+                note: audio::RtNote {
+                    key: 60,
+                    ..audio::RtNote::default()
+                },
+            }];
+            let (mut a, mut b) = ([0.0f32; 4], [0.0f32; 4]);
+            let mut out = [&mut a[..], &mut b[..]];
+            r.render(&mut Piece::new(&events, &[], 0.0, 1.0, 4, &mut out));
+            assert_eq!(a, [60.0; 4]);
+        }
+        let release = |id| dispatch_kept(&keys, Request::Release { instance: id }, &listed);
+        assert_eq!(release(1), Ok(Answer::Done));
+        assert_eq!(release(1).unwrap_err().kind, ErrorKind::NotFound);
+        let unknown = api::message::Prepare {
+            instrument: "other".into(),
+            ..prepare
+        };
+        assert_eq!(
+            dispatch_kept(&keys, Request::Prepare(Box::new(unknown)), &listed)
+                .unwrap_err()
+                .kind,
+            ErrorKind::NotFound
+        );
+        // A curve followed in straight lines, held at its ends.
+        let curve = [
+            audio::PitchPoint {
+                time: 1.0,
+                cents: 0,
+            },
+            audio::PitchPoint {
+                time: 2.0,
+                cents: 200,
+            },
+        ];
+        assert_eq!(audio::cents_at(&curve, 0.5), 0.0);
+        assert_eq!(audio::cents_at(&curve, 1.5), 100.0);
+        assert_eq!(audio::cents_at(&curve, 3.0), 200.0);
+        assert_eq!(audio::cents_at(&[], 3.0), 0.0);
     }
 
     #[test]
