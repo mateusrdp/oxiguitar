@@ -515,9 +515,10 @@ jobs:
           done
           for f in dist/OxiGuitar-plugins-basic-*.zip; do
             unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
-            # Five format plugins, and the system's audio-device plugins:
-            # PipeWire and ALSA on Linux, one elsewhere.
-            case "$f" in *-linux-*) want=7 ;; *) want=6 ;; esac
+            # Five format plugins, the SoundFont instrument, and the
+            # system's audio-device plugins: PipeWire and ALSA on Linux,
+            # one elsewhere.
+            case "$f" in *-linux-*) want=8 ;; *) want=7 ;; esac
             [ "$(unzip -l "$f" | grep -c '\.oxp$')" -eq "$want" ] || { echo "::error::$f lacks our $want plugins" >&2; exit 1; }
           done
       - name: Checksums
