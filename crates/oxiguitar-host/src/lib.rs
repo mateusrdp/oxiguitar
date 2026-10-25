@@ -23,6 +23,7 @@ mod inventory;
 mod loader;
 mod oxp;
 mod plugins;
+pub mod realtime;
 mod settings;
 pub mod sidecar;
 

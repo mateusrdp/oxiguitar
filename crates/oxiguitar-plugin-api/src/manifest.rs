@@ -80,9 +80,9 @@ pub struct Manifest {
     /// The file formats it reads or writes.
     #[serde(default)]
     pub formats: Vec<FormatSpec>,
-    /// The instruments it offers the player. The instrument interface comes
-    /// with the player, in a later minor version; the player ignores
-    /// instruments declared by a plugin built for an older interface.
+    /// The instruments it offers the player. The player uses them from
+    /// interface 1.3 on, and ignores instruments declared by a plugin built
+    /// for an older interface.
     #[serde(default)]
     pub instruments: Vec<InstrumentSpec>,
     /// The services it implements.
@@ -109,6 +109,10 @@ pub struct Manifest {
     /// Since interface 1.3.
     #[serde(default)]
     pub folders: Vec<SharedFolder>,
+    /// The effects it offers a track's sound, after its instrument. Since
+    /// interface 1.3.
+    #[serde(default)]
+    pub effects: Vec<InstrumentSpec>,
 }
 
 /// A section of the track dialog, as the manifest declares it: rows of
@@ -295,6 +299,16 @@ impl Manifest {
                 out.push(format!("tool {:?}: the name is empty", t.id));
             }
         }
+        let mut effects: Vec<&str> = Vec::new();
+        for e in &self.effects {
+            if !is_id(&e.id) || effects.contains(&e.id.as_str()) {
+                out.push(format!("effect {:?}: not a valid or unique id", e.id));
+            }
+            effects.push(&e.id);
+            if InstrumentClass::ALL.iter().all(|&c| !e.plays(c)) {
+                out.push(format!("effect {:?}: plays nothing", e.id));
+            }
+        }
         let mut sections: Vec<&str> = Vec::new();
         for s in &self.track_sections {
             if !is_id(&s.id) || sections.contains(&s.id.as_str()) {
@@ -322,6 +336,7 @@ impl Manifest {
                 ("a settings window needs", self.settings_window),
                 ("track sections need", !self.track_sections.is_empty()),
                 ("shared folders need", !self.folders.is_empty()),
+                ("effects need", !self.effects.is_empty()),
             ] {
                 if used {
                     out.push(format!(

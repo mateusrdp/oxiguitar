@@ -23,7 +23,8 @@ In the template, `cargo test` runs three kinds of test:
    - every tab's contents can be shown, before and after a plausible use of each widget;
    - every kind of event it subscribes to is taken without an error;
    - every tool runs with no score open;
-   - its settings window and its track sections show contents that can be shown, before and after a plausible use of each widget, and a section hands back its track's settings as a JSON object.
+   - its settings window and its track sections show contents that can be shown, before and after a plausible use of each widget, and a section hands back its track's settings as a JSON object;
+   - every instrument and effect prepares; an instrument's note starts within its resolution and not before; neither allocates while rendering, and on Linux neither makes a system call ([Instruments](instruments.md)).
 
 A test that loads a plugin file must build it once per test program and never rebuild it while it is loaded: a system loads a library file once per process (and Windows refuses to replace a loaded file). One contract test per crate, as in the template, keeps to that.
 

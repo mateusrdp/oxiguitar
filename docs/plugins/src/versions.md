@@ -7,7 +7,7 @@ The plugin interface has a major and a minor version, `MAJOR.MINOR`. A plugin's 
 | 1.0 | OxiGuitar 0.2 | Formats (read and write), services, instruments (declared), footer messages, settings |
 | 1.1 | OxiGuitar 0.2 | Tabs (widgets and a canvas, version 1 of the display list), pushed events, the open score |
 | 1.2 | OxiGuitar 0.5 | The score version 2, which grows by extensions; the editor's selection (`Event::Selection2`); tools in the Tools menu and changes to the score, each one step the user can undo ([Tools and changes](tools.md)) |
-| 1.3 | In development, for the player | A settings window ([Settings](settings.md)); sections of the track dialog ([Track sections](track-sections.md)); footer messages with a link; the plugin's folders; then instruments, effects and audio devices |
+| 1.3 | In development, for the player | A settings window ([Settings](settings.md)); sections of the track dialog ([Track sections](track-sections.md)); footer messages with a link; the plugin's folders; instruments and effects on the audio thread ([Instruments](instruments.md)); then audio devices |
 
 **Interface 1 is frozen from OxiGuitar 0.2 on.** What exists stays as it is:
 

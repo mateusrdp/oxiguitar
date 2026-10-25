@@ -13,21 +13,35 @@
 //! ([`Timeline::find`]).
 //!
 //! Times are in seconds at 100 % speed; the transport plays faster or
-//! slower by scaling them, never by changing pitch. The sound itself comes
-//! from instrument plugins and the audio device from a device plugin: this
-//! crate has no audio code and no window code.
+//! slower by scaling them, never by changing pitch.
+//!
+//! It also plays the timeline: [`Schedule`] is the timeline as the audio
+//! thread reads it, and [`mod@engine`] the scheduler, the mixer and the audio
+//! clock (M4 slice 2). The sound itself comes from instrument plugins
+//! ([`Source`]; with the `host` feature, `plugin_source` makes a
+//! plugin's instance one) and the device's callback from an audio-device
+//! plugin: this crate opens no device and has no window code.
 
 pub mod click;
+pub mod engine;
 pub mod events;
 pub mod order;
+#[cfg(feature = "host")]
+pub mod plugin_source;
+pub mod schedule;
 pub mod text;
 pub mod time;
 
 use oxiguitar_model::Score;
 
+/// The notes as they cross to instrument plugins (plugin interface 1.3).
+pub use oxiguitar_plugin_api::realtime;
+
 pub use click::Click;
+pub use engine::{Buffers, Collected, Control, Engine, Slot, Source, Sources, TrackMix, engine};
 pub use events::{Attack, HarmonicKind, NoteEvent, PitchPoint, Sound, Vibrato};
 pub use order::{Visit, playing_order};
+pub use schedule::{Route, Schedule};
 pub use time::{TimeMap, VisitTime};
 
 /// A score as it plays: the bars in order with their times, the notes, the

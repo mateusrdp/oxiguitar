@@ -62,7 +62,7 @@ use oxiguitar_plugin_api::manifest::{
 };
 use oxiguitar_plugin_api::message::{
     Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry, PluginFolders,
-    Request, TrackInfo, decode, encode, outcome,
+    Prepare, PrepareEffect, Request, TrackInfo, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::Score2;
@@ -819,6 +819,110 @@ impl Plugins {
             .collect()
     }
 
+    /// The instruments the player can use for tracks of `class`: those of
+    /// plugins built for interface 1.3 or later (Mateus, 19 Oct 2026: the
+    /// player ignores instruments declared before the instrument
+    /// interface), in plugin order.
+    pub fn playable(&self, class: InstrumentClass) -> Vec<InstrumentRef<'_>> {
+        self.instruments_for(class)
+            .into_iter()
+            .filter(|i| i.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(3)))
+            .collect()
+    }
+
+    /// The effects the ready plugins offer tracks of `class` (interface
+    /// 1.3), in plugin order.
+    pub fn effects_for(&self, class: InstrumentClass) -> Vec<InstrumentRef<'_>> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(3))
+            .flat_map(|(_, plugin, m)| {
+                m.effects
+                    .iter()
+                    .filter(move |spec| spec.plays(class))
+                    .map(move |spec| InstrumentRef { plugin, spec })
+            })
+            .collect()
+    }
+
+    /// Prepares `instrument` (one of [`Plugins::playable`]) for
+    /// `prepare.tracks`, loading its plugin if needed: off the audio
+    /// thread, since the plugin loads its sounds now.
+    pub fn prepare(
+        &self,
+        instrument: InstrumentRef<'_>,
+        prepare: Prepare,
+    ) -> Result<crate::realtime::Instance, Error> {
+        let buffers = prepare.tracks.len() * 2;
+        let prepare = Prepare {
+            instrument: instrument.spec.id.clone(),
+            ..prepare
+        };
+        self.prepared(
+            instrument.plugin,
+            &Request::Prepare(Box::new(prepare)),
+            buffers,
+        )
+    }
+
+    /// Prepares `effect` (one of [`Plugins::effects_for`]) for one track.
+    pub fn prepare_effect(
+        &self,
+        effect: InstrumentRef<'_>,
+        prepare: PrepareEffect,
+    ) -> Result<crate::realtime::Instance, Error> {
+        let prepare = PrepareEffect {
+            effect: effect.spec.id.clone(),
+            ..prepare
+        };
+        self.prepared(effect.plugin, &Request::PrepareEffect(Box::new(prepare)), 2)
+    }
+
+    fn prepared(
+        &self,
+        plugin: &Found,
+        request: &Request<'_>,
+        buffers: usize,
+    ) -> Result<crate::realtime::Instance, Error> {
+        let index = self.index_of(plugin);
+        if index == usize::MAX {
+            return Err(Error::not_found("that plugin isn't one of these"));
+        }
+        match self.request(index, request)? {
+            Answer::Prepared {
+                instance,
+                latency,
+                resolution,
+            } => {
+                let loaded = self.loaded(index)?;
+                if !loaded.is_realtime() {
+                    return Err(self.fail(
+                        index,
+                        "it prepared an instrument but has no real-time functions".to_owned(),
+                    ));
+                }
+                Ok(crate::realtime::Instance::new(
+                    loaded,
+                    self.clone(),
+                    index,
+                    instance,
+                    latency,
+                    resolution,
+                    buffers,
+                ))
+            }
+            other => Err(self.unexpected(index, &other)),
+        }
+    }
+
+    /// Sends `request` to the plugin at `index` (an instance's release).
+    pub(crate) fn send_index(
+        &self,
+        index: usize,
+        request: &Request<'_>,
+    ) -> Result<Answer<'static>, Error> {
+        self.request(index, request)
+    }
+
     /// The instruments that play tracks of `class`: what the player offers
     /// a track (`InstrumentClass::of` gives a track's class).
     pub fn instruments_for(&self, class: InstrumentClass) -> Vec<InstrumentRef<'_>> {
@@ -1486,6 +1590,7 @@ impl Plugins {
             Answer::Read2 { .. } => "a score",
             Answer::Report(_) => "a report",
             Answer::TrackSection { .. } => "a track section",
+            Answer::Prepared { .. } => "a prepared instrument",
         };
         self.fail(
             index,

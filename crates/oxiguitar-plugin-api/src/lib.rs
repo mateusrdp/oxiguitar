@@ -24,6 +24,8 @@
 //! - [`event`]: what the core pushes to plugins as it happens: the score
 //!   opened or changed, the selection, the playback position (interface
 //!   1.1).
+//! - [`realtime`]: the audio thread's plain C calls to instruments and
+//!   effects, with the notes as they cross (interface 1.3).
 //!
 //! Plugin authors don't use this crate directly: the SDK, `oxiguitar-plugin`,
 //! wraps it in safe Rust. This crate holds no `unsafe` code; the tables'
@@ -65,6 +67,7 @@ pub mod display;
 pub mod event;
 pub mod manifest;
 pub mod message;
+pub mod realtime;
 pub mod score;
 pub mod score2;
 pub mod signature;

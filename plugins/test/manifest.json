@@ -22,6 +22,9 @@
     { "id": "drums", "name": "Test drums", "plays": ["drums"] },
     { "id": "no-drums", "name": "Test everything but drums", "does_not_play": ["drums"] }
   ],
+  "effects": [
+    { "id": "gain", "name": "Test gain (halves the track)" }
+  ],
   "services": [
     { "interface": "test-echo", "id": "echo", "name": "Echo", "priority": 1 },
     { "interface": "test-echo", "id": "second", "name": "Second echo" },
