@@ -1,0 +1,22 @@
+length 9.000000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.200000
+bar 3 pass 1 4.200000 6.600000
+bar 4 pass 1 6.600000 9.000000
+note 4.200000 4.800000 t1 s1 v1 b1 string 3 A3 vel 79
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000 strong
+click 4.800000
+click 5.400000
+click 6.000000
+click 6.600000 strong
+click 7.200000
+click 7.800000
+click 8.400000

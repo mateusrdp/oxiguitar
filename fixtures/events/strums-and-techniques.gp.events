@@ -1,0 +1,44 @@
+length 7.200000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.800000
+bar 3 pass 1 4.800000 7.200000
+note 0.000000 0.600000 t1 s1 v1 b1 string 6 E2 vel 79
+note 0.012500 0.600000 t1 s1 v1 b1 string 5 B2 vel 79
+note 0.025000 0.600000 t1 s1 v1 b1 string 4 E3 vel 79
+note 0.037500 0.600000 t1 s1 v1 b1 string 3 G#3 vel 79
+note 0.050000 0.600000 t1 s1 v1 b1 string 2 B3 vel 79
+note 0.062500 0.600000 t1 s1 v1 b1 string 1 E4 vel 79
+note 0.600000 1.200000 t1 s1 v1 b2 string 1 E4 vel 79
+note 0.612500 1.200000 t1 s1 v1 b2 string 2 B3 vel 79
+note 0.625000 1.200000 t1 s1 v1 b2 string 3 G#3 vel 79
+note 0.637500 1.200000 t1 s1 v1 b2 string 4 E3 vel 79
+note 0.650000 1.200000 t1 s1 v1 b2 string 5 B2 vel 79
+note 0.662500 1.200000 t1 s1 v1 b2 string 6 E2 vel 79
+note 1.200000 2.400000 t1 s1 v1 b3 string 5 A2 vel 79
+note 1.215000 2.400000 t1 s1 v1 b3 string 4 E3 vel 79
+note 1.230000 2.400000 t1 s1 v1 b3 string 3 A3 vel 79
+note 1.245000 2.400000 t1 s1 v1 b3 string 2 C4 vel 79
+note 1.260000 2.400000 t1 s1 v1 b3 string 1 E4 vel 79
+note 2.400000 3.000000 t1 s1 v1 b1 string 6 E2 vel 79 slapped
+note 3.000000 3.600000 t1 s1 v1 b2 string 4 E3 vel 79 popped
+note 3.600000 4.200000 t1 s1 v1 b3 string 6 E2 vel 79 slapped
+note 4.200000 4.800000 t1 s1 v1 b4 string 4 F#3 vel 79 popped
+note 4.800000 5.100000 t1 s1 v1 b1 string 1 E5 vel 79 tapped
+note 5.100000 5.400000 t1 s1 v1 b2 string 1 A4 vel 79
+note 5.400000 5.700000 t1 s1 v1 b3 string 1 C5 vel 79
+note 5.700000 6.000000 t1 s1 v1 b4 string 1 E5 vel 79 tapped
+note 6.000000 6.300000 t1 s1 v1 b5 string 1 A4 vel 79
+note 6.300000 6.600000 t1 s1 v1 b6 string 1 C5 vel 79
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000
+click 4.800000 strong
+click 5.400000
+click 6.000000
+click 6.600000

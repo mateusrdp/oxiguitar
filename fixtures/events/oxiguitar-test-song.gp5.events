@@ -1,0 +1,44 @@
+length 11.875000
+count-in 2.500000 clicks 4
+bar 1 pass 1 0.000000 2.500000
+bar 2 pass 1 2.500000 5.000000
+bar 1 pass 2 5.000000 7.500000
+bar 2 pass 2 7.500000 10.000000
+bar 3 pass 1 10.000000 11.875000
+note 0.000000 0.625000 t1 s1 v1 b1 string 1 E4 vel 95
+note 0.625000 0.833333 t1 s1 v1 b2 string 2 C4 vel 95
+note 0.833333 1.041667 t1 s1 v1 b3 string 2 D4 vel 95
+note 1.041667 1.250000 t1 s1 v1 b4 string 2 E4 vel 95 pitch 1.041667:0 1.145833:200 1.250000:0
+note 1.250000 2.500000 t1 s1 v1 b5 string 3 A3 vel 95
+note 2.500000 3.750000 t1 s1 v1 b1 string 6 E2 vel 95 dead
+note 5.000000 5.625000 t1 s1 v1 b1 string 1 E4 vel 95 legato
+note 5.625000 5.833333 t1 s1 v1 b2 string 2 C4 vel 95
+note 5.833333 6.041667 t1 s1 v1 b3 string 2 D4 vel 95
+note 6.041667 6.250000 t1 s1 v1 b4 string 2 E4 vel 95 pitch 6.041667:0 6.145833:200 6.250000:0
+note 6.250000 7.500000 t1 s1 v1 b5 string 3 A3 vel 95
+note 7.500000 8.750000 t1 s1 v1 b1 string 6 E2 vel 95 dead
+note 10.000000 11.875000 t1 s1 v1 b1 string 6 E2 vel 95 palm-mute
+note 10.000000 11.875000 t1 s1 v1 b1 string 5 B2 vel 95 palm-mute
+note 10.000000 11.875000 t1 s1 v1 b1 string 4 E3 vel 95 palm-mute
+note 10.000000 10.625000 t1 s1 v2 b1 string 1 E4 vel 95
+note 10.625000 11.250000 t1 s1 v2 b2 string 1 F4 vel 95
+note 11.250000 11.875000 t1 s1 v2 b3 string 1 G4 vel 95
+click 0.000000 strong
+click 0.625000
+click 1.250000
+click 1.875000
+click 2.500000 strong
+click 3.125000
+click 3.750000
+click 4.375000
+click 5.000000 strong
+click 5.625000
+click 6.250000
+click 6.875000
+click 7.500000 strong
+click 8.125000
+click 8.750000
+click 9.375000
+click 10.000000 strong
+click 10.625000
+click 11.250000

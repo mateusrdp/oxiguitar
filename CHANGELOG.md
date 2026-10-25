@@ -6,6 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- The player's timeline (M4 slice 1, `oxiguitar-play`): a score as it plays, with repeats, alternate endings, D.C., D.S., codas and Fine in Guitar Pro's order, tempo changes (gradual ones exactly), swing and triplet feel, every note's start and end in seconds with its velocity and every effect (bends, the whammy bar, slides, hammer-ons, ties, let ring, grace notes, strums, tremolo picking, trills, harmonics, dead, ghost and palm-muted notes, vibrato, fades), the metronome and a bar of count-in. `oxiguitar-cli events FILE` prints it. Nothing plays it yet: the sound comes in the next slices.
 - Help → About asks for donations: a **Donate with PayPal** button, which opens the page in your browser, and a QR code (Mateus, 25 Oct 2026). OxiGuitar still connects nowhere itself: the browser does, and only when you click.
 
 ### Changed

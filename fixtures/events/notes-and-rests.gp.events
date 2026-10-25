@@ -1,0 +1,58 @@
+length 14.400000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.800000
+bar 3 pass 1 4.800000 7.200000
+bar 4 pass 1 7.200000 9.600000
+bar 5 pass 1 9.600000 12.000000
+bar 6 pass 1 12.000000 14.400000
+note 0.000000 2.400000 t1 s1 v1 b1 string 3 A3 vel 79
+note 2.400000 3.600000 t1 s1 v1 b1 string 3 A3 vel 79
+note 4.800000 5.400000 t1 s1 v1 b1 string 3 A3 vel 79
+note 6.000000 6.600000 t1 s1 v1 b3 string 3 B3 vel 79
+note 7.200000 7.500000 t1 s1 v1 b1 string 3 A3 vel 79
+note 7.800000 8.100000 t1 s1 v1 b3 string 3 B3 vel 79
+note 8.400000 8.700000 t1 s1 v1 b5 string 2 D4 vel 79
+note 9.000000 9.300000 t1 s1 v1 b7 string 2 E4 vel 79
+note 9.600000 9.750000 t1 s1 v1 b1 string 3 A3 vel 79
+note 9.900000 10.050000 t1 s1 v1 b3 string 3 B3 vel 79
+note 10.200000 10.350000 t1 s1 v1 b5 string 2 D4 vel 79
+note 10.500000 10.650000 t1 s1 v1 b7 string 2 E4 vel 79
+note 10.800000 10.950000 t1 s1 v1 b9 string 1 G4 vel 79
+note 11.100000 11.250000 t1 s1 v1 b11 string 1 A4 vel 79
+note 11.400000 11.550000 t1 s1 v1 b13 string 1 B4 vel 79
+note 11.700000 11.850000 t1 s1 v1 b15 string 1 C5 vel 79
+note 12.000000 12.075000 t1 s1 v1 b1 string 1 A4 vel 79
+note 12.150000 12.225000 t1 s1 v1 b3 string 1 B4 vel 79
+note 12.300000 12.375000 t1 s1 v1 b5 string 1 C5 vel 79
+note 12.450000 12.525000 t1 s1 v1 b7 string 1 B4 vel 79
+note 12.600000 12.675000 t1 s1 v1 b9 string 1 A4 vel 79
+note 12.750000 12.825000 t1 s1 v1 b11 string 1 B4 vel 79
+note 12.900000 12.975000 t1 s1 v1 b13 string 1 C5 vel 79
+note 13.050000 13.125000 t1 s1 v1 b15 string 1 B4 vel 79
+note 14.250000 14.287500 t1 s1 v1 b20 string 1 A4 vel 79
+note 14.287500 14.325000 t1 s1 v1 b21 string 1 B4 vel 79
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000
+click 4.800000 strong
+click 5.400000
+click 6.000000
+click 6.600000
+click 7.200000 strong
+click 7.800000
+click 8.400000
+click 9.000000
+click 9.600000 strong
+click 10.200000
+click 10.800000
+click 11.400000
+click 12.000000 strong
+click 12.600000
+click 13.200000
+click 13.800000

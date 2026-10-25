@@ -10,7 +10,8 @@ exclude = ["spikes", "fuzz", "docs/plugins/template"]
 [workspace.package]
 version = "0.5.0"
 edition = "2024"
-# Follows the rustc in Debian unstable, so apt's toolchain always builds OxiGuitar.
+# Rust from rustup, raised only when something needs it, so Debian unstable
+# can catch up before an upload (CONTRIBUTING.md, "Minimum Rust version").
 rust-version = "1.99"
 license = "GPL-3.0-or-later"
 authors = ["Mateus Rocha de Paula", "The OxiGuitar contributors"]
@@ -25,6 +26,7 @@ oxiguitar-display = { path = "crates/oxiguitar-display" }
 oxiguitar-layout = { path = "crates/oxiguitar-layout" }
 oxiguitar-render = { path = "crates/oxiguitar-render" }
 oxiguitar-tools = { path = "crates/oxiguitar-tools" }
+oxiguitar-play = { path = "crates/oxiguitar-play" }
 oxiguitar-edit = { path = "crates/oxiguitar-edit" }
 oxiguitar-host = { path = "crates/oxiguitar-host" }
 oxiguitar-testgen = { path = "crates/oxiguitar-testgen" }
