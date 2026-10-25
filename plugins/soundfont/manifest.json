@@ -10,5 +10,6 @@
   "instruments": [
     { "id": "soundfont", "name": "SoundFont" }
   ],
+  "settings_window": true,
   "folders": ["soundfonts"]
 }

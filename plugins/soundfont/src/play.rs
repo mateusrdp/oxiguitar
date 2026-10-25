@@ -125,19 +125,23 @@ fn string_channels(strings: usize) -> Vec<u8> {
 }
 
 impl Player {
-    /// Gets ready to play `prepare.tracks` with `font`: one synthesiser
-    /// per track at `prepare.rate`, set to each track's program.
-    pub(crate) fn new(prepare: &Prepare, font: &Arc<SoundFont>) -> Result<Player, Error> {
+    /// Gets ready to play `prepare.tracks`, each with its set of `fonts`:
+    /// synthesisers at `prepare.rate`, set to each track's program.
+    pub(crate) fn new(prepare: &Prepare, fonts: &[Arc<SoundFont>]) -> Result<Player, Error> {
         let mut settings = SynthesizerSettings::new(prepare.rate as i32);
         settings.block_size = BLOCK;
         settings.maximum_polyphony = POLYPHONY;
         // Dry: the sound is the instrument's, and a track's effects (the
         // amp, M4 slice 5) come after it.
         settings.enable_reverb_and_chorus = false;
+        if fonts.len() != prepare.tracks.len() {
+            return Err(Error::new(ErrorKind::Failed, "a sound set for each track"));
+        }
         let tracks = prepare
             .tracks
             .iter()
-            .map(|t| track(t, font, &settings))
+            .zip(fonts)
+            .map(|(t, font)| track(t, font, &settings))
             .collect::<Result<Vec<_>, Error>>()?;
         let frames = prepare.frames as usize;
         Ok(Player {
@@ -402,7 +406,7 @@ mod tests {
 
     #[test]
     fn a_note_sounds_within_the_resolution_and_stops_after_its_release() {
-        let mut p = Player::new(&prepare(vec![guitar()]), &font()).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar()]), &[font()]).unwrap();
         assert!(render(&mut p, &[], 64).iter().all(|v| *v == 0.0));
         let a = note(1, 1, 64);
         let l = render(&mut p, &[on(a)], 64);
@@ -419,7 +423,7 @@ mod tests {
 
     #[test]
     fn a_new_note_on_a_string_ends_the_one_before() {
-        let mut p = Player::new(&prepare(vec![guitar()]), &font()).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar()]), &[font()]).unwrap();
         let (a, b) = (note(1, 2, 60), note(2, 2, 62));
         let _ = render(&mut p, &[on(a)], 64);
         let _ = render(&mut p, &[on(b)], 64);
@@ -432,7 +436,7 @@ mod tests {
 
     #[test]
     fn stopping_fades_out_at_once_and_the_next_notes_start_at_full_level() {
-        let mut p = Player::new(&prepare(vec![guitar()]), &font()).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar()]), &[font()]).unwrap();
         let a = note(1, 1, 64);
         let _ = render(&mut p, &[on(a)], 256);
         let full = render(&mut p, &[], 256);
@@ -462,7 +466,7 @@ mod tests {
 
     #[test]
     fn notes_on_other_strings_ring_together() {
-        let mut p = Player::new(&prepare(vec![guitar()]), &font()).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar()]), &[font()]).unwrap();
         let _ = render(&mut p, &[on(note(1, 1, 64)), on(note(2, 2, 59))], 64);
         assert_eq!(p.sounding.iter().flatten().count(), 2);
     }
@@ -472,7 +476,7 @@ mod tests {
         let mut bass = guitar();
         bass.program = 33;
         bass.tuning = vec![43, 38, 33, 28];
-        let mut p = Player::new(&prepare(vec![guitar(), bass]), &font()).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar(), bass]), &[font(), font()]).unwrap();
         let mut n = note(1, 1, 40);
         n.track = 1;
         let (mut b0, mut b1, mut b2, mut b3) =

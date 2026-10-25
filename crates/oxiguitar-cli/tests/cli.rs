@@ -421,4 +421,12 @@ fn play_into_a_wav_file_needs_no_sound_card() {
         (seconds - length - 2.0).abs() < 0.1,
         "{seconds} s for a song of {length} s"
     );
+    // Nothing was made in the user's folder: the plugins' own folders are
+    // named to them, not created.
+    let mut left: Vec<String> = std::fs::read_dir(sound_home())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+    assert_eq!(left, ["plugins", "soundfonts"]);
 }

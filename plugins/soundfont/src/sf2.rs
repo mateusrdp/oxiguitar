@@ -12,24 +12,54 @@
 //! 46 silent ones) and `pdta` (the nine record chunks, each closed by a
 //! terminal record).
 
-/// Generators, by their SoundFont 2 numbers (only those we write).
+/// Generators, by their SoundFont 2 numbers and names (section 8.1.2 of
+/// the specification; only those we write).
 pub(crate) mod generator {
-    /// The instrument a preset zone plays.
-    pub(crate) const INSTRUMENT: u16 = 41;
-    /// The keys a zone plays (low byte, high byte).
-    pub(crate) const KEY_RANGE: u16 = 43;
-    /// The velocities a zone plays (low byte, high byte).
-    pub(crate) const VELOCITY_RANGE: u16 = 44;
-    /// The sample an instrument zone plays.
-    pub(crate) const SAMPLE_ID: u16 = 53;
-    /// 0 no loop, 1 loop, 3 loop until released then play on.
-    pub(crate) const SAMPLE_MODES: u16 = 54;
-    /// The volume envelope's delay, in timecents.
+    pub(crate) const START_LOOP_OFFSET: u16 = 2;
+    pub(crate) const END_LOOP_OFFSET: u16 = 3;
+    pub(crate) const MOD_LFO_TO_PITCH: u16 = 5;
+    pub(crate) const VIB_LFO_TO_PITCH: u16 = 6;
+    pub(crate) const MOD_ENV_TO_PITCH: u16 = 7;
+    pub(crate) const INITIAL_FILTER_FC: u16 = 8;
+    pub(crate) const INITIAL_FILTER_Q: u16 = 9;
+    pub(crate) const MOD_LFO_TO_FILTER_FC: u16 = 10;
+    pub(crate) const MOD_ENV_TO_FILTER_FC: u16 = 11;
+    pub(crate) const MOD_LFO_TO_VOLUME: u16 = 13;
+    pub(crate) const CHORUS_SEND: u16 = 15;
+    pub(crate) const REVERB_SEND: u16 = 16;
+    pub(crate) const PAN: u16 = 17;
+    pub(crate) const DELAY_MOD_LFO: u16 = 21;
+    pub(crate) const FREQ_MOD_LFO: u16 = 22;
+    pub(crate) const DELAY_VIB_LFO: u16 = 23;
+    pub(crate) const FREQ_VIB_LFO: u16 = 24;
+    pub(crate) const DELAY_MOD_ENV: u16 = 25;
+    pub(crate) const ATTACK_MOD_ENV: u16 = 26;
+    pub(crate) const HOLD_MOD_ENV: u16 = 27;
+    pub(crate) const DECAY_MOD_ENV: u16 = 28;
+    pub(crate) const SUSTAIN_MOD_ENV: u16 = 29;
+    pub(crate) const RELEASE_MOD_ENV: u16 = 30;
+    pub(crate) const KEYNUM_TO_MOD_ENV_HOLD: u16 = 31;
+    pub(crate) const KEYNUM_TO_MOD_ENV_DECAY: u16 = 32;
     pub(crate) const DELAY_VOL_ENV: u16 = 33;
-    /// The volume envelope's attack, in timecents.
     pub(crate) const ATTACK_VOL_ENV: u16 = 34;
-    /// The volume envelope's release, in timecents.
+    pub(crate) const HOLD_VOL_ENV: u16 = 35;
+    pub(crate) const DECAY_VOL_ENV: u16 = 36;
+    pub(crate) const SUSTAIN_VOL_ENV: u16 = 37;
     pub(crate) const RELEASE_VOL_ENV: u16 = 38;
+    pub(crate) const KEYNUM_TO_VOL_ENV_HOLD: u16 = 39;
+    pub(crate) const KEYNUM_TO_VOL_ENV_DECAY: u16 = 40;
+    pub(crate) const INSTRUMENT: u16 = 41;
+    pub(crate) const KEY_RANGE: u16 = 43;
+    pub(crate) const VELOCITY_RANGE: u16 = 44;
+    pub(crate) const START_LOOP_COARSE_OFFSET: u16 = 45;
+    pub(crate) const INITIAL_ATTENUATION: u16 = 48;
+    pub(crate) const END_LOOP_COARSE_OFFSET: u16 = 50;
+    pub(crate) const FINE_TUNE: u16 = 52;
+    pub(crate) const SAMPLE_ID: u16 = 53;
+    pub(crate) const SAMPLE_MODES: u16 = 54;
+    pub(crate) const SCALE_TUNING: u16 = 56;
+    pub(crate) const EXCLUSIVE_CLASS: u16 = 57;
+    pub(crate) const OVERRIDING_ROOT_KEY: u16 = 58;
 }
 
 /// A sample: 16-bit mono data at its own rate.
@@ -274,6 +304,7 @@ impl Sf2 {
 /// program 0) and a drum kit (bank 128, program 0). The contract suite puts
 /// it in the `soundfonts` folder of the plugins it checks; this function
 /// makes it again (see the test that compares the two).
+#[cfg(test)]
 pub(crate) fn test_set() -> Vec<u8> {
     let period = 100usize;
     let data: Vec<i16> = (0..period * 48)
