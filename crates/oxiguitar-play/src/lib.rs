@@ -16,9 +16,9 @@
 //! slower by scaling them, never by changing pitch.
 //!
 //! It also plays the timeline: [`Schedule`] is the timeline as the audio
-//! thread reads it, and [`engine`] the scheduler, the mixer and the audio
+//! thread reads it, and [`mod@engine`] the scheduler, the mixer and the audio
 //! clock (M4 slice 2). The sound itself comes from instrument plugins
-//! ([`Source`]; with the `host` feature, [`plugin_source`] makes a
+//! ([`Source`]; with the `host` feature, `plugin_source` makes a
 //! plugin's instance one) and the device's callback from an audio-device
 //! plugin: this crate opens no device and has no window code.
 
