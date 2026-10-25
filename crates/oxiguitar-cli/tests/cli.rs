@@ -400,8 +400,10 @@ fn play_into_a_wav_file_needs_no_sound_card() {
     assert_eq!(&wav[8..16], b"WAVEfmt ");
     assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 48_000);
     let samples: Vec<i16> = wav[44..]
-        .chunks_exact(2)
-        .map(|b| i16::from_le_bytes([b[0], b[1]]))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|b| i16::from_le_bytes(*b))
         .collect();
     assert!(samples.iter().any(|v| v.unsigned_abs() > 100), "silent");
     // The song and two seconds after it.
