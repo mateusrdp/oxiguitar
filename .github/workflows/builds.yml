@@ -36,7 +36,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
       - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
       # Linux has two builds of the app (docs/design/plugins.md): oxiguitar
       # is the Wayland one, oxiguitar-x11 the deprecated X11 one.

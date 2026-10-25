@@ -73,7 +73,8 @@ You need Rust 1.99 or newer, from [rustup](https://rustup.rs): distributions' ow
 
 ```
 sudo apt install git build-essential pkg-config rustup \
-  libfontconfig1-dev libxkbcommon-dev libwayland-dev
+  libfontconfig1-dev libxkbcommon-dev libwayland-dev \
+  libasound2-dev libpipewire-0.3-dev libclang-dev
 rustup default stable
 git clone https://github.com/mateusrdp/oxiguitar.git
 cd oxiguitar
@@ -82,7 +83,7 @@ scripts/build-plugins.sh
 cargo test
 ```
 
-Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The last three packages are the system libraries the desktop app needs for fonts, keyboard and windows. Playback, from milestone M4, will add the audio libraries (ALSA, and PipeWire's on Linux).
+Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The `lib…-dev` packages are the system libraries OxiGuitar needs: fontconfig, xkbcommon and Wayland for fonts, keyboard and windows, and ALSA and PipeWire (with libclang, which builds PipeWire's bindings) for the audio-device plugins.
 
 The program opens files only through format plugins (one per format, `.oxp` files). `scripts/build-plugins.sh` builds ours (Guitar Pro 3, 4, 5, 6 and 7–8) and puts them where a build from source looks for them (`target/lib/oxiguitar/plugins/` on Linux); run it again after changing a plugin or a reader. The release packages hold the program alone; ours come as `oxiguitar-plugins-basic` (.deb, .rpm) and as a zip for each system.
 

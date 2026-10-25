@@ -7,11 +7,14 @@
 //! rendered on it. An instance owns what a render call needs (its event
 //! list and its buffer pointers, sized once), so rendering allocates
 //! nothing; dropping it releases the plugin's instance, which the engine
-//! does off the audio thread.
+//! does off the audio thread. And audio [`Stream`]s, opened on the chosen
+//! audio-device service ([`crate::Plugins::open_stream`]).
 
 use oxiguitar_plugin_api::abi::Status;
-use oxiguitar_plugin_api::message::Request;
+use oxiguitar_plugin_api::audio_device::{self, Open, Opened};
+use oxiguitar_plugin_api::message::{Error, ErrorKind, Request};
 use oxiguitar_plugin_api::realtime::{PitchPoint, ProcessCall, RenderCall, RtEvent};
+use oxiguitar_plugin_api::{decode, encode};
 
 use crate::Plugins;
 use crate::loader::Loaded;
@@ -163,5 +166,106 @@ impl Drop for Instance {
         let _ = self
             .plugins
             .send_index(self.index, &Request::Release { instance: self.id });
+    }
+}
+
+/// An open audio stream (interface 1.3): the chosen audio-device service
+/// calls its target from the device's callback until it is dropped, which
+/// closes it.
+pub struct Stream {
+    plugins: Plugins,
+    id: u64,
+    opened: Opened,
+    service: String,
+}
+
+impl std::fmt::Debug for Stream {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Stream")
+            .field("id", &self.id)
+            .field("opened", &self.opened)
+            .field("service", &self.service)
+            .finish()
+    }
+}
+
+impl Stream {
+    /// What the device opened: its rate, channels, buffer size and name.
+    pub fn opened(&self) -> &Opened {
+        &self.opened
+    }
+
+    /// The service's name, for the user ("PipeWire").
+    pub fn service(&self) -> &str {
+        &self.service
+    }
+}
+
+impl Drop for Stream {
+    fn drop(&mut self) {
+        // The device stops calling, then the target goes (off the audio
+        // thread: it holds the engine).
+        if let Ok(bytes) = encode(&self.id) {
+            let _ = self
+                .plugins
+                .call_service(audio_device::INTERFACE, audio_device::CLOSE, &bytes);
+        }
+        drop(crate::loader::unregister_stream(self.id));
+    }
+}
+
+impl Plugins {
+    /// Opens a stream on the chosen audio-device service (settings.json's
+    /// pin, or the highest priority that can work here), at `rate` if the
+    /// device takes it, on `device` (empty: the system's default output).
+    /// `target` fills each buffer on the device's audio thread: interleaved
+    /// frames, their channels, the delay to the speaker in nanoseconds.
+    pub fn open_stream(
+        &self,
+        rate: u32,
+        device: &str,
+        target: impl FnMut(&mut [f32], usize, u64) + Send + 'static,
+    ) -> Result<Stream, Error> {
+        let service = self
+            .service(audio_device::INTERFACE)
+            .map_err(|why| Error::new(ErrorKind::NotFound, why))?;
+        let name = service.name().to_owned();
+        let Some(id) = crate::loader::register_stream(Box::new(target)) else {
+            return Err(Error::new(
+                ErrorKind::Failed,
+                "too many audio streams are open",
+            ));
+        };
+        let open = Open {
+            stream: id,
+            rate,
+            frames: 0,
+            device: device.to_owned(),
+        };
+        let opened = encode(&open)
+            .map_err(|e| Error::new(ErrorKind::Failed, e.to_string()))
+            .and_then(|bytes| {
+                self.call_service(audio_device::INTERFACE, audio_device::OPEN, &bytes)
+            })
+            .and_then(|answer| {
+                decode::<Opened>(&answer).map_err(|e| {
+                    Error::new(
+                        ErrorKind::Failed,
+                        format!("the audio device's answer can't be read ({e})"),
+                    )
+                })
+            });
+        match opened {
+            Ok(opened) => Ok(Stream {
+                plugins: self.clone(),
+                id,
+                opened,
+                service: name,
+            }),
+            Err(e) => {
+                drop(crate::loader::unregister_stream(id));
+                Err(e)
+            }
+        }
     }
 }

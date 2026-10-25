@@ -29,7 +29,8 @@
     { "interface": "test-echo", "id": "echo", "name": "Echo", "priority": 1 },
     { "interface": "test-echo", "id": "second", "name": "Second echo" },
     { "interface": "test-echo", "id": "unavailable", "name": "Never available", "priority": 9 },
-    { "interface": "test-echo", "id": "elsewhere", "name": "Only on Plan 9", "priority": 20, "conditions": { "os": ["plan9"] } }
+    { "interface": "test-echo", "id": "elsewhere", "name": "Only on Plan 9", "priority": 20, "conditions": { "os": ["plan9"] } },
+    { "interface": "audio-device", "id": "fake", "name": "Fake output (a test)", "priority": -100 }
   ],
   "tabs": [
     { "id": "panel", "title": "Test", "area": "bottom" },

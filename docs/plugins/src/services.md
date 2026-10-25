@@ -61,3 +61,25 @@ let name = host.call_service("note-names", "name", &[61, 0])?;  // "C♯4"
 ```
 
 A plugin may call only the interfaces it `requires`. When no installed plugin implements one, or none works here, the call returns an error saying so: handle it, and tell the user in your README which plugins yours needs.
+
+## The audio device (interface 1.3)
+
+`audio-device` is the core's own interface: the service that sends OxiGuitar's sound to the system. The basic plugins implement it for PipeWire and ALSA (Linux), WASAPI (Windows) and Core Audio (macOS), through cpal. Its types are in `oxiguitar_plugin::api::audio_device`.
+
+| Method | Input | Output |
+| --- | --- | --- |
+| `open` | `Open { stream, rate, frames, device }` | `Opened { rate, channels, frames, device }` |
+| `close` | the stream's number, a `u64` | nothing |
+| `devices` | nothing | the outputs' names, a `Vec<String>` |
+
+`open` opens a stream on the output named (empty: the system's default) at the rate asked for (48 000), or at the device's own when it refuses that one, and starts it. From then on, in the device's audio callback, the plugin has the core fill each buffer:
+
+```rust,ignore
+let out = host.audio_out().ok_or(...)?;  // None before interface 1.3
+// In the callback, for every buffer:
+out.render(stream, buffer, channels, delay_ns);
+```
+
+`buffer` is interleaved frames of `channels` channels, and `delay_ns` is how long until they reach the speaker (the device's latency), which the cursor follows. The callback is the audio thread: `render` never blocks, and your callback must not either. After `close` returns, never call `render` for that stream again. When a stream breaks (the device unplugged, the sound server gone), say so with `host.notify`.
+
+Users pick a device by pinning it in settings.json, as `"services": {"audio-device": "oxiguitar.audio-alsa/alsa"}`. The test plugin's `fake` device (priority -100) renders into nothing, so the contract tests can play a whole stream without a sound card.

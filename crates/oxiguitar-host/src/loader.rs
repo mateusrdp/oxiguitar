@@ -28,6 +28,7 @@
 use std::ffi::c_void;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
+use std::sync::atomic::{AtomicPtr, Ordering};
 
 use oxiguitar_plugin_api::abi::{
     EntryV1, HOST_TABLE_V1_SIZE, HostTableV1, PLUGIN_TABLE_V1_0_SIZE, PLUGIN_TABLE_V1_SIZE,
@@ -160,6 +161,7 @@ pub(crate) fn load(path: &Path, manifest: &[u8], host: Box<HostCalls>) -> Result
         interface_minor: host_minor,
         ctx: std::ptr::from_ref::<Box<HostCalls>>(host).cast(),
         call: host_call,
+        render: host_render,
     }));
     let mut answer: Vec<u8> = Vec::new();
     let mut sink = RawSink {
@@ -305,4 +307,99 @@ unsafe fn slice<'a>(raw: RawBytes) -> &'a [u8] {
     // SAFETY: `ptr` is non-null and `len` bytes from it are readable for
     // `'a` (this function's contract); `u8` has no alignment requirement.
     unsafe { std::slice::from_raw_parts(raw.ptr, raw.len) }
+}
+
+/// What fills an audio stream's buffers: interleaved frames, their
+/// channels, and the delay to the speaker in nanoseconds. Called on the
+/// device's audio thread.
+pub(crate) type StreamTarget = Box<dyn FnMut(&mut [f32], usize, u64) + Send>;
+
+/// The most streams open at once.
+const STREAMS: usize = 16;
+
+/// The open streams' targets, by number less one: a stream's slot holds a
+/// leaked `Box<StreamTarget>` from `register_stream` until
+/// `unregister_stream`.
+static TARGETS: [AtomicPtr<StreamTarget>; STREAMS] =
+    [const { AtomicPtr::new(std::ptr::null_mut()) }; STREAMS];
+
+/// Keeps `target` for a new stream; its number, or `None` when every slot
+/// is taken.
+pub(crate) fn register_stream(target: StreamTarget) -> Option<u64> {
+    let boxed = Box::into_raw(Box::new(target));
+    for (i, slot) in TARGETS.iter().enumerate() {
+        if slot
+            .compare_exchange(
+                std::ptr::null_mut(),
+                boxed,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .is_ok()
+        {
+            return Some(i as u64 + 1);
+        }
+    }
+    // SAFETY: `boxed` was made just above and no slot took it.
+    drop(unsafe { Box::from_raw(boxed) });
+    None
+}
+
+/// Takes the target of stream `stream` back, once its device has closed it
+/// (so no callback will use it again).
+pub(crate) fn unregister_stream(stream: u64) -> Option<StreamTarget> {
+    let slot = TARGETS.get(usize::try_from(stream).ok()?.checked_sub(1)?)?;
+    let ptr = slot.swap(std::ptr::null_mut(), Ordering::AcqRel);
+    if ptr.is_null() {
+        return None;
+    }
+    // SAFETY: the slot held a box `register_stream` leaked, now taken out
+    // of the slot, so no one else can reach it; the device closed the
+    // stream before this was called, so its callback no longer uses it.
+    Some(*unsafe { Box::from_raw(ptr) })
+}
+
+/// `HostTableV1::render`: fills a stream's buffer with what its target
+/// makes, or silence for a stream that isn't open.
+///
+/// # Safety
+///
+/// `out` points to `frames * channels` floats, valid and the caller's for
+/// the call; the call comes from the stream's own audio callback (never
+/// two at once for one stream) and not after the stream was closed.
+unsafe extern "C" fn host_render(
+    _ctx: *const c_void,
+    stream: u64,
+    out: *mut f32,
+    frames: u32,
+    channels: u32,
+    delay_ns: u64,
+) {
+    if out.is_null() {
+        return;
+    }
+    let len = frames as usize * channels as usize;
+    // SAFETY: `out` holds `len` floats for the call (this function's
+    // contract).
+    let out = unsafe { std::slice::from_raw_parts_mut(out, len) };
+    let slot = usize::try_from(stream)
+        .ok()
+        .and_then(|s| s.checked_sub(1))
+        .and_then(|s| TARGETS.get(s));
+    let ptr = slot.map_or(std::ptr::null_mut(), |s| s.load(Ordering::Acquire));
+    if ptr.is_null() {
+        out.fill(0.0);
+        return;
+    }
+    // SAFETY: the slot holds a live target (`register_stream`), used only
+    // by this stream's callback, one call at a time, until it is closed
+    // (this function's contract), so this is the only reference.
+    let target = unsafe { &mut *ptr };
+    if catch_unwind(AssertUnwindSafe(|| {
+        target(out, channels as usize, delay_ns)
+    }))
+    .is_err()
+    {
+        out.fill(0.0);
+    }
 }

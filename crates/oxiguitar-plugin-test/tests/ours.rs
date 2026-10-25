@@ -13,7 +13,7 @@ use std::sync::{Arc, OnceLock};
 use oxiguitar_host::api::Blob;
 use oxiguitar_host::api::message::{Answer, ErrorKind, LogEntry, Request};
 use oxiguitar_host::{Plugins, SharedSettings, Unheard, Unrecognised};
-use oxiguitar_plugin_test::{OURS, build_ours, check};
+use oxiguitar_plugin_test::{OUR_DEVICES, OURS, build_devices, build_ours, check};
 
 fn workspace() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -63,11 +63,37 @@ fn the_list_of_our_plugins_is_the_plugins_folder() {
         .filter(|n| n != "test" && !n.starts_with("test-"))
         .collect();
     folders.sort();
-    let mut listed: Vec<String> = OURS.iter().map(|(_, n)| (*n).to_owned()).collect();
+    let mut listed: Vec<String> = OURS
+        .iter()
+        .map(|(_, n)| *n)
+        .chain(OUR_DEVICES.iter().map(|(_, n, _)| *n))
+        .map(str::to_owned)
+        .collect();
     listed.sort();
     assert_eq!(folders, listed);
     for (package, name) in OURS {
         assert_eq!(*package, format!("oxiguitar-{name}-plugin"));
+    }
+    for (package, name, os) in OUR_DEVICES {
+        assert_eq!(*package, format!("oxiguitar-{name}-plugin"));
+        let manifest =
+            std::fs::read_to_string(workspace().join("plugins").join(name).join("manifest.json"))
+                .unwrap();
+        assert!(
+            manifest.contains(&format!("\"{os}\"")),
+            "{name} runs on {os}"
+        );
+    }
+}
+
+/// The audio devices that run here pass the contract. Their probes answer
+/// whether or not this machine has a sound card (CI's have none).
+#[test]
+fn our_audio_devices_pass_the_contract() {
+    let (folder, names) = build_devices(&workspace(), false).expect("our audio devices build");
+    for name in names {
+        let report = check(&folder.join(&name));
+        assert!(report.ok(), "{name}: {:#?}", report.failed);
     }
 }
 

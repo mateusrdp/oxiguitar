@@ -114,14 +114,14 @@ fn discover(folders: &[PathBuf], settings: SharedSettings) -> (Plugins, Arc<Hear
 fn the_test_plugin_passes_the_contract() {
     let report = oxiguitar_plugin_test::check(test_oxp());
     assert!(report.ok(), "failed: {:#?}", report.failed);
-    // 11 for formats and services; 2 tabs; 10 uses of the panel's widgets
+    // 12 for formats and services; 2 tabs; 10 uses of the panel's widgets
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
     // of event, the selection in both its forms; 2 tools; the settings
     // window and its 2 widgets; the track section and its 2 widgets; 2
     // instruments and an effect, 4 real-time checks each.
     assert_eq!(
         report.passed.len(),
-        11 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4,
+        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4,
         "{:#?}",
         report.passed
     );
@@ -193,7 +193,9 @@ fn services_are_chosen_by_conditions_priority_probe_and_settings() {
         plugins.call_service("test-echo", "echo", b"hi").unwrap(),
         b"hi"
     );
-    assert!(plugins.service("audio-device").is_err());
+    // The fake audio device is the only one, so it is chosen, though its
+    // priority is the lowest.
+    assert_eq!(plugins.service("audio-device").unwrap().spec.id, "fake");
 
     // Errors cross with their kind, offset and context.
     let e = plugins.call_service("test-echo", "fail", b"").unwrap_err();
@@ -1155,14 +1157,15 @@ fn the_real_time_checks_catch_allocations_system_calls_and_late_notes() {
     );
 }
 
-#[test]
-fn the_engine_plays_a_plugin_instrument_on_its_frames() {
+/// The engine with the test song, every track on the test plugin's sine,
+/// and the time of its first note.
+fn engine_on_the_test_song(
+    plugins: &Plugins,
+) -> (oxiguitar_play::Engine, oxiguitar_play::Control, f64) {
     use oxiguitar_host::api::message::{Prepare, PreparedTrack, TrackInfo};
     use oxiguitar_play::plugin_source::PluginSource;
     use oxiguitar_play::{Route, Schedule, Slot, Sources, Timeline, engine};
 
-    let dir = folder("engine", &["test.oxp"]);
-    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
     let song =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
     let score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
@@ -1204,7 +1207,7 @@ fn the_engine_plays_a_plugin_instrument_on_its_frames() {
         .map(|t| Some(Route { source: 0, slot: t }))
         .collect();
     let schedule = Arc::new(Schedule::new(&timeline, &routes, 1));
-    let (mut engine, mut control) = engine(48_000, 512);
+    let (engine, mut control) = engine(48_000, 512);
     let mut sources = Sources::new(vec![Slot::new(
         Box::new(PluginSource::new(
             instance,
@@ -1221,6 +1224,16 @@ fn the_engine_plays_a_plugin_instrument_on_its_frames() {
         .iter()
         .map(|n| n.start)
         .fold(f64::MAX, f64::min);
+    (engine, control, first)
+}
+
+#[test]
+fn the_engine_plays_a_plugin_instrument_on_its_frames() {
+    use oxiguitar_play::Sources;
+
+    let dir = folder("engine", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let (mut engine, mut control, first) = engine_on_the_test_song(&plugins);
     // Play from a little before the first note; the device's callbacks
     // are 100 frames.
     let from = (first - 0.01).max(0.0);
@@ -1241,5 +1254,47 @@ fn the_engine_plays_a_plugin_instrument_on_its_frames() {
     // releases its instance.
     control.set_sources(Sources::new(Vec::new()));
     engine.render(&mut out, 2, 0);
+    control.collect();
+}
+
+#[test]
+fn an_audio_device_plays_the_engine_through_the_host() {
+    // The fake device (priority -100) is the only one here, so it is
+    // chosen; settings.json may pin it too, as a user would a real one.
+    let pinned = SharedSettings::new(
+        Settings::parse(r#"{"services": {"audio-device": "oxiguitar.test/fake"}}"#).unwrap(),
+        None,
+    );
+    let dir = folder("audio-device", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), pinned);
+    assert_eq!(plugins.service("audio-device").unwrap().spec.id, "fake");
+    let devices = plugins
+        .call_service("audio-device", "devices", b"")
+        .unwrap();
+    assert_eq!(
+        oxiguitar_host::api::decode::<Vec<String>>(&devices).unwrap(),
+        ["Nowhere"]
+    );
+
+    let (mut engine, mut control, first) = engine_on_the_test_song(&plugins);
+    control.play(first, false);
+    // The device's thread renders 200 buffers of 256 frames through the
+    // host's `render`, which hands them to the engine.
+    let stream = plugins
+        .open_stream(48_000, "", move |out, channels, _delay| {
+            engine.render(out, channels, 0);
+        })
+        .unwrap();
+    assert_eq!(stream.opened().rate, 48_000);
+    assert_eq!(stream.opened().device, "Nowhere");
+    let totals = plugins.call_service("audio-device", "totals", b"").unwrap();
+    let totals = String::from_utf8(totals).unwrap();
+    let (frames, sum) = totals.split_once(' ').unwrap();
+    assert_eq!(frames, (200 * 256).to_string());
+    assert!(sum.parse::<f64>().unwrap() > 1.0, "it made sound: {sum}");
+    // The clock followed the frames the device took.
+    let heard = control.heard().unwrap();
+    assert!(heard > first, "{heard} after {first}");
+    drop(stream);
     control.collect();
 }

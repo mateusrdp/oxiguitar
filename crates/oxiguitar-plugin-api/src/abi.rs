@@ -138,6 +138,10 @@ pub struct HostTableV1 {
     /// Answers one encoded [`crate::message::HostRequest`].
     pub call:
         unsafe extern "C" fn(ctx: *const c_void, request: RawBytes, answer: *mut RawSink) -> Status,
+    /// The audio device's request from its callback (interface 1.3): fill a
+    /// stream's buffer ([`crate::realtime::HostRender`]). Read only when
+    /// `size` covers it.
+    pub render: crate::realtime::HostRender,
 }
 
 /// The type of the entry symbol.
@@ -156,3 +160,7 @@ pub const REALTIME_TABLE_V1_SIZE: u32 =
 
 /// `size_of::<HostTableV1>()` as a `u32`, for the table's `size` field.
 pub const HOST_TABLE_V1_SIZE: u32 = std::mem::size_of::<HostTableV1>() as u32;
+
+/// The size of interface 1.0's host table, the smallest a plugin takes:
+/// everything before `render`.
+pub const HOST_TABLE_V1_0_SIZE: u32 = std::mem::offset_of!(HostTableV1, render) as u32;

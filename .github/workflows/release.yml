@@ -100,6 +100,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libfontconfig1-dev libxkbcommon-dev libwayland-dev \
+            libasound2-dev libpipewire-0.3-dev libclang-dev \
             rpm squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
       # The two Linux builds of the app (docs/design/plugins.md): the
       # Wayland one, the default, and the deprecated X11 one in a target
@@ -142,7 +143,7 @@ jobs:
             grep -q "no plugin that opens files is installed" /tmp/refused
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-plugins-basic_*.deb
             dpkg -s oxiguitar-plugins-basic | grep -E "^(Version|Depends|Enhances):"
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 7
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             grep -q "application/x-gtp=io.github.mateusrdp.OxiGuitar.desktop" /usr/share/applications/mimeinfo.cache
@@ -152,7 +153,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-x11_*.deb
             ! dpkg -s oxiguitar 2> /dev/null | grep -q "^Status: install ok installed"
             dpkg -s oxiguitar-x11 | grep -E "^(Version|Depends|Recommends|Provides|Conflicts|Replaces):"
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 7
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
             apt-get remove -y oxiguitar-x11 oxiguitar-plugins-basic
             test ! -e /usr/lib/oxiguitar
@@ -180,14 +181,14 @@ jobs:
             rpm -q --suggests oxiguitar | grep -q "^oxiguitar-plugins-basic"
             ! oxiguitar-cli info "$0"
             dnf install -y ./dist/oxiguitar-plugins-basic-*.rpm
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 7
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar "$0"
             dnf remove -y oxiguitar
             dnf install -y ./dist/oxiguitar-x11-*.rpm
             rpm -q --provides oxiguitar-x11 | grep -q "^oxiguitar = "
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 5
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 7
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
             dnf remove -y oxiguitar-x11 oxiguitar-plugins-basic
           ' "$SAMPLE"
@@ -198,7 +199,7 @@ jobs:
           home="$RUNNER_TEMP/oxiguitar-home"
           mkdir -p "$home/plugins" "$RUNNER_TEMP/empty-home"
           unzip -q dist/OxiGuitar-plugins-basic-*-linux-*.zip -d "$home/plugins"
-          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 5
+          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 7
           for build in wayland x11; do
             if [ "$build" = wayland ]; then
               appimage="$(ls dist/OxiGuitar-[0-9]*.AppImage)"
@@ -333,7 +334,7 @@ jobs:
           Compress-Archive -Path $dir -DestinationPath "dist/$name.zip"
           Get-Item "dist/$name.zip"
           $plugins = Get-ChildItem target/release/plugins/*.oxp
-          if ($plugins.Count -ne 5) { throw 'expected our five plugins' }
+          if ($plugins.Count -ne 6) { throw 'expected our six plugins' }
           $pdir = "dist/plugins-basic"
           New-Item -ItemType Directory -Force $pdir | Out-Null
           Copy-Item $plugins $pdir
@@ -428,7 +429,7 @@ jobs:
           cli="$RUNNER_TEMP/cli/bin/oxiguitar-cli"
           ! OXIGUITAR_HOME="$RUNNER_TEMP/empty-home" "$cli" info "$SAMPLE"
           unzip -q dist/OxiGuitar-plugins-basic-*-macos-universal.zip -d "$home/plugins"
-          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 5
+          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 6
           for plugin in "$home"/plugins/*.oxp; do
             lipo -info "$plugin" | grep -q "x86_64 arm64"
             codesign --verify "$plugin"
@@ -514,7 +515,10 @@ jobs:
           done
           for f in dist/OxiGuitar-plugins-basic-*.zip; do
             unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
-            [ "$(unzip -l "$f" | grep -c '\.oxp$')" -eq 5 ] || { echo "::error::$f lacks our five plugins" >&2; exit 1; }
+            # Five format plugins, and the system's audio-device plugins:
+            # PipeWire and ALSA on Linux, one elsewhere.
+            case "$f" in *-linux-*) want=7 ;; *) want=6 ;; esac
+            [ "$(unzip -l "$f" | grep -c '\.oxp$')" -eq "$want" ] || { echo "::error::$f lacks our $want plugins" >&2; exit 1; }
           done
       - name: Checksums
         run: (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)

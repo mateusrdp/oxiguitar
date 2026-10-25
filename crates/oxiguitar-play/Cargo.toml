@@ -27,5 +27,11 @@ oxiguitar-testgen.workspace = true
 # Counts allocations in tests/engine_allocations.rs (MIT).
 stats_alloc = "0.1"
 
+# Its own main, with no test harness: the harness's own thread allocates
+# while the test runs, and the counter sees every thread.
+[[test]]
+name = "engine_allocations"
+harness = false
+
 [lints]
 workspace = true
