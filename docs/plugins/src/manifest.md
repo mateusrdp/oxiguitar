@@ -54,8 +54,11 @@ Every list given must hold the running system's value; an empty or missing list 
 | `os` | `linux`, `macos`, `windows` (later `android`, `ios`) |
 | `arch` | `x86_64`, `aarch64` |
 | `display` | `wayland`, `x11`, `windows`, `macos`: the display system OxiGuitar was built for. On Linux there are two builds of OxiGuitar, Wayland (the default) and X11 |
+| `cpu` | Processor features the code needs, all of them, as Rust names them: `avx2`, `fma`, `avx512f`… on x86-64, `neon`, `dotprod`, `sve`… on ARM64. Since interface 1.3: a manifest asking for an older interface can't use it |
 
 A plugin whose conditions don't hold is listed in Tools → Plugins with the reason, and never loaded. A plugin file is already built for one system and processor, so you need `os` and `arch` only for a file that would load but can't work (a universal macOS file that works on Apple Silicon only, say). `display` matters for plugins that talk to the windowing system. Services have conditions of their own, beside the plugin's.
+
+`cpu` lets you ship a faster build beside a plain one. Build the plugin twice, with the same id and version: once plainly, and once with `-C target-cpu=x86-64-v3` and `"cpu": ["avx2", "fma"]` in its manifest. On a processor without those features that file can't be used and the plain one is; where both can be used, the one needing more features is. A feature name OxiGuitar doesn't know counts as missing, so a build is never loaded on a guess.
 
 ## Rules the checks enforce
 

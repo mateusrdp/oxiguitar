@@ -337,6 +337,14 @@ impl Manifest {
                 ("track sections need", !self.track_sections.is_empty()),
                 ("shared folders need", !self.folders.is_empty()),
                 ("effects need", !self.effects.is_empty()),
+                // A host before 1.3 would ignore the condition and load
+                // code its processor can't run: such a host refuses a 1.3
+                // manifest, so the key may appear only in one.
+                (
+                    "processor features (conditions \"cpu\") need",
+                    !self.conditions.cpu.is_empty()
+                        || self.services.iter().any(|s| !s.conditions.cpu.is_empty()),
+                ),
             ] {
                 if used {
                     out.push(format!(
@@ -488,6 +496,15 @@ pub struct Conditions {
     /// builds).
     #[serde(default)]
     pub display: Vec<String>,
+    /// Processor features the code needs, all of them, as Rust names them
+    /// (`avx2`, `fma`, `avx512f`, `neon`…): a build for x86-64-v3 lists
+    /// `avx2` and `fma`, so a processor without them never loads it and
+    /// another file of the same plugin, built without them, is used. A
+    /// name this OxiGuitar doesn't know counts as missing. When two usable
+    /// files hold the same plugin at the same version, the one needing
+    /// more features is used. Since interface 1.3.
+    #[serde(default)]
+    pub cpu: Vec<String>,
 }
 
 impl Conditions {
@@ -501,10 +518,77 @@ impl Conditions {
                 )
             })
         };
+        let missing: Vec<&str> = self
+            .cpu
+            .iter()
+            .filter(|f| !env.cpu.contains(f))
+            .map(String::as_str)
+            .collect();
         check("the system", &self.os, &env.os)
             .or_else(|| check("the processor", &self.arch, &env.arch))
             .or_else(|| check("the display system", &self.display, &env.display))
+            .or_else(|| {
+                (!missing.is_empty()).then(|| {
+                    format!(
+                        "it needs the processor feature{} {}, which this processor doesn't have",
+                        if missing.len() == 1 { "" } else { "s" },
+                        missing.join(", ")
+                    )
+                })
+            })
     }
+}
+
+/// The processor features this process can use, of those manifests may
+/// name in [`Conditions::cpu`], as Rust names them.
+pub fn cpu_features() -> Vec<String> {
+    #[allow(unused_mut)]
+    let mut out: Vec<&str> = Vec::new();
+    macro_rules! detect {
+        ($check:ident, $($f:tt),*) => {
+            $( if std::arch::$check!($f) { out.push($f); } )*
+        };
+    }
+    #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+    detect!(
+        is_x86_feature_detected,
+        "sse3",
+        "ssse3",
+        "sse4.1",
+        "sse4.2",
+        "popcnt",
+        "avx",
+        "avx2",
+        "fma",
+        "f16c",
+        "bmi1",
+        "bmi2",
+        "lzcnt",
+        "movbe",
+        "avx512f",
+        "avx512bw",
+        "avx512cd",
+        "avx512dq",
+        "avx512vl"
+    );
+    #[cfg(target_arch = "aarch64")]
+    detect!(
+        is_aarch64_feature_detected,
+        "neon",
+        "aes",
+        "sha2",
+        "crc",
+        "lse",
+        "rdm",
+        "dotprod",
+        "fp16",
+        "fhm",
+        "sve",
+        "sve2",
+        "i8mm",
+        "bf16"
+    );
+    out.into_iter().map(str::to_owned).collect()
 }
 
 /// The system the host runs on, as [`Conditions`] name it.
@@ -516,6 +600,8 @@ pub struct Environment {
     pub arch: String,
     /// The display system the core was built for.
     pub display: String,
+    /// The processor's features ([`cpu_features`]).
+    pub cpu: Vec<String>,
 }
 
 impl Environment {
@@ -525,6 +611,7 @@ impl Environment {
             os: std::env::consts::OS.into(),
             arch: std::env::consts::ARCH.into(),
             display: display.into(),
+            cpu: cpu_features(),
         }
     }
 }
@@ -765,7 +852,8 @@ mod tests {
             )
         };
         let keys = r#", "settings_window": true, "folders": ["nam", "soundfonts"],
-            "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}]"#;
+            "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}],
+            "conditions": {"arch": ["x86_64"], "cpu": ["avx2", "fma"]}"#;
         let m: Manifest = serde_json::from_str(&json("1.3", keys)).unwrap();
         assert!(m.problems().is_empty(), "{:?}", m.problems());
         assert_eq!(m.folders, [SharedFolder::Nam, SharedFolder::Soundfonts]);
@@ -778,8 +866,10 @@ mod tests {
                 "a settings window needs interface 1.3, and the manifest asks for 1.2",
                 "track sections need interface 1.3, and the manifest asks for 1.2",
                 "shared folders need interface 1.3, and the manifest asks for 1.2",
+                "processor features (conditions \"cpu\") need interface 1.3, and the manifest asks for 1.2",
             ]
         );
+        assert_eq!(m.conditions.cpu, ["avx2", "fma"]);
         let bad = r#", "folders": ["nam", "nam"],
             "track_sections": [{"id": "Amp", "title": " ", "plays": []}]"#;
         let m: Manifest = serde_json::from_str(&json("1.3", bad)).unwrap();
@@ -821,8 +911,20 @@ mod tests {
             os: "linux".into(),
             arch: "x86_64".into(),
             display: "wayland".into(),
+            cpu: vec!["avx".into(), "avx2".into()],
         };
         assert_eq!(Conditions::default().unmet(&env), None);
+        let v3 = |features: &[&str]| Conditions {
+            cpu: features.iter().map(|f| (*f).to_owned()).collect(),
+            ..Conditions::default()
+        };
+        assert_eq!(v3(&["avx2"]).unmet(&env), None);
+        assert_eq!(
+            v3(&["avx2", "fma"]).unmet(&env).as_deref(),
+            Some("it needs the processor feature fma, which this processor doesn't have")
+        );
+        // A feature this host doesn't know is missing, never assumed.
+        assert!(v3(&["avx1024"]).unmet(&env).is_some());
         let x11 = Conditions {
             display: vec!["x11".into()],
             ..Conditions::default()
