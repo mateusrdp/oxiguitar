@@ -37,9 +37,9 @@ pub(crate) struct Map {
     pub(crate) palm_mute: Option<Articulation>,
     pub(crate) dead: Option<Articulation>,
     pub(crate) ghost: Option<Articulation>,
-    /// Recorded hammer-ons and pull-offs. Not played by default: a note
-    /// not picked carries on the ringing string (Mateus, 25 Oct 2026),
-    /// unless the settings ask for the recorded ones (`recorded_legato`).
+    /// Recorded hammer-ons and pull-offs, for notes not picked: they sound
+    /// more natural than carrying on the ringing string (Mateus, 26 Oct
+    /// 2026), which sets without them still do.
     pub(crate) legato: Option<Articulation>,
 }
 
