@@ -174,7 +174,11 @@ fn begin(
         .plugin_folders()
         .unwrap_or_else(|| folders.default_plugin_folders());
     let plugins = discover(&searched, settings.clone(), display, core);
-    plugins.use_folders(folders.clone());
+    if app {
+        plugins.use_folders(folders.clone());
+    } else {
+        plugins.use_folders_read_only(folders.clone());
+    }
     // The folders the plugins share with the user (interface 1.3), made at
     // start so the user finds them before any plugin runs.
     if app && !safe {

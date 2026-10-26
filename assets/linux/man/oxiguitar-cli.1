@@ -91,10 +91,13 @@ The sound goes to the audio device the plugins offer (PipeWire before ALSA
 on Linux), or the one settings.json pins, or with
 .B \-\-wav
 into a file.
-The SoundFont player plays with the best sound set it finds: one in the
+The SoundFont player plays with the sound sets chosen in the app's plugin
+settings, else the best it finds: one in the
 .I soundfonts
 folder beside the plugin folder, else the largest the system has (on Linux
-in /usr/share/sounds/sf2 and /usr/share/soundfonts).
+in /usr/share/sounds/sf2, /usr/share/sounds/sf3 and /usr/share/soundfonts).
+A SoundFont 3 set the app hasn't decoded yet is decoded each time, which
+takes a few seconds.
 .TP
 .B tools
 List the tools, as in the Tools menu of

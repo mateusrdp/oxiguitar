@@ -173,6 +173,9 @@ struct Inner {
     /// OxiGuitar's folders, for the plugins' own folders and the shared
     /// ones (interface 1.3); unset for programs that keep none.
     folders: OnceLock<Folders>,
+    /// The folders are only read (`oxiguitar-cli`): a plugin's own folders
+    /// are named but not created.
+    read_only: std::sync::atomic::AtomicBool,
 }
 
 impl Drop for Inner {
@@ -571,6 +574,7 @@ impl Plugins {
             events: Arc::new(Queue::default()),
             failed_events: Mutex::new(Vec::new()),
             folders: OnceLock::new(),
+            read_only: std::sync::atomic::AtomicBool::new(false),
         }))
     }
 
@@ -580,6 +584,18 @@ impl Plugins {
     /// later calls change nothing.
     pub fn use_folders(&self, folders: Folders) {
         let _ = self.0.folders.set(folders);
+    }
+
+    /// Gives the plugins OxiGuitar's folders to read only, as a program
+    /// that changes nothing in them does (`oxiguitar-cli`): plugins asking
+    /// for their own data and cache folders are told where they are, but
+    /// they aren't created, so what a plugin writes there fails unless the
+    /// app made them.
+    pub fn use_folders_read_only(&self, folders: Folders) {
+        self.0
+            .read_only
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.use_folders(folders);
     }
 
     /// The shared folders the ready plugins list in their manifests, each
@@ -1786,7 +1802,8 @@ impl Plugins {
         };
         let data = folders.plugin_data(&manifest.id);
         let cache = folders.plugin_cache(&manifest.id);
-        for dir in [&data, &cache] {
+        let read_only = self.0.read_only.load(std::sync::atomic::Ordering::Relaxed);
+        for dir in [&data, &cache].into_iter().filter(|_| !read_only) {
             std::fs::create_dir_all(dir).map_err(|e| {
                 Error::new(
                     ErrorKind::Failed,

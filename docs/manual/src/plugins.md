@@ -4,7 +4,7 @@ OxiGuitar is a small program that does more with plugins: one plugin for each fi
 
 ## Where OxiGuitar keeps things
 
-When it starts, OxiGuitar makes sure its settings folder, a `settings.json` file and your `plugins` folder exist (on Linux in the usual freedesktop places), and creates any that are missing. It never changes anything else.
+When it starts, OxiGuitar makes sure its settings folder, a `settings.json` file and your `plugins` folder exist (on Linux in the usual freedesktop places), and creates any that are missing, with the `soundfonts` folder beside `plugins` for sound sets ([Better sounds](better-sounds.md)). It never changes anything else.
 
 | System | Settings (`settings.json`) | Your plugins | The program's plugin folder |
 | --- | --- | --- | --- |

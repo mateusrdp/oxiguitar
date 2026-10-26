@@ -20,6 +20,7 @@ oxp = []
 [dependencies]
 oxiguitar-plugin.workspace = true
 rustysynth.workspace = true
+lewton.workspace = true
 
 # Plugins deny `unsafe` rather than forbid it: `export_plugin!` allows it on
 # the two attributes it generates, and nowhere else.

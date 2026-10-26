@@ -7,33 +7,45 @@
 //!
 //! - `sets` finds the sound sets: the user's `soundfonts` folder (beside
 //!   `plugins`) and the system's own, read only; nothing is ever fetched.
-//!   Until the user picks, the best set plays: the user's before the
-//!   system's, the larger before the smaller.
+//! - `settings` is the settings window: a set for guitars, basses, drums
+//!   and everything else; until the user picks, the best set found (the
+//!   user's before the system's, the larger before the smaller).
 //! - `play` turns the timeline's notes into rustysynth's: one synthesiser
 //!   per track, a channel per string, notes starting within 7 frames.
-//! - `sf2` writes SoundFont 2 files in memory: what other sets become
-//!   before rustysynth reads them, and the contract suite's test set.
+//! - rustysynth reads only SoundFont 2, so `sf3` (SoundFont 3: Ogg Vorbis
+//!   samples, decoded with lewton) and `dls` (Downloadable Sounds, as
+//!   Windows and macOS ship their General MIDI set) turn the others into
+//!   SoundFont 2 in memory, written by `sf2`. A decoded SoundFont 3 is kept
+//!   in the plugin's cache folder, so it is decoded once.
 
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use oxiguitar_plugin::audio::Prepare;
-use oxiguitar_plugin::{Error, ErrorKind, Host, Instrument, Plugin, Renderer, SharedFolder};
+use oxiguitar_plugin::{
+    Error, ErrorKind, Host, Instrument, Level, Plugin, Renderer, SharedFolder, Tab,
+};
 use rustysynth::SoundFont;
 
+pub(crate) mod dls;
 pub(crate) mod play;
+pub(crate) mod riff;
 pub(crate) mod sets;
-// Used by the tests and the contract suite's test set for now; the DLS and
-// SF3 readers write through it next.
-#[cfg(test)]
+pub(crate) mod settings;
 pub(crate) mod sf2;
+pub(crate) mod sf3;
 
 /// The instrument's id in the manifest.
 pub const INSTRUMENT: &str = "soundfont";
 
-/// A set loaded once and kept while it is the one chosen, so opening
-/// another file doesn't load it again.
+/// The manual's page on getting better sets, which the footer's warning
+/// links to.
+pub const BETTER_SOUNDS: &str = "https://mateusrdp.github.io/oxiguitar/better-sounds.html";
+
+/// A set loaded once and kept while it is in use, so opening another file
+/// doesn't load it again.
 struct Loaded {
     path: PathBuf,
     modified: Option<SystemTime>,
@@ -46,6 +58,7 @@ pub struct SoundFontPlugin {
     host: Host,
     /// The sets loaded for the last preparation.
     loaded: Mutex<Vec<Loaded>>,
+    window: settings::Window,
 }
 
 impl std::fmt::Debug for SoundFontPlugin {
@@ -54,70 +67,158 @@ impl std::fmt::Debug for SoundFontPlugin {
     }
 }
 
+/// The user's `soundfonts` folder, as the host names it.
+pub(crate) fn user_folder(host: &Host) -> Option<PathBuf> {
+    let folders = host.folders().ok()?;
+    folders
+        .shared(SharedFolder::Soundfonts)
+        .map(Path::to_path_buf)
+}
+
+/// The sets this plugin can play, the best first.
+pub(crate) fn playable(host: &Host) -> Vec<sets::Found> {
+    sets::find(user_folder(host).as_deref(), &sets::system_places())
+}
+
+/// A short, stable name for a file's contents: its path, size and time
+/// (FNV-1a), for the cache of decoded sets.
+fn fingerprint(path: &Path, size: u64, modified: Option<SystemTime>) -> u64 {
+    let since = modified
+        .and_then(|m| m.duration_since(SystemTime::UNIX_EPOCH).ok())
+        .map_or(0, |d| d.as_nanos());
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    let bytes = path
+        .as_os_str()
+        .to_string_lossy()
+        .into_owned()
+        .into_bytes()
+        .into_iter()
+        .chain(size.to_le_bytes())
+        .chain(since.to_le_bytes());
+    for b in bytes {
+        h ^= u64::from(b);
+        h = h.wrapping_mul(0x0100_0000_01b3);
+    }
+    h
+}
+
+fn read_error(path: &Path, e: impl std::fmt::Display) -> Error {
+    Error::new(
+        ErrorKind::Failed,
+        format!("cannot read {}: {e}", path.display()),
+    )
+}
+
+fn unplayable(path: &Path, e: impl std::fmt::Display) -> Error {
+    Error::new(
+        ErrorKind::Invalid,
+        format!("{} isn't a sound set it can play: {e}", path.display()),
+    )
+}
+
 impl SoundFontPlugin {
-    /// The user's `soundfonts` folder, as the host names it.
-    fn user_folder(&self) -> Option<PathBuf> {
-        let folders = self.host.folders().ok()?;
-        folders
-            .shared(SharedFolder::Soundfonts)
-            .map(Path::to_path_buf)
-    }
-
-    /// The sets this plugin can play, the best first.
-    fn playable(&self) -> Vec<sets::Found> {
-        sets::find(self.user_folder().as_deref(), &sets::system_places())
-            .into_iter()
-            .filter(|f| f.kind == sets::Kind::Sf2)
-            .collect()
-    }
-
-    /// The set at `found`, loaded or taken from those already loaded.
+    /// The set `found`, loaded, or taken from those already loaded.
     fn load(&self, found: &sets::Found) -> Result<Arc<SoundFont>, Error> {
-        let meta = std::fs::metadata(&found.path).ok();
-        let modified = meta.as_ref().and_then(|m| m.modified().ok());
-        let size = meta.as_ref().map_or(0, std::fs::Metadata::len);
-        let mut loaded = self
-            .loaded
-            .lock()
-            .map_err(|_| Error::new(ErrorKind::Failed, "the loaded sets"))?;
-        if let Some(l) = loaded
-            .iter()
-            .find(|l| l.path == found.path && l.modified == modified && l.size == size)
+        let meta = std::fs::metadata(&found.path).map_err(|e| read_error(&found.path, e))?;
+        let modified = meta.modified().ok();
+        let size = meta.len();
+        if let Ok(loaded) = self.loaded.lock()
+            && let Some(l) = loaded
+                .iter()
+                .find(|l| l.path == found.path && l.modified == modified && l.size == size)
         {
             return Ok(l.font.clone());
         }
-        let file = std::fs::File::open(&found.path).map_err(|e| {
-            Error::new(
-                ErrorKind::Failed,
-                format!("cannot open {}: {e}", found.path.display()),
-            )
-        })?;
-        let font = SoundFont::new(&mut std::io::BufReader::new(file)).map_err(|e| {
-            Error::new(
-                ErrorKind::Invalid,
-                format!(
-                    "{} isn't a sound set it can read: {e}",
-                    found.path.display()
-                ),
-            )
-        })?;
-        let font = Arc::new(font);
-        // Only the set in use stays: an older one goes when the renderers
-        // that hold it are let go of.
-        loaded.clear();
-        loaded.push(Loaded {
-            path: found.path.clone(),
-            modified,
-            size,
-            font: font.clone(),
-        });
+        let font = Arc::new(self.read(&found.path, size, modified)?);
+        if let Ok(mut loaded) = self.loaded.lock() {
+            loaded.push(Loaded {
+                path: found.path.clone(),
+                modified,
+                size,
+                font: font.clone(),
+            });
+        }
         Ok(font)
+    }
+
+    /// Reads the set at `path`, whatever its kind: what its first bytes
+    /// say, not its name.
+    fn read(
+        &self,
+        path: &Path,
+        size: u64,
+        modified: Option<SystemTime>,
+    ) -> Result<SoundFont, Error> {
+        let mut head = [0u8; 4096];
+        let n = std::fs::File::open(path)
+            .and_then(|mut f| f.read(&mut head))
+            .map_err(|e| read_error(path, e))?;
+        let head = &head[..n];
+        if head.starts_with(b"RIFF") && head.get(8..12) == Some(b"DLS ") {
+            let file = std::fs::read(path).map_err(|e| read_error(path, e))?;
+            let (sf2, _left_out) = dls::to_sf2(&file).map_err(|e| unplayable(path, e.message))?;
+            return SoundFont::new(&mut std::io::Cursor::new(&sf2))
+                .map_err(|e| unplayable(path, e));
+        }
+        if !sf3::is_sf3(head) {
+            // SoundFont 2, read straight from the file.
+            let file = std::fs::File::open(path).map_err(|e| read_error(path, e))?;
+            return SoundFont::new(&mut std::io::BufReader::new(file))
+                .map_err(|e| unplayable(path, e));
+        }
+        // SoundFont 3: decoded once, then kept in the cache folder.
+        let cache = self.host.folders().ok().map(|f| {
+            f.cache
+                .join(format!("{:016x}.sf2", fingerprint(path, size, modified)))
+        });
+        if let Some(cached) = &cache
+            && let Ok(file) = std::fs::File::open(cached)
+            && let Ok(font) = SoundFont::new(&mut std::io::BufReader::new(file))
+        {
+            return Ok(font);
+        }
+        let file = std::fs::read(path).map_err(|e| read_error(path, e))?;
+        let sf2 = sf3::to_sf2(&file).map_err(|e| unplayable(path, e.message))?;
+        drop(file);
+        let font =
+            SoundFont::new(&mut std::io::Cursor::new(&sf2)).map_err(|e| unplayable(path, e))?;
+        if let Some(cached) = &cache {
+            // Written whole under another name, then renamed: a set half
+            // written is never read. A cache that can't be written only
+            // means decoding again next time.
+            let part = cached.with_extension("part");
+            if std::fs::write(&part, &sf2).is_ok() {
+                let _ = std::fs::rename(&part, cached);
+            }
+            let _ = std::fs::remove_file(&part);
+        }
+        Ok(font)
+    }
+
+    /// Says once, ever, that only the system's sets play, with a link to
+    /// the manual's page on better ones.
+    fn warn_once(&self) {
+        let Ok(mut s) = self.host.settings() else {
+            return;
+        };
+        if s.get(settings::WARNED).and_then(|v| v.as_bool()) == Some(true) {
+            return;
+        }
+        self.host.notify_with_link(
+            Level::Warning,
+            "Playing with your system's basic sound set. Better ones, free, make a big difference.",
+            "Better sounds",
+            BETTER_SOUNDS,
+        );
+        s.insert(settings::WARNED.into(), true.into());
+        let _ = self.host.set_settings(&s);
     }
 }
 
 impl Plugin for SoundFontPlugin {
     fn start(host: Host) -> Result<SoundFontPlugin, Error> {
         Ok(SoundFontPlugin {
+            window: settings::Window { host: host.clone() },
             host,
             loaded: Mutex::default(),
         })
@@ -126,23 +227,63 @@ impl Plugin for SoundFontPlugin {
     fn instrument(&self, id: &str) -> Option<&dyn Instrument> {
         (id == INSTRUMENT).then_some(self as &dyn Instrument)
     }
+
+    fn settings_window(&self) -> Option<&dyn Tab> {
+        Some(&self.window)
+    }
 }
 
 impl Instrument for SoundFontPlugin {
     fn prepare(&self, prepare: &Prepare) -> Result<Box<dyn Renderer>, Error> {
-        let playable = self.playable();
-        let Some(best) = playable.first() else {
-            let place = self.user_folder().map_or_else(
+        let found = playable(&self.host);
+        if found.is_empty() {
+            let place = user_folder(&self.host).map_or_else(
                 || "the soundfonts folder".to_owned(),
                 |p| p.display().to_string(),
             );
             return Err(Error::new(
                 ErrorKind::NotFound,
-                format!("no sound set found: put a SoundFont (.sf2) file in {place}"),
+                format!("no sound set found: put a SoundFont (.sf2 or .sf3) file in {place}"),
             ));
-        };
-        let font = self.load(best)?;
-        Ok(Box::new(play::Player::new(prepare, &font)?))
+        }
+        let picks = self.host.settings().unwrap_or_default();
+        let mut used: Vec<&sets::Found> = Vec::new();
+        let mut fonts = Vec::with_capacity(prepare.tracks.len());
+        for t in &prepare.tracks {
+            let pick = settings::chosen(&picks, settings::Role::of(t), &found);
+            // The pick, then every other set in order, until one loads.
+            let mut first_error = None;
+            let mut font = None;
+            for f in pick.into_iter().chain(found.iter()) {
+                match self.load(f) {
+                    Ok(loaded) => {
+                        if !used.iter().any(|u| u.path == f.path) {
+                            used.push(f);
+                        }
+                        font = Some(loaded);
+                        break;
+                    }
+                    Err(e) => {
+                        first_error.get_or_insert(e);
+                    }
+                }
+            }
+            match font {
+                Some(f) => fonts.push(f),
+                None => {
+                    return Err(first_error
+                        .unwrap_or_else(|| Error::new(ErrorKind::NotFound, "no sound set loads")));
+                }
+            }
+        }
+        // Only the sets in use stay loaded.
+        if let Ok(mut loaded) = self.loaded.lock() {
+            loaded.retain(|l| used.iter().any(|u| u.path == l.path));
+        }
+        if settings::only_basic(&used) {
+            self.warn_once();
+        }
+        Ok(Box::new(play::Player::new(prepare, &fonts)?))
     }
 }
 
