@@ -12,7 +12,8 @@
 //!   starts the next note exactly; the count-in comes first.
 //! - Ten minutes of music end on the frame they should, and the clock says
 //!   exactly which time each device frame played: nothing drifts.
-//! - The mixer: volume, pan, mute, solo; the metronome.
+//! - The mixer: volume, pan, mute, solo; the master level and its
+//!   limiter; the metronome.
 //!
 //! That it allocates nothing while it plays is `tests/engine_allocations.rs`
 //! (a test program of its own, so no other test allocates meanwhile).
@@ -131,6 +132,44 @@ fn a_loop_jumps_on_the_frame_of_its_end_and_a_seek_starts_the_next_note() {
 }
 
 #[test]
+fn play_until_stops_on_the_frame_of_its_end() {
+    let timeline = timeline();
+    let (mut engine, mut control, heard, _) = rig(&timeline, 512);
+    // Bar 2 alone, as Play Selection plays a selected bar.
+    let bar = &timeline.visits()[1];
+    let (a, b) = (bar.start, bar.end);
+    control.play_until(a, Some(b), false);
+    let span = frame_of(b, a, 1.0);
+    run(&mut engine, span as usize + 48_000, false);
+    let h = heard.lock().unwrap();
+    // Every note started is one of the bar's, and every one of them is.
+    let in_bar = timeline
+        .notes
+        .iter()
+        .filter(|n| n.start >= a && n.start < b)
+        .count();
+    assert!(in_bar > 0);
+    assert_eq!(h.on.len(), in_bar, "{:?}", h.on);
+    for (id, _) in &h.on {
+        let n = &timeline.notes[*id as usize];
+        assert!(n.start >= a && n.start < b, "note {id} at {}", n.start);
+    }
+    // The sound stops on the frame of its end, and the window is told.
+    assert!(h.all_off.contains(&(64 + span)), "{:?}", h.all_off);
+    assert!(control.collect().ended);
+    // A play after it plays to the song's end again.
+    drop(h);
+    control.play(a, false);
+    run(&mut engine, span as usize + 4096, false);
+    let h = heard.lock().unwrap();
+    assert!(
+        h.on.iter()
+            .any(|(id, _)| timeline.notes[*id as usize].start >= b),
+        "the next play goes past the old end"
+    );
+}
+
+#[test]
 fn the_count_in_comes_first_then_the_music() {
     let timeline = timeline();
     assert!(timeline.count_in_length > 0.0);
@@ -201,7 +240,9 @@ fn the_mixer_pans_mutes_and_solos_and_the_metronome_clicks() {
         .map(|n| n.start)
         .fold(f64::MAX, f64::min);
     let at = |frame: u64| frame as usize;
-    // Hard left at full volume: the right is silent.
+    // Hard left at full volume, the master at half (the recorder's level
+    // is 1, above the limiter's): the right is silent.
+    control.set_master(0.5);
     for t in 0..tracks {
         control.set_mix(
             t,
@@ -214,8 +255,23 @@ fn the_mixer_pans_mutes_and_solos_and_the_metronome_clicks() {
     }
     control.play(first, false);
     let (l, r) = run(&mut engine, 4800, true);
-    assert!((l[at(2400)] - 1.0).abs() < 1e-3, "{}", l[2400]);
+    assert!((l[at(2400)] - 0.5).abs() < 1e-3, "{}", l[2400]);
     assert!(r[at(2400)].abs() < 1e-3);
+    // The master at four times: the limiter holds every frame at −1 dBFS.
+    control.set_master(4.0);
+    control.seek(first);
+    let (l, _) = run(&mut engine, 4800, true);
+    assert!(
+        l.iter()
+            .all(|v| v.abs() <= oxiguitar_play::engine::LIMIT + 1e-6),
+        "nothing past the limit"
+    );
+    assert!(
+        (l[at(2400)] - oxiguitar_play::engine::LIMIT).abs() < 1e-3,
+        "{}",
+        l[2400]
+    );
+    control.set_master(0.5);
     // Muted: silence (after the ramp of one piece).
     for t in 0..tracks {
         control.set_mix(

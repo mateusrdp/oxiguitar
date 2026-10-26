@@ -22,7 +22,7 @@ OxiGuitar values your privacy first. It never uploads anything. No telemetry, no
 
 **v0.5.0, the editor (milestone M3), published as a pre-release on 21 October 2026.**
 
-OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). The window does not play anything yet: the player (milestone M4, NAM included) is what we are building now, and v1.0 follows it. The command-line tool already does: `oxiguitar-cli play` plays a score with the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
+OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). It plays them too: from the caret or the selection, looping, with a count-in and a metronome, at 25 to 200 % speed, with each track's volume, pan, mute and solo, using the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). The player (milestone M4) is still being finished, NAM included, and v1.0 follows it; `oxiguitar-cli play` plays a score from the terminal too. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## How to get involved
 

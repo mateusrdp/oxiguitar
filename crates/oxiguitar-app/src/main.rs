@@ -44,10 +44,13 @@ mod inspector;
 mod links;
 mod manager;
 mod palette;
+mod player;
+mod playing;
 mod plugin_tabs;
 mod prefs;
 mod shell;
 mod song;
+mod sound;
 #[cfg(test)]
 mod speed;
 #[cfg(test)]
@@ -219,6 +222,23 @@ struct App {
     transpose_scope: Option<oxiguitar_edit::Scope>,
     /// What to do once the score is saved (after "Save the changes…?").
     after_save: Option<Then>,
+    /// The player (M4): its controls and the engine's window half, its
+    /// thread, and the score's revisions as it was told them.
+    player: player::Player,
+    sound: sound::Sound,
+    score_revision: u64,
+    /// Where the caret was when playing began, for Stop.
+    began: Option<oxiguitar_edit::Caret>,
+    /// What the player has said in the footer this session.
+    player_told: std::collections::HashSet<String>,
+    /// The Output drop-down's entries (the first is the system's default),
+    /// the one chosen (empty: the default), and whether any audio output
+    /// works here.
+    outputs: Vec<String>,
+    output: String,
+    outputs_available: bool,
+    /// The score as plugins and the worker share it (whether it plays).
+    open_score: OpenScore,
 }
 
 /// What the question over the window asks.
@@ -460,7 +480,14 @@ fn main() -> Result<(), slint::PlatformError> {
         })
     });
 
-    let worker = Worker::start(startup.plugins.clone(), open_score, |event| {
+    let (sound, control) = sound::Sound::start(startup.plugins.clone(), |m| {
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                playing::from_sound(&app, m);
+            }
+        });
+    });
+    let worker = Worker::start(startup.plugins.clone(), open_score.clone(), |event| {
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(app) = APP.with(|a| a.borrow().clone()) {
                 handle(&app, event);
@@ -521,6 +548,15 @@ fn main() -> Result<(), slint::PlatformError> {
         chord_dialog: None,
         transpose_scope: None,
         after_save: None,
+        player: player::Player::new(control),
+        sound,
+        score_revision: 0,
+        began: None,
+        player_told: std::collections::HashSet::new(),
+        outputs: Vec::new(),
+        output: String::new(),
+        outputs_available: false,
+        open_score,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
     measure_palette();
@@ -528,6 +564,7 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.set_shortcut_lines(lines(&[
         "Ctrl + N: a new score;  Ctrl + O: open a file;  Ctrl + S: save it;  Ctrl + Shift + S: save it as another file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
         "Escape or a click: close this note",
+        "Space: play from the caret, or pause;  Ctrl + Left / Ctrl + Right: a bar back / on (the sound while it plays, else the caret)",
         "Mouse wheel over the page: scroll it;  Shift + wheel: zoom the page around the pointer",
         "Page Up / Page Down, the scroll bars: scroll the page;  with no score open, the arrow keys too",
         "A click on the page puts the caret there; Shift + click selects up to it",
@@ -578,17 +615,9 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     set_tools(&ui, &tool_rows(&default_tools()));
 
-    ui.set_player_available(!startup.inventory.instruments.is_empty());
-    if !startup.inventory.instruments.is_empty() {
-        ui.set_outputs(ModelRc::new(VecModel::from(
-            startup
-                .inventory
-                .instruments
-                .iter()
-                .map(|n| SharedString::from(n.as_str()))
-                .collect::<Vec<_>>(),
-        )));
-    }
+    // The outputs, asked of the audio-device plugin on the player's thread
+    // (finding one loads it).
+    app.borrow().sound.send(sound::ToSound::Devices);
     // The View menu as the user left it (a dark interface and a white page
     // the first time).
     let prefs = ViewPrefs::from_value(startup.settings.get(prefs::KEY).as_ref());
@@ -959,6 +988,27 @@ fn main() -> Result<(), slint::PlatformError> {
         let m = a.borrow_mut().mixer.toggle_solo(i as usize);
         sync_mix(&a, i as usize, m);
     });
+    let a = app.clone();
+    ui.on_player_action(move |name| playing::action(&a, name.as_str()));
+    let a = app.clone();
+    ui.on_player_key(move |name, shift, ctrl, alt| {
+        playing::key(&a, name.as_str(), shift, ctrl, alt)
+    });
+    let a = app.clone();
+    ui.on_player_frame(move |_| playing::frame(&a));
+    let a = app.clone();
+    ui.on_speed_edited(move |v| {
+        a.borrow_mut()
+            .player
+            .set_speed(u32::try_from(v).unwrap_or(100));
+        playing::sync(&a);
+    });
+    let a = app.clone();
+    ui.on_master_moved(move |v| {
+        a.borrow_mut().player.set_master(v);
+    });
+    let a = app.clone();
+    ui.on_output_chosen(move |i| playing::output_chosen(&a, usize::try_from(i).unwrap_or(0)));
     let a = app.clone();
     ui.on_palette_group_clicked(move |g| {
         a.borrow_mut().palette.toggle(g as usize);
@@ -1996,6 +2046,7 @@ fn handle(app: &Shared, event: Event) {
             sync_edit_state(app, &edit);
             ui.invoke_scroll_to(0.0, 0.0);
             settings_changed(app);
+            playing::score_changed(app, true);
         }
         Event::AskSave {
             heading,
@@ -2053,6 +2104,14 @@ fn handle(app: &Shared, event: Event) {
                 caret_moved(app);
             } else {
                 sync_caret(app, false);
+            }
+            playing::score_changed(app, false);
+        }
+        Event::Refused => {
+            let text = "Editing waits while the score plays: pause it (Space) to edit.".to_owned();
+            let new = app.borrow_mut().player_told.insert(text.clone());
+            if new {
+                message(app, Level::Warning, text);
             }
         }
         Event::Engraved {
@@ -2242,6 +2301,7 @@ fn sync_caret(app: &Shared, scroll: bool) {
     };
     sync_inspector(app, &ui);
     let s = app.borrow();
+    ui.set_has_selection(s.editing.selection().is_some());
     // A box on sheet `sheet`, in canvas points.
     let place = |sheet: usize, r: Rect| -> Option<BoxItem> {
         let o = s.sheets.rects.get(sheet)?;
@@ -2368,8 +2428,9 @@ fn settings_changed(app: &Shared) {
     }
 }
 
-/// A track's mixer changed: show it in its row.
+/// A track's mixer changed: show it in its row, and let the sound follow.
 fn sync_mix(app: &Shared, i: usize, mix: oxiguitar_model::Mix) {
+    app.borrow_mut().player.set_mix(i, mix);
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
