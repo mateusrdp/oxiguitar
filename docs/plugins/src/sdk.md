@@ -13,7 +13,7 @@ Four things in it matter to OxiGuitar:
 - **The `oxp` feature.** `export_plugin!` exports the entry point and the manifest's section only with it, so the same crate is an ordinary library for `cargo test` and a plugin file when built with `--features oxp --crate-type cdylib`. Without the feature in `Cargo.toml`, that build fails with "does not have the feature `oxp`".
 - **`unsafe_code = "deny"`**, not `"forbid"`: the two attributes `export_plugin!` generates (`#[unsafe(no_mangle)]` and `#[unsafe(link_section)]`) need `unsafe`, and allow it for themselves only. You write no `unsafe` code.
 - **`panic = "unwind"`**, Rust's default. A panic in a call is then caught, and the plugin is withdrawn for the rest of the session while OxiGuitar carries on; with `panic = "abort"` it closes OxiGuitar.
-- **The SDK's tag**: `v0.5.0`, the release of OxiGuitar you build for; it has interface 1.2. A plugin loads in every OxiGuitar that has the interface version its manifest asks for, and in every later one: 0.2 and later for 1.0 and 1.1, 0.5 and later for 1.2 ([Interface versions](versions.md)).
+- **The SDK's tag**: `v0.9.0`, the release of OxiGuitar you build for; it has interface 1.3. A plugin loads in every OxiGuitar that has the interface version its manifest asks for, and in every later one: 0.2 and later for 1.0 and 1.1, 0.5 and later for 1.2, 0.9 and later for 1.3 ([Interface versions](versions.md)).
 
 ## The plugin
 
