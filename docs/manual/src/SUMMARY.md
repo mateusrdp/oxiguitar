@@ -9,6 +9,7 @@
 - [Layouts](layouts.md)
 - [Tracks and notation](tracks.md)
 - [Editing](editing.md)
+- [Playing a score](playback.md)
 - [Zoom](zoom.md)
 - [Dark page and dynamics](view.md)
 - [Tools](tools.md)

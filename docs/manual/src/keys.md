@@ -13,7 +13,9 @@
 | F7 / F8 | Show or hide the left / bottom panel (View → Panels) |
 | Mouse wheel over the score | Scroll the score (along the line in the Horizontal layout) |
 | Shift + mouse wheel over the score | Zoom the score, around the pointer |
-| Page Up, Page Down, Space, the scroll bars | Scroll the score (the arrow keys too, with no score open) |
+| Page Up, Page Down, the scroll bars | Scroll the score (Space and the arrow keys too, with no score open) |
+| Space | Play from the caret, or pause ([Playing a score](playback.md)) |
+| Ctrl + Left / Ctrl + Right | A bar back or on: the sound while it plays, else the caret |
 | Click in the music | Put the caret there; Shift + click selects up to it |
 | Arrow keys, Home, End, Tab, Ctrl + Up / Down, Ctrl + 1 to 4 | Move the caret ([Editing](editing.md)) |
 | Shift + those keys, Ctrl + Shift + Left / Right | Select |
@@ -33,6 +35,7 @@
 | Ctrl + + / Ctrl + − / Ctrl + 0 | Zoom the interface in, out, back to 100 % |
 | Score zoom slider, bottom right | Zoom the score; click the percentage for 100 % |
 | Click a track's name | Select that track |
+| Click a track's overview | Move the playback (or the caret) there |
 | Click a hidden track's clef or TAB | Show it with the others |
 | Click a panel's open tab, or its chevron | Fold the panel away or open it again |
 | Click the line at the bottom | See every message; its chevron folds it back |
