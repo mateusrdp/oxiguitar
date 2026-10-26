@@ -544,7 +544,9 @@ impl Plugins {
                 examine(path, &env, &disabled)
             })
             .collect();
-        // One file per plugin id: the highest version, then the earliest.
+        // One file per plugin id: the highest version, then the one needing
+        // more processor features (a faster build this processor can run),
+        // then the earliest.
         for i in 0..found.len() {
             let Some(id) = found[i].ready().map(|m| m.id.clone()) else {
                 continue;
@@ -554,7 +556,7 @@ impl Plugins {
                 .reduce(|best, j| {
                     let (b, c) = (found[best].ready(), found[j].ready());
                     match (b, c) {
-                        (Some(b), Some(c)) if c.version > b.version => j,
+                        (Some(b), Some(c)) if better(c, b) => j,
                         _ => best,
                     }
                 });
@@ -1856,6 +1858,13 @@ fn missing_library(error: &str) -> Option<String> {
     None
 }
 
+/// Whether `c` is to be used rather than `b`, two usable files of one
+/// plugin: a higher version, or the same version needing more processor
+/// features (both usable here, so this processor has them).
+fn better(c: &Manifest, b: &Manifest) -> bool {
+    (&c.version, c.conditions.cpu.len()) > (&b.version, b.conditions.cpu.len())
+}
+
 /// What a plugin file is, from its manifest alone.
 fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
     let (manifest, bytes, state) = match oxp::read_manifest(&path) {
@@ -1942,6 +1951,24 @@ mod missing {
 mod tests {
     use super::*;
     use crate::folders::tests::scratch;
+
+    #[test]
+    fn of_two_builds_at_one_version_the_one_needing_more_features_is_used() {
+        let m = |version: &str, cpu: &[&str]| -> Manifest {
+            let mut m: Manifest = serde_json::from_str(&format!(
+                r#"{{"interface": "1.3", "id": "me.nam", "name": "NAM", "version": "{version}"}}"#
+            ))
+            .unwrap();
+            m.conditions.cpu = cpu.iter().map(|f| (*f).to_owned()).collect();
+            m
+        };
+        let (plain, v3) = (m("1.0.0", &[]), m("1.0.0", &["avx2", "fma"]));
+        assert!(better(&v3, &plain));
+        assert!(!better(&plain, &v3));
+        assert!(!better(&plain, &plain), "a tie keeps the earlier file");
+        // A newer version wins whatever it needs.
+        assert!(better(&m("1.0.1", &[]), &v3));
+    }
 
     fn plain(folders: &[PathBuf]) -> Plugins {
         Plugins::discover(folders, SharedSettings::default(), "x11", Arc::new(Unheard))
