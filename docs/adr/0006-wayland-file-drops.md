@@ -1,6 +1,6 @@
-# 0006 — No file drops on Wayland until winit or Slint report them
+# 0006 — No file drops on Wayland
 
-- Status: accepted (revisit on every winit or Slint upgrade)
+- Status: accepted; the gap is permanent (Mateus, 25 Oct 2026)
 - Date: 2026-10-17
 - Note (19 Oct 2026): written against Slint 1.18; the app is now pinned to Slint 1.17.1 ([ADR 0009](0009-wayland-first.md)), on the same winit 0.30.13.
 - Milestone: M1
@@ -25,18 +25,14 @@ So on Wayland, which GNOME and KDE use by default, a drop does nothing. On Wayla
 
 Option 1. Drops work on Windows, macOS and X11; on Wayland they don't, and the manual says so. No workaround in the code.
 
-## What needs to change to enable it
+## Permanent (25 Oct 2026)
 
-Any one of these, in the versions in our Cargo.lock:
+Mateus's rule for every library (CONTRIBUTING.md, "Libraries exactly as published"): nothing is planned on a change upstream. Option 1 as first written waited for winit or Slint; now the gap is accepted for good, no upgrade is checked for it, and nothing in the roadmap depends on it. Options 3 and 4 stay rejected: our own code on top of the libraries can't close it without polling and borrowing winit's connection.
 
-1. **winit's Wayland backend emits `WindowEvent::DroppedFile`, and the Slint we use runs on that winit.** Then drops work with no change to our code: `install_window_events` already handles the event. Check with `grep -rn DroppedFile ~/.cargo/registry/src/*/winit-<version>/src/platform_impl/linux/wayland/`; today nothing matches.
-2. **Slint passes operating-system drops to the window**, for example as a `DropArea` event whose `DataTransfer` has file paths. Then open the file from that event, and drop the winit `DroppedFile` arm if Slint covers every system.
-3. **Slint (or winit through Slint) lets an app add its own event source to the event loop**, for example a file descriptor that wakes the loop when it is readable. Then option 3 could be reconsidered without polling. It would still need the `unsafe` display wrap, so it needs Mateus's agreement first.
-
-Whichever lands, test with [`scripts/wayland-dnd-test/`](../../scripts/wayland-dnd-test/README.md). It runs a Wayland compositor nested in Xvfb and a drag source that behaves like a file manager, so it shows whether a drop reaches the app. Then remove the Wayland exception from the manual (`docs/manual/src/opening.md` and `keys.md`), `docs/design/ui.md` and CONTRIBUTING.md, and mark this ADR superseded.
+`install_window_events` keeps handling `WindowEvent::DroppedFile` on every system, so the Wayland build would open dropped files without a change of ours if a winit we use ever delivered them there. That is a fact about the code, not a plan.
 
 ## Consequences
 
 - On Wayland, users open files with File → Open, a double-click in the file manager (the packages register the Guitar Pro types), or the command line.
 - No `unsafe` code and no polling in the app.
-- Each winit or Slint upgrade gets a check against the list above. CONTRIBUTING.md lists this under "Known platform gaps" for reviewers.
+- CONTRIBUTING.md lists this under "Known platform gaps".

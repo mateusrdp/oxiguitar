@@ -74,4 +74,4 @@ xdg-mime default "$id.desktop" application/x-gtp
 
 This also gives OxiGuitar its icon and an entry in your desktop's menu. To undo it, delete the three files and run `update-mime-database` again. With a copy of the source code, `scripts/install-desktop-entry.sh PATH-TO-APPIMAGE` does the same.
 
-**macOS.** Double-clicking a Guitar Pro file starts OxiGuitar, but version 0.1 does not open the file yet: open it with **File → Open**.
+**macOS.** Double-clicking a Guitar Pro file starts OxiGuitar but does not open the file: open it with **File → Open**, or drop it on the window.

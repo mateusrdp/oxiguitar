@@ -19,6 +19,6 @@ The plugins recognise a file by its contents, so a file with the wrong extension
 
 When no installed plugin recognises a file, OxiGuitar doesn't open it, and the line of messages at the bottom of the window says so. If a plugin opens files with that extension but didn't recognise this one (a damaged file, or one the plugin gets wrong), the message asks you to report a bug; otherwise it asks you to open a feature request, so we know which formats people need. Both go to [the issue tracker](https://github.com/mateusrdp/oxiguitar/issues/new). Plugins for MuseScore (.mscz, .mscx), MusicXML, ABC and MIDI files are planned. The same line explains what went wrong when a file cannot be read; click it to see earlier messages.
 
-Dragging a file onto the window works on Windows, macOS and Linux desktops running X11; on Wayland desktops (the default on GNOME and KDE) it does not work yet; open the file with File → Open or a double-click instead. If you drop several files, the first one opens.
+Dragging a file onto the window works on Windows, macOS and Linux desktops running X11; on Wayland desktops (the default on GNOME and KDE) it does not work; open the file with File → Open or a double-click instead. If you drop several files, the first one opens.
 
 On Linux the Open dialog comes from your desktop through the XDG desktop portal, which GNOME and KDE install by default. Without it, the line at the bottom says so, and you can still open files from the command line.

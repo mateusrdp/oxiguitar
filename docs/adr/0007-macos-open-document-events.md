@@ -1,6 +1,6 @@
-# 0007 — No macOS "open document" events until winit or Slint deliver them
+# 0007 — No macOS "open document" events
 
-- Status: accepted (revisit on every winit or Slint upgrade)
+- Status: accepted; the gap is permanent (Mateus, 25 Oct 2026)
 - Date: 2026-10-18
 - Note (19 Oct 2026): written against Slint 1.18; the app is now pinned to Slint 1.17.1 ([ADR 0009](0009-wayland-first.md)), on the same winit 0.30.13.
 - Milestone: M1
@@ -24,18 +24,13 @@ So today a double-click on macOS starts OxiGuitar with an empty window. The manu
 
 Option 1, the same as ADR 0006 (Mateus, 18 Oct 2026): clean code only, no `unsafe`, the gap documented.
 
-## What needs to change to enable it
+## Permanent (25 Oct 2026)
 
-Any one of these, in the versions in our Cargo.lock:
-
-1. **winit reports opened files or URLs on macOS** (an event or application-handler method), **and the Slint we use exposes it** to the app, for example through `slint::winit_030` or its successor.
-2. **Slint offers an "open file" callback** on macOS (it would also serve iOS later, M9).
-
-Then open the file through the same `Request::Open` as File → Open and a drop, remove the macOS note from `docs/manual/src/installing.md`, `docs/design/ui.md` and CONTRIBUTING.md ("Known platform gaps"), and mark this ADR superseded. Check with: `grep -rn -i "openurls\|open_urls\|opened" ~/.cargo/registry/src/*/winit-<version>/src/platform_impl/apple/` (or `macos/`), and the Slint changelog.
+Mateus's rule for every library (CONTRIBUTING.md, "Libraries exactly as published"): nothing is planned on a change upstream. Option 1 as first written waited for winit or Slint; now the gap is accepted for good (Mateus chose this over option 2, our own `unsafe` application delegate), no upgrade is checked for it, and nothing in the roadmap depends on it.
 
 ## Consequences
 
 - On macOS, users open files with File → Open, by dropping them on the window (winit reports those), or from the command line.
 - No `unsafe` code and no Objective-C glue in the app.
-- When the plugin system arrives (ADR 0008), this could become a macOS-only plugin. That changes where the code lives, not the decision: it would still need the `unsafe` delegate, so it waits for upstream too unless Mateus decides otherwise.
-- Each winit or Slint upgrade gets a check against the list above, next to ADR 0006's.
+- A macOS-only plugin (ADR 0008) wouldn't change this: it would still need the `unsafe` delegate.
+- CONTRIBUTING.md lists this under "Known platform gaps".
