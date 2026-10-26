@@ -14,6 +14,7 @@ use slint::{ModelRc, SharedString, VecModel};
 
 use crate::player::{Do, Place, State, span_of};
 use crate::sound::{FromSound, ToSound};
+use crate::ui::PlayFrame;
 use crate::{Shared, message, sync_footer};
 
 /// The manual's page on getting better sounds.
@@ -166,15 +167,23 @@ pub(crate) fn sync(app: &Shared) {
     ui.set_player_speed(p.speed() as i32);
     ui.set_master_level(p.master());
     ui.set_player_running(p.state() == State::Playing);
-    // Paused, the overview's playhead stays where the sound stopped;
-    // stopped, at the start.
-    let song = match (p.state(), p.heard(), p.timeline()) {
-        (State::Paused, Some(t), Some(tl)) if tl.length() > 0.0 => {
-            (t / tl.length()).clamp(0.0, 1.0) as f32
-        }
-        _ => 0.0,
+    ui.set_visual_on(s.visual);
+    // Paused, the cursor and the overview's playhead stay where the sound
+    // stopped; stopped, nothing shows.
+    let still = match p.state() {
+        State::Paused => p.heard().map(|t| shown_at(&s, t, false)),
+        // Stopped, the playhead shows where Play starts: the caret.
+        _ => match (s.editing.score(), s.editing.caret(), p.timeline()) {
+            (Some(score), Some(c), Some(tl)) if tl.length() > 0.0 => {
+                crate::player::time_of(tl, Place::of_caret(c, &score), 0).map(|(_, t)| PlayFrame {
+                    song: (t / tl.length()).clamp(0.0, 1.0) as f32,
+                    ..Default::default()
+                })
+            }
+            _ => None,
+        },
     };
-    ui.set_song_position(song);
+    ui.set_still_frame(still.unwrap_or_default());
     s.open_score.set_playing(p.refuses_edits());
 }
 
@@ -232,6 +241,11 @@ pub(crate) fn action(app: &Shared, name: &str) {
             s.player.set_metronome(on);
             Vec::new()
         }
+        "visual-metronome" => {
+            let mut s = app.borrow_mut();
+            s.visual = !s.visual;
+            Vec::new()
+        }
         "loop" => {
             let mut s = app.borrow_mut();
             let on = !s.player.looping();
@@ -272,14 +286,39 @@ fn play(app: &Shared, selection: bool) -> Vec<Do> {
     if s.player.state() != State::Playing {
         s.began = Some(caret);
     }
+    s.followed = None;
     s.player.play(Place::of_caret(caret, &score), span)
 }
 
 fn pause(app: &Shared) {
-    let at = app.borrow_mut().player.pause();
-    if let Some(p) = at {
-        put_caret_at(app, p);
+    let moved = {
+        let mut s = app.borrow_mut();
+        let at = s.player.pause();
+        let moved = at.is_some_and(|p| s.editing.put_caret_at(p.bar, p.offset));
+        // Where the pause leaves it, before anyone hears it moved.
+        s.paused_at = s.editing.caret();
+        moved
+    };
+    if moved {
+        crate::caret_moved(app);
     }
+}
+
+/// The caret moved: moved away from where Pause left it, the pause ends
+/// (Play starts from the caret, so the paused cursor would show a place
+/// nothing will play from).
+pub(crate) fn caret_moved(app: &Shared) {
+    let dos = {
+        let mut s = app.borrow_mut();
+        if s.player.state() != State::Paused || s.editing.caret() == s.paused_at {
+            return;
+        }
+        s.paused_at = None;
+        s.began = None;
+        s.player.stop().1
+    };
+    act(app, dos);
+    sync(app);
 }
 
 fn stop(app: &Shared) -> Vec<Do> {
@@ -346,19 +385,30 @@ pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) 
 /// One frame while the sound runs: what the engine handed back is
 /// dropped, the song's end noticed, and where the sound is, for what the
 /// frame shows. Called by the window while drawing, so anything that
-/// changes the window waits until the frame is done.
-pub(crate) fn frame(app: &Shared) -> crate::ui::PlayFrame {
+/// changes the window (the page turning, the song's end) waits until the
+/// frame is done.
+pub(crate) fn frame(app: &Shared) -> PlayFrame {
     let Ok(mut s) = app.try_borrow_mut() else {
-        return crate::ui::PlayFrame { song: 0.0 };
+        return PlayFrame::default();
     };
     let (ended, dos) = s.player.frame();
-    let song = match (s.player.heard(), s.player.timeline()) {
-        (Some(t), Some(tl)) if tl.length() > 0.0 => (t / tl.length()).clamp(0.0, 1.0) as f32,
-        _ => 0.0,
+    let out = match s.player.heard() {
+        Some(t) => shown_at(&s, t, true),
+        None => PlayFrame::default(),
     };
+    // A new line or system: turn the page if the cursor nears its edge.
+    let turn = out.shown && (s.followed != Some((out.top as i32, out.x as i32 / 64)));
+    if turn {
+        s.followed = Some((out.top as i32, out.x as i32 / 64));
+    }
+    drop(s);
+    if turn {
+        let a = app.clone();
+        let f = out.clone();
+        slint::Timer::single_shot(Duration::ZERO, move || follow(&a, f));
+    }
     if ended {
-        let back = s.began.take();
-        drop(s);
+        let back = app.borrow_mut().began.take();
         let a = app.clone();
         slint::Timer::single_shot(Duration::ZERO, move || {
             if let Some(c) = back {
@@ -371,7 +421,96 @@ pub(crate) fn frame(app: &Shared) -> crate::ui::PlayFrame {
             sync(&a);
         });
     }
-    crate::ui::PlayFrame { song }
+    out
+}
+
+/// What shows of playback at score time `t`: the overview's playhead, the
+/// cursor on the page and, while the sound runs (`running`), the visual
+/// metronome's flash.
+fn shown_at(s: &crate::App, t: f64, running: bool) -> PlayFrame {
+    let Some(tl) = s.player.timeline() else {
+        return PlayFrame::default();
+    };
+    let length = tl.length();
+    let song = if length > 0.0 {
+        (t / length).clamp(0.0, 1.0) as f32
+    } else {
+        0.0
+    };
+    let mut out = PlayFrame {
+        song,
+        ..Default::default()
+    };
+    if let (Some(score), Some((v, offset))) = (s.editing.score(), tl.find(t)) {
+        let bar = tl.visits()[v].visit.bar;
+        let bar_length = tl.map.bar_length(bar).to_f64();
+        if let Some(c) = crate::cursor::at(s.editing.hits(), &score, bar, offset, bar_length)
+            && let Some(o) = s.sheets.rects.get(c.sheet)
+        {
+            out.shown = true;
+            out.x = o.x + c.x;
+            out.top = o.y + c.top;
+            out.bottom = o.y + c.bottom;
+            out.beat = crate::ui::BoxItem {
+                x: o.x + c.beat.x,
+                y: o.y + c.beat.y,
+                w: c.beat.width,
+                h: c.beat.height,
+            };
+        }
+    }
+    if running && s.visual {
+        // The latest click: bright for a moment, then dark.
+        let i = tl.clicks.partition_point(|c| c.time <= t);
+        if let Some(c) = i.checked_sub(1).and_then(|i| tl.clicks.get(i)) {
+            let age = (t - c.time).max(0.0);
+            let strength = if c.strong { 1.0 } else { 0.55 };
+            out.flash = (strength * (1.0 - age / FLASH).max(0.0)) as f32;
+        }
+    }
+    out
+}
+
+/// How long a flash of the visual metronome lasts, in score seconds.
+const FLASH: f64 = 0.12;
+
+/// Turns the page to keep the cursor in sight.
+fn follow(app: &Shared, f: PlayFrame) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let px = crate::PX_PER_PT * app.borrow().zoom;
+    let (ox, oy) = (ui.get_origin_x(), ui.get_origin_y());
+    let view = (
+        ui.get_view_x(),
+        ui.get_view_y(),
+        ui.get_view_width(),
+        ui.get_view_height(),
+    );
+    if let Some((x, y)) =
+        crate::cursor::follow(view, ox + f.x * px, oy + f.top * px, oy + f.bottom * px)
+    {
+        ui.invoke_scroll_to(x, y);
+    }
+}
+
+/// A click on a track's overview, at `fraction` of the song: the sound
+/// goes there while it plays, else the caret does.
+pub(crate) fn overview_clicked(app: &Shared, fraction: f32) {
+    let place = {
+        let mut s = app.borrow_mut();
+        let Some(tl) = s.player.timeline().cloned() else {
+            return;
+        };
+        let t = f64::from(fraction.clamp(0.0, 1.0)) * tl.length();
+        if s.player.seek(t) {
+            return;
+        }
+        crate::player::place_at(&tl, t.min(tl.length() - 1e-6).max(0.0))
+    };
+    if let Some(p) = place {
+        put_caret_at(app, p);
+    }
 }
 
 /// The Output drop-down: `index` into the outputs listed, 0 the system's
