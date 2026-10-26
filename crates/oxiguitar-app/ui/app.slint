@@ -24,12 +24,6 @@ export struct TileItem {
     size: length,
 }
 
-// What the window shows of playback on one frame (main.rs, `player_frame`).
-export struct PlayFrame {
-    // Where the song is, 0 to 1: the track overview's playhead.
-    song: float,
-}
-
 // A box over the page, in canvas points (the editor's caret and selection;
 // editing.rs). The window places it with the origin and the zoom, so it
 // follows resizing and zooming by itself.
@@ -38,6 +32,21 @@ export struct BoxItem {
     y: float,
     w: float,
     h: float,
+}
+
+// What the window shows of playback on one frame (main.rs, `player_frame`).
+export struct PlayFrame {
+    // Where the song is, 0 to 1: the track overview's playhead.
+    song: float,
+    // The cursor on the page, in canvas points (cursor.rs): the line and
+    // the beat heard; `shown` false when its bar isn't on the page.
+    shown: bool,
+    x: float,
+    top: float,
+    bottom: float,
+    beat: BoxItem,
+    // The visual metronome, 0 (dark) to 1 (the bar's first beat).
+    flash: float,
 }
 
 export struct TrackRow {
@@ -128,6 +137,9 @@ global Look {
     // The caret, the selection and the selected track: the score's accent,
     // between its light and dark pages' greens so it reads on both.
     out property <color> accent: #3aa55f;
+    // The playback cursor and the visual metronome: a blue that reads on
+    // the white page and the dark one, apart from the caret's green.
+    out property <color> playback: #2f8fe0;
 }
 
 // A link in a footer message: underlined, in the accent colour.
@@ -512,8 +524,14 @@ component TrackOverview inherits Rectangle {
         fill: Palette.foreground.transparentize(0.45);
         commands: "M0 0 L8 0 L4 6 Z";
     }
+    // A click moves the playback there (the sound while it plays, else
+    // the caret).
+    callback clicked(float);
+    TouchArea {
+        clicked => { root.clicked(clamp((self.mouse-x - 4px) / max(1px, root.width - 8px), 0, 1)); }
+    }
     Tooltip {
-        text: @markdown("Playback position");
+        text: @markdown("Playback position (click to move it)");
     }
 }
 
@@ -1013,11 +1031,14 @@ export component AppWindow inherits Window {
     in property <bool> outputs-available: false;
     callback player-action(string);
     callback player-key(string, bool, bool, bool) -> bool;
+    callback overview-clicked(float);
+    in property <bool> visual-on;
     callback speed-edited(int);
     callback master-moved(float);
     callback output-chosen(int);
-    // Where the player is in the song, 0 to 1, while nothing plays.
-    in property <float> song-position: 0;
+    // What shows of playback while the sound doesn't run: where it
+    // paused, or nothing.
+    in property <PlayFrame> still-frame: { song: 0, shown: false };
     // While the sound runs, the window draws a frame whenever the screen
     // can show one and asks for what it shows on every frame (main.rs,
     // `player_frame`): computed from the audio clock, never from a timer.
@@ -1026,7 +1047,7 @@ export component AppWindow inherits Window {
     pure callback player-frame(int) -> PlayFrame;
     out property <PlayFrame> play-frame: root.player-running
         ? root.player-frame(round(animation-tick() / 1ms))
-        : { song: root.song-position };
+        : root.still-frame;
 
     // Score zoom as log2 of the zoom factor: -2 is 25 %, 0 is 100 %, 2 is 400 %.
     in-out property <float> zoom-log: 0;
@@ -1589,6 +1610,23 @@ export component AppWindow inherits Window {
                                 checked: root.metronome-on;
                                 clicked => { root.player-action("metronome"); }
                             }
+                            // The visual metronome: while on, it flashes on
+                            // each beat, brighter on the bar's first.
+                            Rectangle {
+                                width: 30px;
+                                height: 28px;
+                                border-radius: 4px;
+                                background: root.visual-on && root.player-running
+                                    ? Look.playback.transparentize(1 - root.play-frame.flash * 0.9)
+                                    : transparent;
+                                IconButton {
+                                    icon: @image-url("../../../assets/icons/ui/visual-metronome.svg");
+                                    tip: "Visual Metronome (flashes on each beat)";
+                                    enabled: root.player-available;
+                                    checked: root.visual-on && !root.player-running;
+                                    clicked => { root.player-action("visual-metronome"); }
+                                }
+                            }
                         }
                     }
                     Rectangle { width: 13px; Rectangle { x: 6px; width: 1px; height: 60%; background: Palette.border; } }
@@ -1740,12 +1778,12 @@ export component AppWindow inherits Window {
                     background: Look.canvas;
                     clip: true;
                     // Reads the frame while the sound runs, so frames keep
-                    // coming even with the track list hidden (it draws
-                    // nothing).
+                    // coming even when the cursor's bar isn't in the view
+                    // (it draws nothing).
                     Rectangle {
                         x: 0;
                         y: 0;
-                        width: root.player-running ? 1px + root.play-frame.song * 0px : 0px;
+                        width: root.player-running ? 1px + root.play-frame.x * 0px : 0px;
                         height: 1px;
                     }
                     flick := ScrollView {
@@ -1835,6 +1873,25 @@ export component AppWindow inherits Window {
                             border-color: Look.accent;
                             border-width: 1.5px;
                             border-radius: 2px;
+                        }
+                        // The playback cursor (cursor.rs): the beat heard,
+                        // lightly boxed, and a line moving with the sound,
+                        // in the player's blue (the caret is green). Drawn
+                        // over the tiles, so it redraws none.
+                        if root.player-state != 0 && root.play-frame.shown : Rectangle {
+                            x: root.origin-x + root.play-frame.beat.x * root.pt-scale * 1px;
+                            y: root.origin-y + root.play-frame.beat.y * root.pt-scale * 1px;
+                            width: root.play-frame.beat.w * root.pt-scale * 1px;
+                            height: root.play-frame.beat.h * root.pt-scale * 1px;
+                            background: Look.playback.transparentize(0.85);
+                            border-radius: 2px;
+                        }
+                        if root.player-state != 0 && root.play-frame.shown : Rectangle {
+                            x: root.origin-x + root.play-frame.x * root.pt-scale * 1px - 1px;
+                            y: root.origin-y + root.play-frame.top * root.pt-scale * 1px;
+                            width: 2px;
+                            height: (root.play-frame.bottom - root.play-frame.top) * root.pt-scale * 1px;
+                            background: Look.playback;
                         }
                         // Lyrics typed on the page (M3 slice 6, as in
                         // MuseScore): space and hyphen go to the next beat.
@@ -2115,6 +2172,7 @@ export component AppWindow inherits Window {
                                 bars: track.bars;
                                 shown: track.shown;
                                 position: root.play-frame.song;
+                                clicked(f) => { root.overview-clicked(f); }
                             }
                             Rectangle { width: 2px; }
                         }

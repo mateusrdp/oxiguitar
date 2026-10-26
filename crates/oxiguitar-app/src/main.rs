@@ -35,6 +35,7 @@ mod bar_form;
 mod bend_form;
 mod canvas;
 mod chord_form;
+mod cursor;
 mod document;
 mod editing;
 mod effect_form;
@@ -239,6 +240,12 @@ struct App {
     outputs_available: bool,
     /// The score as plugins and the worker share it (whether it plays).
     open_score: OpenScore,
+    /// The visual metronome is on; the cursor's line and system when the
+    /// page was last checked for turning.
+    visual: bool,
+    followed: Option<(i32, i32)>,
+    /// Where Pause put the caret: moved from there, the pause ends.
+    paused_at: Option<oxiguitar_edit::Caret>,
 }
 
 /// What the question over the window asks.
@@ -557,6 +564,9 @@ fn main() -> Result<(), slint::PlatformError> {
         output: String::new(),
         outputs_available: false,
         open_score,
+        visual: false,
+        followed: None,
+        paused_at: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
     measure_palette();
@@ -996,6 +1006,8 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_player_frame(move |_| playing::frame(&a));
+    let a = app.clone();
+    ui.on_overview_clicked(move |f| playing::overview_clicked(&a, f));
     let a = app.clone();
     ui.on_speed_edited(move |v| {
         a.borrow_mut()
@@ -2270,6 +2282,8 @@ fn send_typed(app: &Shared, t: editing::Typed) {
 }
 
 fn caret_moved(app: &Shared) {
+    playing::caret_moved(app);
+    playing::sync(app);
     sync_caret(app, true);
     follow_voice(app);
     let s = app.borrow();

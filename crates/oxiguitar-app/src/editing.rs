@@ -424,6 +424,11 @@ impl Editing {
 
     /// A new engraving: its map, and so the tracks shown. A caret on a
     /// track no longer shown goes to the first shown track, same bar.
+    /// The engraver's map of the page, for the playback cursor.
+    pub(crate) fn hits(&self) -> &Arc<Hits> {
+        &self.hits
+    }
+
     pub(crate) fn engraved(&mut self, hits: Arc<Hits>) {
         self.shown = hits.tracks();
         self.hits = hits;

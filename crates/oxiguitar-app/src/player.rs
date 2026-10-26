@@ -559,6 +559,16 @@ impl Player {
         }
     }
 
+    /// The overview was clicked at `time`: the sound goes there while it
+    /// plays (true); otherwise the caret should (false).
+    pub(crate) fn seek(&mut self, time: f64) -> bool {
+        if self.state == State::Playing {
+            self.control.seek(time);
+            return true;
+        }
+        false
+    }
+
     pub(crate) fn count_in(&self) -> bool {
         self.count_in
     }
