@@ -17,7 +17,8 @@
 //!   Windows and macOS ship their General MIDI set) turn the others into
 //!   SoundFont 2 in memory, written by `sf2`. A decoded SoundFont 3 is kept
 //!   in the plugin's cache folder, so it is decoded once.
-//! - `sfz` reads SFZ instruments and their samples, for our own sampler.
+//! - `sfz` reads SFZ instruments and their samples and plays them: our own
+//!   sampler (an SFZ instrument plays only where the settings pick it).
 
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
@@ -37,9 +38,6 @@ pub(crate) mod sets;
 pub(crate) mod settings;
 pub(crate) mod sf2;
 pub(crate) mod sf3;
-// Read but not played until the sampler, the next pull request of M4
-// slice 5, which removes this allowance.
-#[allow(dead_code)]
 pub(crate) mod sfz;
 
 /// The instrument's id in the manifest.
@@ -58,11 +56,22 @@ struct Loaded {
     font: Arc<SoundFont>,
 }
 
+/// An SFZ instrument loaded, as its file was then.
+struct LoadedSfz {
+    path: PathBuf,
+    modified: Option<SystemTime>,
+    size: u64,
+    sfz: Arc<sfz::Loaded>,
+}
+
 /// The plugin.
 pub struct SoundFontPlugin {
     host: Host,
     /// The sets loaded for the last preparation.
     loaded: Mutex<Vec<Loaded>>,
+    /// The SFZ instruments loaded for it, and their samples.
+    loaded_sfz: Mutex<Vec<LoadedSfz>>,
+    samples: sfz::Samples,
     window: settings::Window,
 }
 
@@ -82,11 +91,7 @@ pub(crate) fn user_folder(host: &Host) -> Option<PathBuf> {
 
 /// The sets this plugin can play, the best first.
 pub(crate) fn playable(host: &Host) -> Vec<sets::Found> {
-    let mut found = sets::find(user_folder(host).as_deref(), &sets::system_places());
-    // SFZ instruments are read (`sfz`) but not played yet: the sampler
-    // comes in the next pull request of M4 slice 5.
-    found.retain(|f| f.kind != sets::Kind::Sfz);
-    found
+    sets::find(user_folder(host).as_deref(), &sets::system_places())
 }
 
 /// A short, stable name for a file's contents: its path, size and time
@@ -126,6 +131,43 @@ fn unplayable(path: &Path, e: impl std::fmt::Display) -> Error {
 }
 
 impl SoundFontPlugin {
+    /// The SFZ instrument `found` with its samples, loaded, or taken from
+    /// those already loaded. Samples it can't read are said in the footer.
+    fn load_sfz(&self, found: &sets::Found) -> Result<Arc<sfz::Loaded>, Error> {
+        let meta = std::fs::metadata(&found.path).map_err(|e| read_error(&found.path, e))?;
+        let modified = meta.modified().ok();
+        let size = meta.len();
+        if let Ok(loaded) = self.loaded_sfz.lock()
+            && let Some(l) = loaded
+                .iter()
+                .find(|l| l.path == found.path && l.modified == modified && l.size == size)
+        {
+            return Ok(l.sfz.clone());
+        }
+        let sfz = Arc::new(
+            sfz::load(&found.path, &self.samples).map_err(|e| unplayable(&found.path, e))?,
+        );
+        if let Some(first) = sfz.missing.first() {
+            let name = found.path.file_name().map_or_else(
+                || found.path.display().to_string(),
+                |n| n.to_string_lossy().into_owned(),
+            );
+            self.host.notify(
+                Level::Warning,
+                format!("{name} plays without some of its samples: {first}"),
+            );
+        }
+        if let Ok(mut loaded) = self.loaded_sfz.lock() {
+            loaded.push(LoadedSfz {
+                path: found.path.clone(),
+                modified,
+                size,
+                sfz: sfz.clone(),
+            });
+        }
+        Ok(sfz)
+    }
+
     /// The set `found`, loaded, or taken from those already loaded.
     fn load(&self, found: &sets::Found) -> Result<Arc<SoundFont>, Error> {
         let meta = std::fs::metadata(&found.path).map_err(|e| read_error(&found.path, e))?;
@@ -230,6 +272,8 @@ impl Plugin for SoundFontPlugin {
             window: settings::Window { host: host.clone() },
             host,
             loaded: Mutex::default(),
+            loaded_sfz: Mutex::default(),
+            samples: sfz::Samples::default(),
         })
     }
 
@@ -257,42 +301,63 @@ impl Instrument for SoundFontPlugin {
         }
         let picks = self.host.settings().unwrap_or_default();
         let mut used: Vec<&sets::Found> = Vec::new();
-        let mut fonts = Vec::with_capacity(prepare.tracks.len());
+        let mut sounds = Vec::with_capacity(prepare.tracks.len());
+        let mut said: Vec<&std::path::Path> = Vec::new();
         for t in &prepare.tracks {
             let pick = settings::chosen(&picks, settings::Role::of(t), &found);
-            // The pick, then every other set in order, until one loads.
+            // The pick, then every General MIDI set in order, until one
+            // loads.
             let mut first_error = None;
-            let mut font = None;
-            for f in pick.into_iter().chain(found.iter()) {
-                match self.load(f) {
+            let mut sound = None;
+            for f in pick
+                .into_iter()
+                .chain(found.iter().filter(|f| f.kind != sets::Kind::Sfz))
+            {
+                let loaded = if f.kind == sets::Kind::Sfz {
+                    self.load_sfz(f).map(play::Sound::Sfz)
+                } else {
+                    self.load(f).map(play::Sound::Font)
+                };
+                match loaded {
                     Ok(loaded) => {
                         if !used.iter().any(|u| u.path == f.path) {
                             used.push(f);
                         }
-                        font = Some(loaded);
+                        sound = Some(loaded);
                         break;
                     }
                     Err(e) => {
+                        if f.kind == sets::Kind::Sfz && !said.contains(&f.path.as_path()) {
+                            said.push(&f.path);
+                            self.host.notify(
+                                Level::Warning,
+                                format!("{}; playing a General MIDI set instead", e.message),
+                            );
+                        }
                         first_error.get_or_insert(e);
                     }
                 }
             }
-            match font {
-                Some(f) => fonts.push(f),
+            match sound {
+                Some(s) => sounds.push(s),
                 None => {
                     return Err(first_error
                         .unwrap_or_else(|| Error::new(ErrorKind::NotFound, "no sound set loads")));
                 }
             }
         }
-        // Only the sets in use stay loaded.
+        // Only the sets in use stay loaded, and only their samples.
         if let Ok(mut loaded) = self.loaded.lock() {
             loaded.retain(|l| used.iter().any(|u| u.path == l.path));
         }
+        if let Ok(mut loaded) = self.loaded_sfz.lock() {
+            loaded.retain(|l| used.iter().any(|u| u.path == l.path));
+        }
+        self.samples.trim();
         if settings::only_basic(&used) {
             self.warn_once();
         }
-        Ok(Box::new(play::Player::new(prepare, &fonts)?))
+        Ok(Box::new(play::Player::new(prepare, &sounds)?))
     }
 }
 

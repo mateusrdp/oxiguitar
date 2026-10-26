@@ -60,7 +60,8 @@ impl Role {
 }
 
 /// The set `settings` picks for `role` among `found`, if it picks one that
-/// is still there; else the best.
+/// is still there; else the best General MIDI set (an SFZ instrument plays
+/// only where picked: Mateus, 26 Oct 2026).
 pub(crate) fn chosen<'a>(
     settings: &Map<String, Value>,
     role: Role,
@@ -74,7 +75,7 @@ pub(crate) fn chosen<'a>(
                 .iter()
                 .find(|f| f.path.as_os_str() == std::ffi::OsStr::new(p))
         })
-        .or_else(|| found.first())
+        .or_else(|| found.iter().find(|f| f.kind != sets::Kind::Sfz))
 }
 
 /// How the window names a set.
@@ -98,7 +99,11 @@ pub(crate) struct Window {
 
 impl Window {
     fn found(&self) -> Vec<Found> {
-        crate::playable(&self.host)
+        let mut found = crate::playable(&self.host);
+        // SFZ instruments join the window with their own roles (M4 slice
+        // 5, the third pull request); until then settings.json picks them.
+        found.retain(|f| f.kind != sets::Kind::Sfz);
+        found
     }
 }
 

@@ -6,7 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
-- The SoundFont plugin reads SFZ instruments (M4 slice 5): their headers, `#define` and `#include`, every opcode the recommended guitars, basses and drum kits use, and their WAV, FLAC and Ogg Vorbis samples, whole in memory at their own bit depth. They don't play yet: the sampler comes next.
+- The SoundFont plugin plays SFZ instruments (M4 slice 5), the format of the best free recorded guitars, basses and drum kits, through a sampler of our own: every note on its exact frame, velocity layers, round robins, key switches, choke groups (a closed hi-hat stops the open one), release samples, loops, envelopes, filters and LFOs, the samples (WAV, FLAC, Ogg Vorbis) whole in memory at their own bit depth and read with a high-quality interpolator. Bends, slides and vibrato move an SFZ note's pitch as far as they need. For now an SFZ instrument is picked in `settings.json`; the settings window lists them next.
 
 ### Changed
 
