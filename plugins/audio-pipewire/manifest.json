@@ -2,7 +2,7 @@
   "interface": "1.3",
   "id": "oxiguitar.audio-pipewire",
   "name": "PipeWire audio",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Plays OxiGuitar's sound through PipeWire, the sound server of current Linux desktops.",
   "authors": [
     "The OxiGuitar contributors"
