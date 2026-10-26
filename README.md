@@ -20,7 +20,7 @@ OxiGuitar values your privacy first. It never uploads anything. No telemetry, no
 
 ## Status
 
-**v0.9.0, a pre-release for testers of the player (milestone M4), 26 October 2026.** v1.0 follows it, with NAM.
+**v0.10.0, a pre-release for testers of the player (milestone M4), 26 October 2026**: v0.9's player, now with recorded guitars, basses and drums (SFZ). v1.0 follows it, with NAM.
 
 OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). And it plays them: from the caret or the selection, looping, with a count-in and a metronome (heard, seen, or both), at 25 to 200 % speed, with each track's volume, pan, mute and solo, and a cursor on the very beat you're hearing. It uses the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). `oxiguitar-cli play` plays a score from the terminal too. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
@@ -31,7 +31,7 @@ OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF
 <img src="docs/readme/light.png" alt="The light interface, with lyrics under a melody" width="395">
 </p>
 
-**Hear it:** a band, bends, strums and drums, played by OxiGuitar 0.9 with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
+**Hear it:** a band with recorded guitars, bass and drums, the bass and the drum kit alone, guitar techniques, bends and strums, played by OxiGuitar with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
 
 ## How to get involved
 

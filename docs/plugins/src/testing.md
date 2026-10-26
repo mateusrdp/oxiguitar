@@ -33,7 +33,7 @@ A test that loads a plugin file must build it once per test program and never re
 The contract suite is also a program, for plugin files you have built:
 
 ```sh
-cargo install --git https://github.com/mateusrdp/oxiguitar --tag v0.5.0 --locked oxiguitar-plugin-test
+cargo install --git https://github.com/mateusrdp/oxiguitar --tag v0.9.0 --locked oxiguitar-plugin-test
 oxiguitar-plugin-test target/oxp/example.oxp
 oxiguitar-plugin-test --build example-plugin example   # build PACKAGE as NAME.oxp, then check it
 ```
@@ -51,7 +51,7 @@ oxiguitar-cli info --bars song.extab             # and every bar of every track
 oxiguitar-cli render song.extab --png page       # page-1.png, … as the window engraves it
 ```
 
-It comes with the Linux packages and the Windows zip; elsewhere, `cargo install --git https://github.com/mateusrdp/oxiguitar --tag v0.5.0 --locked oxiguitar-cli`. It reads the same plugin folders as the app, so put your file in a plugin folder first (below).
+It comes with the Linux packages and the Windows zip; elsewhere, `cargo install --git https://github.com/mateusrdp/oxiguitar --tag v0.9.0 --locked oxiguitar-cli`. It reads the same plugin folders as the app, so put your file in a plugin folder first (below).
 
 ## In the app
 

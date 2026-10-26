@@ -49,13 +49,14 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       # Each problem also becomes an annotation on the pull request.
       - name: Clippy
         run: |
           set -o pipefail
           cargo clippy --workspace --all-targets --all-features --locked \
             --message-format=short -- -D warnings 2>&1 \
-            | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+            | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
       # The X11 build of the app (the Wayland one is the default above), and
       # the two builds keeping apart: no X11 crate in the Wayland build, no
       # Wayland crate in the X11 one (docs/design/plugins.md).
@@ -64,7 +65,7 @@ jobs:
           set -o pipefail
           cargo clippy -p oxiguitar-app --no-default-features --features x11 --all-targets --locked \
             --message-format=short -- -D warnings 2>&1 \
-            | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+            | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
       - name: The two Linux builds keep apart
         run: scripts/check-display-crates.sh
       # Each format plugin is built with one reader of oxiguitar-formats, so
@@ -75,7 +76,7 @@ jobs:
           for reader in gp3 gp4 gp5 gpx gp; do
             cargo clippy -p oxiguitar-formats --no-default-features --features "$reader,plugin" --locked \
               --message-format=short -- -D warnings 2>&1 \
-              | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::error file=\1,line=\2,col=\3::\5\n&/'
+              | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
           done
       - name: Docs
         run: |
@@ -99,6 +100,7 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       - env:
           CARGO_TERM_COLOR: never
         run: |
@@ -137,6 +139,7 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       # Failing tests also become an annotation, so they can be read without
       # downloading the job log. Bash on every runner, Windows included.
       # Default features only: with --all-features, every plugin crate would
@@ -241,6 +244,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       - name: cargo test --release (speed budget)
         shell: bash
         env:
@@ -278,6 +282,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace xvfb weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1 libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       # Both Linux builds of the app: the X11 one in a target folder of its
       # own, then copied beside the Wayland one so both find the plugins in
       # target/lib/oxiguitar/plugins/.

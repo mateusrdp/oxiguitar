@@ -2,7 +2,7 @@
   "interface": "1.3",
   "id": "oxiguitar.test",
   "name": "Test plugin",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Tests the plugin interface. Never shipped.",
   "authors": ["The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",

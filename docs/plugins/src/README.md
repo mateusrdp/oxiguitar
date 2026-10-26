@@ -1,13 +1,13 @@
 # Writing OxiGuitar plugins
 
-OxiGuitar is a small core with plugins. The core holds the score, shows it, exports it as a PDF and will edit and play it; everything else comes from plugins: every file format, every sound, other exports, and tabs in the window's panels. Our own Guitar Pro readers are plugins like any you write, and the app makes no distinction between ours and yours.
+OxiGuitar is a small core with plugins. The core holds the score, shows it, exports it as a PDF, edits it and plays it; everything else comes from plugins: every file format, every sound, other exports, and tabs in the window's panels. Our own Guitar Pro readers are plugins like any you write, and the app makes no distinction between ours and yours.
 
 This guide shows how to write one, in Rust, with the SDK (`oxiguitar-plugin`). The fastest way in is to copy the [template plugin](template.md): it builds, passes the contract suite and opens in the app as it is, and each part of it is explained in the pages that follow.
 
 ## What you need
 
-- Rust from [rustup](https://rustup.rs): 1.97 or later for the SDK of v0.5.0; the SDK of the next release needs 1.99.
-- OxiGuitar 0.5 or later (0.2 for a plugin on interface 1.0 or 1.1), to try your plugin in the app ([the user manual](https://mateusrdp.github.io/oxiguitar/installing.html)).
+- Rust 1.99 or later, from [rustup](https://rustup.rs), for the SDK of v0.9.0.
+- OxiGuitar 0.9 or later (0.5 for a plugin on interface 1.2, 0.2 for one on 1.0 or 1.1), to try your plugin in the app ([the user manual](https://mateusrdp.github.io/oxiguitar/installing.html)).
 - Nothing else: the SDK and the contract suite come through Cargo, and you write no `unsafe` code.
 
 ## The pages

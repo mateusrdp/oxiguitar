@@ -23,7 +23,7 @@ The template is MIT OR Apache-2.0, like OxiGuitar's plugin SDK; your plugin may 
 
 ## Build and test
 
-You need Rust 1.97 or later for the SDK of v0.5.0, which the template uses (1.99 for the SDK of later releases), from [rustup](https://rustup.rs).
+You need Rust 1.99 or later for the SDK of v0.9.0, which the template uses, from [rustup](https://rustup.rs).
 
 ```sh
 cargo test

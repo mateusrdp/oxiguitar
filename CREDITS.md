@@ -22,6 +22,7 @@ Each file ported or adapted from one of these starts with an SPDX header, the or
 | [PyGuitarPro](https://github.com/Perlence/PyGuitarPro) 0.11 | Sviatoslav Abakumov (Perlence) and contributors | LGPL-3.0-only | Byte-level documentation of the GP3–5 formats |
 | [guitarpro / scorelib](https://codeberg.org/slundi/scorelib) 0.4 | slundi | MIT | Rust readers for GP3–8; used as a cross-check while testing our readers (see ADR 0003) |
 | [Verovio](https://github.com/rism-digital/verovio) | RISM Digital Center and contributors | LGPL-3.0 | Engraving techniques; reference only |
+| [sfizz](https://github.com/sfztools/sfizz) | The sfizz contributors | BSD-2-Clause | How SFZ players read and play SFZ files (its parser's rules, opcodes' defaults, curves); reference only, for our own SFZ sampler |
 
 ## Rust crates we depend on
 
@@ -38,6 +39,9 @@ Direct dependencies so far, all Rust (the desktop app also links the system's fo
 | [zip](https://github.com/zip-rs/zip2) 9 | Mathijs van de Nes, Marli Frost, Ryan Levick, Chris Hennick and contributors | MIT | Guitar Pro 7/8 archives (later .mscz). No default features (they compile the zstd C library); deflate through flate2 with the pure-Rust [zlib-rs](https://github.com/trifectatechfoundation/zlib-rs) (Zlib) |
 | [postcard](https://github.com/jamesmunns/postcard) 1.1 | James Munns and contributors | MIT OR Apache-2.0 | Encoding the plugin interface's messages |
 | [rustysynth](https://github.com/sinshu/rustysynth) 1.3.8 | Nobuaki Tanaka (sinshu), a port of his MeltySynth | MIT | SoundFont synthesis: the SoundFont plugin plays every track through it, as published |
+| [lewton](https://github.com/RustAudio/lewton) 0.10 | est31 and contributors | MIT OR Apache-2.0 | Ogg Vorbis: SoundFont 3 sets' samples and SFZ instruments' |
+| [claxon](https://github.com/ruuda/claxon) 0.4 | Ruud van Asseldonk | Apache-2.0 | FLAC: SFZ instruments' samples |
+| [rtrb](https://github.com/mgeier/rtrb) 0.4 | Matthias Geier and contributors | MIT OR Apache-2.0 | The player's lock-free queues to and from the audio thread |
 | [cpal](https://github.com/RustAudio/cpal) 0.18 | The RustAudio contributors | Apache-2.0 | Sound output: the audio-device plugins for PipeWire, ALSA, WASAPI and Core Audio; compatible with GPL-3.0, not GPL-2.0 |
 | [object](https://github.com/gimli-rs/object) 0.37 | The gimli-rs developers | Apache-2.0 OR MIT | Reading a plugin's manifest section without loading the plugin |
 | [libloading](https://github.com/nagisa/rust_libloading) 0.8 | Simonas Kazlauskas | ISC | Loading plugins |

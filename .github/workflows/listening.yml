@@ -6,8 +6,10 @@
 # decodes); and once with each of FreePats' electric guitar banks (CC0,
 # their SoundFont 2 files from FreePats' GitHub releases) for the guitars
 # and FluidR3 for everything else, as the plugin's settings window picks
-# them, before the manual's Better sounds page names them. For Mateus's
-# ears: each set is an artifact of its own, kept 14 days. (This is CI
+# them, before the manual's Better sounds page names them; and once with
+# each recommended SFZ guitar, bass and drum kit (M4 slice 5), the same
+# way. For Mateus's ears: each set is an artifact of its own, kept 14
+# days. (This is CI
 # fetching test material; OxiGuitar itself downloads nothing.) Run it from the Actions tab or with
 # `gh api -X POST repos/OWNER/REPO/actions/workflows/listening.yml/dispatches -f ref=BRANCH`.
 name: Listening pack
@@ -116,8 +118,8 @@ jobs:
             mine="$(readlink -f "$home/soundfonts/$(basename "$sf2")")"
             # The plugin's settings window's picks: this bank for guitars,
             # FluidR3 for the rest.
-            printf '{"oxiguitar.soundfont":{"guitars":"%s","basses":"%s","drums":"%s","other":"%s","warned_basic_sets":true}}\n' \
-              "$mine" "$fluid" "$fluid" "$fluid" > "$home/settings.json"
+            printf '{"oxiguitar.soundfont":{"electric-guitars":"%s","acoustic-guitars":"%s","basses":"%s","drums":"%s","other":"%s","warned_basic_sets":true}}\n' \
+              "$mine" "$mine" "$fluid" "$fluid" "$fluid" > "$home/settings.json"
             for song in fixtures/reference/*.gp; do
               out="listening/freepats-$b/$(basename "$song" .gp).wav"
               OXIGUITAR_HOME="$home" target/release/oxiguitar-cli play "$song" --wav "$out"
@@ -147,4 +149,141 @@ jobs:
         with:
           name: listening-freepats-direct
           path: listening/freepats-direct
+          retention-days: 14
+
+  # The recommended SFZ instruments (M4 slice 5), each on a runner of its
+  # own: the set fetched from its makers' repository or release (git's
+  # text conversion off: some of these repositories mark every file as
+  # CRLF text, which corrupts samples on checkout), picked for its role
+  # as the settings window would, FluidR3 for the rest.
+  sfz:
+    name: Render the reference songs with ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: bg-green
+            title: "Karoryfer's Black and Green Guitars, green (CC0), its key-switched program"
+            repo: sfzinstruments/karoryfer.black-and-green-guitars
+            program: Programs/01-green_keyswitch.sfz
+            roles: electric-guitars acoustic-guitars
+          - name: bg-black
+            title: "Karoryfer's Black and Green Guitars, black (CC0), its key-switched program"
+            repo: sfzinstruments/karoryfer.black-and-green-guitars
+            program: Programs/02-black_keyswitch.sfz
+            roles: electric-guitars acoustic-guitars
+          - name: freepats-clean-sfz
+            title: "FreePats' clean electric guitar (CC0) as SFZ with FLAC samples: the same recordings as the SoundFont 2 bank Mateus approved, through the SFZ sampler"
+            archive: https://github.com/freepats/electric-guitar-FSBS-clean/releases/download/2026-08-07/EGuitarFSBS-clean-SFZ+FLAC-20260807.7z
+            program: '*.sfz'
+            roles: electric-guitars acoustic-guitars
+          - name: bb-basses
+            title: "Karoryfer's Black and Blue Basses (CC0), dark black, its key-switched program"
+            repo: sfzinstruments/karoryfer.black-and-blue-basses
+            program: Programs/01-darkblack_keysw.sfz
+            roles: basses
+          - name: sm-drums
+            title: "SM Drums (public domain), the whole kit, its keys mapped to General MIDI by OxiGuitar"
+            repo: sfzinstruments/SMDrums
+            program: Programs/SM_Drums_kit.sfz
+            roles: drums
+          - name: naked-drums-gm
+            title: "Naked Drums by Wilkinson Audio (CC BY 4.0: credit Wilkinson Audio), its own General MIDI program"
+            repo: sfzinstruments/WilkinsonAudio.NakedDrums
+            program: Wilkinson Audio/Naked Drums/User/Naked Drums GM.sfz
+            roles: drums
+          - name: naked-drums
+            title: "Naked Drums by Wilkinson Audio (CC BY 4.0: credit Wilkinson Audio), its stereo program, its keys mapped to General MIDI by OxiGuitar"
+            repo: sfzinstruments/WilkinsonAudio.NakedDrums
+            program: Wilkinson Audio/Naked Drums/Stereo/Naked Drums.sfz
+            roles: drums
+          - name: big-rusty-drums
+            title: "Karoryfer's Big Rusty Drums (CC0), the full kit"
+            repo: sfzinstruments/karoryfer.big-rusty-drums
+            program: Programs/01-full.sfz
+            roles: drums
+          - name: muldjord-drums
+            title: "DrumGizmo's MuldjordKit by Lars Muldjord, SFZ by kinwie (CC BY 4.0: credit Lars Muldjord and the DrumGizmo team), stereo"
+            repo: sfzinstruments/DrumGizmo.MuldjordKit
+            program: DrumGizmo/MuldjordKit/Stereo/DrumGizmo MuldjordKit.sfz
+            roles: drums
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev libpipewire-0.3-dev libclang-dev \
+            fluid-soundfont-gm p7zip-full
+      - run: cargo build --release --locked -p oxiguitar-cli
+      - run: scripts/build-plugins.sh
+      - name: Fetch the set
+        env:
+          REPO: ${{ matrix.repo }}
+          ARCHIVE: ${{ matrix.archive }}
+        run: |
+          set -euo pipefail
+          set_dir="$RUNNER_TEMP/home/soundfonts/${{ matrix.name }}"
+          mkdir -p "$set_dir"
+          if [[ -n "$REPO" ]]; then
+            git clone -q --depth 1 --no-checkout "https://github.com/$REPO" "$set_dir"
+            echo '* -text' > "$set_dir/.git/info/attributes"
+            git -C "$set_dir" reset -q --hard
+            rm -rf "$set_dir/.git"
+          else
+            curl -fsSL -o "$RUNNER_TEMP/set.7z" "$ARCHIVE"
+            7z x -o"$set_dir" "$RUNNER_TEMP/set.7z" > /dev/null
+            rm "$RUNNER_TEMP/set.7z"
+          fi
+          echo "::notice title=${{ matrix.name }}::$(du -sh "$set_dir" | cut -f1)"
+      - name: Render
+        env:
+          PROGRAM: ${{ matrix.program }}
+          ROLES: ${{ matrix.roles }}
+          TITLE: ${{ matrix.title }}
+        run: |
+          set -euo pipefail
+          home="$RUNNER_TEMP/home"
+          set_dir="$home/soundfonts/${{ matrix.name }}"
+          if [[ "$PROGRAM" == '*.sfz' ]]; then
+            program="$(find "$set_dir" -name '*.sfz' | head -1)"
+          else
+            program="$set_dir/$PROGRAM"
+          fi
+          test -f "$program"
+          pick="$(readlink -f "$program")"
+          fluid="$(readlink -f /usr/share/sounds/sf2/FluidR3_GM.sf2)"
+          picks=""
+          for role in electric-guitars acoustic-guitars basses drums other; do
+            if [[ " $ROLES " == *" $role "* ]]; then
+              picks+="\"$role\":\"$pick\","
+            else
+              picks+="\"$role\":\"$fluid\","
+            fi
+          done
+          printf '{"oxiguitar.soundfont":{%s"warned_basic_sets":true}}\n' "$picks" > "$home/settings.json"
+          cat "$home/settings.json"
+          out="listening/sfz-${{ matrix.name }}"
+          mkdir -p "$out"
+          for song in fixtures/reference/*.gp; do
+            wav="$out/$(basename "$song" .gp).wav"
+            OXIGUITAR_HOME="$home" target/release/oxiguitar-cli play "$song" --wav "$wav" 2>&1 | tee -a "$out/log.txt"
+            test -s "$wav"
+          done
+          {
+            echo "Every reference song of OxiGuitar ${GITHUB_SHA::12}, played by the SoundFont plugin"
+            echo "with $TITLE"
+            echo "($(basename "$program")) for: $ROLES; FluidR3_GM for everything else; into WAV files"
+            echo "(48 kHz, 16-bit stereo, dry, each track at its file's mixer volume and pan, the usual"
+            echo "master level), with two seconds after the end. The songs are OxiGuitar's own reference"
+            echo "songs (GPL-3.0-or-later), not music: listen for the instrument, its levels, timing and"
+            echo "the effects (bends, slides, hammer-ons, palm mutes, dead and ghost notes, the drums)."
+            echo "log.txt has what the plugin said, such as missing samples."
+          } > "$out/README.txt"
+          echo "::notice title=${{ matrix.name }}::$(ls "$out"/*.wav | wc -l) songs, $(du -sh "$out" | cut -f1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: listening-sfz-${{ matrix.name }}
+          path: listening/sfz-${{ matrix.name }}
           retention-days: 14
