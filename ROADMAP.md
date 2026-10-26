@@ -205,7 +205,7 @@ Mateus's answers (25 Oct 2026): rustysynth 1.3.8 for SF2, used exactly as publis
 4. **The window**: transport, follow cursor, loop, count-in, metronome and visual metronome, speed, live mixer; the footer's link to better sounds; the manual's pages. Then a release for testers. In three pull requests (26 Oct 2026; the cursor a line moving with the sound plus the beat heard boxed, Mateus): (1) playing from the window: the transport, keys, speed, the master level with a limiter, the output, the live mixer, edits refused while playing (built 26 Oct 2026); (2) the cursor, the page following it, the overview's seek, the visual metronome (built 26 Oct 2026); (3) the manual's Playback page and the rest of Better sounds (built 26 Oct 2026; FreePats' guitars named once Mateus has heard them).
 5. **The NAM plugin**: amp models and cabinet IRs per track from the track dialog, on a DI sound set.
 6. **The SFZ sampler** (or v1.1).
-7. **WAV export**, the milestone's gates, then v1.0.
+7. **WAV export**, the milestone's gates, then v1.0. Before tagging v1.0, README.md gets a few screenshots of the main features (the score with its tablature, the editor's palette and Inspector, playing with the cursor and the mixer, NAM's track settings), to get people excited about trying it (Mateus, 26 Oct 2026).
 
 Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes (the cursor shows the sample being heard); golden-file tests cover event output; the practice tools work on every reference song; it plays out of the box on Windows, macOS and Linux with the system's own sound set; with no instrument or sound set the transport is greyed out and the footer says where to get one.
 
