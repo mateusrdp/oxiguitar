@@ -9,7 +9,8 @@
 //! [`Schedule`] directly (no thread fills queues ahead, so nothing needs
 //! waking), splits the callback at every event, has each [`Source`] render
 //! the piece, mixes the tracks (volume, pan, mute, solo), adds the
-//! metronome and the count-in, and writes the device's frames. It
+//! metronome and the count-in, applies the master level and its limiter
+//! (nothing leaves louder than −1 dBFS), and writes the device's frames. It
 //! allocates nothing, takes no lock and makes no system call: everything
 //! it needs arrives through lock-free single-producer queues ([`rtrb`]),
 //! and what it lets go of (an old schedule, old sources) goes back the
@@ -198,12 +199,33 @@ impl Default for TrackMix {
     }
 }
 
+/// The loudest a frame leaves the engine: −1 dBFS.
+pub const LIMIT: f32 = 0.891;
+
+/// How long the limiter takes to let a loud song's level back, in seconds
+/// (to about two thirds of the way).
+const RELEASE: f32 = 0.08;
+
+/// The usual master gain, about +6 dB: the window's default and
+/// `oxiguitar-cli play`'s. Over the corpus a song's peaks then sit near
+/// −3 dBFS, and the limiter holds the few louder ones (player.md, "The
+/// window, as built").
+pub const MASTER_USUAL: f32 = 1.96;
+
+/// The largest master gain (+18 dB). The window's master control goes up
+/// to +12 dB (its default is +6), for songs that render quietly at unity.
+pub const MASTER_MOST: f32 = 8.0;
+
 /// The most tracks a score's mixer holds.
 pub const MAX_TRACKS: usize = 256;
 
 /// What the window tells the engine.
 enum Command {
-    Play { from: f64, count_in: bool },
+    Play {
+        from: f64,
+        count_in: bool,
+        until: Option<f64>,
+    },
     Pause,
     Seek(f64),
     Loop(Option<(f64, f64)>),
@@ -284,9 +306,12 @@ pub fn engine(rate: u32, capacity: usize) -> (Engine, Control) {
         // Not yet mixed: the first piece takes its gains at once.
         gains: [(f32::NAN, f32::NAN); MAX_TRACKS],
         master: 1.0,
+        limit: 1.0,
+        release: 1.0 - (-1.0 / (RELEASE * rate as f32)).exp(),
         metronome: false,
         speed: 1.0,
         looped: None,
+        until: None,
         state: State::Stopped,
         anchor: Piece::default(),
         device_frame: 0,
@@ -341,9 +366,14 @@ pub struct Engine {
     /// for ramps.
     gains: [(f32, f32); MAX_TRACKS],
     master: f32,
+    /// The limiter's gain now, and how far it returns to 1 each frame.
+    limit: f32,
+    release: f32,
     metronome: bool,
     speed: f64,
     looped: Option<(f64, f64)>,
+    /// Play Selection's end: playing stops there (a loop goes on).
+    until: Option<f64>,
     state: State,
     anchor: Piece,
     device_frame: u64,
@@ -398,7 +428,14 @@ impl Engine {
     fn take_commands(&mut self) {
         while let Ok(c) = self.commands.pop() {
             match c {
-                Command::Play { from, count_in } => self.play(from, count_in),
+                Command::Play {
+                    from,
+                    count_in,
+                    until,
+                } => {
+                    self.until = until;
+                    self.play(from, count_in);
+                }
                 Command::Pause => self.stop(),
                 Command::Seek(t) => self.seek(t),
                 Command::Loop(l) => self.looped = l.filter(|(a, b)| b > a),
@@ -414,7 +451,7 @@ impl Engine {
                         *slot = m;
                     }
                 }
-                Command::Master(m) => self.master = m.clamp(0.0, 2.0),
+                Command::Master(m) => self.master = m.clamp(0.0, MASTER_MOST),
                 Command::Metronome(on) => self.metronome = on,
                 Command::Schedule(s) => {
                     if self.state == State::Stopped {
@@ -456,6 +493,14 @@ impl Engine {
         } else {
             self.state = State::Playing;
             self.anchor_at(from, true);
+        }
+    }
+
+    /// Where playing stops: the song's end, or Play Selection's.
+    fn end(&self) -> f64 {
+        match self.until {
+            Some(u) => u.min(self.schedule.length),
+            None => self.schedule.length,
         }
     }
 
@@ -556,13 +601,7 @@ impl Engine {
         self.render_sources(n, time, step);
         self.mix_tracks(n);
         self.render_clicks(n);
-        let master = self.master;
-        for v in self.mixed.0[..n]
-            .iter_mut()
-            .chain(self.mixed.1[..n].iter_mut())
-        {
-            *v *= master;
-        }
+        self.master_out(n);
         // The device frame advances as the callback's frames are written;
         // the piece's own frames are counted here.
         self.device_frame += n as u64;
@@ -599,7 +638,7 @@ impl Engine {
             // The loop's end, or the song's: a jump, or the end.
             let (end, jump) = match self.looped {
                 Some((a, b)) => (b.min(self.schedule.length), Some(a)),
-                None => (self.schedule.length, None),
+                None => (self.end(), None),
             };
             if self.frame_of(end) <= now {
                 match jump {
@@ -700,7 +739,7 @@ impl Engine {
                 }
                 at(match self.looped {
                     Some((_, b)) => b.min(s.length),
-                    None => s.length,
+                    None => self.end(),
                 });
             }
             State::Stopped => {}
@@ -750,6 +789,29 @@ impl Engine {
                     self.mixed.1[i] += r[i] * gr;
                 }
             }
+        }
+    }
+
+    /// The master level, then the limiter: no frame leaves louder than
+    /// [`LIMIT`]. A frame that would is brought down to it at once, and the
+    /// gain comes back over [`RELEASE`] seconds, so a loud song's peaks are
+    /// held down smoothly rather than clipped, while anything quieter
+    /// passes untouched. It looks at no frame ahead, so it adds no latency
+    /// and the clock stays exact.
+    fn master_out(&mut self, n: usize) {
+        let master = self.master;
+        let k = self.release;
+        for i in 0..n {
+            let (l, r) = (self.mixed.0[i] * master, self.mixed.1[i] * master);
+            let peak = l.abs().max(r.abs());
+            let back = self.limit + (1.0 - self.limit) * k;
+            self.limit = if peak * back > LIMIT {
+                LIMIT / peak
+            } else {
+                back
+            };
+            self.mixed.0[i] = l * self.limit;
+            self.mixed.1[i] = r * self.limit;
         }
     }
 
@@ -841,10 +903,17 @@ impl Control {
     /// Plays from `time` (score seconds at 100 % speed), after a bar of
     /// count-in if `count_in`.
     pub fn play(&mut self, time: f64, count_in: bool) {
+        self.play_until(time, None, count_in);
+    }
+
+    /// Plays from `time` and stops at `until` (Play Selection), or at the
+    /// song's end with `None`; a loop set meanwhile goes on past it.
+    pub fn play_until(&mut self, time: f64, until: Option<f64>, count_in: bool) {
         self.playing = true;
         self.send(Command::Play {
             from: time,
             count_in,
+            until,
         });
     }
 
@@ -874,7 +943,7 @@ impl Control {
         self.send(Command::Mix(track, mix));
     }
 
-    /// The master level.
+    /// The master level: a gain, 0 to [`MASTER_MOST`].
     pub fn set_master(&mut self, level: f32) {
         self.send(Command::Master(level));
     }

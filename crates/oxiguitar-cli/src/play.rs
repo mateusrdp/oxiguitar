@@ -16,11 +16,9 @@ use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Duration;
 
-use oxiguitar_host::api::class::InstrumentClass;
-use oxiguitar_host::api::message::{Prepare, PreparedTrack, TrackInfo};
 use oxiguitar_model::Score;
-use oxiguitar_play::plugin_source::PluginSource;
-use oxiguitar_play::{Route, Schedule, Slot, Sources, Timeline, TrackMix, engine};
+use oxiguitar_play::plugin_source;
+use oxiguitar_play::{Route, Schedule, Sources, Timeline, TrackMix, engine};
 
 use crate::plugins::{open, plugins};
 
@@ -122,115 +120,29 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
     }
 }
 
-/// The class of a track's instrument.
-fn class_of(score: &Score, track: usize) -> InstrumentClass {
-    let i = score.tracks[track].instrument;
-    InstrumentClass::of(i.midi_program, i.percussion)
-}
-
 /// What [`sources`] gets ready.
 struct Ready {
-    /// One prepared instance per instrument.
     sources: Sources,
-    /// Each track's source and slot, or `None` when nothing plays it.
     routes: Vec<Option<Route>>,
-    /// The instruments' names.
+    count: usize,
     names: Vec<String>,
 }
 
 /// The sources for `score` at `rate`: one prepared instance per
-/// instrument, the tracks each plays, and the routes. Tracks no
-/// instrument plays are said and left silent.
+/// instrument, the tracks each plays, and the routes. Tracks nothing
+/// plays are said and left silent.
 fn sources(score: &Score, rate: u32) -> Result<Ready, String> {
     let plugins = plugins();
-    // The instrument for each track: the first that plays its class.
-    let chosen: Vec<Option<(String, String)>> = (0..score.tracks.len())
-        .map(|t| {
-            plugins.playable(class_of(score, t)).first().map(|i| {
-                (
-                    i.plugin
-                        .manifest
-                        .as_ref()
-                        .map(|m| m.id.clone())
-                        .unwrap_or_default(),
-                    i.spec.id.clone(),
-                )
-            })
-        })
-        .collect();
-    let mut groups: Vec<((String, String), Vec<usize>)> = Vec::new();
-    for (t, c) in chosen.iter().enumerate() {
-        if let Some(key) = c {
-            match groups.iter_mut().find(|(k, _)| k == key) {
-                Some((_, tracks)) => tracks.push(t),
-                None => groups.push((key.clone(), vec![t])),
-            }
-        }
-    }
-    if groups.is_empty() {
-        return Err("no installed instrument plays its tracks".into());
-    }
-    let mut routes = vec![None; score.tracks.len()];
-    let mut slots = Vec::new();
-    let mut names = Vec::new();
-    for (source, ((plugin, id), tracks)) in groups.into_iter().enumerate() {
-        let class = class_of(score, tracks[0]);
-        let instrument = plugins
-            .playable(class)
-            .into_iter()
-            .find(|i| i.spec.id == id && i.plugin.manifest.as_ref().is_some_and(|m| m.id == plugin))
-            .ok_or("an instrument went away")?;
-        names.push(instrument.spec.name.clone());
-        let prepared: Vec<PreparedTrack> = tracks
-            .iter()
-            .map(|&t| {
-                let track = &score.tracks[t];
-                let staff = track.staves.first();
-                PreparedTrack {
-                    info: TrackInfo {
-                        index: t as u32,
-                        name: track.name.clone(),
-                        class: class_of(score, t),
-                    },
-                    program: track.instrument.midi_program,
-                    percussion: track.instrument.percussion,
-                    tuning: staff
-                        .map(|s| s.tuning.iter().map(|p| p.0).collect())
-                        .unwrap_or_default(),
-                    capo: staff.map_or(0, |s| s.capo),
-                    settings: track
-                        .plugins
-                        .get(&plugin)
-                        .cloned()
-                        .unwrap_or_else(|| "{}".into()),
-                }
-            })
-            .collect();
-        let instance = plugins
-            .prepare(
-                instrument,
-                Prepare {
-                    instrument: id.clone(),
-                    rate,
-                    frames: CAPACITY as u32,
-                    tracks: prepared,
-                },
-            )
-            .map_err(|e| format!("{} couldn't get ready: {e}", instrument.spec.name))?;
-        for (slot, &t) in tracks.iter().enumerate() {
-            routes[t] = Some(Route { source, slot });
-        }
-        let effects = tracks.iter().map(|_| Vec::new()).collect();
-        slots.push(Slot::new(
-            Box::new(PluginSource::new(instance, effects)),
-            tracks,
-            CAPACITY,
-        ));
+    let plan = plugin_source::plan(plugins, score);
+    let p = plugin_source::prepare(plugins, score, &plan, rate, CAPACITY)?;
+    for s in &p.silent {
+        eprintln!("{s}");
     }
     Ok(Ready {
-        sources: Sources::new(slots),
-        routes,
-        names,
+        sources: p.sources,
+        routes: p.routes,
+        count: p.count,
+        names: p.names,
     })
 }
 
@@ -283,9 +195,10 @@ fn play(asked: &Asked) -> Result<(), String> {
             let Ready {
                 mut sources,
                 routes,
+                count,
                 names,
             } = sources(&score, rate)?;
-            let schedule = Arc::new(Schedule::new(&timeline, &routes, sources_count(&routes)));
+            let schedule = Arc::new(Schedule::new(&timeline, &routes, count));
             sources.fit(&schedule);
             let mut control = control;
             control.set_schedule(schedule);
@@ -341,8 +254,10 @@ fn play(asked: &Asked) -> Result<(), String> {
     Ok(())
 }
 
-/// The mixer's settings for each track, with `--tracks` heard alone.
+/// The mixer's settings for each track, with `--tracks` heard alone, and
+/// the window's usual master level.
 fn mix(control: &mut engine::Control, score: &Score, asked: &Asked) {
+    control.set_master(engine::MASTER_USUAL);
     let solo = !asked.tracks.is_empty();
     for t in 0..score.tracks.len() {
         let m = &score.tracks[t].mix;
@@ -381,9 +296,10 @@ fn play_into(
     let Ready {
         mut sources,
         routes,
+        count,
         names,
     } = sources(score, rate)?;
-    let schedule = Arc::new(Schedule::new(timeline, &routes, sources_count(&routes)));
+    let schedule = Arc::new(Schedule::new(timeline, &routes, count));
     sources.fit(&schedule);
     control.set_schedule(schedule);
     control.set_sources(sources);
@@ -442,16 +358,6 @@ fn wav_file(samples: &[i16], rate: u32) -> Vec<u8> {
         w.extend_from_slice(&v.to_le_bytes());
     }
     w
-}
-
-/// The number of sources the routes name.
-fn sources_count(routes: &[Option<Route>]) -> usize {
-    routes
-        .iter()
-        .flatten()
-        .map(|r| r.source + 1)
-        .max()
-        .unwrap_or(0)
 }
 
 #[cfg(test)]

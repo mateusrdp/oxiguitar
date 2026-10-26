@@ -35,6 +35,8 @@ oxiguitar-edit.workspace = true
 oxiguitar-render.workspace = true
 oxiguitar-tools.workspace = true
 oxiguitar-host.workspace = true
+# The player: the timeline, the engine and the instruments as its sources.
+oxiguitar-play = { workspace = true, features = ["host"] }
 serde_json.workspace = true
 tiny-skia.workspace = true
 # GUI (ADR 0004). No default features: those bring Slint's system-tray

@@ -166,11 +166,23 @@ struct Shared {
     revision: u64,
     /// The worker, where plugins' changes go.
     edits: Option<std::sync::mpsc::Sender<crate::worker::Request>>,
+    /// The sound runs: no editing while playing (Mateus, 25 Oct 2026).
+    playing: bool,
 }
 
 impl OpenScore {
     fn lock(&self) -> std::sync::MutexGuard<'_, Shared> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Whether the sound runs: while it does, edits are refused, from the
+    /// window and from plugins alike, and allowed again once paused.
+    pub(crate) fn set_playing(&self, playing: bool) {
+        self.lock().playing = playing;
+    }
+
+    pub(crate) fn playing(&self) -> bool {
+        self.lock().playing
     }
 
     /// The open score, and its revision.
@@ -213,6 +225,11 @@ impl OpenScore {
         let s = self.lock();
         if s.score.is_none() {
             return Err("no score is open".to_owned());
+        }
+        if s.playing {
+            return Err(
+                "the score is playing: it can be changed once it is paused or stopped".to_owned(),
+            );
         }
         if revision != s.revision {
             return Err(format!(

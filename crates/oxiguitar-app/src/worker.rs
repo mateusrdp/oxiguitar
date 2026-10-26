@@ -159,6 +159,8 @@ pub(crate) enum Event {
     Tools(Vec<ToolEntry>),
     /// A message for the footer: an error, or a report such as a tool's.
     Message(Level, String),
+    /// An edit was refused: the sound runs (no editing while playing).
+    Refused,
 }
 
 impl std::fmt::Debug for Event {
@@ -177,6 +179,7 @@ impl std::fmt::Debug for Event {
             Event::AskSave { heading, .. } => write!(f, "AskSave({heading:?})"),
             Event::Saved { name, .. } => write!(f, "Saved({name:?})"),
             Event::SaveFailed => write!(f, "SaveFailed"),
+            Event::Refused => write!(f, "Refused"),
         }
     }
 }
@@ -320,6 +323,21 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 | Request::CancelSave => false,
             })
         };
+        // No editing while playing: the window and plugins alike are
+        // refused until the sound is paused or stopped.
+        let edits = matches!(
+            request,
+            Request::ApplyTool(_)
+                | Request::Edit { .. }
+                | Request::Undo
+                | Request::Redo
+                | Request::PluginEdit { .. }
+                | Request::PluginTool(..)
+        );
+        if edits && st.open.playing() {
+            sink(Event::Refused);
+            continue;
+        }
         match request {
             Request::Stop => return,
             Request::Open(path) => open(&mut st, path, sink),
@@ -937,6 +955,58 @@ mod tests {
         loop {
             if let Event::Changed { score, .. } = next(&rx) {
                 assert_ne!(score.info.title, "Changed");
+                break;
+            }
+        }
+    }
+
+    #[test]
+    fn no_edit_is_made_while_the_score_plays() {
+        let (tx, rx) = channel();
+        let open = OpenScore::default();
+        let worker = Worker::start(crate::test_plugins().clone(), open.clone(), move |e| {
+            let _ = tx.send(e);
+        });
+        worker.send(Request::New);
+        let score = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        let caret = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        let fret = |worker: &Worker| {
+            worker.send(Request::Edit {
+                command: Command::Fret {
+                    fret: 5,
+                    again: false,
+                },
+                caret,
+                selection: None,
+            });
+        };
+        // Playing: the window's edits and the plugins' are refused.
+        open.set_playing(true);
+        fret(&worker);
+        worker.send(Request::Undo);
+        loop {
+            match next(&rx) {
+                Event::Refused => break,
+                Event::Changed { .. } => panic!("an edit was made while playing"),
+                _ => {}
+            }
+        }
+        assert!(matches!(next(&rx), Event::Refused), "undo is refused too");
+        let (revision, plugin_score) = open.wire2().unwrap();
+        let why = open
+            .apply("A plugin", revision, "Rename".into(), plugin_score)
+            .unwrap_err();
+        assert!(why.contains("playing"), "{why}");
+        // Paused: allowed again.
+        open.set_playing(false);
+        fret(&worker);
+        loop {
+            if let Event::Changed { edit, .. } = next(&rx) {
+                assert_eq!(edit.undo.as_deref(), Some("Type Fret"));
                 break;
             }
         }
