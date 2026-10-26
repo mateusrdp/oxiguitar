@@ -3659,7 +3659,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-app"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "i-slint-backend-winit",
  "oxiguitar-display",
@@ -3681,7 +3681,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-audio-alsa-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "cpal",
  "oxiguitar-audio-cpal",
@@ -3691,7 +3691,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-audio-coreaudio-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "cpal",
  "oxiguitar-audio-cpal",
@@ -3701,7 +3701,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-audio-cpal"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "cpal",
  "oxiguitar-plugin",
@@ -3709,7 +3709,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-audio-pipewire-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "cpal",
  "oxiguitar-audio-cpal",
@@ -3719,7 +3719,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-audio-wasapi-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "cpal",
  "oxiguitar-audio-cpal",
@@ -3729,7 +3729,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-cli"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-host",
@@ -3743,7 +3743,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-display"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde",
@@ -3753,7 +3753,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-edit"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-model",
@@ -3761,7 +3761,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-formats"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-model",
  "oxiguitar-plugin",
@@ -3772,7 +3772,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gp-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -3781,7 +3781,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gp3-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -3790,7 +3790,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gp4-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -3799,7 +3799,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gp5-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -3808,7 +3808,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-gpx-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-plugin",
@@ -3817,7 +3817,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-host"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "libloading",
  "object",
@@ -3827,7 +3827,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-layout"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-formats",
@@ -3836,14 +3836,14 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-model"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-plugin-api",
 ]
 
 [[package]]
 name = "oxiguitar-play"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-host",
@@ -3856,7 +3856,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde_json",
@@ -3864,7 +3864,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-api"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "postcard",
  "serde",
@@ -3873,7 +3873,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-test"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "libc",
  "oxiguitar-formats",
@@ -3885,7 +3885,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-render"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "krilla",
  "oxiguitar-display",
@@ -3895,7 +3895,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-soundfont-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "lewton",
  "oxiguitar-plugin",
@@ -3904,21 +3904,21 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-test-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-test-second-plugin"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-testgen"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-formats",
@@ -3935,7 +3935,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-tools"
-version = "0.5.0"
+version = "0.9.0"
 dependencies = [
  "oxiguitar-formats",
  "oxiguitar-model",

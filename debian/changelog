@@ -1,4 +1,4 @@
-oxiguitar (0.5.0+ds-1) UNRELEASED; urgency=medium
+oxiguitar (0.9.0+ds-1) UNRELEASED; urgency=medium
 
   * The packaging for Debian, built offline from the crates in the
     orig-vendor component until Debian has them all (docs/debian.md).

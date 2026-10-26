@@ -17,3 +17,4 @@
 - [Keyboard and mouse](keys.md)
 - [Settings and plugins](plugins.md)
 - [Better sounds](better-sounds.md)
+- [Hear it](hear-it.md)
