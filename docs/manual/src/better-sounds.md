@@ -19,15 +19,17 @@ Put the set's file in the `soundfonts` folder beside your plugins folder (OxiGui
 | macOS | `~/Library/Application Support/OxiGuitar/soundfonts/` |
 | Windows | `%APPDATA%\OxiGuitar\soundfonts\` |
 
-With `OXIGUITAR_HOME` set, it is the `soundfonts` folder in that folder. OxiGuitar reads SoundFont 2 (`.sf2`), SoundFont 3 (`.sf3`) and Downloadable Sounds (`.dls`) files there, and in folders inside it, two levels deep, so a set unpacked into a folder of its own is found too. It never changes them.
+With `OXIGUITAR_HOME` set, it is the `soundfonts` folder in that folder. OxiGuitar reads SoundFont 2 (`.sf2`), SoundFont 3 (`.sf3`) and Downloadable Sounds (`.dls`) files there, and **SFZ instruments**: a `.sfz` file with its samples (WAV, FLAC or Ogg Vorbis) in folders beside it, as their makers ship them, so put the whole unpacked folder in. It looks in folders inside it too, five levels deep, and never changes anything there.
 
-A set in your folder plays before any of the system's, and of several, the largest plays. To choose yourself, open **Tools → Plugins…**, select **SoundFont** and press **Settings…**: pick one set for guitars, one for basses, one for drums and one for everything else. The choice holds for every file. "The best found" goes back to the automatic choice.
+A set in your folder plays before any of the system's, and of several, the largest plays. To choose yourself, open **Tools → Plugins…**, select **SoundFont** and press **Settings…**: pick a set for electric guitars, one for acoustic guitars, one for basses, one for drums and one for everything else. The choice holds for every file. "The best found" goes back to the automatic choice, which is never an SFZ instrument (below).
 
 A SoundFont 3 file is decoded the first time it plays, which takes a few seconds for a large set; OxiGuitar keeps the decoded copy in its cache folder, so later it loads at once. That copy can be large (216 MB for the small MuseScore General, 490 MB for the full one); deleting it is harmless.
 
 ## Choosing a set for each instrument
 
-A set made for one instrument usually sounds far better than a General MIDI set's version of it, so you can mix: recorded guitars from one set, the bass, the drums and the rest from another. Open **Tools → Plugins…**, select **SoundFont**, press **Settings…**, and pick a set for each of **Guitars**, **Basses**, **Drums** and **Everything else**. Guitars are every fretted instrument but the basses; basses are General MIDI's eight bass sounds. A set made for one instrument only has that instrument, so pick it only for its own row and leave a General MIDI set for the others.
+A set made for one instrument usually sounds far better than a General MIDI set's version of it, so you can mix: recorded guitars from one set, the bass, the drums and the rest from another. Open **Tools → Plugins…**, select **SoundFont**, press **Settings…**, and pick a set for each of **Electric guitars**, **Acoustic guitars**, **Basses**, **Drums** and **Everything else**. Electric guitars are General MIDI's six electric sounds (jazz, clean, muted, overdriven, distortion, harmonics), acoustic guitars its nylon and steel strings, and basses its eight bass sounds; banjos and the other fretted instruments go with everything else, so they keep their own sounds. A set made for one instrument only has that instrument, so pick it only for its own row and leave a General MIDI set for the others.
+
+**SFZ instruments** are listed in the same rows, as their set's folder and their own name ("… (SFZ)"). An SFZ file is one instrument, not a set of 128, so it plays only in a row you pick it for. Many SFZ sets come with several instruments (programs) for the same recording, with different microphones or articulations: try them. OxiGuitar loads an SFZ instrument's samples into memory, whole, when you open a score, so playing never waits for the disk; a big drum kit can take a few seconds and some gigabytes of memory. If an instrument can't load, or some of its samples are missing, the bottom of the window says so and a General MIDI set plays instead.
 
 ## Sets worth getting
 
@@ -48,8 +50,8 @@ FreePats' electric guitars (CC0: free for anything, no credit needed), each from
 | Jazz | [electric-guitar-FSBS-jazz](https://github.com/freepats/electric-guitar-FSBS-jazz/releases) | 66 MB (or `bridge-small`, 5 MB) |
 | Direct | [electric-guitar-FSBS-direct](https://github.com/freepats/electric-guitar-FSBS-direct/releases) | 60 MB |
 
-Pick one for **Guitars** in the settings window. **Direct** sounds thin on its own: it is the raw signal an amp model starts from, for the amp modelling (NAM) that OxiGuitar 1.0 brings; get it for then.
+Pick one for **Electric guitars** in the settings window. **Direct** sounds thin on its own: it is the raw signal an amp model starts from, for the amp modelling (NAM) that OxiGuitar 1.0 brings; get it for then.
 
 ### Basses and drums
 
-For now, the General MIDI sets above play the basses and the drums. The best free recorded basses and drum kits (Karoryfer's basses and kits, SM Drums, Naked Drums) come in the SFZ format, which a later version of the SoundFont plugin plays; this page will say which to get then.
+For now, the General MIDI sets above play the basses and the drums. The best free recorded basses and drum kits (Karoryfer's basses and kits, SM Drums, Naked Drums) come in the SFZ format, which the SoundFont plugin now plays (above); this page will name the ones to get once we have listened to them with OxiGuitar.

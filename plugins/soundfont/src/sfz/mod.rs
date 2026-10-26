@@ -13,11 +13,14 @@
 //!   doesn't know.
 //! - `sample` reads WAV, FLAC and Ogg Vorbis samples whole into memory, at
 //!   their own bit depth.
+//! - `sampler` plays an instrument, reading samples through `sinc`.
+//! - `maps` knows the recommended sets' articulations and drum layouts.
 //!
 //! [`load`] reads an instrument and all its samples, in parallel, before
 //! anything plays, so the audio thread never waits for the disk.
 
 pub(crate) mod instrument;
+pub(crate) mod maps;
 pub(crate) mod region;
 pub(crate) mod sample;
 pub(crate) mod sampler;

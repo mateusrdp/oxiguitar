@@ -57,6 +57,7 @@ use oxiguitar_plugin::audio::{
 use oxiguitar_plugin::{Error, ErrorKind, Renderer};
 use rustysynth::{SoundFont, Synthesizer, SynthesizerSettings};
 
+use crate::sfz::maps::Map;
 use crate::sfz::sampler::Sampler;
 
 /// rustysynth's smallest block: notes start at most `BLOCK - 1` frames
@@ -331,7 +332,12 @@ fn expression(note: &RtNote, t: f64) -> i32 {
 /// instrument through our sampler.
 pub(crate) enum Sound {
     Font(Arc<SoundFont>),
-    Sfz(Arc<crate::sfz::Loaded>),
+    Sfz {
+        sfz: Arc<crate::sfz::Loaded>,
+        /// Notes not picked play the set's recorded hammer-ons, where it
+        /// has them, instead of carrying on the ringing string.
+        recorded_legato: bool,
+    },
 }
 
 /// A track as it plays.
@@ -341,7 +347,92 @@ enum Part {
         sampler: Box<Sampler>,
         /// It has strings: a string sounds one note at a time.
         strings: bool,
+        /// What OxiGuitar knows of the set: its articulations, its drums.
+        map: Option<&'static Map>,
+        recorded_legato: bool,
     },
+}
+
+/// What the score asks of a note, for an SFZ set's articulations.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Asked {
+    Normal,
+    Legato,
+    PalmMute,
+    Dead,
+    Ghost,
+}
+
+fn asked(note: &RtNote) -> Asked {
+    if note.sound == sound::DEAD {
+        Asked::Dead
+    } else if note.sound == sound::PALM_MUTE {
+        Asked::PalmMute
+    } else if note.attack == attack::LEGATO {
+        Asked::Legato
+    } else if note.flags & flags::GHOST != 0 {
+        Asked::Ghost
+    } else {
+        Asked::Normal
+    }
+}
+
+/// Starts an SFZ note: its drum's key, its articulation from the set's
+/// map, or else the SoundFont path's treatment (a palm mute or dead note
+/// ended early and softer, a note not picked carrying on its string).
+fn sampler_note_on(
+    sampler: &mut Sampler,
+    strings: bool,
+    map: Option<&Map>,
+    recorded_legato: bool,
+    note: &RtNote,
+    pitch: &[PitchPoint],
+) {
+    let mut n = *note;
+    if let Some(map) = map {
+        let (key, controller) = map.key(n.key);
+        n.key = key;
+        if let Some((cc, value)) = controller {
+            sampler.set_controller(cc, value);
+        }
+    }
+    let what = asked(note);
+    let articulation = map.and_then(|m| match what {
+        Asked::PalmMute => m.palm_mute,
+        Asked::Dead => m.dead,
+        Asked::Ghost => m.ghost,
+        Asked::Legato if recorded_legato => m.legato,
+        _ => None,
+    });
+    if what == Asked::Legato && strings && articulation.is_none() && sampler.carry(&n) {
+        return;
+    }
+    // Softer as on the SoundFont path, whoever plays them: a set's own
+    // staccato is often its loudest sample (Black and Green's peak near
+    // 0 dBFS, its ordinary notes near −15); and ended early where the set
+    // has no articulation of its own for them.
+    let (cut, scale) = match (articulation.is_some(), what) {
+        (true, Asked::PalmMute) => (f64::INFINITY, PALM_MUTE.1),
+        (true, Asked::Dead) => (f64::INFINITY, DEAD.1),
+        (false, Asked::PalmMute) => (n.start + PALM_MUTE.0, PALM_MUTE.1),
+        (false, Asked::Dead) => (n.start + DEAD.0, DEAD.1),
+        (false, Asked::Legato) => (f64::INFINITY, UNPICKED),
+        _ => (f64::INFINITY, 1.0),
+    };
+    if let Some(a) = articulation.or_else(|| map.and_then(|m| m.normal)) {
+        if let Some(key) = a.switch {
+            sampler.set_switch(key);
+        }
+        for &(cc, value) in a.controllers {
+            sampler.set_controller(cc, value);
+        }
+    }
+    n.velocity = (f32::from(n.velocity) * scale).round().clamp(1.0, 127.0) as u8;
+    if strings {
+        // A string sounds one note: a new one ends the one before.
+        sampler.end_string(n.string, pitch);
+    }
+    sampler.note_on(&n, pitch, cut);
 }
 
 /// A prepared instrument.
@@ -412,7 +503,11 @@ impl Player {
             .enumerate()
             .map(|(i, (t, sound))| match sound {
                 Sound::Font(font) => Ok(Part::Synth(Box::new(track(t, font, &settings)?))),
-                Sound::Sfz(sfz) => Ok(Part::Sampler {
+                Sound::Sfz {
+                    sfz,
+                    recorded_legato,
+                } => Ok(Part::Sampler {
+                    map: crate::sfz::maps::for_instrument(&sfz.instrument.path),
                     // Each track's own random numbers, the same on every
                     // play: renders are repeatable.
                     sampler: Box::new(Sampler::new(
@@ -421,6 +516,7 @@ impl Player {
                         0x9E37_79B9_7F4A_7C15 ^ (i as u64 + 1),
                     )),
                     strings: !t.percussion && !t.tuning.is_empty(),
+                    recorded_legato: *recorded_legato,
                 }),
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -438,13 +534,13 @@ impl Player {
     fn note_on(&mut self, note: &RtNote, pitch: &[PitchPoint]) {
         let track = match self.tracks.get_mut(note.track as usize) {
             Some(Part::Synth(track)) => track,
-            Some(Part::Sampler { sampler, strings }) => {
-                if *strings {
-                    // A string sounds one note: a new one ends the one
-                    // before.
-                    sampler.end_string(note.string, pitch);
-                }
-                sampler.note_on(note, pitch);
+            Some(Part::Sampler {
+                sampler,
+                strings,
+                map,
+                recorded_legato,
+            }) => {
+                sampler_note_on(sampler, *strings, *map, *recorded_legato, note, pitch);
                 return;
             }
             None => return,
@@ -555,8 +651,15 @@ impl Player {
     }
 
     fn note_off(&mut self, note: &RtNote, later: &[RtEvent], pitch: &[PitchPoint]) {
-        if let Some(Part::Sampler { sampler, .. }) = self.tracks.get_mut(note.track as usize) {
-            sampler.note_off(note.id, pitch);
+        if let Some(Part::Sampler {
+            sampler, strings, ..
+        }) = self.tracks.get_mut(note.track as usize)
+        {
+            if *strings && carried_on(later, note) {
+                sampler.hold(note.id);
+            } else {
+                sampler.note_off(note.id, pitch);
+            }
             return;
         }
         let Some(i) = self
@@ -704,6 +807,11 @@ impl Renderer for Player {
         for i in 0..NOTES {
             if self.sounding[i].is_some_and(|s| s.held) {
                 self.end(i);
+            }
+        }
+        for part in &mut self.tracks {
+            if let Part::Sampler { sampler, .. } = part {
+                sampler.end_pending(pitch);
             }
         }
         let frames = piece.frames().min(self.left.len());
@@ -855,7 +963,18 @@ mod tests {
     ) -> (Vec<f32>, Player) {
         let mut t = guitar();
         t.program = program;
-        let mut p = Player::new(&prepare(vec![t]), &[Sound::Font(font())]).unwrap();
+        play_with(script, pitch, seconds, t, Sound::Font(font()))
+    }
+
+    /// `play`, for track `t` played by `sound`.
+    fn play_with(
+        script: &[(f64, RtEvent)],
+        pitch: &[PitchPoint],
+        seconds: f64,
+        t: PreparedTrack,
+        sound: Sound,
+    ) -> (Vec<f32>, Player) {
+        let mut p = Player::new(&prepare(vec![t]), &[sound]).unwrap();
         let step = 1.0 / 48_000.0;
         let total = (seconds * 48_000.0) as usize;
         let mut out = Vec::with_capacity(total);
@@ -1138,5 +1257,157 @@ mod tests {
         }
         assert!(b0.iter().all(|v| *v == 0.0));
         assert!(b2.iter().any(|v| *v != 0.0));
+    }
+
+    /// An SFZ instrument at `path` from `text`, its samples by name in
+    /// its folder.
+    fn sfz(path: &str, text: &str, samples: Vec<(&str, crate::sfz::Sample)>) -> Sound {
+        let path = std::path::PathBuf::from(path);
+        let bytes = text.as_bytes().to_vec();
+        let top = path.clone();
+        let load = move |p: &std::path::Path| {
+            if p == top {
+                Ok(bytes.clone())
+            } else {
+                Err(std::io::Error::from(std::io::ErrorKind::NotFound))
+            }
+        };
+        let instrument = crate::sfz::instrument::build(
+            &path,
+            crate::sfz::text::read_with(&path, &load).unwrap(),
+        );
+        let folder = path.parent().unwrap().to_path_buf();
+        let samples = instrument
+            .samples
+            .iter()
+            .map(|p| {
+                samples
+                    .iter()
+                    .find(|(n, _)| folder.join(n) == *p)
+                    .map(|(_, s)| Arc::new(s.clone()))
+            })
+            .collect();
+        Sound::Sfz {
+            sfz: Arc::new(crate::sfz::Loaded {
+                instrument,
+                samples,
+                missing: Vec::new(),
+            }),
+            recorded_legato: false,
+        }
+    }
+
+    fn sine_sample(level: f32) -> crate::sfz::Sample {
+        let values: Vec<f32> = (0..48_000)
+            .map(|i| (std::f64::consts::TAU * 440.0 * f64::from(i) / 48_000.0).sin() as f32 * level)
+            .collect();
+        crate::sfz::Sample {
+            rate: 48_000,
+            channels: 1,
+            frames: values.len(),
+            pcm: crate::sfz::sample::Pcm::F32(values.into()),
+            looped: Some((0, 47_999)),
+            unity: None,
+        }
+    }
+
+    fn voices(p: &Player) -> usize {
+        match &p.tracks[0] {
+            Part::Sampler { sampler, .. } => sampler.sounding(),
+            Part::Synth(_) => 0,
+        }
+    }
+
+    const SINE_GUITAR: &str =
+        "<region> sample=sine.wav pitch_keycenter=69 lokey=30 hikey=100 ampeg_release=0.01";
+
+    #[test]
+    fn an_sfz_hammer_on_carries_on_the_ringing_string() {
+        let mut a = note(1, 1, 69);
+        a.end = 0.5;
+        let mut b = note(2, 1, 71);
+        b.start = 0.5;
+        b.end = 1.0;
+        b.attack = attack::LEGATO;
+        let script = [(0.0, on(a)), (0.5, off(a)), (0.5, on(b)), (1.0, off(b))];
+        let sound = sfz(
+            "/s/guitar.sfz",
+            SINE_GUITAR,
+            vec![("sine.wav", sine_sample(0.5))],
+        );
+        let (out, p) = play_with(&script, &[], 0.9, guitar(), sound);
+        assert_eq!(voices(&p), 1, "carried on, not started again");
+        let f = hz(&out, 0.6, 0.9);
+        assert!((f - 493.9).abs() < 4.0, "{f}");
+        // No gap and no new attack where it carries on.
+        assert!(peak(&out, 0.49, 0.51) > 0.15, "{}", peak(&out, 0.49, 0.51));
+    }
+
+    #[test]
+    fn an_sfz_palm_mute_ends_early_without_a_map() {
+        let mut a = note(1, 1, 69);
+        a.end = 1.0;
+        a.sound = sound::PALM_MUTE;
+        let sound = sfz(
+            "/s/guitar.sfz",
+            SINE_GUITAR,
+            vec![("sine.wav", sine_sample(0.5))],
+        );
+        let (out, _) = play_with(&[(0.0, on(a))], &[], 0.5, guitar(), sound);
+        assert!(peak(&out, 0.05, 0.1) > 0.1);
+        assert!(peak(&out, 0.25, 0.5) < 1e-3, "{}", peak(&out, 0.25, 0.5));
+    }
+
+    #[test]
+    fn an_sfz_kits_drums_move_to_its_keys() {
+        let mut kit = guitar();
+        kit.percussion = true;
+        kit.tuning = Vec::new();
+        kit.program = 0;
+        let crash = note(1, 0, 49);
+        let sound = sfz(
+            "/s/SMDrums/Programs/SM_Drums_kit.sfz",
+            "<region> sample=sine.wav key=56",
+            vec![("sine.wav", sine_sample(0.5))],
+        );
+        let (out, _) = play_with(&[(0.0, on(crash))], &[], 0.2, kit, sound);
+        assert!(
+            peak(&out, 0.0, 0.2) > 0.1,
+            "General MIDI's crash plays the kit's"
+        );
+    }
+
+    #[test]
+    fn an_sfz_sets_articulations_come_from_its_map() {
+        // Black and Green Guitars' layout: Twang on 36, Staccato on 37.
+        let text = "<global> sw_lokey=36 sw_hikey=38 sw_default=36 ampeg_release=0.01\n\
+                    <group> sw_last=36 <region> sample=sine.wav pitch_keycenter=69 lokey=40 hikey=90\n\
+                    <group> sw_last=37 <region> sample=soft.wav pitch_keycenter=69 lokey=40 hikey=90";
+        let path = "/s/karoryfer.black-and-green-guitars/Programs/01-green_keyswitch.sfz";
+        let level = |n: RtNote| {
+            let sound = sfz(
+                path,
+                text,
+                vec![
+                    ("sine.wav", sine_sample(0.5)),
+                    ("soft.wav", sine_sample(0.1)),
+                ],
+            );
+            let (out, _) = play_with(&[(0.0, on(n))], &[], 0.4, guitar(), sound);
+            (peak(&out, 0.05, 0.1), peak(&out, 0.3, 0.4))
+        };
+        let mut n = note(1, 1, 69);
+        n.end = 1.0;
+        let (normal, _) = level(n);
+        n.sound = sound::DEAD;
+        let (dead, later) = level(n);
+        // The dead note plays the staccato samples, softer as on the
+        // SoundFont path, and isn't cut short: the samples are short
+        // already.
+        assert!(
+            normal > 0.15 && dead < 0.03 && dead > 0.005,
+            "{normal} {dead}"
+        );
+        assert!(later > 0.005, "{later}");
     }
 }
