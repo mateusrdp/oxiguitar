@@ -332,12 +332,7 @@ fn expression(note: &RtNote, t: f64) -> i32 {
 /// instrument through our sampler.
 pub(crate) enum Sound {
     Font(Arc<SoundFont>),
-    Sfz {
-        sfz: Arc<crate::sfz::Loaded>,
-        /// Notes not picked play the set's recorded hammer-ons, where it
-        /// has them, instead of carrying on the ringing string.
-        recorded_legato: bool,
-    },
+    Sfz(Arc<crate::sfz::Loaded>),
 }
 
 /// A track as it plays.
@@ -349,7 +344,6 @@ enum Part {
         strings: bool,
         /// What OxiGuitar knows of the set: its articulations, its drums.
         map: Option<&'static Map>,
-        recorded_legato: bool,
     },
 }
 
@@ -378,13 +372,14 @@ fn asked(note: &RtNote) -> Asked {
 }
 
 /// Starts an SFZ note: its drum's key, its articulation from the set's
-/// map, or else the SoundFont path's treatment (a palm mute or dead note
-/// ended early and softer, a note not picked carrying on its string).
+/// map (recorded hammer-ons and pull-offs where the set has them: they
+/// sound more natural, Mateus, 26 Oct 2026), or else the SoundFont path's
+/// treatment (a palm mute or dead note ended early and softer, a note not
+/// picked carrying on its string).
 fn sampler_note_on(
     sampler: &mut Sampler,
     strings: bool,
     map: Option<&Map>,
-    recorded_legato: bool,
     note: &RtNote,
     pitch: &[PitchPoint],
 ) {
@@ -401,7 +396,7 @@ fn sampler_note_on(
         Asked::PalmMute => m.palm_mute,
         Asked::Dead => m.dead,
         Asked::Ghost => m.ghost,
-        Asked::Legato if recorded_legato => m.legato,
+        Asked::Legato => m.legato,
         _ => None,
     });
     if what == Asked::Legato && strings && articulation.is_none() && sampler.carry(&n) {
@@ -503,10 +498,7 @@ impl Player {
             .enumerate()
             .map(|(i, (t, sound))| match sound {
                 Sound::Font(font) => Ok(Part::Synth(Box::new(track(t, font, &settings)?))),
-                Sound::Sfz {
-                    sfz,
-                    recorded_legato,
-                } => Ok(Part::Sampler {
+                Sound::Sfz(sfz) => Ok(Part::Sampler {
                     map: crate::sfz::maps::for_instrument(&sfz.instrument.path),
                     // Each track's own random numbers, the same on every
                     // play: renders are repeatable.
@@ -516,7 +508,6 @@ impl Player {
                         0x9E37_79B9_7F4A_7C15 ^ (i as u64 + 1),
                     )),
                     strings: !t.percussion && !t.tuning.is_empty(),
-                    recorded_legato: *recorded_legato,
                 }),
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -538,9 +529,8 @@ impl Player {
                 sampler,
                 strings,
                 map,
-                recorded_legato,
             }) => {
-                sampler_note_on(sampler, *strings, *map, *recorded_legato, note, pitch);
+                sampler_note_on(sampler, *strings, *map, note, pitch);
                 return;
             }
             None => return,
@@ -1287,14 +1277,11 @@ mod tests {
                     .map(|(_, s)| Arc::new(s.clone()))
             })
             .collect();
-        Sound::Sfz {
-            sfz: Arc::new(crate::sfz::Loaded {
-                instrument,
-                samples,
-                missing: Vec::new(),
-            }),
-            recorded_legato: false,
-        }
+        Sound::Sfz(Arc::new(crate::sfz::Loaded {
+            instrument,
+            samples,
+            missing: Vec::new(),
+        }))
     }
 
     fn sine_sample(level: f32) -> crate::sfz::Sample {
@@ -1409,5 +1396,35 @@ mod tests {
             "{normal} {dead}"
         );
         assert!(later > 0.005, "{later}");
+    }
+
+    #[test]
+    fn an_sfz_hammer_on_plays_the_sets_recorded_ones() {
+        // Black and Green Guitars' layout: Twang on 36, Hammer-on on 38.
+        let text = "<global> sw_lokey=36 sw_hikey=38 sw_default=36 ampeg_release=0.01\n\
+                    <group> sw_last=36 <region> sample=sine.wav pitch_keycenter=69 lokey=40 hikey=90\n\
+                    <group> sw_last=38 <region> sample=soft.wav pitch_keycenter=69 lokey=40 hikey=90";
+        let sound = sfz(
+            "/s/karoryfer.black-and-green-guitars/Programs/01-green_keyswitch.sfz",
+            text,
+            vec![
+                ("sine.wav", sine_sample(0.5)),
+                ("soft.wav", sine_sample(0.1)),
+            ],
+        );
+        let mut a = note(1, 1, 69);
+        a.end = 0.5;
+        let mut b = note(2, 1, 71);
+        b.start = 0.5;
+        b.end = 1.0;
+        b.attack = attack::LEGATO;
+        let script = [(0.0, on(a)), (0.5, off(a)), (0.5, on(b)), (1.0, off(b))];
+        let (out, _) = play_with(&script, &[], 0.9, guitar(), sound);
+        // Not carried on: the recorded hammer-on's quieter samples, at the
+        // new note's pitch.
+        assert!(peak(&out, 0.6, 0.9) < 0.05, "{}", peak(&out, 0.6, 0.9));
+        assert!(peak(&out, 0.6, 0.9) > 0.005);
+        let f = hz(&out, 0.6, 0.9);
+        assert!((f - 493.9).abs() < 4.0, "{f}");
     }
 }

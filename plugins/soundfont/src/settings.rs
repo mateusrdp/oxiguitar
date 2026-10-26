@@ -308,11 +308,6 @@ impl Tab for Window {
     }
 }
 
-/// The settings key asking SFZ sets with recorded hammer-ons to play them
-/// for notes not picked, rather than carrying on the ringing string: for
-/// comparing the two by ear (M4 slice 5); not in the window.
-pub(crate) const RECORDED_LEGATO: &str = "recorded_legato";
-
 /// The settings key that remembers the warning about basic sets was shown.
 pub(crate) const WARNED: &str = "warned_basic_sets";
 

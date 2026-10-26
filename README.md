@@ -31,7 +31,7 @@ OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF
 <img src="docs/readme/light.png" alt="The light interface, with lyrics under a melody" width="395">
 </p>
 
-**Hear it:** a band, bends, strums and drums, played by OxiGuitar 0.9 with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
+**Hear it:** a band with recorded guitars, bass and drums, the bass and the drum kit alone, guitar techniques, bends and strums, played by OxiGuitar with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
 
 ## How to get involved
 

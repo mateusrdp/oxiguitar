@@ -52,6 +52,22 @@ FreePats' electric guitars (CC0: free for anything, no credit needed), each from
 
 Pick one for **Electric guitars** in the settings window. **Direct** sounds thin on its own: it is the raw signal an amp model starts from, for the amp modelling (NAM) that OxiGuitar 1.0 brings; get it for then.
 
-### Basses and drums
+### Recorded guitars, basses and drums (SFZ)
 
-For now, the General MIDI sets above play the basses and the drums. The best free recorded basses and drum kits (Karoryfer's basses and kits, SM Drums, Naked Drums) come in the SFZ format, which the SoundFont plugin now plays (above); this page will name the ones to get once we have listened to them with OxiGuitar.
+These SFZ sets are the ones we recommend: we listened to every reference song with each of them, and OxiGuitar knows their layouts, so they play the score's hammer-ons, palm mutes, dead and ghost notes with their own recorded articulations. Unpack each into your `soundfonts` folder as a whole folder, then pick its instrument in its row of the settings window.
+
+| Set | Pick, in the row | Licence | Download | Size |
+| --- | --- | --- | --- | --- |
+| **Black and Green Guitars** by Karoryfer Lecolds: a green Gretsch Anniversary and a black Hofner Club, recorded by Brian Wood | `01-green_keyswitch` (the Gretsch) or `02-black_keyswitch` (the Hofner), for **Electric guitars** | CC0 | [Releases](https://github.com/sfzinstruments/karoryfer.black-and-green-guitars/releases): `Karoryfer_Black_And_Green_Guitars_1000.zip` | 460 MB packed, 560 MB unpacked |
+| **Black and Blue Basses** by Karoryfer Lecolds | `01-darkblack_keysw`, for **Basses** | CC0 | [Releases](https://github.com/sfzinstruments/karoryfer.black-and-blue-basses/releases): `Black_And_Blue_Basses_1002.zip` | 962 MB packed, 1.1 GB unpacked |
+| **MuldjordKit** by Lars Muldjord (DrumGizmo), SFZ by kinwie: a Tama Superstar rock and metal kit | `DrumGizmo MuldjordKit` (in its `Stereo` folder), for **Drums** | CC BY 4.0 | [its page](https://github.com/sfzinstruments/DrumGizmo.MuldjordKit): **Code → Download ZIP** | 340 MB |
+
+Get the two Karoryfer sets from their **Releases**, the file named in the table, not with **Code → Download ZIP** or `git clone`: their repositories ask git to treat every file as text, which corrupts the samples in those copies. The MuldjordKit has no releases, and its **Download ZIP** is fine.
+
+The keyswitched programs (`…_keyswitch`, `…_keysw`) are the ones with every articulation: pick those. Black and Green's other programs and Black and Blue's single-articulation programs play too, without the score's effects on their own samples. Hear them together on the [Hear it](hear-it.md) page.
+
+The MuldjordKit is under CC BY 4.0: if you publish music made with it, credit Lars Muldjord and the DrumGizmo team. Karoryfer's sets need no credit.
+
+### Other SFZ sets
+
+Any SFZ instrument plays. Ones OxiGuitar has no layout for play their notes as they are, palm mutes and dead notes ended early, hammer-ons carrying on the ringing string. OxiGuitar also knows the layouts of SM Drums, Naked Drums (its own programs) and Karoryfer's Big Rusty, Swirly and Unruly Drums, so their drums play at the right keys; we found the MuldjordKit the most natural of these.

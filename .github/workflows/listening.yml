@@ -168,12 +168,6 @@ jobs:
             repo: sfzinstruments/karoryfer.black-and-green-guitars
             program: Programs/01-green_keyswitch.sfz
             roles: electric-guitars acoustic-guitars
-          - name: bg-green-recorded-legato
-            title: "the same, with its recorded hammer-ons for notes not picked (recorded_legato), to compare with bg-green, which carries on the ringing string"
-            repo: sfzinstruments/karoryfer.black-and-green-guitars
-            program: Programs/01-green_keyswitch.sfz
-            roles: electric-guitars acoustic-guitars
-            extra: '"recorded_legato":true,'
           - name: bg-black
             title: "Karoryfer's Black and Green Guitars, black (CC0), its key-switched program"
             repo: sfzinstruments/karoryfer.black-and-green-guitars
@@ -247,7 +241,6 @@ jobs:
         env:
           PROGRAM: ${{ matrix.program }}
           ROLES: ${{ matrix.roles }}
-          EXTRA: ${{ matrix.extra }}
           TITLE: ${{ matrix.title }}
         run: |
           set -euo pipefail
@@ -269,7 +262,7 @@ jobs:
               picks+="\"$role\":\"$fluid\","
             fi
           done
-          printf '{"oxiguitar.soundfont":{%s%s"warned_basic_sets":true}}\n' "$EXTRA" "$picks" > "$home/settings.json"
+          printf '{"oxiguitar.soundfont":{%s"warned_basic_sets":true}}\n' "$picks" > "$home/settings.json"
           cat "$home/settings.json"
           out="listening/sfz-${{ matrix.name }}"
           mkdir -p "$out"
