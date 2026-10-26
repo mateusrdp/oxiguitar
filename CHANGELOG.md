@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- The plugin developer guide and its template plugin build against the SDK of v0.9.0 (interface 1.3), which needs Rust 1.99.
+
 ## [0.9.0] - 2026-10-26
 
 A release for testers of milestone M4, the player: OxiGuitar plays scores in the window, out of the box on Windows, macOS and Linux with the system's own sound set or better ones you add, with the cursor on the beat being heard, the practice tools and each track's mixer. Still to come before v1.0: amp modelling (NAM), SFZ sound sets and WAV export. Plugin interface 1.3 is frozen with this release.
