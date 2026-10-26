@@ -40,8 +40,8 @@ When a file opens, each track shows the notation it was saved with. Tablature is
 
 ## Mixer
 
-After its name, each track has its mixer: two buttons, **mute** (a loudspeaker crossed out) and **solo** (headphones), a **volume** slider and a **pan** knob (left to right). They show what the file sets for each track, and they stay greyed out until an output plugin is installed and the player arrives ([Settings and plugins](plugins.md)). Nothing you change there is written to the file.
+After its name, each track has its mixer: two buttons, **mute** (a loudspeaker crossed out) and **solo** (headphones), a **volume** slider and a **pan** knob (left to right). They start as the file sets them and change the sound as you move them, while it plays ([Playing a score](playback.md#the-mixer)); they are greyed out while nothing can play the score. Nothing you change there is written to the file.
 
 ## Overview
 
-The rest of each row shows the track across the whole song, from start to end, like a waveform: it is thick where the track plays a lot and a thin line where it is silent, so you can see at a glance where each instrument comes in. The mark at its start is where the playback position will be shown, once the player arrives.
+The rest of each row shows the track across the whole song, from start to end, like a waveform: it is thick where the track plays a lot and a thin line where it is silent, so you can see at a glance where each instrument comes in. The mark across it is the playback position: it follows the sound while the score plays, stays where you paused, and otherwise shows where Play will start (the caret). Click an overview to move the playback there.
