@@ -49,6 +49,7 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       # Each problem also becomes an annotation on the pull request.
       - name: Clippy
         run: |
@@ -99,6 +100,7 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       - env:
           CARGO_TERM_COLOR: never
         run: |
@@ -137,6 +139,7 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       # Failing tests also become an annotation, so they can be read without
       # downloading the job log. Bash on every runner, Windows included.
       # Default features only: with --all-features, every plugin crate would
@@ -241,6 +244,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       - name: cargo test --release (speed budget)
         shell: bash
         env:
@@ -278,6 +282,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace xvfb weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1 libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
       # Both Linux builds of the app: the X11 one in a target folder of its
       # own, then copied beside the Wayland one so both find the plugins in
       # target/lib/oxiguitar/plugins/.
