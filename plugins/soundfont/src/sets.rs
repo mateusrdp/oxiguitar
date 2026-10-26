@@ -4,7 +4,9 @@
 //! Finding sound sets (docs/design/player.md, "Sounds"): the files in the
 //! user's `soundfonts` folder and the system's own, read only, never
 //! fetched. Until the user picks, the best set plays: the user's before the
-//! system's, the larger before the smaller.
+//! system's, the larger before the smaller. SFZ instruments are found too,
+//! but play only where the user picks them (Mateus, 26 Oct 2026): one is a
+//! single instrument, not a General MIDI set.
 
 use std::path::{Path, PathBuf};
 
@@ -26,6 +28,8 @@ pub(crate) enum Kind {
     Sf3,
     /// Downloadable Sounds, as Windows and macOS ship their General MIDI set.
     Dls,
+    /// An SFZ instrument: a `.sfz` file, its samples beside it.
+    Sfz,
 }
 
 impl Kind {
@@ -37,6 +41,7 @@ impl Kind {
             "sf2" => Some(Kind::Sf2),
             "sf3" => Some(Kind::Sf3),
             "dls" => Some(Kind::Dls),
+            "sfz" => Some(Kind::Sfz),
             _ => None,
         }
     }
@@ -80,8 +85,10 @@ pub(crate) fn system_places() -> Vec<PathBuf> {
 }
 
 /// How deep into a folder's subfolders sets are looked for: a set unpacked
-/// into a folder of its own, and one more level.
-const DEPTH: usize = 3;
+/// into a folder of its own, and three more levels (SFZ sets keep their
+/// instruments in a folder or two of their own: `Naked Drums/Wilkinson
+/// Audio/Naked Drums/*.sfz`).
+const DEPTH: usize = 5;
 
 /// Every set in the user's folder `user` and the system's `system` (files
 /// or folders), the best first: the user's before the system's, then the
@@ -97,6 +104,7 @@ pub(crate) fn find(user: Option<&Path>, system: &[PathBuf]) -> Vec<Found> {
     for place in system {
         look(place, Origin::System, DEPTH, &mut found, &mut seen);
     }
+    leave_out_included(&mut found);
     found.sort_by(|a: &Found, b: &Found| {
         a.origin
             .cmp(&b.origin)
@@ -104,6 +112,24 @@ pub(crate) fn find(user: Option<&Path>, system: &[PathBuf]) -> Vec<Found> {
             .then(a.path.cmp(&b.path))
     });
     found
+}
+
+/// Leaves out the `.sfz` files other `.sfz` files include: parts of an
+/// instrument (Karoryfer's `modules/`), not instruments.
+fn leave_out_included(found: &mut Vec<Found>) {
+    let mut included: Vec<PathBuf> = Vec::new();
+    for f in found.iter().filter(|f| f.kind == Kind::Sfz) {
+        let Ok(bytes) = std::fs::read(&f.path) else {
+            continue;
+        };
+        let folder = f.path.parent().unwrap_or(Path::new(""));
+        for include in crate::sfz::text::includes(&bytes) {
+            if let Ok(real) = std::fs::canonicalize(folder.join(include)) {
+                included.push(real);
+            }
+        }
+    }
+    found.retain(|f| f.kind != Kind::Sfz || !included.contains(&f.path));
 }
 
 fn look(
@@ -220,11 +246,39 @@ mod tests {
     #[test]
     fn subfolders_are_looked_into_only_so_deep() {
         let dir = scratch("deep");
-        file(&dir.join("a/b/found.sf2"), 1);
-        file(&dir.join("a/b/c/lost.sf2"), 1);
+        file(&dir.join("a/b/c/d/found.sf2"), 1);
+        file(&dir.join("a/b/c/d/e/lost.sf2"), 1);
         let found = find(Some(&dir), &[]);
         assert_eq!(found.len(), 1);
         assert!(found[0].path.ends_with("found.sf2"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn sfz_instruments_are_found_but_not_the_files_they_include() {
+        let dir = scratch("sfz");
+        let set = dir.join("karoryfer.black-and-green-guitars/Programs");
+        std::fs::create_dir_all(set.join("modules/maps")).unwrap();
+        std::fs::write(
+            set.join("01-green.sfz"),
+            "<global>\n#include \"modules/env.sfz\"\n#include \"modules/maps/ord.sfz\"",
+        )
+        .unwrap();
+        std::fs::write(set.join("02-black.sfz"), "#include \"modules/env.sfz\"").unwrap();
+        std::fs::write(set.join("modules/env.sfz"), "ampeg_release=0.25").unwrap();
+        std::fs::write(set.join("modules/maps/ord.sfz"), "<region> sample=a.wav").unwrap();
+        file(
+            &dir.join("Naked Drums/Wilkinson Audio/Naked Drums/kit.sfz"),
+            10,
+        );
+        let found = find(Some(&dir), &[]);
+        let mut names: Vec<_> = found
+            .iter()
+            .map(|f| f.path.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(names, ["01-green.sfz", "02-black.sfz", "kit.sfz"]);
+        assert!(found.iter().all(|f| f.kind == Kind::Sfz));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- The SoundFont plugin reads SFZ instruments (M4 slice 5): their headers, `#define` and `#include`, every opcode the recommended guitars, basses and drum kits use, and their WAV, FLAC and Ogg Vorbis samples, whole in memory at their own bit depth. They don't play yet: the sampler comes next.
+
 ### Changed
 
 - The plugin developer guide and its template plugin build against the SDK of v0.9.0 (interface 1.3), which needs Rust 1.99.
