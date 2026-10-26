@@ -6,10 +6,12 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
-- The SoundFont plugin plays SFZ instruments (M4 slice 5), the format of the best free recorded guitars, basses and drum kits, through a sampler of our own: every note on its exact frame, velocity layers, round robins, key switches, choke groups (a closed hi-hat stops the open one), release samples, loops, envelopes, filters and LFOs, the samples (WAV, FLAC, Ogg Vorbis) whole in memory at their own bit depth and read with a high-quality interpolator. Bends, slides and vibrato move an SFZ note's pitch as far as they need. For now an SFZ instrument is picked in `settings.json`; the settings window lists them next.
+- The SoundFont plugin plays SFZ instruments (M4 slice 5), the format of the best free recorded guitars, basses and drum kits, through a sampler of our own: every note on its exact frame, velocity layers, round robins, key switches, choke groups (a closed hi-hat stops the open one), release samples, loops, envelopes, filters and LFOs, the samples (WAV, FLAC, Ogg Vorbis) whole in memory at their own bit depth and read with a high-quality interpolator. Bends, slides and vibrato move an SFZ note's pitch as far as they need. The SoundFont plugin's settings window lists SFZ instruments; one plays only where you pick it.
+- SFZ tracks play the score's effects: hammer-ons, pull-offs and legato slides carry on the ringing string; palm mutes, dead and ghost notes use a set's recorded articulations where OxiGuitar knows them (Karoryfer's Black and Green Guitars and Black and Blue Basses), and drum kits laid out their own way play General MIDI's drums at their keys (SM Drums, Naked Drums, the open hi-hat of Karoryfer's kits).
 
 ### Changed
 
+- The SoundFont plugin's settings window picks a set for **Electric guitars** and **Acoustic guitars** apart (an SFZ guitar is one or the other); a pick made for Guitars in 0.9 holds for both. Banjos and the other fretted instruments now go with Everything else.
 - The plugin developer guide and its template plugin build against the SDK of v0.9.0 (interface 1.3), which needs Rust 1.99.
 
 ## [0.9.0] - 2026-10-26

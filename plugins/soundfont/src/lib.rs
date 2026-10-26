@@ -269,7 +269,7 @@ impl SoundFontPlugin {
 impl Plugin for SoundFontPlugin {
     fn start(host: Host) -> Result<SoundFontPlugin, Error> {
         Ok(SoundFontPlugin {
-            window: settings::Window { host: host.clone() },
+            window: settings::Window::new(host.clone()),
             host,
             loaded: Mutex::default(),
             loaded_sfz: Mutex::default(),
@@ -300,6 +300,12 @@ impl Instrument for SoundFontPlugin {
             ));
         }
         let picks = self.host.settings().unwrap_or_default();
+        // For comparing by ear (M4 slice 5): the recorded hammer-ons of a
+        // set that has them, instead of carrying on the ringing string.
+        let recorded_legato = picks
+            .get(settings::RECORDED_LEGATO)
+            .and_then(|v| v.as_bool())
+            == Some(true);
         let mut used: Vec<&sets::Found> = Vec::new();
         let mut sounds = Vec::with_capacity(prepare.tracks.len());
         let mut said: Vec<&std::path::Path> = Vec::new();
@@ -314,7 +320,10 @@ impl Instrument for SoundFontPlugin {
                 .chain(found.iter().filter(|f| f.kind != sets::Kind::Sfz))
             {
                 let loaded = if f.kind == sets::Kind::Sfz {
-                    self.load_sfz(f).map(play::Sound::Sfz)
+                    self.load_sfz(f).map(|sfz| play::Sound::Sfz {
+                        sfz,
+                        recorded_legato,
+                    })
                 } else {
                     self.load(f).map(play::Sound::Font)
                 };

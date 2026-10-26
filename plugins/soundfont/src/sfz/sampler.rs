@@ -491,6 +491,9 @@ struct Voice {
     /// moves while it sounds (the timeline's curve, vibrato).
     cents: f64,
     moving: f64,
+    /// Cents from the key it started at to the note it carries on now (a
+    /// hammer-on, a pull-off, a legato slide).
+    carried: f64,
     gain: f32,
     /// The pan, width and position, as a matrix from the sample's two
     /// channels to the track's.
@@ -546,6 +549,7 @@ impl Voice {
         base_speed: 1.0,
         cents: 0.0,
         moving: 0.0,
+        carried: 0.0,
         gain: 0.0,
         matrix: [1.0, 0.0, 0.0, 1.0],
         stereo: false,
@@ -608,6 +612,12 @@ struct Held {
     /// When it started, in frames of the track.
     since: u64,
     note: RtNote,
+    /// When it ends early (a palm mute, a dead note), in seconds of the
+    /// score.
+    cut: f64,
+    /// Its end came, but a note not picked on its string may carry it on
+    /// in the same call.
+    ending: bool,
 }
 
 /// Reads frame `i` of a sample's channel `c`, wrapping into its loop past
@@ -963,8 +973,81 @@ impl Sampler {
         true
     }
 
-    /// Starts note `note`: the regions it triggers.
-    pub(crate) fn note_on(&mut self, note: &RtNote, pitch: &[PitchPoint]) {
+    /// Presses key switch `key`, as if played, for the notes from now.
+    pub(crate) fn set_switch(&mut self, key: u8) {
+        self.switch = Some(key);
+    }
+
+    /// Sets controller `cc` to `value` (0 to 127), for the notes from now:
+    /// an articulation's, a hi-hat's openness.
+    pub(crate) fn set_controller(&mut self, cc: u16, value: f32) {
+        if let Some(c) = self.controllers.get_mut(usize::from(cc)) {
+            *c = value.clamp(0.0, 127.0);
+        }
+    }
+
+    /// Carries on the note sounding on `note`'s string as `note` (a note
+    /// not picked): its voices go on, bent to the new note's pitch, with
+    /// no new attack. False when nothing sounds there to carry on.
+    pub(crate) fn carry(&mut self, note: &RtNote) -> bool {
+        if note.string == 0 {
+            return false;
+        }
+        let Some(slot) = self
+            .held
+            .iter()
+            .position(|h| h.is_some_and(|h| h.string == note.string))
+        else {
+            return false;
+        };
+        let Some(old) = self.held[slot] else {
+            return false;
+        };
+        let mut any = false;
+        for v in self
+            .voices
+            .iter_mut()
+            .filter(|v| v.active && v.note.id == old.id && !v.released)
+        {
+            v.carried = (f64::from(note.key) - f64::from(v.key)) * 100.0;
+            v.note = *note;
+            any = true;
+        }
+        if any {
+            self.held[slot] = Some(Held {
+                id: note.id,
+                note: *note,
+                cut: f64::INFINITY,
+                ending: false,
+                ..old
+            });
+        }
+        any
+    }
+
+    /// Note `id`'s end came, but a note not picked on its string may
+    /// carry it on in this call: [`Sampler::end_pending`] ends it if none
+    /// does.
+    pub(crate) fn hold(&mut self, id: u32) {
+        if let Some(h) = self.held.iter_mut().flatten().find(|h| h.id == id) {
+            h.ending = true;
+        }
+    }
+
+    /// Ends the notes whose end came and that nothing carried on.
+    pub(crate) fn end_pending(&mut self, pitch: &[PitchPoint]) {
+        for i in 0..self.held.len() {
+            if let Some(h) = self.held[i]
+                && h.ending
+            {
+                self.note_off(h.id, pitch);
+            }
+        }
+    }
+
+    /// Starts note `note`: the regions it triggers. It ends early at `cut`
+    /// (seconds of the score; infinity for its written end).
+    pub(crate) fn note_on(&mut self, note: &RtNote, pitch: &[PitchPoint], cut: f64) {
         let key = note.key.min(127);
         if self.is_switch(key) {
             self.switch = Some(key);
@@ -997,6 +1080,8 @@ impl Sampler {
                 string: note.string,
                 since: born,
                 note: *note,
+                cut,
+                ending: false,
             });
         }
         self.keys_down[usize::from(key)] = true;
@@ -1252,6 +1337,7 @@ impl Sampler {
             base_speed: sample_rate / self.rate,
             cents,
             moving: cents_at(super::super::play::run(pitch, note), note.start),
+            carried: 0.0,
             gain,
             matrix: matrix(stereo, pan, width, position),
             stereo,
@@ -1402,9 +1488,17 @@ impl Sampler {
     /// The voices' pitch from the timeline at `t` (seconds of the score)
     /// and their vibrato, `seconds` of sound before the next update.
     pub(crate) fn update(&mut self, pitch: &[PitchPoint], t: f64, seconds: f64) {
+        // Notes that end early.
+        for i in 0..self.held.len() {
+            if let Some(h) = self.held[i]
+                && t >= h.cut
+            {
+                self.note_off(h.id, pitch);
+            }
+        }
         for v in self.voices.iter_mut().filter(|v| v.active) {
             let curve = super::super::play::run(pitch, &v.note);
-            let mut cents = cents_at(curve, t);
+            let mut cents = cents_at(curve, t) + v.carried;
             if let Some((depth, hz)) = super::super::play::vibrato_of(&v.note) {
                 let rise = (v.vibrating / super::super::play::VIBRATO_RISE).min(1.0);
                 cents += depth * rise * v.vibrato_phase.sin();
@@ -1590,7 +1684,7 @@ impl Sampler {
 
     /// Voices sounding now, for tests.
     #[cfg(test)]
-    fn sounding(&self) -> usize {
+    pub(crate) fn sounding(&self) -> usize {
         self.voices.iter().filter(|v| v.active).count()
     }
 }
@@ -1739,14 +1833,14 @@ mod tests {
             vec![("a.wav", constant(0.5, 4_800))],
         );
         assert_eq!(peak(&render(&mut s, 64)), 0.0);
-        s.note_on(&note(1, 60, 127, 0), &[]);
+        s.note_on(&note(1, 60, 127, 0), &[], f64::INFINITY);
         let out = render(&mut s, 64);
         // Centre pan keeps the level; velocity 127 is full.
         let want = 0.5 * volume7();
         assert!((out[0] - want).abs() < 0.02, "{} {want}", out[0]);
         assert!((out[40] - want).abs() < 1e-3, "{}", out[40]);
         // Another key plays nothing.
-        s.note_on(&note(2, 61, 127, 0), &[]);
+        s.note_on(&note(2, 61, 127, 0), &[], f64::INFINITY);
         assert_eq!(s.sounding(), 1);
     }
 
@@ -1758,14 +1852,14 @@ mod tests {
             "<region> sample=a.wav pitch_keycenter=69",
             vec![("a.wav", sine(44_100, 440.0, 1.0))],
         );
-        s.note_on(&note(1, 81, 127, 0), &[]);
+        s.note_on(&note(1, 81, 127, 0), &[], f64::INFINITY);
         let out = render(&mut s, RATE as usize / 4);
         let f = hz(&out[480..]);
         assert!((f - 880.0).abs() < 5.0, "{f}");
         // The timeline's bend moves it: two semitones down, 784 Hz.
         s.stop();
         render(&mut s, 480);
-        s.note_on(&note(2, 81, 127, 0), &[]);
+        s.note_on(&note(2, 81, 127, 0), &[], f64::INFINITY);
         s.update(&[], 0.0, 0.0);
         for v in s.voices.iter_mut().filter(|v| v.active) {
             v.moving = -200.0;
@@ -1791,7 +1885,7 @@ mod tests {
         for (i, v) in [127u8, 127, 127, 40].into_iter().enumerate() {
             s.stop();
             render(&mut s, 480);
-            s.note_on(&note(i as u32, 60, v, 0), &[]);
+            s.note_on(&note(i as u32, 60, v, 0), &[], f64::INFINITY);
             let out = render(&mut s, 64);
             let gain = volume7() * (f32::from(v) / 127.0).powi(2);
             levels.push(((out[32] / gain) * 10.0).round() / 10.0);
@@ -1813,7 +1907,7 @@ mod tests {
         let level = |s: &mut Sampler, id| {
             s.stop();
             render(s, 480);
-            s.note_on(&note(id, 60, 127, 0), &[]);
+            s.note_on(&note(id, 60, 127, 0), &[], f64::INFINITY);
             let out = render(s, 64);
             ((out[32] / volume7()) * 10.0).round() / 10.0
         };
@@ -1821,7 +1915,7 @@ mod tests {
         // The switch key sounds nothing, and switches.
         s.stop();
         render(&mut s, 480);
-        s.note_on(&note(2, 38, 127, 0), &[]);
+        s.note_on(&note(2, 38, 127, 0), &[], f64::INFINITY);
         assert_eq!(s.sounding(), 0);
         assert_eq!(level(&mut s, 3), 0.6);
     }
@@ -1836,9 +1930,9 @@ mod tests {
                 ("closed.wav", constant(0.0001, 48_000)),
             ],
         );
-        s.note_on(&note(1, 46, 127, 0), &[]);
+        s.note_on(&note(1, 46, 127, 0), &[], f64::INFINITY);
         render(&mut s, 480);
-        s.note_on(&note(2, 42, 127, 0), &[]);
+        s.note_on(&note(2, 42, 127, 0), &[], f64::INFINITY);
         let out = render(&mut s, 960);
         // Gone within off_time's 6 ms (288 frames).
         assert!(peak(&out[300..]) < 0.01, "{}", peak(&out[300..]));
@@ -1857,7 +1951,7 @@ mod tests {
                     ("rel.wav", constant(0.5, 48_000)),
                 ],
             );
-            s.note_on(&note(1, 60, 127, 0), &[]);
+            s.note_on(&note(1, 60, 127, 0), &[], f64::INFINITY);
             render(&mut s, held);
             assert_eq!(peak(&render(&mut s, 64)), 0.0);
             s.note_off(1, &[]);
@@ -1877,7 +1971,7 @@ mod tests {
             "<region> sample=a.wav key=60 loop_mode=loop_continuous ampeg_release=0.05",
             vec![("a.wav", constant(0.5, 100))],
         );
-        s.note_on(&note(1, 60, 127, 0), &[]);
+        s.note_on(&note(1, 60, 127, 0), &[], f64::INFINITY);
         let held = render(&mut s, 4_800);
         assert!(held[4_000] > 0.25, "{}", held[4_000]);
         s.note_off(1, &[]);
@@ -1890,7 +1984,7 @@ mod tests {
             "<region> sample=a.wav key=60",
             vec![("a.wav", constant(0.5, 100))],
         );
-        s.note_on(&note(1, 60, 127, 0), &[]);
+        s.note_on(&note(1, 60, 127, 0), &[], f64::INFINITY);
         let out = render(&mut s, 400);
         assert!(peak(&out[200..]) < 1e-6);
         // A one-shot ignores the note's end.
@@ -1898,7 +1992,7 @@ mod tests {
             "<region> sample=a.wav key=60 loop_mode=one_shot",
             vec![("a.wav", constant(0.5, 4_800))],
         );
-        s.note_on(&note(1, 60, 127, 0), &[]);
+        s.note_on(&note(1, 60, 127, 0), &[], f64::INFINITY);
         render(&mut s, 64);
         s.note_off(1, &[]);
         let out = render(&mut s, 2_000);
@@ -1911,10 +2005,10 @@ mod tests {
             "<region> sample=a.wav key=60 ampeg_release=2",
             vec![("a.wav", constant(0.5, 48_000))],
         );
-        s.note_on(&note(1, 60, 127, 0), &[]);
+        s.note_on(&note(1, 60, 127, 0), &[], f64::INFINITY);
         render(&mut s, 480);
         s.stop();
-        s.note_on(&note(2, 60, 127, 0), &[]);
+        s.note_on(&note(2, 60, 127, 0), &[], f64::INFINITY);
         let out = render(&mut s, 480);
         // Old and new together for 2.5 ms (120 frames), then the new alone.
         assert!((out[200] - 0.5 * volume7()).abs() < 1e-3, "{}", out[200]);
@@ -1926,10 +2020,10 @@ mod tests {
             "<region> sample=a.wav lokey=40 hikey=80 ampeg_release=0.01",
             vec![("a.wav", constant(0.5, 48_000))],
         );
-        s.note_on(&note(1, 60, 127, 1), &[]);
+        s.note_on(&note(1, 60, 127, 1), &[], f64::INFINITY);
         s.end_string(1, &[]);
-        s.note_on(&note(2, 62, 127, 1), &[]);
-        s.note_on(&note(3, 64, 127, 2), &[]);
+        s.note_on(&note(2, 62, 127, 1), &[], f64::INFINITY);
+        s.note_on(&note(3, 64, 127, 2), &[], f64::INFINITY);
         render(&mut s, 4_800);
         assert_eq!(s.sounding(), 2);
     }
