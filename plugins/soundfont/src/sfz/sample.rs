@@ -154,8 +154,10 @@ fn wav(bytes: &[u8]) -> Result<Sample, String> {
     };
     let pcm = match (tag, bits) {
         (1, 16) if channels <= 2 => Pcm::I16(
-            data.chunks_exact(2)
-                .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            data.as_chunks::<2>()
+                .0
+                .iter()
+                .map(|b| i16::from_le_bytes(*b))
                 .collect(),
         ),
         (1, 16) => {
