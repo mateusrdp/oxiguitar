@@ -16,6 +16,10 @@ Files of unclear ownership never go here; see `corpus/README.md`.
 
 The three test songs hold the same music: a repeat, a marker, a time-signature change, a triplet, a hammer-on, a bend, a tie, a dead note, a rest, a chord and (in GP5) a second voice. The Guitar Pro 6 and 7 songs add a rehearsal letter, a chord diagram, a strum and a tempo change in the middle of a bar. To regenerate the fixtures after changing a writer: `OXIGUITAR_BLESS=1 cargo test -p oxiguitar-formats --test guitar_pro --test gpif`.
 
+## SFZ samples
+
+`sfz/` holds three tiny samples for the SFZ sampler's tests (`plugins/soundfont`): a 440 Hz sine as 16- and 24-bit FLAC and as Ogg Vorbis, made with ffmpeg (the commands are in its README). Made by us; GPL-3.0-or-later.
+
 ## Guitar Pro 7.6's own files
 
 `guitar-pro-7.6/` holds ten reference songs as Guitar Pro 7.6 saved them (their score XML only) and two files Mateus made in Guitar Pro 7.6 for OxiGuitar (a guitar, and pianos with very low and high notes), which show how Guitar Pro writes pitches and instruments without strings. See its README. Made by Mateus for OxiGuitar; GPL-3.0-or-later.

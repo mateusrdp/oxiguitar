@@ -17,6 +17,7 @@
 //!   Windows and macOS ship their General MIDI set) turn the others into
 //!   SoundFont 2 in memory, written by `sf2`. A decoded SoundFont 3 is kept
 //!   in the plugin's cache folder, so it is decoded once.
+//! - `sfz` reads SFZ instruments and their samples, for our own sampler.
 
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
@@ -36,6 +37,10 @@ pub(crate) mod sets;
 pub(crate) mod settings;
 pub(crate) mod sf2;
 pub(crate) mod sf3;
+// Read but not played until the sampler, the next pull request of M4
+// slice 5, which removes this allowance.
+#[allow(dead_code)]
+pub(crate) mod sfz;
 
 /// The instrument's id in the manifest.
 pub const INSTRUMENT: &str = "soundfont";
@@ -77,7 +82,11 @@ pub(crate) fn user_folder(host: &Host) -> Option<PathBuf> {
 
 /// The sets this plugin can play, the best first.
 pub(crate) fn playable(host: &Host) -> Vec<sets::Found> {
-    sets::find(user_folder(host).as_deref(), &sets::system_places())
+    let mut found = sets::find(user_folder(host).as_deref(), &sets::system_places());
+    // SFZ instruments are read (`sfz`) but not played yet: the sampler
+    // comes in the next pull request of M4 slice 5.
+    found.retain(|f| f.kind != sets::Kind::Sfz);
+    found
 }
 
 /// A short, stable name for a file's contents: its path, size and time
