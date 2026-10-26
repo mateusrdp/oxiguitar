@@ -57,6 +57,8 @@ use oxiguitar_plugin::audio::{
 use oxiguitar_plugin::{Error, ErrorKind, Renderer};
 use rustysynth::{SoundFont, Synthesizer, SynthesizerSettings};
 
+use crate::sfz::sampler::Sampler;
+
 /// rustysynth's smallest block: notes start at most `BLOCK - 1` frames
 /// late, and controllers change every `BLOCK` frames.
 pub(crate) const BLOCK: usize = 8;
@@ -83,7 +85,18 @@ const BEND_RANGE: f64 = 24.0;
 /// the whammy bar's; and how long it takes to reach full depth.
 const VIBRATO: (f64, f64) = (30.0, 5.5);
 const WIDE_VIBRATO: (f64, f64) = (60.0, 4.5);
-const VIBRATO_RISE: f64 = 0.1;
+pub(crate) const VIBRATO_RISE: f64 = 0.1;
+
+/// A note's vibrato, if it has one: its depth in cents and rate in hertz.
+pub(crate) fn vibrato_of(note: &RtNote) -> Option<(f64, f64)> {
+    if note.flags & flags::WIDE_VIBRATO != 0 {
+        Some(WIDE_VIBRATO)
+    } else if note.flags & flags::VIBRATO != 0 {
+        Some(VIBRATO)
+    } else {
+        None
+    }
+}
 
 /// How long a palm mute and a dead note sound, in seconds of the score, and
 /// their velocity against the written one.
@@ -289,7 +302,7 @@ impl Track {
 }
 
 /// A note's run of the pitch points: its curve, empty for a steady pitch.
-fn run<'a>(pitch: &'a [PitchPoint], note: &RtNote) -> &'a [PitchPoint] {
+pub(crate) fn run<'a>(pitch: &'a [PitchPoint], note: &RtNote) -> &'a [PitchPoint] {
     let start = note.pitch_start as usize;
     pitch
         .get(start..start.saturating_add(note.pitch_len as usize))
@@ -314,9 +327,26 @@ fn expression(note: &RtNote, t: f64) -> i32 {
     (127.0 * level.sqrt()).round() as i32
 }
 
+/// What plays a track: a SoundFont through rustysynth, or an SFZ
+/// instrument through our sampler.
+pub(crate) enum Sound {
+    Font(Arc<SoundFont>),
+    Sfz(Arc<crate::sfz::Loaded>),
+}
+
+/// A track as it plays.
+enum Part {
+    Synth(Box<Track>),
+    Sampler {
+        sampler: Box<Sampler>,
+        /// It has strings: a string sounds one note at a time.
+        strings: bool,
+    },
+}
+
 /// A prepared instrument.
 pub(crate) struct Player {
-    tracks: Vec<Track>,
+    tracks: Vec<Part>,
     /// The notes sounding, in the order they started.
     sounding: [Option<Sounding>; NOTES],
     /// Scratch buffers for one synthesiser's render, as long as the
@@ -362,23 +392,37 @@ fn carried_on(events: &[RtEvent], note: &RtNote) -> bool {
 }
 
 impl Player {
-    /// Gets ready to play `prepare.tracks`, each with its set of `fonts`:
-    /// synthesisers at `prepare.rate`, set to each track's program.
-    pub(crate) fn new(prepare: &Prepare, fonts: &[Arc<SoundFont>]) -> Result<Player, Error> {
+    /// Gets ready to play `prepare.tracks`, each with its `sounds`:
+    /// synthesisers at `prepare.rate`, set to each track's program, or an
+    /// SFZ instrument's sampler.
+    pub(crate) fn new(prepare: &Prepare, sounds: &[Sound]) -> Result<Player, Error> {
         let mut settings = SynthesizerSettings::new(prepare.rate as i32);
         settings.block_size = BLOCK;
         settings.maximum_polyphony = POLYPHONY;
         // Dry: the sound is the instrument's, and a track's effects (the
         // amp, M4 slice 5) come after it.
         settings.enable_reverb_and_chorus = false;
-        if fonts.len() != prepare.tracks.len() {
+        if sounds.len() != prepare.tracks.len() {
             return Err(Error::new(ErrorKind::Failed, "a sound set for each track"));
         }
         let tracks = prepare
             .tracks
             .iter()
-            .zip(fonts)
-            .map(|(t, font)| track(t, font, &settings))
+            .zip(sounds)
+            .enumerate()
+            .map(|(i, (t, sound))| match sound {
+                Sound::Font(font) => Ok(Part::Synth(Box::new(track(t, font, &settings)?))),
+                Sound::Sfz(sfz) => Ok(Part::Sampler {
+                    // Each track's own random numbers, the same on every
+                    // play: renders are repeatable.
+                    sampler: Box::new(Sampler::new(
+                        sfz.clone(),
+                        prepare.rate,
+                        0x9E37_79B9_7F4A_7C15 ^ (i as u64 + 1),
+                    )),
+                    strings: !t.percussion && !t.tuning.is_empty(),
+                }),
+            })
             .collect::<Result<Vec<_>, Error>>()?;
         let frames = prepare.frames as usize;
         Ok(Player {
@@ -392,8 +436,18 @@ impl Player {
     }
 
     fn note_on(&mut self, note: &RtNote, pitch: &[PitchPoint]) {
-        let Some(track) = self.tracks.get_mut(note.track as usize) else {
-            return;
+        let track = match self.tracks.get_mut(note.track as usize) {
+            Some(Part::Synth(track)) => track,
+            Some(Part::Sampler { sampler, strings }) => {
+                if *strings {
+                    // A string sounds one note: a new one ends the one
+                    // before.
+                    sampler.end_string(note.string, pitch);
+                }
+                sampler.note_on(note, pitch);
+                return;
+            }
+            None => return,
         };
         let channel = track.channel_of(note);
         let on_string = !track.strings.is_empty() && note.string > 0;
@@ -487,7 +541,7 @@ impl Player {
             self.sounding.iter().flatten().any(|s| {
                 s.track == ending.track && s.channel == ending.channel && s.key == ending.key
             });
-        if let Some(track) = self.tracks.get_mut(usize::from(ending.track)) {
+        if let Some(Part::Synth(track)) = self.tracks.get_mut(usize::from(ending.track)) {
             let c = &mut track.channels[usize::from(ending.channel)];
             if c.voice.is_some_and(|v| v.note.id == ending.id) {
                 c.voice = None;
@@ -500,7 +554,11 @@ impl Player {
         }
     }
 
-    fn note_off(&mut self, note: &RtNote, later: &[RtEvent]) {
+    fn note_off(&mut self, note: &RtNote, later: &[RtEvent], pitch: &[PitchPoint]) {
+        if let Some(Part::Sampler { sampler, .. }) = self.tracks.get_mut(note.track as usize) {
+            sampler.note_off(note.id, pitch);
+            return;
+        }
         let Some(i) = self
             .sounding
             .iter()
@@ -522,7 +580,10 @@ impl Player {
     fn all_off(&mut self) {
         self.sounding = [None; NOTES];
         for t in &mut self.tracks {
-            t.stop(self.fade);
+            match t {
+                Part::Synth(t) => t.stop(self.fade),
+                Part::Sampler { sampler, .. } => sampler.stop(),
+            }
         }
     }
 
@@ -531,8 +592,15 @@ impl Player {
     /// next update.
     fn update(&mut self, pitch: &[PitchPoint], t: f64, seconds: f64) {
         for ti in 0..self.tracks.len() {
+            if let Part::Sampler { sampler, .. } = &mut self.tracks[ti] {
+                sampler.update(pitch, t, seconds);
+                continue;
+            }
             for c in 0..16u8 {
-                let Some(mut v) = self.tracks[ti].channels[usize::from(c)].voice else {
+                let Part::Synth(track) = &self.tracks[ti] else {
+                    break;
+                };
+                let Some(mut v) = track.channels[usize::from(c)].voice else {
                     continue;
                 };
                 if t >= v.cut {
@@ -543,29 +611,25 @@ impl Player {
                     {
                         self.end(i);
                     }
-                    self.tracks[ti].channels[usize::from(c)].voice = None;
+                    if let Part::Synth(track) = &mut self.tracks[ti] {
+                        track.channels[usize::from(c)].voice = None;
+                    }
                     continue;
                 }
                 let curve = run(pitch, &v.note);
                 let mut cents = v.offset + cents_at(curve, t);
-                let vibrato = if v.note.flags & flags::WIDE_VIBRATO != 0 {
-                    Some(WIDE_VIBRATO)
-                } else if v.note.flags & flags::VIBRATO != 0 {
-                    Some(VIBRATO)
-                } else {
-                    None
-                };
-                if let Some((depth, hz)) = vibrato {
+                if let Some((depth, hz)) = vibrato_of(&v.note) {
                     let rise = (v.vibrating / VIBRATO_RISE).min(1.0);
                     cents += depth * rise * v.phase.sin();
                     v.phase =
                         (v.phase + std::f64::consts::TAU * hz * seconds) % std::f64::consts::TAU;
                     v.vibrating += seconds;
                 }
-                let track = &mut self.tracks[ti];
-                track.send_bend(c, cents);
-                track.send_expression(c, expression(&v.note, t));
-                track.channels[usize::from(c)].voice = Some(v);
+                if let Part::Synth(track) = &mut self.tracks[ti] {
+                    track.send_bend(c, cents);
+                    track.send_expression(c, expression(&v.note, t));
+                    track.channels[usize::from(c)].voice = Some(v);
+                }
             }
         }
     }
@@ -631,7 +695,7 @@ impl Renderer for Player {
         for (i, e) in events.iter().enumerate() {
             match e.kind {
                 RtEventKind::NOTE_ON => self.note_on(&e.note, pitch),
-                RtEventKind::NOTE_OFF => self.note_off(&e.note, &events[i + 1..]),
+                RtEventKind::NOTE_OFF => self.note_off(&e.note, &events[i + 1..], pitch),
                 RtEventKind::ALL_OFF => self.all_off(),
                 _ => {}
             }
@@ -649,11 +713,18 @@ impl Renderer for Player {
         while f < frames {
             let n = (frames - f).min(BLOCK);
             self.update(pitch, time + f as f64 * step, n as f64 / self.rate);
-            for (slot, t) in self.tracks.iter_mut().enumerate() {
+            for (slot, part) in self.tracks.iter_mut().enumerate() {
                 let Some((out_l, out_r)) = piece.track(slot) else {
                     continue;
                 };
                 let (out_l, out_r) = (&mut out_l[f..f + n], &mut out_r[f..f + n]);
+                let t = match part {
+                    Part::Synth(t) => t,
+                    Part::Sampler { sampler, .. } => {
+                        sampler.render(out_l, out_r);
+                        continue;
+                    }
+                };
                 let (l, r) = (&mut self.left[..n], &mut self.right[..n]);
                 t.synths[t.live].render(l, r);
                 for (o, v) in out_l.iter_mut().zip(l.iter()) {
@@ -693,6 +764,15 @@ mod tests {
     use oxiguitar_plugin::audio::RtEvent;
 
     use super::*;
+
+    impl Player {
+        fn synth(&self, i: usize) -> &Track {
+            match &self.tracks[i] {
+                Part::Synth(t) => t,
+                Part::Sampler { .. } => panic!("track {i} is a sampler"),
+            }
+        }
+    }
 
     fn font() -> Arc<SoundFont> {
         let bytes = crate::sf2::test_set();
@@ -775,7 +855,7 @@ mod tests {
     ) -> (Vec<f32>, Player) {
         let mut t = guitar();
         t.program = program;
-        let mut p = Player::new(&prepare(vec![t]), &[font()]).unwrap();
+        let mut p = Player::new(&prepare(vec![t]), &[Sound::Font(font())]).unwrap();
         let step = 1.0 / 48_000.0;
         let total = (seconds * 48_000.0) as usize;
         let mut out = Vec::with_capacity(total);
@@ -938,22 +1018,22 @@ mod tests {
         plain.start = 0.1;
         plain.end = 0.2;
         let (_, p) = play(&[(0.0, on(h))], &[], 0.05, 25);
-        assert_eq!(p.tracks[0].channels[0].program, program::GUITAR_HARMONICS);
+        assert_eq!(p.synth(0).channels[0].program, program::GUITAR_HARMONICS);
         let (_, p) = play(
             &[(0.0, on(h)), (0.1, off(h)), (0.1, on(plain))],
             &[],
             0.15,
             25,
         );
-        assert_eq!(p.tracks[0].channels[0].program, 25);
+        assert_eq!(p.synth(0).channels[0].program, 25);
         // A distorted guitar's harmonic keeps its own sound.
         let (_, p) = play(&[(0.0, on(h))], &[], 0.05, 30);
-        assert_eq!(p.tracks[0].channels[0].program, 30);
+        assert_eq!(p.synth(0).channels[0].program, 30);
         let mut slap = note(3, 1, 40);
         slap.end = 0.1;
         slap.attack = attack::SLAPPED;
         let (_, p) = play(&[(0.0, on(slap))], &[], 0.05, 33);
-        assert_eq!(p.tracks[0].channels[0].program, program::SLAP_BASS_1);
+        assert_eq!(p.synth(0).channels[0].program, program::SLAP_BASS_1);
     }
 
     #[test]
@@ -966,7 +1046,7 @@ mod tests {
 
     #[test]
     fn a_note_sounds_within_the_resolution_and_stops_after_its_release() {
-        let mut p = Player::new(&prepare(vec![guitar()]), &[font()]).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar()]), &[Sound::Font(font())]).unwrap();
         assert!(render(&mut p, &[], 64).iter().all(|v| *v == 0.0));
         let a = note(1, 1, 64);
         let l = render(&mut p, &[on(a)], 64);
@@ -983,7 +1063,7 @@ mod tests {
 
     #[test]
     fn a_new_note_on_a_string_ends_the_one_before() {
-        let mut p = Player::new(&prepare(vec![guitar()]), &[font()]).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar()]), &[Sound::Font(font())]).unwrap();
         let (a, b) = (note(1, 2, 60), note(2, 2, 62));
         let _ = render(&mut p, &[on(a)], 64);
         let _ = render(&mut p, &[on(b)], 64);
@@ -996,7 +1076,7 @@ mod tests {
 
     #[test]
     fn stopping_fades_out_at_once_and_the_next_notes_start_at_full_level() {
-        let mut p = Player::new(&prepare(vec![guitar()]), &[font()]).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar()]), &[Sound::Font(font())]).unwrap();
         let a = note(1, 1, 64);
         let _ = render(&mut p, &[on(a)], 256);
         let full = render(&mut p, &[], 256);
@@ -1026,7 +1106,7 @@ mod tests {
 
     #[test]
     fn notes_on_other_strings_ring_together() {
-        let mut p = Player::new(&prepare(vec![guitar()]), &[font()]).unwrap();
+        let mut p = Player::new(&prepare(vec![guitar()]), &[Sound::Font(font())]).unwrap();
         let _ = render(&mut p, &[on(note(1, 1, 64)), on(note(2, 2, 59))], 64);
         assert_eq!(p.sounding.iter().flatten().count(), 2);
     }
@@ -1036,7 +1116,11 @@ mod tests {
         let mut bass = guitar();
         bass.program = 33;
         bass.tuning = vec![43, 38, 33, 28];
-        let mut p = Player::new(&prepare(vec![guitar(), bass]), &[font(), font()]).unwrap();
+        let mut p = Player::new(
+            &prepare(vec![guitar(), bass]),
+            &[Sound::Font(font()), Sound::Font(font())],
+        )
+        .unwrap();
         let mut n = note(1, 1, 40);
         n.track = 1;
         let (mut b0, mut b1, mut b2, mut b3) =

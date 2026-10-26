@@ -20,6 +20,8 @@
 pub(crate) mod instrument;
 pub(crate) mod region;
 pub(crate) mod sample;
+pub(crate) mod sampler;
+pub(crate) mod sinc;
 pub(crate) mod text;
 
 use std::path::{Path, PathBuf};
@@ -43,6 +45,7 @@ pub(crate) struct Loaded {
 
 impl Loaded {
     /// The memory its samples take.
+    #[cfg(test)]
     pub(crate) fn bytes(&self) -> usize {
         self.samples.iter().flatten().map(|s| s.bytes()).sum()
     }

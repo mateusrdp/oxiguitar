@@ -66,6 +66,7 @@ impl Sample {
     }
 
     /// The memory it takes.
+    #[cfg(test)]
     pub(crate) fn bytes(&self) -> usize {
         match &self.pcm {
             Pcm::I16(d) => d.len() * 2,

@@ -24,9 +24,7 @@ pub(crate) const CCS: usize = 1024;
 
 /// Extended controllers, by number.
 pub(crate) mod cc {
-    pub(crate) const PITCH_BEND: u16 = 128;
     pub(crate) const VELOCITY: u16 = 131;
-    pub(crate) const RELEASE_VELOCITY: u16 = 132;
     pub(crate) const KEY: u16 = 133;
     pub(crate) const GATE: u16 = 134;
     pub(crate) const RANDOM: u16 = 135;
@@ -1453,7 +1451,7 @@ mod tests {
                 },
                 Mod {
                     target: Target::Tune,
-                    cc: cc::PITCH_BEND,
+                    cc: 128,
                     depth: 200.0,
                     curve: 0
                 },

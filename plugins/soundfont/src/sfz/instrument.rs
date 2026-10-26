@@ -301,12 +301,12 @@ impl Builder {
 }
 
 /// Controllers before an instrument sets any: 0, but for volume (7) at
-/// 100, pan (10) in the middle and expression (11) full, as General MIDI
-/// and sfizz have them.
+/// 100, pan (10) exactly in the middle (63.5, sfizz's half: 64 would pan
+/// a hair right) and expression (11) full, as sfizz has them.
 fn starting_controllers() -> [f32; CCS] {
     let mut c = [0.0; CCS];
     c[7] = 100.0;
-    c[10] = 64.0;
+    c[10] = 63.5;
     c[11] = 127.0;
     c
 }
