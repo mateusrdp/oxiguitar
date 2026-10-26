@@ -214,8 +214,8 @@ mod tests {
         assert_eq!(
             names,
             [
-                ("Test plugin", "0.5.0", "a-test.oxp"),
-                ("Test plugin", "0.5.0", "b-test.oxp"),
+                ("Test plugin", "0.9.0", "a-test.oxp"),
+                ("Test plugin", "0.9.0", "b-test.oxp"),
                 ("junk.oxp", "", "junk.oxp"),
             ]
         );

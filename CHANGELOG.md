@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-26
+
+A release for testers of milestone M4, the player: OxiGuitar plays scores in the window, out of the box on Windows, macOS and Linux with the system's own sound set or better ones you add, with the cursor on the beat being heard, the practice tools and each track's mixer. Still to come before v1.0: amp modelling (NAM), SFZ sound sets and WAV export. Plugin interface 1.3 is frozen with this release.
+
 ### Added
 
 - The player's timeline (M4 slice 1, `oxiguitar-play`): a score as it plays, with repeats, alternate endings, D.C., D.S., codas and Fine in Guitar Pro's order, tempo changes (gradual ones exactly), swing and triplet feel, every note's start and end in seconds with its velocity and every effect (bends, the whammy bar, slides, hammer-ons, ties, let ring, grace notes, strums, tremolo picking, trills, harmonics, dead, ghost and palm-muted notes, vibrato, fades), the metronome and a bar of count-in. `oxiguitar-cli events FILE` prints it. Nothing plays it yet: the sound comes in the next slices.
@@ -15,6 +19,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 - `oxiguitar-cli play FILE --wav OUT` plays a score into a WAV file instead of a sound card.
 - **The player in the window** (M4 slice 4): the Player tab plays the open score from the caret (Space, as in Guitar Pro 8), plays the selection and stops at its end, pauses (the caret stays on the beat heard), stops (the caret goes back where playing began), rewinds, loops the selection or the whole song, counts in a bar, clicks a metronome, plays at 25 to 200 % without changing pitch, and has a master level and the choice of output (kept for next time). Ctrl + Left and Right move a bar. The mixer in each Tracks row (volume, pan, mute, solo) changes the sound as it plays, and the track overview's playhead follows it. Sounds are made ready when a file opens, so Play doesn't wait. While the score plays it can't be edited: pause it to edit (Mateus, 25 Oct 2026). With no instrument, no sound set or no audio output, the controls are greyed out and the footer says what to get.
 - **The playback cursor**: a line moving with the sound and the beat being heard boxed, in blue, computed from the sound card's clock on every frame the screen shows; the page turns to keep it in sight. Paused, it stays with the caret. A click on a track's overview moves the playback there. The **visual metronome** flashes on each beat, brighter on the bar's first.
+- The manual's **Hear it** page: a band, bends, strums and drums as OxiGuitar plays them with good free sound sets; README shows them, with screenshots (Mateus, 26 Oct 2026).
 - The manual's **Playing a score** page, and the rest of **Better sounds**: choosing a set for each instrument, and FreePats' electric guitars (CC0) as the first recorded guitars to get, with the raw DI bank for the amp modelling to come. The listening workflow renders the reference songs with each of those banks too.
 - Plugin interface 1.3 gains the `cpu` condition: a plugin file can name the processor features its code needs (`avx2`, `fma`…), so a faster build ships beside a plain one of the same plugin; a processor without them uses the plain one, and where both can run the faster is used. Only manifests asking for 1.3 may use it, so no older OxiGuitar ever loads such a build blindly.
 - The engine limits its output to −1 dBFS, without adding latency, so loud songs no longer clip; the usual master level is about +6 dB, in the window and in `oxiguitar-cli play`.
