@@ -8,7 +8,7 @@ members = ["crates/*", "plugins/*"]
 exclude = ["spikes", "fuzz", "docs/plugins/template"]
 
 [workspace.package]
-version = "0.9.0"
+version = "0.10.0"
 edition = "2024"
 # Rust from rustup, raised only when something needs it, so Debian unstable
 # can catch up before an upload (CONTRIBUTING.md, "Minimum Rust version").
