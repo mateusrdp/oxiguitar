@@ -13,7 +13,7 @@ use std::sync::{Arc, OnceLock};
 use oxiguitar_host::api::Blob;
 use oxiguitar_host::api::message::{Answer, ErrorKind, LogEntry, Request};
 use oxiguitar_host::{Plugins, SharedSettings, Unheard, Unrecognised};
-use oxiguitar_plugin_test::{OUR_DEVICES, OURS, build_devices, build_ours, check};
+use oxiguitar_plugin_test::{OUR_DEVICES, OUR_INSTRUMENTS, OURS, build_devices, build_ours, check};
 
 fn workspace() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -55,6 +55,22 @@ fn our_plugins_pass_the_contract() {
 }
 
 #[test]
+fn our_instruments_pass_the_contract() {
+    for (_, name) in OUR_INSTRUMENTS {
+        let report = check(&ours().join(format!("{name}.oxp")));
+        assert!(report.ok(), "{name}.oxp: {:#?}", report.failed);
+        assert!(
+            report
+                .passed
+                .iter()
+                .any(|p| p.contains("notes start within its resolution")),
+            "{name}.oxp: {:#?}",
+            report.passed
+        );
+    }
+}
+
+#[test]
 fn the_list_of_our_plugins_is_the_plugins_folder() {
     let mut folders: Vec<String> = std::fs::read_dir(workspace().join("plugins"))
         .unwrap()
@@ -66,12 +82,13 @@ fn the_list_of_our_plugins_is_the_plugins_folder() {
     let mut listed: Vec<String> = OURS
         .iter()
         .map(|(_, n)| *n)
+        .chain(OUR_INSTRUMENTS.iter().map(|(_, n)| *n))
         .chain(OUR_DEVICES.iter().map(|(_, n, _)| *n))
         .map(str::to_owned)
         .collect();
     listed.sort();
     assert_eq!(folders, listed);
-    for (package, name) in OURS {
+    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS) {
         assert_eq!(*package, format!("oxiguitar-{name}-plugin"));
     }
     for (package, name, os) in OUR_DEVICES {

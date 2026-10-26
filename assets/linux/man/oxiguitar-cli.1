@@ -52,8 +52,8 @@ It reads and writes files through the same format plugins, from the same plugin 
 and never creates or changes anything there.
 The package
 .B oxiguitar\-plugins\-basic
-holds the plugins for Guitar Pro files, versions 3 to 8, and those that play
-sound through PipeWire and ALSA.
+holds the plugins for Guitar Pro files, versions 3 to 8, the SoundFont
+player, and those that play sound through PipeWire and ALSA.
 .SH COMMANDS
 .TP
 .BR info " [" \-\-bars "] \fIfile\fR..."
@@ -88,7 +88,13 @@ Play the score through the installed instrument and audio\-device plugins,
 printing each bar as it is heard; Ctrl + C stops it.
 Each track plays through the first installed instrument for its class.
 The sound goes to the audio device the plugins offer (PipeWire before ALSA
-on Linux), or the one settings.json pins.
+on Linux), or the one settings.json pins, or with
+.B \-\-wav
+into a file.
+The SoundFont player plays with the best sound set it finds: one in the
+.I soundfonts
+folder beside the plugin folder, else the largest the system has (on Linux
+in /usr/share/sounds/sf2 and /usr/share/soundfonts).
 .TP
 .B tools
 List the tools, as in the Tools menu of
@@ -172,6 +178,13 @@ Hear only these tracks, by number (1,3).
 .TP
 .BI \-\-device " name"
 Play on this output rather than the system's default.
+.TP
+.BI \-\-wav " file"
+Play into a WAV file (48 kHz, 16\-bit stereo) instead of an output, as fast
+as the computer can, with two seconds after the end for the last notes to
+die away.
+Not with
+.BR \-\-loop .
 .SH EXIT STATUS
 0 if every file was read (and, for
 .BR convert ,
@@ -193,6 +206,9 @@ Engrave every track of song.gp into a PDF.
 .TP
 .B oxiguitar\-cli play song.gp \-\-loop 5\-8 \-\-speed 75 \-\-count\-in
 Practise bars 5 to 8 at three\-quarter speed, after a bar of count\-in.
+.TP
+.B oxiguitar\-cli play song.gp \-\-wav song.wav
+Play song.gp into song.wav.
 .SH BUGS
 Report bugs at
 .UR https://github.com/mateusrdp/oxiguitar/issues

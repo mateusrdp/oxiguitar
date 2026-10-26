@@ -3,7 +3,9 @@
 
 //! `oxiguitar-cli play FILE`: plays a score through the installed
 //! instrument and audio-device plugins (M4 slice 2), from the terminal,
-//! printing each bar as it is heard. Ctrl + C stops it.
+//! printing each bar as it is heard. Ctrl + C stops it. With `--wav OUT`
+//! it plays into a WAV file instead (48 kHz, 16-bit stereo), as fast as it
+//! can, through the same engine and instruments, and needs no sound card.
 //!
 //! Each track plays through the first installed instrument for its class;
 //! the tracks of one instrument share one prepared instance. The audio
@@ -41,6 +43,8 @@ struct Asked {
     tracks: Vec<usize>,
     /// The output's name; the system's default if empty.
     device: String,
+    /// A WAV file to play into instead of a device.
+    wav: Option<String>,
 }
 
 fn parse(args: &[String]) -> Result<Asked, String> {
@@ -76,6 +80,7 @@ fn parse(args: &[String]) -> Result<Asked, String> {
             "--device" => {
                 asked.device = it.next().ok_or("--device needs an output's name")?.clone();
             }
+            "--wav" => asked.wav = Some(it.next().ok_or("--wav needs a file's name")?.clone()),
             "--count-in" => asked.count_in = true,
             "--metronome" => asked.metronome = true,
             "--tracks" => {
@@ -93,6 +98,12 @@ fn parse(args: &[String]) -> Result<Asked, String> {
     }
     if asked.path.is_empty() {
         return Err("play needs a file".into());
+    }
+    if asked.wav.is_some() && asked.looped.is_some() {
+        return Err("--wav and --loop don't go together: a loop never ends".into());
+    }
+    if asked.wav.is_some() && !asked.device.is_empty() {
+        return Err("--wav plays into a file, not an output".into());
     }
     Ok(asked)
 }
@@ -253,6 +264,9 @@ fn play(asked: &Asked) -> Result<(), String> {
         None => None,
     };
     let speed = f64::from(asked.speed.unwrap_or(100)) / 100.0;
+    if let Some(wav) = &asked.wav {
+        return play_into(asked, &score, &timeline, from, speed, wav);
+    }
 
     // The device first, at 48 kHz if it takes it: the engine and the
     // instruments then run at the rate it opened at.
@@ -282,23 +296,7 @@ fn play(asked: &Asked) -> Result<(), String> {
         rate = stream.opened().rate;
         drop(stream);
     };
-    let solo = !asked.tracks.is_empty();
-    for t in 0..score.tracks.len() {
-        let m = &score.tracks[t].mix;
-        control.set_mix(
-            t,
-            TrackMix {
-                volume: m.volume,
-                pan: m.pan,
-                mute: m.mute,
-                solo: if solo {
-                    asked.tracks.contains(&(t + 1))
-                } else {
-                    m.solo
-                },
-            },
-        );
-    }
+    mix(&mut control, &score, asked);
     control.set_speed(speed);
     control.set_loop(looped);
     control.set_metronome(asked.metronome);
@@ -343,6 +341,109 @@ fn play(asked: &Asked) -> Result<(), String> {
     Ok(())
 }
 
+/// The mixer's settings for each track, with `--tracks` heard alone.
+fn mix(control: &mut engine::Control, score: &Score, asked: &Asked) {
+    let solo = !asked.tracks.is_empty();
+    for t in 0..score.tracks.len() {
+        let m = &score.tracks[t].mix;
+        control.set_mix(
+            t,
+            TrackMix {
+                volume: m.volume,
+                pan: m.pan,
+                mute: m.mute,
+                solo: if solo {
+                    asked.tracks.contains(&(t + 1))
+                } else {
+                    m.solo
+                },
+            },
+        );
+    }
+}
+
+/// How long the sound goes on after the song's end, so the last notes'
+/// release is heard: two seconds.
+const TAIL_SECONDS: u32 = 2;
+
+/// Plays the score into the WAV file `wav` at 48 kHz, through the engine
+/// as a device would, as fast as it can.
+fn play_into(
+    asked: &Asked,
+    score: &Score,
+    timeline: &Timeline,
+    from: f64,
+    speed: f64,
+    wav: &str,
+) -> Result<(), String> {
+    let rate = engine::RATE;
+    let (mut engine, mut control) = engine(rate, CAPACITY);
+    let Ready {
+        mut sources,
+        routes,
+        names,
+    } = sources(score, rate)?;
+    let schedule = Arc::new(Schedule::new(timeline, &routes, sources_count(&routes)));
+    sources.fit(&schedule);
+    control.set_schedule(schedule);
+    control.set_sources(sources);
+    mix(&mut control, score, asked);
+    control.set_speed(speed);
+    control.set_metronome(asked.metronome);
+    control.play(from, asked.count_in);
+    // At most the song at this speed, the count-in and the tail: a song
+    // that never says it ended still stops.
+    let most = ((timeline.length() - from).max(0.0) / speed + 10.0) as u64 * u64::from(rate)
+        + u64::from(TAIL_SECONDS * rate);
+    let mut samples: Vec<i16> = Vec::new();
+    let mut out = vec![0f32; CAPACITY * 2];
+    let (mut frames, mut tail) = (0u64, None::<u64>);
+    while frames < most && tail.is_none_or(|t| t > 0) {
+        engine.render(&mut out, 2, 0);
+        samples.extend(
+            out.iter()
+                .map(|v| (v.clamp(-1.0, 1.0) * f32::from(i16::MAX)).round() as i16),
+        );
+        frames += CAPACITY as u64;
+        if let Some(t) = &mut tail {
+            *t = t.saturating_sub(CAPACITY as u64);
+        } else if control.collect().ended {
+            tail = Some(u64::from(TAIL_SECONDS * rate));
+        }
+    }
+    std::fs::write(wav, wav_file(&samples, rate))
+        .map_err(|e| format!("cannot write {wav}: {e}"))?;
+    println!(
+        "Played {} into {wav} ({:.1} s, {rate} Hz) with {}.",
+        asked.path,
+        frames as f64 / f64::from(rate),
+        names.join(", ")
+    );
+    Ok(())
+}
+
+/// A WAV file of interleaved 16-bit stereo `samples` at `rate`.
+fn wav_file(samples: &[i16], rate: u32) -> Vec<u8> {
+    let bytes = (samples.len() * 2) as u32;
+    let mut w = Vec::with_capacity(44 + bytes as usize);
+    w.extend_from_slice(b"RIFF");
+    w.extend_from_slice(&(36 + bytes).to_le_bytes());
+    w.extend_from_slice(b"WAVEfmt ");
+    w.extend_from_slice(&16u32.to_le_bytes());
+    w.extend_from_slice(&1u16.to_le_bytes()); // PCM
+    w.extend_from_slice(&2u16.to_le_bytes()); // stereo
+    w.extend_from_slice(&rate.to_le_bytes());
+    w.extend_from_slice(&(rate * 4).to_le_bytes());
+    w.extend_from_slice(&4u16.to_le_bytes());
+    w.extend_from_slice(&16u16.to_le_bytes());
+    w.extend_from_slice(b"data");
+    w.extend_from_slice(&bytes.to_le_bytes());
+    for v in samples {
+        w.extend_from_slice(&v.to_le_bytes());
+    }
+    w
+}
+
 /// The number of sources the routes name.
 fn sources_count(routes: &[Option<Route>]) -> usize {
     routes
@@ -376,8 +477,15 @@ mod tests {
                 metronome: true,
                 tracks: vec![1, 3],
                 device: String::new(),
+                wav: None,
             })
         );
+        assert_eq!(
+            parse(&args("song.gp --wav out.wav")).map(|a| a.wav),
+            Ok(Some("out.wav".into()))
+        );
+        assert!(parse(&args("song.gp --wav out.wav --loop 1-2")).is_err());
+        assert!(parse(&args("song.gp --wav out.wav --device hw:0")).is_err());
         assert!(parse(&args("song.gp --speed 300")).is_err());
         assert!(parse(&args("song.gp --loop 8-5")).is_err());
         assert!(parse(&args("song.gp --from 0")).is_err());

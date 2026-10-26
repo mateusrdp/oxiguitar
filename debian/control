@@ -52,11 +52,14 @@ Architecture: any
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
+Recommends:
+ fluid-soundfont-gm | musescore-general-soundfont-small,
 Enhances:
  oxiguitar,
-Description: Guitar Pro format and audio plugins for OxiGuitar
+Description: Guitar Pro format, sound and audio plugins for OxiGuitar
  The plugins the OxiGuitar project writes and recommends: one for each
  Guitar Pro format (3, 4, 5, 6 and 7-8), so OxiGuitar can open those
- files, and the ones that play its sound through PipeWire or ALSA.
+ files; the SoundFont player, which plays the tracks with a General MIDI
+ sound set; and the ones that play its sound through PipeWire or ALSA.
  OxiGuitar alone opens no file; it finds these in
  /usr/lib/oxiguitar/plugins.
