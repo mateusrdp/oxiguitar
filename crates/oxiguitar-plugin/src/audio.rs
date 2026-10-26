@@ -157,6 +157,14 @@ impl<'a, 'b> Piece<'a, 'b> {
         self.step
     }
 
+    /// The timeline's pitch points, which every note's curve is a run of
+    /// ([`RtNote::pitch_start`], [`RtNote::pitch_len`]). The same array
+    /// stays put while anything sounds, so a renderer can keep a note's
+    /// run, by index, from one call to the next.
+    pub fn pitch(&self) -> &'a [PitchPoint] {
+        self.pitch
+    }
+
     /// The note's pitch curve: empty for a steady pitch.
     pub fn pitch_of(&self, note: &RtNote) -> &'a [PitchPoint] {
         let start = note.pitch_start as usize;

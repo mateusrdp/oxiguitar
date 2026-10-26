@@ -314,13 +314,14 @@ pub(crate) fn test_set() -> Vec<u8> {
         })
         .collect();
     let len = data.len() as u32;
-    // 480 Hz is key 70.506: key 71, 49 cents flat.
+    // 480 Hz is key 70.506: 49 cents flat of key 71, which a correction
+    // of +49 cents makes up.
     let sine = Sample {
         name: "Sine 480 Hz".into(),
         data,
         rate: 48_000,
         root: 71,
-        correction: -49,
+        correction: 49,
         looped: Some((0, len)),
     };
     let zone = Zone {
@@ -374,10 +375,7 @@ mod tests {
         let s = &font.get_sample_headers()[0];
         assert_eq!((s.get_start(), s.get_end()), (0, 4800));
         assert_eq!((s.get_start_loop(), s.get_end_loop()), (0, 4800));
-        assert_eq!(
-            (s.get_original_pitch(), s.get_pitch_correction()),
-            (71, -49)
-        );
+        assert_eq!((s.get_original_pitch(), s.get_pitch_correction()), (71, 49));
         assert_eq!(font.get_wave_data().len(), 4800 + PAD);
         assert_eq!(font.get_wave_data()[0], 16_000);
     }
