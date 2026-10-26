@@ -44,7 +44,7 @@ Arrows show which crate calls which. Every crate reads or writes the shared mode
 | `oxiguitar-layout` | M1 | Engraving: turns the model into a display list per page, or one long sheet, in four layouts, with a map of where every staff, bar, beat and string is drawn (`Hits`) for the editor's clicks and caret. See [docs/design/engraving.md](docs/design/engraving.md). |
 | `oxiguitar-tools` | M1 | The Tools menu's core tools: actions the user starts that change a score, such as inferring key signatures. Model only, one shape per tool. Stays in the core: Infer Key Signatures is a feature of the editor (18 Oct 2026). See [docs/design/tools.md](docs/design/tools.md). |
 | `oxiguitar-render` | M0 | Draws a display list into pixels (screen, PNG) with tiny-skia and into PDF with krilla (ADR 0005); SVG later. PDF export stays in the core, a feature of the viewer (18 Oct 2026). |
-| `oxiguitar-play` | M4 | Score-to-event conversion, the transport, the mixer. The synthesiser and the audio device are plugins. |
+| `oxiguitar-play` | M4 | The player's core. Built (slice 1): the **timeline**, the score as it plays: the playing order (`order.rs`: repeats, endings, D.C., D.S., codas, Fine), time (`time.rs`: bar lengths, tempo with exact gradual changes, swing and triplet feel, and the way back from a time to the bar and position being heard, for the cursor), every note as an event with its exact start and end in seconds and what it means for the sound (`events.rs`: every TAB-1 effect), the metronome and the count-in (`click.rs`), and the text the golden files hold (`text.rs`). To come: the transport, the scheduler and the mixer. The synthesiser and the audio device are plugins. |
 | `oxiguitar-app` | M1 | The desktop window, binary `oxiguitar`, in Slint (ADR 0004), following [docs/design/ui.md](docs/design/ui.md). A worker thread reads, engraves and draws the score as tiles; the window only shows them, so it never waits on the music code. |
 
 | `oxiguitar-testgen` | M1 | Test code only: scores written in a short text notation and saved as Guitar Pro 7 files, for the speed budget and visual regression tests. See [docs/testing.md](docs/testing.md). |
@@ -61,7 +61,7 @@ Crates marked with a later milestone do not exist yet. Throwaway experiments liv
 - **Small core, everything else a plugin** (from M2). The core never carries or loads code it cannot use on the machine it runs on; it compiles per target, and a plugin's code loads only when one of its contributions is used.
 - **Thin GUI.** All logic lives in toolkit-free crates, because Rust GUI toolkits change fast.
 - **Untrusted input.** Files come from anywhere. Readers never panic, never allocate without bounds checks, and report errors with the file and position.
-- **No network** except downloads the user starts (NET-1, NET-2). CI enforces this.
+- **No network** and no downloads; the only use planned is an update check the user starts (NET-1, NET-2, as changed on 21 Oct 2026). CI enforces this.
 - **No polling.** Code reacts to events or waits on something that wakes it; see CONTRIBUTING.md, "Design principles".
 
 ## Where decisions are recorded

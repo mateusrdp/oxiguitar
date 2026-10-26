@@ -1,0 +1,150 @@
+# Listening packs, by hand: every reference song (fixtures/reference/*.gp)
+# played into a WAV file by `oxiguitar-cli play --wav`, through our
+# SoundFont plugin, once with each General MIDI set Debian and Ubuntu
+# package: FluidR3 (fluid-soundfont-gm) and MuseScore General
+# (musescore-general-soundfont, the SoundFont 3 one, which the plugin
+# decodes); and once with each of FreePats' electric guitar banks (CC0,
+# their SoundFont 2 files from FreePats' GitHub releases) for the guitars
+# and FluidR3 for everything else, as the plugin's settings window picks
+# them, before the manual's Better sounds page names them. For Mateus's
+# ears: each set is an artifact of its own, kept 14 days. (This is CI
+# fetching test material; OxiGuitar itself downloads nothing.) Run it from the Actions tab or with
+# `gh api -X POST repos/OWNER/REPO/actions/workflows/listening.yml/dispatches -f ref=BRANCH`.
+name: Listening pack
+
+on:
+  workflow_dispatch:
+  # Once more whenever this file changes in a pull request (a workflow
+  # can be dispatched only once it is on the default branch).
+  pull_request:
+    paths: [.github/workflows/listening.yml]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  render:
+    name: Render the reference songs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev libpipewire-0.3-dev libclang-dev \
+            fluid-soundfont-gm musescore-general-soundfont
+      - run: cargo build --release --locked -p oxiguitar-cli
+      - run: scripts/build-plugins.sh
+      - name: Render
+        run: |
+          set -euo pipefail
+          declare -A sets=(
+            [fluidr3]=/usr/share/sounds/sf2/FluidR3_GM.sf2
+            [musescore-general]=/usr/share/sounds/sf3/MuseScore_General_Full.sf3
+          )
+          for name in "${!sets[@]}"; do
+            set_file="$(readlink -f "${sets[$name]}")"
+            test -f "$set_file"
+            home="$RUNNER_TEMP/home-$name"
+            mkdir -p "$home/soundfonts" "listening/$name"
+            # The user's folder plays before the system's: this set alone.
+            ln -s "$set_file" "$home/soundfonts/"
+            for song in fixtures/reference/*.gp; do
+              out="listening/$name/$(basename "$song" .gp).wav"
+              OXIGUITAR_HOME="$home" target/release/oxiguitar-cli play "$song" --wav "$out" 2>&1 \
+                | grep -v 'basic sound set' || true
+              test -s "$out"
+            done
+            {
+              echo "Every reference song of OxiGuitar ${GITHUB_SHA::12}, played by the SoundFont"
+              echo "plugin with $(basename "$set_file") into WAV files (48 kHz, 16-bit stereo, dry,"
+              echo "each track at its file's mixer volume and pan), with two seconds after the end."
+            } > "listening/$name/README.txt"
+            echo "::notice title=$name::$(ls listening/$name/*.wav | wc -l) songs, $(du -sh listening/$name | cut -f1)"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: listening-fluidr3
+          path: listening/fluidr3
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: listening-musescore-general
+          path: listening/musescore-general
+          retention-days: 14
+
+  guitars:
+    name: Render the reference songs with FreePats' guitars
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev libpipewire-0.3-dev libclang-dev \
+            fluid-soundfont-gm p7zip-full
+      - run: cargo build --release --locked -p oxiguitar-cli
+      - run: scripts/build-plugins.sh
+      - name: Fetch the banks
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/banks"
+          cd "$RUNNER_TEMP/banks"
+          base=https://github.com/freepats
+          curl -fsSL -o clean.7z "$base/electric-guitar-FSBS-clean/releases/download/2026-08-07/EGuitarFSBS-clean-SF2-20260807.7z"
+          curl -fsSL -o jazz.7z "$base/electric-guitar-FSBS-jazz/releases/download/2026-08-07/EGuitarFSBS-jazz-SF2-20260807.7z"
+          curl -fsSL -o direct.7z "$base/electric-guitar-FSBS-direct/releases/download/2022-09-11/EGuitarFSBS-direct-SF2-20220911.7z"
+          for b in clean jazz direct; do
+            mkdir "$b" && 7z x -o"$b" "$b.7z" > /dev/null
+            echo "::notice title=$b::$(find "$b" -name '*.sf2' -printf '%f %s bytes\n')"
+          done
+      - name: Render
+        run: |
+          set -euo pipefail
+          fluid="$(readlink -f /usr/share/sounds/sf2/FluidR3_GM.sf2)"
+          for b in clean jazz direct; do
+            sf2="$(find "$RUNNER_TEMP/banks/$b" -name '*.sf2' | head -1)"
+            test -f "$sf2"
+            home="$RUNNER_TEMP/home-$b"
+            mkdir -p "$home/soundfonts" "listening/freepats-$b"
+            cp "$sf2" "$home/soundfonts/"
+            mine="$(readlink -f "$home/soundfonts/$(basename "$sf2")")"
+            # The plugin's settings window's picks: this bank for guitars,
+            # FluidR3 for the rest.
+            printf '{"oxiguitar.soundfont":{"guitars":"%s","basses":"%s","drums":"%s","other":"%s","warned_basic_sets":true}}\n' \
+              "$mine" "$fluid" "$fluid" "$fluid" > "$home/settings.json"
+            for song in fixtures/reference/*.gp; do
+              out="listening/freepats-$b/$(basename "$song" .gp).wav"
+              OXIGUITAR_HOME="$home" target/release/oxiguitar-cli play "$song" --wav "$out"
+              test -s "$out"
+            done
+            {
+              echo "Every reference song of OxiGuitar ${GITHUB_SHA::12}, played by the SoundFont"
+              echo "plugin with FreePats' electric guitar bank '$b' ($(basename "$sf2"), CC0) for"
+              echo "the guitars and FluidR3_GM for everything else, into WAV files (48 kHz, 16-bit"
+              echo "stereo, dry, each track at its file's mixer volume and pan, the usual master"
+              echo "level), with two seconds after the end. 'direct' is the raw DI signal, meant"
+              echo "for an amp model (NAM, v1.0), so it sounds thin on its own."
+            } > "listening/freepats-$b/README.txt"
+            echo "::notice title=freepats-$b::$(ls listening/freepats-$b/*.wav | wc -l) songs, $(du -sh listening/freepats-$b | cut -f1)"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: listening-freepats-clean
+          path: listening/freepats-clean
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: listening-freepats-jazz
+          path: listening/freepats-jazz
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: listening-freepats-direct
+          path: listening/freepats-direct
+          retention-days: 14

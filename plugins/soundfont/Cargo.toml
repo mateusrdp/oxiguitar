@@ -1,0 +1,36 @@
+[package]
+name = "oxiguitar-soundfont-plugin"
+description = "The OxiGuitar SoundFont plugin: plays every track with a sound set, the user's or the system's, through rustysynth."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+# An ordinary library for tests, and soundfont.oxp when built with
+# `--features oxp --crate-type cdylib` (scripts/build-plugins.sh).
+crate-type = ["lib"]
+
+[features]
+oxp = []
+
+[dependencies]
+oxiguitar-plugin.workspace = true
+rustysynth.workspace = true
+lewton.workspace = true
+
+# Plugins deny `unsafe` rather than forbid it: `export_plugin!` allows it on
+# the two attributes it generates, and nowhere else.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"

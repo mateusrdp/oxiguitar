@@ -79,6 +79,15 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         eprintln!("oxiguitar-cli: {output}: {e}");
         return ExitCode::FAILURE;
     }
+    // The tracks' plugin settings, which no format holds, go beside the new
+    // file as they were beside the old (FILE.oxg).
+    use oxiguitar_host::sidecar::Sidecar;
+    match Sidecar::read_for(Path::new(input))
+        .and_then(|s| s.map_or(Ok(()), |s| s.write_for(Path::new(output))))
+    {
+        Ok(()) => {}
+        Err(e) => eprintln!("oxiguitar-cli: {e}"),
+    }
     let lost = written
         .losses
         .iter()

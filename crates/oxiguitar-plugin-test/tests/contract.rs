@@ -114,16 +114,24 @@ fn discover(folders: &[PathBuf], settings: SharedSettings) -> (Plugins, Arc<Hear
 fn the_test_plugin_passes_the_contract() {
     let report = oxiguitar_plugin_test::check(test_oxp());
     assert!(report.ok(), "failed: {:#?}", report.failed);
-    // 11 for formats and services; 2 tabs; 10 uses of the panel's widgets
+    // 12 for formats and services; 2 tabs; 10 uses of the panel's widgets
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
-    // of event, the selection in both its forms; 1 tool.
+    // of event, the selection in both its forms; 2 tools; the settings
+    // window and its 2 widgets; the track section and its 2 widgets; 2
+    // instruments and an effect, 4 real-time checks each.
     assert_eq!(
         report.passed.len(),
-        11 + 2 + 10 + 4 + 1,
+        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4,
         "{:#?}",
         report.passed
     );
-    assert!(report.messages.is_empty(), "{:?}", report.messages);
+    // The tool `link` says something on purpose.
+    assert_eq!(report.messages.len(), 1, "{:?}", report.messages);
+    assert!(
+        report.messages[0].contains("A footer message with a link"),
+        "{:?}",
+        report.messages
+    );
 }
 
 #[test]
@@ -185,7 +193,9 @@ fn services_are_chosen_by_conditions_priority_probe_and_settings() {
         plugins.call_service("test-echo", "echo", b"hi").unwrap(),
         b"hi"
     );
-    assert!(plugins.service("audio-device").is_err());
+    // The fake audio device is the only one, so it is chosen, though its
+    // priority is the lowest.
+    assert_eq!(plugins.service("audio-device").unwrap().spec.id, "fake");
 
     // Errors cross with their kind, offset and context.
     let e = plugins.call_service("test-echo", "fail", b"").unwrap_err();
@@ -812,7 +822,7 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
     // The test plugin's tool, from its manifest; the second plugin (1.1)
     // has none.
     let tools = plugins.tools();
-    assert_eq!(tools.len(), 1);
+    assert_eq!(tools.len(), 2);
     assert_eq!(tools[0].spec.name, "Mark the Title");
     assert_eq!(plugins.run_tool(tools[0]).unwrap(), "No score is open.");
 
@@ -937,4 +947,354 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
         "{said:?}"
     );
     assert!(!said.iter().any(|s| s.contains("Selection2")), "{said:?}");
+}
+
+/// The rest of the core for interface 1.3: footer messages with their
+/// links.
+#[derive(Default)]
+struct Linked(Mutex<Vec<Said>>);
+
+/// A footer message, and its link's words and address if it has one.
+type Said = (Level, String, Option<(String, String)>);
+
+impl Core for Linked {
+    fn notify(&self, level: Level, text: String) {
+        self.0.lock().unwrap().push((level, text, None));
+    }
+
+    fn notify_with_link(
+        &self,
+        level: Level,
+        text: String,
+        link: oxiguitar_host::api::message::Link,
+    ) {
+        self.0
+            .lock()
+            .unwrap()
+            .push((level, text, Some((link.text, link.url))));
+    }
+}
+
+#[test]
+fn interface_1_3_settings_windows_track_sections_links_and_folders() {
+    use oxiguitar_host::api::manifest::SharedFolder;
+    use oxiguitar_host::api::message::TrackInfo;
+    use oxiguitar_host::{Folders, System};
+
+    let dir = folder("one-three", &["test.oxp"]);
+    let home = dir.join("home");
+    let core = Arc::new(Linked::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        core.clone(),
+    );
+
+    // The shared folders come from the manifest alone.
+    assert_eq!(plugins.shared_folders(), [SharedFolder::Soundfonts]);
+    assert!(!plugins.found()[0].is_loaded());
+
+    // The settings window: its widgets change the plugin's own settings.
+    let found = plugins.with_settings_window()[0];
+    let content = plugins.settings_window(found).unwrap();
+    assert!(matches!(
+        &content.rows[0].widgets[0],
+        Widget::Toggle { on: false, .. }
+    ));
+    plugins
+        .settings_event(found, "greet", TabEvent::Toggled(true))
+        .unwrap();
+    let content = plugins
+        .settings_event(found, "name", TabEvent::Edited("Mateus".into()))
+        .unwrap();
+    assert!(matches!(
+        &content.rows[2].widgets[0],
+        Widget::Label { text, .. } if text == "Hello, Mateus."
+    ));
+    assert_eq!(
+        plugins.settings().get("oxiguitar.test"),
+        Some(serde_json::json!({"greet": true, "name": "Mateus"}))
+    );
+
+    // The track section: every class but drums, and the settings travel
+    // with every request; the plugin keeps none.
+    assert!(plugins.track_sections(InstrumentClass::Drums).is_empty());
+    let section = plugins.track_sections(InstrumentClass::Fretted)[0];
+    assert_eq!(section.spec.title, "Test section");
+    assert_eq!(section.plugin_id(), "oxiguitar.test");
+    let track = TrackInfo {
+        index: 1,
+        name: "Lead".into(),
+        class: InstrumentClass::Fretted,
+    };
+    let (content, settings) = plugins.track_section(section, &track, "{}").unwrap();
+    assert_eq!(settings, "{}");
+    assert!(matches!(
+        &content.rows[1].widgets[0],
+        Widget::Field { placeholder, .. } if placeholder == "A nickname for Lead"
+    ));
+    let (_, settings) = plugins
+        .track_section_event(section, &track, &settings, "level", TabEvent::Slid(0.25))
+        .unwrap();
+    assert_eq!(settings, r#"{"level":0.25}"#);
+    // A refused value: said in the footer, and the settings stay.
+    let (_, kept) = plugins
+        .track_section_event(
+            section,
+            &track,
+            &settings,
+            "nickname",
+            TabEvent::Edited("refuse".into()),
+        )
+        .unwrap();
+    assert_eq!(kept, settings);
+    assert!(
+        core.0
+            .lock()
+            .unwrap()
+            .last()
+            .unwrap()
+            .1
+            .contains("that nickname is refused"),
+        "{:?}",
+        core.0.lock().unwrap()
+    );
+
+    // Footer links: https only.
+    let tool = plugins
+        .tools()
+        .into_iter()
+        .find(|t| t.spec.id == "link")
+        .unwrap();
+    assert_eq!(plugins.run_tool(tool).unwrap(), "");
+    assert_eq!(
+        core.0.lock().unwrap().last().unwrap(),
+        &(
+            Level::Warning,
+            "Test plugin: A footer message with a link (a test).".to_owned(),
+            Some((
+                "The plugin guide".to_owned(),
+                "https://mateusrdp.github.io/oxiguitar/plugin-guide/".to_owned()
+            ))
+        )
+    );
+    // Anything else is refused (the SDK drops a message that can't be
+    // shown, so the footer hears nothing).
+    let said = core.0.lock().unwrap().len();
+    for refused in [
+        "http://example.org",
+        "file:///etc/passwd",
+        "https://",
+        "javascript:x",
+    ] {
+        plugins
+            .call_service("test-echo", "link", refused.as_bytes())
+            .unwrap();
+        assert_eq!(core.0.lock().unwrap().len(), said, "{refused}");
+    }
+    assert!(oxiguitar_host::is_https("https://example.org/a?b=c"));
+
+    // Folders: none until the host is given them; then the plugin's own,
+    // made on first ask, and the shared ones.
+    let e = plugins
+        .call_service("test-echo", "folders", b"")
+        .unwrap_err();
+    assert!(e.message.contains("keeps no folders"), "{e}");
+    let folders = Folders::resolve(
+        System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    plugins.use_folders(folders.clone());
+    let answer = plugins.call_service("test-echo", "folders", b"").unwrap();
+    let answer = String::from_utf8(answer).unwrap();
+    let lines: Vec<&str> = answer.lines().collect();
+    assert_eq!(
+        lines,
+        [
+            folders.plugin_data("oxiguitar.test").to_str().unwrap(),
+            folders.plugin_cache("oxiguitar.test").to_str().unwrap(),
+            folders.shared(SharedFolder::Soundfonts).to_str().unwrap(),
+        ]
+    );
+    assert_eq!(
+        std::fs::read_to_string(folders.plugin_data("oxiguitar.test").join("hello.txt")).unwrap(),
+        "hello\n"
+    );
+    assert!(folders.plugin_cache("oxiguitar.test").is_dir());
+}
+
+#[test]
+fn the_real_time_checks_catch_allocations_system_calls_and_late_notes() {
+    let dir = folder("realtime", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    // As it should be: every check passes.
+    let fine = oxiguitar_plugin_test::check_realtime(&plugins, "{}");
+    assert!(fine.ok(), "{:#?}", fine.failed);
+    assert_eq!(fine.passed.len(), 3 * 4, "{:#?}", fine.passed);
+
+    // Allocating and yielding its thread on every render: both are caught.
+    let bad = oxiguitar_plugin_test::check_realtime(&plugins, r#"{"misbehave": true}"#);
+    let failed = bad.failed.join("\n");
+    assert!(
+        failed.contains("allocates nothing while rendering"),
+        "{failed}"
+    );
+    if cfg!(target_os = "linux") {
+        assert!(
+            failed.contains("makes no system call while rendering"),
+            "{failed}"
+        );
+    }
+    // A note 20 frames late, past a resolution of 0.
+    let late = oxiguitar_plugin_test::check_realtime(&plugins, r#"{"late": 20}"#);
+    let failed = late.failed.join("\n");
+    assert!(
+        failed.contains("started on frame 20, later than its resolution of 0"),
+        "{failed}"
+    );
+}
+
+/// The engine with the test song, every track on the test plugin's sine,
+/// and the time of its first note.
+fn engine_on_the_test_song(
+    plugins: &Plugins,
+) -> (oxiguitar_play::Engine, oxiguitar_play::Control, f64) {
+    use oxiguitar_host::api::message::{Prepare, PreparedTrack, TrackInfo};
+    use oxiguitar_play::plugin_source::PluginSource;
+    use oxiguitar_play::{Route, Schedule, Slot, Sources, Timeline, engine};
+
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
+        .unwrap()
+        .score;
+    let timeline = Timeline::new(&score);
+    let tracks = score.tracks.len();
+    let class = InstrumentClass::of(
+        score.tracks[0].instrument.midi_program,
+        score.tracks[0].instrument.percussion,
+    );
+    let instrument = plugins.playable(class)[0];
+    let prepared: Vec<PreparedTrack> = (0..tracks)
+        .map(|i| PreparedTrack {
+            info: TrackInfo {
+                index: i as u32,
+                name: score.tracks[i].name.clone(),
+                class,
+            },
+            program: score.tracks[i].instrument.midi_program,
+            percussion: false,
+            tuning: Vec::new(),
+            capo: 0,
+            settings: "{}".into(),
+        })
+        .collect();
+    let instance = plugins
+        .prepare(
+            instrument,
+            Prepare {
+                instrument: String::new(),
+                rate: 48_000,
+                frames: 512,
+                tracks: prepared,
+            },
+        )
+        .unwrap();
+    let routes: Vec<Option<Route>> = (0..tracks)
+        .map(|t| Some(Route { source: 0, slot: t }))
+        .collect();
+    let schedule = Arc::new(Schedule::new(&timeline, &routes, 1));
+    let (engine, mut control) = engine(48_000, 512);
+    let mut sources = Sources::new(vec![Slot::new(
+        Box::new(PluginSource::new(
+            instance,
+            (0..tracks).map(|_| Vec::new()).collect(),
+        )),
+        (0..tracks).collect(),
+        512,
+    )]);
+    sources.fit(&schedule);
+    control.set_schedule(schedule.clone());
+    control.set_sources(sources);
+    let first = timeline
+        .notes
+        .iter()
+        .map(|n| n.start)
+        .fold(f64::MAX, f64::min);
+    (engine, control, first)
+}
+
+#[test]
+fn the_engine_plays_a_plugin_instrument_on_its_frames() {
+    use oxiguitar_play::Sources;
+
+    let dir = folder("engine", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let (mut engine, mut control, first) = engine_on_the_test_song(&plugins);
+    // Play from a little before the first note; the device's callbacks
+    // are 100 frames.
+    let from = (first - 0.01).max(0.0);
+    control.play(from, false);
+    let mut out = vec![0.0f32; 200];
+    let mut left: Vec<f32> = Vec::new();
+    for _ in 0..48 {
+        engine.render(&mut out, 2, 0);
+        left.extend(out.iter().step_by(2));
+    }
+    let expected = ((first - from) * 48_000.0 - 1e-6).ceil() as usize;
+    let heard = left.iter().position(|v| v.abs() > 1e-4).unwrap();
+    assert_eq!(heard, expected, "the first note starts on its frame");
+    assert!(left[..expected].iter().all(|v| *v == 0.0));
+    control.pause();
+    engine.render(&mut out, 2, 0);
+    // The sources go back to the window, which drops them: the plugin
+    // releases its instance.
+    control.set_sources(Sources::new(Vec::new()));
+    engine.render(&mut out, 2, 0);
+    control.collect();
+}
+
+#[test]
+fn an_audio_device_plays_the_engine_through_the_host() {
+    // The fake device (priority -100) is the only one here, so it is
+    // chosen; settings.json may pin it too, as a user would a real one.
+    let pinned = SharedSettings::new(
+        Settings::parse(r#"{"services": {"audio-device": "oxiguitar.test/fake"}}"#).unwrap(),
+        None,
+    );
+    let dir = folder("audio-device", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), pinned);
+    assert_eq!(plugins.service("audio-device").unwrap().spec.id, "fake");
+    let devices = plugins
+        .call_service("audio-device", "devices", b"")
+        .unwrap();
+    assert_eq!(
+        oxiguitar_host::api::decode::<Vec<String>>(&devices).unwrap(),
+        ["Nowhere"]
+    );
+
+    let (mut engine, mut control, first) = engine_on_the_test_song(&plugins);
+    control.play(first, false);
+    // The device's thread renders 200 buffers of 256 frames through the
+    // host's `render`, which hands them to the engine.
+    let stream = plugins
+        .open_stream(48_000, "", move |out, channels, _delay| {
+            engine.render(out, channels, 0);
+        })
+        .unwrap();
+    assert_eq!(stream.opened().rate, 48_000);
+    assert_eq!(stream.opened().device, "Nowhere");
+    let totals = plugins.call_service("audio-device", "totals", b"").unwrap();
+    let totals = String::from_utf8(totals).unwrap();
+    let (frames, sum) = totals.split_once(' ').unwrap();
+    assert_eq!(frames, (200 * 256).to_string());
+    assert!(sum.parse::<f64>().unwrap() > 1.0, "it made sound: {sum}");
+    // The clock followed the frames the device took.
+    let heard = control.heard().unwrap();
+    assert!(heard > first, "{heard} after {first}");
+    drop(stream);
+    control.collect();
 }

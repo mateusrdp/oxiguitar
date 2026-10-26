@@ -2,8 +2,10 @@ OxiGuitar basic plugins
 =======================
 
 These are the plugins the OxiGuitar project writes and recommends: one for
-each Guitar Pro format (Guitar Pro 3, 4, 5, 6 and 7-8). OxiGuitar alone
-opens no file; with these it opens Guitar Pro files.
+each Guitar Pro format (Guitar Pro 3, 4, 5, 6 and 7-8), and the ones that
+play sound through your system (PipeWire and ALSA on Linux, WASAPI on
+Windows, Core Audio on macOS). OxiGuitar alone opens no file; with these it
+opens Guitar Pro files.
 
 Put the .oxp files in a plugin folder, then start OxiGuitar again:
 

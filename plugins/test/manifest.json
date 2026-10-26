@@ -1,8 +1,8 @@
 {
-  "interface": "1.2",
+  "interface": "1.3",
   "id": "oxiguitar.test",
   "name": "Test plugin",
-  "version": "0.5.0",
+  "version": "0.9.0",
   "description": "Tests the plugin interface. Never shipped.",
   "authors": ["The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",
@@ -22,11 +22,15 @@
     { "id": "drums", "name": "Test drums", "plays": ["drums"] },
     { "id": "no-drums", "name": "Test everything but drums", "does_not_play": ["drums"] }
   ],
+  "effects": [
+    { "id": "gain", "name": "Test gain (halves the track)" }
+  ],
   "services": [
     { "interface": "test-echo", "id": "echo", "name": "Echo", "priority": 1 },
     { "interface": "test-echo", "id": "second", "name": "Second echo" },
     { "interface": "test-echo", "id": "unavailable", "name": "Never available", "priority": 9 },
-    { "interface": "test-echo", "id": "elsewhere", "name": "Only on Plan 9", "priority": 20, "conditions": { "os": ["plan9"] } }
+    { "interface": "test-echo", "id": "elsewhere", "name": "Only on Plan 9", "priority": 20, "conditions": { "os": ["plan9"] } },
+    { "interface": "audio-device", "id": "fake", "name": "Fake output (a test)", "priority": -100 }
   ],
   "tabs": [
     { "id": "panel", "title": "Test", "area": "bottom" },
@@ -34,6 +38,12 @@
   ],
   "events": ["score", "selection", "playback"],
   "tools": [
-    { "id": "mark", "name": "Mark the Title", "description": "Adds an exclamation mark to the score's title, as one change." }
-  ]
+    { "id": "mark", "name": "Mark the Title", "description": "Adds an exclamation mark to the score's title, as one change." },
+    { "id": "link", "name": "Show a Footer Link", "description": "Shows a warning in the footer with a link to the plugin guide." }
+  ],
+  "settings_window": true,
+  "track_sections": [
+    { "id": "test", "title": "Test section", "does_not_play": ["drums"] }
+  ],
+  "folders": ["soundfonts"]
 }

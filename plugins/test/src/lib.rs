@@ -15,9 +15,9 @@
 //!   only when settings.json pins it), `unavailable` (its probe says no,
 //!   though its priority is the highest that can run) and `elsewhere`
 //!   (only on Plan 9, so never chosen);
-//! - two instrument declarations, one playing only drums and one
-//!   everything but drums (the manifest alone: instruments get their
-//!   interface with the player, M4);
+//! - two instruments, one playing only drums and one everything but drums,
+//!   both a sine per note (interface 1.3: [`sine`]), and the effect `gain`,
+//!   which halves a track;
 //! - two tabs (interface 1.1): `panel`, in the bottom area, with one widget
 //!   of every kind and a canvas that marks where the pointer last went
 //!   down, and `side`, in the right area, with one line of text. `panel`'s
@@ -28,7 +28,14 @@
 //!   selection (`Event::Selection2`);
 //! - the tool `mark` (interface 1.2), "Mark the Title": it asks for the
 //!   score (version 2), adds `!` to its title and hands it back as one
-//!   change.
+//!   change;
+//! - interface 1.3: a settings window (a toggle and a field, kept in the
+//!   plugin's settings), the track dialog's section `test` for every track
+//!   but drums (a level slider and a name field, kept per track), the tool
+//!   `link`, "Show a Footer Link" (a warning in the footer with a link to
+//!   the plugin guide), and the shared folder `soundfonts`;
+//! - the audio device `fake` (interface 1.3, [`fake`]): an output with no
+//!   speaker, priority -100, so a real device always wins.
 //!
 //! `echo`'s methods exercise the host's side: `notify` and `settings` call
 //! the host's services, `via-host` calls `test-echo` back through the host
@@ -36,6 +43,12 @@
 //! `panic` and `fail` check that both cross the interface as errors.
 //! `events` returns the events received so far, one per line, and `break`
 //! makes `panel`'s contents unshowable from then on (an id used twice).
+//! `link` shows a footer warning linking to the address it is given, and
+//! `folders` writes `hello.txt` into the plugin's data folder and returns
+//! the data, cache and `soundfonts` folders, one per line.
+
+pub mod fake;
+pub mod sine;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
@@ -43,9 +56,14 @@ use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{Score, ScoreInfo};
 use oxiguitar_plugin::{
     Availability, Canvas, Error, ErrorKind, Event, FormatReader, FormatWriter, Host, Level,
-    LogEntry, Plugin, PointerKind, Read, Row, Service, Tab, TabContent, TabEvent, Tool, Widget,
-    Written,
+    LogEntry, Plugin, PointerKind, Read, Row, Service, SharedFolder, Tab, TabContent, TabEvent,
+    Tool, TrackInfo, TrackSection, Widget, Written,
 };
+
+use oxiguitar_plugin::serde_json;
+
+/// The plugin guide, where the tool `link` points.
+pub const GUIDE: &str = "https://mateusrdp.github.io/oxiguitar/plugin-guide/";
 
 /// The first line of every `oxgtest` file.
 pub const MAGIC: &str = "OXGTEST\n";
@@ -57,6 +75,161 @@ pub struct TestPlugin {
     panel: Panel,
     side: Side,
     mark: Mark,
+    link: LinkTool,
+    settings: SettingsWindow,
+    fake: fake::Fake,
+}
+
+/// The tool `link`.
+#[derive(Debug)]
+struct LinkTool {
+    host: Host,
+}
+
+impl Tool for LinkTool {
+    fn run(&self) -> Result<String, Error> {
+        self.host.notify_with_link(
+            Level::Warning,
+            "A footer message with a link (a test).",
+            "The plugin guide",
+            GUIDE,
+        );
+        Ok(String::new())
+    }
+}
+
+/// The settings window: a toggle and a field, kept in the plugin's
+/// settings (`greet` and `name`).
+#[derive(Debug)]
+struct SettingsWindow {
+    host: Host,
+}
+
+impl Tab for SettingsWindow {
+    fn content(&self) -> TabContent {
+        let settings = self.host.settings().unwrap_or_default();
+        let greet = settings
+            .get("greet")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let name = settings
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_owned();
+        let greeting = if greet && !name.is_empty() {
+            format!("Hello, {name}.")
+        } else {
+            "Nothing to say.".to_owned()
+        };
+        TabContent {
+            rows: vec![
+                Row {
+                    widgets: vec![Widget::Toggle {
+                        id: "greet".into(),
+                        text: "Greet".into(),
+                        on: greet,
+                        enabled: true,
+                    }],
+                },
+                Row {
+                    widgets: vec![Widget::Field {
+                        id: "name".into(),
+                        text: name,
+                        placeholder: "Your name".into(),
+                        enabled: true,
+                    }],
+                },
+                Row {
+                    widgets: vec![Widget::Label {
+                        text: greeting,
+                        muted: true,
+                    }],
+                },
+            ],
+        }
+    }
+
+    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
+        let mut settings = self.host.settings()?;
+        match (widget, event) {
+            ("greet", TabEvent::Toggled(on)) => settings.insert("greet".into(), on.into()),
+            ("name", TabEvent::Edited(text)) => settings.insert("name".into(), text.into()),
+            _ => return Err(Error::not_found(format!("no widget {widget:?}"))),
+        };
+        self.host.set_settings(&settings)
+    }
+}
+
+/// The track dialog's section `test`: a level (0 to 1, `level`) and a
+/// nickname (`nickname`) per track.
+#[derive(Debug)]
+struct TestSection;
+
+impl TrackSection for TestSection {
+    fn content(
+        &self,
+        track: &TrackInfo,
+        settings: &serde_json::Map<String, serde_json::Value>,
+    ) -> TabContent {
+        let level = settings
+            .get("level")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.5);
+        let nickname = settings
+            .get("nickname")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        TabContent {
+            rows: vec![
+                Row {
+                    widgets: vec![
+                        Widget::Label {
+                            text: "Level".into(),
+                            muted: false,
+                        },
+                        Widget::Slider {
+                            id: "level".into(),
+                            value: level as f32,
+                            min: 0.0,
+                            max: 1.0,
+                            enabled: true,
+                        },
+                    ],
+                },
+                Row {
+                    widgets: vec![Widget::Field {
+                        id: "nickname".into(),
+                        text: nickname.into(),
+                        placeholder: format!("A nickname for {}", track.name),
+                        enabled: true,
+                    }],
+                },
+            ],
+        }
+    }
+
+    fn on(
+        &self,
+        _track: &TrackInfo,
+        settings: &mut serde_json::Map<String, serde_json::Value>,
+        widget: &str,
+        event: TabEvent,
+    ) -> Result<(), Error> {
+        match (widget, event) {
+            ("level", TabEvent::Slid(v)) => {
+                settings.insert("level".into(), f64::from(v).into());
+            }
+            ("nickname", TabEvent::Edited(text)) if text == "refuse" => {
+                return Err(Error::new(ErrorKind::Invalid, "that nickname is refused"));
+            }
+            ("nickname", TabEvent::Edited(text)) => {
+                settings.insert("nickname".into(), text.into());
+            }
+            _ => return Err(Error::not_found(format!("no widget {widget:?}"))),
+        }
+        Ok(())
+    }
 }
 
 /// The service that is never available.
@@ -119,12 +292,36 @@ impl Plugin for TestPlugin {
             },
             side: Side,
             mark: Mark { host: host.clone() },
+            link: LinkTool { host: host.clone() },
+            settings: SettingsWindow { host: host.clone() },
+            fake: fake::Fake::new(host.clone()),
             host,
         })
     }
 
     fn tool(&self, id: &str) -> Option<&dyn Tool> {
-        (id == "mark").then_some(&self.mark as &dyn Tool)
+        match id {
+            "mark" => Some(&self.mark),
+            "link" => Some(&self.link),
+            _ => None,
+        }
+    }
+
+    fn settings_window(&self) -> Option<&dyn Tab> {
+        Some(&self.settings)
+    }
+
+    fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
+        (id == "test").then_some(&TestSection as &dyn TrackSection)
+    }
+
+    fn instrument(&self, id: &str) -> Option<&dyn oxiguitar_plugin::Instrument> {
+        matches!(id, "drums" | "no-drums")
+            .then_some(&sine::Sine as &dyn oxiguitar_plugin::Instrument)
+    }
+
+    fn effect(&self, id: &str) -> Option<&dyn oxiguitar_plugin::Effect> {
+        (id == "gain").then_some(&sine::Gain as &dyn oxiguitar_plugin::Effect)
     }
 
     fn tab(&self, id: &str) -> Option<&dyn Tab> {
@@ -154,6 +351,7 @@ impl Plugin for TestPlugin {
         match (interface, id) {
             ("test-echo", "echo" | "second" | "elsewhere") => Some(self),
             ("test-echo", "unavailable") => Some(&Unavailable),
+            ("audio-device", "fake") => Some(&self.fake),
             _ => None,
         }
     }
@@ -243,6 +441,27 @@ impl Service for TestPlugin {
             "break" => {
                 self.panel.state().broken = true;
                 Ok(Vec::new())
+            }
+            "link" => {
+                let url = String::from_utf8_lossy(input).into_owned();
+                self.host
+                    .notify_with_link(Level::Warning, "A link.", "Open it", url);
+                Ok(Vec::new())
+            }
+            "folders" => {
+                let folders = self.host.folders()?;
+                std::fs::write(folders.data.join("hello.txt"), "hello\n")
+                    .map_err(|e| Error::new(ErrorKind::Failed, e.to_string()))?;
+                let soundfonts = folders
+                    .shared(SharedFolder::Soundfonts)
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_default();
+                Ok(format!(
+                    "{}\n{}\n{soundfonts}",
+                    folders.data.display(),
+                    folders.cache.display()
+                )
+                .into_bytes())
             }
             _ => Err(Error::not_found(format!("no method {method:?}"))),
         }

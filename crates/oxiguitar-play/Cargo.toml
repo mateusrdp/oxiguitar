@@ -1,0 +1,37 @@
+[package]
+name = "oxiguitar-play"
+description = "OxiGuitar's player core: the score as timed events (the timeline), the transport and the mixer. Sound comes from instrument and audio-device plugins."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+oxiguitar-model.workspace = true
+# The notes as they cross to instrument plugins (`realtime`).
+oxiguitar-plugin-api.workspace = true
+rtrb.workspace = true
+# Instrument plugins as the engine's sources (`plugin_source`), for the app
+# and the command-line tool.
+oxiguitar-host = { workspace = true, optional = true }
+
+[features]
+host = ["dep:oxiguitar-host"]
+
+[dev-dependencies]
+oxiguitar-formats.workspace = true
+oxiguitar-testgen.workspace = true
+# Counts allocations in tests/engine_allocations.rs (MIT).
+stats_alloc = "0.1"
+
+# Its own main, with no test harness: the harness's own thread allocates
+# while the test runs, and the counter sees every thread.
+[[test]]
+name = "engine_allocations"
+harness = false
+
+[lints]
+workspace = true

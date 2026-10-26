@@ -57,11 +57,12 @@ use oxiguitar_plugin_api::abi::Status;
 use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::event::{Event, EventKind};
 use oxiguitar_plugin_api::manifest::{
-    Environment, FormatSpec, InstrumentSpec, Manifest, ServiceSpec, ToolSpec,
+    Environment, FormatSpec, InstrumentSpec, Manifest, ServiceSpec, SharedFolder, ToolSpec,
+    TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
-    Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, LogEntry, Request, decode,
-    encode, outcome,
+    Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry, PluginFolders,
+    Prepare, PrepareEffect, Request, TrackInfo, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::Score2;
@@ -70,6 +71,7 @@ use oxiguitar_plugin_api::tab::{TabContent, TabEvent, TabSpec};
 use serde_json::Value;
 
 use crate::events::Queue;
+use crate::folders::Folders;
 
 use crate::inventory::{ISSUES_URL, Level, PLUGINS_URL, plugin_files};
 use crate::loader::{self, Loaded};
@@ -88,6 +90,14 @@ pub const SERVICES_KEY: &str = "services";
 pub trait Core: Send + Sync {
     /// Shows `text` in the footer. `text` starts with the plugin's name.
     fn notify(&self, level: Level, text: String);
+
+    /// Shows `text` in the footer with `link`, which opens in the system's
+    /// browser when clicked (interface 1.3; the host has checked that it is
+    /// an `https:` address). The default, for programs without a window,
+    /// writes the address after the text.
+    fn notify_with_link(&self, level: Level, text: String, link: Link) {
+        self.notify(level, format!("{text} {}: {}", link.text, link.url));
+    }
 
     /// The plugin's tab `tab` has changed: ask for its contents
     /// ([`Plugins::tab_content`]) when it is next on screen. The default
@@ -160,6 +170,12 @@ struct Inner {
     /// The plugins that answered an event with an error: told once in the
     /// footer.
     failed_events: Mutex<Vec<usize>>,
+    /// OxiGuitar's folders, for the plugins' own folders and the shared
+    /// ones (interface 1.3); unset for programs that keep none.
+    folders: OnceLock<Folders>,
+    /// The folders are only read (`oxiguitar-cli`): a plugin's own folders
+    /// are named but not created.
+    read_only: std::sync::atomic::AtomicBool,
 }
 
 impl Drop for Inner {
@@ -275,6 +291,13 @@ pub struct ServiceRef<'a> {
     pub spec: &'a ServiceSpec,
 }
 
+impl ServiceRef<'_> {
+    /// The service's name, for the user: its manifest's, else its id.
+    pub fn name(&self) -> &str {
+        service_name(self.spec)
+    }
+}
+
 /// A plugin's tab, by the plugin's id and the tab's.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TabId {
@@ -292,6 +315,24 @@ pub struct ToolRef<'a> {
     /// The tool, as its manifest declares it.
     pub spec: &'a ToolSpec,
     index: usize,
+}
+
+/// A section a plugin adds to the track dialog (interface 1.3).
+#[derive(Clone, Copy, Debug)]
+pub struct SectionRef<'a> {
+    /// The plugin.
+    pub plugin: &'a Found,
+    /// The section, as its manifest declares it.
+    pub spec: &'a TrackSectionSpec,
+    index: usize,
+}
+
+impl SectionRef<'_> {
+    /// The id of the section's plugin, under which the track keeps its
+    /// settings.
+    pub fn plugin_id(&self) -> &str {
+        self.plugin.manifest.as_ref().map_or("", |m| m.id.as_str())
+    }
 }
 
 /// A tab a plugin adds to the window.
@@ -503,7 +544,9 @@ impl Plugins {
                 examine(path, &env, &disabled)
             })
             .collect();
-        // One file per plugin id: the highest version, then the earliest.
+        // One file per plugin id: the highest version, then the one needing
+        // more processor features (a faster build this processor can run),
+        // then the earliest.
         for i in 0..found.len() {
             let Some(id) = found[i].ready().map(|m| m.id.clone()) else {
                 continue;
@@ -513,7 +556,7 @@ impl Plugins {
                 .reduce(|best, j| {
                     let (b, c) = (found[best].ready(), found[j].ready());
                     match (b, c) {
-                        (Some(b), Some(c)) if c.version > b.version => j,
+                        (Some(b), Some(c)) if better(c, b) => j,
                         _ => best,
                     }
                 });
@@ -532,7 +575,42 @@ impl Plugins {
             chosen: Mutex::new(HashMap::new()),
             events: Arc::new(Queue::default()),
             failed_events: Mutex::new(Vec::new()),
+            folders: OnceLock::new(),
+            read_only: std::sync::atomic::AtomicBool::new(false),
         }))
+    }
+
+    /// Gives the plugins OxiGuitar's folders, for their own data and cache
+    /// folders and the shared folders their manifests list (interface 1.3).
+    /// Without it, plugins asking for their folders get an error. Set once;
+    /// later calls change nothing.
+    pub fn use_folders(&self, folders: Folders) {
+        let _ = self.0.folders.set(folders);
+    }
+
+    /// Gives the plugins OxiGuitar's folders to read only, as a program
+    /// that changes nothing in them does (`oxiguitar-cli`): plugins asking
+    /// for their own data and cache folders are told where they are, but
+    /// they aren't created, so what a plugin writes there fails unless the
+    /// app made them.
+    pub fn use_folders_read_only(&self, folders: Folders) {
+        self.0
+            .read_only
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.use_folders(folders);
+    }
+
+    /// The shared folders the ready plugins list in their manifests, each
+    /// once, so the host can create them at start (interface 1.3).
+    pub fn shared_folders(&self) -> Vec<SharedFolder> {
+        let mut out: Vec<SharedFolder> = self
+            .ready()
+            .filter(|(_, _, m)| m.knows_minor(3))
+            .flat_map(|(_, _, m)| m.folders.iter().copied())
+            .collect();
+        out.sort();
+        out.dedup();
+        out
     }
 
     /// Every plugin file found, in folder order and then by name.
@@ -766,6 +844,110 @@ impl Plugins {
             .collect()
     }
 
+    /// The instruments the player can use for tracks of `class`: those of
+    /// plugins built for interface 1.3 or later (Mateus, 19 Oct 2026: the
+    /// player ignores instruments declared before the instrument
+    /// interface), in plugin order.
+    pub fn playable(&self, class: InstrumentClass) -> Vec<InstrumentRef<'_>> {
+        self.instruments_for(class)
+            .into_iter()
+            .filter(|i| i.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(3)))
+            .collect()
+    }
+
+    /// The effects the ready plugins offer tracks of `class` (interface
+    /// 1.3), in plugin order.
+    pub fn effects_for(&self, class: InstrumentClass) -> Vec<InstrumentRef<'_>> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(3))
+            .flat_map(|(_, plugin, m)| {
+                m.effects
+                    .iter()
+                    .filter(move |spec| spec.plays(class))
+                    .map(move |spec| InstrumentRef { plugin, spec })
+            })
+            .collect()
+    }
+
+    /// Prepares `instrument` (one of [`Plugins::playable`]) for
+    /// `prepare.tracks`, loading its plugin if needed: off the audio
+    /// thread, since the plugin loads its sounds now.
+    pub fn prepare(
+        &self,
+        instrument: InstrumentRef<'_>,
+        prepare: Prepare,
+    ) -> Result<crate::realtime::Instance, Error> {
+        let buffers = prepare.tracks.len() * 2;
+        let prepare = Prepare {
+            instrument: instrument.spec.id.clone(),
+            ..prepare
+        };
+        self.prepared(
+            instrument.plugin,
+            &Request::Prepare(Box::new(prepare)),
+            buffers,
+        )
+    }
+
+    /// Prepares `effect` (one of [`Plugins::effects_for`]) for one track.
+    pub fn prepare_effect(
+        &self,
+        effect: InstrumentRef<'_>,
+        prepare: PrepareEffect,
+    ) -> Result<crate::realtime::Instance, Error> {
+        let prepare = PrepareEffect {
+            effect: effect.spec.id.clone(),
+            ..prepare
+        };
+        self.prepared(effect.plugin, &Request::PrepareEffect(Box::new(prepare)), 2)
+    }
+
+    fn prepared(
+        &self,
+        plugin: &Found,
+        request: &Request<'_>,
+        buffers: usize,
+    ) -> Result<crate::realtime::Instance, Error> {
+        let index = self.index_of(plugin);
+        if index == usize::MAX {
+            return Err(Error::not_found("that plugin isn't one of these"));
+        }
+        match self.request(index, request)? {
+            Answer::Prepared {
+                instance,
+                latency,
+                resolution,
+            } => {
+                let loaded = self.loaded(index)?;
+                if !loaded.is_realtime() {
+                    return Err(self.fail(
+                        index,
+                        "it prepared an instrument but has no real-time functions".to_owned(),
+                    ));
+                }
+                Ok(crate::realtime::Instance::new(
+                    loaded,
+                    self.clone(),
+                    index,
+                    instance,
+                    latency,
+                    resolution,
+                    buffers,
+                ))
+            }
+            other => Err(self.unexpected(index, &other)),
+        }
+    }
+
+    /// Sends `request` to the plugin at `index` (an instance's release).
+    pub(crate) fn send_index(
+        &self,
+        index: usize,
+        request: &Request<'_>,
+    ) -> Result<Answer<'static>, Error> {
+        self.request(index, request)
+    }
+
     /// The instruments that play tracks of `class`: what the player offers
     /// a track (`InstrumentClass::of` gives a track's class).
     pub fn instruments_for(&self, class: InstrumentClass) -> Vec<InstrumentRef<'_>> {
@@ -965,6 +1147,175 @@ impl Plugins {
                 )),
             },
             other => Err(self.unexpected(tab.index, &other)),
+        }
+    }
+
+    /// The ready plugins with a settings window (interface 1.3), in plugin
+    /// order.
+    pub fn with_settings_window(&self) -> Vec<&Found> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(3) && m.settings_window)
+            .map(|(_, f, _)| f)
+            .collect()
+    }
+
+    /// What the settings window of `plugin` (one of
+    /// [`Plugins::with_settings_window`]) shows now, loading it if needed.
+    pub fn settings_window(&self, plugin: &Found) -> Result<TabContent, Error> {
+        let index = self.settings_index(plugin)?;
+        self.window_answer(index, &Request::SettingsWindow)
+    }
+
+    /// Tells `plugin` that the user used the widget `widget` of its settings
+    /// window, and returns the window's contents after it.
+    pub fn settings_event(
+        &self,
+        plugin: &Found,
+        widget: &str,
+        event: TabEvent,
+    ) -> Result<TabContent, Error> {
+        let index = self.settings_index(plugin)?;
+        let answer = self.window_answer(
+            index,
+            &Request::SettingsEvent {
+                widget: widget.to_owned(),
+                event,
+            },
+        );
+        match answer {
+            // As for tabs: an ordinary error is said in the footer, and the
+            // window keeps showing what it shows now.
+            Err(e) if plugin.failure().is_none() => {
+                let name = plugin.name();
+                self.0.core.notify(Level::Warning, format!("{name}: {e}"));
+                self.window_answer(index, &Request::SettingsWindow)
+            }
+            answer => answer,
+        }
+    }
+
+    fn settings_index(&self, plugin: &Found) -> Result<usize, Error> {
+        let index = self.index_of(plugin);
+        let usable = self
+            .ready()
+            .any(|(i, _, m)| i == index && m.knows_minor(3) && m.settings_window);
+        if usable {
+            Ok(index)
+        } else {
+            Err(Error::not_found(format!(
+                "{} has no settings window that can be used",
+                plugin.name()
+            )))
+        }
+    }
+
+    fn window_answer(&self, index: usize, request: &Request<'_>) -> Result<TabContent, Error> {
+        match self.request(index, request)? {
+            Answer::Tab(content) => match content.problems().into_iter().next() {
+                None => Ok(*content),
+                Some(problem) => Err(self.fail(
+                    index,
+                    format!("its settings window can't be shown ({problem})"),
+                )),
+            },
+            other => Err(self.unexpected(index, &other)),
+        }
+    }
+
+    /// The sections the ready plugins add to the track dialog for a track
+    /// of class `class` (interface 1.3), in plugin order.
+    pub fn track_sections(&self, class: InstrumentClass) -> Vec<SectionRef<'_>> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(3))
+            .flat_map(|(index, plugin, m)| {
+                m.track_sections
+                    .iter()
+                    .filter(move |spec| spec.shows_for(class))
+                    .map(move |spec| SectionRef {
+                        plugin,
+                        spec,
+                        index,
+                    })
+            })
+            .collect()
+    }
+
+    /// What `section` shows for `track`, whose settings for the section's
+    /// plugin are `settings` (a JSON object), loading the plugin if needed:
+    /// the contents and the settings the plugin hands back.
+    pub fn track_section(
+        &self,
+        section: SectionRef<'_>,
+        track: &TrackInfo,
+        settings: &str,
+    ) -> Result<(TabContent, String), Error> {
+        self.section_answer(
+            section,
+            &Request::TrackSection {
+                section: section.spec.id.clone(),
+                track: track.clone(),
+                settings: settings.to_owned(),
+            },
+        )
+    }
+
+    /// Tells the plugin of `section` that the user used its widget `widget`
+    /// for `track`; returns the section's contents and the track's settings
+    /// after it. An ordinary error is said in the footer, and the settings
+    /// stay as they were.
+    pub fn track_section_event(
+        &self,
+        section: SectionRef<'_>,
+        track: &TrackInfo,
+        settings: &str,
+        widget: &str,
+        event: TabEvent,
+    ) -> Result<(TabContent, String), Error> {
+        let answer = self.section_answer(
+            section,
+            &Request::TrackSectionEvent {
+                section: section.spec.id.clone(),
+                track: track.clone(),
+                settings: settings.to_owned(),
+                widget: widget.to_owned(),
+                event,
+            },
+        );
+        match answer {
+            Err(e) if section.plugin.failure().is_none() => {
+                let name = section.plugin.name();
+                self.0.core.notify(Level::Warning, format!("{name}: {e}"));
+                self.track_section(section, track, settings)
+            }
+            answer => answer,
+        }
+    }
+
+    fn section_answer(
+        &self,
+        section: SectionRef<'_>,
+        request: &Request<'_>,
+    ) -> Result<(TabContent, String), Error> {
+        match self.request(section.index, request)? {
+            Answer::TrackSection { content, settings } => {
+                let problem = content.problems().into_iter().next().or_else(|| {
+                    match serde_json::from_str::<Value>(&settings) {
+                        Ok(Value::Object(_)) => None,
+                        _ => Some("its settings are not a JSON object".to_owned()),
+                    }
+                });
+                match problem {
+                    None => Ok((*content, settings)),
+                    Some(problem) => Err(self.fail(
+                        section.index,
+                        format!(
+                            "its track section {} can't be shown ({problem})",
+                            section.spec.title
+                        ),
+                    )),
+                }
+            }
+            other => Err(self.unexpected(section.index, &other)),
         }
     }
 
@@ -1199,6 +1550,16 @@ impl Plugins {
                     result
                 });
                 if let Err(e) = result {
+                    // A system library the plugin needs isn't installed (the
+                    // PipeWire plugin without libpipewire): it can't run on
+                    // this system, which isn't a failure to tell about in
+                    // the footer; the plugin manager says why.
+                    if let Some(library) = missing_library(e) {
+                        return Err(self.unavailable(
+                            index,
+                            format!("it needs {library}, which isn't installed on this system"),
+                        ));
+                    }
                     return Err(self.fail(index, e.clone()));
                 }
                 result
@@ -1251,6 +1612,24 @@ impl Plugins {
         Error::new(ErrorKind::Failed, format!("{name} stopped working: {why}"))
     }
 
+    /// Withdraws the plugin at `index` quietly: it can't run on this system
+    /// (`why`), which the plugin manager shows; the footer isn't told.
+    fn unavailable(&self, index: usize, why: String) -> Error {
+        let found = &self.0.found[index];
+        let name = found.name();
+        if found.failed.set(why.clone()).is_ok() {
+            self.chosen()
+                .retain(|_, choice| matches!(choice, Ok((i, _)) if *i != index));
+            if let Some(m) = &found.manifest {
+                self.0.core.withdrawn(&m.id);
+            }
+        }
+        Error::new(
+            ErrorKind::Unsupported,
+            format!("{name} can't run here: {why}"),
+        )
+    }
+
     /// A plugin answered with something it wasn't asked for: a broken
     /// contract, so it is withdrawn.
     fn unexpected(&self, index: usize, answer: &Answer<'_>) -> Error {
@@ -1263,6 +1642,8 @@ impl Plugins {
             Answer::Done => "\"done\"",
             Answer::Read2 { .. } => "a score",
             Answer::Report(_) => "a report",
+            Answer::TrackSection { .. } => "a track section",
+            Answer::Prepared { .. } => "a prepared instrument",
         };
         self.fail(
             index,
@@ -1358,6 +1739,25 @@ impl Plugins {
                     "a plugin's settings must be a JSON object",
                 )),
             },
+            HostRequest::Notify2 { level, text, link } => {
+                if is_https(&link.url) {
+                    self.0.core.notify_with_link(
+                        level.into(),
+                        format!("{}: {text}", manifest.name),
+                        link,
+                    );
+                    Ok(HostAnswer::Done)
+                } else {
+                    Err(Error::new(
+                        ErrorKind::Invalid,
+                        format!(
+                            "a footer link must be an https: address, and {:?} isn't",
+                            link.url
+                        ),
+                    ))
+                }
+            }
+            HostRequest::Folders => self.plugin_folders(manifest).map(HostAnswer::Folders),
             HostRequest::Service {
                 interface,
                 method,
@@ -1383,6 +1783,86 @@ impl Plugins {
             Err(e) => (Status::PANICKED, e.to_string().into_bytes()),
         }
     }
+}
+
+impl Plugins {
+    /// The folders of the plugin with `manifest`, its own two created on
+    /// the way.
+    fn plugin_folders(&self, manifest: &Manifest) -> Result<PluginFolders, Error> {
+        let Some(folders) = self.0.folders.get() else {
+            return Err(Error::not_found(
+                "this program keeps no folders for plugins",
+            ));
+        };
+        let text = |path: &Path| {
+            path.to_str().map(str::to_owned).ok_or_else(|| {
+                Error::new(
+                    ErrorKind::Unsupported,
+                    format!("the folder {} is not UTF-8 text", path.display()),
+                )
+            })
+        };
+        let data = folders.plugin_data(&manifest.id);
+        let cache = folders.plugin_cache(&manifest.id);
+        let read_only = self.0.read_only.load(std::sync::atomic::Ordering::Relaxed);
+        for dir in [&data, &cache].into_iter().filter(|_| !read_only) {
+            std::fs::create_dir_all(dir).map_err(|e| {
+                Error::new(
+                    ErrorKind::Failed,
+                    format!("cannot create {}: {e}", dir.display()),
+                )
+            })?;
+        }
+        let shared = if manifest.knows_minor(3) {
+            manifest
+                .folders
+                .iter()
+                .map(|&f| Ok((f, text(&folders.shared(f))?)))
+                .collect::<Result<Vec<_>, Error>>()?
+        } else {
+            Vec::new()
+        };
+        Ok(PluginFolders {
+            data: text(&data)?,
+            cache: text(&cache)?,
+            shared,
+        })
+    }
+}
+
+/// Whether `url` is an `https:` address with a host: the only links the
+/// footer opens.
+pub fn is_https(url: &str) -> bool {
+    url.get(..8)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https://"))
+        && url.len() > 8
+        && !url[8..].starts_with('/')
+        && !url.chars().any(char::is_whitespace)
+}
+
+/// The system library a plugin couldn't be loaded without, from the
+/// loader's error, if that was the reason: the dynamic linker's words on
+/// Linux ("libpipewire-0.3.so.0: cannot open shared object file") and
+/// macOS ("Library not loaded: …").
+fn missing_library(error: &str) -> Option<String> {
+    if let Some(at) = error.find(": cannot open shared object file") {
+        let before = &error[..at];
+        let start = before.rfind(['(', ' ']).map_or(0, |i| i + 1);
+        return Some(before[start..].to_owned());
+    }
+    if let Some(at) = error.find("Library not loaded: ") {
+        let rest = &error[at + "Library not loaded: ".len()..];
+        let end = rest.find(['\n', ')', ' ']).unwrap_or(rest.len());
+        return Some(rest[..end].to_owned());
+    }
+    None
+}
+
+/// Whether `c` is to be used rather than `b`, two usable files of one
+/// plugin: a higher version, or the same version needing more processor
+/// features (both usable here, so this processor has them).
+fn better(c: &Manifest, b: &Manifest) -> bool {
+    (&c.version, c.conditions.cpu.len()) > (&b.version, b.conditions.cpu.len())
 }
 
 /// What a plugin file is, from its manifest alone.
@@ -1449,9 +1929,46 @@ impl From<oxiguitar_plugin_api::message::Level> for Level {
 }
 
 #[cfg(test)]
+mod missing {
+    #[test]
+    fn a_missing_system_library_is_named() {
+        assert_eq!(
+            super::missing_library("it couldn't be loaded (libpipewire-0.3.so.0: cannot open shared object file: No such file or directory)").as_deref(),
+            Some("libpipewire-0.3.so.0")
+        );
+        assert_eq!(
+            super::missing_library("it couldn't be loaded (dlopen(x.oxp, 0x0005): Library not loaded: @rpath/libfoo.dylib\n  Referenced from: x)").as_deref(),
+            Some("@rpath/libfoo.dylib")
+        );
+        assert_eq!(
+            super::missing_library("it has no oxiguitar_plugin_v1 entry"),
+            None
+        );
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::folders::tests::scratch;
+
+    #[test]
+    fn of_two_builds_at_one_version_the_one_needing_more_features_is_used() {
+        let m = |version: &str, cpu: &[&str]| -> Manifest {
+            let mut m: Manifest = serde_json::from_str(&format!(
+                r#"{{"interface": "1.3", "id": "me.nam", "name": "NAM", "version": "{version}"}}"#
+            ))
+            .unwrap();
+            m.conditions.cpu = cpu.iter().map(|f| (*f).to_owned()).collect();
+            m
+        };
+        let (plain, v3) = (m("1.0.0", &[]), m("1.0.0", &["avx2", "fma"]));
+        assert!(better(&v3, &plain));
+        assert!(!better(&plain, &v3));
+        assert!(!better(&plain, &plain), "a tie keeps the earlier file");
+        // A newer version wins whatever it needs.
+        assert!(better(&m("1.0.1", &[]), &v3));
+    }
 
     fn plain(folders: &[PathBuf]) -> Plugins {
         Plugins::discover(folders, SharedSettings::default(), "x11", Arc::new(Unheard))

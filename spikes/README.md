@@ -42,3 +42,26 @@ cargo run --release -p spike-slint   # or spike-iced, spike-egui
 ```
 
 The first build of each takes several minutes. The binaries need no files beside them.
+
+## audio/ and nam-bench/ — the player's sound chain (M4)
+
+Does the chain **timed events → SoundFont synthesiser → NAM → audio device** fit together, in real time, without allocating on the audio thread, and with sample-accurate timing? Measurements and conclusions: [docs/design/player.md](../docs/design/player.md), "The spike".
+
+`audio/` (its own workspace): a four-bar test song (a guitar on six channels, one per string, with a bend; a bass; drums) rendered by rustysynth and OxiSynth, one synthesiser per track, in 64-sample callbacks split at every event, with a counting allocator around the audio work.
+
+| Command | What it checks |
+| --- | --- |
+| `render rusty/N\|oxi SF OUT.wav` | Speed, worst callback, allocations; writes the mix and the guitar alone. `N` is rustysynth's block size. SF3 files are decoded to SF2 in memory first (`src/sf3.rs`). |
+| `midi OUT.mid`, then `fluidsynth -n -i -R 0 -C 0 -r 48000 -F REF.wav SF OUT.mid` | The same song for FluidSynth, the reference. |
+| `compare A.wav B.wav` | How close two renders are: loudness envelope correlation and spectral shape distance. |
+| `timing rusty/N\|oxi SF` | How late a note starts against the sample it was asked for. |
+| `nam MODEL IN.wav OUT.wav` | nam-rs on a guitar stem: speed per block size, worst block, allocations. |
+| `pipeline SF MODEL OUT.wav` | The whole chain in 64-sample callbacks: three tracks, the guitar through NAM, mixed and interleaved. |
+| `dls FILE` | The outline of a DLS sound set (Windows' `gm.dls`, macOS's `gs_instruments.dls`). |
+| `devices`, `stream SF` (feature `devices`) | cpal's hosts and devices; three seconds played through the default device, rendering in its callback. |
+
+`nam-bench/`: both NAM engines on the same plucked-string input, 64-sample blocks. NeuralAmpModeler-rs (feature `nam2`) needs x86_64, Rust 1.99 and `RUSTFLAGS="-C target-cpu=x86-64-v3"`.
+
+The spikes workflow runs both on every target and prints the measurements as notices.
+
+`amp DI.sf2 GM.sf2 MODEL.nam CAB.wav OUT-DIR NAME` (feature `nam2`: x86_64, Rust 1.99, `RUSTFLAGS="-C target-cpu=x86-64-v3"`): the song's guitar from a DI sound set through NeuralAmpModeler-rs (amp model, then the cabinet impulse response through its convolution engine) over bass and drums, as 16-bit WAV files for listening; nam-rs runs the same model to compare speed and output. The spikes workflow's `listen` job, started by hand, renders FreePats' DI guitars through four amp captures and keeps them as the artifact `listening-di`.

@@ -4,7 +4,7 @@ OxiGuitar is a small program that does more with plugins: one plugin for each fi
 
 ## Where OxiGuitar keeps things
 
-When it starts, OxiGuitar makes sure its settings folder, a `settings.json` file and your `plugins` folder exist (on Linux in the usual freedesktop places), and creates any that are missing. It never changes anything else.
+When it starts, OxiGuitar makes sure its settings folder, a `settings.json` file and your `plugins` folder exist (on Linux in the usual freedesktop places), and creates any that are missing, with the `soundfonts` folder beside `plugins` for sound sets ([Better sounds](better-sounds.md)). It never changes anything else.
 
 | System | Settings (`settings.json`) | Your plugins | The program's plugin folder |
 | --- | --- | --- | --- |
@@ -35,7 +35,7 @@ At start, the line at the bottom of the window says what is missing:
 - **No output plugin is installed, so the player is off.** The player's buttons stay greyed out until a plugin that makes sound is installed.
 - **No read/write plugins are installed.** OxiGuitar can open and save files only through format plugins, so nothing can be opened. Install the basic plugins ([Installing](installing.md)); if they are installed, this message means they aren't in a folder OxiGuitar searches (Help → About lists those; see `plugin_folders` above).
 
-Both messages say where to download plugins: [the releases page](https://github.com/mateusrdp/oxiguitar/releases). Put the files in your plugins folder.
+Both messages say where to download plugins: [the releases page](https://github.com/mateusrdp/oxiguitar/releases), where each release has one zip of our plugins for each system (`OxiGuitar-plugins-basic-VERSION-SYSTEM-ARCH.zip`; on Debian, Ubuntu and Fedora the `oxiguitar-plugins-basic` package). Unzip it into your plugins folder: the `.oxp` files go directly in the folder, not in a subfolder.
 
 ## The plugin manager
 
@@ -64,7 +64,7 @@ In safe mode no plugin is used at all, so nothing can be opened or played, but *
 
 ## Privacy
 
-Plugins made by the OxiGuitar project keep the program's privacy promises: nothing is uploaded, and nothing is downloaded unless you ask. We make no promises about plugins from anywhere else: a plugin can do anything a program can, so install only plugins you trust.
+Plugins made by the OxiGuitar project keep the program's privacy promises: nothing is uploaded, and nothing is downloaded. We make no promises about plugins from anywhere else: a plugin can do anything a program can, so install only plugins you trust.
 
 ## Writing your own
 

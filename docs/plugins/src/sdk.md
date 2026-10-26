@@ -13,7 +13,7 @@ Four things in it matter to OxiGuitar:
 - **The `oxp` feature.** `export_plugin!` exports the entry point and the manifest's section only with it, so the same crate is an ordinary library for `cargo test` and a plugin file when built with `--features oxp --crate-type cdylib`. Without the feature in `Cargo.toml`, that build fails with "does not have the feature `oxp`".
 - **`unsafe_code = "deny"`**, not `"forbid"`: the two attributes `export_plugin!` generates (`#[unsafe(no_mangle)]` and `#[unsafe(link_section)]`) need `unsafe`, and allow it for themselves only. You write no `unsafe` code.
 - **`panic = "unwind"`**, Rust's default. A panic in a call is then caught, and the plugin is withdrawn for the rest of the session while OxiGuitar carries on; with `panic = "abort"` it closes OxiGuitar.
-- **The SDK's tag**: `v0.2.0`, the release of OxiGuitar you build for. A plugin built with the SDK of 0.2 loads in every later OxiGuitar with interface 1.x ([Interface versions](versions.md)).
+- **The SDK's tag**: `v0.5.0`, the release of OxiGuitar you build for; it has interface 1.2. A plugin loads in every OxiGuitar that has the interface version its manifest asks for, and in every later one: 0.2 and later for 1.0 and 1.1, 0.5 and later for 1.2 ([Interface versions](versions.md)).
 
 ## The plugin
 
@@ -56,6 +56,9 @@ and takes the lock only to read or change `State`.
 | `call_service(interface, method, input)` | Calls the service OxiGuitar chose for `interface`, which the manifest must list under `requires` ([Services](services.md)) | 1.0 |
 | `redraw(tab)` | Asks the core to show one of the plugin's tabs again ([Tabs](tabs.md)) | 1.1 |
 | `score()` | The open score, or `None` ([Events](events.md)) | 1.1 |
+| `score2()`, `apply(revision, name, score)` | The open score version 2 with its revision, and a change to it the user can undo ([Tools](tools.md)) | 1.2 |
+| `notify_with_link(level, text, link_text, url)` | A footer message ending with a link that opens `url` in the browser; only `https:` addresses are shown | 1.3 |
+| `folders()` | The plugin's own data and cache folders and the shared folders its manifest lists ([Settings](settings.md)) | 1.3 |
 
 `Host::detached()` answers like a host with no window, no settings and no services: for unit tests.
 

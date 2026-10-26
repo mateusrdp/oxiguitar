@@ -1,0 +1,20 @@
+[package]
+name = "oxiguitar-audio-cpal"
+description = "The code OxiGuitar's audio-device plugins share: a stream on one of cpal's hosts, calling the core from the device's callback."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+oxiguitar-plugin.workspace = true
+# Each plugin adds the features of its own host (the PipeWire plugin's
+# `pipewire`); on Linux cpal always builds its ALSA host too (Mateus, 25 Oct
+# 2026: accepted).
+cpal = { version = "0.18", default-features = false }
+
+[lints]
+workspace = true

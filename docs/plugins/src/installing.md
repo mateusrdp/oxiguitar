@@ -46,7 +46,7 @@ Say the same in your README, or sign and notarise your file with an Apple Develo
 
 - What the plugin adds, and which OxiGuitar it needs: 0.2 or later.
 - Which file is for which system, and where to put it (the table above).
-- **What it does beyond OxiGuitar.** A plugin is native code with the user's rights; OxiGuitar's promises (no telemetry, never upload, download only when asked) cover the app and our own plugins, not yours. If your plugin never touches the network, say so; if it does, say when and why.
+- **What it does beyond OxiGuitar.** A plugin is native code with the user's rights; OxiGuitar's promises (no telemetry, never upload, never download) cover the app and our own plugins, not yours. If your plugin never touches the network, say so; if it does, say when and why.
 - Its licence. The SDK is MIT OR Apache-2.0, so any GPL-compatible licence works.
 - Where to report its bugs. When OxiGuitar refuses a file your plugin's extension names, it suggests reporting a bug at OxiGuitar's tracker; we will point people to you, but a line in your README saves them the trip.
 

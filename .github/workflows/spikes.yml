@@ -1,5 +1,7 @@
 # Builds the GUI-toolkit spikes (spikes/gui, ADR 0004) on every target with the
-# minimum supported Rust, to show which toolkits build where. Advisory only:
+# minimum supported Rust, to show which toolkits build where; and runs the
+# audio spikes (spikes/audio, spikes/nam-bench; M4) on every target, printing
+# their measurements as notices and in the job summary. Advisory only:
 # not part of ci-success, so a spike can never block a merge. The Linux x86_64
 # binaries are kept for 14 days under the Actions tab so they can be tried
 # without building.
@@ -23,8 +25,9 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  # Must match rust-version in Cargo.toml (Debian unstable's rustc).
-  MSRV: "1.97"
+  # Must match rust-version in Cargo.toml: the Rust we build with, from
+  # rustup, raised only on purpose (CONTRIBUTING.md, "Minimum Rust version").
+  MSRV: "1.99"
 
 jobs:
   gui:
@@ -52,7 +55,7 @@ jobs:
         with:
           workspaces: spikes/gui
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
       - name: Build each toolkit
         run: |
           echo "| Spike | Result | Size |" >> "$GITHUB_STEP_SUMMARY"
@@ -78,5 +81,186 @@ jobs:
             spikes/gui/target/release/spike-slint
             spikes/gui/target/release/spike-iced
             spikes/gui/target/release/spike-egui
+          retention-days: 14
+          if-no-files-found: error
+
+  audio:
+    name: Audio spikes (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, os: ubuntu-24.04, exe: "" }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, exe: "" }
+          - { name: windows-x86_64, os: windows-2025, exe: ".exe" }
+          - { name: windows-arm64, os: windows-11-arm, exe: ".exe" }
+          - { name: macos-arm64, os: macos-15, exe: "" }
+    defaults:
+      run:
+        shell: bash
+    env:
+      CARGO_TERM_COLOR: never
+      # NeuralAmpModelerCore's example models (MIT), at a fixed commit.
+      NAM_MODELS: https://raw.githubusercontent.com/sdatkinson/NeuralAmpModelerCore/0b3d3c97b0859a3a8c92a8628c4dd89a25eb5842/example_models
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+      - name: Set up
+        run: |
+          # run TITLE COMMAND...: each line the command prints becomes a
+          # notice (GitHub keeps at most ten a step, so steps stay small); a
+          # failure becomes an error with the output's last lines, and the
+          # job goes on (CI logs can't be read from Claude's sessions).
+          # quiet TITLE COMMAND...: the same, silent when it works (builds).
+          cat > "$RUNNER_TEMP/run.sh" <<'SH'
+          title="$1"; shift
+          if out="$("$@" 2>&1)"; then
+            [ "$QUIET" = 1 ] && exit 0
+            printf '%s\n' "$out" | grep -v '^ *$' | grep -v '^ALSA lib' | while IFS= read -r line; do
+              echo "::notice title=$title::$line"
+              echo "- **$title**: $line" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "::error title=$title::$(printf '%s' "$out" | grep -v '^ *Compiling\|^ *Downloaded\|^ *Downloading\|^ *Updating' | tail -n 12 | tr '\n' ' ' | cut -c1-1500)"
+          fi
+          SH
+          chmod +x "$RUNNER_TEMP/run.sh"
+          case "${{ runner.os }}" in
+            Linux) cpu="$(lscpu | sed -n 's/^Model name: *//p' | head -n1)" ;;
+            macOS) cpu="$(sysctl -n machdep.cpu.brand_string)" ;;
+            Windows) cpu="$(powershell -NoProfile -Command '(Get-CimInstance Win32_Processor).Name')" ;;
+          esac
+          echo "::notice title=CPU (${{ matrix.name }})::$cpu"
+          echo "**${{ matrix.name }}**: $cpu" >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p "$RUNNER_TEMP/nam"
+          for m in wavenet_a1_standard lstm; do
+            curl -fsSL -o "$RUNNER_TEMP/nam/$m.nam" "$NAM_MODELS/$m.nam"
+          done
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fluid-soundfont-gm musescore-general-soundfont-small libasound2-dev libpipewire-0.3-dev libclang-dev
+      - name: Build
+        run: |
+          QUIET=1 "$RUNNER_TEMP/run.sh" "Build audio spike (${{ matrix.name }})" cargo build --release --manifest-path spikes/audio/Cargo.toml
+          QUIET=1 "$RUNNER_TEMP/run.sh" "Build nam-bench (${{ matrix.name }})" cargo build --release --manifest-path spikes/nam-bench/Cargo.toml
+          if [ "${{ runner.os }}" = Linux ]; then
+            QUIET=1 "$RUNNER_TEMP/run.sh" "Build cpal with ALSA and PipeWire (${{ matrix.name }})" cargo build --release --manifest-path spikes/audio/Cargo.toml --features devices
+          fi
+      - name: The sound set the system ships
+        if: runner.os != 'Linux'
+        run: |
+          if [ "${{ runner.os }}" = Windows ]; then f="C:/Windows/System32/drivers/gm.dls"; else f="/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls"; fi
+          "$RUNNER_TEMP/run.sh" "Sound set (${{ matrix.name }})" "spikes/audio/target/release/audio-spike${{ matrix.exe }}" dls "$f"
+      - name: SoundFont synthesisers
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p "$RUNNER_TEMP/aud"
+          for sf in /usr/share/sounds/sf2/FluidR3_GM.sf2 /usr/share/sounds/sf3/MuseScore_General_Lite.sf3; do
+            for e in rusty/64 rusty/8 oxi; do
+              "$RUNNER_TEMP/run.sh" "Synth (${{ matrix.name }})" spikes/audio/target/release/audio-spike render "$e" "$sf" "$RUNNER_TEMP/aud/x.wav"
+            done
+          done
+      - name: Timing and the whole chain
+        if: runner.os == 'Linux'
+        run: |
+          for e in rusty/64 rusty/8 oxi; do
+            "$RUNNER_TEMP/run.sh" "Timing (${{ matrix.name }})" spikes/audio/target/release/audio-spike timing "$e" /usr/share/sounds/sf2/FluidR3_GM.sf2
+          done
+          for m in wavenet_a1_standard lstm; do
+            "$RUNNER_TEMP/run.sh" "Pipeline $m (${{ matrix.name }})" spikes/audio/target/release/audio-spike pipeline /usr/share/sounds/sf2/FluidR3_GM.sf2 "$RUNNER_TEMP/nam/$m.nam" "$RUNNER_TEMP/aud/p.wav"
+          done
+      - name: NAM with nam-rs
+        run: |
+          for m in wavenet_a1_standard lstm; do
+            "$RUNNER_TEMP/run.sh" "NAM $m (${{ matrix.name }})" "spikes/nam-bench/target/release/nam-bench${{ matrix.exe }}" "$RUNNER_TEMP/nam/$m.nam"
+          done
+      - name: NAM with NeuralAmpModeler-rs too
+        # Linux x86_64 only: it needs the x86-64-v3 baseline and Linux's
+        # libc (it doesn't build on Windows or macOS).
+        if: matrix.name == 'linux-x86_64'
+        run: |
+          RUSTFLAGS="-C target-cpu=x86-64-v3" CARGO_TARGET_DIR=spikes/nam-bench/target/nam2 QUIET=1 "$RUNNER_TEMP/run.sh" "Build NeuralAmpModeler-rs" cargo build --release --features nam2 --manifest-path spikes/nam-bench/Cargo.toml
+          for m in wavenet_a1_standard lstm; do
+            "$RUNNER_TEMP/run.sh" "NAM both $m (${{ matrix.name }})" spikes/nam-bench/target/nam2/release/nam-bench "$RUNNER_TEMP/nam/$m.nam"
+          done
+
+  # Listening renders for Mateus (started by hand): the song's guitar from
+  # FreePats' clean electric guitars (CC0; "Direct" is the raw DI), through
+  # NeuralAmpModeler-rs with four amp captures and Guitarix's cabinet IRs
+  # (GPL-2.0-or-later), with bass and drums from FluidR3. Kept 14 days as the
+  # artifact "listening-di".
+  listen:
+    name: Listening renders (NeuralAmpModeler-rs, DI guitar)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_TERM_COLOR: never
+      FREEPATS: https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html
+      NAM_MODELS_COMMIT: 944ca6718581c60cc5365586d2f378d740e181f3
+      GUITARIX_COMMIT: 666b564bb8a7194f200029fdbfbec2abe035f777
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fluid-soundfont-gm p7zip-full
+      - name: The DI guitars, amp models and cabinets
+        run: |
+          set -euo pipefail
+          w="$RUNNER_TEMP/in"; mkdir -p "$w/freepats" "$w/sf2"
+          curl -fsSL "$FREEPATS" -o "$w/freepats.html"
+          # Every SF2 bank linked from the page, except the small ones.
+          grep -oiE 'href="[^"]+\.7z"' "$w/freepats.html" | sed -E 's/^href="//I; s/"$//' | grep -i 'sf2' | grep -vi 'small' | sort -u > "$w/links.txt"
+          while IFS= read -r link; do
+            case "$link" in http*) url="$link" ;; /*) url="https://freepats.zenvoid.org$link" ;; *) url="https://freepats.zenvoid.org/ElectricGuitar/$link" ;; esac
+            echo "::notice title=FreePats::$url"
+            curl -fsSL "$url" -o "$w/freepats/$(basename "$link")"
+          done < "$w/links.txt"
+          for a in "$w"/freepats/*.7z; do 7z x -y -o"$w/x" "$a" > /dev/null; done
+          find "$w/x" -iname '*.sf2' -exec cp {} "$w/sf2/" \;
+          ls -la "$w/sf2"
+          git clone -q --filter=blob:none https://github.com/pelennor2170/NAM_models "$w/nam"
+          git -C "$w/nam" checkout -q "$NAM_MODELS_COMMIT"
+          git init -q "$w/gx"
+          git -C "$w/gx" remote add origin https://github.com/brummer10/guitarix
+          git -C "$w/gx" fetch -q --depth 1 --filter=blob:none origin "$GUITARIX_COMMIT"
+          git -C "$w/gx" checkout -q FETCH_HEAD -- trunk/IR/BestPlugins_Amps
+      - name: Build
+        run: RUSTFLAGS="-C target-cpu=x86-64-v3" cargo build --release --features nam2 --manifest-path spikes/audio/Cargo.toml
+      - name: Render
+        run: |
+          set -euo pipefail
+          w="$RUNNER_TEMP/in"; out="$RUNNER_TEMP/listening-di"; mkdir -p "$out"
+          spike=spikes/audio/target/release/audio-spike
+          ir="$w/gx/trunk/IR/BestPlugins_Amps"
+          gm=/usr/share/sounds/sf2/FluidR3_GM.sf2
+          for di in "$w"/sf2/*.sf2; do
+            n="$(basename "$di" .sf2 | tr ' ' '_')"
+            for pair in "Helga B 5150 BlockLetter - NoBoost|EVH 5150 III" "Phillipe P VOXAC15-TopBoost|Mesa Boogie Mark V" "Tim R Fender TwinVerb Norm Bright|Mesa Boogie Mark V" "Tim R JCM2000 Crunch|Marshall JMP 2203  Jose Arredondo mod"; do
+              m="${pair%%|*}"; c="${pair#*|}"
+              line="$("$spike" amp "$di" "$gm" "$w/nam/$m.nam" "$ir/$c.wav" "$out" "$n" 2>&1 | tail -n 1)"
+              echo "::notice title=amp $n::$line"
+            done
+          done
+          cat > "$out/README.txt" <<'TXT'
+          The song's guitar from each FreePats clean electric guitar bank (CC0;
+          the "Direct"/DI one is the raw pickup signal an amp model expects),
+          through NeuralAmpModeler-rs 1.0.1: amp capture, then a cabinet impulse
+          response (Guitarix's BestPlugins pack, GPL-2.0-or-later), with bass and
+          drums from FluidR3 (OxiSynth). "-guitar" alone, "-mix" with the band,
+          "-0-DI-dry" the input. Amp captures from github.com/pelennor2170/NAM_models
+          (no licence stated: for listening only).
+          TXT
+          ls -la "$out"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: listening-di
+          path: ${{ runner.temp }}/listening-di
           retention-days: 14
           if-no-files-found: error

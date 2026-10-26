@@ -210,6 +210,21 @@ fn convert_writes_a_gp_file_and_names_its_losses() {
         .output()
         .unwrap();
     assert_eq!(bare.status.code(), Some(2));
+
+    // The tracks' plugin settings beside the file go beside the new one.
+    let source = dir.join("with-settings.gp5");
+    std::fs::copy(fixture("oxiguitar-test-song.gp5"), &source).unwrap();
+    let kept = r#"{"oxiguitar": 1, "tracks": [{"name": "A", "plugins": {"me.p": {"x": 1}}}]}"#;
+    std::fs::write(dir.join("with-settings.gp5.oxg"), kept).unwrap();
+    let run = cli()
+        .arg("convert")
+        .arg(&source)
+        .arg(dir.join("with-settings.gp"))
+        .output()
+        .unwrap();
+    assert!(run.status.success());
+    let copied = std::fs::read_to_string(dir.join("with-settings.gp.oxg")).unwrap();
+    assert!(copied.contains("\"me.p\""), "{copied}");
 }
 
 #[test]
@@ -307,4 +322,111 @@ fn tools_are_listed() {
     let text = String::from_utf8(out.stdout).unwrap();
     assert!(text.contains("infer-key-signatures"), "{text}");
     assert!(text.contains("Infer Key Signatures"), "{text}");
+}
+
+#[test]
+fn events_prints_the_score_as_it_plays() {
+    let out = cli()
+        .arg("events")
+        .arg(fixture("oxiguitar-test-song.gp"))
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = String::from_utf8(out.stdout).unwrap();
+    // The golden file was made from the same file by the play crate.
+    let golden = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/events/oxiguitar-test-song.gp.events"),
+    )
+    .unwrap();
+    assert_eq!(text, golden);
+    assert!(
+        text.starts_with("length ")
+            && text.contains("\nbar 1 pass 1 0.000000 ")
+            && text.contains("\nnote ")
+    );
+}
+
+/// A home whose plugin folder holds our format and instrument plugins and
+/// whose `soundfonts` folder holds the contract suite's test set, which
+/// the SoundFont plugin plays before any set of the system's.
+fn sound_home() -> &'static Path {
+    static HOME: OnceLock<PathBuf> = OnceLock::new();
+    HOME.get_or_init(|| {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let built =
+            oxiguitar_plugin_test::build_ours(&workspace, false).expect("our plugins build");
+        let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-sound-home");
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(home.join("plugins")).unwrap();
+        std::fs::create_dir_all(home.join("soundfonts")).unwrap();
+        for (_, name) in oxiguitar_plugin_test::OURS
+            .iter()
+            .chain(oxiguitar_plugin_test::OUR_INSTRUMENTS)
+        {
+            let file = format!("{name}.oxp");
+            std::fs::copy(built.join(&file), home.join("plugins").join(&file)).unwrap();
+        }
+        std::fs::write(
+            home.join("soundfonts").join("test-sine.sf2"),
+            oxiguitar_plugin_test::TEST_SET,
+        )
+        .unwrap();
+        home
+    })
+}
+
+#[test]
+fn play_into_a_wav_file_needs_no_sound_card() {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("played.wav");
+    let _ = std::fs::remove_file(&out);
+    let o = Command::new(env!("CARGO_BIN_EXE_oxiguitar-cli"))
+        .env("OXIGUITAR_HOME", sound_home())
+        .arg("play")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .arg("--wav")
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let said = String::from_utf8_lossy(&o.stdout);
+    assert!(said.contains("with SoundFont"), "{said}");
+    let wav = std::fs::read(&out).unwrap();
+    assert_eq!(&wav[..4], b"RIFF");
+    assert_eq!(&wav[8..16], b"WAVEfmt ");
+    assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 48_000);
+    let samples: Vec<i16> = wav[44..]
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|b| i16::from_le_bytes(*b))
+        .collect();
+    assert!(samples.iter().any(|v| v.unsigned_abs() > 100), "silent");
+    // The song and two seconds after it.
+    let seconds = samples.len() as f64 / 2.0 / 48_000.0;
+    let events = cli()
+        .arg("events")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .output()
+        .unwrap();
+    let length: f64 = String::from_utf8_lossy(&events.stdout)
+        .lines()
+        .find_map(|l| l.strip_prefix("length ")?.trim().parse().ok())
+        .unwrap();
+    assert!(
+        (seconds - length - 2.0).abs() < 0.1,
+        "{seconds} s for a song of {length} s"
+    );
+    // Nothing was made in the user's folder: the plugins' own folders are
+    // named to them, not created.
+    let mut left: Vec<String> = std::fs::read_dir(sound_home())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+    assert_eq!(left, ["plugins", "soundfonts"]);
 }

@@ -34,8 +34,7 @@
 #         dist/oxiguitar-plugins-basic_VERSION_ARCH.deb,
 #         dist/oxiguitar-plugins-basic-VERSION-1.ARCH.rpm,
 #         dist/OxiGuitar-plugins-basic-VERSION-linux-ARCH.zip (the .oxp
-#         files, flat, and a README) and
-#         dist/oxp/oxiguitar-NAME-VERSION-linux-ARCH.oxp
+#         files, flat, and a README)
 #
 # Only the .deb and the .rpm register the Guitar Pro file types (UI-4); the
 # AppImage registers nothing (the manual shows how to do it by hand).
@@ -320,11 +319,13 @@ build_appimage() {
 # unzip into a plugin folder; then each plugin on its own.
 build_plugins() {
     local name=oxiguitar-plugins-basic
-    local summary="Guitar Pro format plugins for OxiGuitar"
+    local summary="Guitar Pro format, sound and audio plugins for OxiGuitar"
     local description="The plugins the OxiGuitar project writes and recommends: one for each
 Guitar Pro format (3, 4, 5, 6 and 7-8), so OxiGuitar can open those
-files. OxiGuitar alone opens no file; it finds these in
-/usr/lib/oxiguitar/plugins."
+files; the SoundFont player, which plays the tracks with a General MIDI
+sound set (the recommended package, or one of your own); and the ones
+that play its sound through PipeWire or ALSA. OxiGuitar alone opens no
+file; it finds these in /usr/lib/oxiguitar/plugins."
     local tree="$work/plugins-deb"
     install -d "$tree/usr/lib/oxiguitar/plugins"
     install -m644 "$plugins"/*.oxp "$tree/usr/lib/oxiguitar/plugins/"
@@ -359,6 +360,8 @@ files. OxiGuitar alone opens no file; it finds these in
         echo "Maintainer: $maintainer"
         echo "Installed-Size: $size"
         if [[ -n "$linked" ]]; then echo "Depends: $linked"; fi
+        # A General MIDI sound set for the SoundFont plugin to play with.
+        echo "Recommends: fluid-soundfont-gm | musescore-general-soundfont-small"
         echo "Enhances: oxiguitar, oxiguitar-x11"
         echo "Section: sound"
         echo "Priority: optional"
@@ -369,6 +372,8 @@ files. OxiGuitar alone opens no file; it finds these in
     local deb="$dist/${name}_${version}_${deb_arch}.deb"
     dpkg-deb --root-owner-group -Zxz --build "$tree" "$deb"
     dpkg-deb --info "$deb"
+    dpkg-deb -f "$deb" Recommends | grep fluid-soundfont-gm > /dev/null \
+        || { echo "$deb recommends no sound set" >&2; exit 1; }
     echo "Built $deb"
 
     local rtree="$work/plugins-rpm"
@@ -383,6 +388,7 @@ files. OxiGuitar alone opens no file; it finds these in
         echo "Summary: $summary"
         echo "License: GPL-3.0-or-later"
         echo "URL: https://github.com/mateusrdp/oxiguitar"
+        echo "Recommends: fluid-soundfont-gm"
         echo "Enhances: oxiguitar"
         echo "%global debug_package %{nil}"
         echo "%global __os_install_post %{nil}"
@@ -404,6 +410,8 @@ files. OxiGuitar alone opens no file; it finds these in
         "$spec"
     local built
     built="$(find "$work/rpms-plugins" -name '*.rpm' | head -n1)"
+    rpm -qp --recommends "$built" | grep fluid-soundfont-gm > /dev/null \
+        || { echo "$built recommends no sound set" >&2; exit 1; }
     mv "$built" "$dist/$(basename "$built")"
     echo "Built $dist/$(basename "$built")"
 
@@ -416,13 +424,6 @@ files. OxiGuitar alone opens no file; it finds these in
     rm -f "$zip"
     (cd "$zdir" && python3 -m zipfile -c "$zip" ./*)
     echo "Built $zip"
-
-    # Each plugin on its own: dist/oxp/oxiguitar-gp5-VERSION-linux-ARCH.oxp.
-    install -d "$dist/oxp"
-    for f in "$plugins"/*.oxp; do
-        install -m644 "$f" "$dist/oxp/oxiguitar-$(basename "$f" .oxp)-$version-linux-$arch.oxp"
-    done
-    echo "Built $(ls "$dist/oxp" | wc -l) plugin files in $dist/oxp"
 }
 
 case "$what" in

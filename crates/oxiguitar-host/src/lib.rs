@@ -23,7 +23,9 @@ mod inventory;
 mod loader;
 mod oxp;
 mod plugins;
+pub mod realtime;
 mod settings;
+pub mod sidecar;
 
 use std::sync::Arc;
 
@@ -34,7 +36,8 @@ pub use inventory::{
 pub use oxiguitar_plugin_api as api;
 pub use plugins::{
     Core, DISABLED_KEY, FormatRef, Found, InstrumentRef, OpenError, OpenedFile, Plugins, ReadScore,
-    SERVICES_KEY, ServiceRef, State, TabId, TabRef, Unheard, Unrecognised, WrittenFile,
+    SERVICES_KEY, SectionRef, ServiceRef, State, TabId, TabRef, Unheard, Unrecognised, WrittenFile,
+    is_https,
 };
 pub use settings::{Settings, SharedSettings};
 
@@ -171,6 +174,36 @@ fn begin(
         .plugin_folders()
         .unwrap_or_else(|| folders.default_plugin_folders());
     let plugins = discover(&searched, settings.clone(), display, core);
+    if app {
+        plugins.use_folders(folders.clone());
+    } else {
+        plugins.use_folders_read_only(folders.clone());
+    }
+    // The folders the plugins share with the user (interface 1.3), made at
+    // start so the user finds them before any plugin runs.
+    if app && !safe {
+        match folders.ensure_shared(&plugins.shared_folders()) {
+            Ok(created) if !created.is_empty() => notices.push(Notice::new(
+                Level::Info,
+                format!(
+                    "Created {}.",
+                    created
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(" and ")
+                ),
+            )),
+            Ok(_) => {}
+            Err(e) => notices.push(Notice::new(
+                Level::Error,
+                format!(
+                    "Cannot create a folder for the plugins in {}: {e}.",
+                    folders.data.display()
+                ),
+            )),
+        }
+    }
     let inventory = Inventory::of(searched, &plugins);
     if safe {
         notices.push(Notice::new(

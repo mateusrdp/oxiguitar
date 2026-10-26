@@ -31,30 +31,31 @@ You keep the copyright on what you contribute. Your name goes in [CREDITS.md](CR
 - **Rust only.** Every line we write is Rust and every dependency is a Rust crate. The only exceptions are the operating system's own libraries for windows, graphics and audio. C and C++ projects are references to read and port from, never libraries to link.
 - **Crates Debian has.** OxiGuitar aims for Debian's main archive, which builds only from crates Debian packages ([docs/debian.md](docs/debian.md)). Given a choice, take a crate and a version Debian unstable has; the Debian workflow's weekly audit shows which.
 - **Formatting and lint:** `cargo fmt --all` and `cargo clippy --workspace --all-targets -- -D warnings` must be clean.
+- **Libraries exactly as published** (Mateus, 25 Oct 2026). Every dependency is the released version, used as it is: no fork, no `[patch]`, no vendored or edited copy. Never plan on a change upstream or wait on a pull request elsewhere. What a library lacks is added only in our own code on top of it: wrapping it, preparing what it is given, or processing what it returns. When a gap can't be closed that way, say plainly what it costs and propose our own code or another library.
 - **No panics on user input.** Readers return errors that name the file and the byte position or element where things went wrong (FMT-1). Reader crates deny `unwrap`, `expect`, `panic!` and unchecked indexing outside tests.
 - **No `unsafe`.** The workspace forbids it. The one exception is the plugin interface (ADR 0008): the host's loader (`crates/oxiguitar-host/src/loader.rs`) and the SDK's export glue (`crates/oxiguitar-plugin/src/glue.rs`, with the two attributes `export_plugin!` generates). Their crates deny `unsafe_code` and allow it in that one module; every `unsafe` block carries a `// SAFETY:` comment saying why it is sound, and changes to either file are reviewed line by line. A test (`crates/oxiguitar-plugin-test/tests/unsafe_audit.rs`) fails if `unsafe` is allowed anywhere else. Plugin crates deny it too (not forbid, so `export_plugin!` can allow its attributes). If something else truly needs `unsafe`, open a discussion first.
 - **Document public items.** `missing_docs` is on.
-- **Minimum Rust version:** the rustc in Debian unstable, currently 1.97. Don't use newer language or library features; CI tests that version and the latest stable.
+- **Minimum Rust version:** 1.99 (`rust-version` in `Cargo.toml`), built with Rust from [rustup](https://rustup.rs) rather than a distribution's package (Mateus, 24 Oct 2026). CI tests that version and the latest stable. Raise it only when something needs it, in a pull request of its own: Debian's archive builds with the rustc Debian unstable has (1.97 in October 2026), so before OxiGuitar can be uploaded there, unstable must have caught up with ours ([docs/debian.md](docs/debian.md)).
 - **Exact time.** Durations are exact fractions; never use floating point for musical time.
 - **Edits are commands.** Every change to a score goes through a reversible command, so undo and redo always work.
-- **Privacy.** No telemetry, analytics, crash uploads or background requests, ever. Network code may run only after the user asks for a download. CI enforces this (NET-5).
+- **Privacy.** No telemetry, analytics, crash uploads or background requests, ever, and no downloads: sound sets, models and plugins are files the user places (Mateus, 21 Oct 2026). The only network use planned is an update check the user starts. CI enforces this (NET-5).
 
 ## Known platform gaps
 
-Features that don't work on one system because of a library we build on, with the ADR that explains why and what has to change. Reviewers: check this list whenever winit or Slint is upgraded, and when a pull request touches one of these features.
+Features that don't work on one system because of a library we build on, with the ADR that explains why. They are accepted for good (Mateus, 25 Oct 2026): nothing is planned on a library changing, and no upgrade is checked for them.
 
-| Feature | Missing on | Why | Enable it when | ADR |
-| --- | --- | --- | --- | --- |
-| Drop a file on the window to open it | Wayland | winit 0.30 has no drag and drop on Wayland, and Slint 1.18 passes no OS drops on. A workaround would need `unsafe` code and polling, which we rejected | winit's Wayland backend emits `DroppedFile` (no code change needed), or Slint forwards OS drops. Test with `scripts/wayland-dnd-test/` | [0006](docs/adr/0006-wayland-file-drops.md) |
-| Double-click a file in Finder (or Open With, or drop on the Dock icon) to open it | macOS | macOS sends these as Apple Events to the application delegate; winit 0.30 and Slint 1.18 report none, and a delegate of our own would need `unsafe` Objective-C glue, which we rejected | winit reports opened files on macOS and Slint passes the event on, or Slint offers an "open file" callback | [0007](docs/adr/0007-macos-open-document-events.md) |
+| Feature | Missing on | Why | ADR |
+| --- | --- | --- | --- |
+| Drop a file on the window to open it | Wayland | winit 0.30 has no drag and drop on Wayland, and Slint 1.18 passes no OS drops on. A workaround would need `unsafe` code and polling, which we rejected | [0006](docs/adr/0006-wayland-file-drops.md) |
+| Double-click a file in Finder (or Open With, or drop on the Dock icon) to open it | macOS | macOS sends these as Apple Events to the application delegate; winit 0.30 and Slint 1.18 report none, and a delegate of our own would need `unsafe` Objective-C glue, which we rejected | [0007](docs/adr/0007-macos-open-document-events.md) |
 
 ## Design principles
 
 These come from Mateus's decisions and apply to every pull request.
 
-- **No polling, ever** (Mateus, 17 and 18 Oct 2026). Nothing may wake up on a timer to check whether something happened: not a file, a queue, a socket or another library's state. Code reacts to events the operating system or a library delivers, or it waits on a channel, a condition or a file descriptor that wakes it. A one-shot timer for something that really is about time (a message that fades after ten seconds, a double-click window) is not polling. If the only way to learn about an event is to poll, the feature waits for upstream and the gap is documented, as ADRs 0006 and 0007 show.
+- **No polling, ever** (Mateus, 17 and 18 Oct 2026). Nothing may wake up on a timer to check whether something happened: not a file, a queue, a socket or another library's state. Code reacts to events the operating system or a library delivers, or it waits on a channel, a condition or a file descriptor that wakes it. A one-shot timer for something that really is about time (a message that fades after ten seconds, a double-click window) is not polling. If the only way to learn about an event is to poll, the feature is left out and the gap documented, as ADRs 0006 and 0007 show.
 - **Wayland first** (Mateus, 19 Oct 2026; ADR 0009). When the Wayland and X11 builds pull different ways, the Wayland build gets the clean, native solution; fallbacks and workarounds belong in the X11 build, which will be dropped. The Wayland build holds no X11 code, and CI checks it (`scripts/check-display-crates.sh`). Test on Wayland first (headless Weston), then X11.
-- **No hacks.** A workaround that races another library's event loop, or needs `unsafe` to borrow its internals, is not acceptable. Document the gap, say what upstream has to change, and list it under "Known platform gaps" above.
+- **No hacks.** A workaround that races another library's event loop, or needs `unsafe` to borrow its internals, is not acceptable. Document the gap and what it costs, and list it under "Known platform gaps" above.
 - **As fast as it can be.** Start-up, opening a file and drawing are measured (`docs/testing.md`, "Speed budget"). Do work when it is needed, not up front, and off the UI thread.
 - **Elegant over clever.** Code is read far more often than written: prefer the plain, obvious shape that a new contributor can follow and maintain.
 - **Don't be too smart** (Mateus, 16 Oct 2026). Show what the file says; anything that changes it is an explicit action the user picks.
@@ -110,6 +111,7 @@ Every format is its own plugin; the core recognises no format itself (docs/desig
 4. Add small public fixtures and tests; `cargo test -p oxiguitar-plugin-test --test ours` checks the plugin against the contract and the in-process reader. Run the private corpus locally if you have it.
 5. Writers come with round-trip tests (FMT-4) and loss warnings for lossy formats (FMT-3).
 6. A new fuzz target for the reader, and the plugin in `fuzz/fuzz_targets/plugin_dispatch.rs`.
+7. If the plugin joins the basic set we publish, it goes into each system's plugins zip (`OxiGuitar-plugins-basic-VERSION-SYSTEM-ARCH.zip`) and the `oxiguitar-plugins-basic` .deb and .rpm by itself; raise the plugin counts the release workflow checks (`.github/workflows/release.yml`) and add it to the list in `scripts/package/plugins-README.txt`. Releases attach no plugin on its own (docs/design/plugins.md, "Distribution").
 
 ## Adding an effect
 

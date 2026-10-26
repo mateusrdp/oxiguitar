@@ -1,0 +1,25 @@
+{
+  "interface": "1.3",
+  "id": "oxiguitar.audio-coreaudio",
+  "name": "Core Audio audio",
+  "version": "0.9.0",
+  "description": "Plays OxiGuitar's sound through Core Audio, macOS's sound system.",
+  "authors": [
+    "The OxiGuitar contributors"
+  ],
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/mateusrdp/oxiguitar",
+  "conditions": {
+    "os": [
+      "macos"
+    ]
+  },
+  "services": [
+    {
+      "interface": "audio-device",
+      "id": "coreaudio",
+      "name": "Core Audio",
+      "priority": 10
+    }
+  ]
+}

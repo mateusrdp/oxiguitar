@@ -40,6 +40,9 @@ pub(crate) struct Row {
     pub(crate) changed: bool,
     /// Loaded now.
     pub(crate) loaded: bool,
+    /// The plugin's id when it is in use and has a settings window
+    /// (interface 1.3): the row's Settings… button opens it.
+    pub(crate) settings: Option<String>,
 }
 
 /// Whether any change waits for OxiGuitar to start again.
@@ -66,7 +69,17 @@ pub(crate) fn rows(plugins: &Plugins, disabled: &[String]) -> Vec<Row> {
     plugins
         .found()
         .iter()
-        .map(|f| row(f, plugins.safe_mode(), disabled))
+        .map(|f| {
+            let mut r = row(f, plugins.safe_mode(), disabled);
+            let has_window = plugins
+                .with_settings_window()
+                .iter()
+                .any(|w| std::ptr::eq(*w, f));
+            if has_window {
+                r.settings = f.manifest.as_ref().map(|m| m.id.clone());
+            }
+            r
+        })
         .collect()
 }
 
@@ -83,6 +96,11 @@ fn row(f: &Found, safe: bool, disabled: &[String]) -> Row {
     let toggles = matches!(f.state, State::Ready | State::Disabled | State::Replaced(_));
     let enabled = id.as_ref().is_some_and(|id| !disabled.contains(id));
     let mut state = match &f.state {
+        // A system library it needs isn't installed (`Plugins`' quiet
+        // withdrawal): it can't run here, rather than having failed.
+        State::Ready if f.failure().is_some_and(|w| w.starts_with("it needs ")) => {
+            format!("Can't run here: {}.", f.failure().unwrap_or_default())
+        }
         State::Ready if f.failure().is_some() => format!(
             "Stopped working and not used until OxiGuitar restarts: {}.",
             f.failure().unwrap_or_default()
@@ -124,6 +142,7 @@ fn row(f: &Found, safe: bool, disabled: &[String]) -> Row {
         enabled,
         changed,
         loaded: f.is_loaded(),
+        settings: None,
     }
 }
 
@@ -195,8 +214,8 @@ mod tests {
         assert_eq!(
             names,
             [
-                ("Test plugin", "0.5.0", "a-test.oxp"),
-                ("Test plugin", "0.5.0", "b-test.oxp"),
+                ("Test plugin", "0.9.0", "a-test.oxp"),
+                ("Test plugin", "0.9.0", "b-test.oxp"),
                 ("junk.oxp", "", "junk.oxp"),
             ]
         );

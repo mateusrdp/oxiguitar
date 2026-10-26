@@ -23,6 +23,11 @@ oxiguitar\-cli \- print, convert and engrave guitar tablature files
 .IR file ]
 .RI [ options ]
 .br
+.BI "oxiguitar\-cli events " file
+.br
+.BI "oxiguitar\-cli play " file
+.RI [ options ]
+.br
 .B oxiguitar\-cli tools
 .br
 .B oxiguitar\-cli specimen
@@ -47,7 +52,8 @@ It reads and writes files through the same format plugins, from the same plugin 
 and never creates or changes anything there.
 The package
 .B oxiguitar\-plugins\-basic
-holds the plugins for Guitar Pro files, versions 3 to 8.
+holds the plugins for Guitar Pro files, versions 3 to 8, the SoundFont
+player, and those that play sound through PipeWire and ALSA.
 .SH COMMANDS
 .TP
 .BR info " [" \-\-bars "] \fIfile\fR..."
@@ -71,6 +77,27 @@ and track it happens in, and notes on what Guitar Pro does differently.
 .TP
 .BI render " file"
 Engrave a score to PNG pages and/or a PDF.
+.TP
+.BI events " file"
+Print the score as it plays: the bars in playing order (repeats, endings,
+D.C. and D.S., codas) with their times in seconds, every note with its
+start, end, string, pitch, velocity and effects, and the metronome's clicks.
+.TP
+.BI play " file"
+Play the score through the installed instrument and audio\-device plugins,
+printing each bar as it is heard; Ctrl + C stops it.
+Each track plays through the first installed instrument for its class.
+The sound goes to the audio device the plugins offer (PipeWire before ALSA
+on Linux), or the one settings.json pins, or with
+.B \-\-wav
+into a file.
+The SoundFont player plays with the sound sets chosen in the app's plugin
+settings, else the best it finds: one in the
+.I soundfonts
+folder beside the plugin folder, else the largest the system has (on Linux
+in /usr/share/sounds/sf2, /usr/share/sounds/sf3 and /usr/share/soundfonts).
+A SoundFont 3 set the app hasn't decoded yet is decoded each time, which
+takes a few seconds.
 .TP
 .B tools
 List the tools, as in the Tools menu of
@@ -130,6 +157,37 @@ Run a tool on the score first, as the Tools menu does; may be repeated.
 .TP
 .B \-\-quiet
 Report only errors.
+.SH PLAY OPTIONS
+.TP
+.BI \-\-from " bar"
+Start at the bar (from 1).
+.TP
+.BI \-\-loop " first\-last"
+Play those bars over and over (starting at the first, unless
+.B \-\-from
+says otherwise).
+.TP
+.BI \-\-speed " percent"
+Play at 25 to 200 % speed; the pitch stays.
+.TP
+.B \-\-count\-in
+A bar of clicks first.
+.TP
+.B \-\-metronome
+Clicks on every beat.
+.TP
+.BI \-\-tracks " list"
+Hear only these tracks, by number (1,3).
+.TP
+.BI \-\-device " name"
+Play on this output rather than the system's default.
+.TP
+.BI \-\-wav " file"
+Play into a WAV file (48 kHz, 16\-bit stereo) instead of an output, as fast
+as the computer can, with two seconds after the end for the last notes to
+die away.
+Not with
+.BR \-\-loop .
 .SH EXIT STATUS
 0 if every file was read (and, for
 .BR convert ,
@@ -148,6 +206,12 @@ Write song.gp5 as a Guitar Pro 7 file, song.gp.
 .TP
 .B oxiguitar\-cli render song.gp \-\-pdf song.pdf \-\-tracks all
 Engrave every track of song.gp into a PDF.
+.TP
+.B oxiguitar\-cli play song.gp \-\-loop 5\-8 \-\-speed 75 \-\-count\-in
+Practise bars 5 to 8 at three\-quarter speed, after a bar of count\-in.
+.TP
+.B oxiguitar\-cli play song.gp \-\-wav song.wav
+Play song.gp into song.wav.
 .SH BUGS
 Report bugs at
 .UR https://github.com/mateusrdp/oxiguitar/issues

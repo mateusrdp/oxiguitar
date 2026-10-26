@@ -24,6 +24,16 @@
 //! [`Answer::Report`]) and edits ([`HostRequest::Apply`]). The host sends
 //! a plugin built for 1.2 or later [`Request::Write2`] instead of
 //! [`Request::Write`], and takes either answer to a [`Request::Read`].
+//!
+//! Interface 1.3 added settings windows ([`Request::SettingsWindow`],
+//! [`Request::SettingsEvent`]), sections of the track dialog
+//! ([`Request::TrackSection`], [`Request::TrackSectionEvent`],
+//! [`Answer::TrackSection`]), footer messages with a link
+//! ([`HostRequest::Notify2`]) and the plugin's folders
+//! ([`HostRequest::Folders`]); then instruments and effects, prepared here
+//! ([`Request::Prepare`], [`Request::PrepareEffect`], [`Answer::Prepared`],
+//! [`Request::Release`]) and run on the audio thread
+//! ([`crate::realtime`]).
 
 use std::fmt;
 
@@ -31,7 +41,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::Blob;
 use crate::abi::Status;
+use crate::class::InstrumentClass;
 use crate::event::Event;
+use crate::manifest::SharedFolder;
 use crate::score::Score;
 use crate::score2::Score2;
 use crate::tab::{TabContent, TabEvent};
@@ -180,6 +192,123 @@ pub enum Request<'a> {
         /// The tool's id.
         tool: String,
     },
+    /// What the plugin's settings window shows now (the manifest's
+    /// `settings_window`): asked when the user opens it from the plugin
+    /// manager. Answered with [`Answer::Tab`]. The plugin keeps what the
+    /// user sets with [`HostRequest::SetSettings`]. Since interface 1.3.
+    SettingsWindow,
+    /// The user used the widget `widget` of the settings window. Answered
+    /// with [`Answer::Tab`], the window's contents after it. Since
+    /// interface 1.3.
+    SettingsEvent {
+        /// The widget's id.
+        widget: String,
+        /// What the user did.
+        event: TabEvent,
+    },
+    /// What the track dialog's section `section` (an id from the manifest's
+    /// `track_sections`) shows for `track`, whose settings for this plugin
+    /// are `settings` (a JSON object, `{}` at first). Answered with
+    /// [`Answer::TrackSection`]. Since interface 1.3.
+    TrackSection {
+        /// The section's id.
+        section: String,
+        /// The track the dialog is open for.
+        track: TrackInfo,
+        /// The track's settings for this plugin, as JSON text.
+        settings: String,
+    },
+    /// The user used the widget `widget` of the section `section` for
+    /// `track`. Answered with [`Answer::TrackSection`]: the section's
+    /// contents and the track's settings after it. The dialog keeps them
+    /// until the user presses OK, which makes them one change the user can
+    /// undo; Cancel drops them. Since interface 1.3.
+    TrackSectionEvent {
+        /// The section's id.
+        section: String,
+        /// The track the dialog is open for.
+        track: TrackInfo,
+        /// The track's settings for this plugin, as the dialog holds them.
+        settings: String,
+        /// The widget's id.
+        widget: String,
+        /// What the user did.
+        event: TabEvent,
+    },
+    /// Get the instrument `prepare.instrument` ready to play its tracks:
+    /// load their sounds now, off the audio thread. Answered with
+    /// [`Answer::Prepared`], an instance the audio thread renders
+    /// ([`crate::realtime::RealtimeTableV1::render`]). Since interface 1.3.
+    Prepare(Box<Prepare>),
+    /// Get the effect `prepare.effect` ready for one track. Answered with
+    /// [`Answer::Prepared`]. Since interface 1.3.
+    PrepareEffect(Box<PrepareEffect>),
+    /// The host is done with `instance` (it is no longer rendered): free
+    /// it. Answered with [`Answer::Done`]. Since interface 1.3.
+    Release {
+        /// The instance.
+        instance: u64,
+    },
+}
+
+/// What an instrument is prepared for. Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Prepare {
+    /// The instrument's id, from the manifest's `instruments`.
+    pub instrument: String,
+    /// The sample rate, in frames a second.
+    pub rate: u32,
+    /// The most frames one render call asks for.
+    pub frames: u32,
+    /// The tracks it plays, in the order of their buffers
+    /// ([`crate::realtime::RenderCall::outputs`]) and of
+    /// [`crate::realtime::RtNote::track`].
+    pub tracks: Vec<PreparedTrack>,
+}
+
+/// What an effect is prepared for. Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PrepareEffect {
+    /// The effect's id, from the manifest's `effects`.
+    pub effect: String,
+    /// The sample rate.
+    pub rate: u32,
+    /// The most frames one call asks for.
+    pub frames: u32,
+    /// The track it runs on.
+    pub track: PreparedTrack,
+}
+
+/// A track as an instrument or effect is prepared for it. Since interface
+/// 1.3.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PreparedTrack {
+    /// The track, as the track dialog's sections know it.
+    pub info: TrackInfo,
+    /// Its General MIDI program, 0 to 127.
+    pub program: u8,
+    /// A drum kit.
+    pub percussion: bool,
+    /// Its open strings' MIDI keys, highest string first; empty without
+    /// strings.
+    pub tuning: Vec<u8>,
+    /// Its capo's fret, 0 for none.
+    pub capo: u8,
+    /// The track's settings for this plugin (its track section), a JSON
+    /// object as text.
+    pub settings: String,
+}
+
+/// A track, as the track dialog's sections are told about it. Since
+/// interface 1.3.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrackInfo {
+    /// Its index in the score.
+    pub index: u32,
+    /// Its name.
+    pub name: String,
+    /// Its class of instrument.
+    pub class: InstrumentClass,
 }
 
 /// A plugin's answer to a [`Request`].
@@ -219,6 +348,25 @@ pub enum Answer<'a> {
     /// What a tool did, in a sentence for the footer ("Transposed 3
     /// tracks up a tone."); empty to say nothing. Since interface 1.2.
     Report(String),
+    /// What a section of the track dialog shows, and the track's settings
+    /// for this plugin. Since interface 1.3.
+    TrackSection {
+        /// The section's contents.
+        content: Box<TabContent>,
+        /// The track's settings for this plugin, a JSON object as text.
+        settings: String,
+    },
+    /// An instrument or effect, ready. Since interface 1.3.
+    Prepared {
+        /// The instance the audio thread names in its calls.
+        instance: u64,
+        /// The frames its sound comes late by.
+        latency: u32,
+        /// How many frames late a note may start, at most: a synthesiser
+        /// that renders in blocks starts notes on the next block (7 for
+        /// blocks of 8); 0 for one that starts every note on its frame.
+        resolution: u32,
+    },
 }
 
 impl Answer<'_> {
@@ -236,6 +384,18 @@ impl Answer<'_> {
             Answer::Done => Answer::Done,
             Answer::Read2 { score, log } => Answer::Read2 { score, log },
             Answer::Report(r) => Answer::Report(r),
+            Answer::TrackSection { content, settings } => {
+                Answer::TrackSection { content, settings }
+            }
+            Answer::Prepared {
+                instance,
+                latency,
+                resolution,
+            } => Answer::Prepared {
+                instance,
+                latency,
+                resolution,
+            },
         }
     }
 }
@@ -394,6 +554,46 @@ pub enum HostRequest<'a> {
         /// The whole score, changed.
         score: Box<Score2>,
     },
+    /// Show a message in the footer, with a link the user can click to
+    /// open in the system's browser (an `https:` address; others are
+    /// refused). Answered with [`HostAnswer::Done`]. Since interface 1.3.
+    Notify2 {
+        /// How much it matters. The footer shows only warnings and errors.
+        level: Level,
+        /// One or two sentences.
+        text: String,
+        /// The link, after the text.
+        link: Link,
+    },
+    /// The plugin's folders: its own data and cache folders and the shared
+    /// folders its manifest lists. Answered with [`HostAnswer::Folders`].
+    /// Since interface 1.3.
+    Folders,
+}
+
+/// A link in a footer message. Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Link {
+    /// What the link says: a few words ("Better sounds").
+    pub text: String,
+    /// Where it goes: an `https:` address.
+    pub url: String,
+}
+
+/// A plugin's folders (paths as UTF-8 text). Since interface 1.3.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PluginFolders {
+    /// The plugin's own data folder, which only it uses: kept until the
+    /// user deletes it. Created when this is asked for.
+    pub data: String,
+    /// The plugin's own cache folder, in the system's place for caches:
+    /// for what it can make again (a decoded sound set), which the system
+    /// or the user may delete at any time. Created when this is asked for.
+    pub cache: String,
+    /// The shared folders the manifest lists, each with its path, in the
+    /// manifest's order. The user puts files there; the host creates them
+    /// at start.
+    pub shared: Vec<(SharedFolder, String)>,
 }
 
 /// The host's answer to a [`HostRequest`].
@@ -415,6 +615,8 @@ pub enum HostAnswer<'a> {
         /// The score.
         score: Option<Box<Score2>>,
     },
+    /// The plugin's folders. Since interface 1.3.
+    Folders(PluginFolders),
 }
 
 impl HostAnswer<'_> {
@@ -426,6 +628,7 @@ impl HostAnswer<'_> {
             HostAnswer::Service(b) => HostAnswer::Service(b.into_owned()),
             HostAnswer::Score(s) => HostAnswer::Score(s),
             HostAnswer::Score2 { revision, score } => HostAnswer::Score2 { revision, score },
+            HostAnswer::Folders(f) => HostAnswer::Folders(f),
         }
     }
 }
@@ -455,6 +658,70 @@ mod tests {
         );
         let bytes = encode(&error).unwrap();
         assert_eq!(decode::<Error>(&bytes).unwrap(), error);
+    }
+
+    #[test]
+    fn interface_1_3_messages_round_trip() {
+        let track = TrackInfo {
+            index: 2,
+            name: "Lead".into(),
+            class: InstrumentClass::Fretted,
+        };
+        let requests = [
+            Request::SettingsWindow,
+            Request::SettingsEvent {
+                widget: "on".into(),
+                event: TabEvent::Toggled(true),
+            },
+            Request::TrackSection {
+                section: "amp".into(),
+                track: track.clone(),
+                settings: "{}".into(),
+            },
+            Request::TrackSectionEvent {
+                section: "amp".into(),
+                track,
+                settings: r#"{"level":0.5}"#.into(),
+                widget: "level".into(),
+                event: TabEvent::Slid(0.25),
+            },
+        ];
+        for request in requests {
+            let bytes = encode(&request).unwrap();
+            assert_eq!(decode::<Request<'_>>(&bytes).unwrap(), request);
+        }
+        let answer = Answer::TrackSection {
+            content: Box::default(),
+            settings: "{}".into(),
+        };
+        assert_eq!(
+            decode::<Answer<'_>>(&encode(&answer).unwrap()).unwrap(),
+            answer
+        );
+        let host = [
+            HostRequest::Notify2 {
+                level: Level::Warning,
+                text: "Only a basic sound set plays.".into(),
+                link: Link {
+                    text: "Better sounds".into(),
+                    url: "https://example.org/sounds".into(),
+                },
+            },
+            HostRequest::Folders,
+        ];
+        for request in host {
+            let bytes = encode(&request).unwrap();
+            assert_eq!(decode::<HostRequest<'_>>(&bytes).unwrap(), request);
+        }
+        let folders = HostAnswer::Folders(PluginFolders {
+            data: "/d".into(),
+            cache: "/c".into(),
+            shared: vec![(SharedFolder::Soundfonts, "/s".into())],
+        });
+        assert_eq!(
+            decode::<HostAnswer<'_>>(&encode(&folders).unwrap()).unwrap(),
+            folders
+        );
     }
 
     #[test]

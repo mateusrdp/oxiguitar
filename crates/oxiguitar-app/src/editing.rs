@@ -424,6 +424,11 @@ impl Editing {
 
     /// A new engraving: its map, and so the tracks shown. A caret on a
     /// track no longer shown goes to the first shown track, same bar.
+    /// The engraver's map of the page, for the playback cursor.
+    pub(crate) fn hits(&self) -> &Arc<Hits> {
+        &self.hits
+    }
+
     pub(crate) fn engraved(&mut self, hits: Arc<Hits>) {
         self.shown = hits.tracks();
         self.hits = hits;
@@ -438,9 +443,36 @@ impl Editing {
         }
     }
 
-    #[cfg(test)]
     pub(crate) fn caret(&self) -> Option<Caret> {
         self.caret
+    }
+
+    /// The player put the caret back (Stop: where playing began). The
+    /// selection stays, so Play Selection and Loop still have it.
+    pub(crate) fn put_caret(&mut self, caret: Caret) -> bool {
+        let Some(score) = self.score.clone() else {
+            return false;
+        };
+        let Some(c) = caret.clamp(&score) else {
+            return false;
+        };
+        let moved = self.caret != Some(c);
+        self.caret = Some(c);
+        moved
+    }
+
+    /// The player stopped at `onset` in `bar` (Pause, Rewind): the caret
+    /// goes to the beat of its voice sounding there, on its staff. The
+    /// selection stays.
+    pub(crate) fn put_caret_at(&mut self, bar: usize, onset: oxiguitar_model::Ratio) -> bool {
+        let (Some(score), Some(c)) = (self.score.clone(), self.caret) else {
+            return false;
+        };
+        let at = Caret { bar, beat: 0, ..c };
+        let beat = at
+            .voice_in(&score)
+            .map_or(0, |v| oxiguitar_edit::beat_at(v, onset));
+        self.put_caret(Caret { beat, ..at })
     }
 
     pub(crate) fn selection(&self) -> Option<Selection> {

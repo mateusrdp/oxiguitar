@@ -36,7 +36,7 @@ The packages above hold the program alone, and it opens files only through plugi
 | Windows | `OxiGuitar-plugins-basic-VERSION-windows-x86_64.zip` or `-arm64` | Unzip the `.oxp` files into `%APPDATA%\OxiGuitar\plugins\`, or into a `plugins` folder beside `oxiguitar.exe` |
 | macOS | `OxiGuitar-plugins-basic-VERSION-macos-universal.zip` | Unzip the `.oxp` files into `~/Library/Application Support/OxiGuitar/plugins/` |
 
-The .deb and .rpm work with either Linux build. OxiGuitar creates your plugin folder the first time it starts; **Help → About** lists every folder it searches, and **Tools → Plugins** the plugins it found. Each plugin is also attached to the release on its own (`oxiguitar-gp5-VERSION-linux-x86_64.oxp` …), if you want only some. Until OxiGuitar has a plugin, its footer says that nothing can be opened yet.
+The .deb and .rpm work with either Linux build. OxiGuitar creates your plugin folder the first time it starts; **Help → About** lists every folder it searches, and **Tools → Plugins** the plugins it found. To leave out a plugin you don't want, untick it in **Tools → Plugins**, or delete its `.oxp` file. (Releases up to 0.5.0 also listed every plugin as a file of its own; the zip holds them all.) Until OxiGuitar has a plugin, its footer says that nothing can be opened yet.
 
 On macOS, if the system refuses a plugin it downloaded ("cannot be opened because the developer cannot be verified"), clear the download mark on the plugin files and start OxiGuitar again:
 
@@ -74,4 +74,4 @@ xdg-mime default "$id.desktop" application/x-gtp
 
 This also gives OxiGuitar its icon and an entry in your desktop's menu. To undo it, delete the three files and run `update-mime-database` again. With a copy of the source code, `scripts/install-desktop-entry.sh PATH-TO-APPIMAGE` does the same.
 
-**macOS.** Double-clicking a Guitar Pro file starts OxiGuitar, but version 0.1 does not open the file yet: open it with **File → Open**.
+**macOS.** Double-clicking a Guitar Pro file starts OxiGuitar but does not open the file: open it with **File → Open**, or drop it on the window.

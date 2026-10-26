@@ -1,0 +1,26 @@
+length 7.200000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.800000
+bar 3 pass 1 4.800000 7.200000
+note 0.000000 0.600000 t1 s1 v1 b1 string 3 G4 vel 79 harmonic-natural
+note 0.600000 1.200000 t1 s1 v1 b2 string 2 B4 vel 79 harmonic-natural
+note 1.200000 1.800000 t1 s1 v1 b3 string 1 E5 vel 79 harmonic-natural
+note 1.800000 2.400000 t1 s1 v1 b4 string 6 E4 vel 79 harmonic-natural
+note 2.400000 3.000000 t1 s1 v1 b1 string 3 C5 vel 79 harmonic-artificial
+note 3.000000 3.600000 t1 s1 v1 b2 string 2 F#5 vel 79 harmonic-artificial
+note 3.600000 4.800000 t1 s1 v1 b3 string 3 B5 vel 79 harmonic-pinch
+note 4.800000 6.000000 t1 s1 v1 b1 string 3 A5 vel 79 harmonic-pinch
+note 6.000000 7.200000 t1 s1 v1 b2 string 2 B5 vel 79 harmonic-pinch
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000
+click 4.800000 strong
+click 5.400000
+click 6.000000
+click 6.600000

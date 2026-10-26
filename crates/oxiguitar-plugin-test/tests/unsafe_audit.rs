@@ -3,7 +3,8 @@
 
 //! Where `unsafe` code may be (docs/design/plugins.md, "Where the `unsafe`
 //! is"): the host's loader and the SDK's export glue, plus the two
-//! attributes `export_plugin!` generates. Crates that hold these deny
+//! attributes `export_plugin!` generates, and the contract suite's watch
+//! for system calls (test code, never shipped). Crates that hold these deny
 //! `unsafe_code` and allow it in that one place; every other crate forbids
 //! it (the workspace's lints), or denies it where generated code needs a
 //! local allowance (the app, for Slint's generated code).
@@ -19,6 +20,9 @@ const ALLOWED: &[&str] = &[
     "crates/oxiguitar-plugin/src/glue.rs",
     // export_plugin!: the manifest section and the entry symbol.
     "crates/oxiguitar-plugin/src/lib.rs",
+    // The contract suite catching system calls while a plugin renders
+    // (Linux: fork, seccomp, a signal handler). Test code, never shipped.
+    "crates/oxiguitar-plugin-test/src/syscalls.rs",
 ];
 
 fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {

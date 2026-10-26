@@ -1,0 +1,57 @@
+length 9.600000
+count-in 2.400000 clicks 4
+bar 1 pass 1 0.000000 2.400000
+bar 2 pass 1 2.400000 4.800000
+bar 3 pass 1 4.800000 7.200000
+bar 4 pass 1 7.200000 9.600000
+note 0.000000 0.300000 t1 s1 v1 b1 C2 vel 79
+note 0.000000 0.300000 t1 s1 v1 b1 F#2 vel 79
+note 0.300000 0.600000 t1 s1 v1 b2 F#2 vel 79
+note 0.600000 0.900000 t1 s1 v1 b3 D2 vel 79
+note 0.600000 0.900000 t1 s1 v1 b3 F#2 vel 79
+note 0.900000 1.200000 t1 s1 v1 b4 F#2 vel 79
+note 1.200000 1.500000 t1 s1 v1 b5 C2 vel 79
+note 1.200000 1.500000 t1 s1 v1 b5 F#2 vel 79
+note 1.500000 1.800000 t1 s1 v1 b6 C2 vel 79
+note 1.500000 1.800000 t1 s1 v1 b6 F#2 vel 79
+note 1.800000 2.100000 t1 s1 v1 b7 D2 vel 79
+note 1.800000 2.100000 t1 s1 v1 b7 F#2 vel 79
+note 2.100000 2.400000 t1 s1 v1 b8 F#2 vel 79
+note 2.400000 2.700000 t1 s1 v1 b1 C2 vel 79
+note 2.400000 2.700000 t1 s1 v1 b1 C#3 vel 79
+note 2.700000 3.000000 t1 s1 v1 b2 F#2 vel 79
+note 3.000000 3.300000 t1 s1 v1 b3 D2 vel 79
+note 3.000000 3.300000 t1 s1 v1 b3 F#2 vel 79
+note 3.300000 3.600000 t1 s1 v1 b4 F#2 vel 79
+note 3.600000 3.750000 t1 s1 v1 b5 D2 vel 79
+note 3.750000 3.900000 t1 s1 v1 b6 D2 vel 79
+note 3.900000 4.050000 t1 s1 v1 b7 B2 vel 79
+note 4.050000 4.200000 t1 s1 v1 b8 A2 vel 79
+note 4.200000 4.500000 t1 s1 v1 b9 G2 vel 79
+note 4.500000 4.800000 t1 s1 v1 b10 F2 vel 79
+note 4.800000 5.400000 t1 s1 v1 b1 C2 vel 79
+note 4.800000 5.400000 t1 s1 v1 b1 D#3 vel 79
+note 5.400000 6.000000 t1 s1 v1 b2 D2 vel 79
+note 5.400000 6.000000 t1 s1 v1 b2 D#3 vel 79
+note 6.000000 6.600000 t1 s1 v1 b3 C2 vel 79
+note 6.000000 6.600000 t1 s1 v1 b3 D#3 vel 79
+note 6.600000 7.200000 t1 s1 v1 b4 D2 vel 79
+note 6.600000 7.200000 t1 s1 v1 b4 D#3 vel 79
+note 7.200000 9.600000 t1 s1 v1 b1 C2 vel 79
+note 7.200000 9.600000 t1 s1 v1 b1 C#3 vel 79
+click 0.000000 strong
+click 0.600000
+click 1.200000
+click 1.800000
+click 2.400000 strong
+click 3.000000
+click 3.600000
+click 4.200000
+click 4.800000 strong
+click 5.400000
+click 6.000000
+click 6.600000
+click 7.200000 strong
+click 7.800000
+click 8.400000
+click 9.000000

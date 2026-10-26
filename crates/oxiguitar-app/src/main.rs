@@ -35,18 +35,23 @@ mod bar_form;
 mod bend_form;
 mod canvas;
 mod chord_form;
+mod cursor;
 mod document;
 mod editing;
 mod effect_form;
 mod footer;
 mod icons;
 mod inspector;
+mod links;
 mod manager;
 mod palette;
+mod player;
+mod playing;
 mod plugin_tabs;
 mod prefs;
 mod shell;
 mod song;
+mod sound;
 #[cfg(test)]
 mod speed;
 #[cfg(test)]
@@ -54,6 +59,7 @@ mod test_support;
 #[cfg(test)]
 use test_support::test_plugins;
 mod track_form;
+mod track_sections;
 mod tracks;
 mod worker;
 
@@ -96,8 +102,8 @@ mod ui {
 use ui::{
     AltBox, AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField,
     InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow,
-    PluginWidget, SongField, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields,
-    TrackRow,
+    PluginSection, PluginSettingsWindow, PluginWidget, SongField, TileItem, ToolRow,
+    ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -186,6 +192,14 @@ struct App {
     /// once opened (hidden, not dropped, when closed).
     plugins: oxiguitar_host::Plugins,
     manager: Option<PluginManagerWindow>,
+    /// A plugin's settings window (interface 1.3): the window, once made,
+    /// and the plugin it shows.
+    settings_window: Option<(PluginSettingsWindow, String)>,
+    /// The plugins' sections of the open track dialog, and how many times
+    /// the dialog has opened (so late answers for an earlier opening are
+    /// dropped).
+    sections: Option<track_sections::TrackSections>,
+    dialogs_opened: u64,
     /// The editor: the caret and the selection over the page.
     editing: editing::Editing,
     /// The bars that don't add up, every track's.
@@ -209,6 +223,29 @@ struct App {
     transpose_scope: Option<oxiguitar_edit::Scope>,
     /// What to do once the score is saved (after "Save the changes…?").
     after_save: Option<Then>,
+    /// The player (M4): its controls and the engine's window half, its
+    /// thread, and the score's revisions as it was told them.
+    player: player::Player,
+    sound: sound::Sound,
+    score_revision: u64,
+    /// Where the caret was when playing began, for Stop.
+    began: Option<oxiguitar_edit::Caret>,
+    /// What the player has said in the footer this session.
+    player_told: std::collections::HashSet<String>,
+    /// The Output drop-down's entries (the first is the system's default),
+    /// the one chosen (empty: the default), and whether any audio output
+    /// works here.
+    outputs: Vec<String>,
+    output: String,
+    outputs_available: bool,
+    /// The score as plugins and the worker share it (whether it plays).
+    open_score: OpenScore,
+    /// The visual metronome is on; the cursor's line and system when the
+    /// page was last checked for turning.
+    visual: bool,
+    followed: Option<(i32, i32)>,
+    /// Where Pause put the caret: moved from there, the pause ends.
+    paused_at: Option<oxiguitar_edit::Caret>,
 }
 
 /// What the question over the window asks.
@@ -286,6 +323,22 @@ impl oxiguitar_host::Core for WindowCore {
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(app) = APP.with(|a| a.borrow().clone()) {
                 app.borrow_mut().footer.push(level, text);
+                sync_footer(&app);
+            }
+        });
+    }
+
+    fn notify_with_link(
+        &self,
+        level: Level,
+        text: String,
+        link: oxiguitar_host::api::message::Link,
+    ) {
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                app.borrow_mut()
+                    .footer
+                    .push_with_link(level, text, link.text, link.url);
                 sync_footer(&app);
             }
         });
@@ -418,8 +471,13 @@ fn main() -> Result<(), slint::PlatformError> {
     let save_formats = SaveFormat::writable(&startup.plugins);
     let mut shell = Shell::default();
     plugin_tabs::add_to(&mut shell, &startup.plugins);
-    // Only when a plugin has tabs.
-    let tab_thread = (!startup.plugins.tabs().is_empty()).then(|| {
+    // Only when a plugin has tabs, a settings window or track sections.
+    let uses_tab_thread = !startup.plugins.tabs().is_empty()
+        || !startup.plugins.with_settings_window().is_empty()
+        || oxiguitar_host::api::class::InstrumentClass::ALL
+            .iter()
+            .any(|&c| !startup.plugins.track_sections(c).is_empty());
+    let tab_thread = uses_tab_thread.then(|| {
         TabThread::start(startup.plugins.clone(), true, |answer| {
             let _ = slint::invoke_from_event_loop(move || {
                 if let Some(app) = APP.with(|a| a.borrow().clone()) {
@@ -429,7 +487,14 @@ fn main() -> Result<(), slint::PlatformError> {
         })
     });
 
-    let worker = Worker::start(startup.plugins.clone(), open_score, |event| {
+    let (sound, control) = sound::Sound::start(startup.plugins.clone(), |m| {
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                playing::from_sound(&app, m);
+            }
+        });
+    });
+    let worker = Worker::start(startup.plugins.clone(), open_score.clone(), |event| {
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(app) = APP.with(|a| a.borrow().clone()) {
                 handle(&app, event);
@@ -475,6 +540,9 @@ fn main() -> Result<(), slint::PlatformError> {
         plugin_views: Default::default(),
         plugins: startup.plugins.clone(),
         manager: None,
+        settings_window: None,
+        sections: None,
+        dialogs_opened: 0,
         editing: editing::Editing::default(),
         bad: Vec::new(),
         doc_name: None,
@@ -487,6 +555,18 @@ fn main() -> Result<(), slint::PlatformError> {
         chord_dialog: None,
         transpose_scope: None,
         after_save: None,
+        player: player::Player::new(control),
+        sound,
+        score_revision: 0,
+        began: None,
+        player_told: std::collections::HashSet::new(),
+        outputs: Vec::new(),
+        output: String::new(),
+        outputs_available: false,
+        open_score,
+        visual: false,
+        followed: None,
+        paused_at: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
     measure_palette();
@@ -494,6 +574,7 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.set_shortcut_lines(lines(&[
         "Ctrl + N: a new score;  Ctrl + O: open a file;  Ctrl + S: save it;  Ctrl + Shift + S: save it as another file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
         "Escape or a click: close this note",
+        "Space: play from the caret, or pause;  Ctrl + Left / Ctrl + Right: a bar back / on (the sound while it plays, else the caret)",
         "Mouse wheel over the page: scroll it;  Shift + wheel: zoom the page around the pointer",
         "Page Up / Page Down, the scroll bars: scroll the page;  with no score open, the arrow keys too",
         "A click on the page puts the caret there; Shift + click selects up to it",
@@ -544,17 +625,9 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     set_tools(&ui, &tool_rows(&default_tools()));
 
-    ui.set_player_available(!startup.inventory.instruments.is_empty());
-    if !startup.inventory.instruments.is_empty() {
-        ui.set_outputs(ModelRc::new(VecModel::from(
-            startup
-                .inventory
-                .instruments
-                .iter()
-                .map(|n| SharedString::from(n.as_str()))
-                .collect::<Vec<_>>(),
-        )));
-    }
+    // The outputs, asked of the audio-device plugin on the player's thread
+    // (finding one loads it).
+    app.borrow().sound.send(sound::ToSound::Devices);
     // The View menu as the user left it (a dark interface and a white page
     // the first time).
     let prefs = ViewPrefs::from_value(startup.settings.get(prefs::KEY).as_ref());
@@ -719,6 +792,10 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_track_form_changed(move || track_form_changed(&a));
     let a = app.clone();
     ui.on_track_dialog_done(move |ok| track_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_track_section_event(move |i, widget, kind, on, value, text, chosen| {
+        track_section_event(&a, i, &widget, widget_event(kind, on, value, &text, chosen));
+    });
     let a = app.clone();
     ui.on_transpose_dialog_done(move |ok| transpose_dialog_done(&a, ok));
     let a = app.clone();
@@ -922,6 +999,29 @@ fn main() -> Result<(), slint::PlatformError> {
         sync_mix(&a, i as usize, m);
     });
     let a = app.clone();
+    ui.on_player_action(move |name| playing::action(&a, name.as_str()));
+    let a = app.clone();
+    ui.on_player_key(move |name, shift, ctrl, alt| {
+        playing::key(&a, name.as_str(), shift, ctrl, alt)
+    });
+    let a = app.clone();
+    ui.on_player_frame(move |_| playing::frame(&a));
+    let a = app.clone();
+    ui.on_overview_clicked(move |f| playing::overview_clicked(&a, f));
+    let a = app.clone();
+    ui.on_speed_edited(move |v| {
+        a.borrow_mut()
+            .player
+            .set_speed(u32::try_from(v).unwrap_or(100));
+        playing::sync(&a);
+    });
+    let a = app.clone();
+    ui.on_master_moved(move |v| {
+        a.borrow_mut().player.set_master(v);
+    });
+    let a = app.clone();
+    ui.on_output_chosen(move |i| playing::output_chosen(&a, usize::try_from(i).unwrap_or(0)));
+    let a = app.clone();
     ui.on_palette_group_clicked(move |g| {
         a.borrow_mut().palette.toggle(g as usize);
         if let Some(ui) = a.borrow().ui.upgrade() {
@@ -1005,6 +1105,18 @@ fn main() -> Result<(), slint::PlatformError> {
     install_plugin_tab_callbacks(&ui, &app);
     let a = app.clone();
     ui.on_open_plugin_manager(move || open_plugin_manager(&a));
+    let a = app.clone();
+    ui.on_open_link(move |url| {
+        if let Err(e) = links::open(&url) {
+            message(&a, Level::Error, e);
+        }
+    });
+    let a = app.clone();
+    ui.on_open_donation(move || {
+        if let Err(e) = links::open(links::DONATE) {
+            message(&a, Level::Error, e);
+        }
+    });
     // Closing the main window ends the program, even with the plugin
     // manager's window open (the event loop would otherwise wait for the
     // last window).
@@ -1125,19 +1237,30 @@ fn sync_footer(app: &Shared) {
     let Some(ui) = s.ui.upgrade() else {
         return;
     };
-    let (level, text) = s
-        .footer
-        .latest()
-        .map_or((0, ""), |n| (level_code(n.level), n.text.as_str()));
+    let latest = s.footer.latest();
+    let (level, text) = latest.map_or((0, ""), |n| (level_code(n.level), n.text.as_str()));
+    let (link_text, link_url) = latest
+        .and_then(|n| n.link.as_ref())
+        .map_or(("", ""), |(t, u)| (t.as_str(), u.as_str()));
     ui.set_footer_level(level);
     ui.set_footer_text(text.into());
+    ui.set_footer_link_text(link_text.into());
+    ui.set_footer_link_url(link_url.into());
     ui.set_footer_count(s.footer.len() as i32);
     let rows: Vec<FooterRow> = s
         .footer
         .newest_first()
-        .map(|n| FooterRow {
-            level: level_code(n.level),
-            text: n.text.as_str().into(),
+        .map(|n| {
+            let (link_text, link_url) = n
+                .link
+                .as_ref()
+                .map_or(("", ""), |(t, u)| (t.as_str(), u.as_str()));
+            FooterRow {
+                level: level_code(n.level),
+                text: n.text.as_str().into(),
+                link_text: link_text.into(),
+                link_url: link_url.into(),
+            }
         })
         .collect();
     ui.set_footer_rows(ModelRc::new(VecModel::from(rows)));
@@ -1323,6 +1446,26 @@ fn plugin_answer(app: &Shared, answer: plugin_tabs::Answer) {
                 .canvases
                 .insert(drawn.widget.clone(), drawn_image(&drawn));
             tab
+        }
+        plugin_tabs::Answer::Settings { plugin, content } => {
+            settings_window_answer(app, &plugin, content);
+            return;
+        }
+        plugin_tabs::Answer::Section {
+            dialog,
+            plugin,
+            section,
+            answer,
+        } => {
+            let changed = app
+                .borrow_mut()
+                .sections
+                .as_mut()
+                .is_some_and(|s| s.answered(dialog, &plugin, &section, answer));
+            if changed {
+                sync_track_sections(app);
+            }
+            return;
         }
     };
     for side in Side::ALL {
@@ -1734,6 +1877,12 @@ fn open_plugin_manager(app: &Shared) {
             };
             let a = app.clone();
             w.on_toggled(move |i, on| manager_toggled(&a, i, on));
+            let a = app.clone();
+            w.on_settings_clicked(move |i| {
+                if let Some(id) = app_rows_settings(&a, i) {
+                    open_settings_window(&a, id);
+                }
+            });
             let weak = w.as_weak();
             w.on_close_clicked(move || {
                 if let Some(w) = weak.upgrade() {
@@ -1781,6 +1930,7 @@ fn sync_manager(app: &Shared) {
             state: r.state.into(),
             can_toggle: r.id.is_some(),
             enabled: r.enabled,
+            has_settings: r.settings.is_some(),
         })
         .collect();
     window.set_rows(ModelRc::new(VecModel::from(rows)));
@@ -1908,6 +2058,7 @@ fn handle(app: &Shared, event: Event) {
             sync_edit_state(app, &edit);
             ui.invoke_scroll_to(0.0, 0.0);
             settings_changed(app);
+            playing::score_changed(app, true);
         }
         Event::AskSave {
             heading,
@@ -1965,6 +2116,14 @@ fn handle(app: &Shared, event: Event) {
                 caret_moved(app);
             } else {
                 sync_caret(app, false);
+            }
+            playing::score_changed(app, false);
+        }
+        Event::Refused => {
+            let text = "Editing waits while the score plays: pause it (Space) to edit.".to_owned();
+            let new = app.borrow_mut().player_told.insert(text.clone());
+            if new {
+                message(app, Level::Warning, text);
             }
         }
         Event::Engraved {
@@ -2123,6 +2282,8 @@ fn send_typed(app: &Shared, t: editing::Typed) {
 }
 
 fn caret_moved(app: &Shared) {
+    playing::caret_moved(app);
+    playing::sync(app);
     sync_caret(app, true);
     follow_voice(app);
     let s = app.borrow();
@@ -2154,6 +2315,7 @@ fn sync_caret(app: &Shared, scroll: bool) {
     };
     sync_inspector(app, &ui);
     let s = app.borrow();
+    ui.set_has_selection(s.editing.selection().is_some());
     // A box on sheet `sheet`, in canvas points.
     let place = |sheet: usize, r: Rect| -> Option<BoxItem> {
         let o = s.sheets.rects.get(sheet)?;
@@ -2268,6 +2430,9 @@ fn settings_changed(app: &Shared) {
     if let Some(m) = &s.manager {
         m.set_dark_interface(prefs.dark_interface);
     }
+    if let Some((w, _)) = &s.settings_window {
+        w.set_dark_interface(prefs.dark_interface);
+    }
     // Dark Page only needs new tiles; everything else a new engraving.
     s.paint += 1;
     retire_tiles(&mut s, 1.0);
@@ -2277,8 +2442,9 @@ fn settings_changed(app: &Shared) {
     }
 }
 
-/// A track's mixer changed: show it in its row.
+/// A track's mixer changed: show it in its row, and let the sound follow.
 fn sync_mix(app: &Shared, i: usize, mix: oxiguitar_model::Mix) {
+    app.borrow_mut().player.set_mix(i, mix);
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
@@ -3336,7 +3502,207 @@ fn open_track_dialog(app: &Shared) {
     ui.set_track_fields(track_fields(&f));
     ui.set_track_preview(f.preview().into());
     ui.set_track_invalid(false);
+    {
+        let mut s = app.borrow_mut();
+        s.dialogs_opened += 1;
+        let sections = track_sections::TrackSections::open(&s.plugins, s.dialogs_opened, t, track);
+        if let Some(thread) = &s.tab_thread {
+            for ask in sections.asks() {
+                thread.send(ask);
+            }
+        }
+        s.sections = Some(sections);
+    }
+    sync_track_sections(app);
     ui.set_track_dialog_shown(true);
+}
+
+/// The track dialog's plugin sections, as they stand.
+fn sync_track_sections(app: &Shared) {
+    let s = app.borrow();
+    let Some(ui) = s.ui.upgrade() else {
+        return;
+    };
+    let sections: Vec<PluginSection> = s
+        .sections
+        .iter()
+        .flat_map(|t| &t.sections)
+        .map(|shown| {
+            let (rows, message) = match &shown.content {
+                None => (ModelRc::default(), "…".to_owned()),
+                Some(Ok(content)) => (plain_rows(content), String::new()),
+                Some(Err(why)) => (ModelRc::default(), why.clone()),
+            };
+            PluginSection {
+                title: shown.title.as_str().into(),
+                rows,
+                message: message.into(),
+            }
+        })
+        .collect();
+    ui.set_track_sections(ModelRc::new(VecModel::from(sections)));
+}
+
+/// A plugin's rows without canvases, as settings windows and track
+/// sections show them: rebuilt whole each time (they are small, and their
+/// widgets answer only when let go).
+fn plain_rows(content: &TabContent) -> ModelRc<PluginRow> {
+    let none = HashMap::new();
+    ModelRc::new(VecModel::from(
+        content
+            .rows
+            .iter()
+            .map(|r| PluginRow {
+                widgets: ModelRc::new(VecModel::from(
+                    r.widgets
+                        .iter()
+                        .map(|w| plugin_widget(w, &none))
+                        .collect::<Vec<_>>(),
+                )),
+                stretch: r.widgets.iter().any(|w| matches!(w, Widget::List { .. })),
+            })
+            .collect::<Vec<_>>(),
+    ))
+}
+
+/// What a use of a widget in the window's plugin callbacks comes to: the
+/// kind (0 clicked, 1 toggled, 2 slid, 3 edited, 4 chosen) and its value.
+fn widget_event(kind: i32, on: bool, value: f32, text: &str, chosen: i32) -> TabEvent {
+    match kind {
+        1 => TabEvent::Toggled(on),
+        2 => TabEvent::Slid(value),
+        3 => TabEvent::Edited(text.to_owned()),
+        4 => TabEvent::Chosen(u32::try_from(chosen).unwrap_or(0)),
+        _ => TabEvent::Clicked,
+    }
+}
+
+/// A widget of the track dialog's section `index` was used.
+fn track_section_event(app: &Shared, index: i32, widget: &str, event: TabEvent) {
+    let s = app.borrow();
+    let (Some(sections), Some(thread)) = (&s.sections, &s.tab_thread) else {
+        return;
+    };
+    if let Some(ask) = usize::try_from(index)
+        .ok()
+        .and_then(|i| sections.ask(i, Some((widget.to_owned(), event))))
+    {
+        thread.send(ask);
+    }
+}
+
+/// The plugin id of the manager's row `index`, when it has a settings
+/// window.
+fn app_rows_settings(app: &Shared, index: i32) -> Option<String> {
+    let s = app.borrow();
+    usize::try_from(index)
+        .ok()
+        .and_then(|i| {
+            manager::rows(&s.plugins, &manager::disabled(&s.stored))
+                .into_iter()
+                .nth(i)
+        })
+        .and_then(|r| r.settings)
+}
+
+/// Opens the settings window of the plugin `id` (interface 1.3), made the
+/// first time; it shows one plugin at a time.
+fn open_settings_window(app: &Shared, id: String) {
+    let existing = app
+        .borrow()
+        .settings_window
+        .as_ref()
+        .map(|(w, _)| w.clone_strong());
+    let window = match existing {
+        Some(w) => w,
+        None => {
+            let Ok(w) = PluginSettingsWindow::new() else {
+                message(
+                    app,
+                    Level::Error,
+                    "The plugin's settings window couldn't be opened.",
+                );
+                return;
+            };
+            let a = app.clone();
+            w.on_clicked(move |widget| settings_event(&a, &widget, TabEvent::Clicked));
+            let a = app.clone();
+            w.on_toggled(move |widget, on| settings_event(&a, &widget, TabEvent::Toggled(on)));
+            let a = app.clone();
+            w.on_slid(move |widget, v| settings_event(&a, &widget, TabEvent::Slid(v)));
+            let a = app.clone();
+            w.on_edited(move |widget, t| {
+                settings_event(&a, &widget, TabEvent::Edited(t.to_string()));
+            });
+            let a = app.clone();
+            w.on_chosen(move |widget, n| {
+                settings_event(&a, &widget, TabEvent::Chosen(u32::try_from(n).unwrap_or(0)));
+            });
+            let weak = w.as_weak();
+            w.on_close_clicked(move || {
+                if let Some(w) = weak.upgrade() {
+                    let _ = w.hide();
+                }
+            });
+            w
+        }
+    };
+    let name = {
+        let s = app.borrow();
+        s.plugins
+            .found()
+            .iter()
+            .find(|f| f.manifest.as_ref().is_some_and(|m| m.id == id))
+            .map(oxiguitar_host::Found::name)
+            .unwrap_or_else(|| id.clone())
+    };
+    window.set_window_title(format!("{name} Settings").into());
+    window.set_dark_interface(app.borrow().prefs.dark_interface);
+    window.set_rows(ModelRc::default());
+    window.set_message("…".into());
+    {
+        let mut s = app.borrow_mut();
+        if let Some(thread) = &s.tab_thread {
+            thread.send(plugin_tabs::Request::Settings {
+                plugin: id.clone(),
+                event: None,
+            });
+        }
+        s.settings_window = Some((window.clone_strong(), id));
+    }
+    let _ = window.show();
+}
+
+/// A widget of the settings window was used.
+fn settings_event(app: &Shared, widget: &str, event: TabEvent) {
+    let s = app.borrow();
+    if let (Some((_, plugin)), Some(thread)) = (&s.settings_window, &s.tab_thread) {
+        thread.send(plugin_tabs::Request::Settings {
+            plugin: plugin.clone(),
+            event: Some((widget.to_owned(), event)),
+        });
+    }
+}
+
+/// The tab thread answered for a settings window.
+fn settings_window_answer(app: &Shared, plugin: &str, content: Result<TabContent, String>) {
+    let s = app.borrow();
+    let Some((window, shown)) = &s.settings_window else {
+        return;
+    };
+    if shown != plugin {
+        return;
+    }
+    match content {
+        Ok(content) => {
+            window.set_rows(plain_rows(&content));
+            window.set_message(SharedString::new());
+        }
+        Err(why) => {
+            window.set_rows(ModelRc::default());
+            window.set_message(why.into());
+        }
+    }
 }
 
 fn track_fields(f: &track_form::TrackForm) -> TrackFields {
@@ -3356,6 +3722,7 @@ fn track_fields(f: &track_form::TrackForm) -> TrackFields {
 
 fn track_form(f: &TrackFields) -> track_form::TrackForm {
     track_form::TrackForm {
+        plugins: std::collections::BTreeMap::new(),
         name: f.name.to_string(),
         short_name: f.short_name.to_string(),
         instrument: f.instrument,
@@ -3392,11 +3759,27 @@ fn track_dialog_done(app: &Shared, ok: bool) {
         return;
     };
     if !ok {
+        app.borrow_mut().sections = None;
         ui.set_track_dialog_shown(false);
         ui.invoke_focus_page();
         return;
     }
-    let settings = match track_form(&ui.get_track_fields()).to_settings() {
+    let mut form = track_form(&ui.get_track_fields());
+    // The plugins' sections as the dialog holds them; without any, the
+    // track's own stay.
+    form.plugins = {
+        let s = app.borrow();
+        match (&s.sections, s.editing.score(), s.editing.track()) {
+            (Some(sections), _, _) => sections.settings.clone(),
+            (None, Some(score), Some(t)) => score
+                .tracks
+                .get(t)
+                .map(|tr| tr.plugins.clone())
+                .unwrap_or_default(),
+            _ => Default::default(),
+        }
+    };
+    let settings = match form.to_settings() {
         Ok(s) => s,
         Err(e) => {
             // The dialog stays open, saying why.
@@ -3407,6 +3790,7 @@ fn track_dialog_done(app: &Shared, ok: bool) {
     };
     ui.set_track_dialog_shown(false);
     ui.invoke_focus_page();
+    app.borrow_mut().sections = None;
     let (score, track) = {
         let s = app.borrow();
         (s.editing.score(), s.editing.track())

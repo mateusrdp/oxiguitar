@@ -5,7 +5,9 @@
 //! Files are read by the format plugins installed for the app.
 
 mod convert;
+mod events;
 mod info;
+mod play;
 mod plugins;
 mod render;
 mod specimen;
@@ -46,6 +48,20 @@ Commands:
                              --tool runs a tool on the score first, as the
                              app's Tools menu does; --quiet only reports
                              errors
+  events <file>              Print the score as it plays: the bars in playing
+                             order with their times in seconds, every note
+                             (start, end, string, pitch, velocity, effects)
+                             and the metronome's clicks
+  play <file> [--from BAR] [--loop FIRST-LAST] [--speed PERCENT]
+       [--count-in] [--metronome] [--tracks 1,3] [--device NAME | --wav FILE]
+                             Play a score through the installed instrument
+                             and audio-device plugins, printing each bar
+                             as it is heard: from a bar, looping bars, at
+                             25 to 200 % speed (the pitch stays), after a
+                             bar of count-in, with the metronome, only some
+                             tracks, on an output other than the
+                             system's default, or into a WAV file.
+                             Ctrl + C stops it
   tools                      List the tools (the app's Tools menu)
   specimen [--png FILE] [--pdf FILE] [--scale N] [--dark]
                              Draw the render spike's test page into a PNG
@@ -68,6 +84,8 @@ fn main() -> ExitCode {
         Some("convert") => convert::run(rest),
         Some("render") => render::run(rest),
         Some("specimen") => specimen::run(rest),
+        Some("events") => events::run(rest),
+        Some("play") => play::run(rest),
         Some("tools") => tools::list(),
         Some("version" | "--version" | "-V") => {
             println!("oxiguitar-cli {}", env!("CARGO_PKG_VERSION"));

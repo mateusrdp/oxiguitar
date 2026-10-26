@@ -18,6 +18,8 @@ oxiguitar-display.workspace = true
 oxiguitar-layout.workspace = true
 oxiguitar-render.workspace = true
 oxiguitar-tools.workspace = true
+# The engine, with instrument plugins as its sources (`play`).
+oxiguitar-play = { workspace = true, features = ["host"] }
 
 [dev-dependencies]
 # tests/cli.rs runs the program with our format plugins, built as .oxp files.
