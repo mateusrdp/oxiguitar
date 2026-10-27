@@ -144,6 +144,15 @@ pub enum Widget {
     },
     /// A drawing of the plugin's own: [`TabEvent::Pointer`].
     Canvas(Canvas),
+    /// A web address the user can click, opened in the system's browser
+    /// by the core; the plugin is told nothing. Only `https://` addresses
+    /// are opened. Since interface 1.4.
+    Link {
+        /// The text shown.
+        text: String,
+        /// The address.
+        url: String,
+    },
 }
 
 /// A drawing of the plugin's own, in a tab.
@@ -164,7 +173,7 @@ impl Widget {
     /// The widget's id, for those the user can use.
     pub fn id(&self) -> Option<&str> {
         match self {
-            Widget::Label { .. } => None,
+            Widget::Label { .. } | Widget::Link { .. } => None,
             Widget::Button { id, .. }
             | Widget::Toggle { id, .. }
             | Widget::Slider { id, .. }
@@ -244,6 +253,11 @@ impl TabContent {
                         }
                         if let Some(p) = c.items.iter().find_map(|i| i.problem(c.width, c.height)) {
                             out.push(format!("{at}: {p}"));
+                        }
+                    }
+                    Widget::Link { url, .. } => {
+                        if !url.starts_with("https://") || url.chars().any(char::is_whitespace) {
+                            out.push(format!("{at}: the link {url:?} is not an https:// address"));
                         }
                     }
                     _ => {}
@@ -368,6 +382,17 @@ mod tests {
             ),
             6
         );
+        // Interface 1.4's link follows the canvas, at the end.
+        assert_eq!(
+            first(
+                encode(&Widget::Link {
+                    text: "Help".into(),
+                    url: "https://example.org".into()
+                })
+                .unwrap()
+            ),
+            8
+        );
         assert_eq!(first(encode(&TabEvent::Chosen(1)).unwrap()), 4);
         let pointer = TabEvent::Pointer(Pointer {
             kind: PointerKind::Drag,
@@ -393,6 +418,15 @@ mod tests {
         };
         let twice = row(vec![button("go"), button("go")]);
         assert!(twice.problems()[0].contains("used twice"));
+        let link = |url: &str| {
+            row(vec![Widget::Link {
+                text: "Help".into(),
+                url: url.into(),
+            }])
+        };
+        assert!(link("https://example.org/page").problems().is_empty());
+        assert!(link("file:///etc/passwd").problems()[0].contains("https://"));
+        assert!(link("https://a b").problems()[0].contains("https://"));
         let bad_id = row(vec![button("Go!")]);
         assert!(bad_id.problems()[0].contains("not a valid id"));
         let slider = row(vec![Widget::Slider {
