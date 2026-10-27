@@ -421,10 +421,10 @@ fn wrong_build_hint(display: &str) -> Option<&'static str> {
     }
     match display {
         "wayland" => Some(
-            "This is OxiGuitar's Wayland build, and it found no Wayland session (is WAYLAND_DISPLAY set?). On an X11 desktop, install the X11 build instead: the package oxiguitar-x11, or the OxiGuitar-x11 AppImage.",
+            "This is OxiGuitar's Wayland build, and it found no Wayland session (is WAYLAND_DISPLAY set?). On an X11 desktop, install the X11 build instead (the package oxiguitar-x11), or use the AppImage, which holds both builds.",
         ),
         "x11" => Some(
-            "This is OxiGuitar's X11 build, and it found no X server (is DISPLAY set?). On a Wayland desktop, install the Wayland build instead: the package oxiguitar, or the OxiGuitar AppImage.",
+            "This is OxiGuitar's X11 build, and it found no X server (is DISPLAY set?). On a Wayland desktop, install the Wayland build instead (the package oxiguitar), or use the AppImage, which holds both builds.",
         ),
         _ => None,
     }

@@ -2,19 +2,17 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# Builds OxiGuitar.app and its disk image from a universal binary, and the
-# basic plugins apart: a zip of them (to unzip into a plugin folder, such as
-# ~/Library/Application Support/OxiGuitar/plugins). The
-# app holds no plugins (Mateus, 18 Oct 2026; docs/design/plugins.md,
-# "Distribution"). Runs on macOS (iconutil, codesign, hdiutil). Used by
-# .github/workflows/release.yml.
+# Builds OxiGuitar.app, with the basic plugins in Contents/PlugIns (the
+# folder the app searches beside itself; Mateus, 27 Oct 2026: every download
+# carries the plugins that work on its system; docs/design/plugins.md,
+# "Distribution"), and its disk image, from a universal binary. Runs on
+# macOS (iconutil, codesign, hdiutil). Used by .github/workflows/release.yml.
 #
 # Usage: scripts/package/macos.sh VERSION
 # Reads:  dist/macos/oxiguitar (universal, from lipo),
 #         dist/macos/PlugIns/*.oxp (our plugins, universal, from lipo),
 #         dist/THIRD-PARTY-LICENSES.html
-# Writes: dist/OxiGuitar-VERSION-macos-universal.dmg and
-#         dist/OxiGuitar-plugins-basic-VERSION-macos-universal.zip
+# Writes: dist/OxiGuitar-VERSION-macos-universal.dmg
 #
 # The app is not signed with a developer certificate, only "ad hoc" (no
 # identity), which Apple Silicon needs to run it at all; Gatekeeper still
@@ -59,6 +57,15 @@ cp "$root/CHANGELOG.md" "$root/CREDITS.md" "$dist/THIRD-PARTY-LICENSES.html" "$r
 cp "$root/assets/fonts/bravura/OFL.txt" "$res/Bravura-OFL.txt"
 cp "$root/assets/fonts/noto-sans/OFL.txt" "$res/NotoSans-OFL.txt"
 
+# The plugins, each signed ad hoc on its own first, like the app (Apple
+# Silicon loads no unsigned code; codesign signs from the inside out, and
+# --deep doesn't reach plain libraries in PlugIns).
+mkdir -p "$app/Contents/PlugIns"
+for plugin in "$dist"/macos/PlugIns/*.oxp; do
+    install -m644 "$plugin" "$app/Contents/PlugIns/"
+    codesign --force --sign - "$app/Contents/PlugIns/$(basename "$plugin")"
+done
+
 codesign --force --deep --sign - "$app"
 codesign --verify --verbose "$app"
 
@@ -68,18 +75,3 @@ out="$dist/OxiGuitar-$version-macos-universal.dmg"
 rm -f "$out"
 hdiutil create -volname "OxiGuitar" -srcfolder "$work/dmg" -fs HFS+ -format UDZO -ov "$out"
 echo "Built $out"
-
-# The basic plugins, signed ad hoc like the app (Apple Silicon loads no
-# unsigned code), in a zip with a README.
-plugins="$work/plugins"
-mkdir -p "$plugins"
-for plugin in "$dist"/macos/PlugIns/*.oxp; do
-    name="$(basename "$plugin" .oxp)"
-    install -m644 "$plugin" "$plugins/$name.oxp"
-    codesign --force --sign - "$plugins/$name.oxp"
-done
-cp "$root/scripts/package/plugins-README.txt" "$plugins/README.txt"
-zip="$dist/OxiGuitar-plugins-basic-$version-macos-universal.zip"
-rm -f "$zip"
-(cd "$plugins" && zip -q -X "$zip" ./*)
-echo "Built $zip"

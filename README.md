@@ -59,16 +59,13 @@ How can you help, you ask?
 | Linux | the AppImage: distributions with glibc 2.35 or newer (Debian 12 and later, Ubuntu 22.04+, Fedora 36+); the .deb and .rpm: glibc 2.39 or newer (Debian trixie and sid, Ubuntu 24.04+, Fedora 40+) | x86\_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
-Each [release](https://github.com/mateusrdp/oxiguitar/releases) has two kinds of download, and you need one of each:
-
-1. **The program**, for your system: a portable .exe for Windows (in a zip); an AppImage, a .deb and an .rpm for Linux; one .dmg for macOS.
-2. **The plugins** it opens files with: `OxiGuitar-plugins-basic-VERSION-SYSTEM-ARCH.zip` for your system, unzipped into your plugin folder ([how](https://mateusrdp.github.io/oxiguitar/plugins.html)). On Debian, Ubuntu and Fedora, install the `oxiguitar-plugins-basic` package instead. Without them, OxiGuitar opens nothing. (Releases up to 0.5.0 also list every plugin as a file of its own; you don't need those, as the zip holds them all.)
+Each [release](https://github.com/mateusrdp/oxiguitar/releases) has one download for your system, and it comes with the basic plugins, which open Guitar Pro files and play them: a portable .exe for Windows (in a zip, its plugins in a `plugins` folder beside it); one AppImage for any Linux, which holds both the Wayland and the X11 build and starts the right one; a .deb and an .rpm for Debian, Ubuntu and Fedora, installed together with the `oxiguitar-plugins-basic` package beside them; one .dmg for macOS, the plugins inside the app.
 
 Every release carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Guitar Pro file types (.gp, .gpx, .gp5, .gp4, .gp3), so double-clicking a file opens OxiGuitar; the portable .exe and the AppImage register nothing, and the [user manual](https://mateusrdp.github.io/oxiguitar/installing.html) shows how to do it by hand. The [manual](https://mateusrdp.github.io/oxiguitar/) explains the whole program in a few short pages.
 
 - **Debian, Ubuntu:** `sudo apt install ./oxiguitar_VERSION_amd64.deb ./oxiguitar-plugins-basic_VERSION_amd64.deb` (or `_arm64.deb`).
 - **Fedora:** `sudo dnf install ./oxiguitar-VERSION-1.x86_64.rpm ./oxiguitar-plugins-basic-VERSION-1.x86_64.rpm` (or `.aarch64.rpm`).
-- **Linux on X11:** the packages above are the Wayland build, for today's desktops. A desktop without Wayland needs the X11 build: `oxiguitar-x11_….deb`, `oxiguitar-x11-….rpm` or `OxiGuitar-x11-….AppImage`. It is deprecated and will be dropped. Each build carries only its own display system's code, and installing one package replaces the other.
+- **Linux on X11:** the AppImage works on X11 as it is. The .deb and .rpm above are the Wayland build, for today's desktops; a desktop without Wayland needs the X11 build's package instead, `oxiguitar-x11_….deb` or `oxiguitar-x11-….rpm`, with the same plugins' package. The X11 build is deprecated and will be dropped. Each build carries only its own display system's code, and installing one package replaces the other.
 
 None of the packages is code-signed yet, so the first launch shows a warning:
 
