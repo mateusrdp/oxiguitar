@@ -233,10 +233,10 @@ impl Window {
 /// which says what to get, where, and what to pick here. Labels don't wrap:
 /// one short sentence a row.
 fn better_sounds(found: &[Found]) -> Vec<Row> {
-    let label = |text: &str, muted: bool| Row {
+    let line = |text: &str| Row {
         widgets: vec![Widget::Label {
             text: text.into(),
-            muted,
+            muted: false,
         }],
     };
     let link = |text: &str| Widget::Link {
@@ -245,16 +245,10 @@ fn better_sounds(found: &[Found]) -> Vec<Row> {
     };
     if found.iter().all(|f| f.origin == Origin::System) {
         vec![
-            label(
-                "Only your system's basic General MIDI sound set plays now.",
-                false,
-            ),
-            label(
-                "Free recorded SFZ sets sound far better: one for electric guitars, one for basses, one for drums.",
-                false,
-            ),
+            line("Only your system's basic General MIDI set plays now."),
+            line("Free recorded SFZ sets sound far better."),
             Row {
-                widgets: vec![link("How to get them and pick them here: Better sounds")],
+                widgets: vec![link("Better sounds: which to get, and how to pick them")],
             },
         ]
     } else {
@@ -310,11 +304,16 @@ impl Tab for Window {
             || "the soundfonts folder".to_owned(),
             |p| p.display().to_string(),
         );
+        // Two rows: labels don't wrap, and the folder's path can be long.
         rows.push(Row {
             widgets: vec![Widget::Label {
-                text: format!(
-                    "Put .sf2, .sf3 or .dls files, or SFZ instruments' folders, in {folder}."
-                ),
+                text: "Put .sf2, .sf3 or .dls files, or SFZ instruments' folders, in:".into(),
+                muted: true,
+            }],
+        });
+        rows.push(Row {
+            widgets: vec![Widget::Label {
+                text: folder,
                 muted: true,
             }],
         });
