@@ -39,7 +39,7 @@ if ! command -v cargo > /dev/null; then
 fi
 export PATH="$CARGO_HOME/bin:$PATH"
 rustc --version
-ldd --version | head -n 1
+ldd --version | sed -n 1p
 
 export CARGO_TERM_COLOR=always CARGO_INCREMENTAL=0
 cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
