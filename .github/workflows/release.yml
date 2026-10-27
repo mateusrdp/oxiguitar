@@ -94,56 +94,28 @@ jobs:
       VERSION: ${{ needs.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
+            libfontconfig1-dev libxkbcommon-dev libwayland-dev \
+            libasound2-dev libpipewire-0.3-dev libclang-dev \
             rpm squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
-      # The registry and the build folders, kept between runs; the build
-      # itself runs in the container below.
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo-container/registry
-            ~/.cargo-container/git
-            target
-          key: linux-2204-${{ matrix.arch }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: linux-2204-${{ matrix.arch }}-
-      # Everything the packages hold, built on Ubuntu 22.04, the oldest LTS
-      # in standard support, so it runs there and on everything newer
-      # (scripts/package/build-linux.sh): the two Linux builds of the app
-      # (docs/design/plugins.md; the Wayland one, the default, and the
-      # deprecated X11 one in target/x11), oxiguitar-cli, and our plugins in
-      # target/lib/oxiguitar/plugins/.
-      - name: Build on Ubuntu 22.04
-        run: |
-          mkdir -p ~/.cargo-container
-          docker run --rm -v "$PWD:/w" -w /w \
-            -v "$HOME/.cargo-container:/opt/cargo-cache" \
-            -e CARGO_HOME=/opt/cargo \
-            ubuntu:22.04 bash -euc '
-              mkdir -p /opt/cargo /opt/cargo-cache/registry /opt/cargo-cache/git
-              ln -s /opt/cargo-cache/registry /opt/cargo/registry
-              ln -s /opt/cargo-cache/git /opt/cargo/git
-              scripts/package/build-linux.sh
-            '
-      # The AppImage catalog tests on Ubuntu 22.04 and refuses anything
-      # needing a newer glibc, even a weak symbol (scripts/package/check-glibc.sh).
-      - name: No glibc newer than 2.35
-        run: |
-          scripts/package/check-glibc.sh 2.35 \
-            target/release/oxiguitar target/release/oxiguitar-cli \
-            target/x11/release/oxiguitar target/lib/oxiguitar/plugins
+      # The two Linux builds of the app (docs/design/plugins.md): the
+      # Wayland one, the default, and the deprecated X11 one in a target
+      # folder of its own.
+      - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      - run: cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
+      # Our plugins (target/lib/oxiguitar/plugins/), packaged apart from the
+      # core: oxiguitar-plugins-basic and a zip.
+      - run: scripts/build-plugins.sh
       - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
           path: dist
-      - name: AppImage runtime
-        run: |
-          # The static type 2 runtime (needs no libfuse2 on the user's system).
-          curl -fsSL -o "$RUNNER_TEMP/runtime" \
-            "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-${{ matrix.arch }}"
-          sha256sum "$RUNNER_TEMP/runtime"
-          echo "APPIMAGE_RUNTIME=$RUNNER_TEMP/runtime" >> "$GITHUB_ENV"
+      # The .deb and .rpm of each build; the AppImages come from the
+      # "AppImage" job, built on Ubuntu 22.04.
       - run: scripts/package/linux.sh all "$VERSION" wayland
       - run: scripts/package/linux.sh all "$VERSION" x11
       - run: scripts/package/linux.sh plugins "$VERSION"
@@ -216,33 +188,6 @@ jobs:
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
             dnf remove -y oxiguitar-x11 oxiguitar-plugins-basic
           ' "$SAMPLE"
-      - name: Test the AppImages
-        run: |
-          # The AppImages hold no plugins; the zip of the basic plugins,
-          # unpacked into a plugin folder, gives them their formats.
-          home="$RUNNER_TEMP/oxiguitar-home"
-          mkdir -p "$home/plugins" "$RUNNER_TEMP/empty-home"
-          unzip -q dist/OxiGuitar-plugins-basic-*-linux-*.zip -d "$home/plugins"
-          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 8
-          for build in wayland x11; do
-            if [ "$build" = wayland ]; then
-              appimage="$(ls dist/OxiGuitar-[0-9]*.AppImage)"
-              run="scripts/package/in-wayland.sh"
-            else
-              appimage="$(ls dist/OxiGuitar-x11-*.AppImage)"
-              run="xvfb-run -a"
-            fi
-            rm -rf "$RUNNER_TEMP/squashfs-root"
-            (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
-            test -x "$RUNNER_TEMP/squashfs-root/AppRun"
-            test ! -e "$RUNNER_TEMP/squashfs-root/usr/lib/oxiguitar"
-            cli="$RUNNER_TEMP/squashfs-root/usr/bin/oxiguitar-cli"
-            ! OXIGUITAR_HOME="$RUNNER_TEMP/empty-home" "$cli" info "$SAMPLE"
-            OXIGUITAR_HOME="$home" "$cli" info "$SAMPLE" > /dev/null
-            # Without FUSE on the runner, the runtime unpacks and runs.
-            OXIGUITAR_HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 \
-              $run "$appimage" "$SAMPLE"
-          done
       # With archive: false a step uploads exactly one file, so one step
       # per package; each pattern matches one (versions start with a digit).
       - uses: actions/upload-artifact@v7
@@ -271,18 +216,6 @@ jobs:
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          path: dist/OxiGuitar-[0-9]*.AppImage
-          archive: false
-          retention-days: 14
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v7
-        with:
-          path: dist/OxiGuitar-x11-*.AppImage
-          archive: false
-          retention-days: 14
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v7
-        with:
           path: dist/oxiguitar-plugins-basic_*.deb
           archive: false
           retention-days: 14
@@ -296,6 +229,115 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           path: dist/OxiGuitar-plugins-basic-*.zip
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+  appimage:
+    name: AppImage (${{ matrix.arch }})
+    # The AppImages run on any Linux, so their programs and plugins are
+    # built on Ubuntu 22.04, the oldest LTS in standard support, as the
+    # AppImage catalog asks (scripts/package/build-linux.sh), and checked
+    # to need no newer glibc. The PipeWire plugin can't be built there
+    # (cpal 0.18's libspa needs newer PipeWire headers than 22.04's
+    # 0.3.48), so an AppImage plays through ALSA, which PipeWire desktops
+    # route to PipeWire (Mateus, 27 Oct 2026); the .deb and .rpm, built on
+    # 24.04 above, keep it.
+    needs: meta
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: ubuntu-24.04 }
+          - { arch: aarch64, os: ubuntu-24.04-arm }
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
+      # The registry and the build folders, kept between runs.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo-container/registry
+            ~/.cargo-container/git
+            target
+          key: appimage-2204-${{ matrix.arch }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: appimage-2204-${{ matrix.arch }}-
+      - name: Build on Ubuntu 22.04
+        run: |
+          mkdir -p ~/.cargo-container
+          docker run --rm -v "$PWD:/w" -w /w \
+            -v "$HOME/.cargo-container:/opt/cargo-cache" \
+            -e CARGO_HOME=/opt/cargo \
+            ubuntu:22.04 bash -euc '
+              mkdir -p /opt/cargo /opt/cargo-cache/registry /opt/cargo-cache/git
+              ln -s /opt/cargo-cache/registry /opt/cargo/registry
+              ln -s /opt/cargo-cache/git /opt/cargo/git
+              scripts/package/build-linux.sh
+            '
+      # The catalog refuses anything needing a newer glibc than its test
+      # system's, even a weak symbol (scripts/package/check-glibc.sh).
+      - name: No glibc newer than 2.35
+        run: |
+          scripts/package/check-glibc.sh 2.35 \
+            target/release/oxiguitar target/release/oxiguitar-cli \
+            target/x11/release/oxiguitar target/lib/oxiguitar/plugins
+          test ! -e target/lib/oxiguitar/plugins/audio-pipewire.oxp
+      - uses: actions/download-artifact@v8
+        with:
+          name: third-party-licenses
+          path: dist
+      - name: AppImage runtime
+        run: |
+          # The static type 2 runtime (needs no libfuse2 on the user's system).
+          curl -fsSL -o "$RUNNER_TEMP/runtime" \
+            "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-${{ matrix.arch }}"
+          sha256sum "$RUNNER_TEMP/runtime"
+          echo "APPIMAGE_RUNTIME=$RUNNER_TEMP/runtime" >> "$GITHUB_ENV"
+      - run: scripts/package/linux.sh appimage "$VERSION" wayland
+      - run: scripts/package/linux.sh appimage "$VERSION" x11
+      - name: Test the AppImages
+        run: |
+          # The AppImages hold no plugins; ours, built beside them, in a
+          # plugin folder, give them their formats.
+          home="$RUNNER_TEMP/oxiguitar-home"
+          mkdir -p "$home/plugins" "$RUNNER_TEMP/empty-home"
+          cp target/lib/oxiguitar/plugins/*.oxp "$home/plugins/"
+          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 7
+          for build in wayland x11; do
+            if [ "$build" = wayland ]; then
+              appimage="$(ls dist/OxiGuitar-[0-9]*.AppImage)"
+              run="scripts/package/in-wayland.sh"
+            else
+              appimage="$(ls dist/OxiGuitar-x11-*.AppImage)"
+              run="xvfb-run -a"
+            fi
+            rm -rf "$RUNNER_TEMP/squashfs-root"
+            (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
+            test -x "$RUNNER_TEMP/squashfs-root/AppRun"
+            test ! -e "$RUNNER_TEMP/squashfs-root/usr/lib/oxiguitar"
+            test -f "$RUNNER_TEMP/squashfs-root/usr/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml"
+            cli="$RUNNER_TEMP/squashfs-root/usr/bin/oxiguitar-cli"
+            ! OXIGUITAR_HOME="$RUNNER_TEMP/empty-home" "$cli" info "$SAMPLE"
+            OXIGUITAR_HOME="$home" "$cli" info "$SAMPLE" > /dev/null
+            # Without FUSE on the runner, the runtime unpacks and runs.
+            OXIGUITAR_HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 \
+              $run "$appimage" "$SAMPLE"
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-[0-9]*.AppImage
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-x11-*.AppImage
           archive: false
           retention-days: 14
           if-no-files-found: error
@@ -478,7 +520,7 @@ jobs:
     # Collecting the packages and their checksums runs on every build, so a
     # build by hand tests it before a tag relies on it; only a v* tag goes on
     # to create the draft release.
-    needs: [meta, linux, windows, macos]
+    needs: [meta, linux, appimage, windows, macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

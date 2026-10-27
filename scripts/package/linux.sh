@@ -10,10 +10,11 @@
 # docs/design/plugins.md, "Distribution"). Used by
 # .github/workflows/release.yml; runs on Ubuntu 24.04 (dpkg-deb and
 # dpkg-shlibdeps are there; rpmbuild comes from the "rpm" package, the
-# AppImage needs squashfs-tools and the AppImage runtime, see below), on
-# binaries built on Ubuntu 22.04 (scripts/package/build-linux.sh).
+# AppImage needs squashfs-tools and the AppImage runtime, see below).
 #
 # Usage: scripts/package/linux.sh deb|rpm|appimage|all|plugins VERSION [wayland|x11]
+#   all      the .deb and the .rpm (the AppImage is built apart, from
+#            programs built on Ubuntu 22.04: scripts/package/build-linux.sh)
 #   VERSION  the package version, from scripts/package/version.sh
 #   wayland  the Wayland build (the default): packages `oxiguitar`
 #   x11      the X11 build, deprecated: packages `oxiguitar-x11`, which
@@ -434,7 +435,7 @@ case "$what" in
     deb) build_deb ;;
     rpm) build_rpm ;;
     appimage) build_appimage ;;
-    all) build_deb; build_rpm; build_appimage ;;
+    all) build_deb; build_rpm ;;
     plugins) build_plugins ;;
     *) echo "unknown package type $what" >&2; exit 1 ;;
 esac

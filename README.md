@@ -56,7 +56,7 @@ How can you help, you ask?
 | System | Versions | CPUs |
 | --- | --- | --- |
 | Windows | 10 and later | x86\_64, ARM64 |
-| Linux | distributions with glibc 2.35 or newer: Debian 12 (bookworm) and later, Ubuntu 22.04+, Fedora 36+ | x86\_64, ARM64 |
+| Linux | the AppImage: distributions with glibc 2.35 or newer (Debian 12 and later, Ubuntu 22.04+, Fedora 36+); the .deb and .rpm: glibc 2.39 or newer (Debian trixie and sid, Ubuntu 24.04+, Fedora 40+) | x86\_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
 Each [release](https://github.com/mateusrdp/oxiguitar/releases) has two kinds of download, and you need one of each:

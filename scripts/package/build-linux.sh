@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# Builds everything the Linux packages hold, on the oldest Ubuntu LTS still
-# in standard support (22.04, glibc 2.35), so the programs and plugins run on
+# Builds everything the AppImages hold, on the oldest Ubuntu LTS still in
+# standard support (22.04, glibc 2.35), so the programs and plugins run on
 # it and on everything newer. A binary links against the glibc of the system
 # it is built on: built on 24.04, Rust's standard library takes three weak
 # symbols from glibc 2.39 (pidfd_spawnp, pidfd_getpid), and the AppImage
@@ -17,7 +17,8 @@
 #
 # Writes: target/release/oxiguitar (the Wayland build), oxiguitar-cli,
 #         target/x11/release/oxiguitar (the X11 build) and
-#         target/lib/oxiguitar/plugins/*.oxp (scripts/build-plugins.sh),
+#         target/lib/oxiguitar/plugins/*.oxp (scripts/build-plugins.sh,
+#         without the PipeWire plugin),
 #         then gives them back to the user who owns the working directory.
 # scripts/package/check-glibc.sh checks the result.
 
@@ -44,7 +45,11 @@ ldd --version | sed -n 1p
 export CARGO_TERM_COLOR=always CARGO_INCREMENTAL=0
 cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
 cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
-scripts/build-plugins.sh
+# The PipeWire plugin doesn't build here: cpal 0.18's libspa 0.10 needs
+# newer PipeWire headers than 22.04's 0.3.48. The AppImages play through
+# ALSA, which PipeWire desktops route to PipeWire (Mateus, 27 Oct 2026);
+# the .deb and .rpm, built on 24.04, keep the PipeWire plugin.
+scripts/build-plugins.sh --skip audio-pipewire
 
 # Files made in the container belong to root; the runner's user packages,
 # tests and caches them.

@@ -6,7 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
-- The Linux packages are built on Ubuntu 22.04, the oldest Ubuntu LTS still in standard support, so they run on any distribution with glibc 2.35 or newer (Debian 12, Ubuntu 22.04, Fedora 36 and later) instead of 2.39. A release check fails any Linux program or plugin that would need a newer glibc. The plugin template builds its Linux files the same way.
+- The AppImages are built on Ubuntu 22.04, the oldest Ubuntu LTS still in standard support, so they run on any distribution with glibc 2.35 or newer (Debian 12, Ubuntu 22.04, Fedora 36 and later) instead of 2.39. A release check fails any of their programs or plugins that would need a newer glibc. The .deb and .rpm are built on Ubuntu 24.04 as before. The plugin template builds its Linux files on 22.04 too, so they load with either.
 
 ### Added
 
