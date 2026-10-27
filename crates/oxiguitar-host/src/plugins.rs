@@ -397,7 +397,7 @@ impl fmt::Display for Unrecognised {
         match self {
             Unrecognised::NoReaders => write!(
                 f,
-                "no plugin that opens files is installed. Download plugins from {PLUGINS_URL} and put them in your plugins folder."
+                "no plugin that opens files is installed. The basic plugins come with every OxiGuitar download ({PLUGINS_URL}): install it again, or put plugins in your plugins folder."
             ),
             Unrecognised::Unknown => write!(
                 f,

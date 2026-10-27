@@ -92,3 +92,9 @@ Consequences: the interface gains no plugin windows, plugin menu entries or host
 
 - **A plugin may have a settings window** (interface 1.3), opened from its row in the plugin manager (Settings…), made of the same standard widgets as its tabs. This replaces "a plugin with settings shows them in its own tab" above; the manager still only lists, enables, disables, and now opens that window. Plugins also gain sections of the track dialog, whose settings are saved beside the score in `FILE.oxg`, since no score format holds them.
 - **cpal is used as it is**, so the PipeWire audio-device plugin carries cpal's ALSA host as well (cpal always builds it on Linux) and links libasound. An accepted exception to "each plugin carries only its own code": forking cpal to make ALSA optional wasn't worth it. On Linux the plugins package depends on the libraries both link; where libpipewire is missing (a plugin zip on a system without PipeWire), the PipeWire plugin is withdrawn quietly, "can't run here" in the plugin manager, and ALSA plays.
+
+### Every download carries the basic plugins (Mateus, 27 Oct 2026, session 22)
+
+- **The basic plugins come with every download**, replacing answer 7's "the core alone" and the plugin zips: inside the Windows zip, the .dmg's app and the AppImage, and on Linux as `oxiguitar-plugins-basic`, which the core now **depends** on instead of suggesting. Two downloads confused users, and an AppImage found on its own (the AppImage catalog lists them) opened nothing. The core still holds no plugin code, and still opens nothing without plugins (safe mode); only the packaging changed. docs/design/plugins.md, "Distribution", has the layout.
+- **One AppImage holds both Linux builds**, each still pure (ADR 0009), with a launcher that picks the one for the session.
+

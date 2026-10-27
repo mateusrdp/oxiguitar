@@ -1,12 +1,14 @@
-# Release packages: a portable .exe in a zip (Windows x86_64 and ARM64), an
-# AppImage, a .deb and an .rpm of each Linux build (Wayland: oxiguitar; X11,
-# deprecated: oxiguitar-x11; x86_64 and ARM64) and a universal .dmg (macOS),
-# none of them code-signed. The core packages hold no plugins: the basic
-# plugins come apart (Mateus, 18 Oct 2026), as oxiguitar-plugins-basic (.deb,
-# .rpm; Suggested by the core) and one zip for each system, attached to the
-# release. Plugins are not attached one by one (Mateus, 21 Oct 2026: too many
-# files, and users didn't know which to take); the release notes open with
-# which two files a user needs.
+# Release packages: a portable .exe in a zip (Windows x86_64 and ARM64), a
+# .deb and an .rpm of each Linux build (Wayland: oxiguitar; X11, deprecated:
+# oxiguitar-x11), one AppImage holding both builds (x86_64 and ARM64 each),
+# and a universal .dmg (macOS), none of them code-signed. Every download
+# carries the basic plugins that work on its system (Mateus, 27 Oct 2026,
+# replacing the separate plugin zips of 18 Oct): inside the zip, the .dmg
+# and the AppImage, and as oxiguitar-plugins-basic, which the core .deb and
+# .rpm depend on. Plugins are never attached one by one (Mateus, 21 Oct
+# 2026); the release notes say which one file a user needs. The AppImages'
+# programs and plugins are built on Ubuntu 22.04 (scripts/package/build-linux.sh)
+# and go through the AppImage catalog's own test (job "AppImage catalog").
 #
 # - A pushed v* tag (only Mateus creates them) builds everything and attaches
 #   it, with SHA256SUMS, to a draft release for him to check and publish.
@@ -119,11 +121,11 @@ jobs:
       - run: scripts/package/linux.sh all "$VERSION" wayland
       - run: scripts/package/linux.sh all "$VERSION" x11
       - run: scripts/package/linux.sh plugins "$VERSION"
-      # The core alone opens nothing; with oxiguitar-plugins-basic it opens
-      # the sample. Each build starts in its own kind of session: the Wayland
-      # build in a headless Weston (scripts/package/in-wayland.sh), the X11
-      # build under Xvfb. Installing oxiguitar-x11 replaces oxiguitar and
-      # keeps the plugins.
+      # The core brings oxiguitar-plugins-basic along (it depends on it) and
+      # opens the sample. Each build starts in its own kind of session: the
+      # Wayland build in a headless Weston (scripts/package/in-wayland.sh),
+      # the X11 build under Xvfb. Installing oxiguitar-x11 replaces oxiguitar
+      # and keeps the plugins.
       - name: Test the .deb packages on Debian sid
         run: |
           docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euxc '
@@ -131,12 +133,11 @@ jobs:
             # The databases first, so the package triggers rebuild them.
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
               shared-mime-info desktop-file-utils appstream xvfb xauth weston libgl1-mesa-dri
-            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
-            dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends|Suggests):"
-            test ! -e /usr/lib/oxiguitar
-            ! oxiguitar-cli info "$0" 2> /tmp/refused
-            grep -q "no plugin that opens files is installed" /tmp/refused
-            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-plugins-basic_*.deb
+            # Without the plugins the core cannot be installed.
+            ! DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb ./dist/oxiguitar-plugins-basic_*.deb
+            dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends):"
+            dpkg -s oxiguitar | grep -E "^Depends:.*oxiguitar-plugins-basic \(= "
             dpkg -s oxiguitar-plugins-basic | grep -E "^(Version|Depends|Enhances):"
             test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 8
             oxiguitar-cli info "$0" > /dev/null
@@ -172,11 +173,10 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/w" -w /w fedora:latest bash -euxc '
             dnf install -y shared-mime-info desktop-file-utils xorg-x11-server-Xvfb xorg-x11-xauth weston mesa-dri-drivers mesa-libEGL
-            dnf install -y $(ls ./dist/oxiguitar-[0-9]*.rpm)
+            ! dnf install -y $(ls ./dist/oxiguitar-[0-9]*.rpm)
+            dnf install -y $(ls ./dist/oxiguitar-[0-9]*.rpm) ./dist/oxiguitar-plugins-basic-*.rpm
             rpm -q --requires oxiguitar
-            rpm -q --suggests oxiguitar | grep -q "^oxiguitar-plugins-basic"
-            ! oxiguitar-cli info "$0"
-            dnf install -y ./dist/oxiguitar-plugins-basic-*.rpm
+            rpm -q --requires oxiguitar | grep -q "^oxiguitar-plugins-basic = "
             test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 8
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
@@ -223,12 +223,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           path: dist/oxiguitar-plugins-basic-*.rpm
-          archive: false
-          retention-days: 14
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v7
-        with:
-          path: dist/OxiGuitar-plugins-basic-*.zip
           archive: false
           retention-days: 14
           if-no-files-found: error
@@ -299,48 +293,72 @@ jobs:
             "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-${{ matrix.arch }}"
           sha256sum "$RUNNER_TEMP/runtime"
           echo "APPIMAGE_RUNTIME=$RUNNER_TEMP/runtime" >> "$GITHUB_ENV"
-      - run: scripts/package/linux.sh appimage "$VERSION" wayland
-      - run: scripts/package/linux.sh appimage "$VERSION" x11
-      - name: Test the AppImages
+      - run: scripts/package/linux.sh appimage "$VERSION"
+      - name: Test the AppImage
         run: |
-          # The AppImages hold no plugins; ours, built beside them, in a
-          # plugin folder, give them their formats.
-          home="$RUNNER_TEMP/oxiguitar-home"
-          mkdir -p "$home/plugins" "$RUNNER_TEMP/empty-home"
-          cp target/lib/oxiguitar/plugins/*.oxp "$home/plugins/"
-          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 7
-          for build in wayland x11; do
-            if [ "$build" = wayland ]; then
-              appimage="$(ls dist/OxiGuitar-[0-9]*.AppImage)"
-              run="scripts/package/in-wayland.sh"
-            else
-              appimage="$(ls dist/OxiGuitar-x11-*.AppImage)"
-              run="xvfb-run -a"
-            fi
-            rm -rf "$RUNNER_TEMP/squashfs-root"
-            (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
-            test -x "$RUNNER_TEMP/squashfs-root/AppRun"
-            test ! -e "$RUNNER_TEMP/squashfs-root/usr/lib/oxiguitar"
-            test -f "$RUNNER_TEMP/squashfs-root/usr/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml"
-            cli="$RUNNER_TEMP/squashfs-root/usr/bin/oxiguitar-cli"
-            ! OXIGUITAR_HOME="$RUNNER_TEMP/empty-home" "$cli" info "$SAMPLE"
-            OXIGUITAR_HOME="$home" "$cli" info "$SAMPLE" > /dev/null
-            # Without FUSE on the runner, the runtime unpacks and runs.
-            OXIGUITAR_HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 \
-              $run "$appimage" "$SAMPLE"
-          done
+          # One AppImage holds both builds and the basic plugins: with an
+          # empty user folder it opens the sample, as the Wayland build in a
+          # Wayland session and as the X11 build on an X11 one (AppRun picks).
+          appimage="$(ls dist/OxiGuitar-[0-9]*.AppImage)"
+          home="$RUNNER_TEMP/empty-home"
+          mkdir -p "$home"
+          rm -rf "$RUNNER_TEMP/squashfs-root"
+          (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$appimage" --appimage-extract > /dev/null)
+          root="$RUNNER_TEMP/squashfs-root"
+          test -x "$root/AppRun"
+          test -x "$root/usr/bin/oxiguitar"
+          test -x "$root/usr/bin/oxiguitar-x11"
+          # Our plugins but PipeWire's (see the job's comment).
+          test "$(ls "$root"/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 7
+          test ! -e "$root/usr/lib/oxiguitar/plugins/audio-pipewire.oxp"
+          test -f "$root/usr/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml"
+          scripts/package/check-glibc.sh 2.35 "$root"
+          OXIGUITAR_HOME="$home" "$root/usr/bin/oxiguitar-cli" info "$SAMPLE" > /dev/null
+          # Each build holds only its own display system's code
+          # (scripts/check-display-crates.sh checks the crates; this, the files).
+          ! grep -q "libX11.so" "$root/usr/bin/oxiguitar"
+          ! grep -q "libwayland-client.so" "$root/usr/bin/oxiguitar-x11"
+          # Without FUSE on the runner, the runtime unpacks and runs. AppRun
+          # starts the Wayland build here (in-wayland.sh sets WAYLAND_DISPLAY)
+          # and the X11 one under Xvfb, which sets only DISPLAY.
+          OXIGUITAR_HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 \
+            scripts/package/in-wayland.sh "$appimage" "$SAMPLE"
+          env -u WAYLAND_DISPLAY OXIGUITAR_HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 OXIGUITAR_EXIT_AFTER_MS=3000 \
+            xvfb-run -a "$appimage" "$SAMPLE" 2> "$RUNNER_TEMP/x11.log" || { cat "$RUNNER_TEMP/x11.log"; exit 1; }
+          cat "$RUNNER_TEMP/x11.log"
+          ! grep -q "Wayland build" "$RUNNER_TEMP/x11.log"
       - uses: actions/upload-artifact@v7
         with:
           path: dist/OxiGuitar-[0-9]*.AppImage
           archive: false
           retention-days: 14
           if-no-files-found: error
-      - uses: actions/upload-artifact@v7
+
+  catalog:
+    name: AppImage catalog
+    # The AppImage catalog (appimage.github.io) tests every AppImage it lists
+    # on the oldest Ubuntu LTS in standard support, under X11 only, without
+    # network; this runs its own test on our x86_64 AppImage
+    # (scripts/package/appimage-catalog-test.sh). It doesn't hold up a
+    # draft release: their tools change apart from ours.
+    needs: appimage
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v8
         with:
-          path: dist/OxiGuitar-x11-*.AppImage
-          archive: false
+          pattern: "OxiGuitar-*-x86_64.AppImage"
+          path: dist
+          merge-multiple: true
+          skip-decompress: true
+      - run: scripts/package/appimage-catalog-test.sh dist/OxiGuitar-*-x86_64.AppImage
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: appimage-catalog
+          path: catalog-result/
           retention-days: 14
-          if-no-files-found: error
+          if-no-files-found: ignore
 
   windows:
     name: Windows (${{ matrix.arch }})
@@ -385,53 +403,37 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
-          # The core alone; the basic plugins in a zip of their own (to
-          # unzip into %APPDATA%\OxiGuitar\plugins or a plugins folder beside
-          # oxiguitar.exe) and each on its own.
+          # The programs with the basic plugins in plugins\ beside them, the
+          # folder they search (Mateus, 27 Oct 2026: every download carries
+          # the plugins that work on its system).
           $name = "OxiGuitar-$env:VERSION-windows-${{ matrix.arch }}"
           $dir = "dist/$name"
-          New-Item -ItemType Directory -Force $dir, "$dir/licenses" | Out-Null
+          New-Item -ItemType Directory -Force $dir, "$dir/licenses", "$dir/plugins" | Out-Null
           Copy-Item target/release/oxiguitar.exe, target/release/oxiguitar-cli.exe $dir
           Copy-Item README.md, CHANGELOG.md, CREDITS.md $dir
           Copy-Item LICENSE "$dir/LICENSE.txt"
           Copy-Item dist/THIRD-PARTY-LICENSES.html "$dir/licenses/"
           Copy-Item assets/fonts/bravura/OFL.txt "$dir/licenses/Bravura-OFL.txt"
           Copy-Item assets/fonts/noto-sans/OFL.txt "$dir/licenses/NotoSans-OFL.txt"
-          Compress-Archive -Path $dir -DestinationPath "dist/$name.zip"
-          Get-Item "dist/$name.zip"
           $plugins = Get-ChildItem target/release/plugins/*.oxp
           if ($plugins.Count -ne 7) { throw 'expected our seven plugins' }
-          $pdir = "dist/plugins-basic"
-          New-Item -ItemType Directory -Force $pdir | Out-Null
-          Copy-Item $plugins $pdir
-          Copy-Item scripts/package/plugins-README.txt "$pdir/README.txt"
-          $pzip = "dist/OxiGuitar-plugins-basic-$env:VERSION-windows-${{ matrix.arch }}.zip"
-          Compress-Archive -Path "$pdir/*" -DestinationPath $pzip
-          Get-Item $pzip
-      - name: Test the zips
+          Copy-Item $plugins "$dir/plugins"
+          Compress-Archive -Path $dir -DestinationPath "dist/$name.zip"
+          Get-Item "dist/$name.zip"
+      - name: Test the zip
         shell: pwsh
         run: |
-          # The core alone opens nothing; unzipped beside it, the plugins
-          # give it its formats.
+          # Unzipped anywhere, with an empty user folder, it opens the sample.
           $t = "$env:RUNNER_TEMP/zip-test"
           Expand-Archive "dist/OxiGuitar-$env:VERSION-windows-${{ matrix.arch }}.zip" $t
           $core = Get-ChildItem $t -Directory | Select-Object -First 1
-          if (Test-Path "$($core.FullName)/plugins") { throw 'the core zip holds plugins' }
+          if ((Get-ChildItem "$($core.FullName)/plugins/*.oxp").Count -ne 7) { throw 'the zip lacks our seven plugins' }
           $env:OXIGUITAR_HOME = "$env:RUNNER_TEMP/empty-home"
-          & "$($core.FullName)/oxiguitar-cli.exe" info $env:SAMPLE
-          if ($LASTEXITCODE -eq 0) { throw 'the core alone opened a file' }
-          Expand-Archive "dist/OxiGuitar-plugins-basic-$env:VERSION-windows-${{ matrix.arch }}.zip" "$($core.FullName)/plugins"
           & "$($core.FullName)/oxiguitar-cli.exe" info $env:SAMPLE | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw 'the core with the plugin zip opened nothing' }
+          if ($LASTEXITCODE -ne 0) { throw 'the zip opened nothing' }
       - uses: actions/upload-artifact@v7
         with:
           path: dist/OxiGuitar-[0-9]*-windows-*.zip
-          archive: false
-          retention-days: 14
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v7
-        with:
-          path: dist/OxiGuitar-plugins-basic-*.zip
           archive: false
           retention-days: 14
           if-no-files-found: error
@@ -452,14 +454,14 @@ jobs:
           for target in aarch64-apple-darwin x86_64-apple-darwin; do
             cargo build --release --locked -p oxiguitar-app --target "$target"
           done
-          # The command-line tool, for testing the plugin zip below.
+          # The command-line tool, for testing the app's plugins below.
           cargo build --release --locked -p oxiguitar-cli --target aarch64-apple-darwin
           mkdir -p dist/macos
           lipo -create -output dist/macos/oxiguitar \
             target/aarch64-apple-darwin/release/oxiguitar \
             target/x86_64-apple-darwin/release/oxiguitar
           lipo -info dist/macos/oxiguitar
-      # Our plugins, each one universal file, packaged apart from the app.
+      # Our plugins, each one universal file, in the app's Contents/PlugIns.
       - run: |
           for target in aarch64-apple-darwin x86_64-apple-darwin; do
             scripts/build-plugins.sh --target "$target"
@@ -483,34 +485,26 @@ jobs:
           app="$mount/OxiGuitar.app"
           plutil -p "$app/Contents/Info.plist" | grep -E "CFBundleIdentifier|CFBundleShortVersionString|gp5"
           lipo -info "$app/Contents/MacOS/oxiguitar" | grep -q "x86_64 arm64"
-          test ! -e "$app/Contents/PlugIns"
           test -f "$app/Contents/Resources/OxiGuitar.icns"
           codesign --verify --verbose "$app"
-          # The core alone opens nothing; with the plugin zip it opens the
-          # sample (the zip unpacked into a plugin folder).
-          # A copy of the command-line tool away from the build's PlugIns.
-          home="$RUNNER_TEMP/oxiguitar-home"
-          mkdir -p "$home/plugins" "$RUNNER_TEMP/empty-home" "$RUNNER_TEMP/cli/bin"
-          cp target/aarch64-apple-darwin/release/oxiguitar-cli "$RUNNER_TEMP/cli/bin/"
-          cli="$RUNNER_TEMP/cli/bin/oxiguitar-cli"
-          ! OXIGUITAR_HOME="$RUNNER_TEMP/empty-home" "$cli" info "$SAMPLE"
-          unzip -q dist/OxiGuitar-plugins-basic-*-macos-universal.zip -d "$home/plugins"
-          test "$(ls "$home"/plugins/*.oxp | wc -l)" -eq 7
-          for plugin in "$home"/plugins/*.oxp; do
+          # The app holds our seven plugins, universal and signed, where it
+          # searches (Contents/PlugIns). The command-line tool, copied into
+          # a bundle of the same shape, opens the sample through them with
+          # an empty user folder.
+          test "$(ls "$app"/Contents/PlugIns/*.oxp | wc -l)" -eq 7
+          for plugin in "$app"/Contents/PlugIns/*.oxp; do
             lipo -info "$plugin" | grep -q "x86_64 arm64"
             codesign --verify "$plugin"
           done
-          OXIGUITAR_HOME="$home" "$cli" info "$SAMPLE" > /dev/null
+          shape="$RUNNER_TEMP/cli/Contents"
+          mkdir -p "$shape/MacOS" "$RUNNER_TEMP/empty-home"
+          cp target/aarch64-apple-darwin/release/oxiguitar-cli "$shape/MacOS/"
+          cp -R "$app/Contents/PlugIns" "$shape/PlugIns"
+          OXIGUITAR_HOME="$RUNNER_TEMP/empty-home" "$shape/MacOS/oxiguitar-cli" info "$SAMPLE" > /dev/null
           hdiutil detach "$mount"
       - uses: actions/upload-artifact@v7
         with:
           path: dist/*.dmg
-          archive: false
-          retention-days: 14
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v7
-        with:
-          path: dist/OxiGuitar-plugins-basic-*.zip
           archive: false
           retention-days: 14
           if-no-files-found: error
@@ -542,12 +536,12 @@ jobs:
           skip-decompress: true
       - name: Check the packages
         run: |
-          # Each kind of file, by name. The core: a .deb, an .rpm and an
-          # AppImage of each Linux build (Wayland, X11) for each Linux
-          # architecture, a zip for each Windows architecture and the
-          # universal .dmg. The basic plugins: a .deb and an .rpm for each
-          # Linux architecture and a zip for each of the five targets; no
-          # plugin on its own.
+          # Each kind of file, by name. For each Linux architecture: a .deb
+          # and an .rpm of each build of the core (Wayland, X11), the basic
+          # plugins' .deb and .rpm they depend on, and one AppImage holding
+          # both builds and the plugins. A zip for each Windows architecture
+          # and the universal .dmg, each with the plugins inside. No plugin
+          # on its own, and no zip of plugins (Mateus, 27 Oct 2026).
           find dist -mindepth 1 -maxdepth 1 -printf '%y %s %f\n' | sort -k3
           if find dist -mindepth 1 -maxdepth 1 ! -type f | grep -q .; then
             echo "::error::dist/ holds something that is not a file" >&2
@@ -567,25 +561,18 @@ jobs:
           expect 2 'oxiguitar-[0-9]*.rpm' 'Wayland core .rpm'
           expect 2 'oxiguitar-x11-*.rpm' 'X11 core .rpm'
           expect 2 'oxiguitar-plugins-basic-*.rpm' 'plugin .rpm'
-          expect 2 'OxiGuitar-[0-9]*.AppImage' 'Wayland AppImage'
-          expect 2 'OxiGuitar-x11-*.AppImage' 'X11 AppImage'
-          expect 2 'OxiGuitar-[0-9]*-windows-*.zip' 'Windows core zip'
+          expect 2 'OxiGuitar-[0-9]*.AppImage' 'AppImage'
+          expect 0 'OxiGuitar-x11-*.AppImage' 'X11 AppImage (the AppImage holds both builds)'
+          expect 2 'OxiGuitar-[0-9]*-windows-*.zip' 'Windows zip'
           expect 1 '*.dmg' '.dmg'
-          expect 5 'OxiGuitar-plugins-basic-*.zip' 'plugin zip'
+          expect 0 'OxiGuitar-plugins-basic-*.zip' 'plugin zip'
           expect 0 '*.oxp' 'plugin on its own'
-          expect 24 '*' 'files in all'
+          expect 17 '*' 'files in all'
           for f in dist/OxiGuitar-[0-9]*-windows-*.zip; do
             unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
             unzip -l "$f" | grep -q 'oxiguitar.exe' || { echo "::error::$f has no oxiguitar.exe" >&2; exit 1; }
-            ! unzip -l "$f" | grep -q '\.oxp$' || { echo "::error::$f holds plugins" >&2; exit 1; }
-          done
-          for f in dist/OxiGuitar-plugins-basic-*.zip; do
-            unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
-            # Five format plugins, the SoundFont instrument, and the
-            # system's audio-device plugins: PipeWire and ALSA on Linux,
-            # one elsewhere.
-            case "$f" in *-linux-*) want=8 ;; *) want=7 ;; esac
-            [ "$(unzip -l "$f" | grep -c '\.oxp$')" -eq "$want" ] || { echo "::error::$f lacks our $want plugins" >&2; exit 1; }
+            # Five format plugins, the SoundFont instrument and WASAPI.
+            [ "$(unzip -l "$f" | grep -cE 'plugins[/\\][^/\\]*\.oxp$')" -eq 7 ] || { echo "::error::$f lacks our seven plugins in plugins/" >&2; exit 1; }
           done
       - name: Checksums
         run: (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)

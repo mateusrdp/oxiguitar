@@ -126,9 +126,9 @@ jobs:
             apt-get update
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
               shared-mime-info desktop-file-utils weston libgl1-mesa-dri man-db
-            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar_*.deb
-            ! oxiguitar-cli info fixtures/gp/oxiguitar-test-song.gp 2> /dev/null
-            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar-plugins-basic_*.deb
+            # The core depends on the plugins, so the two go in together.
+            ! DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar_*.deb
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar_*.deb ./build/oxiguitar-plugins-basic_*.deb
             for f in fixtures/gp/*; do oxiguitar-cli info "$f" > /dev/null; done
             man -w oxiguitar oxiguitar-cli
             OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar fixtures/gp/oxiguitar-test-song.gp
