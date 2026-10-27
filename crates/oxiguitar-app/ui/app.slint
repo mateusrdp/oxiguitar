@@ -983,11 +983,18 @@ export component AppWindow inherits Window {
     in-out property <bool> paper-0: true;
     in-out property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
-    // The window's own colours: dark by default with a white page (Mateus,
-    // 18 Oct 2026); main.rs restores the user's choice from settings.json.
-    in-out property <bool> dark-interface: true;
-    init => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
-    changed dark-interface => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
+    // The window's own colours (Mateus, 27 Oct 2026): until the user picks
+    // View → Dark Interface, they follow the desktop's light or dark
+    // setting, and are light when the desktop says nothing; main.rs
+    // restores a choice from settings.json. Following means never setting
+    // Palette.color-scheme, which then follows the system by itself.
+    in-out property <bool> follow-desktop: true;
+    in-out property <bool> chosen-dark: false;
+    out property <bool> dark-interface: root.follow-desktop ? Palette.color-scheme == ColorScheme.dark : root.chosen-dark;
+    changed follow-desktop => { Palette.color-scheme = root.chosen-dark ? ColorScheme.dark : ColorScheme.light; }
+    changed chosen-dark => { if (!root.follow-desktop) { Palette.color-scheme = root.chosen-dark ? ColorScheme.dark : ColorScheme.light; } }
+    // The plugin windows, tabs and the settings follow it.
+    changed dark-interface => { root.settings-changed(); }
     in-out property <bool> dynamics: false;
 
     // The shell (shell.rs): the toolbar and the four areas, numbered
@@ -1356,7 +1363,9 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Parchment"; checkable: true; checked <=> root.layout-3; activated => { root.pick-layout(3); root.settings-changed(); } }
             }
             MenuSeparator { }
-            MenuItem { title: "Dark Interface"; checkable: true; checked <=> root.dark-interface; activated => { root.settings-changed(); } }
+            // The item ticks itself before `activated`: its new state is the
+            // user's choice from then on.
+            MenuItem { title: "Dark Interface"; checkable: true; checked: root.dark-interface; activated => { root.chosen-dark = self.checked; root.follow-desktop = false; } }
             MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
             MenuSeparator { }

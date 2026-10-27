@@ -17,8 +17,11 @@ const PAPERS: [&str; 2] = ["a4", "letter"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct ViewPrefs {
-    /// The window's own colours: dark by default (Mateus, 18 Oct 2026).
-    pub(crate) dark_interface: bool,
+    /// The window's own colours as the user picked them in View → Dark
+    /// Interface; `None` until then, and the window follows the desktop's
+    /// light or dark setting, light when it says nothing (Mateus, 27 Oct
+    /// 2026, for the AppImage catalog, replacing "dark by default").
+    pub(crate) dark_interface: Option<bool>,
     /// Light notation on a dark page; off by default, so the page is white.
     pub(crate) dark_page: bool,
     /// Dynamics on the page; off by default, as they clutter it (Mateus,
@@ -31,7 +34,7 @@ pub(crate) struct ViewPrefs {
 impl Default for ViewPrefs {
     fn default() -> ViewPrefs {
         ViewPrefs {
-            dark_interface: true,
+            dark_interface: None,
             dark_page: false,
             dynamics: false,
             layout: Layout::Page,
@@ -55,7 +58,7 @@ impl ViewPrefs {
                 .and_then(|n| names.iter().position(|x| x.eq_ignore_ascii_case(n)))
         };
         ViewPrefs {
-            dark_interface: flag("dark_interface", d.dark_interface),
+            dark_interface: map.get("dark_interface").and_then(Value::as_bool),
             dark_page: flag("dark_page", d.dark_page),
             dynamics: flag("dynamics", d.dynamics),
             layout: pick("layout", &LAYOUTS)
@@ -75,7 +78,10 @@ impl ViewPrefs {
             _ => Map::new(),
         };
         let name = |all: &[&'static str], i: Option<usize>| all.get(i.unwrap_or(0)).copied();
-        map.insert("dark_interface".into(), json!(self.dark_interface));
+        match self.dark_interface {
+            Some(dark) => map.insert("dark_interface".into(), json!(dark)),
+            None => map.remove("dark_interface"),
+        };
         map.insert("dark_page".into(), json!(self.dark_page));
         map.insert("dynamics".into(), json!(self.dynamics));
         map.insert(
@@ -101,16 +107,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn defaults_are_a_dark_interface_and_a_white_page() {
+    fn defaults_follow_the_desktop_with_a_white_page() {
         let d = ViewPrefs::from_value(None);
-        assert!(d.dark_interface && !d.dark_page && !d.dynamics);
+        assert!(d.dark_interface.is_none() && !d.dark_page && !d.dynamics);
         assert_eq!(ViewPrefs::from_value(Some(&json!("nonsense"))), d);
     }
 
     #[test]
     fn round_trip_keeps_unknown_keys() {
         let p = ViewPrefs {
-            dark_interface: false,
+            dark_interface: Some(false),
             dark_page: true,
             dynamics: true,
             layout: Layout::Horizontal,
@@ -121,6 +127,19 @@ mod tests {
         assert_eq!(v["paper"], json!("letter"));
         assert_eq!(v["later"], json!(3));
         assert_eq!(ViewPrefs::from_value(Some(&v)), p);
+    }
+
+    #[test]
+    fn following_the_desktop_writes_no_choice() {
+        let p = ViewPrefs::default();
+        let v = p.to_value(Some(&json!({"dark_interface": true})));
+        assert!(v.get("dark_interface").is_none());
+        assert_eq!(ViewPrefs::from_value(Some(&v)).dark_interface, None);
+        let dark = ViewPrefs {
+            dark_interface: Some(true),
+            ..p
+        };
+        assert_eq!(dark.to_value(None)["dark_interface"], json!(true));
     }
 
     #[test]
