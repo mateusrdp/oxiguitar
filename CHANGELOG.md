@@ -13,6 +13,9 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- The SoundFont plugin's settings window says, with a link to the manual's Better sounds page, which free recorded sets to get, and says so plainly while only your system's basic set plays. The page itself is rewritten as steps: the three recommended SFZ sets (Black and Green Guitars, Black and Blue Basses, the MuldjordKit) first, where to download each, where to unpack it and what to pick. OxiGuitar still downloads nothing: the link opens the page in your browser.
+- Plugin interface **1.4** (in development, frozen with v1.0): a link among a tab's widgets (`Widget::Link`), which OxiGuitar opens in the browser, `https://` addresses only. Plugins built for 1.3 load as they are.
+
 - AppStream metainfo in the .deb, the .rpm and the AppImage, so software centres (GNOME Software, KDE Discover) and the AppImage catalog show OxiGuitar with its description, screenshots and releases.
 - The release workflow runs the AppImage catalog's own test (appimage.github.io) on the AppImage: on Ubuntu 22.04, under X11, without network, with its lint, its C library check and its screenshot checks.
 
