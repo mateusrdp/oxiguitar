@@ -52,7 +52,7 @@ The template's `.github/workflows/build.yml` does all of this on GitHub's runner
 
 When you push a tag starting with `v` (`git tag v0.1.0 && git push --tags`), a last job creates a GitHub release with the five files and a `SHA256SUMS` file. Users drop the file as it is into a plugin folder; the name doesn't matter to OxiGuitar.
 
-The Linux files are built on Ubuntu 24.04, so they need glibc 2.39 or newer, like OxiGuitar's own packages.
+The Linux files are built on Ubuntu 22.04, the oldest Ubuntu LTS still in standard support, so they need glibc 2.35 or newer, like OxiGuitar's own packages: a library built on a newer system needs that system's glibc and doesn't load on older ones.
 
 ## Before you release
 

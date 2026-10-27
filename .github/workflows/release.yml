@@ -94,22 +94,45 @@ jobs:
       VERSION: ${{ needs.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libfontconfig1-dev libxkbcommon-dev libwayland-dev \
-            libasound2-dev libpipewire-0.3-dev libclang-dev \
             rpm squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
-      # The two Linux builds of the app (docs/design/plugins.md): the
-      # Wayland one, the default, and the deprecated X11 one in a target
-      # folder of its own.
-      - run: cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
-      - run: cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
-      # Our plugins (target/lib/oxiguitar/plugins/), packaged apart from the
-      # core: oxiguitar-plugins-basic and a zip.
-      - run: scripts/build-plugins.sh
+      # The registry and the build folders, kept between runs; the build
+      # itself runs in the container below.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo-container/registry
+            ~/.cargo-container/git
+            target
+          key: linux-2204-${{ matrix.arch }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: linux-2204-${{ matrix.arch }}-
+      # Everything the packages hold, built on Ubuntu 22.04, the oldest LTS
+      # in standard support, so it runs there and on everything newer
+      # (scripts/package/build-linux.sh): the two Linux builds of the app
+      # (docs/design/plugins.md; the Wayland one, the default, and the
+      # deprecated X11 one in target/x11), oxiguitar-cli, and our plugins in
+      # target/lib/oxiguitar/plugins/.
+      - name: Build on Ubuntu 22.04
+        run: |
+          mkdir -p ~/.cargo-container
+          docker run --rm -v "$PWD:/w" -w /w \
+            -v "$HOME/.cargo-container:/opt/cargo-cache" \
+            -e CARGO_HOME=/opt/cargo \
+            ubuntu:22.04 bash -euc '
+              mkdir -p /opt/cargo /opt/cargo-cache/registry /opt/cargo-cache/git
+              ln -s /opt/cargo-cache/registry /opt/cargo/registry
+              ln -s /opt/cargo-cache/git /opt/cargo/git
+              scripts/package/build-linux.sh
+            '
+      # The AppImage catalog tests on Ubuntu 22.04 and refuses anything
+      # needing a newer glibc, even a weak symbol (scripts/package/check-glibc.sh).
+      - name: No glibc newer than 2.35
+        run: |
+          scripts/package/check-glibc.sh 2.35 \
+            target/release/oxiguitar target/release/oxiguitar-cli \
+            target/x11/release/oxiguitar target/lib/oxiguitar/plugins
       - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
@@ -135,7 +158,7 @@ jobs:
             apt-get update
             # The databases first, so the package triggers rebuild them.
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-              shared-mime-info desktop-file-utils xvfb xauth weston libgl1-mesa-dri
+              shared-mime-info desktop-file-utils appstream xvfb xauth weston libgl1-mesa-dri
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
             dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends|Suggests):"
             test ! -e /usr/lib/oxiguitar
@@ -148,6 +171,7 @@ jobs:
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             grep -q "application/x-gtp=io.github.mateusrdp.OxiGuitar.desktop" /usr/share/applications/mimeinfo.cache
             desktop-file-validate /usr/share/applications/io.github.mateusrdp.OxiGuitar.desktop
+            appstreamcli validate --no-net /usr/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml
             OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar "$0"
             # The X11 build takes its place.
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-x11_*.deb
@@ -539,6 +563,12 @@ jobs:
             exit 1
           fi
           cat changes.md >> notes.md
+          # The software centres' list of releases names this one first.
+          newest="$(grep -m 1 -oP '<release version="\K[^"]+' assets/linux/io.github.mateusrdp.OxiGuitar.metainfo.xml)"
+          if [ "$newest" != "$VERSION" ]; then
+            echo "::error::the metainfo's newest release is $newest, not $VERSION: add a <release> for it (assets/linux/io.github.mateusrdp.OxiGuitar.metainfo.xml)" >&2
+            exit 1
+          fi
       - name: Create the draft release
         if: github.ref_type == 'tag'
         run: |

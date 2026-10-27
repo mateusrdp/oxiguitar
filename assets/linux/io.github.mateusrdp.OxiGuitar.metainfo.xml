@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0
+     Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+     OxiGuitar's AppStream metainfo: what software centres (GNOME Software,
+     KDE Discover) and the AppImage catalog show about it. Installed in
+     /usr/share/metainfo by the .deb, the .rpm and the AppImage
+     (scripts/package/linux.sh). Each release adds a <release> at the top of
+     <releases>; the release workflow checks that the newest one is the
+     version being released. -->
+<component type="desktop-application">
+  <id>io.github.mateusrdp.OxiGuitar</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later AND GPL-3.0-only</project_license>
+  <name>OxiGuitar</name>
+  <summary>View, edit and play guitar tablature and scores</summary>
+  <developer id="io.github.mateusrdp">
+    <name>Mateus Rocha de Paula</name>
+  </developer>
+  <description>
+    <p>
+      OxiGuitar opens Guitar Pro files (.gp, .gpx, .gp5, .gp4 and .gp3) and
+      shows them as standard notation and tablature, in four layouts, with
+      any set of tracks together. It edits and saves them, exports them to
+      PDF, and plays them, with a cursor on the beat being heard.
+    </p>
+    <ul>
+      <li>Playback from the caret or a selection, with loop, count-in, metronome, speed from 25 to 200 % and a mixer for every track</li>
+      <li>Your system's General MIDI sound set out of the box, and better sounds you add: SoundFont (SF2, SF3, DLS) and SFZ instruments with recorded guitars, basses and drums</li>
+      <li>Note entry and editing with Guitar Pro 8's keys: effects, chords, lyrics, tracks, tunings and transposition</li>
+      <li>Every file format, sound and audio output is a plugin, and anyone can write one</li>
+    </ul>
+    <p>
+      No telemetry: OxiGuitar never uploads anything and downloads nothing.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.mateusrdp.OxiGuitar.desktop</launchable>
+  <url type="homepage">https://github.com/mateusrdp/oxiguitar</url>
+  <url type="bugtracker">https://github.com/mateusrdp/oxiguitar/issues</url>
+  <url type="help">https://mateusrdp.github.io/oxiguitar/</url>
+  <url type="vcs-browser">https://github.com/mateusrdp/oxiguitar</url>
+  <url type="contribute">https://github.com/mateusrdp/oxiguitar/blob/develop/CONTRIBUTING.md</url>
+  <url type="donation">https://www.paypal.com/donate/?business=4QYDZY4RP8V8L&amp;no_recurring=0&amp;currency_code=AUD</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Playing an eight-track song, with the cursor on the beat being heard and each track's mixer</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/mateusrdp/oxiguitar/main/docs/readme/playing.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Editing a bend on the tablature, with the palette of tools and the Inspector</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/mateusrdp/oxiguitar/main/docs/readme/editing.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The light interface, with lyrics under a melody</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/mateusrdp/oxiguitar/main/docs/readme/light.png</image>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Music</category>
+  </categories>
+  <keywords>
+    <keyword>guitar</keyword>
+    <keyword>tab</keyword>
+    <keyword>tablature</keyword>
+    <keyword>score</keyword>
+    <keyword>notation</keyword>
+    <keyword>Guitar Pro</keyword>
+  </keywords>
+  <provides>
+    <binary>oxiguitar</binary>
+    <binary>oxiguitar-cli</binary>
+    <mediatype>application/x-gtp</mediatype>
+  </provides>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <branding>
+    <color type="primary" scheme_preference="light">#8fd1a8</color>
+    <color type="primary" scheme_preference="dark">#2a7247</color>
+  </branding>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.10.0" date="2026-10-26" type="development">
+      <description>
+        <p>Recorded guitars, basses and drums: SFZ instruments play in the sound plugin, picked per role in its settings.</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.10.0</url>
+    </release>
+    <release version="0.9.0" date="2026-10-26" type="development">
+      <description>
+        <p>The player: transport, cursor, loop, count-in, metronome, speed and mixer, with SoundFont sound sets.</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.9.0</url>
+    </release>
+    <release version="0.5.0" date="2026-10-21" type="development">
+      <description>
+        <p>The editor: note entry, effects, chords, lyrics, tracks, transposition, and saving Guitar Pro files.</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.5.0</url>
+    </release>
+    <release version="0.2.0" date="2026-10-19" type="development">
+      <description>
+        <p>Plugins: every file format is a plugin, with a plugin manager and a developer guide.</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.2.0</url>
+    </release>
+    <release version="0.1.0" date="2026-10-17" type="development">
+      <description>
+        <p>The viewer: Guitar Pro files as notation and tablature, four layouts, PDF export.</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.1.0</url>
+    </release>
+  </releases>
+</component>

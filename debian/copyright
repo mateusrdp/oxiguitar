@@ -26,6 +26,10 @@ Files:
 Copyright: 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 License: MIT or Apache-2.0
 
+Files: assets/linux/io.github.mateusrdp.OxiGuitar.metainfo.xml
+Copyright: 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+License: CC0-1.0
+
 Files: assets/fonts/bravura/*
 Copyright: 2015 Steinberg Media Technologies GmbH
 License: OFL-1.1
@@ -169,3 +173,11 @@ License: OFL-1.1
  DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
  OTHER DEALINGS IN THE FONT SOFTWARE.
+
+License: CC0-1.0
+ To the extent possible under law, the authors have dedicated all
+ copyright and related and neighboring rights to this file to the public
+ domain worldwide. This file is distributed without any warranty.
+ .
+ On Debian systems, the complete text of the CC0 1.0 Universal Public
+ Domain Dedication is in /usr/share/common-licenses/CC0-1.0.

@@ -4,6 +4,14 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- The Linux packages are built on Ubuntu 22.04, the oldest Ubuntu LTS still in standard support, so they run on any distribution with glibc 2.35 or newer (Debian 12, Ubuntu 22.04, Fedora 36 and later) instead of 2.39. A release check fails any Linux program or plugin that would need a newer glibc. The plugin template builds its Linux files the same way.
+
+### Added
+
+- AppStream metainfo in the .deb, the .rpm and the AppImage, so software centres (GNOME Software, KDE Discover) and the AppImage catalog show OxiGuitar with its description, screenshots and releases.
+
 ## [0.10.0] - 2026-10-26
 
 A second release for testers of milestone M4: recorded guitars, basses and drums. The SoundFont plugin plays SFZ instruments, and the manual names the free sets we recommend. Still to come before v1.0: amp modelling (NAM) and WAV export. Plugin interface 1.3 is unchanged: plugins built for 0.9 load as they are.
