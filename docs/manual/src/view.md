@@ -1,6 +1,6 @@
 # Dark page and dynamics
 
-**View → Dark Interface** switches the window's own colours between dark (the default) and light.
+**View → Dark Interface** switches the window's own colours between dark and light. Until you choose, OxiGuitar follows your desktop's light or dark setting (and is light when the desktop has none); once you choose, it keeps your choice. To follow the desktop again, delete `dark_interface` from the `view` part of `settings.json` ([Settings and plugins](plugins.md)).
 
 **View → Dark Page** shows light notation on a dark page, which is easier on the eyes at night. It changes only the screen: a PDF is always printed on a light page. The area around the page stays dark either way. OxiGuitar remembers these choices, and the rest of the View menu, the next time it starts.
 
