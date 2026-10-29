@@ -1,0 +1,576 @@
+{
+  "batchIndex": 23,
+  "nodes": [
+    {
+      "id": "fixture:fixtures/events/dynamics.gp.events",
+      "label": "Dynamics (velocity ranges 15–127)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dynamics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/effects-together.gp.events",
+      "label": "Effects Together (combined note effects)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/effects-together.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/eight-tracks.gp.events",
+      "label": "Eight Tracks (multi-track arrangement, 8 tracks)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/eight-tracks.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/empty-bars.gp.events",
+      "label": "Empty Bars (silent bar handling)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/empty-bars.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/four-voices.gp.events",
+      "label": "Four Voices (4 simultaneous voices per staff)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/four-voices.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/grace-notes.gp.events",
+      "label": "Grace Notes (grace note events)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/grace-notes.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/hammer-on-pull-off.gp.events",
+      "label": "Hammer-On / Pull-Off (articulation techniques)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/hammer-on-pull-off.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/harmonics.gp.events",
+      "label": "Harmonics (natural, artificial, pinch)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/harmonics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/header-and-credits.gp.events",
+      "label": "Header and Credits (song metadata)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/header-and-credits.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/key-signatures.gp.events",
+      "label": "Key Signatures (key signature changes)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/key-signatures.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/layout-horizontal.gp.events",
+      "label": "Layout Horizontal (horizontal page layout)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/layout-horizontal.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/layout-parchment.gp.events",
+      "label": "Layout Parchment (parchment page style)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/layout-parchment.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/layout-vertical.gp.events",
+      "label": "Layout Vertical (vertical page layout)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/layout-vertical.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/let-ring.gp.events",
+      "label": "Let Ring (sustain effect)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/let-ring.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/lyrics.gp.events",
+      "label": "Lyrics (vocal lyrics in bars)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/lyrics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/notation-choice.gp.events",
+      "label": "Notation Choice (tablature vs standard notation)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/notation-choice.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/notes-and-rests.gp.events",
+      "label": "Notes and Rests (basic note and rest events)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/oxiguitar-test-song.gp.events",
+      "label": "Oxiguitar Test Song (GP format, primary)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/oxiguitar-test-song.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/oxiguitar-test-song.gp3.events",
+      "label": "Oxiguitar Test Song (GP3 format)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/oxiguitar-test-song.gp3.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/oxiguitar-test-song.gp4.events",
+      "label": "Oxiguitar Test Song (GP4 format)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/oxiguitar-test-song.gp4.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/oxiguitar-test-song.gp5.events",
+      "label": "Oxiguitar Test Song (GP5 format)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/oxiguitar-test-song.gp5.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/oxiguitar-test-song.gpx.events",
+      "label": "Oxiguitar Test Song (GPX format)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/oxiguitar-test-song.gpx.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/page-breaks.gp.events",
+      "label": "Page Breaks (page break events)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/page-breaks.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/paper-letter.gp.events",
+      "label": "Paper Letter (letter-size page layout)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/paper-letter.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/piano-grand-staff.gp.events",
+      "label": "Piano Grand Staff (treble + bass clef)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/piano-grand-staff.gp.events",
+      "line": 1
+    },
+    {
+      "id": "event:length",
+      "label": "length (duration specification)",
+      "type": "event_type",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "event:count-in",
+      "label": "count-in (pre-bar count)",
+      "type": "event_type",
+      "filePath": "fixtures/events/header-and-credits.gp.events",
+      "line": 1
+    },
+    {
+      "id": "event:bar",
+      "label": "bar (bar definition with timestamp)",
+      "type": "event_type",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "event:note",
+      "label": "note (note event with attributes)",
+      "type": "event_type",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "event:click",
+      "label": "click (metronome beat marker)",
+      "type": "event_type",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "event:chord",
+      "label": "chord (chord definition)",
+      "type": "event_type",
+      "filePath": "fixtures/events/eight-tracks.gp.events",
+      "line": 1
+    },
+    {
+      "id": "event:layout",
+      "label": "layout (page layout configuration)",
+      "type": "event_type",
+      "filePath": "fixtures/events/layout-horizontal.gp.events",
+      "line": 1
+    },
+    {
+      "id": "event:page-break",
+      "label": "page-break (page break marker)",
+      "type": "event_type",
+      "filePath": "fixtures/events/page-breaks.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:dynamics",
+      "label": "Dynamics (velocity-based volume control)",
+      "type": "concept",
+      "filePath": "fixtures/events/dynamics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:effects",
+      "label": "Effects (note-level modifiers)",
+      "type": "concept",
+      "filePath": "fixtures/events/effects-together.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:polyphony",
+      "label": "Polyphony (multiple simultaneous voices)",
+      "type": "concept",
+      "filePath": "fixtures/events/four-voices.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:multi-track",
+      "label": "Multi-Track (arrangements across multiple tracks)",
+      "type": "concept",
+      "filePath": "fixtures/events/eight-tracks.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:grace-notes",
+      "label": "Grace Notes (ornamental short notes)",
+      "type": "concept",
+      "filePath": "fixtures/events/grace-notes.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:hammer-on-pull-off",
+      "label": "Hammer-On / Pull-Off (articulation techniques)",
+      "type": "concept",
+      "filePath": "fixtures/events/hammer-on-pull-off.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:harmonics",
+      "label": "Harmonics (natural, artificial, pinch)",
+      "type": "concept",
+      "filePath": "fixtures/events/harmonics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:header-credits",
+      "label": "Header and Credits (song metadata)",
+      "type": "concept",
+      "filePath": "fixtures/events/header-and-credits.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:key-signatures",
+      "label": "Key Signatures (tonal center changes)",
+      "type": "concept",
+      "filePath": "fixtures/events/key-signatures.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:layout",
+      "label": "Layout (page layout and styling)",
+      "type": "concept",
+      "filePath": "fixtures/events/layout-horizontal.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:let-ring",
+      "label": "Let Ring (note sustain)",
+      "type": "concept",
+      "filePath": "fixtures/events/let-ring.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:lyrics",
+      "label": "Lyrics (vocal text in bars)",
+      "type": "concept",
+      "filePath": "fixtures/events/lyrics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:notation-choice",
+      "label": "Notation Choice (tablature vs standard notation)",
+      "type": "concept",
+      "filePath": "fixtures/events/notation-choice.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:notes-and-rests",
+      "label": "Notes and Rests (basic musical events)",
+      "type": "concept",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:empty-bars",
+      "label": "Empty Bars (silent bars)",
+      "type": "concept",
+      "filePath": "fixtures/events/empty-bars.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:test-song",
+      "label": "Test Song (multi-format test suite)",
+      "type": "concept",
+      "filePath": "fixtures/events/oxiguitar-test-song.gp.events",
+      "line": 1
+    },
+    {
+      "id": "concept:piano-grand-staff",
+      "label": "Piano Grand Staff (treble + bass clef)",
+      "type": "concept",
+      "filePath": "fixtures/events/piano-grand-staff.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:velocity",
+      "label": "vel (note velocity, range 15–127)",
+      "type": "attribute",
+      "filePath": "fixtures/events/dynamics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:legato",
+      "label": "legato (smooth note connection)",
+      "type": "attribute",
+      "filePath": "fixtures/events/effects-together.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:palm-mute",
+      "label": "palm-mute (muted strum effect)",
+      "type": "attribute",
+      "filePath": "fixtures/events/effects-together.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:vibrato",
+      "label": "vibrato (pitch oscillation)",
+      "type": "attribute",
+      "filePath": "fixtures/events/effects-together.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:pitch-bend",
+      "label": "pitch (time:value bend pairs)",
+      "type": "attribute",
+      "filePath": "fixtures/events/effects-together.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:let-ring",
+      "label": "let-ring (sustain marker)",
+      "type": "attribute",
+      "filePath": "fixtures/events/let-ring.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:dead",
+      "label": "dead (percussive dead note)",
+      "type": "attribute",
+      "filePath": "fixtures/events/effects-together.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:ghost",
+      "label": "ghost (ghost note, muted)",
+      "type": "attribute",
+      "filePath": "fixtures/events/effects-together.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:harmonic-natural",
+      "label": "harmonic-natural (natural harmonic)",
+      "type": "attribute",
+      "filePath": "fixtures/events/harmonics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:harmonic-artificial",
+      "label": "harmonic-artificial (artificial harmonic)",
+      "type": "attribute",
+      "filePath": "fixtures/events/harmonics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:harmonic-pinch",
+      "label": "harmonic-pinch (pinch harmonic)",
+      "type": "attribute",
+      "filePath": "fixtures/events/harmonics.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:grace",
+      "label": "grace (grace note flag)",
+      "type": "attribute",
+      "filePath": "fixtures/events/grace-notes.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:string",
+      "label": "string (string number)",
+      "type": "attribute",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:track",
+      "label": "t (track number)",
+      "type": "attribute",
+      "filePath": "fixtures/events/eight-tracks.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:staff",
+      "label": "s (staff number)",
+      "type": "attribute",
+      "filePath": "fixtures/events/piano-grand-staff.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:voice",
+      "label": "v (voice number)",
+      "type": "attribute",
+      "filePath": "fixtures/events/four-voices.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:beat",
+      "label": "b (beat number)",
+      "type": "attribute",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:strong",
+      "label": "strong (strong downbeat marker)",
+      "type": "attribute",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:note-name",
+      "label": "note name (e.g. C2, F#2)",
+      "type": "attribute",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    },
+    {
+      "id": "attr:bar-pass",
+      "label": "pass (bar repeat pass number)",
+      "type": "attribute",
+      "filePath": "fixtures/events/notes-and-rests.gp.events",
+      "line": 1
+    }
+  ],
+  "edges": [
+    {"source": "fixture:fixtures/events/dynamics.gp.events", "target": "concept:dynamics", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/effects-together.gp.events", "target": "concept:effects", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/eight-tracks.gp.events", "target": "concept:multi-track", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/empty-bars.gp.events", "target": "concept:empty-bars", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/four-voices.gp.events", "target": "concept:polyphony", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/grace-notes.gp.events", "target": "concept:grace-notes", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/hammer-on-pull-off.gp.events", "target": "concept:hammer-on-pull-off", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/harmonics.gp.events", "target": "concept:harmonics", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/header-and-credits.gp.events", "target": "concept:header-credits", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/key-signatures.gp.events", "target": "concept:key-signatures", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/layout-horizontal.gp.events", "target": "concept:layout", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/layout-parchment.gp.events", "target": "concept:layout", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/layout-vertical.gp.events", "target": "concept:layout", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/let-ring.gp.events", "target": "concept:let-ring", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/lyrics.gp.events", "target": "concept:lyrics", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/notation-choice.gp.events", "target": "concept:notation-choice", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/notes-and-rests.gp.events", "target": "concept:notes-and-rests", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gp.events", "target": "concept:test-song", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gp3.events", "target": "concept:test-song", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gp4.events", "target": "concept:test-song", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gp5.events", "target": "concept:test-song", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gpx.events", "target": "concept:test-song", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/page-breaks.gp.events", "target": "concept:layout", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/paper-letter.gp.events", "target": "concept:layout", "type": "demonstrates"},
+    {"source": "fixture:fixtures/events/piano-grand-staff.gp.events", "target": "concept:piano-grand-staff", "type": "demonstrates"},
+
+    {"source": "concept:dynamics", "target": "event:note", "type": "uses"},
+    {"source": "concept:dynamics", "target": "attr:velocity", "type": "uses"},
+    {"source": "concept:effects", "target": "event:note", "type": "uses"},
+    {"source": "concept:effects", "target": "attr:legato", "type": "uses"},
+    {"source": "concept:effects", "target": "attr:palm-mute", "type": "uses"},
+    {"source": "concept:effects", "target": "attr:vibrato", "type": "uses"},
+    {"source": "concept:effects", "target": "attr:pitch-bend", "type": "uses"},
+    {"source": "concept:effects", "target": "attr:let-ring", "type": "uses"},
+    {"source": "concept:effects", "target": "attr:dead", "type": "uses"},
+    {"source": "concept:effects", "target": "attr:ghost", "type": "uses"},
+    {"source": "concept:polyphony", "target": "event:note", "type": "uses"},
+    {"source": "concept:polyphony", "target": "attr:voice", "type": "uses"},
+    {"source": "concept:multi-track", "target": "event:chord", "type": "uses"},
+    {"source": "concept:multi-track", "target": "attr:track", "type": "uses"},
+    {"source": "concept:grace-notes", "target": "event:note", "type": "uses"},
+    {"source": "concept:grace-notes", "target": "attr:grace", "type": "uses"},
+    {"source": "concept:hammer-on-pull-off", "target": "event:note", "type": "uses"},
+    {"source": "concept:harmonics", "target": "event:note", "type": "uses"},
+    {"source": "concept:harmonics", "target": "attr:harmonic-natural", "type": "uses"},
+    {"source": "concept:harmonics", "target": "attr:harmonic-artificial", "type": "uses"},
+    {"source": "concept:harmonics", "target": "attr:harmonic-pinch", "type": "uses"},
+    {"source": "concept:header-credits", "target": "event:count-in", "type": "uses"},
+    {"source": "concept:key-signatures", "target": "event:bar", "type": "uses"},
+    {"source": "concept:layout", "target": "event:layout", "type": "uses"},
+    {"source": "concept:layout", "target": "event:page-break", "type": "uses"},
+    {"source": "concept:let-ring", "target": "event:note", "type": "uses"},
+    {"source": "concept:let-ring", "target": "attr:let-ring", "type": "uses"},
+    {"source": "concept:lyrics", "target": "event:bar", "type": "uses"},
+    {"source": "concept:notation-choice", "target": "event:length", "type": "uses"},
+    {"source": "concept:notation-choice", "target": "event:note", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "event:length", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "event:bar", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "event:note", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "event:click", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "attr:string", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "attr:beat", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "attr:strong", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "attr:note-name", "type": "uses"},
+    {"source": "concept:notes-and-rests", "target": "attr:bar-pass", "type": "uses"},
+    {"source": "concept:empty-bars", "target": "event:bar", "type": "uses"},
+    {"source": "concept:test-song", "target": "event:bar", "type": "uses"},
+    {"source": "concept:test-song", "target": "event:note", "type": "uses"},
+    {"source": "concept:piano-grand-staff", "target": "event:note", "type": "uses"},
+    {"source": "concept:piano-grand-staff", "target": "attr:staff", "type": "uses"},
+
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gp3.events", "target": "fixture:fixtures/events/oxiguitar-test-song.gp.events", "type": "format-variant-of"},
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gp4.events", "target": "fixture:fixtures/events/oxiguitar-test-song.gp.events", "type": "format-variant-of"},
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gp5.events", "target": "fixture:fixtures/events/oxiguitar-test-song.gp.events", "type": "format-variant-of"},
+    {"source": "fixture:fixtures/events/oxiguitar-test-song.gpx.events", "target": "fixture:fixtures/events/oxiguitar-test-song.gp.events", "type": "format-variant-of"},
+
+    {"source": "fixture:fixtures/events/layout-parchment.gp.events", "target": "fixture:fixtures/events/layout-horizontal.gp.events", "type": "layout-variant-of"},
+    {"source": "fixture:fixtures/events/layout-vertical.gp.events", "target": "fixture:fixtures/events/layout-horizontal.gp.events", "type": "layout-variant-of"},
+    {"source": "fixture:fixtures/events/paper-letter.gp.events", "target": "fixture:fixtures/events/layout-horizontal.gp.events", "type": "layout-variant-of"}
+  ]
+}

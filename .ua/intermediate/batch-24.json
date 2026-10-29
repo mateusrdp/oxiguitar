@@ -1,0 +1,252 @@
+{
+  "batchIndex": 24,
+  "nodes": [
+    {
+      "id": "file:fixtures/events/repeats-and-endings.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture covering repeat bars (D.S. al Coda, D.S. al Fine, D.S. al Segno, D.S. al Segno al Fine, D.C. al Coda, D.C. al Fine, D.C. al Segno) and ending bars (first and second endings). Defines 18 bars with bar-level and beat-level events for repeat markers and end-of-song markers.",
+      "tags": ["test-fixture", "events", "repeats", "endings", "guitar-pro"],
+      "complexity": 3,
+      "nodes": ["bar:0-17", "repeat-type:D.S. al Coda", "repeat-type:D.S. al Fine", "repeat-type:D.S. al Segno", "repeat-type:D.C. al Coda", "repeat-type:D.C. al Fine", "repeat-type:D.C. al Segno", "ending:1st", "ending:2nd"],
+      "edges": ["uses:bar:0-17", "uses:repeat-type:D.S. al Coda", "uses:repeat-type:D.S. al Fine", "uses:repeat-type:D.S. al Segno", "uses:repeat-type:D.C. al Coda", "uses:repeat-type:D.C. al Fine", "uses:repeat-type:D.C. al Segno", "uses:ending:1st", "uses:ending:2nd"]
+    },
+    {
+      "id": "file:fixtures/events/rhythm-on-tab.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for rhythm notation on tablature. Contains a single bar with 4 beats (quarter notes) in 4/4 time at 120 BPM, using standard tuning (EADGBE) on a 6-string guitar with 24 frets. Tests display of rhythmic values on tab staves.",
+      "tags": ["test-fixture", "events", "rhythm", "tablature", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "rhythm:quarter"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:rhythm:quarter"]
+    },
+    {
+      "id": "file:fixtures/events/sections-and-directions.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for musical section markers and directions. Defines 10 bars with section labels (Intro, Verse, Chorus, Bridge, Outro) and direction markers (end of section, end of song). Tests section-based navigation and display.",
+      "tags": ["test-fixture", "events", "sections", "directions", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0-9", "section:Intro", "section:Verse", "section:Chorus", "section:Bridge", "section:Outro"],
+      "edges": ["uses:bar:0-9", "uses:section:Intro", "uses:section:Verse", "uses:section:Chorus", "uses:section:Bridge", "uses:section:Outro"]
+    },
+    {
+      "id": "file:fixtures/events/seven-string.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for 7-string guitar. Defines a single bar with 4 quarter-note beats using 7-string tuning (BEGCGBE, MIDI pitches 35-74). Tests extended-range guitar support with an additional low B string.",
+      "tags": ["test-fixture", "events", "7-string", "extended-range", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "tuning:7-string"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:tuning:7-string"]
+    },
+    {
+      "id": "file:fixtures/events/slides.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for slide techniques. Contains a single bar with 4 beats demonstrating hammer-ons, pull-offs, and slides. Tests articulation techniques in event-based notation.",
+      "tags": ["test-fixture", "events", "slides", "hammer-on", "pull-off", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "technique:hammer-on", "technique:pull-off", "technique:slide"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:technique:hammer-on", "uses:technique:pull-off", "uses:technique:slide"]
+    },
+    {
+      "id": "file:fixtures/events/standard-only.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for standard notation only (no tablature). Defines a single bar with 4 quarter-note beats in 4/4 time, using treble clef. Tests rendering of standard music notation without tab staff.",
+      "tags": ["test-fixture", "events", "standard-notation", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "clef:treble"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:clef:treble"]
+    },
+    {
+      "id": "file:fixtures/events/strings-treble-and-bass.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for dual-staff notation with treble and bass clefs. Defines a single bar with 4 beats using both clefs simultaneously. Tests multi-clef system layout for classical guitar or bass guitar.",
+      "tags": ["test-fixture", "events", "treble-clef", "bass-clef", "dual-staff", "guitar-pro"],
+      "complexity": 3,
+      "nodes": ["bar:0", "beats:0-3", "clef:treble", "clef:bass"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:clef:treble", "uses:clef:bass"]
+    },
+    {
+      "id": "file:fixtures/events/strums-and-techniques.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for strum patterns and guitar techniques. Contains a single bar with 4 beats demonstrating strum notation, palm muting, and other playing techniques. Tests complex articulation in event format.",
+      "tags": ["test-fixture", "events", "strums", "palm-mute", "techniques", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "technique:strum", "technique:palm-mute"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:technique:strum", "uses:technique:palm-mute"]
+    },
+    {
+      "id": "file:fixtures/events/tall-system-shrinks.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for system layout with tall notation. Contains 20 bars of dense musical content with multiple voices, testing how the renderer handles system height constraints and automatic shrinking of notation spacing.",
+      "tags": ["test-fixture", "events", "layout", "system-shrink", "multi-voice", "guitar-pro"],
+      "complexity": 4,
+      "nodes": ["bar:0-19", "voices:multi", "layout:system-shrink"],
+      "edges": ["uses:bar:0-19", "uses:voices:multi", "uses:layout:system-shrink"]
+    },
+    {
+      "id": "file:fixtures/events/tempo-changes.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for tempo changes throughout a piece. Defines 10 bars with tempo markers starting at 120 BPM and changing to various tempos (100, 80, 140, 60 BPM). Tests tempo automation in event-based format.",
+      "tags": ["test-fixture", "events", "tempo", "automation", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0-9", "tempo:120", "tempo:100", "tempo:80", "tempo:140", "tempo:60"],
+      "edges": ["uses:bar:0-9", "uses:tempo:120", "uses:tempo:100", "uses:tempo:80", "uses:tempo:140", "uses:tempo:60"]
+    },
+    {
+      "id": "file:fixtures/events/time-signatures.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for time signature changes. Defines 8 bars with time signatures changing between 4/4, 3/4, 6/8, and 2/4. Tests meter changes in event-based musical notation.",
+      "tags": ["test-fixture", "events", "time-signature", "meter-change", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0-7", "time:4/4", "time:3/4", "time:6/8", "time:2/4"],
+      "edges": ["uses:bar:0-7", "uses:time:4/4", "uses:time:3/4", "uses:time:6/8", "uses:time:2/4"]
+    },
+    {
+      "id": "file:fixtures/events/tremolo-picking.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for tremolo picking technique. Defines a single bar with 4 beats using tremolo picking notation. Tests rapid alternate picking articulation in event format.",
+      "tags": ["test-fixture", "events", "tremolo-picking", "articulation", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "technique:tremolo-picking"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:technique:tremolo-picking"]
+    },
+    {
+      "id": "file:fixtures/events/triplets.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for triplet rhythms. Contains a single bar with triplet groupings (quarter-note triplets, eighth-note triplets) across 4 beats. Tests tuplet notation in event-based format.",
+      "tags": ["test-fixture", "events", "triplets", "tuplets", "rhythm", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "tuplet:quarter-triplet", "tuplet:eighth-triplet"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:tuplet:quarter-triplet", "uses:tuplet:eighth-triplet"]
+    },
+    {
+      "id": "file:fixtures/events/two-voices.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for polyphonic two-voice notation. Defines a single bar with two independent voices (up and down stem directions) playing simultaneously. Tests multi-voice rendering in event format.",
+      "tags": ["test-fixture", "events", "two-voices", "polyphony", "guitar-pro"],
+      "complexity": 3,
+      "nodes": ["bar:0", "voices:2", "voice:up-stem", "voice:down-stem"],
+      "edges": ["uses:bar:0", "uses:voices:2", "uses:voice:up-stem", "uses:voice:down-stem"]
+    },
+    {
+      "id": "file:fixtures/events/unusual-tuplets.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for unusual tuplet ratios. Contains a single bar with non-standard tuplet groupings (5-tuplets, 7-tuplets, etc.). Tests extended tuplet support in event-based notation.",
+      "tags": ["test-fixture", "events", "tuplets", "unusual-ratios", "rhythm", "guitar-pro"],
+      "complexity": 3,
+      "nodes": ["bar:0", "tuplet:5-tuplet", "tuplet:7-tuplet"],
+      "edges": ["uses:bar:0", "uses:tuplet:5-tuplet", "uses:tuplet:7-tuplet"]
+    },
+    {
+      "id": "file:fixtures/events/vibrato-and-trill.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for vibrato and trill techniques. Defines a single bar with beats using vibrato (wide and narrow) and trill articulations. Tests expressive technique notation in event format.",
+      "tags": ["test-fixture", "events", "vibrato", "trill", "articulation", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "technique:vibrato-wide", "technique:vibrato-narrow", "technique:trill"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:technique:vibrato-wide", "uses:technique:vibrato-narrow", "uses:technique:trill"]
+    },
+    {
+      "id": "file:fixtures/events/whammy-and-fade-in.gp.events",
+      "type": "file",
+      "summary": "Event-stream test fixture for whammy bar and fade-in techniques. Defines a single bar with beats using dive-bomb, whammy bar dips, and fade-in articulations. Tests pitch bend effects in event-based notation.",
+      "tags": ["test-fixture", "events", "whammy-bar", "dive-bomb", "fade-in", "guitar-pro"],
+      "complexity": 2,
+      "nodes": ["bar:0", "beats:0-3", "technique:whammy-dive", "technique:whammy-dip", "technique:fade-in"],
+      "edges": ["uses:bar:0", "uses:beats:0-3", "uses:technique:whammy-dive", "uses:technique:whammy-dip", "uses:technique:fade-in"]
+    },
+    {
+      "id": "file:fixtures/gp/oxiguitar-test-song.gp",
+      "type": "file",
+      "summary": "Guitar Pro 5 binary file (opaque). Test fixture for the oxiguitar parser to validate reading and writing of GP5 format files. Binary content cannot be analyzed as text.",
+      "tags": ["test-fixture", "binary", "gp5", "guitar-pro"],
+      "complexity": 1,
+      "nodes": [],
+      "edges": []
+    },
+    {
+      "id": "file:fixtures/gp/oxiguitar-test-song.gp3",
+      "type": "file",
+      "summary": "Guitar Pro 3 binary file (opaque). Test fixture for the oxiguitar parser to validate reading and writing of GP3 format files. Binary content cannot be analyzed as text.",
+      "tags": ["test-fixture", "binary", "gp3", "guitar-pro"],
+      "complexity": 1,
+      "nodes": [],
+      "edges": []
+    },
+    {
+      "id": "file:fixtures/gp/oxiguitar-test-song.gp4",
+      "type": "file",
+      "summary": "Guitar Pro 4 binary file (opaque). Test fixture for the oxiguitar parser to validate reading and writing of GP4 format files. Binary content cannot be analyzed as text.",
+      "tags": ["test-fixture", "binary", "gp4", "guitar-pro"],
+      "complexity": 1,
+      "nodes": [],
+      "edges": []
+    },
+    {
+      "id": "file:fixtures/gp/oxiguitar-test-song.gp5",
+      "type": "file",
+      "summary": "Guitar Pro 5 binary file (opaque). Test fixture for the oxiguitar parser to validate reading and writing of GP5 format files. Binary content cannot be analyzed as text.",
+      "tags": ["test-fixture", "binary", "gp5", "guitar-pro"],
+      "complexity": 1,
+      "nodes": [],
+      "edges": []
+    },
+    {
+      "id": "file:fixtures/gp/oxiguitar-test-song.gpx",
+      "type": "file",
+      "summary": "Guitar Pro XML binary file (opaque). Test fixture for the oxiguitar parser to validate reading and writing of GPX (XML-based Guitar Pro) format files. Binary content cannot be analyzed as text.",
+      "tags": ["test-fixture", "binary", "gpx", "guitar-pro", "xml"],
+      "complexity": 1,
+      "nodes": [],
+      "edges": []
+    },
+    {
+      "id": "document:fixtures/guitar-pro-7.6/README.md",
+      "type": "document",
+      "summary": "Documentation file for Guitar Pro 7.6 reference songs. Explains the purpose of the reference files in this directory — they are test songs used by the oxiguitar test suite to validate parsing, round-tripping, and rendering of Guitar Pro 7.6 (.gp, .gpx) files. Lists available reference songs and their test coverage.",
+      "tags": ["documentation", "guitar-pro-7.6", "reference", "test-data"],
+      "complexity": 1,
+      "nodes": [],
+      "edges": []
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/bends.gpif",
+      "type": "file",
+      "summary": "Guitar Pro 7.6 XML format file (GPIF) testing bend techniques. Contains 3 bars, 10 beats, and 9 notes demonstrating various bend types: full bends (100% destination), half bends (50% destination), and release bends. Notes include G4 (fret 8, string 4), D4 (fret 7, string 3), A4 (frets 5 and 10), and E5 (fret 12). Rhythms include quarter, half, and eighth notes. Single guitar track with Electric Guitar sound, standard tuning (EADGBE), 24 frets.",
+      "tags": ["test-fixture", "guitar-pro-7.6", "xml", "bends", "gpi"],
+      "complexity": 3,
+      "nodes": ["track:electric-guitar", "bar:0-2", "note:G4-bend", "note:D4-bend", "note:A4-bend", "note:E5-bend", "rhythm:quarter", "rhythm:half", "rhythm:eighth", "bend-type:full", "bend-type:half", "bend-type:release"],
+      "edges": ["uses:track:electric-guitar", "uses:bar:0-2", "uses:note:G4-bend", "uses:note:D4-bend", "uses:note:A4-bend", "uses:note:E5-bend", "uses:rhythm:quarter", "uses:rhythm:half", "uses:rhythm:eighth", "uses:bend-type:full", "uses:bend-type:half", "uses:bend-type:release"]
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/chord-names.gpif",
+      "type": "file",
+      "summary": "Guitar Pro 7.6 XML format file (GPIF) testing chord naming and multi-note chords. Contains 4 bars, 15 beats, and 23 notes forming chord voicings: Am (5-note chord across all strings), G6 (3-note chord), Fmaj7 (6-note chord), and A (5-note chord). Uses whole, half, quarter, and eighth note rhythms. Single guitar track with Electric Guitar sound, standard tuning (EADGBE), 24 frets. Tests chord display with multiple simultaneous notes per beat.",
+      "tags": ["test-fixture", "guitar-pro-7.6", "xml", "chords", "gpi"],
+      "complexity": 4,
+      "nodes": ["track:electric-guitar", "bar:0-3", "chord:Am", "chord:G6", "chord:Fmaj7", "chord:A", "rhythm:whole", "rhythm:half", "rhythm:quarter", "rhythm:eighth", "beat:0-multi-note", "beat:1-multi-note", "beat:4-multi-note"],
+      "edges": ["uses:track:electric-guitar", "uses:bar:0-3", "uses:chord:Am", "uses:chord:G6", "uses:chord:Fmaj7", "uses:chord:A", "uses:rhythm:whole", "uses:rhythm:half", "uses:rhythm:quarter", "uses:rhythm:eighth", "uses:beat:0-multi-note", "uses:beat:1-multi-note", "uses:beat:4-multi-note"]
+    }
+  ],
+  "edges": [
+    {"from": "file:fixtures/events/repeats-and-endings.gp.events", "to": "file:fixtures/events/rhythm-on-tab.gp.events", "type": "related", "description": "Both are event-stream test fixtures in the same events directory"},
+    {"from": "file:fixtures/events/repeats-and-endings.gp.events", "to": "file:fixtures/events/sections-and-directions.gp.events", "type": "related", "description": "Both use bar-level structural markers"},
+    {"from": "file:fixtures/events/rhythm-on-tab.gp.events", "to": "file:fixtures/events/time-signatures.gp.events", "type": "related", "description": "Both test rhythmic/metric properties"},
+    {"from": "file:fixtures/events/seven-string.gp.events", "to": "file:fixtures/events/standard-only.gp.events", "type": "related", "description": "Both test non-standard guitar configurations"},
+    {"from": "file:fixtures/events/slides.gp.events", "to": "file:fixtures/events/strums-and-techniques.gp.events", "type": "related", "description": "Both test guitar articulation techniques"},
+    {"from": "file:fixtures/events/tempo-changes.gp.events", "to": "file:fixtures/events/time-signatures.gp.events", "type": "related", "description": "Both test musical property changes over time"},
+    {"from": "file:fixtures/events/tremolo-picking.gp.events", "to": "file:fixtures/events/vibrato-and-trill.gp.events", "type": "related", "description": "Both test expressive playing techniques"},
+    {"from": "file:fixtures/events/triplets.gp.events", "to": "file:fixtures/events/unusual-tuplets.gp.events", "type": "related", "description": "Both test rhythmic tuplet notation"},
+    {"from": "file:fixtures/events/two-voices.gp.events", "to": "file:fixtures/events/tall-system-shrinks.gp.events", "type": "related", "description": "Both involve multi-voice notation"},
+    {"from": "file:fixtures/events/whammy-and-fade-in.gp.events", "to": "file:fixtures/guitar-pro-7.6/bends.gpif", "type": "related", "description": "Both test pitch-bend techniques (whammy bar vs fret bends)"},
+    {"from": "file:fixtures/guitar-pro-7.6/bends.gpif", "to": "file:fixtures/guitar-pro-7.6/chord-names.gpif", "type": "related", "description": "Both are Guitar Pro 7.6 GPIF XML test fixtures"},
+    {"from": "file:fixtures/guitar-pro-7.6/README.md", "to": "file:fixtures/guitar-pro-7.6/bends.gpif", "type": "related", "description": "README documents the purpose of GPIF reference files in this directory"},
+    {"from": "file:fixtures/guitar-pro-7.6/README.md", "to": "file:fixtures/guitar-pro-7.6/chord-names.gpif", "type": "related", "description": "README documents the purpose of GPIF reference files in this directory"},
+    {"from": "file:fixtures/gp/oxiguitar-test-song.gp", "to": "file:fixtures/gp/oxiguitar-test-song.gp3", "type": "related", "description": "Both are Guitar Pro binary test fixtures (GP3 and GP5 formats)"},
+    {"from": "file:fixtures/gp/oxiguitar-test-song.gp3", "to": "file:fixtures/gp/oxiguitar-test-song.gp4", "type": "related", "description": "Both are Guitar Pro binary test fixtures (GP3 and GP4 formats)"},
+    {"from": "file:fixtures/gp/oxiguitar-test-song.gp4", "to": "file:fixtures/gp/oxiguitar-test-song.gp5", "type": "related", "description": "Both are Guitar Pro binary test fixtures (GP4 and GP5 formats)"},
+    {"from": "file:fixtures/gp/oxiguitar-test-song.gp5", "to": "file:fixtures/gp/oxiguitar-test-song.gpx", "type": "related", "description": "Both are Guitar Pro test fixtures (binary GP5 and XML GPX formats)"},
+    {"from": "file:fixtures/gp/oxiguitar-test-song.gpx", "to": "file:fixtures/guitar-pro-7.6/bends.gpif", "type": "related", "description": "Both are Guitar Pro XML-based formats (GPX and GPIF)"},
+    {"from": "file:fixtures/guitar-pro-7.6/bends.gpif", "to": "file:fixtures/events/slides.gp.events", "type": "related", "description": "Both test guitar articulation — bends in GPIF, slides in events format"},
+    {"from": "file:fixtures/guitar-pro-7.6/chord-names.gpif", "to": "file:fixtures/events/two-voices.gp.events", "type": "related", "description": "Both test multi-note/polyphonic notation"}
+  ]
+}

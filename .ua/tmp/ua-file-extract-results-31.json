@@ -1,0 +1,44 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 0,
+  "filesSkipped": [
+    "fixtures/reference/layout-vertical.gp",
+    "fixtures/reference/let-ring.gp",
+    "fixtures/reference/lyrics.gp",
+    "fixtures/reference/notation-choice.gp",
+    "fixtures/reference/notes-and-rests.gp",
+    "fixtures/reference/page-breaks.gp",
+    "fixtures/reference/paper-letter.gp",
+    "fixtures/reference/piano-grand-staff.gp",
+    "fixtures/reference/repeats-and-endings.gp",
+    "fixtures/reference/rhythm-on-tab.gp",
+    "fixtures/reference/sections-and-directions.gp",
+    "fixtures/reference/seven-string.gp",
+    "fixtures/reference/slides.gp",
+    "fixtures/reference/standard-only.gp",
+    "fixtures/reference/strings-treble-and-bass.gp",
+    "fixtures/reference/strums-and-techniques.gp",
+    "fixtures/reference/tall-system-shrinks.gp",
+    "fixtures/reference/tempo-changes.gp",
+    "fixtures/reference/time-signatures.gp",
+    "fixtures/reference/tremolo-picking.gp",
+    "fixtures/reference/triplets.gp",
+    "fixtures/reference/two-voices.gp",
+    "fixtures/reference/unusual-tuplets.gp",
+    "fixtures/reference/vibrato-and-trill.gp",
+    "fixtures/reference/whammy-and-fade-in.gp"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 0,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": []
+}

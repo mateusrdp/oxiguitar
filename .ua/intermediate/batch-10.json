@@ -1,0 +1,77 @@
+{
+  "nodes": [
+    {
+      "id": "config:fuzz/Cargo.toml",
+      "type": "config",
+      "name": "Cargo.toml",
+      "filePath": "fuzz/Cargo.toml",
+      "summary": "Rust fuzzing workspace configuration defining 9 fuzz targets for OxiGuitar's file format readers and plugins, with dependencies on internal crates and libFuzzer.",
+      "tags": ["fuzzing", "cargo", "libfuzzer", "rust", "configuration"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:fuzz/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "fuzz/README.md",
+      "summary": "Documentation for the fuzzing setup explaining targets, usage, CI integration, and the fuzzing policy for OxiGuitar's format readers.",
+      "tags": ["fuzzing", "documentation", "cargo-fuzz", "testing", "ci"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:fuzz/run.sh",
+      "type": "file",
+      "name": "run.sh",
+      "filePath": "fuzz/run.sh",
+      "summary": "Shell script that runs a fuzz target for a specified duration using libFuzzer's fork mode with crash detection and corpus minimization.",
+      "tags": ["fuzzing", "shell", "libfuzzer", "automation", "testing"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:fuzz/seeds.sh",
+      "type": "file",
+      "name": "seeds.sh",
+      "filePath": "fuzz/seeds.sh",
+      "summary": "Shell script that populates fuzzing corpus directories with seed files from public fixtures for each fuzz target.",
+      "tags": ["fuzzing", "shell", "seeding", "fixtures", "automation"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:fuzz/README.md",
+      "target": "config:fuzz/Cargo.toml",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "document:fuzz/README.md",
+      "target": "file:fuzz/run.sh",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "document:fuzz/README.md",
+      "target": "file:fuzz/seeds.sh",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:fuzz/run.sh",
+      "target": "file:fuzz/seeds.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:fuzz/Cargo.toml",
+      "target": "file:fuzz/run.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

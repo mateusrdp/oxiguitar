@@ -1,0 +1,11 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "crates/oxiguitar-testgen/src/big.rs", "language": "rust", "sizeLines": 302, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/src/lib.rs", "language": "rust", "sizeLines": 25, "fileCategory": "code"}
+  ],
+  "batchImportData": {
+    "crates/oxiguitar-testgen/src/big.rs": [],
+    "crates/oxiguitar-testgen/src/lib.rs": []
+  }
+}

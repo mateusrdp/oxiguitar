@@ -1,0 +1,712 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 18,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 18,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 18
+    }
+  },
+  "results": [
+    {
+      "path": "docs/plugins/src/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 32,
+      "nonEmptyLines": 25,
+      "sections": [
+        {
+          "heading": "Writing OxiGuitar plugins",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "What you need",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "The pages",
+          "level": 2,
+          "line": 13
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "docs/plugins/src/SUMMARY.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 20,
+      "nonEmptyLines": 18,
+      "sections": [
+        {
+          "heading": "Summary",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/plugins/src/building.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 62,
+      "nonEmptyLines": 44,
+      "sections": [
+        {
+          "heading": "Building for every system",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "One build",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "Every system, on GitHub",
+          "level": 2,
+          "line": 45
+        },
+        {
+          "heading": "Before you release",
+          "level": 2,
+          "line": 57
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "docs/plugins/src/events.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 49,
+      "nonEmptyLines": 32,
+      "sections": [
+        {
+          "heading": "Events and the open score",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Subscribing",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "Receiving",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "The open score",
+          "level": 2,
+          "line": 35
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "docs/plugins/src/formats.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 124,
+      "nonEmptyLines": 92,
+      "sections": [
+        {
+          "heading": "Formats: reading and writing files",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Declaring a format",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "Signatures",
+          "level": 3,
+          "line": 30
+        },
+        {
+          "heading": "Reading",
+          "level": 2,
+          "line": 42
+        },
+        {
+          "heading": "The score",
+          "level": 2,
+          "line": 65
+        },
+        {
+          "heading": "Writing",
+          "level": 2,
+          "line": 101
+        },
+        {
+          "heading": "One format per plugin",
+          "level": 2,
+          "line": 122
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "docs/plugins/src/installing.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 55,
+      "nonEmptyLines": 35,
+      "sections": [
+        {
+          "heading": "Installing and sharing",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Where users put the file",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "What OxiGuitar does with it",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "macOS: the download mark",
+          "level": 2,
+          "line": 35
+        },
+        {
+          "heading": "What to tell your users",
+          "level": 2,
+          "line": 45
+        },
+        {
+          "heading": "Sharing it",
+          "level": 2,
+          "line": 53
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "docs/plugins/src/instruments.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 50,
+      "nonEmptyLines": 37,
+      "sections": [
+        {
+          "heading": "Instruments",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "How an instrument works",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Effects",
+          "level": 2,
+          "line": 21
+        },
+        {
+          "heading": "Tracks and classes",
+          "level": 2,
+          "line": 25
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "docs/plugins/src/manifest.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 77,
+      "nonEmptyLines": 57,
+      "sections": [
+        {
+          "heading": "The plugin file and its manifest",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "The file",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "manifest.json",
+          "level": 2,
+          "line": 9
+        },
+        {
+          "heading": "Conditions",
+          "level": 2,
+          "line": 44
+        },
+        {
+          "heading": "Rules the checks enforce",
+          "level": 2,
+          "line": 63
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "docs/plugins/src/sdk.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 89,
+      "nonEmptyLines": 64,
+      "sections": [
+        {
+          "heading": "The SDK",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "The crate",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "The plugin",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "Threads",
+          "level": 2,
+          "line": 37
+        },
+        {
+          "heading": "The host",
+          "level": 2,
+          "line": 47
+        },
+        {
+          "heading": "Errors",
+          "level": 2,
+          "line": 65
+        },
+        {
+          "heading": "Built in, and in tests",
+          "level": 2,
+          "line": 87
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "docs/plugins/src/services.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 85,
+      "nonEmptyLines": 59,
+      "sections": [
+        {
+          "heading": "Services",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Implementing one",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "How OxiGuitar chooses",
+          "level": 2,
+          "line": 41
+        },
+        {
+          "heading": "Calling one",
+          "level": 2,
+          "line": 51
+        },
+        {
+          "heading": "The audio device (interface 1.3)",
+          "level": 2,
+          "line": 65
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "docs/plugins/src/settings.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 40,
+      "nonEmptyLines": 29,
+      "sections": [
+        {
+          "heading": "Settings",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Folders (interface 1.3)",
+          "level": 2,
+          "line": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "docs/plugins/src/tabs.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 120,
+      "nonEmptyLines": 84,
+      "sections": [
+        {
+          "heading": "Tabs: widgets and canvases",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Declaring a tab",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "Contents",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "Contents the core refuses",
+          "level": 3,
+          "line": 57
+        },
+        {
+          "heading": "Redrawing",
+          "level": 2,
+          "line": 61
+        },
+        {
+          "heading": "The canvas",
+          "level": 2,
+          "line": 65
+        },
+        {
+          "heading": "Limits",
+          "level": 3,
+          "line": 95
+        },
+        {
+          "heading": "The pointer",
+          "level": 3,
+          "line": 99
+        },
+        {
+          "heading": "Tips",
+          "level": 2,
+          "line": 115
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 9
+      }
+    },
+    {
+      "path": "docs/plugins/src/template.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 78,
+      "nonEmptyLines": 56,
+      "sections": [
+        {
+          "heading": "Start from the template",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "1. Copy it",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "2. Build and test it",
+          "level": 2,
+          "line": 24
+        },
+        {
+          "heading": "3. Try it in OxiGuitar",
+          "level": 2,
+          "line": 36
+        },
+        {
+          "heading": "4. Make it yours",
+          "level": 2,
+          "line": 51
+        },
+        {
+          "heading": "What's in the folder",
+          "level": 2,
+          "line": 58
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "docs/plugins/src/testing.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 88,
+      "nonEmptyLines": 62,
+      "sections": [
+        {
+          "heading": "Testing",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "cargo test",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "oxiguitar-plugin-test",
+          "level": 2,
+          "line": 31
+        },
+        {
+          "heading": "oxiguitar-cli",
+          "level": 2,
+          "line": 43
+        },
+        {
+          "heading": "In the app",
+          "level": 2,
+          "line": 56
+        },
+        {
+          "heading": "Fuzzing",
+          "level": 2,
+          "line": 75
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "docs/plugins/src/tools.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 39,
+      "nonEmptyLines": 24,
+      "sections": [
+        {
+          "heading": "Tools and changes to the score",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Tools",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "Changing the score",
+          "level": 2,
+          "line": 17
+        },
+        {
+          "heading": "The selection",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "The score, version 2",
+          "level": 2,
+          "line": 37
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "docs/plugins/src/track-sections.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 22,
+      "nonEmptyLines": 14,
+      "sections": [
+        {
+          "heading": "Track sections",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/plugins/src/versions.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 21,
+      "nonEmptyLines": 15,
+      "sections": [
+        {
+          "heading": "Interface versions",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/plugins/src/what.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 37,
+      "nonEmptyLines": 25,
+      "sections": [
+        {
+          "heading": "What a plugin is",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "What a plugin can add",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "What a plugin is not",
+          "level": 2,
+          "line": 17
+        },
+        {
+          "heading": "When it runs",
+          "level": 2,
+          "line": 24
+        },
+        {
+          "heading": "In Rust",
+          "level": 2,
+          "line": 33
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    }
+  ]
+}

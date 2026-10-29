@@ -1,0 +1,16 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "crates/oxiguitar-testgen/tests/guitar_pro_7_6.rs", "language": "rust", "sizeLines": 182, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/tests/guitar_pro_check.rs", "language": "rust", "sizeLines": 74, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/tests/hits.rs", "language": "rust", "sizeLines": 99, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/tests/read.rs", "language": "rust", "sizeLines": 42, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/tests/visual.rs", "language": "rust", "sizeLines": 508, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-tools/Cargo.toml", "language": "toml", "sizeLines": 19, "fileCategory": "config"},
+    {"path": "crates/oxiguitar-tools/src/keys.rs", "language": "rust", "sizeLines": 500, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-tools/src/lib.rs", "language": "rust", "sizeLines": 94, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-tools/tests/corpus.rs", "language": "rust", "sizeLines": 52, "fileCategory": "code"}
+  ],
+  "batchImportData": {},
+  "neighborMap": {}
+}

@@ -1,0 +1,847 @@
+{
+  "nodes": [
+    {
+      "id": "file:ARCHITECTURE.md",
+      "type": "docs",
+      "filePath": "ARCHITECTURE.md",
+      "summary": "High-level architecture overview documenting OxiGuitar's crate-based workspace structure, design rules, and where architectural decisions are recorded. Covers the modular crate organization, design principles guiding the codebase, and the ADR (Architecture Decision Record) system in docs/adr/.",
+      "tags": ["architecture", "overview", "crates", "design-rules", "adr"],
+      "complexity": 3,
+      "category": "docs"
+    },
+    {
+      "id": "docs:ARCHITECTURE.md:crates",
+      "type": "section",
+      "filePath": "ARCHITECTURE.md",
+      "parentFile": "file:ARCHITECTURE.md",
+      "summary": "Documents the crate-based modular structure of OxiGuitar, describing how functionality is split across workspace members in crates/ and plugins/.",
+      "tags": ["crates", "workspace", "modular-architecture"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:ARCHITECTURE.md:design-rules",
+      "type": "section",
+      "filePath": "ARCHITECTURE.md",
+      "parentFile": "file:ARCHITECTURE.md",
+      "summary": "Design rules and conventions that guide architectural decisions across the OxiGuitar codebase.",
+      "tags": ["design-rules", "conventions"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:ARCHITECTURE.md:where-decisions-are-recorded",
+      "type": "section",
+      "filePath": "ARCHITECTURE.md",
+      "parentFile": "file:ARCHITECTURE.md",
+      "summary": "Points to the ADR directory (docs/adr/) and references ADR 0008 as an example of recorded architectural decisions.",
+      "tags": ["adr", "decision-records"],
+      "complexity": 1,
+      "category": "docs"
+    },
+    {
+      "id": "file:CHANGELOG.md",
+      "type": "docs",
+      "filePath": "CHANGELOG.md",
+      "summary": "Comprehensive version history spanning from v0.1.0 (2026-10-17) through v0.10.0 (2026-10-26), documenting all added, changed, and fixed items per release. Tracks the project's rapid iteration cadence across milestones M0-M3.",
+      "tags": ["changelog", "version-history", "releases", "0.1.0", "0.2.0", "0.5.0", "0.9.0", "0.10.0"],
+      "complexity": 5,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CHANGELOG.md:unreleased",
+      "type": "section",
+      "filePath": "CHANGELOG.md",
+      "parentFile": "file:CHANGELOG.md",
+      "summary": "Pending changes not yet released, tracking work in progress.",
+      "tags": ["unreleased", "in-progress"],
+      "complexity": 1,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CHANGELOG.md:v0.10.0",
+      "type": "section",
+      "filePath": "CHANGELOG.md",
+      "parentFile": "file:CHANGELOG.md",
+      "summary": "Version 0.10.0 release (2026-10-26) with added and changed features.",
+      "tags": ["v0.10.0", "release"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CHANGELOG.md:v0.9.0",
+      "type": "section",
+      "filePath": "CHANGELOG.md",
+      "parentFile": "file:CHANGELOG.md",
+      "summary": "Version 0.9.0 release (2026-10-26) with added and changed features.",
+      "tags": ["v0.9.0", "release"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CHANGELOG.md:v0.5.0",
+      "type": "section",
+      "filePath": "CHANGELOG.md",
+      "parentFile": "file:CHANGELOG.md",
+      "summary": "Version 0.5.0 release (2026-10-21) covering M3 — Editor milestone additions, fixes, and changes.",
+      "tags": ["v0.5.0", "release", "m3-editor"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CHANGELOG.md:v0.2.0",
+      "type": "section",
+      "filePath": "CHANGELOG.md",
+      "parentFile": "file:CHANGELOG.md",
+      "summary": "Version 0.2.0 release (2026-10-19) covering M2 — Plugin system and window shell milestone.",
+      "tags": ["v0.2.0", "release", "m2-plugin-system"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CHANGELOG.md:v0.1.0",
+      "type": "section",
+      "filePath": "CHANGELOG.md",
+      "parentFile": "file:CHANGELOG.md",
+      "summary": "Version 0.1.0 release (2026-10-17) — initial release covering M0 — Foundations and M1 — Viewer.",
+      "tags": ["v0.1.0", "release", "m0-foundations", "m1-viewer"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "file:CONTRIBUTING.md",
+      "type": "docs",
+      "filePath": "CONTRIBUTING.md",
+      "summary": "Contributor guide covering branch strategy, pull request workflow, DCO sign-off requirements, code standards, platform gaps, design principles, file headers, test conventions, file format and effect plugin development processes, and a Decisions section linking to ADRs.",
+      "tags": ["contributing", "guidelines", "dco", "code-standards", "plugins", "testing"],
+      "complexity": 5,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CONTRIBUTING.md:branches-and-pull-requests",
+      "type": "section",
+      "filePath": "CONTRIBUTING.md",
+      "parentFile": "file:CONTRIBUTING.md",
+      "summary": "Branch naming conventions and pull request workflow for contributing to OxiGuitar.",
+      "tags": ["git-workflow", "pull-requests"],
+      "complexity": 1,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CONTRIBUTING.md:code-standards",
+      "type": "section",
+      "filePath": "CONTRIBUTING.md",
+      "parentFile": "file:CONTRIBUTING.md",
+      "summary": "Code style and quality standards enforced by clippy.toml, rustfmt.toml, and deny.toml.",
+      "tags": ["code-standards", "clippy", "rustfmt"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CONTRIBUTING.md:design-principles",
+      "type": "section",
+      "filePath": "CONTRIBUTING.md",
+      "parentFile": "file:CONTRIBUTING.md",
+      "summary": "High-level design principles guiding OxiGuitar's development philosophy.",
+      "tags": ["design-principles"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CONTRIBUTING.md:adding-a-file-format",
+      "type": "section",
+      "filePath": "CONTRIBUTING.md",
+      "parentFile": "file:CONTRIBUTING.md",
+      "summary": "Process and guidelines for adding new file format support to OxiGuitar.",
+      "tags": ["file-format", "plugin-development"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CONTRIBUTING.md:adding-an-effect",
+      "type": "section",
+      "filePath": "CONTRIBUTING.md",
+      "parentFile": "file:CONTRIBUTING.md",
+      "summary": "Process and guidelines for adding new audio effects via the plugin system.",
+      "tags": ["effect-plugin", "plugin-development"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "file:CREDITS.md",
+      "type": "docs",
+      "filePath": "CREDITS.md",
+      "summary": "Acknowledgments page listing special thanks, external projects studied or ported from (e.g., Guitar Pro), Rust crates depended on, fonts and assets used, and trademark notices. References deny.toml and about.toml for license compliance tooling.",
+      "tags": ["credits", "acknowledgments", "third-party", "licenses", "trademarks"],
+      "complexity": 3,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CREDITS.md:projects-we-study",
+      "type": "section",
+      "filePath": "CREDITS.md",
+      "parentFile": "file:CREDITS.md",
+      "summary": "External projects that OxiGuitar ports from or studies for reference, including Guitar Pro and other music software.",
+      "tags": ["external-projects", "guitar-pro"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:CREDITS.md:rust-crates",
+      "type": "section",
+      "filePath": "CREDITS.md",
+      "parentFile": "file:CREDITS.md",
+      "summary": "Rust crates that OxiGuitar depends on, listed with their licenses.",
+      "tags": ["rust-crates", "dependencies", "licenses"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "file:Cargo.toml",
+      "type": "config",
+      "filePath": "Cargo.toml",
+      "summary": "Rust workspace root configuration defining workspace members (crates/* and plugins/*), package metadata (edition 2024, rust-version 1.99), shared dependencies, workspace-level lint rules for rust and clippy, and release profile optimization settings. References CONTRIBUTING.md, spikes/README.md, fuzz/README.md, and docs/plugins/ in comments or documentation.",
+      "tags": ["cargo", "workspace", "dependencies", "lints", "rust-2024"],
+      "complexity": 4,
+      "category": "config"
+    },
+    {
+      "id": "config:Cargo.toml:workspace",
+      "type": "section",
+      "filePath": "Cargo.toml",
+      "parentFile": "file:Cargo.toml",
+      "summary": "Workspace root definition listing member crates and plugins, establishing the project's modular structure.",
+      "tags": ["workspace", "members"],
+      "complexity": 2,
+      "category": "config"
+    },
+    {
+      "id": "config:Cargo.toml:workspace-dependencies",
+      "type": "section",
+      "filePath": "Cargo.toml",
+      "parentFile": "file:Cargo.toml",
+      "summary": "Shared dependency declarations used across all workspace members, including core libraries and tooling.",
+      "tags": ["dependencies", "shared"],
+      "complexity": 3,
+      "category": "config"
+    },
+    {
+      "id": "config:Cargo.toml:workspace-lints",
+      "type": "section",
+      "filePath": "Cargo.toml",
+      "parentFile": "file:Cargo.toml",
+      "summary": "Workspace-level lint configurations for rust and clippy, enforcing code quality standards.",
+      "tags": ["lints", "clippy", "code-quality"],
+      "complexity": 2,
+      "category": "config"
+    },
+    {
+      "id": "config:Cargo.toml:profile-release",
+      "type": "section",
+      "filePath": "Cargo.toml",
+      "parentFile": "file:Cargo.toml",
+      "summary": "Release profile optimization settings for production builds.",
+      "tags": ["profile", "release", "optimization"],
+      "complexity": 1,
+      "category": "config"
+    },
+    {
+      "id": "file:README.md",
+      "type": "docs",
+      "filePath": "README.md",
+      "summary": "Project introduction covering privacy policy, project status, how to get involved, supported systems, build-from-source instructions, plugin writing guide, tester recruitment, contributing guidelines, donation information, and licensing. Serves as the primary entry point for new users and contributors.",
+      "tags": ["readme", "getting-started", "installation", "plugins", "community"],
+      "complexity": 4,
+      "category": "docs"
+    },
+    {
+      "id": "docs:README.md:supported-systems",
+      "type": "section",
+      "filePath": "README.md",
+      "parentFile": "file:README.md",
+      "summary": "Lists supported operating systems and platforms for OxiGuitar.",
+      "tags": ["platforms", "supported-systems"],
+      "complexity": 1,
+      "category": "docs"
+    },
+    {
+      "id": "docs:README.md:building-from-source",
+      "type": "section",
+      "filePath": "README.md",
+      "parentFile": "file:README.md",
+      "summary": "Step-by-step build instructions for compiling OxiGuitar from source.",
+      "tags": ["build", "compilation", "getting-started"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:README.md:writing-plugins",
+      "type": "section",
+      "filePath": "README.md",
+      "parentFile": "file:README.md",
+      "summary": "Guide to writing OxiGuitar plugins, referencing docs/plugins/ for detailed documentation.",
+      "tags": ["plugins", "plugin-development"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "file:ROADMAP.md",
+      "type": "docs",
+      "filePath": "ROADMAP.md",
+      "summary": "Detailed product roadmap spanning milestones M0 through M4 and beyond. M0 (Foundations) and M1 (Viewer v0.1) are complete. M2 (Plugin system v0.2) is in progress with remaining slices planned. M3 (Editor v0.5) slices are approved. M4 (Player v1.0) slices are approved. Later milestones and wishlist items are outlined. References ADR 0008, ADR 0009, CHANGELOG.md, CONTRIBUTING.md, CREDITS.md, and docs/adr/.",
+      "tags": ["roadmap", "milestones", "m0", "m1", "m2", "m3", "m4", "planning"],
+      "complexity": 5,
+      "category": "docs"
+    },
+    {
+      "id": "docs:ROADMAP.md:m0-foundations",
+      "type": "section",
+      "filePath": "ROADMAP.md",
+      "parentFile": "file:ROADMAP.md",
+      "summary": "M0 — Foundations milestone: initial project setup, tooling, and basic infrastructure.",
+      "tags": ["m0", "foundations", "completed"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:ROADMAP.md:m1-viewer",
+      "type": "section",
+      "filePath": "ROADMAP.md",
+      "parentFile": "file:ROADMAP.md",
+      "summary": "M1 — Viewer milestone (v0.1): basic sheet music viewer functionality.",
+      "tags": ["m1", "viewer", "v0.1", "completed"],
+      "complexity": 2,
+      "category": "docs"
+    },
+    {
+      "id": "docs:ROADMAP.md:m2-plugin-system",
+      "type": "section",
+      "filePath": "ROADMAP.md",
+      "parentFile": "file:ROADMAP.md",
+      "summary": "M2 — Plugin system and window shell (v0.2): in-progress milestone with remaining slices planned as of 18 Oct 2026.",
+      "tags": ["m2", "plugin-system", "v0.2", "in-progress"],
+      "complexity": 3,
+      "category": "docs"
+    },
+    {
+      "id": "docs:ROADMAP.md:m3-editor",
+      "type": "section",
+      "filePath": "ROADMAP.md",
+      "parentFile": "file:ROADMAP.md",
+      "summary": "M3 — Editor milestone (v0.5): approved slices for music score editing functionality.",
+      "tags": ["m3", "editor", "v0.5", "approved"],
+      "complexity": 3,
+      "category": "docs"
+    },
+    {
+      "id": "docs:ROADMAP.md:m4-player",
+      "type": "section",
+      "filePath": "ROADMAP.md",
+      "parentFile": "file:ROADMAP.md",
+      "summary": "M4 — Player milestone (v1.0): approved slices for music playback functionality.",
+      "tags": ["m4", "player", "v1.0", "approved"],
+      "complexity": 3,
+      "category": "docs"
+    },
+    {
+      "id": "file:about.toml",
+      "type": "config",
+      "filePath": "about.toml",
+      "summary": "Cargo about configuration for license attribution generation. References deny.toml for license compliance enforcement. Used alongside cargo-about to generate NOTICE and attribution files.",
+      "tags": ["cargo-about", "licenses", "attribution", "compliance"],
+      "complexity": 2,
+      "category": "config"
+    },
+    {
+      "id": "file:clippy.toml",
+      "type": "config",
+      "filePath": "clippy.toml",
+      "summary": "Clippy lint configuration for the Rust workspace, defining allowed and disallowed lints to enforce code quality standards.",
+      "tags": ["clippy", "lints", "code-quality"],
+      "complexity": 1,
+      "category": "config"
+    },
+    {
+      "id": "file:deny.toml",
+      "type": "config",
+      "filePath": "deny.toml",
+      "summary": "Cargo deny configuration for dependency security and license compliance. Defines graph settings, advisory checks, license allow/deny lists (including private license handling), banned crates, and source restrictions. References CREDITS.md and ADR 0009 for license policy context.",
+      "tags": ["cargo-deny", "security", "licenses", "compliance", "bans"],
+      "complexity": 4,
+      "category": "config"
+    },
+    {
+      "id": "config:deny.toml:advisories",
+      "type": "section",
+      "filePath": "deny.toml",
+      "parentFile": "file:deny.toml",
+      "summary": "RustSec advisory checks for vulnerable dependencies.",
+      "tags": ["advisories", "security", "rustsec"],
+      "complexity": 1,
+      "category": "config"
+    },
+    {
+      "id": "config:deny.toml:licenses",
+      "type": "section",
+      "filePath": "deny.toml",
+      "parentFile": "file:deny.toml",
+      "summary": "License allow/deny policy for workspace dependencies, including private license handling.",
+      "tags": ["licenses", "compliance"],
+      "complexity": 2,
+      "category": "config"
+    },
+    {
+      "id": "config:deny.toml:bans",
+      "type": "section",
+      "filePath": "deny.toml",
+      "parentFile": "file:deny.toml",
+      "summary": "Banned crates and duplicate dependency policies.",
+      "tags": ["bans", "dependencies"],
+      "complexity": 1,
+      "category": "config"
+    },
+    {
+      "id": "file:rustfmt.toml",
+      "type": "config",
+      "filePath": "rustfmt.toml",
+      "summary": "Rustfmt configuration defining code formatting rules for the workspace.",
+      "tags": ["rustfmt", "formatting", "code-style"],
+      "complexity": 1,
+      "category": "config"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:ARCHITECTURE.md:contains:crates",
+      "source": "file:ARCHITECTURE.md",
+      "target": "docs:ARCHITECTURE.md:crates",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:ARCHITECTURE.md:contains:design-rules",
+      "source": "file:ARCHITECTURE.md",
+      "target": "docs:ARCHITECTURE.md:design-rules",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:ARCHITECTURE.md:contains:where-decisions",
+      "source": "file:ARCHITECTURE.md",
+      "target": "docs:ARCHITECTURE.md:where-decisions-are-recorded",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:ARCHITECTURE.md:references:CONTRIBUTING.md",
+      "source": "file:ARCHITECTURE.md",
+      "target": "file:CONTRIBUTING.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:ARCHITECTURE.md:references:docs-adr",
+      "source": "file:ARCHITECTURE.md",
+      "target": "file:docs/adr/ADR-0008.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:CHANGELOG.md:contains:unreleased",
+      "source": "file:CHANGELOG.md",
+      "target": "docs:CHANGELOG.md:unreleased",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CHANGELOG.md:contains:v0.10.0",
+      "source": "file:CHANGELOG.md",
+      "target": "docs:CHANGELOG.md:v0.10.0",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CHANGELOG.md:contains:v0.9.0",
+      "source": "file:CHANGELOG.md",
+      "target": "docs:CHANGELOG.md:v0.9.0",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CHANGELOG.md:contains:v0.5.0",
+      "source": "file:CHANGELOG.md",
+      "target": "docs:CHANGELOG.md:v0.5.0",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CHANGELOG.md:contains:v0.2.0",
+      "source": "file:CHANGELOG.md",
+      "target": "docs:CHANGELOG.md:v0.2.0",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CHANGELOG.md:contains:v0.1.0",
+      "source": "file:CHANGELOG.md",
+      "target": "docs:CHANGELOG.md:v0.1.0",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CHANGELOG.md:references:deny.toml",
+      "source": "file:CHANGELOG.md",
+      "target": "file:deny.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:CHANGELOG.md:references:licenses.sh",
+      "source": "file:CHANGELOG.md",
+      "target": "file:scripts/package/licenses.sh",
+      "relation": "references"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:contains:branches",
+      "source": "file:CONTRIBUTING.md",
+      "target": "docs:CONTRIBUTING.md:branches-and-pull-requests",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:contains:code-standards",
+      "source": "file:CONTRIBUTING.md",
+      "target": "docs:CONTRIBUTING.md:code-standards",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:contains:design-principles",
+      "source": "file:CONTRIBUTING.md",
+      "target": "docs:CONTRIBUTING.md:design-principles",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:contains:adding-file-format",
+      "source": "file:CONTRIBUTING.md",
+      "target": "docs:CONTRIBUTING.md:adding-a-file-format",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:contains:adding-effect",
+      "source": "file:CONTRIBUTING.md",
+      "target": "docs:CONTRIBUTING.md:adding-an-effect",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:references:ARCHITECTURE.md",
+      "source": "file:CONTRIBUTING.md",
+      "target": "file:ARCHITECTURE.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:references:clippy.toml",
+      "source": "file:CONTRIBUTING.md",
+      "target": "file:clippy.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:references:rustfmt.toml",
+      "source": "file:CONTRIBUTING.md",
+      "target": "file:rustfmt.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:CONTRIBUTING.md:references:deny.toml",
+      "source": "file:CONTRIBUTING.md",
+      "target": "file:deny.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:CREDITS.md:contains:projects-study",
+      "source": "file:CREDITS.md",
+      "target": "docs:CREDITS.md:projects-we-study",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CREDITS.md:contains:rust-crates",
+      "source": "file:CREDITS.md",
+      "target": "docs:CREDITS.md:rust-crates",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:CREDITS.md:references:deny.toml",
+      "source": "file:CREDITS.md",
+      "target": "file:deny.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:CREDITS.md:references:about.toml",
+      "source": "file:CREDITS.md",
+      "target": "file:about.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:Cargo.toml:contains:workspace",
+      "source": "file:Cargo.toml",
+      "target": "config:Cargo.toml:workspace",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:Cargo.toml:contains:dependencies",
+      "source": "file:Cargo.toml",
+      "target": "config:Cargo.toml:workspace-dependencies",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:Cargo.toml:contains:lints",
+      "source": "file:Cargo.toml",
+      "target": "config:Cargo.toml:workspace-lints",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:Cargo.toml:contains:profile-release",
+      "source": "file:Cargo.toml",
+      "target": "config:Cargo.toml:profile-release",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:Cargo.toml:references:CONTRIBUTING.md",
+      "source": "file:Cargo.toml",
+      "target": "file:CONTRIBUTING.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:Cargo.toml:references:spikes-readme",
+      "source": "file:Cargo.toml",
+      "target": "file:spikes/README.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:Cargo.toml:references:fuzz-readme",
+      "source": "file:Cargo.toml",
+      "target": "file:fuzz/README.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:Cargo.toml:references:docs-plugins",
+      "source": "file:Cargo.toml",
+      "target": "file:docs/plugins/",
+      "relation": "references"
+    },
+    {
+      "id": "edge:Cargo.toml:references:clippy.toml",
+      "source": "file:Cargo.toml",
+      "target": "file:clippy.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:Cargo.toml:references:deny.toml",
+      "source": "file:Cargo.toml",
+      "target": "file:deny.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:Cargo.toml:references:rustfmt.toml",
+      "source": "file:Cargo.toml",
+      "target": "file:rustfmt.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:Cargo.toml:references:about.toml",
+      "source": "file:Cargo.toml",
+      "target": "file:about.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:README.md:contains:supported-systems",
+      "source": "file:README.md",
+      "target": "docs:README.md:supported-systems",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:README.md:contains:building-from-source",
+      "source": "file:README.md",
+      "target": "docs:README.md:building-from-source",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:README.md:contains:writing-plugins",
+      "source": "file:README.md",
+      "target": "docs:README.md:writing-plugins",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:README.md:references:CONTRIBUTING.md",
+      "source": "file:README.md",
+      "target": "file:CONTRIBUTING.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:README.md:references:ARCHITECTURE.md",
+      "source": "file:README.md",
+      "target": "file:ARCHITECTURE.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:README.md:references:Cargo.toml",
+      "source": "file:README.md",
+      "target": "file:Cargo.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:README.md:references:ROADMAP.md",
+      "source": "file:README.md",
+      "target": "file:ROADMAP.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:README.md:references:CHANGELOG.md",
+      "source": "file:README.md",
+      "target": "file:CHANGELOG.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:ROADMAP.md:contains:m0",
+      "source": "file:ROADMAP.md",
+      "target": "docs:ROADMAP.md:m0-foundations",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:ROADMAP.md:contains:m1",
+      "source": "file:ROADMAP.md",
+      "target": "docs:ROADMAP.md:m1-viewer",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:ROADMAP.md:contains:m2",
+      "source": "file:ROADMAP.md",
+      "target": "docs:ROADMAP.md:m2-plugin-system",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:ROADMAP.md:contains:m3",
+      "source": "file:ROADMAP.md",
+      "target": "docs:ROADMAP.md:m3-editor",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:ROADMAP.md:contains:m4",
+      "source": "file:ROADMAP.md",
+      "target": "docs:ROADMAP.md:m4-player",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:ROADMAP.md:references:CHANGELOG.md",
+      "source": "file:ROADMAP.md",
+      "target": "file:CHANGELOG.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:ROADMAP.md:references:CONTRIBUTING.md",
+      "source": "file:ROADMAP.md",
+      "target": "file:CONTRIBUTING.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:ROADMAP.md:references:CREDITS.md",
+      "source": "file:ROADMAP.md",
+      "target": "file:CREDITS.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:ROADMAP.md:references:ARCHITECTURE.md",
+      "source": "file:ROADMAP.md",
+      "target": "file:ARCHITECTURE.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:ROADMAP.md:references:adr-0008",
+      "source": "file:ROADMAP.md",
+      "target": "file:docs/adr/ADR-0008.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:ROADMAP.md:references:adr-0009",
+      "source": "file:ROADMAP.md",
+      "target": "file:docs/adr/ADR-0009.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:about.toml:references:deny.toml",
+      "source": "file:about.toml",
+      "target": "file:deny.toml",
+      "relation": "references"
+    },
+    {
+      "id": "edge:deny.toml:references:CREDITS.md",
+      "source": "file:deny.toml",
+      "target": "file:CREDITS.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:deny.toml:references:adr-0009",
+      "source": "file:deny.toml",
+      "target": "file:docs/adr/ADR-0009.md",
+      "relation": "references"
+    },
+    {
+      "id": "edge:deny.toml:contains:advisories",
+      "source": "file:deny.toml",
+      "target": "config:deny.toml:advisories",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:deny.toml:contains:licenses",
+      "source": "file:deny.toml",
+      "target": "config:deny.toml:licenses",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:deny.toml:contains:bans",
+      "source": "file:deny.toml",
+      "target": "config:deny.toml:bans",
+      "relation": "contains"
+    },
+    {
+      "id": "edge:clippy.toml:referenced-by:CONTRIBUTING.md",
+      "source": "file:clippy.toml",
+      "target": "file:CONTRIBUTING.md",
+      "relation": "referenced-by"
+    },
+    {
+      "id": "edge:clippy.toml:referenced-by:Cargo.toml",
+      "source": "file:clippy.toml",
+      "target": "file:Cargo.toml",
+      "relation": "referenced-by"
+    },
+    {
+      "id": "edge:rustfmt.toml:referenced-by:CONTRIBUTING.md",
+      "source": "file:rustfmt.toml",
+      "target": "file:CONTRIBUTING.md",
+      "relation": "referenced-by"
+    },
+    {
+      "id": "edge:rustfmt.toml:referenced-by:Cargo.toml",
+      "source": "file:rustfmt.toml",
+      "target": "file:Cargo.toml",
+      "relation": "referenced-by"
+    },
+    {
+      "id": "edge:deny.toml:referenced-by:about.toml",
+      "source": "file:deny.toml",
+      "target": "file:about.toml",
+      "relation": "referenced-by"
+    },
+    {
+      "id": "edge:deny.toml:referenced-by:CREDITS.md",
+      "source": "file:deny.toml",
+      "target": "file:CREDITS.md",
+      "relation": "referenced-by"
+    },
+    {
+      "id": "edge:deny.toml:referenced-by:CHANGELOG.md",
+      "source": "file:deny.toml",
+      "target": "file:CHANGELOG.md",
+      "relation": "referenced-by"
+    },
+    {
+      "id": "edge:deny.toml:referenced-by:Cargo.toml",
+      "source": "file:deny.toml",
+      "target": "file:Cargo.toml",
+      "relation": "referenced-by"
+    },
+    {
+      "id": "edge:CHANGELOG.md:tracks:ROADMAP.md",
+      "source": "file:CHANGELOG.md",
+      "target": "file:ROADMAP.md",
+      "relation": "tracks"
+    }
+  ]
+}

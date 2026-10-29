@@ -1,0 +1,1515 @@
+{
+  "nodes": [
+    {
+      "id": "config:plugins/gp/Cargo.toml",
+      "type": "config",
+      "label": "plugins/gp/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "totalLines": 41
+      }
+    },
+    {
+      "id": "config:plugins/gp/manifest.json",
+      "type": "config",
+      "label": "plugins/gp/manifest.json",
+      "metadata": {
+        "language": "json",
+        "totalLines": 22
+      }
+    },
+    {
+      "id": "config:plugins/gp3/Cargo.toml",
+      "type": "config",
+      "label": "plugins/gp3/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "totalLines": 41
+      }
+    },
+    {
+      "id": "config:plugins/gp3/manifest.json",
+      "type": "config",
+      "label": "plugins/gp3/manifest.json",
+      "metadata": {
+        "language": "json",
+        "totalLines": 30
+      }
+    },
+    {
+      "id": "config:plugins/gp4/Cargo.toml",
+      "type": "config",
+      "label": "plugins/gp4/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "totalLines": 41
+      }
+    },
+    {
+      "id": "config:plugins/gp4/manifest.json",
+      "type": "config",
+      "label": "plugins/gp4/manifest.json",
+      "metadata": {
+        "language": "json",
+        "totalLines": 30
+      }
+    },
+    {
+      "id": "config:plugins/gp5/Cargo.toml",
+      "type": "config",
+      "label": "plugins/gp5/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "totalLines": 41
+      }
+    },
+    {
+      "id": "config:plugins/gp5/manifest.json",
+      "type": "config",
+      "label": "plugins/gp5/manifest.json",
+      "metadata": {
+        "language": "json",
+        "totalLines": 30
+      }
+    },
+    {
+      "id": "config:plugins/gpx/Cargo.toml",
+      "type": "config",
+      "label": "plugins/gpx/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "totalLines": 41
+      }
+    },
+    {
+      "id": "config:plugins/gpx/manifest.json",
+      "type": "config",
+      "label": "plugins/gpx/manifest.json",
+      "metadata": {
+        "language": "json",
+        "totalLines": 23
+      }
+    },
+    {
+      "id": "config:plugins/soundfont/Cargo.toml",
+      "type": "config",
+      "label": "plugins/soundfont/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "totalLines": 37
+      }
+    },
+    {
+      "id": "config:plugins/soundfont/manifest.json",
+      "type": "config",
+      "label": "plugins/soundfont/manifest.json",
+      "metadata": {
+        "language": "json",
+        "totalLines": 15
+      }
+    },
+    {
+      "id": "file:plugins/gp/src/lib.rs",
+      "type": "file",
+      "label": "plugins/gp/src/lib.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 99
+      }
+    },
+    {
+      "id": "file:plugins/gp3/src/lib.rs",
+      "type": "file",
+      "label": "plugins/gp3/src/lib.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 72
+      }
+    },
+    {
+      "id": "file:plugins/gp4/src/lib.rs",
+      "type": "file",
+      "label": "plugins/gp4/src/lib.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 72
+      }
+    },
+    {
+      "id": "file:plugins/gp5/src/lib.rs",
+      "type": "file",
+      "label": "plugins/gp5/src/lib.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 101
+      }
+    },
+    {
+      "id": "file:plugins/gpx/src/lib.rs",
+      "type": "file",
+      "label": "plugins/gpx/src/lib.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 72
+      }
+    },
+    {
+      "id": "file:plugins/soundfont/src/dls.rs",
+      "type": "file",
+      "label": "plugins/soundfont/src/dls.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 842
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/dls.rs:wsmp",
+      "type": "function",
+      "label": "wsmp (25 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/dls.rs",
+        "name": "wsmp",
+        "lineCount": 25,
+        "startLine": 81,
+        "endLine": 105,
+        "params": [
+          "data"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/dls.rs:blocks",
+      "type": "function",
+      "label": "blocks (29 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/dls.rs",
+        "name": "blocks",
+        "lineCount": 29,
+        "startLine": 108,
+        "endLine": 136,
+        "params": [
+          "list"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/dls.rs:take",
+      "type": "function",
+      "label": "take (126 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/dls.rs",
+        "name": "take",
+        "lineCount": 126,
+        "startLine": 189,
+        "endLine": 314,
+        "params": [
+          "b"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/dls.rs:wave",
+      "type": "function",
+      "label": "wave (48 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/dls.rs",
+        "name": "wave",
+        "lineCount": 48,
+        "startLine": 331,
+        "endLine": 378,
+        "params": [
+          "body",
+          "index"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/dls.rs:to_sf2",
+      "type": "function",
+      "label": "to_sf2 (199 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/dls.rs",
+        "name": "to_sf2",
+        "lineCount": 199,
+        "startLine": 382,
+        "endLine": 580,
+        "params": [
+          "file"
+        ]
+      }
+    },
+    {
+      "id": "file:plugins/soundfont/src/lib.rs",
+      "type": "file",
+      "label": "plugins/soundfont/src/lib.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 364
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/lib.rs:fingerprint",
+      "type": "function",
+      "label": "fingerprint (19 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/lib.rs",
+        "name": "fingerprint",
+        "lineCount": 19,
+        "startLine": 99,
+        "endLine": 117,
+        "params": [
+          "path",
+          "size",
+          "modified"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/lib.rs:load_sfz",
+      "type": "function",
+      "label": "load_sfz (34 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/lib.rs",
+        "name": "load_sfz",
+        "lineCount": 34,
+        "startLine": 136,
+        "endLine": 169,
+        "params": [
+          "found"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/lib.rs:load",
+      "type": "function",
+      "label": "load (22 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/lib.rs",
+        "name": "load",
+        "lineCount": 22,
+        "startLine": 172,
+        "endLine": 193,
+        "params": [
+          "found"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/lib.rs:read",
+      "type": "function",
+      "label": "read (51 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/lib.rs",
+        "name": "read",
+        "lineCount": 51,
+        "startLine": 197,
+        "endLine": 247,
+        "params": [
+          "path",
+          "size",
+          "modified"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/lib.rs:warn_once",
+      "type": "function",
+      "label": "warn_once (16 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/lib.rs",
+        "name": "warn_once",
+        "lineCount": 16,
+        "startLine": 251,
+        "endLine": 266,
+        "params": []
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/lib.rs:prepare",
+      "type": "function",
+      "label": "prepare (72 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/lib.rs",
+        "name": "prepare",
+        "lineCount": 72,
+        "startLine": 290,
+        "endLine": 361,
+        "params": [
+          "prepare"
+        ]
+      }
+    },
+    {
+      "id": "file:plugins/soundfont/src/play.rs",
+      "type": "file",
+      "label": "plugins/soundfont/src/play.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 1430
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:stop",
+      "type": "function",
+      "label": "stop (16 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "stop",
+        "lineCount": 16,
+        "startLine": 211,
+        "endLine": 226,
+        "params": [
+          "fade"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:set_program",
+      "type": "function",
+      "label": "set_program (13 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "set_program",
+        "lineCount": 13,
+        "startLine": 228,
+        "endLine": 240,
+        "params": [
+          "channel",
+          "program"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:send_bend",
+      "type": "function",
+      "label": "send_bend (15 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "send_bend",
+        "lineCount": 15,
+        "startLine": 242,
+        "endLine": 256,
+        "params": [
+          "channel",
+          "cents"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:send_expression",
+      "type": "function",
+      "label": "send_expression (14 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "send_expression",
+        "lineCount": 14,
+        "startLine": 258,
+        "endLine": 271,
+        "params": [
+          "channel",
+          "value"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:program_for",
+      "type": "function",
+      "label": "program_for (20 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "program_for",
+        "lineCount": 20,
+        "startLine": 283,
+        "endLine": 302,
+        "params": [
+          "note"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:expression",
+      "type": "function",
+      "label": "expression (14 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "expression",
+        "lineCount": 14,
+        "startLine": 316,
+        "endLine": 329,
+        "params": [
+          "note",
+          "t"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:asked",
+      "type": "function",
+      "label": "asked (13 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "asked",
+        "lineCount": 13,
+        "startLine": 360,
+        "endLine": 372,
+        "params": [
+          "note"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:sampler_note_on",
+      "type": "function",
+      "label": "sampler_note_on (53 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "sampler_note_on",
+        "lineCount": 53,
+        "startLine": 379,
+        "endLine": 431,
+        "params": [
+          "sampler",
+          "strings",
+          "map",
+          "note",
+          "pitch"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:new",
+      "type": "function",
+      "label": "new (40 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "new",
+        "lineCount": 40,
+        "startLine": 484,
+        "endLine": 523,
+        "params": [
+          "prepare",
+          "sounds"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:note_on",
+      "type": "function",
+      "label": "note_on (94 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "note_on",
+        "lineCount": 94,
+        "startLine": 525,
+        "endLine": 618,
+        "params": [
+          "note",
+          "pitch"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:end",
+      "type": "function",
+      "label": "end (20 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "end",
+        "lineCount": 20,
+        "startLine": 622,
+        "endLine": 641,
+        "params": [
+          "i"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:note_off",
+      "type": "function",
+      "label": "note_off (29 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "note_off",
+        "lineCount": 29,
+        "startLine": 643,
+        "endLine": 671,
+        "params": [
+          "note",
+          "later",
+          "pitch"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:update",
+      "type": "function",
+      "label": "update (43 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "update",
+        "lineCount": 43,
+        "startLine": 686,
+        "endLine": 728,
+        "params": [
+          "pitch",
+          "t",
+          "seconds"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:track",
+      "type": "function",
+      "label": "track (49 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "track",
+        "lineCount": 49,
+        "startLine": 733,
+        "endLine": 781,
+        "params": [
+          "t",
+          "font",
+          "settings"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/play.rs:render",
+      "type": "function",
+      "label": "render (68 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/play.rs",
+        "name": "render",
+        "lineCount": 68,
+        "startLine": 784,
+        "endLine": 851,
+        "params": [
+          "piece"
+        ]
+      }
+    },
+    {
+      "id": "file:plugins/soundfont/src/riff.rs",
+      "type": "file",
+      "label": "plugins/soundfont/src/riff.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 115
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/riff.rs:chunks",
+      "type": "function",
+      "label": "chunks (27 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/riff.rs",
+        "name": "chunks",
+        "lineCount": 27,
+        "startLine": 55,
+        "endLine": 81,
+        "params": [
+          "body"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/riff.rs:form",
+      "type": "function",
+      "label": "form (11 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/riff.rs",
+        "name": "form",
+        "lineCount": 11,
+        "startLine": 84,
+        "endLine": 94,
+        "params": [
+          "file"
+        ]
+      }
+    },
+    {
+      "id": "file:plugins/soundfont/src/sets.rs",
+      "type": "file",
+      "label": "plugins/soundfont/src/sets.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 284
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sets.rs:of",
+      "type": "function",
+      "label": "of (10 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sets.rs",
+        "name": "of",
+        "lineCount": 10,
+        "startLine": 38,
+        "endLine": 47,
+        "params": [
+          "path"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sets.rs:system_places",
+      "type": "function",
+      "label": "system_places (22 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sets.rs",
+        "name": "system_places",
+        "lineCount": 22,
+        "startLine": 64,
+        "endLine": 85,
+        "params": []
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sets.rs:find",
+      "type": "function",
+      "label": "find (18 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sets.rs",
+        "name": "find",
+        "lineCount": 18,
+        "startLine": 98,
+        "endLine": 115,
+        "params": [
+          "user",
+          "system"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sets.rs:leave_out_included",
+      "type": "function",
+      "label": "leave_out_included (15 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sets.rs",
+        "name": "leave_out_included",
+        "lineCount": 15,
+        "startLine": 119,
+        "endLine": 133,
+        "params": [
+          "found"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sets.rs:look",
+      "type": "function",
+      "label": "look (42 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sets.rs",
+        "name": "look",
+        "lineCount": 42,
+        "startLine": 135,
+        "endLine": 176,
+        "params": [
+          "place",
+          "origin",
+          "depth",
+          "found",
+          "seen"
+        ]
+      }
+    },
+    {
+      "id": "file:plugins/soundfont/src/settings.rs",
+      "type": "file",
+      "label": "plugins/soundfont/src/settings.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 462
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/settings.rs:of",
+      "type": "function",
+      "label": "of (15 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/settings.rs",
+        "name": "of",
+        "lineCount": 15,
+        "startLine": 73,
+        "endLine": 87,
+        "params": [
+          "track"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/settings.rs:chosen",
+      "type": "function",
+      "label": "chosen (13 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/settings.rs",
+        "name": "chosen",
+        "lineCount": 13,
+        "startLine": 102,
+        "endLine": 114,
+        "params": [
+          "settings",
+          "role",
+          "found"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/settings.rs:sfz_label",
+      "type": "function",
+      "label": "sfz_label (15 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/settings.rs",
+        "name": "sfz_label",
+        "lineCount": 15,
+        "startLine": 118,
+        "endLine": 132,
+        "params": [
+          "f",
+          "user"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/settings.rs:label",
+      "type": "function",
+      "label": "label (11 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/settings.rs",
+        "name": "label",
+        "lineCount": 11,
+        "startLine": 135,
+        "endLine": 145,
+        "params": [
+          "f"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/settings.rs:found",
+      "type": "function",
+      "label": "found (12 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/settings.rs",
+        "name": "found",
+        "lineCount": 12,
+        "startLine": 174,
+        "endLine": 185,
+        "params": []
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/settings.rs:instrument",
+      "type": "function",
+      "label": "instrument (29 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/settings.rs",
+        "name": "instrument",
+        "lineCount": 29,
+        "startLine": 191,
+        "endLine": 219,
+        "params": [
+          "path"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/settings.rs:content",
+      "type": "function",
+      "label": "content (49 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/settings.rs",
+        "name": "content",
+        "lineCount": 49,
+        "startLine": 231,
+        "endLine": 279,
+        "params": []
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/settings.rs:on",
+      "type": "function",
+      "label": "on (28 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/settings.rs",
+        "name": "on",
+        "lineCount": 28,
+        "startLine": 281,
+        "endLine": 308,
+        "params": [
+          "widget",
+          "event"
+        ]
+      }
+    },
+    {
+      "id": "file:plugins/soundfont/src/sf2.rs",
+      "type": "file",
+      "label": "plugins/soundfont/src/sf2.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 399
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sf2.rs:generators",
+      "type": "function",
+      "label": "generators (17 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sf2.rs",
+        "name": "generators",
+        "lineCount": 17,
+        "startLine": 172,
+        "endLine": 188,
+        "params": [
+          "zone",
+          "last"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sf2.rs:write",
+      "type": "function",
+      "label": "write (108 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sf2.rs",
+        "name": "write",
+        "lineCount": 108,
+        "startLine": 192,
+        "endLine": 299,
+        "params": []
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sf2.rs:test_set",
+      "type": "function",
+      "label": "test_set (56 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sf2.rs",
+        "name": "test_set",
+        "lineCount": 56,
+        "startLine": 308,
+        "endLine": 363,
+        "params": []
+      }
+    },
+    {
+      "id": "file:plugins/soundfont/src/sf3.rs",
+      "type": "file",
+      "label": "plugins/soundfont/src/sf3.rs",
+      "metadata": {
+        "language": "rust",
+        "totalLines": 280
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sf3.rs:is_sf3",
+      "type": "function",
+      "label": "is_sf3 (18 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sf3.rs",
+        "name": "is_sf3",
+        "lineCount": 18,
+        "startLine": 32,
+        "endLine": 49,
+        "params": [
+          "head"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sf3.rs:decode",
+      "type": "function",
+      "label": "decode (11 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sf3.rs",
+        "name": "decode",
+        "lineCount": 11,
+        "startLine": 51,
+        "endLine": 61,
+        "params": [
+          "data"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sf3.rs:samples",
+      "type": "function",
+      "label": "samples (52 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sf3.rs",
+        "name": "samples",
+        "lineCount": 52,
+        "startLine": 68,
+        "endLine": 119,
+        "params": [
+          "shdr",
+          "smpl"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sf3.rs:chunk",
+      "type": "function",
+      "label": "chunk (10 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sf3.rs",
+        "name": "chunk",
+        "lineCount": 10,
+        "startLine": 121,
+        "endLine": 130,
+        "params": [
+          "id",
+          "data"
+        ]
+      }
+    },
+    {
+      "id": "function:plugins/soundfont/src/sf3.rs:to_sf2",
+      "type": "function",
+      "label": "to_sf2 (75 lines)",
+      "metadata": {
+        "file": "plugins/soundfont/src/sf3.rs",
+        "name": "to_sf2",
+        "lineCount": 75,
+        "startLine": 142,
+        "endLine": 216,
+        "params": [
+          "file"
+        ]
+      }
+    },
+    {
+      "id": "plugin:plugins/gp",
+      "type": "plugin",
+      "label": "GP1-GP2 Format Plugin",
+      "metadata": {
+        "directory": "plugins/gp"
+      }
+    },
+    {
+      "id": "plugin:plugins/gp3",
+      "type": "plugin",
+      "label": "GP3 Format Plugin",
+      "metadata": {
+        "directory": "plugins/gp3"
+      }
+    },
+    {
+      "id": "plugin:plugins/gp4",
+      "type": "plugin",
+      "label": "GP4 Format Plugin",
+      "metadata": {
+        "directory": "plugins/gp4"
+      }
+    },
+    {
+      "id": "plugin:plugins/gp5",
+      "type": "plugin",
+      "label": "GP5 Format Plugin",
+      "metadata": {
+        "directory": "plugins/gp5"
+      }
+    },
+    {
+      "id": "plugin:plugins/gpx",
+      "type": "plugin",
+      "label": "GPX Format Plugin",
+      "metadata": {
+        "directory": "plugins/gpx"
+      }
+    },
+    {
+      "id": "plugin:plugins/soundfont",
+      "type": "plugin",
+      "label": "SoundFont Format Plugin (SF2/SF3/DLS)",
+      "metadata": {
+        "directory": "plugins/soundfont"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:plugins/soundfont/src/dls.rs",
+      "target": "function:plugins/soundfont/src/dls.rs:wsmp",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/dls.rs",
+      "target": "function:plugins/soundfont/src/dls.rs:blocks",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/dls.rs",
+      "target": "function:plugins/soundfont/src/dls.rs:take",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/dls.rs",
+      "target": "function:plugins/soundfont/src/dls.rs:wave",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/dls.rs",
+      "target": "function:plugins/soundfont/src/dls.rs:to_sf2",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/lib.rs",
+      "target": "function:plugins/soundfont/src/lib.rs:fingerprint",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/lib.rs",
+      "target": "function:plugins/soundfont/src/lib.rs:load_sfz",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/lib.rs",
+      "target": "function:plugins/soundfont/src/lib.rs:load",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/lib.rs",
+      "target": "function:plugins/soundfont/src/lib.rs:read",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/lib.rs",
+      "target": "function:plugins/soundfont/src/lib.rs:warn_once",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/lib.rs",
+      "target": "function:plugins/soundfont/src/lib.rs:prepare",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:stop",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:set_program",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:send_bend",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:send_expression",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:program_for",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:expression",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:asked",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:sampler_note_on",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:new",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:note_on",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:end",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:note_off",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:update",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:track",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/play.rs",
+      "target": "function:plugins/soundfont/src/play.rs:render",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/riff.rs",
+      "target": "function:plugins/soundfont/src/riff.rs:chunks",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/riff.rs",
+      "target": "function:plugins/soundfont/src/riff.rs:form",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sets.rs",
+      "target": "function:plugins/soundfont/src/sets.rs:of",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sets.rs",
+      "target": "function:plugins/soundfont/src/sets.rs:system_places",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sets.rs",
+      "target": "function:plugins/soundfont/src/sets.rs:find",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sets.rs",
+      "target": "function:plugins/soundfont/src/sets.rs:leave_out_included",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sets.rs",
+      "target": "function:plugins/soundfont/src/sets.rs:look",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/settings.rs",
+      "target": "function:plugins/soundfont/src/settings.rs:of",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/settings.rs",
+      "target": "function:plugins/soundfont/src/settings.rs:chosen",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/settings.rs",
+      "target": "function:plugins/soundfont/src/settings.rs:sfz_label",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/settings.rs",
+      "target": "function:plugins/soundfont/src/settings.rs:label",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/settings.rs",
+      "target": "function:plugins/soundfont/src/settings.rs:found",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/settings.rs",
+      "target": "function:plugins/soundfont/src/settings.rs:instrument",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/settings.rs",
+      "target": "function:plugins/soundfont/src/settings.rs:content",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/settings.rs",
+      "target": "function:plugins/soundfont/src/settings.rs:on",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sf2.rs",
+      "target": "function:plugins/soundfont/src/sf2.rs:generators",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sf2.rs",
+      "target": "function:plugins/soundfont/src/sf2.rs:write",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sf2.rs",
+      "target": "function:plugins/soundfont/src/sf2.rs:test_set",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sf3.rs",
+      "target": "function:plugins/soundfont/src/sf3.rs:is_sf3",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sf3.rs",
+      "target": "function:plugins/soundfont/src/sf3.rs:decode",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sf3.rs",
+      "target": "function:plugins/soundfont/src/sf3.rs:samples",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sf3.rs",
+      "target": "function:plugins/soundfont/src/sf3.rs:chunk",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sf3.rs",
+      "target": "function:plugins/soundfont/src/sf3.rs:to_sf2",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "config:plugins/gp/Cargo.toml",
+      "target": "file:plugins/gp/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6
+    },
+    {
+      "source": "config:plugins/gp3/Cargo.toml",
+      "target": "file:plugins/gp3/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6
+    },
+    {
+      "source": "config:plugins/gp4/Cargo.toml",
+      "target": "file:plugins/gp4/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6
+    },
+    {
+      "source": "config:plugins/gp5/Cargo.toml",
+      "target": "file:plugins/gp5/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6
+    },
+    {
+      "source": "config:plugins/gpx/Cargo.toml",
+      "target": "file:plugins/gpx/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6
+    },
+    {
+      "source": "config:plugins/soundfont/Cargo.toml",
+      "target": "file:plugins/soundfont/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6
+    },
+    {
+      "source": "plugin:plugins/gp",
+      "target": "config:plugins/gp/Cargo.toml",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp",
+      "target": "config:plugins/gp/manifest.json",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp",
+      "target": "file:plugins/gp/src/lib.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp3",
+      "target": "config:plugins/gp3/Cargo.toml",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp3",
+      "target": "config:plugins/gp3/manifest.json",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp3",
+      "target": "file:plugins/gp3/src/lib.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp4",
+      "target": "config:plugins/gp4/Cargo.toml",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp4",
+      "target": "config:plugins/gp4/manifest.json",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp4",
+      "target": "file:plugins/gp4/src/lib.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp5",
+      "target": "config:plugins/gp5/Cargo.toml",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp5",
+      "target": "config:plugins/gp5/manifest.json",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gp5",
+      "target": "file:plugins/gp5/src/lib.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gpx",
+      "target": "config:plugins/gpx/Cargo.toml",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gpx",
+      "target": "config:plugins/gpx/manifest.json",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/gpx",
+      "target": "file:plugins/gpx/src/lib.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "config:plugins/soundfont/Cargo.toml",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "config:plugins/soundfont/manifest.json",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "file:plugins/soundfont/src/dls.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "file:plugins/soundfont/src/lib.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "file:plugins/soundfont/src/play.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "file:plugins/soundfont/src/riff.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "file:plugins/soundfont/src/sets.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "file:plugins/soundfont/src/settings.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "file:plugins/soundfont/src/sf2.rs",
+      "type": "contains",
+      "weight": 0.5
+    },
+    {
+      "source": "plugin:plugins/soundfont",
+      "target": "file:plugins/soundfont/src/sf3.rs",
+      "type": "contains",
+      "weight": 0.5
+    }
+  ]
+}

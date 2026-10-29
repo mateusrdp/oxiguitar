@@ -1,0 +1,3774 @@
+{
+  "nodes": [
+    {
+      "id": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "type": "file",
+      "label": "instrument.rs",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "language": "rust",
+      "sizeLines": 532
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/instrument.rs:Curves",
+      "type": "struct",
+      "label": "Curves",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 19,
+      "endLine": 21,
+      "fieldCount": 1
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/instrument.rs:Instrument",
+      "type": "struct",
+      "label": "Instrument",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 76,
+      "endLine": 95,
+      "fieldCount": 9
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/instrument.rs:Scope",
+      "type": "struct",
+      "label": "Scope",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 99,
+      "endLine": 109,
+      "fieldCount": 8
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/instrument.rs:Builder",
+      "type": "struct",
+      "label": "Builder",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 111,
+      "endLine": 123,
+      "fieldCount": 11
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:at",
+      "type": "function",
+      "label": "at",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 26,
+      "endLine": 43,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:curve",
+      "type": "function",
+      "label": "curve",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 48,
+      "endLine": 72,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:problem",
+      "type": "function",
+      "label": "problem",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 126,
+      "endLine": 130,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:close",
+      "type": "function",
+      "label": "close",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 133,
+      "endLine": 174,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:header",
+      "type": "function",
+      "label": "header",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 176,
+      "endLine": 203,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:opcode",
+      "type": "function",
+      "label": "opcode",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 205,
+      "endLine": 216,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:control",
+      "type": "function",
+      "label": "control",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 218,
+      "endLine": 256,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:curve_opcode",
+      "type": "function",
+      "label": "curve_opcode",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 258,
+      "endLine": 269,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:new",
+      "type": "function",
+      "label": "new",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 273,
+      "endLine": 300,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:starting_controllers",
+      "type": "function",
+      "label": "starting_controllers",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 306,
+      "endLine": 312,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:build",
+      "type": "function",
+      "label": "build",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 315,
+      "endLine": 332,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:implicit_controllers",
+      "type": "function",
+      "label": "implicit_controllers",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 338,
+      "endLine": 359,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/instrument.rs:read",
+      "type": "function",
+      "label": "read",
+      "path": "plugins/soundfont/src/sfz/instrument.rs",
+      "startLine": 362,
+      "endLine": 364,
+      "paramCount": 1
+    },
+    {
+      "id": "file:plugins/soundfont/src/sfz/maps.rs",
+      "type": "file",
+      "label": "maps.rs",
+      "path": "plugins/soundfont/src/sfz/maps.rs",
+      "language": "rust",
+      "sizeLines": 247
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/maps.rs:Articulation",
+      "type": "struct",
+      "label": "Articulation",
+      "path": "plugins/soundfont/src/sfz/maps.rs",
+      "startLine": 19,
+      "endLine": 22,
+      "fieldCount": 2
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/maps.rs:Map",
+      "type": "struct",
+      "label": "Map",
+      "path": "plugins/soundfont/src/sfz/maps.rs",
+      "startLine": 30,
+      "endLine": 44,
+      "fieldCount": 7
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/maps.rs:for_instrument",
+      "type": "function",
+      "label": "for_instrument",
+      "path": "plugins/soundfont/src/sfz/maps.rs",
+      "startLine": 159,
+      "endLine": 183,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/maps.rs:key",
+      "type": "function",
+      "label": "key",
+      "path": "plugins/soundfont/src/sfz/maps.rs",
+      "startLine": 188,
+      "endLine": 193,
+      "paramCount": 1
+    },
+    {
+      "id": "file:plugins/soundfont/src/sfz/mod.rs",
+      "type": "file",
+      "label": "mod.rs",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "language": "rust",
+      "sizeLines": 254
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/mod.rs:Loaded",
+      "type": "struct",
+      "label": "Loaded",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 40,
+      "endLine": 47,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/mod.rs:Stamp",
+      "type": "struct",
+      "label": "Stamp",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 59,
+      "endLine": 63,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/mod.rs:Samples",
+      "type": "struct",
+      "label": "Samples",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 80,
+      "endLine": 82,
+      "fieldCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/mod.rs:bytes",
+      "type": "function",
+      "label": "bytes",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 52,
+      "endLine": 54,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/mod.rs:of",
+      "type": "function",
+      "label": "of",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 66,
+      "endLine": 73,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/mod.rs:get",
+      "type": "function",
+      "label": "get",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 85,
+      "endLine": 90,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/mod.rs:put",
+      "type": "function",
+      "label": "put",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 92,
+      "endLine": 97,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/mod.rs:trim",
+      "type": "function",
+      "label": "trim",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 101,
+      "endLine": 105,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/mod.rs:load",
+      "type": "function",
+      "label": "load",
+      "path": "plugins/soundfont/src/sfz/mod.rs",
+      "startLine": 113,
+      "endLine": 176,
+      "paramCount": 2
+    },
+    {
+      "id": "file:plugins/soundfont/src/sfz/region.rs",
+      "type": "file",
+      "label": "region.rs",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "language": "rust",
+      "sizeLines": 1537
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Trigger",
+      "type": "struct",
+      "label": "Trigger",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 39,
+      "endLine": 50,
+      "fieldCount": 5
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:LoopMode",
+      "type": "struct",
+      "label": "LoopMode",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 54,
+      "endLine": 63,
+      "fieldCount": 4
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:OffMode",
+      "type": "struct",
+      "label": "OffMode",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 67,
+      "endLine": 74,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Crossfade",
+      "type": "struct",
+      "label": "Crossfade",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 78,
+      "endLine": 83,
+      "fieldCount": 2
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:FilterKind",
+      "type": "struct",
+      "label": "FilterKind",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 87,
+      "endLine": 102,
+      "fieldCount": 14
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Wave",
+      "type": "struct",
+      "label": "Wave",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 128,
+      "endLine": 139,
+      "fieldCount": 9
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:EgKind",
+      "type": "struct",
+      "label": "EgKind",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 160,
+      "endLine": 164,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:EgParam",
+      "type": "struct",
+      "label": "EgParam",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 168,
+      "endLine": 177,
+      "fieldCount": 8
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:LfoParam",
+      "type": "struct",
+      "label": "LfoParam",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 181,
+      "endLine": 191,
+      "fieldCount": 9
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:OldLfo",
+      "type": "struct",
+      "label": "OldLfo",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 195,
+      "endLine": 199,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Target",
+      "type": "struct",
+      "label": "Target",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 203,
+      "endLine": 232,
+      "fieldCount": 15
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Mod",
+      "type": "struct",
+      "label": "Mod",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 237,
+      "endLine": 242,
+      "fieldCount": 4
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:CcFade",
+      "type": "struct",
+      "label": "CcFade",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 246,
+      "endLine": 254,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Eg",
+      "type": "struct",
+      "label": "Eg",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 258,
+      "endLine": 280,
+      "fieldCount": 18
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Lfo",
+      "type": "struct",
+      "label": "Lfo",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 310,
+      "endLine": 322,
+      "fieldCount": 11
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:SimpleLfo",
+      "type": "struct",
+      "label": "SimpleLfo",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 344,
+      "endLine": 349,
+      "fieldCount": 4
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Source",
+      "type": "struct",
+      "label": "Source",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 353,
+      "endLine": 362,
+      "fieldCount": 4
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:KeyCenter",
+      "type": "struct",
+      "label": "KeyCenter",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 366,
+      "endLine": 370,
+      "fieldCount": 2
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Region",
+      "type": "struct",
+      "label": "Region",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 375,
+      "endLine": 482,
+      "fieldCount": 83
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Applied",
+      "type": "struct",
+      "label": "Applied",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 576,
+      "endLine": 586,
+      "fieldCount": 4
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:Context",
+      "type": "struct",
+      "label": "Context",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 591,
+      "endLine": 600,
+      "fieldCount": 4
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/region.rs:CcPart",
+      "type": "struct",
+      "label": "CcPart",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 729,
+      "endLine": 735,
+      "fieldCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:parse",
+      "type": "function",
+      "label": "parse",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 105,
+      "endLine": 123,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:of",
+      "type": "function",
+      "label": "of",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 142,
+      "endLine": 155,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:new",
+      "type": "function",
+      "label": "new",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 283,
+      "endLine": 304,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:default",
+      "type": "function",
+      "label": "default",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 485,
+      "endLine": 571,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:sample",
+      "type": "function",
+      "label": "sample",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 603,
+      "endLine": 622,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:key",
+      "type": "function",
+      "label": "key",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 624,
+      "endLine": 627,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:normal",
+      "type": "function",
+      "label": "normal",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 631,
+      "endLine": 645,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:number",
+      "type": "function",
+      "label": "number",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 681,
+      "endLine": 694,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:integer",
+      "type": "function",
+      "label": "integer",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 696,
+      "endLine": 701,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:shape",
+      "type": "function",
+      "label": "shape",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 705,
+      "endLine": 726,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:controller",
+      "type": "function",
+      "label": "controller",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 739,
+      "endLine": 816,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:ignored",
+      "type": "function",
+      "label": "ignored",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 819,
+      "endLine": 855,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:modulation",
+      "type": "function",
+      "label": "modulation",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 859,
+      "endLine": 877,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:lfo",
+      "type": "function",
+      "label": "lfo",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 879,
+      "endLine": 888,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:cc_fade",
+      "type": "function",
+      "label": "cc_fade",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 890,
+      "endLine": 903,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:cc_range",
+      "type": "function",
+      "label": "cc_range",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 905,
+      "endLine": 914,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:apply",
+      "type": "function",
+      "label": "apply",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 917,
+      "endLine": 1254,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/region.rs:envelope",
+      "type": "function",
+      "label": "envelope",
+      "path": "plugins/soundfont/src/sfz/region.rs",
+      "startLine": 1258,
+      "endLine": 1292,
+      "paramCount": 3
+    },
+    {
+      "id": "file:plugins/soundfont/src/sfz/sample.rs",
+      "type": "file",
+      "label": "sample.rs",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "language": "rust",
+      "sizeLines": 475
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sample.rs:Pcm",
+      "type": "struct",
+      "label": "Pcm",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 23,
+      "endLine": 28,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sample.rs:Sample",
+      "type": "struct",
+      "label": "Sample",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 32,
+      "endLine": 43,
+      "fieldCount": 6
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:at",
+      "type": "function",
+      "label": "at",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 52,
+      "endLine": 66,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:bytes",
+      "type": "function",
+      "label": "bytes",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 70,
+      "endLine": 76,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:read",
+      "type": "function",
+      "label": "read",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 80,
+      "endLine": 83,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:decode",
+      "type": "function",
+      "label": "decode",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 86,
+      "endLine": 96,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:u16_at",
+      "type": "function",
+      "label": "u16_at",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 98,
+      "endLine": 100,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:u32_at",
+      "type": "function",
+      "label": "u32_at",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 102,
+      "endLine": 104,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:wav_chunks",
+      "type": "function",
+      "label": "wav_chunks",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 108,
+      "endLine": 121,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:wav",
+      "type": "function",
+      "label": "wav",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 123,
+      "endLine": 216,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:smpl",
+      "type": "function",
+      "label": "smpl",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 219,
+      "endLine": 233,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:flac",
+      "type": "function",
+      "label": "flac",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 235,
+      "endLine": 293,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sample.rs:ogg",
+      "type": "function",
+      "label": "ogg",
+      "path": "plugins/soundfont/src/sfz/sample.rs",
+      "startLine": 295,
+      "endLine": 327,
+      "paramCount": 1
+    },
+    {
+      "id": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "type": "file",
+      "label": "sampler.rs",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "language": "rust",
+      "sizeLines": 2089
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Stage",
+      "type": "struct",
+      "label": "Stage",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 86,
+      "endLine": 95,
+      "fieldCount": 8
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Envelope",
+      "type": "struct",
+      "label": "Envelope",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 101,
+      "endLine": 115,
+      "fieldCount": 11
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Stages",
+      "type": "struct",
+      "label": "Stages",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 119,
+      "endLine": 128,
+      "fieldCount": 8
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Coefficients",
+      "type": "struct",
+      "label": "Coefficients",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 253,
+      "endLine": 259,
+      "fieldCount": 5
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Biquad",
+      "type": "struct",
+      "label": "Biquad",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 262,
+      "endLine": 267,
+      "fieldCount": 4
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Shape",
+      "type": "struct",
+      "label": "Shape",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 300,
+      "endLine": 307,
+      "fieldCount": 6
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Filter",
+      "type": "struct",
+      "label": "Filter",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 359,
+      "endLine": 369,
+      "fieldCount": 7
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:LfoState",
+      "type": "struct",
+      "label": "LfoState",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 390,
+      "endLine": 396,
+      "fieldCount": 4
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Loop",
+      "type": "struct",
+      "label": "Loop",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 461,
+      "endLine": 467,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Voice",
+      "type": "struct",
+      "label": "Voice",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 470,
+      "endLine": 520,
+      "fieldCount": 30
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Held",
+      "type": "struct",
+      "label": "Held",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 607,
+      "endLine": 621,
+      "fieldCount": 8
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Random",
+      "type": "struct",
+      "label": "Random",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 775,
+      "endLine": 775,
+      "fieldCount": 0
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Event",
+      "type": "struct",
+      "label": "Event",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 795,
+      "endLine": 798,
+      "fieldCount": 2
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sampler.rs:Sampler",
+      "type": "struct",
+      "label": "Sampler",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 801,
+      "endLine": 824,
+      "fieldCount": 16
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:ratio",
+      "type": "function",
+      "label": "ratio",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 68,
+      "endLine": 70,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:db",
+      "type": "function",
+      "label": "db",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 73,
+      "endLine": 75,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:hertz",
+      "type": "function",
+      "label": "hertz",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 78,
+      "endLine": 80,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:exp_rate",
+      "type": "function",
+      "label": "exp_rate",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 130,
+      "endLine": 136,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:new",
+      "type": "function",
+      "label": "new",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 153,
+      "endLine": 172,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:release",
+      "type": "function",
+      "label": "release",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 174,
+      "endLine": 178,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:next",
+      "type": "function",
+      "label": "next",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 182,
+      "endLine": 245,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:run",
+      "type": "function",
+      "label": "run",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 271,
+      "endLine": 278,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:stages_of",
+      "type": "function",
+      "label": "stages_of",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 282,
+      "endLine": 297,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:coefficients",
+      "type": "function",
+      "label": "coefficients",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 309,
+      "endLine": 355,
+      "paramCount": 4
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:wave",
+      "type": "function",
+      "label": "wave",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 398,
+      "endLine": 443,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:lfo_level",
+      "type": "function",
+      "label": "lfo_level",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 446,
+      "endLine": 454,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:fade_out",
+      "type": "function",
+      "label": "fade_out",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 595,
+      "endLine": 602,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:frame",
+      "type": "function",
+      "label": "frame",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 626,
+      "endLine": 642,
+      "paramCount": 5
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:gather",
+      "type": "function",
+      "label": "gather",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 646,
+      "endLine": 701,
+      "paramCount": 5
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:dot",
+      "type": "function",
+      "label": "dot",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 704,
+      "endLine": 706,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:pan_gains",
+      "type": "function",
+      "label": "pan_gains",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 709,
+      "endLine": 713,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:matrix",
+      "type": "function",
+      "label": "matrix",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 717,
+      "endLine": 736,
+      "paramCount": 4
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:fade_in",
+      "type": "function",
+      "label": "fade_in",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 739,
+      "endLine": 753,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:unit",
+      "type": "function",
+      "label": "unit",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 788,
+      "endLine": 790,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:fmt",
+      "type": "function",
+      "label": "fmt",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 827,
+      "endLine": 831,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:is_switch",
+      "type": "function",
+      "label": "is_switch",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 884,
+      "endLine": 887,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:curves",
+      "type": "function",
+      "label": "curves",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 889,
+      "endLine": 891,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:added",
+      "type": "function",
+      "label": "added",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 895,
+      "endLine": 902,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:multiplied",
+      "type": "function",
+      "label": "multiplied",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 904,
+      "endLine": 913,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:plays",
+      "type": "function",
+      "label": "plays",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 916,
+      "endLine": 974,
+      "paramCount": 6
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:set_switch",
+      "type": "function",
+      "label": "set_switch",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 977,
+      "endLine": 979,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:set_controller",
+      "type": "function",
+      "label": "set_controller",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 983,
+      "endLine": 987,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:carry",
+      "type": "function",
+      "label": "carry",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 992,
+      "endLine": 1026,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:hold",
+      "type": "function",
+      "label": "hold",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1031,
+      "endLine": 1035,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:end_pending",
+      "type": "function",
+      "label": "end_pending",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1038,
+      "endLine": 1046,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:note_on",
+      "type": "function",
+      "label": "note_on",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1050,
+      "endLine": 1089,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:set_note_controllers",
+      "type": "function",
+      "label": "set_note_controllers",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1092,
+      "endLine": 1106,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:choke_for",
+      "type": "function",
+      "label": "choke_for",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1110,
+      "endLine": 1135,
+      "paramCount": 4
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:start",
+      "type": "function",
+      "label": "start",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1139,
+      "endLine": 1359,
+      "paramCount": 7
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:stages",
+      "type": "function",
+      "label": "stages",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1362,
+      "endLine": 1379,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:limit",
+      "type": "function",
+      "label": "limit",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1383,
+      "endLine": 1401,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:free_slot",
+      "type": "function",
+      "label": "free_slot",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1405,
+      "endLine": 1417,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:note_off",
+      "type": "function",
+      "label": "note_off",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1421,
+      "endLine": 1460,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:end_string",
+      "type": "function",
+      "label": "end_string",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1463,
+      "endLine": 1476,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:stop",
+      "type": "function",
+      "label": "stop",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1479,
+      "endLine": 1486,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:update",
+      "type": "function",
+      "label": "update",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1490,
+      "endLine": 1511,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:render",
+      "type": "function",
+      "label": "render",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1514,
+      "endLine": 1683,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:sounding",
+      "type": "function",
+      "label": "sounding",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1687,
+      "endLine": 1689,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sampler.rs:velocity_curve",
+      "type": "function",
+      "label": "velocity_curve",
+      "path": "plugins/soundfont/src/sfz/sampler.rs",
+      "startLine": 1694,
+      "endLine": 1718,
+      "paramCount": 2
+    },
+    {
+      "id": "file:plugins/soundfont/src/sfz/sinc.rs",
+      "type": "file",
+      "label": "sinc.rs",
+      "path": "plugins/soundfont/src/sfz/sinc.rs",
+      "language": "rust",
+      "sizeLines": 185
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/sinc.rs:Kernel",
+      "type": "struct",
+      "label": "Kernel",
+      "path": "plugins/soundfont/src/sfz/sinc.rs",
+      "startLine": 39,
+      "endLine": 41,
+      "fieldCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sinc.rs:kernel",
+      "type": "function",
+      "label": "kernel",
+      "path": "plugins/soundfont/src/sfz/sinc.rs",
+      "startLine": 45,
+      "endLine": 50,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sinc.rs:bessel0",
+      "type": "function",
+      "label": "bessel0",
+      "path": "plugins/soundfont/src/sfz/sinc.rs",
+      "startLine": 53,
+      "endLine": 65,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sinc.rs:table",
+      "type": "function",
+      "label": "table",
+      "path": "plugins/soundfont/src/sfz/sinc.rs",
+      "startLine": 69,
+      "endLine": 101,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/sinc.rs:weights",
+      "type": "function",
+      "label": "weights",
+      "path": "plugins/soundfont/src/sfz/sinc.rs",
+      "startLine": 107,
+      "endLine": 114,
+      "paramCount": 2
+    },
+    {
+      "id": "file:plugins/soundfont/src/sfz/text.rs",
+      "type": "file",
+      "label": "text.rs",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "language": "rust",
+      "sizeLines": 544
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/text.rs:Item",
+      "type": "struct",
+      "label": "Item",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 27,
+      "endLine": 32,
+      "fieldCount": 2
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/text.rs:Text",
+      "type": "struct",
+      "label": "Text",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 36,
+      "endLine": 43,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/soundfont/src/sfz/text.rs:Reader",
+      "type": "struct",
+      "label": "Reader",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 105,
+      "endLine": 111,
+      "fieldCount": 4
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:read",
+      "type": "function",
+      "label": "read",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 46,
+      "endLine": 48,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:read_with",
+      "type": "function",
+      "label": "read_with",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 52,
+      "endLine": 66,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:includes",
+      "type": "function",
+      "label": "includes",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 70,
+      "endLine": 103,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:identifier",
+      "type": "function",
+      "label": "identifier",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 113,
+      "endLine": 115,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:space",
+      "type": "function",
+      "label": "space",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 117,
+      "endLine": 119,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:file",
+      "type": "function",
+      "label": "file",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 122,
+      "endLine": 137,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:problem",
+      "type": "function",
+      "label": "problem",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 139,
+      "endLine": 145,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:directive",
+      "type": "function",
+      "label": "directive",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 148,
+      "endLine": 215,
+      "paramCount": 3
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:include",
+      "type": "function",
+      "label": "include",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 217,
+      "endLine": 232,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:header",
+      "type": "function",
+      "label": "header",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 234,
+      "endLine": 248,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:opcode",
+      "type": "function",
+      "label": "opcode",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 250,
+      "endLine": 273,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:expand",
+      "type": "function",
+      "label": "expand",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 277,
+      "endLine": 313,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:skip_blank",
+      "type": "function",
+      "label": "skip_blank",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 317,
+      "endLine": 330,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:end_of_line",
+      "type": "function",
+      "label": "end_of_line",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 332,
+      "endLine": 337,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:end_of_block_comment",
+      "type": "function",
+      "label": "end_of_block_comment",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 339,
+      "endLine": 347,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:strip_comment",
+      "type": "function",
+      "label": "strip_comment",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 350,
+      "endLine": 357,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/soundfont/src/sfz/text.rs:value_end",
+      "type": "function",
+      "label": "value_end",
+      "path": "plugins/soundfont/src/sfz/text.rs",
+      "startLine": 362,
+      "endLine": 412,
+      "paramCount": 2
+    },
+    {
+      "id": "config:plugins/test-second/Cargo.toml",
+      "type": "config",
+      "label": "Cargo.toml",
+      "path": "plugins/test-second/Cargo.toml",
+      "language": "toml",
+      "sizeLines": 34
+    },
+    {
+      "id": "config:plugins/test-second/manifest.json",
+      "type": "config",
+      "label": "manifest.json",
+      "path": "plugins/test-second/manifest.json",
+      "language": "json",
+      "sizeLines": 20
+    },
+    {
+      "id": "file:plugins/test-second/src/lib.rs",
+      "type": "file",
+      "label": "lib.rs",
+      "path": "plugins/test-second/src/lib.rs",
+      "language": "rust",
+      "sizeLines": 65
+    },
+    {
+      "id": "struct:plugins/test-second/src/lib.rs:Second",
+      "type": "struct",
+      "label": "Second",
+      "path": "plugins/test-second/src/lib.rs",
+      "startLine": 25,
+      "endLine": 27,
+      "fieldCount": 1
+    },
+    {
+      "id": "function:plugins/test-second/src/lib.rs:start",
+      "type": "function",
+      "label": "start",
+      "path": "plugins/test-second/src/lib.rs",
+      "startLine": 30,
+      "endLine": 32,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test-second/src/lib.rs:event",
+      "type": "function",
+      "label": "event",
+      "path": "plugins/test-second/src/lib.rs",
+      "startLine": 34,
+      "endLine": 36,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test-second/src/lib.rs:reader",
+      "type": "function",
+      "label": "reader",
+      "path": "plugins/test-second/src/lib.rs",
+      "startLine": 38,
+      "endLine": 40,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test-second/src/lib.rs:read",
+      "type": "function",
+      "label": "read",
+      "path": "plugins/test-second/src/lib.rs",
+      "startLine": 44,
+      "endLine": 62,
+      "paramCount": 1
+    },
+    {
+      "id": "config:plugins/test/Cargo.toml",
+      "type": "config",
+      "label": "Cargo.toml",
+      "path": "plugins/test/Cargo.toml",
+      "language": "toml",
+      "sizeLines": 34
+    },
+    {
+      "id": "config:plugins/test/manifest.json",
+      "type": "config",
+      "label": "manifest.json",
+      "path": "plugins/test/manifest.json",
+      "language": "json",
+      "sizeLines": 49
+    },
+    {
+      "id": "file:plugins/test/src/fake.rs",
+      "type": "file",
+      "label": "fake.rs",
+      "path": "plugins/test/src/fake.rs",
+      "language": "rust",
+      "sizeLines": 117
+    },
+    {
+      "id": "struct:plugins/test/src/fake.rs:Fake",
+      "type": "struct",
+      "label": "Fake",
+      "path": "plugins/test/src/fake.rs",
+      "startLine": 27,
+      "endLine": 30,
+      "fieldCount": 2
+    },
+    {
+      "id": "struct:plugins/test/src/fake.rs:State",
+      "type": "struct",
+      "label": "State",
+      "path": "plugins/test/src/fake.rs",
+      "startLine": 33,
+      "endLine": 36,
+      "fieldCount": 2
+    },
+    {
+      "id": "function:plugins/test/src/fake.rs:new",
+      "type": "function",
+      "label": "new",
+      "path": "plugins/test/src/fake.rs",
+      "startLine": 40,
+      "endLine": 45,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/fake.rs:state",
+      "type": "function",
+      "label": "state",
+      "path": "plugins/test/src/fake.rs",
+      "startLine": 47,
+      "endLine": 49,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/test/src/fake.rs:join",
+      "type": "function",
+      "label": "join",
+      "path": "plugins/test/src/fake.rs",
+      "startLine": 51,
+      "endLine": 61,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/fake.rs:failed",
+      "type": "function",
+      "label": "failed",
+      "path": "plugins/test/src/fake.rs",
+      "startLine": 64,
+      "endLine": 66,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/fake.rs:call",
+      "type": "function",
+      "label": "call",
+      "path": "plugins/test/src/fake.rs",
+      "startLine": 69,
+      "endLine": 116,
+      "paramCount": 2
+    },
+    {
+      "id": "file:plugins/test/src/lib.rs",
+      "type": "file",
+      "label": "lib.rs",
+      "path": "plugins/test/src/lib.rs",
+      "language": "rust",
+      "sizeLines": 722
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:TestPlugin",
+      "type": "struct",
+      "label": "TestPlugin",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 73,
+      "endLine": 81,
+      "fieldCount": 7
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:LinkTool",
+      "type": "struct",
+      "label": "LinkTool",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 85,
+      "endLine": 87,
+      "fieldCount": 1
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:SettingsWindow",
+      "type": "struct",
+      "label": "SettingsWindow",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 104,
+      "endLine": 106,
+      "fieldCount": 1
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:TestSection",
+      "type": "struct",
+      "label": "TestSection",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 167,
+      "endLine": 167,
+      "fieldCount": 0
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:Unavailable",
+      "type": "struct",
+      "label": "Unavailable",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 237,
+      "endLine": 237,
+      "fieldCount": 0
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:Panel",
+      "type": "struct",
+      "label": "Panel",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 241,
+      "endLine": 244,
+      "fieldCount": 2
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:PanelState",
+      "type": "struct",
+      "label": "PanelState",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 247,
+      "endLine": 259,
+      "fieldCount": 10
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:Side",
+      "type": "struct",
+      "label": "Side",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 263,
+      "endLine": 263,
+      "fieldCount": 0
+    },
+    {
+      "id": "struct:plugins/test/src/lib.rs:Mark",
+      "type": "struct",
+      "label": "Mark",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 267,
+      "endLine": 269,
+      "fieldCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:run",
+      "type": "function",
+      "label": "run",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 90,
+      "endLine": 98,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:content",
+      "type": "function",
+      "label": "content",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 109,
+      "endLine": 151,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:on",
+      "type": "function",
+      "label": "on",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 153,
+      "endLine": 161,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:start",
+      "type": "function",
+      "label": "start",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 287,
+      "endLine": 300,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:tool",
+      "type": "function",
+      "label": "tool",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 302,
+      "endLine": 308,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:settings_window",
+      "type": "function",
+      "label": "settings_window",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 310,
+      "endLine": 312,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:track_section",
+      "type": "function",
+      "label": "track_section",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 314,
+      "endLine": 316,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:instrument",
+      "type": "function",
+      "label": "instrument",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 318,
+      "endLine": 321,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:effect",
+      "type": "function",
+      "label": "effect",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 323,
+      "endLine": 325,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:tab",
+      "type": "function",
+      "label": "tab",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 327,
+      "endLine": 333,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:event",
+      "type": "function",
+      "label": "event",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 335,
+      "endLine": 340,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:reader",
+      "type": "function",
+      "label": "reader",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 342,
+      "endLine": 344,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:writer",
+      "type": "function",
+      "label": "writer",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 346,
+      "endLine": 348,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:service",
+      "type": "function",
+      "label": "service",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 350,
+      "endLine": 357,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:read",
+      "type": "function",
+      "label": "read",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 361,
+      "endLine": 398,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:write",
+      "type": "function",
+      "label": "write",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 402,
+      "endLine": 414,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:call",
+      "type": "function",
+      "label": "call",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 418,
+      "endLine": 468,
+      "paramCount": 2
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:probe",
+      "type": "function",
+      "label": "probe",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 472,
+      "endLine": 474,
+      "paramCount": 0
+    },
+    {
+      "id": "function:plugins/test/src/lib.rs:state",
+      "type": "function",
+      "label": "state",
+      "path": "plugins/test/src/lib.rs",
+      "startLine": 482,
+      "endLine": 484,
+      "paramCount": 0
+    },
+    {
+      "id": "file:plugins/test/src/sine.rs",
+      "type": "file",
+      "label": "sine.rs",
+      "path": "plugins/test/src/sine.rs",
+      "language": "rust",
+      "sizeLines": 222
+    },
+    {
+      "id": "struct:plugins/test/src/sine.rs:Sine",
+      "type": "struct",
+      "label": "Sine",
+      "path": "plugins/test/src/sine.rs",
+      "startLine": 23,
+      "endLine": 23,
+      "fieldCount": 0
+    },
+    {
+      "id": "struct:plugins/test/src/sine.rs:Voice",
+      "type": "struct",
+      "label": "Voice",
+      "path": "plugins/test/src/sine.rs",
+      "startLine": 29,
+      "endLine": 34,
+      "fieldCount": 3
+    },
+    {
+      "id": "struct:plugins/test/src/sine.rs:Sines",
+      "type": "struct",
+      "label": "Sines",
+      "path": "plugins/test/src/sine.rs",
+      "startLine": 38,
+      "endLine": 44,
+      "fieldCount": 5
+    },
+    {
+      "id": "struct:plugins/test/src/sine.rs:Gain",
+      "type": "struct",
+      "label": "Gain",
+      "path": "plugins/test/src/sine.rs",
+      "startLine": 137,
+      "endLine": 137,
+      "fieldCount": 0
+    },
+    {
+      "id": "struct:plugins/test/src/sine.rs:Halve",
+      "type": "struct",
+      "label": "Halve",
+      "path": "plugins/test/src/sine.rs",
+      "startLine": 140,
+      "endLine": 140,
+      "fieldCount": 0
+    },
+    {
+      "id": "function:plugins/test/src/sine.rs:prepare",
+      "type": "function",
+      "label": "prepare",
+      "path": "plugins/test/src/sine.rs",
+      "startLine": 47,
+      "endLine": 71,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/sine.rs:render",
+      "type": "function",
+      "label": "render",
+      "path": "plugins/test/src/sine.rs",
+      "startLine": 75,
+      "endLine": 132,
+      "paramCount": 1
+    },
+    {
+      "id": "function:plugins/test/src/sine.rs:process",
+      "type": "function",
+      "label": "process",
+      "path": "plugins/test/src/sine.rs",
+      "startLine": 149,
+      "endLine": 153,
+      "paramCount": 2
+    },
+    {
+      "id": "file:scripts/debian/crate-audit.py",
+      "type": "file",
+      "label": "crate-audit.py",
+      "path": "scripts/debian/crate-audit.py",
+      "language": "python",
+      "sizeLines": 200
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:tree",
+      "type": "function",
+      "label": "tree",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 60,
+      "endLine": 74,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:list_crates",
+      "type": "function",
+      "label": "list_crates",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 77,
+      "endLine": 83,
+      "paramCount": 0
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:series",
+      "type": "function",
+      "label": "series",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 86,
+      "endLine": 94,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:numbers",
+      "type": "function",
+      "label": "numbers",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 97,
+      "endLine": 101,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:debian_crates",
+      "type": "function",
+      "label": "debian_crates",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 104,
+      "endLine": 115,
+      "paramCount": 0
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:debian_name",
+      "type": "function",
+      "label": "debian_name",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 118,
+      "endLine": 119,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:check",
+      "type": "function",
+      "label": "check",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 122,
+      "endLine": 168,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:annotate",
+      "type": "function",
+      "label": "annotate",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 171,
+      "endLine": 184,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/debian/crate-audit.py:main",
+      "type": "function",
+      "label": "main",
+      "path": "scripts/debian/crate-audit.py",
+      "startLine": 187,
+      "endLine": 196,
+      "paramCount": 0
+    },
+    {
+      "id": "file:scripts/debian/source.sh",
+      "type": "file",
+      "label": "source.sh",
+      "path": "scripts/debian/source.sh",
+      "language": "shell",
+      "sizeLines": 85
+    },
+    {
+      "id": "file:scripts/interop/alphatab.mjs",
+      "type": "file",
+      "label": "alphatab.mjs",
+      "path": "scripts/interop/alphatab.mjs",
+      "language": "javascript",
+      "sizeLines": 159
+    },
+    {
+      "id": "function:scripts/interop/alphatab.mjs:load",
+      "type": "function",
+      "label": "load",
+      "path": "scripts/interop/alphatab.mjs",
+      "startLine": 34,
+      "endLine": 39,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/interop/alphatab.mjs:drum",
+      "type": "function",
+      "label": "drum",
+      "path": "scripts/interop/alphatab.mjs",
+      "startLine": 44,
+      "endLine": 50,
+      "paramCount": 2
+    },
+    {
+      "id": "function:scripts/interop/alphatab.mjs:bent",
+      "type": "function",
+      "label": "bent",
+      "path": "scripts/interop/alphatab.mjs",
+      "startLine": 53,
+      "endLine": 58,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/interop/alphatab.mjs:notes",
+      "type": "function",
+      "label": "notes",
+      "path": "scripts/interop/alphatab.mjs",
+      "startLine": 64,
+      "endLine": 92,
+      "paramCount": 2
+    },
+    {
+      "id": "file:scripts/interop/musescore.py",
+      "type": "file",
+      "label": "musescore.py",
+      "path": "scripts/interop/musescore.py",
+      "language": "python",
+      "sizeLines": 241
+    },
+    {
+      "id": "function:scripts/interop/musescore.py:ours",
+      "type": "function",
+      "label": "ours",
+      "path": "scripts/interop/musescore.py",
+      "startLine": 47,
+      "endLine": 74,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/interop/musescore.py:theirs",
+      "type": "function",
+      "label": "theirs",
+      "path": "scripts/interop/musescore.py",
+      "startLine": 77,
+      "endLine": 118,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/interop/musescore.py:convert",
+      "type": "function",
+      "label": "convert",
+      "path": "scripts/interop/musescore.py",
+      "startLine": 121,
+      "endLine": 132,
+      "paramCount": 3
+    },
+    {
+      "id": "function:scripts/interop/musescore.py:same",
+      "type": "function",
+      "label": "same",
+      "path": "scripts/interop/musescore.py",
+      "startLine": 135,
+      "endLine": 141,
+      "paramCount": 3
+    },
+    {
+      "id": "function:scripts/interop/musescore.py:show",
+      "type": "function",
+      "label": "show",
+      "path": "scripts/interop/musescore.py",
+      "startLine": 144,
+      "endLine": 145,
+      "paramCount": 1
+    },
+    {
+      "id": "function:scripts/interop/musescore.py:main",
+      "type": "function",
+      "label": "main",
+      "path": "scripts/interop/musescore.py",
+      "startLine": 148,
+      "endLine": 237,
+      "paramCount": 0
+    },
+    {
+      "id": "config:scripts/interop/package.json",
+      "type": "config",
+      "label": "package.json",
+      "path": "scripts/interop/package.json",
+      "language": "json",
+      "sizeLines": 9
+    },
+    {
+      "id": "config:scripts/wayland-dnd-test/Cargo.toml",
+      "type": "config",
+      "label": "Cargo.toml",
+      "path": "scripts/wayland-dnd-test/Cargo.toml",
+      "language": "toml",
+      "sizeLines": 14
+    },
+    {
+      "id": "document:scripts/wayland-dnd-test/README.md",
+      "type": "document",
+      "label": "README.md",
+      "path": "scripts/wayland-dnd-test/README.md",
+      "language": "markdown",
+      "sizeLines": 38
+    },
+    {
+      "id": "file:scripts/wayland-dnd-test/src/main.rs",
+      "type": "file",
+      "label": "main.rs",
+      "path": "scripts/wayland-dnd-test/src/main.rs",
+      "language": "rust",
+      "sizeLines": 237
+    },
+    {
+      "id": "struct:scripts/wayland-dnd-test/src/main.rs:S",
+      "type": "struct",
+      "label": "S",
+      "path": "scripts/wayland-dnd-test/src/main.rs",
+      "startLine": 18,
+      "endLine": 27,
+      "fieldCount": 8
+    },
+    {
+      "id": "function:scripts/wayland-dnd-test/src/main.rs:event",
+      "type": "function",
+      "label": "event",
+      "path": "scripts/wayland-dnd-test/src/main.rs",
+      "startLine": 51,
+      "endLine": 62,
+      "paramCount": 6
+    },
+    {
+      "id": "function:scripts/wayland-dnd-test/src/main.rs:main",
+      "type": "function",
+      "label": "main",
+      "path": "scripts/wayland-dnd-test/src/main.rs",
+      "startLine": 194,
+      "endLine": 237,
+      "paramCount": 0
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "struct:plugins/soundfont/src/sfz/instrument.rs:Curves",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "struct:plugins/soundfont/src/sfz/instrument.rs:Instrument",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "struct:plugins/soundfont/src/sfz/instrument.rs:Scope",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "struct:plugins/soundfont/src/sfz/instrument.rs:Builder",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:at",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:curve",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:problem",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:close",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:header",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:opcode",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:control",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:curve_opcode",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:new",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:starting_controllers",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:build",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:implicit_controllers",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/instrument.rs",
+      "target": "function:plugins/soundfont/src/sfz/instrument.rs:read",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/maps.rs",
+      "target": "struct:plugins/soundfont/src/sfz/maps.rs:Articulation",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/maps.rs",
+      "target": "struct:plugins/soundfont/src/sfz/maps.rs:Map",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/maps.rs",
+      "target": "function:plugins/soundfont/src/sfz/maps.rs:for_instrument",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/maps.rs",
+      "target": "function:plugins/soundfont/src/sfz/maps.rs:key",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "struct:plugins/soundfont/src/sfz/mod.rs:Loaded",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "struct:plugins/soundfont/src/sfz/mod.rs:Stamp",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "struct:plugins/soundfont/src/sfz/mod.rs:Samples",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "function:plugins/soundfont/src/sfz/mod.rs:bytes",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "function:plugins/soundfont/src/sfz/mod.rs:of",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "function:plugins/soundfont/src/sfz/mod.rs:get",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "function:plugins/soundfont/src/sfz/mod.rs:put",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "function:plugins/soundfont/src/sfz/mod.rs:trim",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/mod.rs",
+      "target": "function:plugins/soundfont/src/sfz/mod.rs:load",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Trigger",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:LoopMode",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:OffMode",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Crossfade",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:FilterKind",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Wave",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:EgKind",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:EgParam",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:LfoParam",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:OldLfo",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Target",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Mod",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:CcFade",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Eg",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Lfo",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:SimpleLfo",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Source",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:KeyCenter",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Region",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Applied",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:Context",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "struct:plugins/soundfont/src/sfz/region.rs:CcPart",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:parse",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:of",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:new",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:default",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:sample",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:key",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:normal",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:number",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:integer",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:shape",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:controller",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:ignored",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:modulation",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:lfo",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:cc_fade",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:cc_range",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:apply",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/region.rs",
+      "target": "function:plugins/soundfont/src/sfz/region.rs:envelope",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sample.rs:Pcm",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sample.rs:Sample",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:at",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:bytes",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:read",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:decode",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:u16_at",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:u32_at",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:wav_chunks",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:wav",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:smpl",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:flac",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sample.rs",
+      "target": "function:plugins/soundfont/src/sfz/sample.rs:ogg",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Stage",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Envelope",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Stages",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Coefficients",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Biquad",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Shape",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Filter",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:LfoState",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Loop",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Voice",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Held",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Random",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Event",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sampler.rs:Sampler",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:ratio",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:db",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:hertz",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:exp_rate",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:new",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:release",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:next",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:run",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:stages_of",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:coefficients",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:wave",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:lfo_level",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:fade_out",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:frame",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:gather",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:dot",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:pan_gains",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:matrix",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:fade_in",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:unit",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:fmt",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:is_switch",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:curves",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:added",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:multiplied",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:plays",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:set_switch",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:set_controller",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:carry",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:hold",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:end_pending",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:note_on",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:set_note_controllers",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:choke_for",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:start",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:stages",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:limit",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:free_slot",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:note_off",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:end_string",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:stop",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:update",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:render",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:sounding",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sampler.rs",
+      "target": "function:plugins/soundfont/src/sfz/sampler.rs:velocity_curve",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sinc.rs",
+      "target": "struct:plugins/soundfont/src/sfz/sinc.rs:Kernel",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sinc.rs",
+      "target": "function:plugins/soundfont/src/sfz/sinc.rs:kernel",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sinc.rs",
+      "target": "function:plugins/soundfont/src/sfz/sinc.rs:bessel0",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sinc.rs",
+      "target": "function:plugins/soundfont/src/sfz/sinc.rs:table",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/sinc.rs",
+      "target": "function:plugins/soundfont/src/sfz/sinc.rs:weights",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "struct:plugins/soundfont/src/sfz/text.rs:Item",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "struct:plugins/soundfont/src/sfz/text.rs:Text",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "struct:plugins/soundfont/src/sfz/text.rs:Reader",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:read",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:read_with",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:includes",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:identifier",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:space",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:file",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:problem",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:directive",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:include",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:header",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:opcode",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:expand",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:skip_blank",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:end_of_line",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:end_of_block_comment",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:strip_comment",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/soundfont/src/sfz/text.rs",
+      "target": "function:plugins/soundfont/src/sfz/text.rs:value_end",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "config:plugins/test-second/Cargo.toml",
+      "target": "file:plugins/test-second/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6
+    },
+    {
+      "source": "file:plugins/test-second/src/lib.rs",
+      "target": "struct:plugins/test-second/src/lib.rs:Second",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test-second/src/lib.rs",
+      "target": "function:plugins/test-second/src/lib.rs:start",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test-second/src/lib.rs",
+      "target": "function:plugins/test-second/src/lib.rs:event",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test-second/src/lib.rs",
+      "target": "function:plugins/test-second/src/lib.rs:reader",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test-second/src/lib.rs",
+      "target": "function:plugins/test-second/src/lib.rs:read",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "config:plugins/test/Cargo.toml",
+      "target": "file:plugins/test/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6
+    },
+    {
+      "source": "file:plugins/test/src/fake.rs",
+      "target": "struct:plugins/test/src/fake.rs:Fake",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/fake.rs",
+      "target": "struct:plugins/test/src/fake.rs:State",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/fake.rs",
+      "target": "function:plugins/test/src/fake.rs:new",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/fake.rs",
+      "target": "function:plugins/test/src/fake.rs:state",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/fake.rs",
+      "target": "function:plugins/test/src/fake.rs:join",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/fake.rs",
+      "target": "function:plugins/test/src/fake.rs:failed",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/fake.rs",
+      "target": "function:plugins/test/src/fake.rs:call",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:TestPlugin",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:LinkTool",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:SettingsWindow",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:TestSection",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:Unavailable",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:Panel",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:PanelState",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:Side",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "struct:plugins/test/src/lib.rs:Mark",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:run",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:content",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:on",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:start",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:tool",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:settings_window",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:track_section",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:instrument",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:effect",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:tab",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:event",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:reader",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:writer",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:service",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:read",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:write",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:call",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:probe",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/lib.rs",
+      "target": "function:plugins/test/src/lib.rs:state",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/sine.rs",
+      "target": "struct:plugins/test/src/sine.rs:Sine",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/sine.rs",
+      "target": "struct:plugins/test/src/sine.rs:Voice",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/sine.rs",
+      "target": "struct:plugins/test/src/sine.rs:Sines",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/sine.rs",
+      "target": "struct:plugins/test/src/sine.rs:Gain",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/sine.rs",
+      "target": "struct:plugins/test/src/sine.rs:Halve",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/sine.rs",
+      "target": "function:plugins/test/src/sine.rs:prepare",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/sine.rs",
+      "target": "function:plugins/test/src/sine.rs:render",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:plugins/test/src/sine.rs",
+      "target": "function:plugins/test/src/sine.rs:process",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:tree",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:list_crates",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:series",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:numbers",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:debian_crates",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:debian_name",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:check",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:annotate",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/debian/crate-audit.py",
+      "target": "function:scripts/debian/crate-audit.py:main",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/alphatab.mjs",
+      "target": "function:scripts/interop/alphatab.mjs:load",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/alphatab.mjs",
+      "target": "function:scripts/interop/alphatab.mjs:drum",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/alphatab.mjs",
+      "target": "function:scripts/interop/alphatab.mjs:bent",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/alphatab.mjs",
+      "target": "function:scripts/interop/alphatab.mjs:notes",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/musescore.py",
+      "target": "function:scripts/interop/musescore.py:ours",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/musescore.py",
+      "target": "function:scripts/interop/musescore.py:theirs",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/musescore.py",
+      "target": "function:scripts/interop/musescore.py:convert",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/musescore.py",
+      "target": "function:scripts/interop/musescore.py:same",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/musescore.py",
+      "target": "function:scripts/interop/musescore.py:show",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/interop/musescore.py",
+      "target": "function:scripts/interop/musescore.py:main",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/wayland-dnd-test/src/main.rs",
+      "target": "struct:scripts/wayland-dnd-test/src/main.rs:S",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/wayland-dnd-test/src/main.rs",
+      "target": "function:scripts/wayland-dnd-test/src/main.rs:event",
+      "type": "contains",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/wayland-dnd-test/src/main.rs",
+      "target": "function:scripts/wayland-dnd-test/src/main.rs:main",
+      "type": "contains",
+      "weight": 1
+    }
+  ],
+  "metadata": {
+    "batchNumber": 34,
+    "totalNodes": 261,
+    "totalEdges": 239,
+    "filesAnalyzed": 24,
+    "filesSkipped": [
+      "scripts/package/licenses.hbs"
+    ]
+  }
+}
