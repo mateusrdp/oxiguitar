@@ -1,0 +1,15 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+#
+# The AppImage's entry point (scripts/package/linux.sh, build_appimage). The
+# AppImage holds both Linux builds, each with only its own display system's
+# code (ADR 0009): in a Wayland session it starts the Wayland build, on an
+# X11 desktop the X11 build. With neither, the Wayland build starts and says
+# what it is missing.
+
+here="$(dirname "$(readlink -f "$0")")"
+if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${WAYLAND_SOCKET:-}" ] && [ -n "${DISPLAY:-}" ]; then
+    exec "$here/usr/bin/oxiguitar-x11" "$@"
+fi
+exec "$here/usr/bin/oxiguitar" "$@"

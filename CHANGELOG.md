@@ -7,10 +7,14 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 ### Changed
 
 - The AppImages are built on Ubuntu 22.04, the oldest Ubuntu LTS still in standard support, so they run on any distribution with glibc 2.35 or newer (Debian 12, Ubuntu 22.04, Fedora 36 and later) instead of 2.39. A release check fails any of their programs or plugins that would need a newer glibc. The .deb and .rpm are built on Ubuntu 24.04 as before. The plugin template builds its Linux files on 22.04 too, so they load with either.
+- **Every download comes with the basic plugins**, so the one file you download opens and plays Guitar Pro files: the Windows zip holds them in a `plugins` folder beside `oxiguitar.exe`, the macOS app inside itself, the AppImage inside itself, and the .deb and .rpm depend on `oxiguitar-plugins-basic` (install the two together). The separate plugin zips are gone; a release has 18 files instead of 25. If you unzipped plugins into your own plugin folder for an earlier release, you can delete them: the newer copies that come with OxiGuitar are used.
+- **The interface follows your desktop's light or dark setting** until you pick one in View → Dark Interface, and is light when the desktop says nothing. It was dark by default. A choice you made before is kept.
+- **One AppImage for every Linux desktop**: it holds both the Wayland and the X11 build and starts the one for your session. It plays through ALSA, which PipeWire desktops pass on to PipeWire (the PipeWire plugin can't be built on Ubuntu 22.04); the .deb and .rpm keep the PipeWire plugin. The separate X11 AppImage is gone; the X11 .deb and .rpm stay.
 
 ### Added
 
 - AppStream metainfo in the .deb, the .rpm and the AppImage, so software centres (GNOME Software, KDE Discover) and the AppImage catalog show OxiGuitar with its description, screenshots and releases.
+- The release workflow runs the AppImage catalog's own test (appimage.github.io) on the AppImage: on Ubuntu 22.04, under X11, without network, with its lint, its C library check and its screenshot checks.
 
 ## [0.10.0] - 2026-10-26
 

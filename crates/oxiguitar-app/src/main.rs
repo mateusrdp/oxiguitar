@@ -181,6 +181,9 @@ struct App {
     /// read at start), and the View settings last written to it.
     stored: oxiguitar_host::SharedSettings,
     prefs: ViewPrefs,
+    /// Whether the interface is dark now: the user's choice, or the
+    /// desktop's while following it. The other windows take this.
+    dark_interface: bool,
     /// A dropped file is being opened; the rest of the same drop is ignored.
     drop_pending: bool,
     /// The thread that asks plugins for their tabs and draws their
@@ -421,10 +424,10 @@ fn wrong_build_hint(display: &str) -> Option<&'static str> {
     }
     match display {
         "wayland" => Some(
-            "This is OxiGuitar's Wayland build, and it found no Wayland session (is WAYLAND_DISPLAY set?). On an X11 desktop, install the X11 build instead: the package oxiguitar-x11, or the OxiGuitar-x11 AppImage.",
+            "This is OxiGuitar's Wayland build, and it found no Wayland session (is WAYLAND_DISPLAY set?). On an X11 desktop, install the X11 build instead (the package oxiguitar-x11), or use the AppImage, which holds both builds.",
         ),
         "x11" => Some(
-            "This is OxiGuitar's X11 build, and it found no X server (is DISPLAY set?). On a Wayland desktop, install the Wayland build instead: the package oxiguitar, or the OxiGuitar AppImage.",
+            "This is OxiGuitar's X11 build, and it found no X server (is DISPLAY set?). On a Wayland desktop, install the Wayland build instead (the package oxiguitar), or use the AppImage, which holds both builds.",
         ),
         _ => None,
     }
@@ -534,6 +537,7 @@ fn main() -> Result<(), slint::PlatformError> {
         footer: Footer::default(),
         stored: oxiguitar_host::SharedSettings::default(),
         prefs: ViewPrefs::default(),
+        dark_interface: false,
         drop_pending: false,
         tab_thread,
         plugin_tabs: HashMap::new(),
@@ -628,8 +632,8 @@ fn main() -> Result<(), slint::PlatformError> {
     // The outputs, asked of the audio-device plugin on the player's thread
     // (finding one loads it).
     app.borrow().sound.send(sound::ToSound::Devices);
-    // The View menu as the user left it (a dark interface and a white page
-    // the first time).
+    // The View menu as the user left it (the first time, the interface
+    // follows the desktop, and the page is white).
     let prefs = ViewPrefs::from_value(startup.settings.get(prefs::KEY).as_ref());
     apply_prefs(&ui, prefs);
     {
@@ -637,6 +641,10 @@ fn main() -> Result<(), slint::PlatformError> {
         s.footer.extend(startup.notices);
         s.stored = startup.settings;
         s.prefs = prefs;
+        s.dark_interface = ui.get_dark_interface();
+        if let Some(tabs) = &s.tab_thread {
+            tabs.send(plugin_tabs::Request::Dark(s.dark_interface));
+        }
     }
     settings_changed(&app);
     sync_footer(&app);
@@ -1895,7 +1903,7 @@ fn open_plugin_manager(app: &Shared) {
     };
     {
         let s = app.borrow();
-        window.set_dark_interface(s.prefs.dark_interface);
+        window.set_dark_interface(s.dark_interface);
         window.set_safe_mode(s.plugins.safe_mode());
         let can_save = s.stored.path().is_some();
         window.set_can_save(can_save);
@@ -1974,7 +1982,12 @@ fn manager_toggled(app: &Shared, index: i32, on: bool) {
 
 /// Puts the View menu's settings on the window.
 fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
-    ui.set_dark_interface(p.dark_interface);
+    // The choice first: leaving follow-desktop sets the window's colours
+    // from it.
+    if let Some(dark) = p.dark_interface {
+        ui.set_chosen_dark(dark);
+    }
+    ui.set_follow_desktop(p.dark_interface.is_none());
     ui.set_dark_page(p.dark_page);
     ui.set_dynamics(p.dynamics);
     let index = |found: Option<usize>| found.unwrap_or(0) as i32;
@@ -2404,8 +2417,10 @@ fn settings_changed(app: &Shared) {
     s.settings.dynamics = ui.get_dynamics();
     s.settings.screen_width = screen_width(&ui, s.zoom);
     // Remember the View menu for next time, when it changed.
+    let dark = ui.get_dark_interface();
+    s.dark_interface = dark;
     let prefs = ViewPrefs {
-        dark_interface: ui.get_dark_interface(),
+        dark_interface: (!ui.get_follow_desktop()).then_some(dark),
         dark_page: ui.get_dark_page(),
         dynamics: s.settings.dynamics,
         layout: s.settings.layout,
@@ -2425,13 +2440,13 @@ fn settings_changed(app: &Shared) {
         ui.invoke_scroll_to(0.0, 0.0);
     }
     if let Some(tabs) = &s.tab_thread {
-        tabs.send(plugin_tabs::Request::Dark(prefs.dark_interface));
+        tabs.send(plugin_tabs::Request::Dark(dark));
     }
     if let Some(m) = &s.manager {
-        m.set_dark_interface(prefs.dark_interface);
+        m.set_dark_interface(dark);
     }
     if let Some((w, _)) = &s.settings_window {
-        w.set_dark_interface(prefs.dark_interface);
+        w.set_dark_interface(dark);
     }
     // Dark Page only needs new tiles; everything else a new engraving.
     s.paint += 1;
@@ -3657,7 +3672,7 @@ fn open_settings_window(app: &Shared, id: String) {
             .unwrap_or_else(|| id.clone())
     };
     window.set_window_title(format!("{name} Settings").into());
-    window.set_dark_interface(app.borrow().prefs.dark_interface);
+    window.set_dark_interface(app.borrow().dark_interface);
     window.set_rows(ModelRc::default());
     window.set_message("…".into());
     {

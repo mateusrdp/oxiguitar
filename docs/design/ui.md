@@ -67,7 +67,7 @@ Everything about how the score is shown lives in the View menu:
   - **Parchment**: one single long vertical column, with no page breaks.
 
   These follow Mateus's description (16 October 2026), checked against the Guitar Pro 8 user guide before they were built: they are GP8's Page – Vertical, Screen – Vertical, Screen – Horizontal and Page – Scroll ([engraving.md](engraving.md#layouts-view-3)).
-- **Dark Interface**: the window's own colours, dark by default (Mateus, 18 Oct 2026), switched through Slint's `Palette.color-scheme`.
+- **Dark Interface**: the window's own colours, switched through Slint's `Palette.color-scheme`. Until the user picks in the View menu they follow the desktop's light or dark setting (Slint reads the XDG desktop portal on Linux, the system elsewhere), light when the desktop says nothing (Mateus, 27 Oct 2026, as the AppImage catalog asks, replacing "dark by default" of 18 Oct). Following means never setting `Palette.color-scheme`; a pick is kept in settings.json (`view.dark_interface`), and the plugin manager, settings windows and plugin tabs take the window's colours.
 - **Dark Page** (VIEW-8): light notation on a dark page. Page colours are themes of the display list (`Theme::LIGHT`, `Theme::DARK` in `oxiguitar-display`), so the PDF can use them too. Off by default: the page is white.
 - The View menu's choices (interface, page, dynamics, layout, paper) are kept in settings.json under `view` (`prefs.rs`) and restored at start.
 - The toolbar, and the four panels under View → Panels.
