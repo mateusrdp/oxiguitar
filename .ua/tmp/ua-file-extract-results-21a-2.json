@@ -1,0 +1,3879 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 9,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 9,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 8,
+      "failed": 0,
+      "skipped": 1
+    }
+  },
+  "results": [
+    {
+      "path": "crates/oxiguitar-testgen/tests/guitar_pro_7_6.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 182,
+      "nonEmptyLines": 174,
+      "functions": [
+        {
+          "name": "guitar_pro_7_6_keeps_our_songs",
+          "startLine": 33,
+          "endLine": 76,
+          "params": []
+        },
+        {
+          "name": "element_paths",
+          "startLine": 80,
+          "endLine": 113,
+          "params": [
+            "xml"
+          ]
+        },
+        {
+          "name": "our_writer_writes_what_guitar_pro_7_6_does",
+          "startLine": 116,
+          "endLine": 182,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "Path::new(env!(\"CARGO_MANIFEST_DIR\")).join",
+          "lineNumber": 34
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "Path::new",
+          "lineNumber": 34
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "references",
+          "lineNumber": 36
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "std::fs::read_to_string",
+          "lineNumber": 37
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "dir.join",
+          "lineNumber": 37
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "oxiguitar_formats::read(&oxiguitar_testgen::to_gp(&r.song)).expect",
+          "lineNumber": 40
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 40
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "oxiguitar_testgen::to_gp",
+          "lineNumber": 40
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "oxiguitar_formats::read(&pack(&gpif, &part_configuration(&r.song))).unwrap_or_else",
+          "lineNumber": 43
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 43
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "pack",
+          "lineNumber": 43
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "part_configuration",
+          "lineNumber": 43
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "ours.tempo_label.clear",
+          "lineNumber": 52
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "ours.info.instructions.clear",
+          "lineNumber": 55
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "ours.tracks.iter_mut().zip",
+          "lineNumber": 56
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "ours.tracks.iter_mut",
+          "lineNumber": 56
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "t.chords.is_empty",
+          "lineNumber": 58
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "o.chords.clear",
+          "lineNumber": 59
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "o.staves.iter_mut().flat_map",
+          "lineNumber": 60
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "o.staves.iter_mut",
+          "lineNumber": 60
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "b.voices.iter_mut().flat_map",
+          "lineNumber": 61
+        },
+        {
+          "caller": "guitar_pro_7_6_keeps_our_songs",
+          "callee": "b.voices.iter_mut",
+          "lineNumber": 61
+        },
+        {
+          "caller": "element_paths",
+          "callee": "quick_xml::Reader::from_str",
+          "lineNumber": 82
+        },
+        {
+          "caller": "element_paths",
+          "callee": "Vec::new",
+          "lineNumber": 83
+        },
+        {
+          "caller": "element_paths",
+          "callee": "BTreeSet::new",
+          "lineNumber": 84
+        },
+        {
+          "caller": "element_paths",
+          "callee": "e.name().as_ref().to_owned",
+          "lineNumber": 86
+        },
+        {
+          "caller": "element_paths",
+          "callee": "e.name().as_ref",
+          "lineNumber": 86
+        },
+        {
+          "caller": "element_paths",
+          "callee": "e.name",
+          "lineNumber": 86
+        },
+        {
+          "caller": "element_paths",
+          "callee": "e\n                .attributes().find",
+          "lineNumber": 88
+        },
+        {
+          "caller": "element_paths",
+          "callee": "e.attributes",
+          "lineNumber": 88
+        },
+        {
+          "caller": "element_paths",
+          "callee": "a.as_ref().is_ok_and",
+          "lineNumber": 90
+        },
+        {
+          "caller": "element_paths",
+          "callee": "a.as_ref",
+          "lineNumber": 90
+        },
+        {
+          "caller": "element_paths",
+          "callee": "a.key.as_ref",
+          "lineNumber": 90
+        },
+        {
+          "caller": "element_paths",
+          "callee": "reader.read_event().expect",
+          "lineNumber": 97
+        },
+        {
+          "caller": "element_paths",
+          "callee": "reader.read_event",
+          "lineNumber": 97
+        },
+        {
+          "caller": "element_paths",
+          "callee": "stack.push",
+          "lineNumber": 99
+        },
+        {
+          "caller": "element_paths",
+          "callee": "name",
+          "lineNumber": 99
+        },
+        {
+          "caller": "element_paths",
+          "callee": "out.insert",
+          "lineNumber": 100
+        },
+        {
+          "caller": "element_paths",
+          "callee": "out.insert",
+          "lineNumber": 103
+        },
+        {
+          "caller": "element_paths",
+          "callee": "stack.pop",
+          "lineNumber": 106
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "p.starts_with",
+          "lineNumber": 119
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "p.starts_with",
+          "lineNumber": 120
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "p.ends_with",
+          "lineNumber": 121
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "p.ends_with",
+          "lineNumber": 122
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "p.contains",
+          "lineNumber": 123
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "Path::new(env!(\"CARGO_MANIFEST_DIR\")).join",
+          "lineNumber": 125
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "Path::new",
+          "lineNumber": 125
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "references",
+          "lineNumber": 127
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "std::fs::read_to_string",
+          "lineNumber": 128
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "dir.join",
+          "lineNumber": 128
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_formats::read(&oxiguitar_testgen::to_gp(&r.song)).unwrap",
+          "lineNumber": 131
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 131
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_testgen::to_gp",
+          "lineNumber": 131
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_formats::write_gp(&song).unwrap",
+          "lineNumber": 134
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_formats::write_gp",
+          "lineNumber": 134
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "String::new",
+          "lineNumber": 136
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "zip::ZipArchive::new(std::io::Cursor::new(&written.data))\n            .unwrap()\n            .by_name(\"Content/score.gpif\")\n            .unwrap()\n            .read_to_string(&mut ours_xml).unwrap",
+          "lineNumber": 137
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "zip::ZipArchive::new(std::io::Cursor::new(&written.data))\n            .unwrap()\n            .by_name(\"Content/score.gpif\")\n            .unwrap().read_to_string",
+          "lineNumber": 137
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "zip::ZipArchive::new(std::io::Cursor::new(&written.data))\n            .unwrap()\n            .by_name(\"Content/score.gpif\").unwrap",
+          "lineNumber": 137
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "zip::ZipArchive::new(std::io::Cursor::new(&written.data))\n            .unwrap().by_name",
+          "lineNumber": 137
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "zip::ZipArchive::new(std::io::Cursor::new(&written.data)).unwrap",
+          "lineNumber": 137
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "zip::ZipArchive::new",
+          "lineNumber": 137
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "std::io::Cursor::new",
+          "lineNumber": 137
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "element_paths",
+          "lineNumber": 144
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "element_paths",
+          "lineNumber": 145
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "theirs_paths\n            .iter()\n            .filter(|p| !theirs_only(p) && !ours.contains(*p)).collect",
+          "lineNumber": 146
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "theirs_paths\n            .iter().filter",
+          "lineNumber": 146
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "theirs_paths.iter",
+          "lineNumber": 146
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "theirs_only",
+          "lineNumber": 148
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "ours.contains",
+          "lineNumber": 148
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_formats::read(&written.data).unwrap",
+          "lineNumber": 156
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 156
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_formats::read(&pack(&gpif, &part_configuration(&r.song))).unwrap",
+          "lineNumber": 157
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 157
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "pack",
+          "lineNumber": 157
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "part_configuration",
+          "lineNumber": 157
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "ours.tempo_label.clear",
+          "lineNumber": 160
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "ours.info.instructions.clear",
+          "lineNumber": 161
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "ours.tracks.iter_mut().zip",
+          "lineNumber": 162
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "ours.tracks.iter_mut",
+          "lineNumber": 162
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "t.chords.is_empty",
+          "lineNumber": 164
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "o.chords.clear",
+          "lineNumber": 165
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "o.staves.iter_mut().flat_map",
+          "lineNumber": 166
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "o.staves.iter_mut",
+          "lineNumber": 166
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "b.voices.iter_mut().flat_map",
+          "lineNumber": 167
+        },
+        {
+          "caller": "our_writer_writes_what_guitar_pro_7_6_does",
+          "callee": "b.voices.iter_mut",
+          "lineNumber": 167
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "crates/oxiguitar-testgen/tests/guitar_pro_check.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 74,
+      "nonEmptyLines": 69,
+      "functions": [
+        {
+          "name": "root",
+          "startLine": 16,
+          "endLine": 18,
+          "params": []
+        },
+        {
+          "name": "read",
+          "startLine": 20,
+          "endLine": 25,
+          "params": [
+            "path"
+          ]
+        },
+        {
+          "name": "the_files_for_guitar_pro_are_current",
+          "startLine": 28,
+          "endLine": 74,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "root",
+          "callee": "Path::new(env!(\"CARGO_MANIFEST_DIR\")).join",
+          "lineNumber": 17
+        },
+        {
+          "caller": "root",
+          "callee": "Path::new",
+          "lineNumber": 17
+        },
+        {
+          "caller": "read",
+          "callee": "std::fs::read(path).unwrap_or_else",
+          "lineNumber": 21
+        },
+        {
+          "caller": "read",
+          "callee": "std::fs::read",
+          "lineNumber": 21
+        },
+        {
+          "caller": "read",
+          "callee": "oxiguitar_formats::read(&data).unwrap_or_else",
+          "lineNumber": 22
+        },
+        {
+          "caller": "read",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 22
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "root",
+          "lineNumber": 29
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(root.join(\"fixtures/reference\"))\n        .unwrap()\n        .filter_map(|e| Some(e.ok()?.path()))\n        .filter(|p| p.extension().is_some_and(|x| x == \"gp\"))\n        .map(|p| {\n            let name = p.file_name().unwrap().to_string_lossy().into_owned();\n            (p, name)\n        }).collect",
+          "lineNumber": 30
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(root.join(\"fixtures/reference\"))\n        .unwrap()\n        .filter_map(|e| Some(e.ok()?.path()))\n        .filter(|p| p.extension().is_some_and(|x| x == \"gp\")).map",
+          "lineNumber": 30
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(root.join(\"fixtures/reference\"))\n        .unwrap()\n        .filter_map(|e| Some(e.ok()?.path())).filter",
+          "lineNumber": 30
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(root.join(\"fixtures/reference\"))\n        .unwrap().filter_map",
+          "lineNumber": 30
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(root.join(\"fixtures/reference\")).unwrap",
+          "lineNumber": 30
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir",
+          "lineNumber": 30
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "root.join",
+          "lineNumber": 30
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "Some",
+          "lineNumber": 32
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "e.ok()?.path",
+          "lineNumber": 32
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "e.ok",
+          "lineNumber": 32
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "p.extension().is_some_and",
+          "lineNumber": 33
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "p.extension",
+          "lineNumber": 33
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "p.file_name().unwrap().to_string_lossy().into_owned",
+          "lineNumber": 35
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "p.file_name().unwrap().to_string_lossy",
+          "lineNumber": 35
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "p.file_name().unwrap",
+          "lineNumber": 35
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "p.file_name",
+          "lineNumber": 35
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "sources.push",
+          "lineNumber": 40
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "root.join",
+          "lineNumber": 41
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "sources.sort",
+          "lineNumber": 45
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "root.join",
+          "lineNumber": 46
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(&check)\n            .unwrap()\n            .filter_map(|e| Some(e.ok()?.path()))\n            .filter(|p| p.extension().is_some_and(|x| x == ext)).count",
+          "lineNumber": 48
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(&check)\n            .unwrap()\n            .filter_map(|e| Some(e.ok()?.path())).filter",
+          "lineNumber": 48
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(&check)\n            .unwrap().filter_map",
+          "lineNumber": 48
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir(&check).unwrap",
+          "lineNumber": 48
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "std::fs::read_dir",
+          "lineNumber": 48
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "Some",
+          "lineNumber": 50
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "e.ok()?.path",
+          "lineNumber": 50
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "e.ok",
+          "lineNumber": 50
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "p.extension().is_some_and",
+          "lineNumber": 51
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "p.extension",
+          "lineNumber": 51
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "Vec::new",
+          "lineNumber": 56
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "oxiguitar_formats::write_gp(&read(source)).unwrap",
+          "lineNumber": 58
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "oxiguitar_formats::write_gp",
+          "lineNumber": 58
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "read",
+          "lineNumber": 58
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "oxiguitar_formats::read(&written.data).unwrap",
+          "lineNumber": 59
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 59
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "read",
+          "lineNumber": 60
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "check.join",
+          "lineNumber": 60
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "stale.push",
+          "lineNumber": 61
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "name.clone",
+          "lineNumber": 61
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "oxiguitar_formats::write_gp5(&read(source)).unwrap",
+          "lineNumber": 64
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "oxiguitar_formats::write_gp5",
+          "lineNumber": 64
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "read",
+          "lineNumber": 64
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "oxiguitar_formats::read(&written.data).unwrap",
+          "lineNumber": 65
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 65
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "read",
+          "lineNumber": 66
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "check.join",
+          "lineNumber": 66
+        },
+        {
+          "caller": "the_files_for_guitar_pro_are_current",
+          "callee": "stale.push",
+          "lineNumber": 67
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "crates/oxiguitar-testgen/tests/hits.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 99,
+      "nonEmptyLines": 95,
+      "functions": [
+        {
+          "name": "every_note_is_where_the_map_says",
+          "startLine": 17,
+          "endLine": 95,
+          "params": []
+        },
+        {
+          "name": "overlaps",
+          "startLine": 97,
+          "endLine": 99,
+          "params": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "FontSet::bundled",
+          "lineNumber": 18
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "Metadata::bravura().expect",
+          "lineNumber": 19
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "Metadata::bravura",
+          "lineNumber": 19
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "references",
+          "lineNumber": 21
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "oxiguitar_formats::read(&to_gp(&r.song)).expect",
+          "lineNumber": 22
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 22
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "to_gp",
+          "lineNumber": 22
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "engrave",
+          "lineNumber": 25
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "hits.tracks",
+          "lineNumber": 27
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "track.staves.iter().enumerate",
+          "lineNumber": 31
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "track.staves.iter",
+          "lineNumber": 31
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "staff.bars.iter().enumerate",
+          "lineNumber": 32
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "staff.bars.iter",
+          "lineNumber": 32
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "bar.voices.iter().enumerate",
+          "lineNumber": 33
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "bar.voices.iter",
+          "lineNumber": 33
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "voice.beats.iter().enumerate",
+          "lineNumber": 34
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "voice.beats.iter",
+          "lineNumber": 34
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "b.grace.is_some",
+          "lineNumber": 35
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "n.string().unwrap_or",
+          "lineNumber": 39
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "n.string",
+          "lineNumber": 39
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "hits.find",
+          "lineNumber": 40
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "fret.to_string",
+          "lineNumber": 54
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "page.items.iter().any",
+          "lineNumber": 55
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "page.items.iter",
+          "lineNumber": 55
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "run.text.contains",
+          "lineNumber": 57
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "overlaps",
+          "lineNumber": 57
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "i.bounds",
+          "lineNumber": 57
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "hits\n                                    .hit(\n                                        found.sheet,\n                                        rect.x + rect.width / 2.0,\n                                        rect.y + rect.height / 2.0,\n                                        vi,\n                                    ).expect",
+          "lineNumber": 71
+        },
+        {
+          "caller": "every_note_is_where_the_map_says",
+          "callee": "hits.hit",
+          "lineNumber": 71
+        },
+        {
+          "caller": "overlaps",
+          "callee": "b.right",
+          "lineNumber": 98
+        },
+        {
+          "caller": "overlaps",
+          "callee": "a.right",
+          "lineNumber": 98
+        },
+        {
+          "caller": "overlaps",
+          "callee": "b.bottom",
+          "lineNumber": 98
+        },
+        {
+          "caller": "overlaps",
+          "callee": "a.bottom",
+          "lineNumber": 98
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "crates/oxiguitar-testgen/tests/read.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 39,
+      "functions": [
+        {
+          "name": "the_band_song_reads_back_whole",
+          "startLine": 11,
+          "endLine": 42,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "band_song",
+          "lineNumber": 12
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "oxiguitar_formats::read(&to_gp(&song)).expect",
+          "lineNumber": 13
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 13
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "to_gp",
+          "lineNumber": 13
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "score.tracks.iter().zip",
+          "lineNumber": 22
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "score.tracks.iter",
+          "lineNumber": 22
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "staff.bars.iter().enumerate",
+          "lineNumber": 27
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "staff.bars.iter",
+          "lineNumber": 27
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "bar\n                .voices\n                .iter()\n                .flat_map(|v| &v.beats)\n                .filter(|b| b.kind != BeatKind::Rest).count",
+          "lineNumber": 28
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "bar\n                .voices\n                .iter()\n                .flat_map(|v| &v.beats).filter",
+          "lineNumber": 28
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "bar\n                .voices\n                .iter().flat_map",
+          "lineNumber": 28
+        },
+        {
+          "caller": "the_band_song_reads_back_whole",
+          "callee": "bar\n                .voices.iter",
+          "lineNumber": 28
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "crates/oxiguitar-testgen/tests/visual.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 508,
+      "nonEmptyLines": 485,
+      "functions": [
+        {
+          "name": "reference_dir",
+          "startLine": 53,
+          "endLine": 55,
+          "params": []
+        },
+        {
+          "name": "plugins",
+          "startLine": 59,
+          "endLine": 72,
+          "params": []
+        },
+        {
+          "name": "diff_dir",
+          "startLine": 74,
+          "endLine": 76,
+          "params": []
+        },
+        {
+          "name": "blessing",
+          "startLine": 78,
+          "endLine": 80,
+          "params": []
+        },
+        {
+          "name": "picture_name",
+          "startLine": 90,
+          "endLine": 92,
+          "params": [
+            "r",
+            "page"
+          ]
+        },
+        {
+          "name": "stored_gpif",
+          "startLine": 95,
+          "endLine": 102,
+          "params": [
+            "path"
+          ]
+        },
+        {
+          "name": "draw",
+          "startLine": 105,
+          "endLine": 153,
+          "params": [
+            "r",
+            "file",
+            "fonts",
+            "meta"
+          ]
+        },
+        {
+          "name": "write_png",
+          "startLine": 155,
+          "endLine": 176,
+          "params": [
+            "path",
+            "pic"
+          ]
+        },
+        {
+          "name": "read_png",
+          "startLine": 178,
+          "endLine": 217,
+          "params": [
+            "path"
+          ]
+        },
+        {
+          "name": "compare",
+          "startLine": 221,
+          "endLine": 258,
+          "params": [
+            "want",
+            "got"
+          ]
+        },
+        {
+          "name": "index",
+          "startLine": 261,
+          "endLine": 286,
+          "params": [
+            "refs",
+            "pages"
+          ]
+        },
+        {
+          "name": "check_one",
+          "startLine": 299,
+          "endLine": 370,
+          "params": [
+            "r",
+            "dir",
+            "bless",
+            "fonts",
+            "meta"
+          ]
+        },
+        {
+          "name": "references_engrave_as_stored",
+          "startLine": 373,
+          "endLine": 457,
+          "params": []
+        },
+        {
+          "name": "a_moved_symbol_is_caught",
+          "startLine": 460,
+          "endLine": 508,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "Picture",
+          "startLine": 83,
+          "endLine": 87,
+          "methods": [],
+          "properties": [
+            "width",
+            "height",
+            "rgb"
+          ]
+        },
+        {
+          "name": "Outcome",
+          "startLine": 290,
+          "endLine": 297,
+          "methods": [],
+          "properties": [
+            "pages",
+            "files",
+            "problems",
+            "changed"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "reference_dir",
+          "callee": "Path::new(env!(\"CARGO_MANIFEST_DIR\")).join",
+          "lineNumber": 54
+        },
+        {
+          "caller": "reference_dir",
+          "callee": "Path::new",
+          "lineNumber": 54
+        },
+        {
+          "caller": "plugins",
+          "callee": "OnceLock::new",
+          "lineNumber": 60
+        },
+        {
+          "caller": "plugins",
+          "callee": "PLUGINS.get_or_init",
+          "lineNumber": 61
+        },
+        {
+          "caller": "plugins",
+          "callee": "Path::new(env!(\"CARGO_MANIFEST_DIR\")).join",
+          "lineNumber": 62
+        },
+        {
+          "caller": "plugins",
+          "callee": "Path::new",
+          "lineNumber": 62
+        },
+        {
+          "caller": "plugins",
+          "callee": "oxiguitar_plugin_test::build_ours(&workspace, !cfg!(debug_assertions)).expect",
+          "lineNumber": 63
+        },
+        {
+          "caller": "plugins",
+          "callee": "oxiguitar_plugin_test::build_ours",
+          "lineNumber": 63
+        },
+        {
+          "caller": "plugins",
+          "callee": "Plugins::discover",
+          "lineNumber": 65
+        },
+        {
+          "caller": "plugins",
+          "callee": "SharedSettings::default",
+          "lineNumber": 67
+        },
+        {
+          "caller": "plugins",
+          "callee": "oxiguitar_host::display_system",
+          "lineNumber": 68
+        },
+        {
+          "caller": "plugins",
+          "callee": "Arc::new",
+          "lineNumber": 69
+        },
+        {
+          "caller": "diff_dir",
+          "callee": "Path::new(env!(\"CARGO_TARGET_TMPDIR\")).join",
+          "lineNumber": 75
+        },
+        {
+          "caller": "diff_dir",
+          "callee": "Path::new",
+          "lineNumber": 75
+        },
+        {
+          "caller": "blessing",
+          "callee": "std::env::var_os(\"OXIGUITAR_BLESS\").is_some_and",
+          "lineNumber": 79
+        },
+        {
+          "caller": "blessing",
+          "callee": "std::env::var_os",
+          "lineNumber": 79
+        },
+        {
+          "caller": "blessing",
+          "callee": "v.is_empty",
+          "lineNumber": 79
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "std::fs::read(path).ok",
+          "lineNumber": 96
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "std::fs::read",
+          "lineNumber": 96
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "zip::ZipArchive::new(std::io::Cursor::new(data)).ok",
+          "lineNumber": 97
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "zip::ZipArchive::new",
+          "lineNumber": 97
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "std::io::Cursor::new",
+          "lineNumber": 97
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "zip.by_name(\"Content/score.gpif\").ok",
+          "lineNumber": 98
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "zip.by_name",
+          "lineNumber": 98
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "String::new",
+          "lineNumber": 99
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "entry.read_to_string(&mut text).ok",
+          "lineNumber": 100
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "entry.read_to_string",
+          "lineNumber": 100
+        },
+        {
+          "caller": "stored_gpif",
+          "callee": "Some",
+          "lineNumber": 101
+        },
+        {
+          "caller": "draw",
+          "callee": "std::fs::read(file).map_err",
+          "lineNumber": 111
+        },
+        {
+          "caller": "draw",
+          "callee": "std::fs::read",
+          "lineNumber": 111
+        },
+        {
+          "caller": "draw",
+          "callee": "plugins",
+          "lineNumber": 112
+        },
+        {
+          "caller": "draw",
+          "callee": "plugins\n        .recognise(&data, Some(\"gp\")).map_err",
+          "lineNumber": 113
+        },
+        {
+          "caller": "draw",
+          "callee": "plugins.recognise",
+          "lineNumber": 113
+        },
+        {
+          "caller": "draw",
+          "callee": "Some",
+          "lineNumber": 114
+        },
+        {
+          "caller": "draw",
+          "callee": "plugins\n        .read(format, &data).map_err",
+          "lineNumber": 116
+        },
+        {
+          "caller": "draw",
+          "callee": "plugins.read",
+          "lineNumber": 116
+        },
+        {
+          "caller": "draw",
+          "callee": "read\n        .log\n        .iter()\n        .filter(|e| e.level >= Level::Warning)\n        .map(|e| format!(\"{} ({})\", e.message, e.place)).collect",
+          "lineNumber": 119
+        },
+        {
+          "caller": "draw",
+          "callee": "read\n        .log\n        .iter()\n        .filter(|e| e.level >= Level::Warning).map",
+          "lineNumber": 119
+        },
+        {
+          "caller": "draw",
+          "callee": "read\n        .log\n        .iter().filter",
+          "lineNumber": 119
+        },
+        {
+          "caller": "draw",
+          "callee": "read\n        .log.iter",
+          "lineNumber": 119
+        },
+        {
+          "caller": "draw",
+          "callee": "warnings.is_empty",
+          "lineNumber": 125
+        },
+        {
+          "caller": "draw",
+          "callee": "Err",
+          "lineNumber": 126
+        },
+        {
+          "caller": "draw",
+          "callee": "oxiguitar_model::wire::from_wire2",
+          "lineNumber": 128
+        },
+        {
+          "caller": "draw",
+          "callee": "engrave",
+          "lineNumber": 129
+        },
+        {
+          "caller": "draw",
+          "callee": "Raster::new",
+          "lineNumber": 131
+        },
+        {
+          "caller": "draw",
+          "callee": "Vec::new",
+          "lineNumber": 132
+        },
+        {
+          "caller": "draw",
+          "callee": "View::page",
+          "lineNumber": 134
+        },
+        {
+          "caller": "draw",
+          "callee": "raster\n            .render(page, fonts, &theme, &view).ok_or",
+          "lineNumber": 135
+        },
+        {
+          "caller": "draw",
+          "callee": "raster.render",
+          "lineNumber": 135
+        },
+        {
+          "caller": "draw",
+          "callee": "pixmap\n            .data()\n            .as_chunks::<4>()\n            .0\n            .iter()\n            .flat_map(|p| [p[0], p[1], p[2]]).collect",
+          "lineNumber": 139
+        },
+        {
+          "caller": "draw",
+          "callee": "pixmap\n            .data()\n            .as_chunks::<4>()\n            .0\n            .iter().flat_map",
+          "lineNumber": 139
+        },
+        {
+          "caller": "draw",
+          "callee": "pixmap\n            .data()\n            .as_chunks::<4>()\n            .0.iter",
+          "lineNumber": 139
+        },
+        {
+          "caller": "draw",
+          "callee": "pixmap\n            .data()\n            .as_chunks::<4>",
+          "lineNumber": 139
+        },
+        {
+          "caller": "draw",
+          "callee": "pixmap.data",
+          "lineNumber": 139
+        },
+        {
+          "caller": "draw",
+          "callee": "out.push",
+          "lineNumber": 146
+        },
+        {
+          "caller": "draw",
+          "callee": "pixmap.width",
+          "lineNumber": 147
+        },
+        {
+          "caller": "draw",
+          "callee": "pixmap.height",
+          "lineNumber": 148
+        },
+        {
+          "caller": "draw",
+          "callee": "Ok",
+          "lineNumber": 152
+        },
+        {
+          "caller": "write_png",
+          "callee": "std::fs::File::create(path).unwrap_or_else",
+          "lineNumber": 156
+        },
+        {
+          "caller": "write_png",
+          "callee": "std::fs::File::create",
+          "lineNumber": 156
+        },
+        {
+          "caller": "write_png",
+          "callee": "png::Encoder::new",
+          "lineNumber": 157
+        },
+        {
+          "caller": "write_png",
+          "callee": "std::io::BufWriter::new",
+          "lineNumber": 157
+        },
+        {
+          "caller": "write_png",
+          "callee": "enc.set_depth",
+          "lineNumber": 158
+        },
+        {
+          "caller": "write_png",
+          "callee": "enc.set_compression",
+          "lineNumber": 159
+        },
+        {
+          "caller": "write_png",
+          "callee": "pic\n        .rgb\n        .as_chunks::<3>()\n        .0\n        .iter().all",
+          "lineNumber": 161
+        },
+        {
+          "caller": "write_png",
+          "callee": "pic\n        .rgb\n        .as_chunks::<3>()\n        .0.iter",
+          "lineNumber": 161
+        },
+        {
+          "caller": "write_png",
+          "callee": "pic\n        .rgb\n        .as_chunks::<3>",
+          "lineNumber": 161
+        },
+        {
+          "caller": "write_png",
+          "callee": "enc.set_color",
+          "lineNumber": 168
+        },
+        {
+          "caller": "write_png",
+          "callee": "pic.rgb.as_chunks::<3>().0.iter().map(|p| p[0]).collect",
+          "lineNumber": 169
+        },
+        {
+          "caller": "write_png",
+          "callee": "pic.rgb.as_chunks::<3>().0.iter().map",
+          "lineNumber": 169
+        },
+        {
+          "caller": "write_png",
+          "callee": "pic.rgb.as_chunks::<3>().0.iter",
+          "lineNumber": 169
+        },
+        {
+          "caller": "write_png",
+          "callee": "pic.rgb.as_chunks::<3>",
+          "lineNumber": 169
+        },
+        {
+          "caller": "write_png",
+          "callee": "enc.set_color",
+          "lineNumber": 171
+        },
+        {
+          "caller": "write_png",
+          "callee": "pic.rgb.clone",
+          "lineNumber": 172
+        },
+        {
+          "caller": "write_png",
+          "callee": "enc.write_header().expect",
+          "lineNumber": 174
+        },
+        {
+          "caller": "write_png",
+          "callee": "enc.write_header",
+          "lineNumber": 174
+        },
+        {
+          "caller": "write_png",
+          "callee": "w.write_image_data(&data).expect",
+          "lineNumber": 175
+        },
+        {
+          "caller": "write_png",
+          "callee": "w.write_image_data",
+          "lineNumber": 175
+        },
+        {
+          "caller": "read_png",
+          "callee": "std::fs::File::open(path).map_err",
+          "lineNumber": 179
+        },
+        {
+          "caller": "read_png",
+          "callee": "std::fs::File::open",
+          "lineNumber": 179
+        },
+        {
+          "caller": "read_png",
+          "callee": "png::Decoder::new",
+          "lineNumber": 180
+        },
+        {
+          "caller": "read_png",
+          "callee": "std::io::BufReader::new",
+          "lineNumber": 180
+        },
+        {
+          "caller": "read_png",
+          "callee": "dec.set_transformations",
+          "lineNumber": 181
+        },
+        {
+          "caller": "read_png",
+          "callee": "dec\n        .read_info().map_err",
+          "lineNumber": 182
+        },
+        {
+          "caller": "read_png",
+          "callee": "dec.read_info",
+          "lineNumber": 182
+        },
+        {
+          "caller": "read_png",
+          "callee": "reader\n        .next_frame(&mut buf).map_err",
+          "lineNumber": 186
+        },
+        {
+          "caller": "read_png",
+          "callee": "reader.next_frame",
+          "lineNumber": 186
+        },
+        {
+          "caller": "read_png",
+          "callee": "info.buffer_size",
+          "lineNumber": 189
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes.iter().flat_map(|g| [*g, *g, *g]).collect",
+          "lineNumber": 191
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes.iter().flat_map",
+          "lineNumber": 191
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes.iter",
+          "lineNumber": 191
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes\n            .as_chunks::<2>()\n            .0\n            .iter()\n            .flat_map(|p| [p[0], p[0], p[0]]).collect",
+          "lineNumber": 192
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes\n            .as_chunks::<2>()\n            .0\n            .iter().flat_map",
+          "lineNumber": 192
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes\n            .as_chunks::<2>()\n            .0.iter",
+          "lineNumber": 192
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes\n            .as_chunks::<2>",
+          "lineNumber": 192
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes.to_vec",
+          "lineNumber": 198
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes\n            .as_chunks::<4>()\n            .0\n            .iter()\n            .flat_map(|p| [p[0], p[1], p[2]]).collect",
+          "lineNumber": 199
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes\n            .as_chunks::<4>()\n            .0\n            .iter().flat_map",
+          "lineNumber": 199
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes\n            .as_chunks::<4>()\n            .0.iter",
+          "lineNumber": 199
+        },
+        {
+          "caller": "read_png",
+          "callee": "bytes\n            .as_chunks::<4>",
+          "lineNumber": 199
+        },
+        {
+          "caller": "read_png",
+          "callee": "Err",
+          "lineNumber": 206
+        },
+        {
+          "caller": "read_png",
+          "callee": "Ok",
+          "lineNumber": 212
+        },
+        {
+          "caller": "compare",
+          "callee": "Vec::with_capacity",
+          "lineNumber": 224
+        },
+        {
+          "caller": "compare",
+          "callee": "got.rgb.len",
+          "lineNumber": 224
+        },
+        {
+          "caller": "compare",
+          "callee": "want\n        .rgb\n        .as_chunks::<3>()\n        .0\n        .iter().zip",
+          "lineNumber": 225
+        },
+        {
+          "caller": "compare",
+          "callee": "want\n        .rgb\n        .as_chunks::<3>()\n        .0.iter",
+          "lineNumber": 225
+        },
+        {
+          "caller": "compare",
+          "callee": "want\n        .rgb\n        .as_chunks::<3>",
+          "lineNumber": 225
+        },
+        {
+          "caller": "compare",
+          "callee": "got.rgb.as_chunks::<3>().0.iter",
+          "lineNumber": 230
+        },
+        {
+          "caller": "compare",
+          "callee": "got.rgb.as_chunks::<3>",
+          "lineNumber": 230
+        },
+        {
+          "caller": "compare",
+          "callee": "w\n            .iter()\n            .zip(g)\n            .map(|(a, b)| a.abs_diff(*b))\n            .max().unwrap_or",
+          "lineNumber": 232
+        },
+        {
+          "caller": "compare",
+          "callee": "w\n            .iter()\n            .zip(g)\n            .map(|(a, b)| a.abs_diff(*b)).max",
+          "lineNumber": 232
+        },
+        {
+          "caller": "compare",
+          "callee": "w\n            .iter()\n            .zip(g).map",
+          "lineNumber": 232
+        },
+        {
+          "caller": "compare",
+          "callee": "w\n            .iter().zip",
+          "lineNumber": 232
+        },
+        {
+          "caller": "compare",
+          "callee": "w.iter",
+          "lineNumber": 232
+        },
+        {
+          "caller": "compare",
+          "callee": "a.abs_diff",
+          "lineNumber": 235
+        },
+        {
+          "caller": "compare",
+          "callee": "largest.max",
+          "lineNumber": 238
+        },
+        {
+          "caller": "compare",
+          "callee": "rgb.extend_from_slice",
+          "lineNumber": 241
+        },
+        {
+          "caller": "compare",
+          "callee": "u16::from",
+          "lineNumber": 244
+        },
+        {
+          "caller": "compare",
+          "callee": "u16::from",
+          "lineNumber": 244
+        },
+        {
+          "caller": "compare",
+          "callee": "u16::from",
+          "lineNumber": 244
+        },
+        {
+          "caller": "compare",
+          "callee": "rgb.extend_from_slice",
+          "lineNumber": 246
+        },
+        {
+          "caller": "index",
+          "callee": "String::from",
+          "lineNumber": 262
+        },
+        {
+          "caller": "index",
+          "callee": "refs.iter().zip",
+          "lineNumber": 270
+        },
+        {
+          "caller": "index",
+          "callee": "refs.iter",
+          "lineNumber": 270
+        },
+        {
+          "caller": "check_one",
+          "callee": "Outcome::default",
+          "lineNumber": 300
+        },
+        {
+          "caller": "check_one",
+          "callee": "dir.join",
+          "lineNumber": 301
+        },
+        {
+          "caller": "check_one",
+          "callee": "out.files.push",
+          "lineNumber": 302
+        },
+        {
+          "caller": "check_one",
+          "callee": "to_gpif",
+          "lineNumber": 304
+        },
+        {
+          "caller": "check_one",
+          "callee": "stored_gpif(&gp_path).as_deref",
+          "lineNumber": 305
+        },
+        {
+          "caller": "check_one",
+          "callee": "stored_gpif",
+          "lineNumber": 305
+        },
+        {
+          "caller": "check_one",
+          "callee": "Some",
+          "lineNumber": 305
+        },
+        {
+          "caller": "check_one",
+          "callee": "gpif.as_str",
+          "lineNumber": 305
+        },
+        {
+          "caller": "check_one",
+          "callee": "std::fs::write(&gp_path, to_gp(&r.song)).expect",
+          "lineNumber": 307
+        },
+        {
+          "caller": "check_one",
+          "callee": "std::fs::write",
+          "lineNumber": 307
+        },
+        {
+          "caller": "check_one",
+          "callee": "to_gp",
+          "lineNumber": 307
+        },
+        {
+          "caller": "check_one",
+          "callee": "out.changed.push",
+          "lineNumber": 308
+        },
+        {
+          "caller": "check_one",
+          "callee": "out.problems.push",
+          "lineNumber": 310
+        },
+        {
+          "caller": "check_one",
+          "callee": "draw",
+          "lineNumber": 317
+        },
+        {
+          "caller": "check_one",
+          "callee": "out.problems.push",
+          "lineNumber": 320
+        },
+        {
+          "caller": "check_one",
+          "callee": "pictures.len",
+          "lineNumber": 324
+        },
+        {
+          "caller": "check_one",
+          "callee": "pictures.iter().enumerate",
+          "lineNumber": 325
+        },
+        {
+          "caller": "check_one",
+          "callee": "pictures.iter",
+          "lineNumber": 325
+        },
+        {
+          "caller": "check_one",
+          "callee": "picture_name",
+          "lineNumber": 326
+        },
+        {
+          "caller": "check_one",
+          "callee": "out.files.push",
+          "lineNumber": 327
+        },
+        {
+          "caller": "check_one",
+          "callee": "name.clone",
+          "lineNumber": 327
+        },
+        {
+          "caller": "check_one",
+          "callee": "dir.join",
+          "lineNumber": 328
+        },
+        {
+          "caller": "check_one",
+          "callee": "read_png",
+          "lineNumber": 329
+        },
+        {
+          "caller": "check_one",
+          "callee": "Some",
+          "lineNumber": 331
+        },
+        {
+          "caller": "check_one",
+          "callee": "Some",
+          "lineNumber": 332
+        },
+        {
+          "caller": "check_one",
+          "callee": "Some",
+          "lineNumber": 338
+        },
+        {
+          "caller": "check_one",
+          "callee": "\"changed\".to_owned",
+          "lineNumber": 338
+        },
+        {
+          "caller": "check_one",
+          "callee": "compare",
+          "lineNumber": 340
+        },
+        {
+          "caller": "check_one",
+          "callee": "std::fs::create_dir_all",
+          "lineNumber": 344
+        },
+        {
+          "caller": "check_one",
+          "callee": "diff_dir",
+          "lineNumber": 344
+        },
+        {
+          "caller": "check_one",
+          "callee": "write_png",
+          "lineNumber": 345
+        },
+        {
+          "caller": "check_one",
+          "callee": "diff_dir().join",
+          "lineNumber": 346
+        },
+        {
+          "caller": "check_one",
+          "callee": "diff_dir",
+          "lineNumber": 346
+        },
+        {
+          "caller": "check_one",
+          "callee": "Some",
+          "lineNumber": 350
+        },
+        {
+          "caller": "check_one",
+          "callee": "write_png",
+          "lineNumber": 360
+        },
+        {
+          "caller": "check_one",
+          "callee": "out.changed.push",
+          "lineNumber": 361
+        },
+        {
+          "caller": "check_one",
+          "callee": "std::fs::create_dir_all",
+          "lineNumber": 363
+        },
+        {
+          "caller": "check_one",
+          "callee": "diff_dir",
+          "lineNumber": 363
+        },
+        {
+          "caller": "check_one",
+          "callee": "write_png",
+          "lineNumber": 364
+        },
+        {
+          "caller": "check_one",
+          "callee": "diff_dir().join",
+          "lineNumber": 364
+        },
+        {
+          "caller": "check_one",
+          "callee": "diff_dir",
+          "lineNumber": 364
+        },
+        {
+          "caller": "check_one",
+          "callee": "out.problems.push",
+          "lineNumber": 365
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "reference_dir",
+          "lineNumber": 374
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "blessing",
+          "lineNumber": 375
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::create_dir_all(&dir).expect",
+          "lineNumber": 377
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::create_dir_all",
+          "lineNumber": 377
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::remove_dir_all",
+          "lineNumber": 379
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "diff_dir",
+          "lineNumber": 379
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "FontSet::bundled",
+          "lineNumber": 380
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "Metadata::bravura().expect",
+          "lineNumber": 381
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "Metadata::bravura",
+          "lineNumber": 381
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "references",
+          "lineNumber": 382
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "Vec::new",
+          "lineNumber": 383
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "BTreeSet::from",
+          "lineNumber": 384
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "\"README.md\".to_owned",
+          "lineNumber": 384
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "Vec::new",
+          "lineNumber": 385
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "Vec::new",
+          "lineNumber": 386
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::thread::available_parallelism().map_or",
+          "lineNumber": 389
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::thread::available_parallelism",
+          "lineNumber": 389
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "n.get",
+          "lineNumber": 389
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "refs.len().div_ceil",
+          "lineNumber": 390
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "refs.len",
+          "lineNumber": 390
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::thread::scope",
+          "lineNumber": 391
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "refs\n            .chunks(chunk)\n            .map(|part| {\n                let (dir, fonts, meta) = (&dir, &fonts, &meta);\n                scope.spawn(move || {\n                    part.iter()\n                        .map(|r| check_one(r, dir, bless, fonts, meta))\n                        .collect::<Vec<_>>()\n                })\n            }).collect",
+          "lineNumber": 392
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "refs\n            .chunks(chunk).map",
+          "lineNumber": 392
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "refs.chunks",
+          "lineNumber": 392
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "scope.spawn",
+          "lineNumber": 396
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "part.iter()\n                        .map(|r| check_one(r, dir, bless, fonts, meta))\n                        .collect::<Vec<_>>",
+          "lineNumber": 397
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "part.iter().map",
+          "lineNumber": 397
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "part.iter",
+          "lineNumber": 397
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "check_one",
+          "lineNumber": 398
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "handles\n            .into_iter()\n            .flat_map(|h| h.join().expect(\"a reference check panicked\")).collect",
+          "lineNumber": 403
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "handles\n            .into_iter().flat_map",
+          "lineNumber": 403
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "handles.into_iter",
+          "lineNumber": 403
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "h.join().expect",
+          "lineNumber": 405
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "h.join",
+          "lineNumber": 405
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "page_counts.push",
+          "lineNumber": 409
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "expected.extend",
+          "lineNumber": 410
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "problems.extend",
+          "lineNumber": 411
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "changed_files.extend",
+          "lineNumber": 412
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "dir.join",
+          "lineNumber": 416
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "index",
+          "lineNumber": 417
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::read_to_string(&readme).ok().as_deref",
+          "lineNumber": 418
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::read_to_string(&readme).ok",
+          "lineNumber": 418
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::read_to_string",
+          "lineNumber": 418
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "Some",
+          "lineNumber": 418
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "text.as_str",
+          "lineNumber": 418
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::write(&readme, &text).expect",
+          "lineNumber": 420
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::write",
+          "lineNumber": 420
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "changed_files.push",
+          "lineNumber": 421
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "\"README.md\".to_owned",
+          "lineNumber": 421
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "problems.push",
+          "lineNumber": 423
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "\"README.md: the index is out of date\".to_owned",
+          "lineNumber": 423
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::read_dir(&dir)\n        .map(|d| {\n            d.filter_map(|e| e.ok())\n                .map(|e| e.file_name().to_string_lossy().into_owned())\n                .collect()\n        }).unwrap_or_default",
+          "lineNumber": 426
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::read_dir(&dir).map",
+          "lineNumber": 426
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::read_dir",
+          "lineNumber": 426
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "d.filter_map(|e| e.ok())\n                .map(|e| e.file_name().to_string_lossy().into_owned()).collect",
+          "lineNumber": 428
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "d.filter_map(|e| e.ok()).map",
+          "lineNumber": 428
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "d.filter_map",
+          "lineNumber": 428
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "e.ok",
+          "lineNumber": 428
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "e.file_name().to_string_lossy().into_owned",
+          "lineNumber": 429
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "e.file_name().to_string_lossy",
+          "lineNumber": 429
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "e.file_name",
+          "lineNumber": 429
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "present.difference",
+          "lineNumber": 433
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "std::fs::remove_file",
+          "lineNumber": 435
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "dir.join",
+          "lineNumber": 435
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "changed_files.push",
+          "lineNumber": 436
+        },
+        {
+          "caller": "references_engrave_as_stored",
+          "callee": "problems.push",
+          "lineNumber": 438
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "FontSet::bundled",
+          "lineNumber": 463
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "Metadata::bravura().expect",
+          "lineNumber": 464
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "Metadata::bravura",
+          "lineNumber": 464
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "references",
+          "lineNumber": 465
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "std::env::temp_dir().join",
+          "lineNumber": 466
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "std::env::temp_dir",
+          "lineNumber": 466
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "std::fs::create_dir_all(&dir).expect",
+          "lineNumber": 467
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "std::fs::create_dir_all",
+          "lineNumber": 467
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "dir.join",
+          "lineNumber": 468
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "std::fs::write(&file, to_gp(&r.song)).expect",
+          "lineNumber": 469
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "std::fs::write",
+          "lineNumber": 469
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "to_gp",
+          "lineNumber": 469
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "draw(r, &file, &fonts, &meta).expect",
+          "lineNumber": 470
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "draw",
+          "lineNumber": 470
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "std::fs::remove_dir_all",
+          "lineNumber": 471
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "a.rgb.clone",
+          "lineNumber": 473
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "shifted.chunks_exact_mut",
+          "lineNumber": 476
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "line.copy_within",
+          "lineNumber": 477
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "compare",
+          "lineNumber": 484
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "compare",
+          "lineNumber": 485
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "a.rgb.clone",
+          "lineNumber": 490
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "(0..a.rgb.len() / 3)\n        .find(|i| a.rgb[3 * i] < 40 && i % w + 3 < w).expect",
+          "lineNumber": 492
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "(0..a.rgb.len() / 3).find",
+          "lineNumber": 492
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "a.rgb.len",
+          "lineNumber": 492
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "dotless[k..k + 3].copy_from_slice",
+          "lineNumber": 498
+        },
+        {
+          "caller": "a_moved_symbol_is_caught",
+          "callee": "compare",
+          "lineNumber": 506
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 14,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "crates/oxiguitar-tools/Cargo.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 19,
+      "nonEmptyLines": 16,
+      "sections": [
+        {
+          "heading": "package",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "dependencies",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "dev-dependencies",
+          "level": 1,
+          "line": 15
+        },
+        {
+          "heading": "lints",
+          "level": 1,
+          "line": 18
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "crates/oxiguitar-tools/src/keys.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 500,
+      "nonEmptyLines": 463,
+      "functions": [
+        {
+          "name": "scale",
+          "startLine": 53,
+          "endLine": 58,
+          "params": [
+            "fifths"
+          ]
+        },
+        {
+          "name": "weights",
+          "startLine": 63,
+          "endLine": 97,
+          "params": [
+            "score"
+          ]
+        },
+        {
+          "name": "outside_share",
+          "startLine": 101,
+          "endLine": 109,
+          "params": [
+            "w",
+            "fifths"
+          ]
+        },
+        {
+          "name": "gain",
+          "startLine": 113,
+          "endLine": 121,
+          "params": [
+            "bars",
+            "keys"
+          ]
+        },
+        {
+          "name": "infer",
+          "startLine": 125,
+          "endLine": 127,
+          "params": [
+            "score"
+          ]
+        },
+        {
+          "name": "infer_bars",
+          "startLine": 130,
+          "endLine": 196,
+          "params": [
+            "score",
+            "bars"
+          ]
+        },
+        {
+          "name": "starts_section",
+          "startLine": 199,
+          "endLine": 204,
+          "params": [
+            "score",
+            "i"
+          ]
+        },
+        {
+          "name": "id",
+          "startLine": 211,
+          "endLine": 213,
+          "params": []
+        },
+        {
+          "name": "name",
+          "startLine": 215,
+          "endLine": 217,
+          "params": []
+        },
+        {
+          "name": "description",
+          "startLine": 219,
+          "endLine": 222,
+          "params": []
+        },
+        {
+          "name": "availability",
+          "startLine": 224,
+          "endLine": 230,
+          "params": [
+            "score"
+          ]
+        },
+        {
+          "name": "apply",
+          "startLine": 232,
+          "endLine": 265,
+          "params": [
+            "score"
+          ]
+        },
+        {
+          "name": "unchanged",
+          "startLine": 268,
+          "endLine": 273,
+          "params": [
+            "report"
+          ]
+        },
+        {
+          "name": "report",
+          "startLine": 276,
+          "endLine": 301,
+          "params": [
+            "keys"
+          ]
+        },
+        {
+          "name": "key_name",
+          "startLine": 304,
+          "endLine": 320,
+          "params": [
+            "fifths"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "InferKeySignatures",
+          "startLine": 208,
+          "endLine": 208,
+          "methods": [
+            "id",
+            "name",
+            "description",
+            "availability",
+            "apply"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "InferKeySignatures",
+          "line": 208,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "scale",
+          "callee": "(7 * i32::from(fifths)).rem_euclid",
+          "lineNumber": 54
+        },
+        {
+          "caller": "scale",
+          "callee": "i32::from",
+          "lineNumber": 54
+        },
+        {
+          "caller": "scale",
+          "callee": "[0, 2, 4, 5, 7, 9, 11]\n        .iter().fold",
+          "lineNumber": 55
+        },
+        {
+          "caller": "scale",
+          "callee": "[0, 2, 4, 5, 7, 9, 11].iter",
+          "lineNumber": 55
+        },
+        {
+          "caller": "weights",
+          "callee": "score.tracks.iter().filter",
+          "lineNumber": 65
+        },
+        {
+          "caller": "weights",
+          "callee": "score.tracks.iter",
+          "lineNumber": 65
+        },
+        {
+          "caller": "weights",
+          "callee": "staff.bars.iter().zip",
+          "lineNumber": 67
+        },
+        {
+          "caller": "weights",
+          "callee": "staff.bars.iter",
+          "lineNumber": 67
+        },
+        {
+          "caller": "weights",
+          "callee": "out.iter_mut",
+          "lineNumber": 67
+        },
+        {
+          "caller": "weights",
+          "callee": "voice.beats.iter().filter",
+          "lineNumber": 69
+        },
+        {
+          "caller": "weights",
+          "callee": "voice.beats.iter",
+          "lineNumber": 69
+        },
+        {
+          "caller": "weights",
+          "callee": "beat\n                            .duration\n                            .length().map_or",
+          "lineNumber": 70
+        },
+        {
+          "caller": "weights",
+          "callee": "beat\n                            .duration.length",
+          "lineNumber": 70
+        },
+        {
+          "caller": "weights",
+          "callee": "l.to_f64",
+          "lineNumber": 73
+        },
+        {
+          "caller": "weights",
+          "callee": "beat.grace.is_some",
+          "lineNumber": 74
+        },
+        {
+          "caller": "weights",
+          "callee": "length.clamp",
+          "lineNumber": 77
+        },
+        {
+          "caller": "weights",
+          "callee": "beat.notes.iter().filter",
+          "lineNumber": 79
+        },
+        {
+          "caller": "weights",
+          "callee": "beat.notes.iter",
+          "lineNumber": 79
+        },
+        {
+          "caller": "weights",
+          "callee": "staff.pitch_of",
+          "lineNumber": 81
+        },
+        {
+          "caller": "weights",
+          "callee": "Some",
+          "lineNumber": 82
+        },
+        {
+          "caller": "weights",
+          "callee": "i32::from",
+          "lineNumber": 85
+        },
+        {
+          "caller": "weights",
+          "callee": "i32::from",
+          "lineNumber": 85
+        },
+        {
+          "caller": "weights",
+          "callee": "w.get_mut",
+          "lineNumber": 86
+        },
+        {
+          "caller": "weights",
+          "callee": "written.rem_euclid",
+          "lineNumber": 86
+        },
+        {
+          "caller": "outside_share",
+          "callee": "scale",
+          "lineNumber": 102
+        },
+        {
+          "caller": "outside_share",
+          "callee": "w.iter().sum",
+          "lineNumber": 103
+        },
+        {
+          "caller": "outside_share",
+          "callee": "w.iter",
+          "lineNumber": 103
+        },
+        {
+          "caller": "outside_share",
+          "callee": "(0..12)\n        .filter(|pc| s & (1 << pc) == 0)\n        .map(|pc| w.get(pc).copied().unwrap_or(0.0)).sum",
+          "lineNumber": 104
+        },
+        {
+          "caller": "outside_share",
+          "callee": "(0..12)\n        .filter(|pc| s & (1 << pc) == 0).map",
+          "lineNumber": 104
+        },
+        {
+          "caller": "outside_share",
+          "callee": "(0..12).filter",
+          "lineNumber": 104
+        },
+        {
+          "caller": "outside_share",
+          "callee": "w.get(pc).copied().unwrap_or",
+          "lineNumber": 106
+        },
+        {
+          "caller": "outside_share",
+          "callee": "w.get(pc).copied",
+          "lineNumber": 106
+        },
+        {
+          "caller": "outside_share",
+          "callee": "w.get",
+          "lineNumber": 106
+        },
+        {
+          "caller": "outside_share",
+          "callee": "total.max",
+          "lineNumber": 108
+        },
+        {
+          "caller": "gain",
+          "callee": "bars.iter().filter(|w| w.iter().sum::<f32>() > 0.0).count",
+          "lineNumber": 114
+        },
+        {
+          "caller": "gain",
+          "callee": "bars.iter().filter",
+          "lineNumber": 114
+        },
+        {
+          "caller": "gain",
+          "callee": "bars.iter",
+          "lineNumber": 114
+        },
+        {
+          "caller": "gain",
+          "callee": "w.iter().sum::<f32>",
+          "lineNumber": 114
+        },
+        {
+          "caller": "gain",
+          "callee": "w.iter",
+          "lineNumber": 114
+        },
+        {
+          "caller": "gain",
+          "callee": "bars\n        .iter()\n        .zip(keys)\n        .map(|(w, k)| outside_share(w, 0) - outside_share(w, *k)).sum",
+          "lineNumber": 115
+        },
+        {
+          "caller": "gain",
+          "callee": "bars\n        .iter()\n        .zip(keys).map",
+          "lineNumber": 115
+        },
+        {
+          "caller": "gain",
+          "callee": "bars\n        .iter().zip",
+          "lineNumber": 115
+        },
+        {
+          "caller": "gain",
+          "callee": "bars.iter",
+          "lineNumber": 115
+        },
+        {
+          "caller": "gain",
+          "callee": "outside_share",
+          "lineNumber": 118
+        },
+        {
+          "caller": "gain",
+          "callee": "outside_share",
+          "lineNumber": 118
+        },
+        {
+          "caller": "gain",
+          "callee": "with_music.max",
+          "lineNumber": 120
+        },
+        {
+          "caller": "infer",
+          "callee": "infer_bars",
+          "lineNumber": 126
+        },
+        {
+          "caller": "infer",
+          "callee": "weights",
+          "lineNumber": 126
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "KEYS.collect",
+          "lineNumber": 131
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "outside_share",
+          "lineNumber": 136
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "f32::from",
+          "lineNumber": 136
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "k.unsigned_abs",
+          "lineNumber": 136
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "bars.len",
+          "lineNumber": 138
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "Vec::new",
+          "lineNumber": 140
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "Vec::with_capacity",
+          "lineNumber": 143
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.len",
+          "lineNumber": 143
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "bars.first",
+          "lineNumber": 145
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "best.push",
+          "lineNumber": 147
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "cost",
+          "lineNumber": 147
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "bars.get",
+          "lineNumber": 151
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "starts_section",
+          "lineNumber": 152
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "Vec::with_capacity",
+          "lineNumber": 157
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.len",
+          "lineNumber": 157
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.iter().enumerate",
+          "lineNumber": 158
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.iter",
+          "lineNumber": 158
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "best\n                .iter()\n                .enumerate()\n                .map(|(p, total)| {\n                    let step = keys.get(p).map_or(0, |q| q.abs_diff(*k));\n                    let change = if p == j {\n                        0.0\n                    } else {\n                        switch + DISTANCE * f32::from(step)\n                    };\n                    (total + change, p)\n                }).fold",
+          "lineNumber": 159
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "best\n                .iter()\n                .enumerate().map",
+          "lineNumber": 159
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "best\n                .iter().enumerate",
+          "lineNumber": 159
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "best.iter",
+          "lineNumber": 159
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.get(p).map_or",
+          "lineNumber": 163
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.get",
+          "lineNumber": 163
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "q.abs_diff",
+          "lineNumber": 163
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "f32::from",
+          "lineNumber": 167
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "next.push",
+          "lineNumber": 172
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "cost",
+          "lineNumber": 172
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "from.get_mut(i).and_then",
+          "lineNumber": 173
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "from.get_mut",
+          "lineNumber": 173
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "f.get_mut",
+          "lineNumber": 173
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "best\n        .iter()\n        .enumerate().fold",
+          "lineNumber": 180
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "best\n        .iter().enumerate",
+          "lineNumber": 180
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "best.iter",
+          "lineNumber": 180
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "(0..n).rev",
+          "lineNumber": 189
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "out.get_mut",
+          "lineNumber": 190
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.get(j).copied().unwrap_or",
+          "lineNumber": 191
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.get(j).copied",
+          "lineNumber": 191
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "keys.get",
+          "lineNumber": 191
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "from.get(i).and_then(|f| f.get(j)).copied().unwrap_or",
+          "lineNumber": 193
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "from.get(i).and_then(|f| f.get(j)).copied",
+          "lineNumber": 193
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "from.get(i).and_then",
+          "lineNumber": 193
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "from.get",
+          "lineNumber": 193
+        },
+        {
+          "caller": "infer_bars",
+          "callee": "f.get",
+          "lineNumber": 193
+        },
+        {
+          "caller": "starts_section",
+          "callee": "score.master_bars.get",
+          "lineNumber": 200
+        },
+        {
+          "caller": "starts_section",
+          "callee": "i.checked_sub(1).and_then",
+          "lineNumber": 201
+        },
+        {
+          "caller": "starts_section",
+          "callee": "i.checked_sub",
+          "lineNumber": 201
+        },
+        {
+          "caller": "starts_section",
+          "callee": "score.master_bars.get",
+          "lineNumber": 201
+        },
+        {
+          "caller": "starts_section",
+          "callee": "here.is_some_and",
+          "lineNumber": 202
+        },
+        {
+          "caller": "starts_section",
+          "callee": "mb.marker.is_some",
+          "lineNumber": 202
+        },
+        {
+          "caller": "starts_section",
+          "callee": "before.is_some_and",
+          "lineNumber": 203
+        },
+        {
+          "caller": "starts_section",
+          "callee": "mb.repeat_end.is_some",
+          "lineNumber": 203
+        },
+        {
+          "caller": "availability",
+          "callee": "score.master_bars.is_empty",
+          "lineNumber": 225
+        },
+        {
+          "caller": "availability",
+          "callee": "Availability::Unavailable",
+          "lineNumber": 226
+        },
+        {
+          "caller": "availability",
+          "callee": "\"The score has no bars.\".to_owned",
+          "lineNumber": 226
+        },
+        {
+          "caller": "apply",
+          "callee": "self.availability",
+          "lineNumber": 233
+        },
+        {
+          "caller": "apply",
+          "callee": "unchanged",
+          "lineNumber": 234
+        },
+        {
+          "caller": "apply",
+          "callee": "weights",
+          "lineNumber": 236
+        },
+        {
+          "caller": "apply",
+          "callee": "infer_bars",
+          "lineNumber": 237
+        },
+        {
+          "caller": "apply",
+          "callee": "keys.iter().any",
+          "lineNumber": 238
+        },
+        {
+          "caller": "apply",
+          "callee": "keys.iter",
+          "lineNumber": 238
+        },
+        {
+          "caller": "apply",
+          "callee": "gain",
+          "lineNumber": 238
+        },
+        {
+          "caller": "apply",
+          "callee": "score\n            .master_bars\n            .iter()\n            .map(|mb| mb.key_signature.fifths).collect",
+          "lineNumber": 242
+        },
+        {
+          "caller": "apply",
+          "callee": "score\n            .master_bars\n            .iter().map",
+          "lineNumber": 242
+        },
+        {
+          "caller": "apply",
+          "callee": "score\n            .master_bars.iter",
+          "lineNumber": 242
+        },
+        {
+          "caller": "apply",
+          "callee": "current.iter().all",
+          "lineNumber": 250
+        },
+        {
+          "caller": "apply",
+          "callee": "current.iter",
+          "lineNumber": 250
+        },
+        {
+          "caller": "apply",
+          "callee": "unchanged",
+          "lineNumber": 255
+        },
+        {
+          "caller": "apply",
+          "callee": "why.to_owned",
+          "lineNumber": 255
+        },
+        {
+          "caller": "apply",
+          "callee": "score.clone",
+          "lineNumber": 257
+        },
+        {
+          "caller": "apply",
+          "callee": "s.master_bars.iter_mut().zip",
+          "lineNumber": 258
+        },
+        {
+          "caller": "apply",
+          "callee": "s.master_bars.iter_mut",
+          "lineNumber": 258
+        },
+        {
+          "caller": "apply",
+          "callee": "Some",
+          "lineNumber": 262
+        },
+        {
+          "caller": "apply",
+          "callee": "report",
+          "lineNumber": 263
+        },
+        {
+          "caller": "report",
+          "callee": "Vec::new",
+          "lineNumber": 277
+        },
+        {
+          "caller": "report",
+          "callee": "keys.iter().enumerate",
+          "lineNumber": 278
+        },
+        {
+          "caller": "report",
+          "callee": "keys.iter",
+          "lineNumber": 278
+        },
+        {
+          "caller": "report",
+          "callee": "runs.last_mut",
+          "lineNumber": 279
+        },
+        {
+          "caller": "report",
+          "callee": "runs.push",
+          "lineNumber": 281
+        },
+        {
+          "caller": "report",
+          "callee": "runs\n        .iter()\n        .take(SHOWN)\n        .map(|(k, from, to)| {\n            let bars = if from == to {\n                format!(\"bar {from}\")\n            } else {\n                format!(\"bars {from}–{to}\")\n            };\n            format!(\"{} in {bars}\", key_name(*k))\n        }).collect",
+          "lineNumber": 285
+        },
+        {
+          "caller": "report",
+          "callee": "runs\n        .iter()\n        .take(SHOWN).map",
+          "lineNumber": 285
+        },
+        {
+          "caller": "report",
+          "callee": "runs\n        .iter().take",
+          "lineNumber": 285
+        },
+        {
+          "caller": "report",
+          "callee": "runs.iter",
+          "lineNumber": 285
+        },
+        {
+          "caller": "report",
+          "callee": "runs.len",
+          "lineNumber": 297
+        },
+        {
+          "caller": "report",
+          "callee": "parts.push",
+          "lineNumber": 298
+        },
+        {
+          "caller": "key_name",
+          "callee": "usize::try_from(i32::from(fifths) + 7).unwrap_or",
+          "lineNumber": 311
+        },
+        {
+          "caller": "key_name",
+          "callee": "usize::try_from",
+          "lineNumber": 311
+        },
+        {
+          "caller": "key_name",
+          "callee": "i32::from",
+          "lineNumber": 311
+        },
+        {
+          "caller": "key_name",
+          "callee": "MAJOR.get(i).copied().unwrap_or",
+          "lineNumber": 312
+        },
+        {
+          "caller": "key_name",
+          "callee": "MAJOR.get(i).copied",
+          "lineNumber": 312
+        },
+        {
+          "caller": "key_name",
+          "callee": "MAJOR.get",
+          "lineNumber": 312
+        },
+        {
+          "caller": "key_name",
+          "callee": "MINOR.get(i).copied().unwrap_or",
+          "lineNumber": 313
+        },
+        {
+          "caller": "key_name",
+          "callee": "MINOR.get(i).copied",
+          "lineNumber": 313
+        },
+        {
+          "caller": "key_name",
+          "callee": "MINOR.get",
+          "lineNumber": 313
+        },
+        {
+          "caller": "key_name",
+          "callee": "String::new",
+          "lineNumber": 315
+        },
+        {
+          "caller": "song",
+          "callee": "Score::new",
+          "lineNumber": 331
+        },
+        {
+          "caller": "song",
+          "callee": "Staff::default",
+          "lineNumber": 332
+        },
+        {
+          "caller": "song",
+          "callee": "score.master_bars.push",
+          "lineNumber": 334
+        },
+        {
+          "caller": "song",
+          "callee": "MasterBar::default",
+          "lineNumber": 334
+        },
+        {
+          "caller": "song",
+          "callee": "pitches\n                .iter()\n                .map(|p| Beat {\n                    notes: vec![Note {\n                        place: NotePlace::Pitched(Pitch(*p)),\n                        ..Note::fretted(1, 0)\n                    }],\n                    duration: Duration::new(NoteValue::Quarter),\n                    ..Beat::default()\n                }).collect",
+          "lineNumber": 335
+        },
+        {
+          "caller": "song",
+          "callee": "pitches\n                .iter().map",
+          "lineNumber": 335
+        },
+        {
+          "caller": "song",
+          "callee": "pitches.iter",
+          "lineNumber": 335
+        },
+        {
+          "caller": "song",
+          "callee": "Duration::new",
+          "lineNumber": 342
+        },
+        {
+          "caller": "song",
+          "callee": "Beat::default",
+          "lineNumber": 343
+        },
+        {
+          "caller": "song",
+          "callee": "staff.bars.push",
+          "lineNumber": 346
+        },
+        {
+          "caller": "song",
+          "callee": "Bar::default",
+          "lineNumber": 348
+        },
+        {
+          "caller": "song",
+          "callee": "score.tracks.push",
+          "lineNumber": 351
+        },
+        {
+          "caller": "song",
+          "callee": "Track::default",
+          "lineNumber": 353
+        },
+        {
+          "caller": "a_tune_in_g_gets_one_sharp",
+          "callee": "infer",
+          "lineNumber": 371
+        },
+        {
+          "caller": "a_tune_in_g_gets_one_sharp",
+          "callee": "song",
+          "lineNumber": 371
+        },
+        {
+          "caller": "music_without_accidentals_stays_in_c",
+          "callee": "song",
+          "lineNumber": 378
+        },
+        {
+          "caller": "a_modulation_changes_the_key_where_it_happens",
+          "callee": "bars.extend",
+          "lineNumber": 394
+        },
+        {
+          "caller": "a_modulation_changes_the_key_where_it_happens",
+          "callee": "infer",
+          "lineNumber": 395
+        },
+        {
+          "caller": "a_modulation_changes_the_key_where_it_happens",
+          "callee": "song",
+          "lineNumber": 395
+        },
+        {
+          "caller": "keys_that_spare_few_accidentals_are_not_used",
+          "callee": "(0..48).map(|i| 60 + i % 12).collect",
+          "lineNumber": 404
+        },
+        {
+          "caller": "keys_that_spare_few_accidentals_are_not_used",
+          "callee": "(0..48).map",
+          "lineNumber": 404
+        },
+        {
+          "caller": "keys_that_spare_few_accidentals_are_not_used",
+          "callee": "bar.push",
+          "lineNumber": 405
+        },
+        {
+          "caller": "keys_that_spare_few_accidentals_are_not_used",
+          "callee": "song",
+          "lineNumber": 406
+        },
+        {
+          "caller": "keys_that_spare_few_accidentals_are_not_used",
+          "callee": "bar.as_slice",
+          "lineNumber": 406
+        },
+        {
+          "caller": "keys_that_spare_few_accidentals_are_not_used",
+          "callee": "InferKeySignatures.apply",
+          "lineNumber": 408
+        },
+        {
+          "caller": "inferred_keys_reach_the_score",
+          "callee": "song",
+          "lineNumber": 421
+        },
+        {
+          "caller": "inferred_keys_reach_the_score",
+          "callee": "InferKeySignatures.apply",
+          "lineNumber": 422
+        },
+        {
+          "caller": "inferred_keys_reach_the_score",
+          "callee": "out.score.expect",
+          "lineNumber": 423
+        },
+        {
+          "caller": "wrong_keys_in_the_file_are_replaced",
+          "callee": "song",
+          "lineNumber": 450
+        },
+        {
+          "caller": "wrong_keys_in_the_file_are_replaced",
+          "callee": "InferKeySignatures.apply",
+          "lineNumber": 453
+        },
+        {
+          "caller": "wrong_keys_in_the_file_are_replaced",
+          "callee": "out.score.expect",
+          "lineNumber": 454
+        },
+        {
+          "caller": "keys_that_already_fit_are_left_alone",
+          "callee": "song",
+          "lineNumber": 469
+        },
+        {
+          "caller": "keys_that_already_fit_are_left_alone",
+          "callee": "InferKeySignatures.apply",
+          "lineNumber": 473
+        },
+        {
+          "caller": "a_key_on_music_in_c_is_taken_away",
+          "callee": "song",
+          "lineNumber": 481
+        },
+        {
+          "caller": "a_key_on_music_in_c_is_taken_away",
+          "callee": "InferKeySignatures.apply",
+          "lineNumber": 483
+        },
+        {
+          "caller": "a_key_on_music_in_c_is_taken_away",
+          "callee": "out.score.expect",
+          "lineNumber": 484
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 15,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "crates/oxiguitar-tools/src/lib.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 94,
+      "nonEmptyLines": 83,
+      "functions": [
+        {
+          "name": "all",
+          "startLine": 59,
+          "endLine": 61,
+          "params": []
+        },
+        {
+          "name": "find",
+          "startLine": 64,
+          "endLine": 66,
+          "params": [
+            "id"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Tool",
+          "startLine": 23,
+          "endLine": 37,
+          "methods": [
+            "id",
+            "name",
+            "description",
+            "availability",
+            "apply"
+          ],
+          "properties": []
+        },
+        {
+          "name": "Availability",
+          "startLine": 41,
+          "endLine": 46,
+          "methods": [],
+          "properties": [
+            "Available",
+            "Unavailable"
+          ]
+        },
+        {
+          "name": "Outcome",
+          "startLine": 50,
+          "endLine": 56,
+          "methods": [],
+          "properties": [
+            "score",
+            "report"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Tool",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "Availability",
+          "line": 41,
+          "isDefault": false
+        },
+        {
+          "name": "Outcome",
+          "line": 50,
+          "isDefault": false
+        },
+        {
+          "name": "all",
+          "line": 59,
+          "isDefault": false
+        },
+        {
+          "name": "find",
+          "line": 64,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "find",
+          "callee": "all().iter().copied().find",
+          "lineNumber": 65
+        },
+        {
+          "caller": "find",
+          "callee": "all().iter().copied",
+          "lineNumber": 65
+        },
+        {
+          "caller": "find",
+          "callee": "all().iter",
+          "lineNumber": 65
+        },
+        {
+          "caller": "find",
+          "callee": "all",
+          "lineNumber": 65
+        },
+        {
+          "caller": "find",
+          "callee": "t.id",
+          "lineNumber": 65
+        },
+        {
+          "caller": "tools_have_unique_ids_and_names",
+          "callee": "all",
+          "lineNumber": 74
+        },
+        {
+          "caller": "tools_have_unique_ids_and_names",
+          "callee": "tools.iter().enumerate",
+          "lineNumber": 75
+        },
+        {
+          "caller": "tools_have_unique_ids_and_names",
+          "callee": "tools.iter",
+          "lineNumber": 75
+        },
+        {
+          "caller": "tools_have_unique_ids_and_names",
+          "callee": "tools.iter().skip",
+          "lineNumber": 78
+        },
+        {
+          "caller": "tools_have_unique_ids_and_names",
+          "callee": "tools.iter",
+          "lineNumber": 78
+        },
+        {
+          "caller": "tools_do_not_panic_on_an_empty_score",
+          "callee": "all",
+          "lineNumber": 89
+        },
+        {
+          "caller": "tools_do_not_panic_on_an_empty_score",
+          "callee": "t.availability",
+          "lineNumber": 90
+        },
+        {
+          "caller": "tools_do_not_panic_on_an_empty_score",
+          "callee": "Score::new",
+          "lineNumber": 90
+        },
+        {
+          "caller": "tools_do_not_panic_on_an_empty_score",
+          "callee": "t.apply",
+          "lineNumber": 91
+        },
+        {
+          "caller": "tools_do_not_panic_on_an_empty_score",
+          "callee": "Score::new",
+          "lineNumber": 91
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 2,
+        "classCount": 3
+      }
+    },
+    {
+      "path": "crates/oxiguitar-tools/tests/corpus.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 52,
+      "nonEmptyLines": 48,
+      "functions": [
+        {
+          "name": "files",
+          "startLine": 10,
+          "endLine": 22,
+          "params": [
+            "dir",
+            "out"
+          ]
+        },
+        {
+          "name": "tools_run_on_the_corpus",
+          "startLine": 25,
+          "endLine": 52,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "files",
+          "callee": "std::fs::read_dir",
+          "lineNumber": 11
+        },
+        {
+          "caller": "files",
+          "callee": "entries.flatten",
+          "lineNumber": 14
+        },
+        {
+          "caller": "files",
+          "callee": "e.path",
+          "lineNumber": 15
+        },
+        {
+          "caller": "files",
+          "callee": "path.is_dir",
+          "lineNumber": 16
+        },
+        {
+          "caller": "files",
+          "callee": "files",
+          "lineNumber": 17
+        },
+        {
+          "caller": "files",
+          "callee": "out.push",
+          "lineNumber": 19
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "Path::new(env!(\"CARGO_MANIFEST_DIR\")).join",
+          "lineNumber": 26
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "Path::new",
+          "lineNumber": 26
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "Vec::new",
+          "lineNumber": 27
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "files",
+          "lineNumber": 28
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "all.sort",
+          "lineNumber": 29
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "std::fs::read",
+          "lineNumber": 32
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "oxiguitar_formats::read",
+          "lineNumber": 35
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "oxiguitar_tools::all",
+          "lineNumber": 39
+        },
+        {
+          "caller": "tools_run_on_the_corpus",
+          "callee": "tool.apply",
+          "lineNumber": 40
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    }
+  ]
+}

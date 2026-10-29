@@ -1,0 +1,44 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 0,
+  "filesSkipped": [
+    "fixtures/guitar-pro-check/paper-letter.gp5",
+    "fixtures/guitar-pro-check/piano-grand-staff.gp",
+    "fixtures/guitar-pro-check/piano-grand-staff.gp5",
+    "fixtures/guitar-pro-check/repeats-and-endings.gp",
+    "fixtures/guitar-pro-check/repeats-and-endings.gp5",
+    "fixtures/guitar-pro-check/rhythm-on-tab.gp",
+    "fixtures/guitar-pro-check/rhythm-on-tab.gp5",
+    "fixtures/guitar-pro-check/sections-and-directions.gp",
+    "fixtures/guitar-pro-check/sections-and-directions.gp5",
+    "fixtures/guitar-pro-check/seven-string.gp",
+    "fixtures/guitar-pro-check/seven-string.gp5",
+    "fixtures/guitar-pro-check/slides.gp",
+    "fixtures/guitar-pro-check/slides.gp5",
+    "fixtures/guitar-pro-check/standard-only.gp",
+    "fixtures/guitar-pro-check/standard-only.gp5",
+    "fixtures/guitar-pro-check/strings-treble-and-bass.gp",
+    "fixtures/guitar-pro-check/strings-treble-and-bass.gp5",
+    "fixtures/guitar-pro-check/strums-and-techniques.gp",
+    "fixtures/guitar-pro-check/strums-and-techniques.gp5",
+    "fixtures/guitar-pro-check/tall-system-shrinks.gp",
+    "fixtures/guitar-pro-check/tall-system-shrinks.gp5",
+    "fixtures/guitar-pro-check/tempo-changes.gp",
+    "fixtures/guitar-pro-check/tempo-changes.gp5",
+    "fixtures/guitar-pro-check/test-song-from-gp.gp",
+    "fixtures/guitar-pro-check/test-song-from-gp.gp5"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 0,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": []
+}

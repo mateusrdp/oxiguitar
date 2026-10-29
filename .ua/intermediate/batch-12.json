@@ -1,0 +1,162 @@
+{
+  "nodes": [
+    {
+      "id": "file:scripts/package/in-wayland.sh",
+      "type": "file",
+      "name": "in-wayland.sh",
+      "filePath": "scripts/package/in-wayland.sh",
+      "summary": "Runs a command inside a private headless Weston Wayland session for testing the Wayland build of OxiGuitar when no desktop environment is available, analogous to xvfb-run for X11.",
+      "tags": ["wayland", "testing", "weston", "headless", "ci"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/package/licenses.sh",
+      "type": "file",
+      "name": "licenses.sh",
+      "filePath": "scripts/package/licenses.sh",
+      "summary": "Generates dist/THIRD-PARTY-LICENSES.html by collecting all crate licenses via cargo-about and appending NOTICE files from every crate compiled across all release target platforms.",
+      "tags": ["licenses", "third-party", "cargo-about", "notices", "compliance"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/package/lintian.sh",
+      "type": "file",
+      "name": "lintian.sh",
+      "filePath": "scripts/package/lintian.sh",
+      "summary": "Runs Debian's Lintian package checker on .deb/.dsc/.changes files with a whitelist of allowed tags, and annotates failures in GitHub Actions.",
+      "tags": ["lintian", "debian", "package-validation", "quality", "ci"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/package/linux.sh",
+      "type": "file",
+      "name": "linux.sh",
+      "filePath": "scripts/package/linux.sh",
+      "summary": "Builds Linux packages (.deb, .rpm, AppImage) for the core OxiGuitar application and its basic plugins, handling both Wayland and deprecated X11 builds with platform-specific runtime dependencies.",
+      "tags": ["packaging", "linux", "deb", "rpm", "appimage"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/package/macos.sh",
+      "type": "file",
+      "name": "macos.sh",
+      "filePath": "scripts/package/macos.sh",
+      "summary": "Builds a macOS application bundle with a universal binary, creates a signed DMG disk image, and packages the basic plugins into a signed zip archive.",
+      "tags": ["packaging", "macos", "dmg", "codesign", "universal-binary"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:scripts/package/plugins-README.txt",
+      "type": "document",
+      "name": "plugins-README.txt",
+      "filePath": "scripts/package/plugins-README.txt",
+      "summary": "Documentation describing the OxiGuitar basic plugins, their purpose, and per-platform installation paths for the .oxp plugin files.",
+      "tags": ["plugins", "documentation", "installation", "oxp", "multi-platform"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:scripts/package/release-notes.md",
+      "type": "document",
+      "name": "release-notes.md",
+      "filePath": "scripts/package/release-notes.md",
+      "summary": "Release download table mapping each supported operating system and architecture to the correct program and plugins package filenames, with a placeholder for the version.",
+      "tags": ["release", "download", "platform-matrix", "documentation", "version-template"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/package/version.sh",
+      "type": "file",
+      "name": "version.sh",
+      "filePath": "scripts/package/version.sh",
+      "summary": "Outputs the release version string from Cargo.toml for tagged builds, or appends a dev suffix with date and commit hash for untagged CI builds.",
+      "tags": ["versioning", "ci", "cargo", "release", "git"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:scripts/package/linux.sh",
+      "target": "file:scripts/package/licenses.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 3
+    },
+    {
+      "source": "file:scripts/package/linux.sh",
+      "target": "file:scripts/package/version.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 3
+    },
+    {
+      "source": "file:scripts/package/linux.sh",
+      "target": "document:scripts/package/plugins-README.txt",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:scripts/package/linux.sh",
+      "target": "file:scripts/package/lintian.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:scripts/package/linux.sh",
+      "target": "file:scripts/package/in-wayland.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:scripts/package/macos.sh",
+      "target": "file:scripts/package/licenses.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 3
+    },
+    {
+      "source": "file:scripts/package/macos.sh",
+      "target": "document:scripts/package/plugins-README.txt",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:scripts/package/macos.sh",
+      "target": "file:scripts/package/version.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 3
+    },
+    {
+      "source": "document:scripts/package/release-notes.md",
+      "target": "file:scripts/package/linux.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 3
+    },
+    {
+      "source": "document:scripts/package/release-notes.md",
+      "target": "file:scripts/package/macos.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 3
+    },
+    {
+      "source": "document:scripts/package/release-notes.md",
+      "target": "file:scripts/package/version.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:scripts/package/linux.sh",
+      "target": "file:scripts/package/macos.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    }
+  ]
+}

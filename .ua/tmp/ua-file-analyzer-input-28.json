@@ -1,0 +1,32 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "fixtures/guitar-pro-check/paper-letter.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/piano-grand-staff.gp", "language": "gp", "sizeLines": 15, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/piano-grand-staff.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/repeats-and-endings.gp", "language": "gp", "sizeLines": 18, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/repeats-and-endings.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/rhythm-on-tab.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/rhythm-on-tab.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/sections-and-directions.gp", "language": "gp", "sizeLines": 14, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/sections-and-directions.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/seven-string.gp", "language": "gp", "sizeLines": 8, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/seven-string.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/slides.gp", "language": "gp", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/slides.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/standard-only.gp", "language": "gp", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/standard-only.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/strings-treble-and-bass.gp", "language": "gp", "sizeLines": 10, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/strings-treble-and-bass.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/strums-and-techniques.gp", "language": "gp", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/strums-and-techniques.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/tall-system-shrinks.gp", "language": "gp", "sizeLines": 45, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/tall-system-shrinks.gp5", "language": "gp5", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/tempo-changes.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/tempo-changes.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gp.gp", "language": "gp", "sizeLines": 12, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gp.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"}
+  ],
+  "batchImportData": {},
+  "neighborMap": {}
+}

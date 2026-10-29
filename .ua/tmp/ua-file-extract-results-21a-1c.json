@@ -1,0 +1,2044 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 2,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 2,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 2,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": [
+    {
+      "path": "crates/oxiguitar-testgen/src/references.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 801,
+      "nonEmptyLines": 783,
+      "functions": [
+        {
+          "name": "reference",
+          "startLine": 40,
+          "endLine": 50,
+          "params": [
+            "name",
+            "about",
+            "song"
+          ]
+        },
+        {
+          "name": "with",
+          "startLine": 53,
+          "endLine": 57,
+          "params": [
+            "change"
+          ]
+        },
+        {
+          "name": "solo",
+          "startLine": 61,
+          "endLine": 78,
+          "params": [
+            "title",
+            "kind",
+            "voices"
+          ]
+        },
+        {
+          "name": "guitar",
+          "startLine": 80,
+          "endLine": 82,
+          "params": [
+            "title",
+            "voices"
+          ]
+        },
+        {
+          "name": "riff",
+          "startLine": 89,
+          "endLine": 91,
+          "params": [
+            "times"
+          ]
+        },
+        {
+          "name": "references",
+          "startLine": 94,
+          "endLine": 675,
+          "params": []
+        },
+        {
+          "name": "band",
+          "startLine": 678,
+          "endLine": 702,
+          "params": [
+            "times"
+          ]
+        },
+        {
+          "name": "band8",
+          "startLine": 705,
+          "endLine": 738,
+          "params": [
+            "song"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Reference",
+          "startLine": 21,
+          "endLine": 32,
+          "methods": [
+            "with"
+          ],
+          "properties": [
+            "name",
+            "about",
+            "song",
+            "options",
+            "dark"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Reference",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "references",
+          "line": 94,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "reference",
+          "callee": "Options::default",
+          "lineNumber": 47
+        },
+        {
+          "caller": "with",
+          "callee": "change",
+          "lineNumber": 54
+        },
+        {
+          "caller": "with",
+          "callee": "self.song.instructions.push_str",
+          "lineNumber": 55
+        },
+        {
+          "caller": "solo",
+          "callee": "crate::song::parse(voices[0]).map_or",
+          "lineNumber": 62
+        },
+        {
+          "caller": "solo",
+          "callee": "crate::song::parse",
+          "lineNumber": 62
+        },
+        {
+          "caller": "solo",
+          "callee": "b.len",
+          "lineNumber": 62
+        },
+        {
+          "caller": "solo",
+          "callee": "Song::new",
+          "lineNumber": 63
+        },
+        {
+          "caller": "solo",
+          "callee": "\"OxiGuitar references\".to_owned",
+          "lineNumber": 64
+        },
+        {
+          "caller": "solo",
+          "callee": "song.track",
+          "lineNumber": 73
+        },
+        {
+          "caller": "solo",
+          "callee": "Track::new",
+          "lineNumber": 73
+        },
+        {
+          "caller": "solo",
+          "callee": "voices.iter().enumerate",
+          "lineNumber": 74
+        },
+        {
+          "caller": "solo",
+          "callee": "voices.iter",
+          "lineNumber": 74
+        },
+        {
+          "caller": "solo",
+          "callee": "t.voice",
+          "lineNumber": 75
+        },
+        {
+          "caller": "guitar",
+          "callee": "solo",
+          "lineNumber": 81
+        },
+        {
+          "caller": "guitar",
+          "callee": "Kind::guitar",
+          "lineNumber": 81
+        },
+        {
+          "caller": "riff",
+          "callee": "vec![RIFF; times].join",
+          "lineNumber": 90
+        },
+        {
+          "caller": "references",
+          "callee": "r.song.artist.is_empty",
+          "lineNumber": 670
+        },
+        {
+          "caller": "references",
+          "callee": "\"OxiGuitar references\".to_owned",
+          "lineNumber": 671
+        },
+        {
+          "caller": "band",
+          "callee": "vec![\"e 1:5 1:8 2:5 2:8 3:5 3:7 2:8b 1:5 | q 1:5v 2:8 h 3:7\"; times].join",
+          "lineNumber": 679
+        },
+        {
+          "caller": "band",
+          "callee": "vec![\n        \"q 6:0+5:2+4:2 e 6:0m 6:0m q 6:0+5:2+4:2 e 6:3m 6:3m | h 5:0+4:2+3:2 h 6:3+5:2+4:0\";\n        times\n    ].join",
+          "lineNumber": 680
+        },
+        {
+          "caller": "band",
+          "callee": "vec![\"e 4:0 4:0 4:0 4:0 4:3 4:3 4:3 4:3 | e 3:0 3:0 3:0 3:0 4:3 4:3 4:3 4:3\"; times].join",
+          "lineNumber": 685
+        },
+        {
+          "caller": "band",
+          "callee": "vec![\"e d36+d42 d42 d38+d42 d42 d36+d42 d36+d42 d38+d42 d42 | e d36+d49 d42 d38+d42 d42 d36+d42 d42 d38+d42 d38\"; times].join",
+          "lineNumber": 688
+        },
+        {
+          "caller": "band",
+          "callee": "Song::new",
+          "lineNumber": 690
+        },
+        {
+          "caller": "band",
+          "callee": "\"OxiGuitar references\".to_owned",
+          "lineNumber": 691
+        },
+        {
+          "caller": "band",
+          "callee": "song.track(Track::new(\"Lead Guitar\", \"Ld.\", Kind::guitar())).voice",
+          "lineNumber": 693
+        },
+        {
+          "caller": "band",
+          "callee": "song.track",
+          "lineNumber": 693
+        },
+        {
+          "caller": "band",
+          "callee": "Track::new",
+          "lineNumber": 693
+        },
+        {
+          "caller": "band",
+          "callee": "Kind::guitar",
+          "lineNumber": 693
+        },
+        {
+          "caller": "band",
+          "callee": "song.track(Track::new(\"Rhythm Guitar\", \"Rhy.\", Kind::guitar())).voice",
+          "lineNumber": 695
+        },
+        {
+          "caller": "band",
+          "callee": "song.track",
+          "lineNumber": 695
+        },
+        {
+          "caller": "band",
+          "callee": "Track::new",
+          "lineNumber": 695
+        },
+        {
+          "caller": "band",
+          "callee": "Kind::guitar",
+          "lineNumber": 695
+        },
+        {
+          "caller": "band",
+          "callee": "song.track(Track::new(\"Bass\", \"Bs.\", Kind::bass())).voice",
+          "lineNumber": 697
+        },
+        {
+          "caller": "band",
+          "callee": "song.track",
+          "lineNumber": 697
+        },
+        {
+          "caller": "band",
+          "callee": "Track::new",
+          "lineNumber": 697
+        },
+        {
+          "caller": "band",
+          "callee": "Kind::bass",
+          "lineNumber": 697
+        },
+        {
+          "caller": "band",
+          "callee": "song.track(Track::new(\"Drums\", \"Dr.\", Kind::Drums)).voice",
+          "lineNumber": 699
+        },
+        {
+          "caller": "band",
+          "callee": "song.track",
+          "lineNumber": 699
+        },
+        {
+          "caller": "band",
+          "callee": "Track::new",
+          "lineNumber": 699
+        },
+        {
+          "caller": "band8",
+          "callee": "song.bars.len",
+          "lineNumber": 706
+        },
+        {
+          "caller": "band8",
+          "callee": "vec![\"q E4+A4+C5 E4+A4+C5 E4+A4+C5 E4+A4+C5 | h E4+A4+C5 D4+G4+B4\"; times].join",
+          "lineNumber": 709
+        },
+        {
+          "caller": "band8",
+          "callee": "vec![\"w A4+C5+E5 | w G4+B4+D5\"; times].join",
+          "lineNumber": 710
+        },
+        {
+          "caller": "band8",
+          "callee": "vec![\"q A4 C5 E5 C5 | h D5 r\"; times].join",
+          "lineNumber": 711
+        },
+        {
+          "caller": "band8",
+          "callee": "vec![\"e 5:0 4:2 3:2 2:1 1:0 2:1 3:2 4:2 | e 6:3 5:2 4:0 3:0 2:0 3:0 4:0 5:2\"; times].join",
+          "lineNumber": 713
+        },
+        {
+          "caller": "band8",
+          "callee": "song.track(Track::new(\"Piano\", \"Pno.\", Kind::piano())).voice",
+          "lineNumber": 715
+        },
+        {
+          "caller": "band8",
+          "callee": "song.track",
+          "lineNumber": 715
+        },
+        {
+          "caller": "band8",
+          "callee": "Track::new",
+          "lineNumber": 715
+        },
+        {
+          "caller": "band8",
+          "callee": "Kind::piano",
+          "lineNumber": 715
+        },
+        {
+          "caller": "band8",
+          "callee": "song.track(Track::new(\n        \"Strings\",\n        \"Str.\",\n        Kind::Pitched {\n            program: 48,\n            bass_clef: false,\n        },\n    )).voice",
+          "lineNumber": 717
+        },
+        {
+          "caller": "band8",
+          "callee": "song.track",
+          "lineNumber": 717
+        },
+        {
+          "caller": "band8",
+          "callee": "Track::new",
+          "lineNumber": 717
+        },
+        {
+          "caller": "band8",
+          "callee": "song.track(Track::new(\n        \"Voice\",\n        \"Vo.\",\n        Kind::Pitched {\n            program: 54,\n            bass_clef: false,\n        },\n    )).voice",
+          "lineNumber": 726
+        },
+        {
+          "caller": "band8",
+          "callee": "song.track",
+          "lineNumber": 726
+        },
+        {
+          "caller": "band8",
+          "callee": "Track::new",
+          "lineNumber": 726
+        },
+        {
+          "caller": "band8",
+          "callee": "song.track(Track::new(\"Acoustic Guitar\", \"Ac.\", Kind::acoustic())).voice",
+          "lineNumber": 735
+        },
+        {
+          "caller": "band8",
+          "callee": "song.track",
+          "lineNumber": 735
+        },
+        {
+          "caller": "band8",
+          "callee": "Track::new",
+          "lineNumber": 735
+        },
+        {
+          "caller": "band8",
+          "callee": "Kind::acoustic",
+          "lineNumber": 735
+        },
+        {
+          "caller": "check_bars",
+          "callee": "t.voices.iter().enumerate",
+          "lineNumber": 749
+        },
+        {
+          "caller": "check_bars",
+          "callee": "t.voices.iter",
+          "lineNumber": 749
+        },
+        {
+          "caller": "check_bars",
+          "callee": "v.len",
+          "lineNumber": 750
+        },
+        {
+          "caller": "check_bars",
+          "callee": "song.bars.len",
+          "lineNumber": 750
+        },
+        {
+          "caller": "check_bars",
+          "callee": "problems.push",
+          "lineNumber": 751
+        },
+        {
+          "caller": "check_bars",
+          "callee": "v.iter().zip(&song.bars).enumerate",
+          "lineNumber": 758
+        },
+        {
+          "caller": "check_bars",
+          "callee": "v.iter().zip",
+          "lineNumber": 758
+        },
+        {
+          "caller": "check_bars",
+          "callee": "v.iter",
+          "lineNumber": 758
+        },
+        {
+          "caller": "check_bars",
+          "callee": "u32::from",
+          "lineNumber": 759
+        },
+        {
+          "caller": "check_bars",
+          "callee": "u32::from",
+          "lineNumber": 759
+        },
+        {
+          "caller": "check_bars",
+          "callee": "f64::from",
+          "lineNumber": 760
+        },
+        {
+          "caller": "check_bars",
+          "callee": "beats\n                        .iter()\n                        .filter(|b| !b.grace)\n                        .map(|b| {\n                            let (n, m) = b.dur.tuplet.unwrap_or((1, 1));\n                            let plain = Dur {\n                                tuplet: None,\n                                ..b.dur\n                            };\n                            f64::from(plain.ticks()) * f64::from(m) / f64::from(n)\n                        }).sum",
+          "lineNumber": 762
+        },
+        {
+          "caller": "check_bars",
+          "callee": "beats\n                        .iter()\n                        .filter(|b| !b.grace).map",
+          "lineNumber": 762
+        },
+        {
+          "caller": "check_bars",
+          "callee": "beats\n                        .iter().filter",
+          "lineNumber": 762
+        },
+        {
+          "caller": "check_bars",
+          "callee": "beats.iter",
+          "lineNumber": 762
+        },
+        {
+          "caller": "check_bars",
+          "callee": "b.dur.tuplet.unwrap_or",
+          "lineNumber": 766
+        },
+        {
+          "caller": "check_bars",
+          "callee": "f64::from",
+          "lineNumber": 771
+        },
+        {
+          "caller": "check_bars",
+          "callee": "plain.ticks",
+          "lineNumber": 771
+        },
+        {
+          "caller": "check_bars",
+          "callee": "f64::from",
+          "lineNumber": 771
+        },
+        {
+          "caller": "check_bars",
+          "callee": "f64::from",
+          "lineNumber": 771
+        },
+        {
+          "caller": "check_bars",
+          "callee": "(got - want).abs",
+          "lineNumber": 774
+        },
+        {
+          "caller": "check_bars",
+          "callee": "problems.push",
+          "lineNumber": 775
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "references",
+          "lineNumber": 788
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "refs.iter().map(|r| r.name).collect",
+          "lineNumber": 790
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "refs.iter().map",
+          "lineNumber": 790
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "refs.iter",
+          "lineNumber": 790
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "names.sort_unstable",
+          "lineNumber": 791
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "names.dedup",
+          "lineNumber": 792
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "Vec::new",
+          "lineNumber": 794
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "check_bars",
+          "lineNumber": 796
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "check_bars",
+          "lineNumber": 798
+        },
+        {
+          "caller": "fifty_references_with_full_bars",
+          "callee": "crate::band_song",
+          "lineNumber": 798
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 8,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "crates/oxiguitar-testgen/src/song.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 774,
+      "nonEmptyLines": 729,
+      "functions": [
+        {
+          "name": "new",
+          "startLine": 78,
+          "endLine": 95,
+          "params": [
+            "title",
+            "bars"
+          ]
+        },
+        {
+          "name": "track",
+          "startLine": 98,
+          "endLine": 101,
+          "params": [
+            "track"
+          ]
+        },
+        {
+          "name": "time",
+          "startLine": 104,
+          "endLine": 109,
+          "params": [
+            "from",
+            "numerator",
+            "denominator"
+          ]
+        },
+        {
+          "name": "key",
+          "startLine": 113,
+          "endLine": 119,
+          "params": [
+            "from",
+            "fifths",
+            "minor"
+          ]
+        },
+        {
+          "name": "default",
+          "startLine": 148,
+          "endLine": 161,
+          "params": []
+        },
+        {
+          "name": "guitar",
+          "startLine": 193,
+          "endLine": 200,
+          "params": []
+        },
+        {
+          "name": "acoustic",
+          "startLine": 203,
+          "endLine": 210,
+          "params": []
+        },
+        {
+          "name": "bass",
+          "startLine": 213,
+          "endLine": 220,
+          "params": []
+        },
+        {
+          "name": "piano",
+          "startLine": 223,
+          "endLine": 228,
+          "params": []
+        },
+        {
+          "name": "strings",
+          "startLine": 230,
+          "endLine": 235,
+          "params": []
+        },
+        {
+          "name": "new",
+          "startLine": 254,
+          "endLine": 268,
+          "params": [
+            "name",
+            "frets"
+          ]
+        },
+        {
+          "name": "new",
+          "startLine": 295,
+          "endLine": 306,
+          "params": [
+            "name",
+            "short_name",
+            "kind"
+          ]
+        },
+        {
+          "name": "notation",
+          "startLine": 309,
+          "endLine": 312,
+          "params": [
+            "flag"
+          ]
+        },
+        {
+          "name": "chord",
+          "startLine": 315,
+          "endLine": 318,
+          "params": [
+            "diagram"
+          ]
+        },
+        {
+          "name": "lyrics",
+          "startLine": 321,
+          "endLine": 324,
+          "params": [
+            "bar",
+            "line"
+          ]
+        },
+        {
+          "name": "voice",
+          "startLine": 329,
+          "endLine": 337,
+          "params": [
+            "index",
+            "text"
+          ]
+        },
+        {
+          "name": "new",
+          "startLine": 353,
+          "endLine": 359,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "ticks",
+          "startLine": 362,
+          "endLine": 373,
+          "params": []
+        },
+        {
+          "name": "new",
+          "startLine": 451,
+          "endLine": 465,
+          "params": [
+            "dur"
+          ]
+        },
+        {
+          "name": "fmt",
+          "startLine": 473,
+          "endLine": 475,
+          "params": [
+            "f"
+          ]
+        },
+        {
+          "name": "err",
+          "startLine": 480,
+          "endLine": 482,
+          "params": [
+            "token",
+            "why"
+          ]
+        },
+        {
+          "name": "parse",
+          "startLine": 485,
+          "endLine": 524,
+          "params": [
+            "text"
+          ]
+        },
+        {
+          "name": "duration",
+          "startLine": 526,
+          "endLine": 570,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "beat_mark",
+          "startLine": 572,
+          "endLine": 605,
+          "params": [
+            "beat",
+            "mark",
+            "token"
+          ]
+        },
+        {
+          "name": "note",
+          "startLine": 607,
+          "endLine": 677,
+          "params": [
+            "part"
+          ]
+        },
+        {
+          "name": "pitch",
+          "startLine": 681,
+          "endLine": 715,
+          "params": [
+            "text"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Song",
+          "startLine": 43,
+          "endLine": 74,
+          "methods": [
+            "new",
+            "track",
+            "time",
+            "key"
+          ],
+          "properties": [
+            "title",
+            "subtitle",
+            "artist",
+            "album",
+            "words",
+            "music",
+            "copyright",
+            "tabber",
+            "instructions",
+            "tempo",
+            "tempo_label",
+            "tempo_changes",
+            "tracks",
+            "bars"
+          ]
+        },
+        {
+          "name": "MasterBar",
+          "startLine": 124,
+          "endLine": 145,
+          "methods": [
+            "default"
+          ],
+          "properties": [
+            "time",
+            "key",
+            "minor",
+            "repeat_start",
+            "repeat_end",
+            "endings",
+            "section",
+            "double_bar",
+            "triplet_feel",
+            "directions"
+          ]
+        },
+        {
+          "name": "Kind",
+          "startLine": 166,
+          "endLine": 189,
+          "methods": [
+            "guitar",
+            "acoustic",
+            "bass",
+            "piano",
+            "strings"
+          ],
+          "properties": [
+            "Fretted",
+            "Pitched",
+            "Drums"
+          ]
+        },
+        {
+          "name": "Diagram",
+          "startLine": 241,
+          "endLine": 248,
+          "methods": [
+            "new"
+          ],
+          "properties": [
+            "name",
+            "frets",
+            "base_fret"
+          ]
+        },
+        {
+          "name": "Track",
+          "startLine": 273,
+          "endLine": 289,
+          "methods": [
+            "new",
+            "notation",
+            "chord",
+            "lyrics",
+            "voice"
+          ],
+          "properties": [
+            "name",
+            "short_name",
+            "kind",
+            "notation",
+            "chords",
+            "lyrics",
+            "voices"
+          ]
+        },
+        {
+          "name": "Dur",
+          "startLine": 342,
+          "endLine": 349,
+          "methods": [
+            "new",
+            "ticks"
+          ],
+          "properties": [
+            "value",
+            "dots",
+            "tuplet"
+          ]
+        },
+        {
+          "name": "At",
+          "startLine": 378,
+          "endLine": 383,
+          "methods": [],
+          "properties": [
+            "Fret",
+            "Pitch"
+          ]
+        },
+        {
+          "name": "Note",
+          "startLine": 387,
+          "endLine": 394,
+          "methods": [],
+          "properties": [
+            "at",
+            "tied",
+            "fx"
+          ]
+        },
+        {
+          "name": "Fx",
+          "startLine": 399,
+          "endLine": 421,
+          "methods": [],
+          "properties": [
+            "HammerPull",
+            "Bend",
+            "HalfBend",
+            "BendRelease",
+            "Dead",
+            "Ghost",
+            "PalmMute",
+            "Vibrato",
+            "LetRing",
+            "Accent",
+            "HeavyAccent",
+            "Staccato",
+            "Slide",
+            "NaturalHarmonic",
+            "ArtificialHarmonic",
+            "PinchHarmonic",
+            "Trill",
+            "Finger"
+          ]
+        },
+        {
+          "name": "Beat",
+          "startLine": 425,
+          "endLine": 448,
+          "methods": [
+            "new"
+          ],
+          "properties": [
+            "dur",
+            "notes",
+            "chord",
+            "text",
+            "dynamic",
+            "grace",
+            "tremolo",
+            "brush",
+            "technique",
+            "fade_in",
+            "dive"
+          ]
+        },
+        {
+          "name": "ParseError",
+          "startLine": 470,
+          "endLine": 470,
+          "methods": [
+            "fmt"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "Song",
+          "line": 43,
+          "isDefault": false
+        },
+        {
+          "name": "new",
+          "line": 78,
+          "isDefault": false
+        },
+        {
+          "name": "track",
+          "line": 98,
+          "isDefault": false
+        },
+        {
+          "name": "time",
+          "line": 104,
+          "isDefault": false
+        },
+        {
+          "name": "key",
+          "line": 113,
+          "isDefault": false
+        },
+        {
+          "name": "MasterBar",
+          "line": 124,
+          "isDefault": false
+        },
+        {
+          "name": "Kind",
+          "line": 166,
+          "isDefault": false
+        },
+        {
+          "name": "guitar",
+          "line": 193,
+          "isDefault": false
+        },
+        {
+          "name": "acoustic",
+          "line": 203,
+          "isDefault": false
+        },
+        {
+          "name": "bass",
+          "line": 213,
+          "isDefault": false
+        },
+        {
+          "name": "piano",
+          "line": 223,
+          "isDefault": false
+        },
+        {
+          "name": "Diagram",
+          "line": 241,
+          "isDefault": false
+        },
+        {
+          "name": "new",
+          "line": 254,
+          "isDefault": false
+        },
+        {
+          "name": "Track",
+          "line": 273,
+          "isDefault": false
+        },
+        {
+          "name": "new",
+          "line": 295,
+          "isDefault": false
+        },
+        {
+          "name": "notation",
+          "line": 309,
+          "isDefault": false
+        },
+        {
+          "name": "chord",
+          "line": 315,
+          "isDefault": false
+        },
+        {
+          "name": "lyrics",
+          "line": 321,
+          "isDefault": false
+        },
+        {
+          "name": "voice",
+          "line": 329,
+          "isDefault": false
+        },
+        {
+          "name": "Dur",
+          "line": 342,
+          "isDefault": false
+        },
+        {
+          "name": "new",
+          "line": 353,
+          "isDefault": false
+        },
+        {
+          "name": "ticks",
+          "line": 362,
+          "isDefault": false
+        },
+        {
+          "name": "At",
+          "line": 378,
+          "isDefault": false
+        },
+        {
+          "name": "Note",
+          "line": 387,
+          "isDefault": false
+        },
+        {
+          "name": "Fx",
+          "line": 399,
+          "isDefault": false
+        },
+        {
+          "name": "Beat",
+          "line": 425,
+          "isDefault": false
+        },
+        {
+          "name": "ParseError",
+          "line": 470,
+          "isDefault": false
+        },
+        {
+          "name": "parse",
+          "line": 485,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "new",
+          "callee": "title.to_owned",
+          "lineNumber": 80
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 81
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 82
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 83
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 84
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 85
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 86
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 87
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 88
+        },
+        {
+          "caller": "new",
+          "callee": "String::new",
+          "lineNumber": 90
+        },
+        {
+          "caller": "new",
+          "callee": "Vec::new",
+          "lineNumber": 91
+        },
+        {
+          "caller": "new",
+          "callee": "Vec::new",
+          "lineNumber": 92
+        },
+        {
+          "caller": "track",
+          "callee": "self.tracks.push",
+          "lineNumber": 99
+        },
+        {
+          "caller": "track",
+          "callee": "self.tracks.last_mut().expect",
+          "lineNumber": 100
+        },
+        {
+          "caller": "track",
+          "callee": "self.tracks.last_mut",
+          "lineNumber": 100
+        },
+        {
+          "caller": "time",
+          "callee": "self.bars.iter_mut().skip",
+          "lineNumber": 105
+        },
+        {
+          "caller": "time",
+          "callee": "self.bars.iter_mut",
+          "lineNumber": 105
+        },
+        {
+          "caller": "key",
+          "callee": "self.bars.iter_mut().skip",
+          "lineNumber": 114
+        },
+        {
+          "caller": "key",
+          "callee": "self.bars.iter_mut",
+          "lineNumber": 114
+        },
+        {
+          "caller": "default",
+          "callee": "Vec::new",
+          "lineNumber": 155
+        },
+        {
+          "caller": "default",
+          "callee": "Vec::new",
+          "lineNumber": 159
+        },
+        {
+          "caller": "strings",
+          "callee": "tuning.len",
+          "lineNumber": 232
+        },
+        {
+          "caller": "new",
+          "callee": "frets\n            .chars()\n            .map(|c| c.to_digit(10).map(|d| d as u8)).collect",
+          "lineNumber": 255
+        },
+        {
+          "caller": "new",
+          "callee": "frets\n            .chars().map",
+          "lineNumber": 255
+        },
+        {
+          "caller": "new",
+          "callee": "frets.chars",
+          "lineNumber": 255
+        },
+        {
+          "caller": "new",
+          "callee": "c.to_digit(10).map",
+          "lineNumber": 257
+        },
+        {
+          "caller": "new",
+          "callee": "c.to_digit",
+          "lineNumber": 257
+        },
+        {
+          "caller": "new",
+          "callee": "frets.iter().flatten().filter(|f| **f > 0).min().copied",
+          "lineNumber": 259
+        },
+        {
+          "caller": "new",
+          "callee": "frets.iter().flatten().filter(|f| **f > 0).min",
+          "lineNumber": 259
+        },
+        {
+          "caller": "new",
+          "callee": "frets.iter().flatten().filter",
+          "lineNumber": 259
+        },
+        {
+          "caller": "new",
+          "callee": "frets.iter().flatten",
+          "lineNumber": 259
+        },
+        {
+          "caller": "new",
+          "callee": "frets.iter",
+          "lineNumber": 259
+        },
+        {
+          "caller": "new",
+          "callee": "name.to_owned",
+          "lineNumber": 261
+        },
+        {
+          "caller": "new",
+          "callee": "kind.strings",
+          "lineNumber": 296
+        },
+        {
+          "caller": "new",
+          "callee": "name.to_owned",
+          "lineNumber": 298
+        },
+        {
+          "caller": "new",
+          "callee": "short_name.to_owned",
+          "lineNumber": 299
+        },
+        {
+          "caller": "new",
+          "callee": "Vec::new",
+          "lineNumber": 302
+        },
+        {
+          "caller": "new",
+          "callee": "Vec::new",
+          "lineNumber": 303
+        },
+        {
+          "caller": "new",
+          "callee": "Vec::new",
+          "lineNumber": 304
+        },
+        {
+          "caller": "chord",
+          "callee": "self.chords.push",
+          "lineNumber": 316
+        },
+        {
+          "caller": "lyrics",
+          "callee": "self.lyrics.push",
+          "lineNumber": 322
+        },
+        {
+          "caller": "lyrics",
+          "callee": "line.to_owned",
+          "lineNumber": 322
+        },
+        {
+          "caller": "voice",
+          "callee": "parse(text).unwrap_or_else",
+          "lineNumber": 331
+        },
+        {
+          "caller": "voice",
+          "callee": "parse",
+          "lineNumber": 331
+        },
+        {
+          "caller": "voice",
+          "callee": "self.voices.len",
+          "lineNumber": 332
+        },
+        {
+          "caller": "voice",
+          "callee": "self.voices.resize",
+          "lineNumber": 333
+        },
+        {
+          "caller": "voice",
+          "callee": "Vec::new",
+          "lineNumber": 333
+        },
+        {
+          "caller": "ticks",
+          "callee": "u32::from",
+          "lineNumber": 363
+        },
+        {
+          "caller": "ticks",
+          "callee": "u32::from",
+          "lineNumber": 370
+        },
+        {
+          "caller": "ticks",
+          "callee": "u32::from",
+          "lineNumber": 370
+        },
+        {
+          "caller": "new",
+          "callee": "Vec::new",
+          "lineNumber": 454
+        },
+        {
+          "caller": "fmt",
+          "callee": "f.write_str",
+          "lineNumber": 474
+        },
+        {
+          "caller": "err",
+          "callee": "Err",
+          "lineNumber": 481
+        },
+        {
+          "caller": "err",
+          "callee": "ParseError",
+          "lineNumber": 481
+        },
+        {
+          "caller": "parse",
+          "callee": "Dur::new",
+          "lineNumber": 487
+        },
+        {
+          "caller": "parse",
+          "callee": "Beat::new",
+          "lineNumber": 488
+        },
+        {
+          "caller": "parse",
+          "callee": "text.split_whitespace",
+          "lineNumber": 490
+        },
+        {
+          "caller": "parse",
+          "callee": "bars.push",
+          "lineNumber": 492
+        },
+        {
+          "caller": "parse",
+          "callee": "Vec::new",
+          "lineNumber": 492
+        },
+        {
+          "caller": "parse",
+          "callee": "token.strip_prefix",
+          "lineNumber": 495
+        },
+        {
+          "caller": "parse",
+          "callee": "beat_mark",
+          "lineNumber": 496
+        },
+        {
+          "caller": "parse",
+          "callee": "duration",
+          "lineNumber": 499
+        },
+        {
+          "caller": "parse",
+          "callee": "marks.clone",
+          "lineNumber": 503
+        },
+        {
+          "caller": "parse",
+          "callee": "Beat::new",
+          "lineNumber": 505
+        },
+        {
+          "caller": "parse",
+          "callee": "token.split",
+          "lineNumber": 513
+        },
+        {
+          "caller": "parse",
+          "callee": "beat.notes.push",
+          "lineNumber": 514
+        },
+        {
+          "caller": "parse",
+          "callee": "note",
+          "lineNumber": 514
+        },
+        {
+          "caller": "parse",
+          "callee": "bars.last_mut().expect(\"never empty\").push",
+          "lineNumber": 517
+        },
+        {
+          "caller": "parse",
+          "callee": "bars.last_mut().expect",
+          "lineNumber": 517
+        },
+        {
+          "caller": "parse",
+          "callee": "bars.last_mut",
+          "lineNumber": 517
+        },
+        {
+          "caller": "parse",
+          "callee": "bars.len",
+          "lineNumber": 520
+        },
+        {
+          "caller": "parse",
+          "callee": "bars.last().is_some_and",
+          "lineNumber": 520
+        },
+        {
+          "caller": "parse",
+          "callee": "bars.last",
+          "lineNumber": 520
+        },
+        {
+          "caller": "parse",
+          "callee": "bars.pop",
+          "lineNumber": 521
+        },
+        {
+          "caller": "parse",
+          "callee": "Ok",
+          "lineNumber": 523
+        },
+        {
+          "caller": "duration",
+          "callee": "token.chars",
+          "lineNumber": 527
+        },
+        {
+          "caller": "duration",
+          "callee": "chars.next",
+          "lineNumber": 528
+        },
+        {
+          "caller": "duration",
+          "callee": "Ok",
+          "lineNumber": 536
+        },
+        {
+          "caller": "duration",
+          "callee": "chars.as_str",
+          "lineNumber": 538
+        },
+        {
+          "caller": "duration",
+          "callee": "rest.chars().take_while(|c| *c == '.').count",
+          "lineNumber": 539
+        },
+        {
+          "caller": "duration",
+          "callee": "rest.chars().take_while",
+          "lineNumber": 539
+        },
+        {
+          "caller": "duration",
+          "callee": "rest.chars",
+          "lineNumber": 539
+        },
+        {
+          "caller": "duration",
+          "callee": "rest.strip_prefix",
+          "lineNumber": 541
+        },
+        {
+          "caller": "duration",
+          "callee": "rest.is_empty",
+          "lineNumber": 542
+        },
+        {
+          "caller": "duration",
+          "callee": "Ok",
+          "lineNumber": 543
+        },
+        {
+          "caller": "duration",
+          "callee": "t.split_once",
+          "lineNumber": 545
+        },
+        {
+          "caller": "duration",
+          "callee": "n.parse::<u8>",
+          "lineNumber": 546
+        },
+        {
+          "caller": "duration",
+          "callee": "m.parse::<u8>",
+          "lineNumber": 546
+        },
+        {
+          "caller": "duration",
+          "callee": "t.parse::<u8>",
+          "lineNumber": 548
+        },
+        {
+          "caller": "duration",
+          "callee": "n.clone().map",
+          "lineNumber": 551
+        },
+        {
+          "caller": "duration",
+          "callee": "n.clone",
+          "lineNumber": 551
+        },
+        {
+          "caller": "duration",
+          "callee": "n.leading_zeros",
+          "lineNumber": 554
+        },
+        {
+          "caller": "duration",
+          "callee": "Some",
+          "lineNumber": 560
+        },
+        {
+          "caller": "duration",
+          "callee": "err",
+          "lineNumber": 561
+        },
+        {
+          "caller": "duration",
+          "callee": "Ok",
+          "lineNumber": 565
+        },
+        {
+          "caller": "duration",
+          "callee": "Some",
+          "lineNumber": 565
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 575
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 587
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 588
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 589
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 590
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 591
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 592
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 593
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 594
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "m.starts_with",
+          "lineNumber": 597
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "m.len",
+          "lineNumber": 597
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "m[1..].parse",
+          "lineNumber": 597
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 598
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "err",
+          "lineNumber": 599
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "m.starts_with",
+          "lineNumber": 601
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "m.len",
+          "lineNumber": 601
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Some",
+          "lineNumber": 601
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "m[1..].replace",
+          "lineNumber": 601
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "err",
+          "lineNumber": 602
+        },
+        {
+          "caller": "beat_mark",
+          "callee": "Ok",
+          "lineNumber": 604
+        },
+        {
+          "caller": "note",
+          "callee": "part.strip_prefix",
+          "lineNumber": 608
+        },
+        {
+          "caller": "note",
+          "callee": "body.split_once",
+          "lineNumber": 612
+        },
+        {
+          "caller": "note",
+          "callee": "s.parse().or_else",
+          "lineNumber": 613
+        },
+        {
+          "caller": "note",
+          "callee": "s.parse",
+          "lineNumber": 613
+        },
+        {
+          "caller": "note",
+          "callee": "err",
+          "lineNumber": 613
+        },
+        {
+          "caller": "note",
+          "callee": "rest.chars().take_while(char::is_ascii_digit).count",
+          "lineNumber": 614
+        },
+        {
+          "caller": "note",
+          "callee": "rest.chars().take_while",
+          "lineNumber": 614
+        },
+        {
+          "caller": "note",
+          "callee": "rest.chars",
+          "lineNumber": 614
+        },
+        {
+          "caller": "note",
+          "callee": "rest[..digits]\n            .parse().or_else",
+          "lineNumber": 615
+        },
+        {
+          "caller": "note",
+          "callee": "rest[..digits].parse",
+          "lineNumber": 615
+        },
+        {
+          "caller": "note",
+          "callee": "err",
+          "lineNumber": 617
+        },
+        {
+          "caller": "note",
+          "callee": "err",
+          "lineNumber": 619
+        },
+        {
+          "caller": "note",
+          "callee": "At::Fret",
+          "lineNumber": 621
+        },
+        {
+          "caller": "note",
+          "callee": "body.strip_prefix",
+          "lineNumber": 622
+        },
+        {
+          "caller": "note",
+          "callee": "rest.chars().take_while(char::is_ascii_digit).count",
+          "lineNumber": 623
+        },
+        {
+          "caller": "note",
+          "callee": "rest.chars().take_while",
+          "lineNumber": 623
+        },
+        {
+          "caller": "note",
+          "callee": "rest.chars",
+          "lineNumber": 623
+        },
+        {
+          "caller": "note",
+          "callee": "rest[..digits]\n            .parse().or_else",
+          "lineNumber": 624
+        },
+        {
+          "caller": "note",
+          "callee": "rest[..digits].parse",
+          "lineNumber": 624
+        },
+        {
+          "caller": "note",
+          "callee": "err",
+          "lineNumber": 626
+        },
+        {
+          "caller": "note",
+          "callee": "At::Pitch",
+          "lineNumber": 627
+        },
+        {
+          "caller": "note",
+          "callee": "pitch(body).ok_or_else",
+          "lineNumber": 630
+        },
+        {
+          "caller": "note",
+          "callee": "pitch",
+          "lineNumber": 630
+        },
+        {
+          "caller": "note",
+          "callee": "ParseError",
+          "lineNumber": 630
+        },
+        {
+          "caller": "note",
+          "callee": "At::Pitch",
+          "lineNumber": 631
+        },
+        {
+          "caller": "note",
+          "callee": "Vec::new",
+          "lineNumber": 633
+        },
+        {
+          "caller": "note",
+          "callee": "effects.chars().peekable",
+          "lineNumber": 634
+        },
+        {
+          "caller": "note",
+          "callee": "effects.chars",
+          "lineNumber": 634
+        },
+        {
+          "caller": "note",
+          "callee": "chars.next",
+          "lineNumber": 635
+        },
+        {
+          "caller": "note",
+          "callee": "String::new",
+          "lineNumber": 637
+        },
+        {
+          "caller": "note",
+          "callee": "chars.next_if",
+          "lineNumber": 638
+        },
+        {
+          "caller": "note",
+          "callee": "n.push",
+          "lineNumber": 639
+        },
+        {
+          "caller": "note",
+          "callee": "n.parse::<u8>().ok",
+          "lineNumber": 641
+        },
+        {
+          "caller": "note",
+          "callee": "n.parse::<u8>",
+          "lineNumber": 641
+        },
+        {
+          "caller": "note",
+          "callee": "fx.push",
+          "lineNumber": 643
+        },
+        {
+          "caller": "note",
+          "callee": "Fx::Slide",
+          "lineNumber": 656
+        },
+        {
+          "caller": "note",
+          "callee": "Fx::Slide",
+          "lineNumber": 657
+        },
+        {
+          "caller": "note",
+          "callee": "Fx::Slide",
+          "lineNumber": 658
+        },
+        {
+          "caller": "note",
+          "callee": "Fx::Slide",
+          "lineNumber": 659
+        },
+        {
+          "caller": "note",
+          "callee": "Fx::Slide",
+          "lineNumber": 660
+        },
+        {
+          "caller": "note",
+          "callee": "Fx::Slide",
+          "lineNumber": 661
+        },
+        {
+          "caller": "note",
+          "callee": "number",
+          "lineNumber": 665
+        },
+        {
+          "caller": "note",
+          "callee": "Fx::Trill",
+          "lineNumber": 666
+        },
+        {
+          "caller": "note",
+          "callee": "err",
+          "lineNumber": 667
+        },
+        {
+          "caller": "note",
+          "callee": "number",
+          "lineNumber": 669
+        },
+        {
+          "caller": "note",
+          "callee": "Fx::Finger",
+          "lineNumber": 670
+        },
+        {
+          "caller": "note",
+          "callee": "err",
+          "lineNumber": 671
+        },
+        {
+          "caller": "note",
+          "callee": "err",
+          "lineNumber": 673
+        },
+        {
+          "caller": "note",
+          "callee": "Ok",
+          "lineNumber": 676
+        },
+        {
+          "caller": "pitch",
+          "callee": "text.as_bytes",
+          "lineNumber": 682
+        },
+        {
+          "caller": "pitch",
+          "callee": "b.first",
+          "lineNumber": 683
+        },
+        {
+          "caller": "pitch",
+          "callee": "b.get",
+          "lineNumber": 695
+        },
+        {
+          "caller": "pitch",
+          "callee": "i32::from",
+          "lineNumber": 706
+        },
+        {
+          "caller": "pitch",
+          "callee": "b.get",
+          "lineNumber": 706
+        },
+        {
+          "caller": "pitch",
+          "callee": "i32::from",
+          "lineNumber": 706
+        },
+        {
+          "caller": "pitch",
+          "callee": "(0..=9).contains",
+          "lineNumber": 707
+        },
+        {
+          "caller": "pitch",
+          "callee": "u8::try_from(midi)\n        .ok()\n        .filter(|m| *m <= 127).map",
+          "lineNumber": 711
+        },
+        {
+          "caller": "pitch",
+          "callee": "u8::try_from(midi)\n        .ok().filter",
+          "lineNumber": 711
+        },
+        {
+          "caller": "pitch",
+          "callee": "u8::try_from(midi).ok",
+          "lineNumber": 711
+        },
+        {
+          "caller": "pitch",
+          "callee": "u8::try_from",
+          "lineNumber": 711
+        },
+        {
+          "caller": "durations_and_tuplets",
+          "callee": "parse(\"q 1:0 e. 1:2 s/3 r | h/5:3 C4\").unwrap",
+          "lineNumber": 723
+        },
+        {
+          "caller": "durations_and_tuplets",
+          "callee": "parse",
+          "lineNumber": 723
+        },
+        {
+          "caller": "notes_effects_and_marks",
+          "callee": "parse(\"@c0 @tlet_ring @ff q 6:0+5:2hm ~3:12b Bb2>. d36 F#5T7\").unwrap",
+          "lineNumber": 739
+        },
+        {
+          "caller": "notes_effects_and_marks",
+          "callee": "parse",
+          "lineNumber": 739
+        },
+        {
+          "caller": "diagrams_from_text",
+          "callee": "Diagram::new",
+          "lineNumber": 768
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 28,
+        "functionCount": 26,
+        "classCount": 11
+      }
+    }
+  ]
+}

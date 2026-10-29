@@ -1,0 +1,17 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "ARCHITECTURE.md", "language": "markdown", "sizeLines": 69, "fileCategory": "docs"},
+    {"path": "CHANGELOG.md", "language": "markdown", "sizeLines": 273, "fileCategory": "docs"},
+    {"path": "CONTRIBUTING.md", "language": "markdown", "sizeLines": 124, "fileCategory": "docs"},
+    {"path": "CREDITS.md", "language": "markdown", "sizeLines": 78, "fileCategory": "docs"},
+    {"path": "Cargo.toml", "language": "toml", "sizeLines": 89, "fileCategory": "config"},
+    {"path": "README.md", "language": "markdown", "sizeLines": 145, "fileCategory": "docs"},
+    {"path": "ROADMAP.md", "language": "markdown", "sizeLines": 233, "fileCategory": "docs"},
+    {"path": "about.toml", "language": "toml", "sizeLines": 41, "fileCategory": "config"},
+    {"path": "clippy.toml", "language": "toml", "sizeLines": 5, "fileCategory": "config"},
+    {"path": "deny.toml", "language": "toml", "sizeLines": 82, "fileCategory": "config"},
+    {"path": "rustfmt.toml", "language": "toml", "sizeLines": 3, "fileCategory": "config"}
+  ],
+  "batchImportData": {"ARCHITECTURE.md":[],"CHANGELOG.md":[],"CONTRIBUTING.md":[],"CREDITS.md":[],"Cargo.toml":[],"README.md":[],"ROADMAP.md":[],"about.toml":[],"clippy.toml":[],"deny.toml":[],"rustfmt.toml":[]}
+}

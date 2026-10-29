@@ -1,0 +1,18 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "debian/changelog", "language": "unknown", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "debian/control", "language": "unknown", "sizeLines": 65, "fileCategory": "code"},
+    {"path": "debian/copyright", "language": "unknown", "sizeLines": 171, "fileCategory": "code"},
+    {"path": "debian/oxiguitar.docs", "language": "docs", "sizeLines": 2, "fileCategory": "code"},
+    {"path": "debian/oxiguitar.manpages", "language": "manpages", "sizeLines": 2, "fileCategory": "code"},
+    {"path": "debian/rules", "language": "unknown", "sizeLines": 102, "fileCategory": "code"},
+    {"path": "debian/source/format", "language": "unknown", "sizeLines": 1, "fileCategory": "code"},
+    {"path": "debian/tests/control", "language": "unknown", "sizeLines": 3, "fileCategory": "code"},
+    {"path": "debian/upstream/metadata", "language": "unknown", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "debian/watch", "language": "unknown", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "docs/debian.md", "language": "markdown", "sizeLines": 39, "fileCategory": "docs"}
+  ],
+  "batchImportData": {},
+  "neighborMap": {}
+}

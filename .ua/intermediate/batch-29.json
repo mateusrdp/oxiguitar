@@ -1,0 +1,1722 @@
+{
+  "nodes": [
+    {
+      "id": "format:gp",
+      "type": "format",
+      "name": "Guitar Pro 7",
+      "description": "ZIP-based format (GPX) with VERSION, Content/score.gpif, Content/PartConfiguration"
+    },
+    {
+      "id": "format:gp5",
+      "type": "format",
+      "name": "Guitar Pro 5",
+      "description": "Binary format with FICHIER GUITAR PRO v5.XX header"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 7
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "type": "song",
+      "title": "OxiGuitar Test Song",
+      "artist": "The OxiGuitar contributors",
+      "album": "Fixtures",
+      "words": "OxiGuitar",
+      "music": "OxiGuitar",
+      "copyright": "Public domain",
+      "tabber": "OxiGuitar tests",
+      "notices": "Made for OxiGuitar's tests",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 96,
+      "tempoDivision": 2,
+      "sections": [
+        "Intro"
+      ],
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 6
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "type": "song",
+      "title": "OxiGuitar Test Song",
+      "artist": "The OxiGuitar contributors",
+      "album": "Fixtures",
+      "words": "OxiGuitar",
+      "music": "OxiGuitar",
+      "copyright": "Public domain",
+      "tabber": "OxiGuitar tests",
+      "notices": "Made for OxiGuitar's tests",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 96,
+      "tempoDivision": 2,
+      "lyrics": "la la la",
+      "sections": [
+        "la la la",
+        "Intro"
+      ],
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 9
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "type": "song",
+      "title": "OxiGuitar Test Song",
+      "artist": "The OxiGuitar contributors",
+      "album": "Fixtures",
+      "words": "OxiGuitar",
+      "music": "OxiGuitar",
+      "copyright": "Public domain",
+      "tabber": "OxiGuitar tests",
+      "notices": "Made for OxiGuitar's tests",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 96,
+      "tempoDivision": 2,
+      "tempoLabel": "Moderato",
+      "lyrics": "la la la",
+      "sections": [
+        "Moderato",
+        "la la la",
+        "Intro"
+      ],
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 12
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "type": "song",
+      "title": "OxiGuitar Test Song",
+      "artist": "The OxiGuitar contributors",
+      "album": "Fixtures",
+      "words": "OxiGuitar",
+      "music": "OxiGuitar",
+      "copyright": "Public domain",
+      "tabber": "OxiGuitar tests",
+      "notices": "Made for OxiGuitar's tests",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 96,
+      "tempoDivision": 2,
+      "tempoLabel": "Moderato",
+      "lyrics": "la la la",
+      "sections": [
+        "Moderato",
+        "la la la",
+        "Intro"
+      ],
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/time-signatures.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 16
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/time-signatures.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/time-signatures.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/time-signatures.gp",
+      "type": "song",
+      "title": "Time Signatures",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: 4/4, 3/4, 6/8, 5/4, 7/8, 2/2 and 12/8 in a row.",
+      "notices": "Generated by oxiguitar-testgen",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 100,
+      "tempoDivision": 2,
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 11
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "type": "song",
+      "title": "Tremolo Picking",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Tremolo picking at eighth, sixteenth and thirty-second speeds.",
+      "notices": "Generated by oxiguitar-testgen",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 100,
+      "tempoDivision": 2,
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/triplets.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 8
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/triplets.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/triplets.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/triplets.gp",
+      "type": "song",
+      "title": "Triplets",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Eighth, quarter and sixteenth triplets, and a triplet with a rest in it.",
+      "notices": "Generated by oxiguitar-testgen",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 100,
+      "tempoDivision": 2,
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/two-voices.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 13
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/two-voices.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/two-voices.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/two-voices.gp",
+      "type": "song",
+      "title": "Two Voices",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Two voices on one staff: voice 1 stems up, voice 2 stems down, rests moved aside.",
+      "notices": "Generated by oxiguitar-testgen",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 100,
+      "tempoDivision": 2,
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 11
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "type": "song",
+      "title": "Unusual Tuplets",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Quintuplets, sextuplets, septuplets, a duplet and a 5:3 ratio (marked n:m).",
+      "notices": "Generated by oxiguitar-testgen",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 100,
+      "tempoDivision": 2,
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 14
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "type": "song",
+      "title": "Vibrato and Trill",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Vibrato on single notes and long notes, and trills with their other fret.",
+      "notices": "Generated by oxiguitar-testgen",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 100,
+      "tempoDivision": 2,
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "type": "file",
+      "format": "gp",
+      "language": "gp",
+      "sizeLines": 9
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "type": "document",
+      "format": "gp"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "type": "song",
+      "title": "Whammy and Fade In",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: A whammy-bar dive and a fade-in.",
+      "notices": "Generated by oxiguitar-testgen",
+      "version": "7.0",
+      "notes": "GP7 format (ZIP-based)",
+      "tempo": 100,
+      "tempoDivision": 2,
+      "trackCount": 1,
+      "track0": "Guitar",
+      "instrument0": "Electric Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 6
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "OxiGuitar Test Song",
+      "artist": "The OxiGuitar contributors",
+      "album": "Fixtures",
+      "notices": "Made for OxiGuitar's tests",
+      "tabber": "OxiGuitar tests",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 6
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "OxiGuitar Test Song",
+      "artist": "The OxiGuitar contributors",
+      "album": "Fixtures",
+      "notices": "Made for OxiGuitar's tests",
+      "tabber": "OxiGuitar tests",
+      "lyrics": "la la la",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 6
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "OxiGuitar Test Song",
+      "artist": "The OxiGuitar contributors",
+      "album": "Fixtures",
+      "notices": "Made for OxiGuitar's tests",
+      "tabber": "OxiGuitar tests",
+      "tempoLabel": "Moderato",
+      "lyrics": "la la la",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 6
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "OxiGuitar Test Song",
+      "artist": "The OxiGuitar contributors",
+      "album": "Fixtures",
+      "notices": "Made for OxiGuitar's tests",
+      "tabber": "OxiGuitar tests",
+      "tempoLabel": "Moderato",
+      "lyrics": "let it ring",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/time-signatures.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/time-signatures.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/time-signatures.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/time-signatures.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "Time Signatures",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: 4/4, 3/4, 6/8, 5/4, 7/8, 2/2 and 12/8 in a row.",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 6
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "Tremolo Picking",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Tremolo picking at eighth, sixteenth and thirty-second speeds.",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/triplets.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/triplets.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/triplets.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/triplets.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "Triplets",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Eighth, quarter and sixteenth triplets, and a triplet with a rest in it.",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/two-voices.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 5
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/two-voices.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/two-voices.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/two-voices.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "Two Voices",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Two voices on one staff: voice 1 stems up, voice 2 stems down, rests moved aside.",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "Unusual Tuplets",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Quintuplets, sextuplets, septuplets, a duplet and a 5:3 ratio (marked n:m).",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 5
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "Vibrato and Trill",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: Vibrato on single notes and long notes, and trills with their other fret.",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "type": "file",
+      "format": "gp5",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "type": "document",
+      "format": "gp5"
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "type": "config"
+    },
+    {
+      "id": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "type": "song",
+      "version": "5.10",
+      "title": "Whammy and Fade In",
+      "artist": "OxiGuitar references",
+      "instructions": "OxiGuitar test file: A whammy-bar dive and a fade-in.",
+      "trackCount": 1,
+      "track0": "Guitar"
+    },
+    {
+      "id": "file:fixtures/plugin/far-line.answer",
+      "type": "file",
+      "format": "answer",
+      "language": "answer",
+      "sizeLines": 0
+    },
+    {
+      "id": "document:fixtures/plugin/far-line.answer",
+      "type": "document",
+      "format": "answer"
+    },
+    {
+      "id": "config:fixtures/plugin/far-line.answer",
+      "type": "config"
+    },
+    {
+      "id": "song:far-line",
+      "type": "song",
+      "title": "far-line",
+      "instructions": "Guitar Pro plugin UI state file for far-line.answer",
+      "notes": "Plugin UI state; stores widget configuration (clicks, score toggle, slider, field, choice, list, canvas)"
+    },
+    {
+      "id": "file:fixtures/plugin/panel.answer",
+      "type": "file",
+      "format": "answer",
+      "language": "answer",
+      "sizeLines": 0
+    },
+    {
+      "id": "document:fixtures/plugin/panel.answer",
+      "type": "document",
+      "format": "answer"
+    },
+    {
+      "id": "config:fixtures/plugin/panel.answer",
+      "type": "config"
+    },
+    {
+      "id": "song:panel",
+      "type": "song",
+      "title": "panel",
+      "instructions": "Guitar Pro plugin UI state file for panel.answer",
+      "notes": "Plugin UI state; stores widget configuration (clicks, score toggle, slider, field, choice, list, canvas)"
+    },
+    {
+      "id": "format:answer",
+      "type": "format",
+      "name": "Guitar Pro Plugin Answer",
+      "description": "Binary plugin UI state file storing widget configuration (clicks, toggle, slider, text field, choice, list, canvas)"
+    },
+    {
+      "id": "file:fixtures/reference/README.md",
+      "type": "file",
+      "format": "markdown",
+      "language": "markdown",
+      "sizeLines": 56
+    },
+    {
+      "id": "document:fixtures/reference/README.md",
+      "type": "document",
+      "format": "markdown"
+    },
+    {
+      "id": "song:reference-readme",
+      "type": "song",
+      "title": "Visual-regression reference index",
+      "artist": "oxiguitar-testgen",
+      "instructions": "Reference index for 50 visual-regression Guitar Pro 7 test files. Generated by `oxiguitar-testgen` (crates/oxiguitar-testgen/src/references.rs); checked by `cargo test -p oxiguitar-testgen --test visual`.",
+      "notes": "Contains 50 reference entries covering: notes-and-rests, beams-and-flags, dots-and-ties, triplets, unusual-tuplets, chords-and-accidentals, key-signatures, time-signatures, repeats-and-endings, sections-and-directions, tempo-changes, two-voices, four-voices, rhythm-on-tab, standard-only, chord-names, beat-text, lyrics, dynamics, dynamics-hidden, grace-notes, hammer-on-pull-off, bends, slides, vibrato-and-trill, harmonics, dead-ghost-palm-mute, let-ring, articulations, tremolo-picking, strums-and-techniques, whammy-and-fade-in, effects-together, bass, seven-string, drop-d-and-capo, drums, piano-grand-staff, strings-treble-and-bass, notation-choice, header-and-credits, page-breaks, layout-vertical, layout-horizontal, layout-parchment, paper-letter, dark-page, tall-system-shrinks, eight-tracks, empty-bars",
+      "referenceCount": 50,
+      "references": [
+        {
+          "file": "notes-and-rests",
+          "description": "Whole to sixty-fourth notes and rests on standard notation and tablature."
+        },
+        {
+          "file": "beams-and-flags",
+          "description": "Beams over groups of eighths and sixteenths, flags on single notes, mixed groups."
+        },
+        {
+          "file": "dots-and-ties",
+          "description": "Dotted and double-dotted notes, ties inside a bar and across the bar line."
+        },
+        {
+          "file": "triplets",
+          "description": "Eighth, quarter and sixteenth triplets, and a triplet with a rest in it."
+        },
+        {
+          "file": "unusual-tuplets",
+          "description": "Quintuplets, sextuplets, septuplets, a duplet and a 5:3 ratio (marked n:m)."
+        },
+        {
+          "file": "chords-and-accidentals",
+          "description": "Chords, sharps, flats and naturals in C, accidentals carried through the bar."
+        },
+        {
+          "file": "key-signatures",
+          "description": "Key changes through sharps and flats, with naturals cancelling the old key."
+        },
+        {
+          "file": "time-signatures",
+          "description": "4/4, 3/4, 6/8, 5/4, 7/8, 2/2 and 12/8 in a row."
+        },
+        {
+          "file": "repeats-and-endings",
+          "description": "Repeat signs, a repeat played three times, first and second endings, a double bar."
+        },
+        {
+          "file": "sections-and-directions",
+          "description": "Rehearsal letters with section names; segno and coda signs at the start of their bars, To Coda, Fine and D.S. al Coda at the end of theirs."
+        },
+        {
+          "file": "tempo-changes",
+          "description": "A labelled starting tempo, then changes at a bar and in the middle of one."
+        },
+        {
+          "file": "two-voices",
+          "description": "Two voices on one staff: voice 1 stems up, voice 2 stems down, rests moved aside."
+        },
+        {
+          "file": "four-voices",
+          "description": "Four voices: 1 and 3 up, 2 and 4 down, voices that rest for a whole bar hidden."
+        },
+        {
+          "file": "rhythm-on-tab",
+          "description": "A tab-only track: rhythm stems above for voice 1, below for voice 2, rests outside the staff."
+        },
+        {
+          "file": "standard-only",
+          "description": "A guitar saved with standard notation only: no tablature drawn."
+        },
+        {
+          "file": "chord-names",
+          "description": "Chord names over their beats, never pushed sideways, and the diagrams in the header."
+        },
+        {
+          "file": "beat-text",
+          "description": "Text above beats, next to chord names and tempo."
+        },
+        {
+          "file": "lyrics",
+          "description": "A voice with lyrics under the staff, syllables split by hyphens."
+        },
+        {
+          "file": "dynamics",
+          "description": "Dynamics from ppp to fff, marked only where they change."
+        },
+        {
+          "file": "dynamics-hidden",
+          "description": "The same dynamics with View → Dynamics off: none drawn."
+        },
+        {
+          "file": "grace-notes",
+          "description": "Grace notes before beats, alone and before chords, on both staves."
+        },
+        {
+          "file": "hammer-on-pull-off",
+          "description": "Hammer-ons and pull-offs, single and in chains, with the arcs and H and P."
+        },
+        {
+          "file": "bends",
+          "description": "Full, half and released bends, with their arrows and labels."
+        },
+        {
+          "file": "slides",
+          "description": "Shift and legato slides between notes, slides into and out of a note."
+        },
+        {
+          "file": "vibrato-and-trill",
+          "description": "Vibrato on single notes and long notes, and trills with their other fret."
+        },
+        {
+          "file": "harmonics",
+          "description": "Natural, artificial and pinch harmonics."
+        },
+        {
+          "file": "dead-ghost-palm-mute",
+          "description": "Dead notes (x), ghost notes in parentheses and palm mutes (P.M.)."
+        },
+        {
+          "file": "let-ring",
+          "description": "Let ring over arpeggios."
+        },
+        {
+          "file": "articulations",
+          "description": "Accents, heavy accents and staccato on both staves."
+        },
+        {
+          "file": "tremolo-picking",
+          "description": "Tremolo picking at eighth, sixteenth and thirty-second speeds."
+        },
+        {
+          "file": "strums-and-techniques",
+          "description": "Strums up and down, slap, pop and tapping."
+        },
+        {
+          "file": "whammy-and-fade-in",
+          "description": "A whammy-bar dive and a fade-in."
+        },
+        {
+          "file": "effects-together",
+          "description": "A dense lick with several effects on neighbouring notes: lanes above the tab."
+        },
+        {
+          "file": "bass",
+          "description": "A four-string bass: bass clef an octave down over a four-line tab."
+        },
+        {
+          "file": "seven-string",
+          "description": "A seven-string guitar: seven tab lines and its tuning in the header."
+        },
+        {
+          "file": "drop-d-and-capo",
+          "description": "Drop D tuning with a capo: tuning and capo in the header."
+        },
+        {
+          "file": "drums",
+          "description": "A drum kit on the percussion clef: kick, snare, hi-hat, toms and cymbals."
+        },
+        {
+          "file": "piano-grand-staff",
+          "description": "A piano with one staff in the file, split over a grand staff by hand range."
+        },
+        {
+          "file": "strings-treble-and-bass",
+          "description": "Two instruments without strings: treble clef and bass clef staves together."
+        },
+        {
+          "file": "notation-choice",
+          "description": "The user's notation per track: the lead as tab only, the bass as standard only."
+        },
+        {
+          "file": "header-and-credits",
+          "description": "A full header: title, subtitle, artist, album, words, music, copyright, tabber, tuning."
+        },
+        {
+          "file": "page-breaks",
+          "description": "Thirty-two bars over pages, with page numbers."
+        },
+        {
+          "file": "layout-vertical",
+          "description": "The Vertical layout: lines as wide as a narrow window, no pages."
+        },
+        {
+          "file": "layout-horizontal",
+          "description": "The Horizontal layout: every bar on one line, no header."
+        },
+        {
+          "file": "layout-parchment",
+          "description": "The Parchment layout: page-wide lines on one sheet, no page breaks."
+        },
+        {
+          "file": "paper-letter",
+          "description": "US Letter paper instead of A4."
+        },
+        {
+          "file": "dark-page",
+          "description": "The dark page (View → Dark Page) with four tracks together, names at each system."
+        },
+        {
+          "file": "tall-system-shrinks",
+          "description": "Twelve tracks in one system, taller than the page at full size: the staff shrinks to fit."
+        },
+        {
+          "file": "eight-tracks",
+          "description": "Eight tracks together: guitars, bass, drums, piano on a grand staff, strings, voice, acoustic tab."
+        },
+        {
+          "file": "empty-bars",
+          "description": "Bars with only rests: a whole rest, a dotted half rest filling 3/4, rests after a note."
+        }
+      ]
+    },
+    {
+      "id": "format:markdown",
+      "type": "format",
+      "name": "Markdown",
+      "description": "Lightweight markup language for documentation"
+    }
+  ],
+  "edges": [
+    {
+      "source": "format:gp",
+      "relation": "archive_type",
+      "target": "zip"
+    },
+    {
+      "source": "format:gp",
+      "relation": "contains",
+      "target": "gpif-content"
+    },
+    {
+      "source": "format:gp5",
+      "relation": "archive_type",
+      "target": "binary"
+    },
+    {
+      "source": "format:gp5",
+      "relation": "header",
+      "target": "FICHIER GUITAR PRO v5.XX"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/test-song-from-gp3.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/test-song-from-gp3.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/test-song-from-gp4.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/test-song-from-gp4.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/test-song-from-gp5.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/test-song-from-gp5.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/test-song-from-gpx.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/test-song-from-gpx.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/time-signatures.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/time-signatures.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/time-signatures.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/time-signatures.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/time-signatures.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/time-signatures.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/time-signatures.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/time-signatures.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/time-signatures.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/tremolo-picking.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/tremolo-picking.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/tremolo-picking.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/tremolo-picking.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/triplets.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/triplets.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/triplets.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/triplets.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/triplets.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/triplets.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/triplets.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/triplets.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/triplets.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/two-voices.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/two-voices.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/two-voices.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/two-voices.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/two-voices.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/two-voices.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/two-voices.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/two-voices.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/two-voices.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/unusual-tuplets.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/unusual-tuplets.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/unusual-tuplets.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/unusual-tuplets.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/vibrato-and-trill.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/vibrato-and-trill.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/whammy-and-fade-in.gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/whammy-and-fade-in.gp"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "relation": "uses_format",
+      "target": "format:gp"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/test-song-from-gp3.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/test-song-from-gp3.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/test-song-from-gp4.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/test-song-from-gp4.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/test-song-from-gp5.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/test-song-from-gp5.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/test-song-from-gpx.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/test-song-from-gpx.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/time-signatures.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/time-signatures.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/time-signatures.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/time-signatures.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/time-signatures.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/time-signatures.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/time-signatures.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/time-signatures.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/time-signatures.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/tremolo-picking.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/tremolo-picking.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/tremolo-picking.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/tremolo-picking.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/triplets.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/triplets.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/triplets.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/triplets.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/triplets.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/triplets.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/triplets.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/triplets.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/triplets.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/two-voices.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/two-voices.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/two-voices.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/two-voices.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/two-voices.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/two-voices.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/two-voices.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/two-voices.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/two-voices.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/unusual-tuplets.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/unusual-tuplets.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/unusual-tuplets.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/unusual-tuplets.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/vibrato-and-trill.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/vibrato-and-trill.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "relation": "contains",
+      "target": "document:fixtures/guitar-pro-check/whammy-and-fade-in.gp5"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "relation": "has_config",
+      "target": "config:fixtures/guitar-pro-check/whammy-and-fade-in.gp5"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "relation": "represents",
+      "target": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp5"
+    },
+    {
+      "source": "config:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "relation": "specifies",
+      "target": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "relation": "uses_format",
+      "target": "format:gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp3.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp4.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gp5.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/test-song-from-gpx.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/time-signatures.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/time-signatures.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/time-signatures.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/time-signatures.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/tremolo-picking.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/tremolo-picking.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/tremolo-picking.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/tremolo-picking.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/triplets.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/triplets.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/triplets.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/triplets.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/two-voices.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/two-voices.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/two-voices.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/two-voices.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/unusual-tuplets.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/unusual-tuplets.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/vibrato-and-trill.gp"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp5"
+    },
+    {
+      "source": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+      "relation": "variant_of",
+      "target": "song:fixtures/guitar-pro-check/whammy-and-fade-in.gp"
+    },
+    {
+      "source": "file:fixtures/plugin/far-line.answer",
+      "relation": "contains",
+      "target": "document:fixtures/plugin/far-line.answer"
+    },
+    {
+      "source": "file:fixtures/plugin/far-line.answer",
+      "relation": "has_config",
+      "target": "config:fixtures/plugin/far-line.answer"
+    },
+    {
+      "source": "document:fixtures/plugin/far-line.answer",
+      "relation": "represents",
+      "target": "song:far-line"
+    },
+    {
+      "source": "config:fixtures/plugin/far-line.answer",
+      "relation": "specifies",
+      "target": "song:far-line"
+    },
+    {
+      "source": "song:far-line",
+      "relation": "uses_format",
+      "target": "format:answer"
+    },
+    {
+      "source": "file:fixtures/plugin/panel.answer",
+      "relation": "contains",
+      "target": "document:fixtures/plugin/panel.answer"
+    },
+    {
+      "source": "file:fixtures/plugin/panel.answer",
+      "relation": "has_config",
+      "target": "config:fixtures/plugin/panel.answer"
+    },
+    {
+      "source": "document:fixtures/plugin/panel.answer",
+      "relation": "represents",
+      "target": "song:panel"
+    },
+    {
+      "source": "config:fixtures/plugin/panel.answer",
+      "relation": "specifies",
+      "target": "song:panel"
+    },
+    {
+      "source": "song:panel",
+      "relation": "uses_format",
+      "target": "format:answer"
+    },
+    {
+      "source": "file:fixtures/reference/README.md",
+      "relation": "contains",
+      "target": "document:fixtures/reference/README.md"
+    },
+    {
+      "source": "document:fixtures/reference/README.md",
+      "relation": "describes",
+      "target": "song:reference-readme"
+    },
+    {
+      "source": "song:reference-readme",
+      "relation": "uses_format",
+      "target": "format:markdown"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 1,
+  "filesSkipped": [
+    "debian/changelog",
+    "debian/control",
+    "debian/copyright",
+    "debian/oxiguitar.docs",
+    "debian/oxiguitar.manpages",
+    "debian/rules",
+    "debian/source/format",
+    "debian/tests/control",
+    "debian/upstream/metadata",
+    "debian/watch"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 1,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 1
+    }
+  },
+  "results": [
+    {
+      "path": "docs/debian.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 39,
+      "nonEmptyLines": 28,
+      "sections": [
+        {
+          "heading": "OxiGuitar and Debian",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "The first audit (19 Oct 2026, Debian sid)",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "The packaging: `debian/`",
+          "level": 2,
+          "line": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    }
+  ]
+}

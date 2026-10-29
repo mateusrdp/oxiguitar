@@ -1,0 +1,4627 @@
+{
+  "nodes": [
+    {
+      "id": "file:crates/oxiguitar-cli/src/events.rs",
+      "type": "file",
+      "name": "events.rs",
+      "filePath": "crates/oxiguitar-cli/src/events.rs",
+      "summary": "Source file events.rs in the oxiguitar-cli crate, providing cli-tool and command-line functionality.",
+      "tags": [
+        "cli-tool",
+        "command-line",
+        "command-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/events.rs:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "crates/oxiguitar-cli/src/events.rs",
+      "summary": "Executes the events command, parsing arguments and orchestrating the core operation.",
+      "tags": [
+        "run",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/src/info.rs",
+      "type": "file",
+      "name": "info.rs",
+      "filePath": "crates/oxiguitar-cli/src/info.rs",
+      "summary": "Source file info.rs in the oxiguitar-cli crate, providing cli-tool and command-line functionality.",
+      "tags": [
+        "cli-tool",
+        "command-line",
+        "command-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/info.rs:detect",
+      "type": "function",
+      "name": "detect",
+      "filePath": "crates/oxiguitar-cli/src/info.rs",
+      "summary": "Detects the type or format of a file or input source.",
+      "tags": [
+        "detect",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/info.rs:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "crates/oxiguitar-cli/src/info.rs",
+      "summary": "Executes the info command, parsing arguments and orchestrating the core operation.",
+      "tags": [
+        "run",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/info.rs:describe",
+      "type": "function",
+      "name": "describe",
+      "filePath": "crates/oxiguitar-cli/src/info.rs",
+      "summary": "Produces a detailed description of a score, including tracks, bars, and timing information.",
+      "tags": [
+        "describe",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/info.rs:time_signatures",
+      "type": "function",
+      "name": "time_signatures",
+      "filePath": "crates/oxiguitar-cli/src/info.rs",
+      "summary": "Returns the time signatures used in the score.",
+      "tags": [
+        "time_signatures",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/info.rs:track_line",
+      "type": "function",
+      "name": "track_line",
+      "filePath": "crates/oxiguitar-cli/src/info.rs",
+      "summary": "Generates a formatted line of text describing a track's properties.",
+      "tags": [
+        "track_line",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/info.rs:bar_length_problems",
+      "type": "function",
+      "name": "bar_length_problems",
+      "filePath": "crates/oxiguitar-cli/src/info.rs",
+      "summary": "Identifies bars with length issues or inconsistencies.",
+      "tags": [
+        "bar_length_problems",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/info.rs:bar_table",
+      "type": "function",
+      "name": "bar_table",
+      "filePath": "crates/oxiguitar-cli/src/info.rs",
+      "summary": "Generates a table of bar information for the score.",
+      "tags": [
+        "bar_table",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/src/main.rs",
+      "type": "file",
+      "name": "main.rs",
+      "filePath": "crates/oxiguitar-cli/src/main.rs",
+      "summary": "Source file main.rs in the oxiguitar-cli crate, providing cli-tool and command-line functionality.",
+      "tags": [
+        "cli-tool",
+        "command-line",
+        "entry-point",
+        "application-main"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/main.rs:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "crates/oxiguitar-cli/src/main.rs",
+      "summary": "Application entry point, initializing the CLI and dispatching to the appropriate command handler.",
+      "tags": [
+        "main",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/src/play.rs",
+      "type": "file",
+      "name": "play.rs",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Source file play.rs in the oxiguitar-cli crate, providing cli-tool and command-line functionality.",
+      "tags": [
+        "cli-tool",
+        "command-line",
+        "command-handler",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/play.rs:parse",
+      "type": "function",
+      "name": "parse",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Parses command-line arguments into a structured configuration object.",
+      "tags": [
+        "parse",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/play.rs:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Executes the play command, parsing arguments and orchestrating the core operation.",
+      "tags": [
+        "run",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/play.rs:sources",
+      "type": "function",
+      "name": "sources",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Returns the available audio sources or input devices.",
+      "tags": [
+        "sources",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/play.rs:play",
+      "type": "function",
+      "name": "play",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Plays a musical score through the audio engine, handling playback timing and track mixing.",
+      "tags": [
+        "play",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/play.rs:mix",
+      "type": "function",
+      "name": "mix",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Mixes multiple audio tracks into a single output stream.",
+      "tags": [
+        "mix",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/play.rs:play_into",
+      "type": "function",
+      "name": "play_into",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Plays the score into a WAV file at maximum speed through the audio engine.",
+      "tags": [
+        "play_into",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/play.rs:wav_file",
+      "type": "function",
+      "name": "wav_file",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Generates a WAV file from the audio output of playback.",
+      "tags": [
+        "wav_file",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-cli/src/play.rs:Asked",
+      "type": "struct",
+      "name": "Asked",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Holds the configuration for a play command: file path, start position, loop range, speed, metronome, tracks, device, and WAV output target.",
+      "tags": [
+        "asked",
+        "struct",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-cli/src/play.rs:Ready",
+      "type": "struct",
+      "name": "Ready",
+      "filePath": "crates/oxiguitar-cli/src/play.rs",
+      "summary": "Holds the resolved audio sources, routes, track count, and names after parsing a play command.",
+      "tags": [
+        "ready",
+        "struct",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "type": "file",
+      "name": "plugins.rs",
+      "filePath": "crates/oxiguitar-cli/src/plugins.rs",
+      "summary": "Source file plugins.rs in the oxiguitar-cli crate, providing cli-tool and command-line functionality.",
+      "tags": [
+        "cli-tool",
+        "command-line",
+        "data-structures"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/plugins.rs:plugins",
+      "type": "function",
+      "name": "plugins",
+      "filePath": "crates/oxiguitar-cli/src/plugins.rs",
+      "summary": "Discovers and returns the available instrument or audio plugins.",
+      "tags": [
+        "plugins",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/plugins.rs:recognise",
+      "type": "function",
+      "name": "recognise",
+      "filePath": "crates/oxiguitar-cli/src/plugins.rs",
+      "summary": "Recognizes the type or format of a plugin or file.",
+      "tags": [
+        "recognise",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/plugins.rs:open",
+      "type": "function",
+      "name": "open",
+      "filePath": "crates/oxiguitar-cli/src/plugins.rs",
+      "summary": "Opens a plugin or resource with the given configuration.",
+      "tags": [
+        "open",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-cli/src/plugins.rs:Opened",
+      "type": "struct",
+      "name": "Opened",
+      "filePath": "crates/oxiguitar-cli/src/plugins.rs",
+      "summary": "Represents an opened plugin instance with its configuration and state.",
+      "tags": [
+        "opened",
+        "struct",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/src/render.rs",
+      "type": "file",
+      "name": "render.rs",
+      "filePath": "crates/oxiguitar-cli/src/render.rs",
+      "summary": "Source file render.rs in the oxiguitar-cli crate, providing cli-tool and command-line functionality.",
+      "tags": [
+        "cli-tool",
+        "command-line",
+        "command-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/render.rs:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "crates/oxiguitar-cli/src/render.rs",
+      "summary": "Executes the render command, parsing arguments and orchestrating the core operation.",
+      "tags": [
+        "run",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/render.rs:png_pieces",
+      "type": "function",
+      "name": "png_pieces",
+      "filePath": "crates/oxiguitar-cli/src/render.rs",
+      "summary": "Function `png_pieces` in render.rs.",
+      "tags": [
+        "png_pieces",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/src/specimen.rs",
+      "type": "file",
+      "name": "specimen.rs",
+      "filePath": "crates/oxiguitar-cli/src/specimen.rs",
+      "summary": "Source file specimen.rs in the oxiguitar-cli crate, providing cli-tool and command-line functionality.",
+      "tags": [
+        "cli-tool",
+        "command-line",
+        "command-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/specimen.rs:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "crates/oxiguitar-cli/src/specimen.rs",
+      "summary": "Executes the specimen command, parsing arguments and orchestrating the core operation.",
+      "tags": [
+        "run",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/src/tools.rs",
+      "type": "file",
+      "name": "tools.rs",
+      "filePath": "crates/oxiguitar-cli/src/tools.rs",
+      "summary": "Source file tools.rs in the oxiguitar-cli crate, providing cli-tool and command-line functionality.",
+      "tags": [
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/tools.rs:list",
+      "type": "function",
+      "name": "list",
+      "filePath": "crates/oxiguitar-cli/src/tools.rs",
+      "summary": "Lists available items such as plugins, devices, or tools.",
+      "tags": [
+        "list",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "type": "file",
+      "name": "cli.rs",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Integration tests for the oxiguitar-cli CLI, verifying command-line behavior and edge cases.",
+      "tags": [
+        "cli-tool",
+        "command-line",
+        "test",
+        "integration-test"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:home",
+      "type": "function",
+      "name": "home",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `home` in cli.rs.",
+      "tags": [
+        "home",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:info_prints_the_structure_of_a_gp5_file",
+      "type": "function",
+      "name": "info_prints_the_structure_of_a_gp5_file",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `info_prints_the_structure_of_a_gp5_file` in cli.rs.",
+      "tags": [
+        "info_prints_the_structure_of_a_gp5_file",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:info_reads_gp7_and_gpx_files",
+      "type": "function",
+      "name": "info_reads_gp7_and_gpx_files",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `info_reads_gp7_and_gpx_files` in cli.rs.",
+      "tags": [
+        "info_reads_gp7_and_gpx_files",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:unreadable_files_fail_with_a_message",
+      "type": "function",
+      "name": "unreadable_files_fail_with_a_message",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `unreadable_files_fail_with_a_message` in cli.rs.",
+      "tags": [
+        "unreadable_files_fail_with_a_message",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:detect_reports_misleading_extensions",
+      "type": "function",
+      "name": "detect_reports_misleading_extensions",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `detect_reports_misleading_extensions` in cli.rs.",
+      "tags": [
+        "detect_reports_misleading_extensions",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:without_plugins_nothing_opens",
+      "type": "function",
+      "name": "without_plugins_nothing_opens",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `without_plugins_nothing_opens` in cli.rs.",
+      "tags": [
+        "without_plugins_nothing_opens",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:convert_writes_a_gp_file_and_names_its_losses",
+      "type": "function",
+      "name": "convert_writes_a_gp_file_and_names_its_losses",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `convert_writes_a_gp_file_and_names_its_losses` in cli.rs.",
+      "tags": [
+        "convert_writes_a_gp_file_and_names_its_losses",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:specimen_writes_a_png_and_a_pdf",
+      "type": "function",
+      "name": "specimen_writes_a_png_and_a_pdf",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `specimen_writes_a_png_and_a_pdf` in cli.rs.",
+      "tags": [
+        "specimen_writes_a_png_and_a_pdf",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:render_engraves_pages_and_a_pdf",
+      "type": "function",
+      "name": "render_engraves_pages_and_a_pdf",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `render_engraves_pages_and_a_pdf` in cli.rs.",
+      "tags": [
+        "render_engraves_pages_and_a_pdf",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:render_rejects_bad_usage",
+      "type": "function",
+      "name": "render_rejects_bad_usage",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `render_rejects_bad_usage` in cli.rs.",
+      "tags": [
+        "render_rejects_bad_usage",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:events_prints_the_score_as_it_plays",
+      "type": "function",
+      "name": "events_prints_the_score_as_it_plays",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `events_prints_the_score_as_it_plays` in cli.rs.",
+      "tags": [
+        "events_prints_the_score_as_it_plays",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:sound_home",
+      "type": "function",
+      "name": "sound_home",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `sound_home` in cli.rs.",
+      "tags": [
+        "sound_home",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/tests/cli.rs:play_into_a_wav_file_needs_no_sound_card",
+      "type": "function",
+      "name": "play_into_a_wav_file_needs_no_sound_card",
+      "filePath": "crates/oxiguitar-cli/tests/cli.rs",
+      "summary": "Function `play_into_a_wav_file_needs_no_sound_card` in cli.rs.",
+      "tags": [
+        "play_into_a_wav_file_needs_no_sound_card",
+        "function",
+        "cli-tool",
+        "command-line"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:crates/oxiguitar-display/Cargo.toml",
+      "type": "config",
+      "name": "Cargo.toml",
+      "filePath": "crates/oxiguitar-display/Cargo.toml",
+      "summary": "Configuration file for the oxiguitar-display crate, defining dependencies, features, and build settings.",
+      "tags": [
+        "build-config",
+        "rust-crate",
+        "dependency-management"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-display/src/lib.rs",
+      "type": "file",
+      "name": "lib.rs",
+      "filePath": "crates/oxiguitar-display/src/lib.rs",
+      "summary": "Crate library root for oxiguitar-display, re-exporting public API and organizing module structure.",
+      "tags": [
+        "barrel",
+        "crate-interface",
+        "module-organization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-display/src/fonts.rs",
+      "type": "file",
+      "name": "fonts.rs",
+      "filePath": "crates/oxiguitar-display/src/fonts.rs",
+      "summary": "Source file fonts.rs in the oxiguitar-display crate, providing display and rendering functionality.",
+      "tags": [
+        "display",
+        "rendering",
+        "playback",
+        "audio",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/fonts.rs:add",
+      "type": "function",
+      "name": "add",
+      "filePath": "crates/oxiguitar-display/src/fonts.rs",
+      "summary": "Function `add` in fonts.rs.",
+      "tags": [
+        "add",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/fonts.rs:place_text",
+      "type": "function",
+      "name": "place_text",
+      "filePath": "crates/oxiguitar-display/src/fonts.rs",
+      "summary": "Function `place_text` in fonts.rs.",
+      "tags": [
+        "place_text",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/fonts.rs:text_run",
+      "type": "function",
+      "name": "text_run",
+      "filePath": "crates/oxiguitar-display/src/fonts.rs",
+      "summary": "Function `text_run` in fonts.rs.",
+      "tags": [
+        "text_run",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/fonts.rs:symbol",
+      "type": "function",
+      "name": "symbol",
+      "filePath": "crates/oxiguitar-display/src/fonts.rs",
+      "summary": "Function `symbol` in fonts.rs.",
+      "tags": [
+        "symbol",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/fonts.rs:FontData",
+      "type": "struct",
+      "name": "FontData",
+      "filePath": "crates/oxiguitar-display/src/fonts.rs",
+      "summary": "Data structure `FontData` in fonts.rs.",
+      "tags": [
+        "fontdata",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-display/src/fonts.rs:FontError",
+      "type": "enum",
+      "name": "FontError",
+      "filePath": "crates/oxiguitar-display/src/fonts.rs",
+      "summary": "Data structure `FontError` in fonts.rs.",
+      "tags": [
+        "fonterror",
+        "enum",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-display/src/list.rs",
+      "type": "file",
+      "name": "list.rs",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "Source file list.rs in the oxiguitar-display crate, providing display and rendering functionality.",
+      "tags": [
+        "display",
+        "rendering",
+        "playback",
+        "audio",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/list.rs:bounds",
+      "type": "function",
+      "name": "bounds",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "Function `bounds` in list.rs.",
+      "tags": [
+        "bounds",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/list.rs:offset",
+      "type": "function",
+      "name": "offset",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "Function `offset` in list.rs.",
+      "tags": [
+        "offset",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/list.rs:mute_from",
+      "type": "function",
+      "name": "mute_from",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "Function `mute_from` in list.rs.",
+      "tags": [
+        "mute_from",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/list.rs:Point",
+      "type": "struct",
+      "name": "Point",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "A 2D point coordinate in display space, with x and y values in points.",
+      "tags": [
+        "point",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/list.rs:Rect",
+      "type": "struct",
+      "name": "Rect",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "An axis-aligned rectangle defined by position and dimensions in display space.",
+      "tags": [
+        "rect",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-display/src/list.rs:Paint",
+      "type": "enum",
+      "name": "Paint",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "A color role abstraction for display rendering, supporting light and dark themes.",
+      "tags": [
+        "paint",
+        "enum",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/list.rs:Rgba",
+      "type": "struct",
+      "name": "Rgba",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "An RGBA color value with red, green, blue, and alpha components.",
+      "tags": [
+        "rgba",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/list.rs:Theme",
+      "type": "struct",
+      "name": "Theme",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "A color theme that maps paint roles to actual colors for light or dark display modes.",
+      "tags": [
+        "theme",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/list.rs:PlacedGlyph",
+      "type": "struct",
+      "name": "PlacedGlyph",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "A glyph positioned on the page with its location, font, and size.",
+      "tags": [
+        "placedglyph",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/list.rs:GlyphRun",
+      "type": "struct",
+      "name": "GlyphRun",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "A sequence of consecutive glyphs sharing the same font and style.",
+      "tags": [
+        "glyphrun",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-display/src/list.rs:PathCmd",
+      "type": "enum",
+      "name": "PathCmd",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "A drawing command in the display path: move, line, curve, or close.",
+      "tags": [
+        "pathcmd",
+        "enum",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-display/src/list.rs:Item",
+      "type": "enum",
+      "name": "Item",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "A display list item: a glyph run, a path, or a nested display list.",
+      "tags": [
+        "item",
+        "enum",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/list.rs:DisplayList",
+      "type": "struct",
+      "name": "DisplayList",
+      "filePath": "crates/oxiguitar-display/src/list.rs",
+      "summary": "A collection of display items (glyph runs, paths, nested lists) for rendering.",
+      "tags": [
+        "displaylist",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-display/src/smufl.rs",
+      "type": "file",
+      "name": "smufl.rs",
+      "filePath": "crates/oxiguitar-display/src/smufl.rs",
+      "summary": "Source file smufl.rs in the oxiguitar-display crate, providing display and rendering functionality.",
+      "tags": [
+        "display",
+        "rendering",
+        "playback",
+        "audio",
+        "data-structures"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/smufl.rs:EngravingDefaults",
+      "type": "struct",
+      "name": "EngravingDefaults",
+      "filePath": "crates/oxiguitar-display/src/smufl.rs",
+      "summary": "Data structure `EngravingDefaults` in smufl.rs.",
+      "tags": [
+        "engravingdefaults",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/smufl.rs:BBox",
+      "type": "struct",
+      "name": "BBox",
+      "filePath": "crates/oxiguitar-display/src/smufl.rs",
+      "summary": "Data structure `BBox` in smufl.rs.",
+      "tags": [
+        "bbox",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/smufl.rs:Metadata",
+      "type": "struct",
+      "name": "Metadata",
+      "filePath": "crates/oxiguitar-display/src/smufl.rs",
+      "summary": "Data structure `Metadata` in smufl.rs.",
+      "tags": [
+        "metadata",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-display/src/specimen.rs",
+      "type": "file",
+      "name": "specimen.rs",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Source file specimen.rs in the oxiguitar-display crate, providing display and rendering functionality.",
+      "tags": [
+        "display",
+        "rendering",
+        "playback",
+        "audio",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/specimen.rs:final_barline",
+      "type": "function",
+      "name": "final_barline",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Function `final_barline` in specimen.rs.",
+      "tags": [
+        "final_barline",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/specimen.rs:ledgers",
+      "type": "function",
+      "name": "ledgers",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Function `ledgers` in specimen.rs.",
+      "tags": [
+        "ledgers",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/specimen.rs:stem",
+      "type": "function",
+      "name": "stem",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Function `stem` in specimen.rs.",
+      "tags": [
+        "stem",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/specimen.rs:beam",
+      "type": "function",
+      "name": "beam",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Function `beam` in specimen.rs.",
+      "tags": [
+        "beam",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/specimen.rs:slur",
+      "type": "function",
+      "name": "slur",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Function `slur` in specimen.rs.",
+      "tags": [
+        "slur",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/specimen.rs:fret",
+      "type": "function",
+      "name": "fret",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Function `fret` in specimen.rs.",
+      "tags": [
+        "fret",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/specimen.rs:guitar_excerpt",
+      "type": "function",
+      "name": "guitar_excerpt",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Function `guitar_excerpt` in specimen.rs.",
+      "tags": [
+        "guitar_excerpt",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/specimen.rs:Staff",
+      "type": "struct",
+      "name": "Staff",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Data structure `Staff` in specimen.rs.",
+      "tags": [
+        "staff",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/specimen.rs:Tab",
+      "type": "struct",
+      "name": "Tab",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Data structure `Tab` in specimen.rs.",
+      "tags": [
+        "tab",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/specimen.rs:Builder",
+      "type": "struct",
+      "name": "Builder",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Data structure `Builder` in specimen.rs.",
+      "tags": [
+        "builder",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-display/src/specimen.rs:Note",
+      "type": "struct",
+      "name": "Note",
+      "filePath": "crates/oxiguitar-display/src/specimen.rs",
+      "summary": "Data structure `Note` in specimen.rs.",
+      "tags": [
+        "note",
+        "struct",
+        "display",
+        "rendering"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-display/src/wire.rs",
+      "type": "file",
+      "name": "wire.rs",
+      "filePath": "crates/oxiguitar-display/src/wire.rs",
+      "summary": "Source file wire.rs in the oxiguitar-display crate, providing display and rendering functionality.",
+      "tags": [
+        "display",
+        "rendering",
+        "playback",
+        "audio"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-display/src/wire.rs:item",
+      "type": "function",
+      "name": "item",
+      "filePath": "crates/oxiguitar-display/src/wire.rs",
+      "summary": "Function `item` in wire.rs.",
+      "tags": [
+        "item",
+        "function",
+        "display",
+        "rendering"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:crates/oxiguitar-edit/Cargo.toml",
+      "type": "config",
+      "name": "Cargo.toml",
+      "filePath": "crates/oxiguitar-edit/Cargo.toml",
+      "summary": "Configuration file for the oxiguitar-edit crate, defining dependencies, features, and build settings.",
+      "tags": [
+        "build-config",
+        "rust-crate",
+        "dependency-management"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-edit/src/bars.rs",
+      "type": "file",
+      "name": "bars.rs",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Source file bars.rs in the oxiguitar-edit crate, providing editor and editing functionality.",
+      "tags": [
+        "editor",
+        "editing",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:apply",
+      "type": "function",
+      "name": "apply",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `apply` in bars.rs.",
+      "tags": [
+        "apply",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:master",
+      "type": "function",
+      "name": "master",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `master` in bars.rs.",
+      "tags": [
+        "master",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:rescale_tempo",
+      "type": "function",
+      "name": "rescale_tempo",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `rescale_tempo` in bars.rs.",
+      "tags": [
+        "rescale_tempo",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:until_changed",
+      "type": "function",
+      "name": "until_changed",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `until_changed` in bars.rs.",
+      "tags": [
+        "until_changed",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:insert",
+      "type": "function",
+      "name": "insert",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `insert` in bars.rs.",
+      "tags": [
+        "insert",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:delete",
+      "type": "function",
+      "name": "delete",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `delete` in bars.rs.",
+      "tags": [
+        "delete",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:clef_from",
+      "type": "function",
+      "name": "clef_from",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `clef_from` in bars.rs.",
+      "tags": [
+        "clef_from",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:tempo",
+      "type": "function",
+      "name": "tempo",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `tempo` in bars.rs.",
+      "tags": [
+        "tempo",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:properties",
+      "type": "function",
+      "name": "properties",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `properties` in bars.rs.",
+      "tags": [
+        "properties",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/bars.rs:at",
+      "type": "function",
+      "name": "at",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Function `at` in bars.rs.",
+      "tags": [
+        "at",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/bars.rs:BarState",
+      "type": "struct",
+      "name": "BarState",
+      "filePath": "crates/oxiguitar-edit/src/bars.rs",
+      "summary": "Tracks the state of a single bar during editing, including its contents and modifications.",
+      "tags": [
+        "barstate",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-edit/src/caret.rs",
+      "type": "file",
+      "name": "caret.rs",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Source file caret.rs in the oxiguitar-edit crate, providing editor and editing functionality.",
+      "tags": [
+        "editor",
+        "editing",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:onsets",
+      "type": "function",
+      "name": "onsets",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `onsets` in caret.rs.",
+      "tags": [
+        "onsets",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:beat_at",
+      "type": "function",
+      "name": "beat_at",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `beat_at` in caret.rs.",
+      "tags": [
+        "beat_at",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:at_start",
+      "type": "function",
+      "name": "at_start",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `at_start` in caret.rs.",
+      "tags": [
+        "at_start",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:voice_in",
+      "type": "function",
+      "name": "voice_in",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `voice_in` in caret.rs.",
+      "tags": [
+        "voice_in",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:room_after",
+      "type": "function",
+      "name": "room_after",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `room_after` in caret.rs.",
+      "tags": [
+        "room_after",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:clamp",
+      "type": "function",
+      "name": "clamp",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `clamp` in caret.rs.",
+      "tags": [
+        "clamp",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:next_beat",
+      "type": "function",
+      "name": "next_beat",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `next_beat` in caret.rs.",
+      "tags": [
+        "next_beat",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:prev_beat",
+      "type": "function",
+      "name": "prev_beat",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `prev_beat` in caret.rs.",
+      "tags": [
+        "prev_beat",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:with_voice",
+      "type": "function",
+      "name": "with_voice",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `with_voice` in caret.rs.",
+      "tags": [
+        "with_voice",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:to_staff",
+      "type": "function",
+      "name": "to_staff",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `to_staff` in caret.rs.",
+      "tags": [
+        "to_staff",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/caret.rs:prev_staff",
+      "type": "function",
+      "name": "prev_staff",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Function `prev_staff` in caret.rs.",
+      "tags": [
+        "prev_staff",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/caret.rs:StaffBar",
+      "type": "struct",
+      "name": "StaffBar",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Represents a bar on a staff in the editor, managing notes, rests, and bar properties.",
+      "tags": [
+        "staffbar",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/caret.rs:Caret",
+      "type": "struct",
+      "name": "Caret",
+      "filePath": "crates/oxiguitar-edit/src/caret.rs",
+      "summary": "Manages the cursor position and selection state in the editor.",
+      "tags": [
+        "caret",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-edit/src/check.rs",
+      "type": "file",
+      "name": "check.rs",
+      "filePath": "crates/oxiguitar-edit/src/check.rs",
+      "summary": "Source file check.rs in the oxiguitar-edit crate, providing editor and editing functionality.",
+      "tags": [
+        "editor",
+        "editing",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/check.rs:adds_up",
+      "type": "function",
+      "name": "adds_up",
+      "filePath": "crates/oxiguitar-edit/src/check.rs",
+      "summary": "Function `adds_up` in check.rs.",
+      "tags": [
+        "adds_up",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/check.rs:of",
+      "type": "function",
+      "name": "of",
+      "filePath": "crates/oxiguitar-edit/src/check.rs",
+      "summary": "Function `of` in check.rs.",
+      "tags": [
+        "of",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/check.rs:update",
+      "type": "function",
+      "name": "update",
+      "filePath": "crates/oxiguitar-edit/src/check.rs",
+      "summary": "Function `update` in check.rs.",
+      "tags": [
+        "update",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-edit/src/clip.rs",
+      "type": "file",
+      "name": "clip.rs",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Source file clip.rs in the oxiguitar-edit crate, providing editor and editing functionality.",
+      "tags": [
+        "editor",
+        "editing",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/clip.rs:copy",
+      "type": "function",
+      "name": "copy",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Function `copy` in clip.rs.",
+      "tags": [
+        "copy",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/clip.rs:apply",
+      "type": "function",
+      "name": "apply",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Function `apply` in clip.rs.",
+      "tags": [
+        "apply",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/clip.rs:fit",
+      "type": "function",
+      "name": "fit",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Function `fit` in clip.rs.",
+      "tags": [
+        "fit",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/clip.rs:map_chords",
+      "type": "function",
+      "name": "map_chords",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Function `map_chords` in clip.rs.",
+      "tags": [
+        "map_chords",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/clip.rs:paste_beats",
+      "type": "function",
+      "name": "paste_beats",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Function `paste_beats` in clip.rs.",
+      "tags": [
+        "paste_beats",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/clip.rs:paste_bars",
+      "type": "function",
+      "name": "paste_bars",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Function `paste_bars` in clip.rs.",
+      "tags": [
+        "paste_bars",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/clip.rs:Clip",
+      "type": "enum",
+      "name": "Clip",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Represents a clipboard item containing selected musical content.",
+      "tags": [
+        "clip",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/clip.rs:ClipTrack",
+      "type": "struct",
+      "name": "ClipTrack",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Represents a single track within a clipboard clip.",
+      "tags": [
+        "cliptrack",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/clip.rs:Paste",
+      "type": "struct",
+      "name": "Paste",
+      "filePath": "crates/oxiguitar-edit/src/clip.rs",
+      "summary": "Manages the paste operation, including position and target track.",
+      "tags": [
+        "paste",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-edit/src/effects.rs",
+      "type": "file",
+      "name": "effects.rs",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Source file effects.rs in the oxiguitar-edit crate, providing editor and editing functionality.",
+      "tags": [
+        "editor",
+        "editing",
+        "command-handler",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:of",
+      "type": "function",
+      "name": "of",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `of` in effects.rs.",
+      "tags": [
+        "of",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:on_notes",
+      "type": "function",
+      "name": "on_notes",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `on_notes` in effects.rs.",
+      "tags": [
+        "on_notes",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:needs_strings",
+      "type": "function",
+      "name": "needs_strings",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `needs_strings` in effects.rs.",
+      "tags": [
+        "needs_strings",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:label",
+      "type": "function",
+      "name": "label",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `label` in effects.rs.",
+      "tags": [
+        "label",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:on_note",
+      "type": "function",
+      "name": "on_note",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `on_note` in effects.rs.",
+      "tags": [
+        "on_note",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:on_beat",
+      "type": "function",
+      "name": "on_beat",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `on_beat` in effects.rs.",
+      "tags": [
+        "on_beat",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:apply",
+      "type": "function",
+      "name": "apply",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `apply` in effects.rs.",
+      "tags": [
+        "apply",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:selected",
+      "type": "function",
+      "name": "selected",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `selected` in effects.rs.",
+      "tags": [
+        "selected",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Executes the effects command, parsing arguments and orchestrating the core operation.",
+      "tags": [
+        "run",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:each_beat",
+      "type": "function",
+      "name": "each_beat",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `each_beat` in effects.rs.",
+      "tags": [
+        "each_beat",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:set_notes",
+      "type": "function",
+      "name": "set_notes",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `set_notes` in effects.rs.",
+      "tags": [
+        "set_notes",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:toggle",
+      "type": "function",
+      "name": "toggle",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `toggle` in effects.rs.",
+      "tags": [
+        "toggle",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:set_note",
+      "type": "function",
+      "name": "set_note",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `set_note` in effects.rs.",
+      "tags": [
+        "set_note",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:set_beat",
+      "type": "function",
+      "name": "set_beat",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `set_beat` in effects.rs.",
+      "tags": [
+        "set_beat",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:note_change",
+      "type": "function",
+      "name": "note_change",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `note_change` in effects.rs.",
+      "tags": [
+        "note_change",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:beat_change",
+      "type": "function",
+      "name": "beat_change",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `beat_change` in effects.rs.",
+      "tags": [
+        "beat_change",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/effects.rs:dynamic",
+      "type": "function",
+      "name": "dynamic",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Function `dynamic` in effects.rs.",
+      "tags": [
+        "dynamic",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/effects.rs:HarmonicKind",
+      "type": "enum",
+      "name": "HarmonicKind",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Categorizes the type of harmonic effect to apply to a note.",
+      "tags": [
+        "harmonickind",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/effects.rs:Effect",
+      "type": "enum",
+      "name": "Effect",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Represents a musical effect or transformation that can be applied to notes.",
+      "tags": [
+        "effect",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/effects.rs:NoteChange",
+      "type": "enum",
+      "name": "NoteChange",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Tracks changes made to individual notes during editing.",
+      "tags": [
+        "notechange",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/effects.rs:BeatChange",
+      "type": "enum",
+      "name": "BeatChange",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Tracks changes made to beat-level properties during editing.",
+      "tags": [
+        "beatchange",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/effects.rs:Edit",
+      "type": "enum",
+      "name": "Edit",
+      "filePath": "crates/oxiguitar-edit/src/effects.rs",
+      "summary": "Represents an edit operation that modifies the score structure.",
+      "tags": [
+        "edit",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-edit/src/entry.rs",
+      "type": "file",
+      "name": "entry.rs",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Source file entry.rs in the oxiguitar-edit crate, providing editor and editing functionality.",
+      "tags": [
+        "editor",
+        "editing",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:label",
+      "type": "function",
+      "name": "label",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `label` in entry.rs.",
+      "tags": [
+        "label",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:apply",
+      "type": "function",
+      "name": "apply",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `apply` in entry.rs.",
+      "tags": [
+        "apply",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:follow_ties",
+      "type": "function",
+      "name": "follow_ties",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `follow_ties` in entry.rs.",
+      "tags": [
+        "follow_ties",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:remember",
+      "type": "function",
+      "name": "remember",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `remember` in entry.rs.",
+      "tags": [
+        "remember",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:played",
+      "type": "function",
+      "name": "played",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `played` in entry.rs.",
+      "tags": [
+        "played",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:new_score",
+      "type": "function",
+      "name": "new_score",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `new_score` in entry.rs.",
+      "tags": [
+        "new_score",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:append_bar",
+      "type": "function",
+      "name": "append_bar",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `append_bar` in entry.rs.",
+      "tags": [
+        "append_bar",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:tidy",
+      "type": "function",
+      "name": "tidy",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `tidy` in entry.rs.",
+      "tags": [
+        "tidy",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:plan",
+      "type": "function",
+      "name": "plan",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `plan` in entry.rs.",
+      "tags": [
+        "plan",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:beat_at_caret",
+      "type": "function",
+      "name": "beat_at_caret",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `beat_at_caret` in entry.rs.",
+      "tags": [
+        "beat_at_caret",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:duration_before",
+      "type": "function",
+      "name": "duration_before",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `duration_before` in entry.rs.",
+      "tags": [
+        "duration_before",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:tuplet_open",
+      "type": "function",
+      "name": "tuplet_open",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `tuplet_open` in entry.rs.",
+      "tags": [
+        "tuplet_open",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:set_note",
+      "type": "function",
+      "name": "set_note",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `set_note` in entry.rs.",
+      "tags": [
+        "set_note",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:note_before",
+      "type": "function",
+      "name": "note_before",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `note_before` in entry.rs.",
+      "tags": [
+        "note_before",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:rests_for",
+      "type": "function",
+      "name": "rests_for",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `rests_for` in entry.rs.",
+      "tags": [
+        "rests_for",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:dynamic_at",
+      "type": "function",
+      "name": "dynamic_at",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `dynamic_at` in entry.rs.",
+      "tags": [
+        "dynamic_at",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:targets",
+      "type": "function",
+      "name": "targets",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `targets` in entry.rs.",
+      "tags": [
+        "targets",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:on_beats",
+      "type": "function",
+      "name": "on_beats",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `on_beats` in entry.rs.",
+      "tags": [
+        "on_beats",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:longer",
+      "type": "function",
+      "name": "longer",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `longer` in entry.rs.",
+      "tags": [
+        "longer",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:shorter",
+      "type": "function",
+      "name": "shorter",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `shorter` in entry.rs.",
+      "tags": [
+        "shorter",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/entry.rs:shift_semitone",
+      "type": "function",
+      "name": "shift_semitone",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Function `shift_semitone` in entry.rs.",
+      "tags": [
+        "shift_semitone",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/entry.rs:Command",
+      "type": "enum",
+      "name": "Command",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Represents an editor command that produces edits to the score.",
+      "tags": [
+        "command",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/entry.rs:Edited",
+      "type": "struct",
+      "name": "Edited",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Tracks what was edited and the resulting changes to the score.",
+      "tags": [
+        "edited",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/entry.rs:Plan",
+      "type": "struct",
+      "name": "Plan",
+      "filePath": "crates/oxiguitar-edit/src/entry.rs",
+      "summary": "Plans a sequence of edits to apply to the score.",
+      "tags": [
+        "plan",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "type": "file",
+      "name": "harmony.rs",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Source file harmony.rs in the oxiguitar-edit crate, providing editor and editing functionality.",
+      "tags": [
+        "editor",
+        "editing",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:label",
+      "type": "function",
+      "name": "label",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Function `label` in harmony.rs.",
+      "tags": [
+        "label",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:intervals",
+      "type": "function",
+      "name": "intervals",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Function `intervals` in harmony.rs.",
+      "tags": [
+        "intervals",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:weight",
+      "type": "function",
+      "name": "weight",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Function `weight` in harmony.rs.",
+      "tags": [
+        "weight",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:name",
+      "type": "function",
+      "name": "name",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Function `name` in harmony.rs.",
+      "tags": [
+        "name",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:classes",
+      "type": "function",
+      "name": "classes",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Function `classes` in harmony.rs.",
+      "tags": [
+        "classes",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:optional",
+      "type": "function",
+      "name": "optional",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Function `optional` in harmony.rs.",
+      "tags": [
+        "optional",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:parse",
+      "type": "function",
+      "name": "parse",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Parses command-line arguments into a structured configuration object.",
+      "tags": [
+        "parse",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:recognise",
+      "type": "function",
+      "name": "recognise",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Recognizes the type or format of a plugin or file.",
+      "tags": [
+        "recognise",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:voicings",
+      "type": "function",
+      "name": "voicings",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Function `voicings` in harmony.rs.",
+      "tags": [
+        "voicings",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/harmony.rs:judge",
+      "type": "function",
+      "name": "judge",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Function `judge` in harmony.rs.",
+      "tags": [
+        "judge",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/harmony.rs:Triad",
+      "type": "enum",
+      "name": "Triad",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Represents a three-note chord structure (root, third, fifth).",
+      "tags": [
+        "triad",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/harmony.rs:Extension",
+      "type": "enum",
+      "name": "Extension",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Repends a chord extension beyond the triad (7th, 9th, 11th, 13th).",
+      "tags": [
+        "extension",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/harmony.rs:Chord",
+      "type": "struct",
+      "name": "Chord",
+      "filePath": "crates/oxiguitar-edit/src/harmony.rs",
+      "summary": "Represents a full chord including triad and extensions with its harmonic analysis.",
+      "tags": [
+        "chord",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-edit/src/history.rs",
+      "type": "file",
+      "name": "history.rs",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Source file history.rs in the oxiguitar-edit crate, providing editor and editing functionality.",
+      "tags": [
+        "editor",
+        "editing",
+        "data-structures"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/history.rs:of",
+      "type": "function",
+      "name": "of",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Function `of` in history.rs.",
+      "tags": [
+        "of",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/history.rs:settings_of",
+      "type": "function",
+      "name": "settings_of",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Function `settings_of` in history.rs.",
+      "tags": [
+        "settings_of",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/history.rs:staff_settings",
+      "type": "function",
+      "name": "staff_settings",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Function `staff_settings` in history.rs.",
+      "tags": [
+        "staff_settings",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/history.rs:take",
+      "type": "function",
+      "name": "take",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Function `take` in history.rs.",
+      "tags": [
+        "take",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/history.rs:restore",
+      "type": "function",
+      "name": "restore",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Function `restore` in history.rs.",
+      "tags": [
+        "restore",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/history.rs:record",
+      "type": "function",
+      "name": "record",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Function `record` in history.rs.",
+      "tags": [
+        "record",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-edit/src/history.rs:undo",
+      "type": "function",
+      "name": "undo",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Function `undo` in history.rs.",
+      "tags": [
+        "undo",
+        "function",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/history.rs:Region",
+      "type": "enum",
+      "name": "Region",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Defines a region within the score for editing operations.",
+      "tags": [
+        "region",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/history.rs:Touched",
+      "type": "struct",
+      "name": "Touched",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Tracks which elements were modified during an editing operation.",
+      "tags": [
+        "touched",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "enum:crates/oxiguitar-edit/src/history.rs:Saved",
+      "type": "enum",
+      "name": "Saved",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Represents a saved state of the score for undo/redo functionality.",
+      "tags": [
+        "saved",
+        "enum",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/history.rs:Change",
+      "type": "struct",
+      "name": "Change",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Represents a single change made during editing that can be undone.",
+      "tags": [
+        "change",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-edit/src/history.rs:History",
+      "type": "struct",
+      "name": "History",
+      "filePath": "crates/oxiguitar-edit/src/history.rs",
+      "summary": "Manages the undo/redo history of editing operations.",
+      "tags": [
+        "history",
+        "struct",
+        "editor",
+        "editing"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:crates/oxiguitar-cli/src/events.rs",
+      "target": "function:crates/oxiguitar-cli/src/events.rs:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/events.rs",
+      "target": "function:crates/oxiguitar-cli/src/events.rs:run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:detect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:detect",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:describe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:describe",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:time_signatures",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:track_line",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:bar_length_problems",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/info.rs",
+      "target": "function:crates/oxiguitar-cli/src/info.rs:bar_table",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/main.rs",
+      "target": "function:crates/oxiguitar-cli/src/main.rs:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "function:crates/oxiguitar-cli/src/play.rs:parse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "function:crates/oxiguitar-cli/src/play.rs:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "function:crates/oxiguitar-cli/src/play.rs:run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "function:crates/oxiguitar-cli/src/play.rs:sources",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "function:crates/oxiguitar-cli/src/play.rs:play",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "function:crates/oxiguitar-cli/src/play.rs:mix",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "function:crates/oxiguitar-cli/src/play.rs:play_into",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "function:crates/oxiguitar-cli/src/play.rs:wav_file",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "struct:crates/oxiguitar-cli/src/play.rs:Asked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/play.rs",
+      "target": "struct:crates/oxiguitar-cli/src/play.rs:Ready",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "target": "function:crates/oxiguitar-cli/src/plugins.rs:plugins",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "target": "function:crates/oxiguitar-cli/src/plugins.rs:plugins",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "target": "function:crates/oxiguitar-cli/src/plugins.rs:recognise",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "target": "function:crates/oxiguitar-cli/src/plugins.rs:recognise",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "target": "function:crates/oxiguitar-cli/src/plugins.rs:open",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "target": "function:crates/oxiguitar-cli/src/plugins.rs:open",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "target": "struct:crates/oxiguitar-cli/src/plugins.rs:Opened",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/render.rs",
+      "target": "function:crates/oxiguitar-cli/src/render.rs:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/render.rs",
+      "target": "function:crates/oxiguitar-cli/src/render.rs:run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/render.rs",
+      "target": "function:crates/oxiguitar-cli/src/render.rs:png_pieces",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/specimen.rs",
+      "target": "function:crates/oxiguitar-cli/src/specimen.rs:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/specimen.rs",
+      "target": "function:crates/oxiguitar-cli/src/specimen.rs:run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/tools.rs",
+      "target": "function:crates/oxiguitar-cli/src/tools.rs:list",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/tools.rs",
+      "target": "function:crates/oxiguitar-cli/src/tools.rs:list",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:home",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:info_prints_the_structure_of_a_gp5_file",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:info_reads_gp7_and_gpx_files",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:unreadable_files_fail_with_a_message",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:detect_reports_misleading_extensions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:without_plugins_nothing_opens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:convert_writes_a_gp_file_and_names_its_losses",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:specimen_writes_a_png_and_a_pdf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:render_engraves_pages_and_a_pdf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:render_rejects_bad_usage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:events_prints_the_score_as_it_plays",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:sound_home",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "function:crates/oxiguitar-cli/tests/cli.rs:play_into_a_wav_file_needs_no_sound_card",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:crates/oxiguitar-display/Cargo.toml",
+      "target": "file:crates/oxiguitar-display/src/lib.rs",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "function:crates/oxiguitar-display/src/fonts.rs:add",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "function:crates/oxiguitar-display/src/fonts.rs:add",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "function:crates/oxiguitar-display/src/fonts.rs:place_text",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "function:crates/oxiguitar-display/src/fonts.rs:place_text",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "function:crates/oxiguitar-display/src/fonts.rs:text_run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "function:crates/oxiguitar-display/src/fonts.rs:text_run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "function:crates/oxiguitar-display/src/fonts.rs:symbol",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "function:crates/oxiguitar-display/src/fonts.rs:symbol",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "struct:crates/oxiguitar-display/src/fonts.rs:FontData",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/fonts.rs",
+      "target": "enum:crates/oxiguitar-display/src/fonts.rs:FontError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "function:crates/oxiguitar-display/src/list.rs:bounds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "function:crates/oxiguitar-display/src/list.rs:bounds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "function:crates/oxiguitar-display/src/list.rs:offset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "function:crates/oxiguitar-display/src/list.rs:offset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "function:crates/oxiguitar-display/src/list.rs:bounds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "function:crates/oxiguitar-display/src/list.rs:bounds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "function:crates/oxiguitar-display/src/list.rs:mute_from",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "function:crates/oxiguitar-display/src/list.rs:mute_from",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "struct:crates/oxiguitar-display/src/list.rs:Point",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "struct:crates/oxiguitar-display/src/list.rs:Rect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "enum:crates/oxiguitar-display/src/list.rs:Paint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "struct:crates/oxiguitar-display/src/list.rs:Rgba",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "struct:crates/oxiguitar-display/src/list.rs:Theme",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "struct:crates/oxiguitar-display/src/list.rs:PlacedGlyph",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "struct:crates/oxiguitar-display/src/list.rs:GlyphRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "enum:crates/oxiguitar-display/src/list.rs:PathCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "enum:crates/oxiguitar-display/src/list.rs:Item",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/list.rs",
+      "target": "struct:crates/oxiguitar-display/src/list.rs:DisplayList",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/smufl.rs",
+      "target": "struct:crates/oxiguitar-display/src/smufl.rs:EngravingDefaults",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/smufl.rs",
+      "target": "struct:crates/oxiguitar-display/src/smufl.rs:BBox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/smufl.rs",
+      "target": "struct:crates/oxiguitar-display/src/smufl.rs:Metadata",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "function:crates/oxiguitar-display/src/specimen.rs:final_barline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "function:crates/oxiguitar-display/src/specimen.rs:ledgers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "function:crates/oxiguitar-display/src/specimen.rs:stem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "function:crates/oxiguitar-display/src/specimen.rs:beam",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "function:crates/oxiguitar-display/src/specimen.rs:slur",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "function:crates/oxiguitar-display/src/specimen.rs:fret",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "function:crates/oxiguitar-display/src/specimen.rs:guitar_excerpt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "function:crates/oxiguitar-display/src/specimen.rs:guitar_excerpt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "struct:crates/oxiguitar-display/src/specimen.rs:Staff",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "struct:crates/oxiguitar-display/src/specimen.rs:Tab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "struct:crates/oxiguitar-display/src/specimen.rs:Builder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/specimen.rs",
+      "target": "struct:crates/oxiguitar-display/src/specimen.rs:Note",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-display/src/wire.rs",
+      "target": "function:crates/oxiguitar-display/src/wire.rs:item",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:apply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:apply",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:master",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:rescale_tempo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:until_changed",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:insert",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:delete",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:clef_from",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:tempo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:properties",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:at",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "function:crates/oxiguitar-edit/src/bars.rs:at",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/bars.rs",
+      "target": "struct:crates/oxiguitar-edit/src/bars.rs:BarState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:onsets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:onsets",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:beat_at",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:beat_at",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:at_start",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:at_start",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:voice_in",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:voice_in",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:room_after",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:clamp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:clamp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:next_beat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:next_beat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:prev_beat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:prev_beat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:with_voice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:with_voice",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:to_staff",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:to_staff",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:prev_staff",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "function:crates/oxiguitar-edit/src/caret.rs:prev_staff",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "struct:crates/oxiguitar-edit/src/caret.rs:StaffBar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/caret.rs",
+      "target": "struct:crates/oxiguitar-edit/src/caret.rs:Caret",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/check.rs",
+      "target": "function:crates/oxiguitar-edit/src/check.rs:adds_up",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/check.rs",
+      "target": "function:crates/oxiguitar-edit/src/check.rs:adds_up",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/check.rs",
+      "target": "function:crates/oxiguitar-edit/src/check.rs:of",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/check.rs",
+      "target": "function:crates/oxiguitar-edit/src/check.rs:of",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/check.rs",
+      "target": "function:crates/oxiguitar-edit/src/check.rs:update",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/check.rs",
+      "target": "function:crates/oxiguitar-edit/src/check.rs:update",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "function:crates/oxiguitar-edit/src/clip.rs:copy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "function:crates/oxiguitar-edit/src/clip.rs:copy",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "function:crates/oxiguitar-edit/src/clip.rs:apply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "function:crates/oxiguitar-edit/src/clip.rs:apply",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "function:crates/oxiguitar-edit/src/clip.rs:fit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "function:crates/oxiguitar-edit/src/clip.rs:map_chords",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "function:crates/oxiguitar-edit/src/clip.rs:paste_beats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "function:crates/oxiguitar-edit/src/clip.rs:paste_bars",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "enum:crates/oxiguitar-edit/src/clip.rs:Clip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "struct:crates/oxiguitar-edit/src/clip.rs:ClipTrack",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/clip.rs",
+      "target": "struct:crates/oxiguitar-edit/src/clip.rs:Paste",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:of",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:of",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:on_notes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:needs_strings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:label",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:label",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:on_note",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:on_note",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:on_beat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:on_beat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:apply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:apply",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:selected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:each_beat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:set_notes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:toggle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:set_note",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:set_beat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:note_change",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:beat_change",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "function:crates/oxiguitar-edit/src/effects.rs:dynamic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "enum:crates/oxiguitar-edit/src/effects.rs:HarmonicKind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "enum:crates/oxiguitar-edit/src/effects.rs:Effect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "enum:crates/oxiguitar-edit/src/effects.rs:NoteChange",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "enum:crates/oxiguitar-edit/src/effects.rs:BeatChange",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/effects.rs",
+      "target": "enum:crates/oxiguitar-edit/src/effects.rs:Edit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:label",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:label",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:apply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:apply",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:follow_ties",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:remember",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:played",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:new_score",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:new_score",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:append_bar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:tidy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:tidy",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:plan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:beat_at_caret",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:beat_at_caret",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:duration_before",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:tuplet_open",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:set_note",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:note_before",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:rests_for",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:rests_for",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:dynamic_at",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:dynamic_at",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:targets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:targets",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:on_beats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:longer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:shorter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "function:crates/oxiguitar-edit/src/entry.rs:shift_semitone",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "enum:crates/oxiguitar-edit/src/entry.rs:Command",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "struct:crates/oxiguitar-edit/src/entry.rs:Edited",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/entry.rs",
+      "target": "struct:crates/oxiguitar-edit/src/entry.rs:Plan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:label",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:label",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:intervals",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:label",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:label",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:weight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:name",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:name",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:intervals",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:classes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:classes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:optional",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:weight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:parse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:parse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:recognise",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:recognise",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:voicings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:voicings",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "function:crates/oxiguitar-edit/src/harmony.rs:judge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "enum:crates/oxiguitar-edit/src/harmony.rs:Triad",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "enum:crates/oxiguitar-edit/src/harmony.rs:Extension",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/harmony.rs",
+      "target": "struct:crates/oxiguitar-edit/src/harmony.rs:Chord",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:of",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:settings_of",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:staff_settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:take",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:restore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:record",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:record",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:undo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "function:crates/oxiguitar-edit/src/history.rs:undo",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "enum:crates/oxiguitar-edit/src/history.rs:Region",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "struct:crates/oxiguitar-edit/src/history.rs:Touched",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "enum:crates/oxiguitar-edit/src/history.rs:Saved",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "struct:crates/oxiguitar-edit/src/history.rs:Change",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-edit/src/history.rs",
+      "target": "struct:crates/oxiguitar-edit/src/history.rs:History",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "file:crates/oxiguitar-cli/src/events.rs",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "file:crates/oxiguitar-cli/src/info.rs",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "file:crates/oxiguitar-cli/src/main.rs",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "file:crates/oxiguitar-cli/src/play.rs",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "file:crates/oxiguitar-cli/src/plugins.rs",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "file:crates/oxiguitar-cli/src/render.rs",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "file:crates/oxiguitar-cli/src/specimen.rs",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/tests/cli.rs",
+      "target": "file:crates/oxiguitar-cli/src/tools.rs",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

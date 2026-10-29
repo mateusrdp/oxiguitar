@@ -1,0 +1,75 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 1,
+  "filesSkipped": [
+    "fixtures/guitar-pro-7.6/drop-d-and-capo.gpif",
+    "fixtures/guitar-pro-7.6/effects-together.gpif",
+    "fixtures/guitar-pro-7.6/four-voices.gpif",
+    "fixtures/guitar-pro-7.6/header-and-credits.gpif",
+    "fixtures/guitar-pro-7.6/nylon-guitar-default.gp",
+    "fixtures/guitar-pro-7.6/pianos-high-low.gp",
+    "fixtures/guitar-pro-7.6/repeats-and-endings.gpif",
+    "fixtures/guitar-pro-7.6/sections-and-directions.gpif",
+    "fixtures/guitar-pro-7.6/tempo-changes.gpif",
+    "fixtures/guitar-pro-7.6/unusual-tuplets.gpif",
+    "fixtures/guitar-pro-check/articulations.gp",
+    "fixtures/guitar-pro-check/articulations.gp5",
+    "fixtures/guitar-pro-check/bass.gp",
+    "fixtures/guitar-pro-check/bass.gp5",
+    "fixtures/guitar-pro-check/beams-and-flags.gp",
+    "fixtures/guitar-pro-check/beams-and-flags.gp5",
+    "fixtures/guitar-pro-check/beat-text.gp",
+    "fixtures/guitar-pro-check/beat-text.gp5",
+    "fixtures/guitar-pro-check/bends.gp",
+    "fixtures/guitar-pro-check/bends.gp5",
+    "fixtures/guitar-pro-check/chord-names.gp",
+    "fixtures/guitar-pro-check/chord-names.gp5",
+    "fixtures/guitar-pro-check/chords-and-accidentals.gp",
+    "fixtures/guitar-pro-check/chords-and-accidentals.gp5"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 1,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 1
+    }
+  },
+  "results": [
+    {
+      "path": "fixtures/guitar-pro-check/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 15,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "Files for checking the .gp and .gp5 writers",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Checks so far",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Known differences that aren't ours",
+          "level": 2,
+          "line": 13
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    }
+  ]
+}

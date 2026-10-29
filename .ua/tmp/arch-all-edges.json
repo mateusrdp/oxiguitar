@@ -1,0 +1,3091 @@
+[
+  {
+    "source": "file:.github/workflows/ci.yml",
+    "target": "file:.github/workflows/builds.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/ci.yml",
+    "target": "file:.github/workflows/release.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/ci.yml",
+    "target": "file:.github/workflows/debian.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/ci.yml",
+    "target": "file:.github/workflows/fuzz.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/ci.yml",
+    "target": "file:.github/workflows/interop.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/ci.yml",
+    "target": "file:.github/workflows/spikes.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/builds.yml",
+    "target": "file:.github/workflows/release.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/builds.yml",
+    "target": "file:.github/workflows/spikes.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/release.yml",
+    "target": "file:.github/workflows/debian.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/release.yml",
+    "target": "file:.github/workflows/listening.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/fuzz.yml",
+    "target": "file:.github/workflows/interop.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/listening.yml",
+    "target": "file:.github/workflows/spikes.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:.github/workflows/docs.yml",
+    "target": "file:.github/workflows/ci.yml",
+    "type": "related"
+  },
+  {
+    "source": "file:Cargo.toml",
+    "target": "file:clippy.toml"
+  },
+  {
+    "source": "file:Cargo.toml",
+    "target": "file:deny.toml"
+  },
+  {
+    "source": "file:Cargo.toml",
+    "target": "file:rustfmt.toml"
+  },
+  {
+    "source": "file:Cargo.toml",
+    "target": "file:about.toml"
+  },
+  {
+    "source": "file:about.toml",
+    "target": "file:deny.toml"
+  },
+  {
+    "source": "file:clippy.toml",
+    "target": "file:Cargo.toml"
+  },
+  {
+    "source": "file:rustfmt.toml",
+    "target": "file:Cargo.toml"
+  },
+  {
+    "source": "file:deny.toml",
+    "target": "file:about.toml"
+  },
+  {
+    "source": "file:deny.toml",
+    "target": "file:Cargo.toml"
+  },
+  {
+    "source": "document:docs/formats/README.md",
+    "target": "document:docs/formats/guitar-pro-3-5.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/formats/README.md",
+    "target": "document:docs/formats/guitar-pro-6-8.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/formats/README.md",
+    "target": "document:docs/formats/guitar-pro-sounds.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/formats/guitar-pro-6-8.md",
+    "target": "document:docs/formats/guitar-pro-sounds.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/README.md",
+    "target": "document:docs/manual/src/window.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/README.md",
+    "target": "document:docs/manual/src/keys.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/README.md",
+    "target": "document:docs/manual/src/playback.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/README.md",
+    "target": "document:docs/manual/src/better-sounds.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/SUMMARY.md",
+    "target": "document:docs/manual/src/README.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/SUMMARY.md",
+    "target": "document:docs/manual/src/installing.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/SUMMARY.md",
+    "target": "document:docs/manual/src/editing.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/SUMMARY.md",
+    "target": "document:docs/manual/src/better-sounds.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/editing.md",
+    "target": "document:docs/manual/src/keys.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/editing.md",
+    "target": "document:docs/manual/src/tracks.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/installing.md",
+    "target": "document:docs/manual/src/plugins.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/installing.md",
+    "target": "document:docs/manual/src/opening.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/keys.md",
+    "target": "document:docs/manual/src/editing.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/keys.md",
+    "target": "document:docs/manual/src/playback.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/opening.md",
+    "target": "document:docs/manual/src/installing.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/playback.md",
+    "target": "document:docs/manual/src/better-sounds.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/playback.md",
+    "target": "document:docs/manual/src/plugins.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/plugins.md",
+    "target": "document:docs/manual/src/installing.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/plugins.md",
+    "target": "document:docs/manual/src/better-sounds.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/saving.md",
+    "target": "document:docs/manual/src/plugins.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/saving.md",
+    "target": "document:docs/manual/src/opening.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/tools.md",
+    "target": "document:docs/manual/src/plugins.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/tools.md",
+    "target": "document:docs/manual/src/editing.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/tracks.md",
+    "target": "document:docs/manual/src/editing.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/tracks.md",
+    "target": "document:docs/manual/src/playback.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/tracks.md",
+    "target": "document:docs/manual/src/window.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/window.md",
+    "target": "document:docs/manual/src/editing.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/window.md",
+    "target": "document:docs/manual/src/playback.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/window.md",
+    "target": "document:docs/manual/src/tracks.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/window.md",
+    "target": "document:docs/manual/src/zoom.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/layouts.md",
+    "target": "document:docs/manual/src/zoom.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/view.md",
+    "target": "document:docs/manual/src/window.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/view.md",
+    "target": "document:docs/manual/src/pdf.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/better-sounds.md",
+    "target": "document:docs/manual/src/hear-it.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/manual/src/hear-it.md",
+    "target": "document:docs/manual/src/better-sounds.md",
+    "type": "related"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/what.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/template.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/manifest.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/sdk.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/formats.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/tabs.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/events.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/services.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/instruments.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/settings.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/testing.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/building.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/installing.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/README.md",
+    "target": "document:docs/plugins/src/versions.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/SUMMARY.md",
+    "target": "document:docs/plugins/src/README.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/SUMMARY.md",
+    "target": "document:docs/plugins/src/tools.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/SUMMARY.md",
+    "target": "document:docs/plugins/src/track-sections.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/manifest.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/sdk.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/formats.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/tabs.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/events.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/services.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/settings.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/building.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/template.md",
+    "target": "document:docs/plugins/src/versions.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/formats.md",
+    "target": "document:docs/plugins/src/versions.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/formats.md",
+    "target": "document:docs/plugins/src/testing.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/events.md",
+    "target": "document:docs/plugins/src/tools.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/events.md",
+    "target": "document:docs/plugins/src/sdk.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/instruments.md",
+    "target": "document:docs/plugins/src/track-sections.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/instruments.md",
+    "target": "document:docs/plugins/src/services.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/versions.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/services.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/tabs.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/events.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/formats.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/instruments.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/settings.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/tools.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/manifest.md",
+    "target": "document:docs/plugins/src/track-sections.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/sdk.md",
+    "target": "document:docs/plugins/src/events.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/sdk.md",
+    "target": "document:docs/plugins/src/services.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/sdk.md",
+    "target": "document:docs/plugins/src/tabs.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/sdk.md",
+    "target": "document:docs/plugins/src/settings.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/sdk.md",
+    "target": "document:docs/plugins/src/tools.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/sdk.md",
+    "target": "document:docs/plugins/src/versions.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/services.md",
+    "target": "document:docs/plugins/src/manifest.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/settings.md",
+    "target": "document:docs/plugins/src/tabs.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/settings.md",
+    "target": "document:docs/plugins/src/track-sections.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/tabs.md",
+    "target": "document:docs/plugins/src/settings.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/testing.md",
+    "target": "document:docs/plugins/src/building.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/testing.md",
+    "target": "document:docs/plugins/src/installing.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/testing.md",
+    "target": "document:docs/plugins/src/instruments.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/building.md",
+    "target": "document:docs/plugins/src/testing.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/building.md",
+    "target": "document:docs/plugins/src/installing.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/installing.md",
+    "target": "document:docs/plugins/src/what.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/what.md",
+    "target": "document:docs/plugins/src/formats.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/what.md",
+    "target": "document:docs/plugins/src/tabs.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/what.md",
+    "target": "document:docs/plugins/src/events.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/what.md",
+    "target": "document:docs/plugins/src/services.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/what.md",
+    "target": "document:docs/plugins/src/instruments.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/what.md",
+    "target": "document:docs/plugins/src/building.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/what.md",
+    "target": "document:docs/plugins/src/sdk.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/tools.md",
+    "target": "document:docs/plugins/src/formats.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/src/tools.md",
+    "target": "document:docs/plugins/src/events.md",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/template/README.md",
+    "target": "config:docs/plugins/template/Cargo.toml",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/template/README.md",
+    "target": "file:docs/plugins/template/build-oxp.sh",
+    "type": "documents"
+  },
+  {
+    "source": "document:docs/plugins/template/README.md",
+    "target": "config:docs/plugins/template/manifest.json",
+    "type": "documents"
+  },
+  {
+    "source": "config:docs/plugins/template/Cargo.toml",
+    "target": "config:docs/plugins/template/manifest.json",
+    "type": "related"
+  },
+  {
+    "source": "file:docs/plugins/template/build-oxp.sh",
+    "target": "config:docs/plugins/template/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:docs/plugins/template/build-oxp.sh",
+    "target": "config:docs/plugins/template/manifest.json",
+    "type": "related"
+  },
+  {
+    "source": "document:fuzz/README.md",
+    "target": "config:fuzz/Cargo.toml",
+    "type": "documents"
+  },
+  {
+    "source": "document:fuzz/README.md",
+    "target": "file:fuzz/run.sh",
+    "type": "documents"
+  },
+  {
+    "source": "document:fuzz/README.md",
+    "target": "file:fuzz/seeds.sh",
+    "type": "documents"
+  },
+  {
+    "source": "file:fuzz/run.sh",
+    "target": "file:fuzz/seeds.sh",
+    "type": "related"
+  },
+  {
+    "source": "config:fuzz/Cargo.toml",
+    "target": "file:fuzz/run.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/guitar-pro-check.sh",
+    "target": "file:scripts/build-plugins.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/build-plugins.sh",
+    "target": "file:scripts/check-plugin-template.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/check-plugin-template.sh",
+    "target": "file:scripts/check-display-crates.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/guitar-pro-check.sh",
+    "target": "file:scripts/check-plugin-template.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/no-network.sh",
+    "target": "file:scripts/check-dco.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/no-network.sh",
+    "target": "file:scripts/guitar-pro-check.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/linux.sh",
+    "target": "file:scripts/package/licenses.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/linux.sh",
+    "target": "file:scripts/package/version.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/linux.sh",
+    "target": "document:scripts/package/plugins-README.txt",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/linux.sh",
+    "target": "file:scripts/package/lintian.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/linux.sh",
+    "target": "file:scripts/package/in-wayland.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/macos.sh",
+    "target": "file:scripts/package/licenses.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/macos.sh",
+    "target": "document:scripts/package/plugins-README.txt",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/macos.sh",
+    "target": "file:scripts/package/version.sh",
+    "type": "related"
+  },
+  {
+    "source": "document:scripts/package/release-notes.md",
+    "target": "file:scripts/package/linux.sh",
+    "type": "related"
+  },
+  {
+    "source": "document:scripts/package/release-notes.md",
+    "target": "file:scripts/package/macos.sh",
+    "type": "related"
+  },
+  {
+    "source": "document:scripts/package/release-notes.md",
+    "target": "file:scripts/package/version.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:scripts/package/linux.sh",
+    "target": "file:scripts/package/macos.sh",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/build.rs",
+    "target": "config:crates/oxiguitar-app/ui/app.slint",
+    "type": "uses"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/bar_form.rs",
+    "target": "config:crates/oxiguitar-app/ui/bar_dialog.slint",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/document.rs",
+    "target": "file:crates/oxiguitar-app/src/canvas.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/document.rs",
+    "target": "file:crates/oxiguitar-app/src/editing.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/document.rs",
+    "target": "file:crates/oxiguitar-app/src/cursor.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/document.rs",
+    "target": "file:crates/oxiguitar-app/src/inspector.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/bar_form.rs",
+    "target": "file:crates/oxiguitar-app/src/editing.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/bend_form.rs",
+    "target": "file:crates/oxiguitar-app/src/effect_form.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/chord_form.rs",
+    "target": "file:crates/oxiguitar-app/src/editing.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/cursor.rs",
+    "target": "file:crates/oxiguitar-app/src/editing.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/effect_form.rs",
+    "target": "file:crates/oxiguitar-app/src/editing.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/inspector.rs",
+    "target": "file:crates/oxiguitar-app/src/editing.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/canvas.rs",
+    "target": "file:crates/oxiguitar-app/src/document.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-app/src/icons.rs",
+    "target": "file:crates/oxiguitar-app/src/canvas.rs",
+    "type": "related"
+  },
+  {
+    "source": "document:corpus/README.md",
+    "target": "config:corpus/MANIFEST.toml",
+    "type": "documents"
+  },
+  {
+    "source": "config:.gitattributes",
+    "target": "config:corpus/MANIFEST.toml",
+    "type": "related"
+  },
+  {
+    "source": "config:crates/oxiguitar-audio-cpal/Cargo.toml",
+    "target": "file:crates/oxiguitar-audio-cpal/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:crates/oxiguitar-cli/Cargo.toml",
+    "target": "file:crates/oxiguitar-cli/src/convert.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:crates/oxiguitar-display/Cargo.toml",
+    "target": "file:crates/oxiguitar-display/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "file:crates/oxiguitar-cli/src/events.rs",
+    "target": "file:crates/oxiguitar-cli/tests/cli.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-cli/src/info.rs",
+    "target": "file:crates/oxiguitar-cli/tests/cli.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-cli/src/main.rs",
+    "target": "file:crates/oxiguitar-cli/tests/cli.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-cli/src/play.rs",
+    "target": "file:crates/oxiguitar-cli/tests/cli.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-cli/src/plugins.rs",
+    "target": "file:crates/oxiguitar-cli/tests/cli.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-cli/src/render.rs",
+    "target": "file:crates/oxiguitar-cli/tests/cli.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-cli/src/specimen.rs",
+    "target": "file:crates/oxiguitar-cli/tests/cli.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-cli/src/tools.rs",
+    "target": "file:crates/oxiguitar-cli/tests/cli.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-edit/src/lib.rs",
+    "target": "file:crates/oxiguitar-edit/tests/corpus.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "file:crates/oxiguitar-edit/src/lib.rs",
+    "target": "file:crates/oxiguitar-edit/tests/entry.rs",
+    "type": "tested_by"
+  },
+  {
+    "source": "config:crates/oxiguitar-formats/Cargo.toml",
+    "target": "file:crates/oxiguitar-formats/Cargo.toml",
+    "type": "configures"
+  },
+  {
+    "source": "file:crates/oxiguitar-formats/src/lib.rs",
+    "target": "file:crates/oxiguitar-formats/src/detect.rs",
+    "type": "exports"
+  },
+  {
+    "source": "file:crates/oxiguitar-formats/src/lib.rs",
+    "target": "file:crates/oxiguitar-formats/src/error.rs",
+    "type": "exports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/lib.rs",
+    "target": "file:crates/oxiguitar-model/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/lib.rs",
+    "target": "file:crates/oxiguitar-model/src/track.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/lib.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/lib.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/plan.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/grid.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/pitch.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/rhythm.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/hits.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/plan.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/plan.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/plan.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/system.rs",
+    "target": "file:crates/oxiguitar-layout/src/plan.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/system.rs",
+    "target": "file:crates/oxiguitar-layout/src/hits.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/hits.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/hits.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/pitch.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/pitch.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/grid.rs",
+    "target": "file:crates/oxiguitar-layout/src/plan.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/rhythm.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/rhythm.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/hands.rs",
+    "target": "file:crates/oxiguitar-model/src/track.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/hands.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/page.rs",
+    "target": "file:crates/oxiguitar-layout/src/plan.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/effects.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/effects.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/effects.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/score.rs",
+    "target": "file:crates/oxiguitar-model/src/track.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/score.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/track.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/track.rs",
+    "target": "file:crates/oxiguitar-model/src/tuning.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/track.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/bar.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/bar.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/bar.rs",
+    "target": "file:crates/oxiguitar-model/src/lyrics.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/note.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/note.rs",
+    "target": "file:crates/oxiguitar-model/src/ratio.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/duration.rs",
+    "target": "file:crates/oxiguitar-model/src/ratio.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/lyrics.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/lyrics.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/track.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/tuning.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/lyrics.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/ratio.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "config:crates/oxiguitar-plugin-test/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "config:crates/oxiguitar-plugin-test/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "config:crates/oxiguitar-plugin-test/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "config:crates/oxiguitar-plugin-test/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "config:crates/oxiguitar-plugin-test/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "config:crates/oxiguitar-plugin-test/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "config:crates/oxiguitar-plugin/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "config:crates/oxiguitar-plugin/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "config:crates/oxiguitar-plugin/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "config:crates/oxiguitar-render/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "config:crates/oxiguitar-render/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "config:crates/oxiguitar-render/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/test-sine.sf2",
+    "target": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/LICENSE-APACHE",
+    "target": "config:crates/oxiguitar-plugin/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/LICENSE-MIT",
+    "target": "config:crates/oxiguitar-plugin/Cargo.toml",
+    "type": "related"
+  },
+  {
+    "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+    "target": "file:crates/oxiguitar-testgen/src/lib.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+    "target": "file:crates/oxiguitar-model/src/lib.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-testgen/src/references.rs",
+    "target": "file:crates/oxiguitar-model/src/lib.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-testgen/src/song.rs",
+    "target": "file:crates/oxiguitar-model/src/lib.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:debian/changelog",
+    "target": "file:debian/control"
+  },
+  {
+    "source": "file:debian/source/format",
+    "target": "config:source-format"
+  },
+  {
+    "source": "file:debian/upstream/metadata",
+    "target": "config:upstream-metadata"
+  },
+  {
+    "source": "file:debian/watch",
+    "target": "config:watch"
+  },
+  {
+    "source": "config:watch",
+    "target": "file:debian/upstream/metadata"
+  },
+  {
+    "source": "document:docs/debian.md",
+    "target": "file:debian/rules"
+  },
+  {
+    "source": "file:debian/copyright",
+    "target": "file:debian/changelog"
+  },
+  {
+    "source": "file:debian/copyright",
+    "target": "file:debian/control"
+  },
+  {
+    "source": "file:debian/copyright",
+    "target": "document:docs/debian.md"
+  },
+  {
+    "source": "file:debian/copyright",
+    "target": "file:debian/rules"
+  },
+  {
+    "source": "file:debian/rules",
+    "target": "file:debian/copyright"
+  },
+  {
+    "source": "file:debian/rules",
+    "target": "file:debian/changelog"
+  },
+  {
+    "source": "file:debian/control",
+    "target": "file:debian/copyright"
+  },
+  {
+    "source": "file:docs/plugins/template/src/format.rs",
+    "target": "file:docs/plugins/template/src/notes.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/lib.rs",
+    "target": "file:docs/plugins/template/src/format.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/lib.rs",
+    "target": "file:docs/plugins/template/src/notes.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/lib.rs",
+    "target": "file:docs/plugins/template/src/service.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/lib.rs",
+    "target": "file:docs/plugins/template/src/statistics.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/service.rs",
+    "target": "file:docs/plugins/template/src/notes.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/articulations.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/articulations.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/bass.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/bass.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/beams-and-flags.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/beams-and-flags.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/beat-text.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/beat-text.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/bends.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/bends.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/chord-names.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/chord-names.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/README.md",
+    "target": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/articulations.gp",
+    "target": "file:fixtures/guitar-pro-check/articulations.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/bass.gp",
+    "target": "file:fixtures/guitar-pro-check/bass.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/beams-and-flags.gp",
+    "target": "file:fixtures/guitar-pro-check/beams-and-flags.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/beat-text.gp",
+    "target": "file:fixtures/guitar-pro-check/beat-text.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/bends.gp",
+    "target": "file:fixtures/guitar-pro-check/bends.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/chord-names.gp",
+    "target": "file:fixtures/guitar-pro-check/chord-names.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp",
+    "target": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp5",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-7.6/drop-d-and-capo.gpif",
+    "target": "file:fixtures/guitar-pro-check/drop-d-and-capo.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-7.6/effects-together.gpif",
+    "target": "file:fixtures/guitar-pro-check/effects-together.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-7.6/four-voices.gpif",
+    "target": "file:fixtures/guitar-pro-check/four-voices.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-7.6/header-and-credits.gpif",
+    "target": "file:fixtures/guitar-pro-check/header-and-credits.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-7.6/repeats-and-endings.gpif",
+    "target": "file:fixtures/guitar-pro-check/repeats-and-endings.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-7.6/sections-and-directions.gpif",
+    "target": "file:fixtures/guitar-pro-check/sections-and-directions.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-7.6/tempo-changes.gpif",
+    "target": "file:fixtures/guitar-pro-check/tempo-changes.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-7.6/unusual-tuplets.gpif",
+    "target": "file:fixtures/guitar-pro-check/unusual-tuplets.gp",
+    "type": "related"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+    "target": "document:fixtures/guitar-pro-check/hammer-on-pull-off.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+    "target": "config:fixtures/guitar-pro-check/hammer-on-pull-off.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+    "target": "document:fixtures/guitar-pro-check/hammer-on-pull-off.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+    "target": "config:fixtures/guitar-pro-check/hammer-on-pull-off.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/harmonics.gp",
+    "target": "document:fixtures/guitar-pro-check/harmonics.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/harmonics.gp",
+    "target": "config:fixtures/guitar-pro-check/harmonics.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/harmonics.gp5",
+    "target": "document:fixtures/guitar-pro-check/harmonics.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/harmonics.gp5",
+    "target": "config:fixtures/guitar-pro-check/harmonics.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/header-and-credits.gp",
+    "target": "document:fixtures/guitar-pro-check/header-and-credits.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/header-and-credits.gp",
+    "target": "config:fixtures/guitar-pro-check/header-and-credits.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/header-and-credits.gp5",
+    "target": "document:fixtures/guitar-pro-check/header-and-credits.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/header-and-credits.gp5",
+    "target": "config:fixtures/guitar-pro-check/header-and-credits.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/key-signatures.gp",
+    "target": "document:fixtures/guitar-pro-check/key-signatures.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/key-signatures.gp",
+    "target": "config:fixtures/guitar-pro-check/key-signatures.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/key-signatures.gp5",
+    "target": "document:fixtures/guitar-pro-check/key-signatures.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/key-signatures.gp5",
+    "target": "config:fixtures/guitar-pro-check/key-signatures.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-horizontal.gp",
+    "target": "document:fixtures/guitar-pro-check/layout-horizontal.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-horizontal.gp",
+    "target": "config:fixtures/guitar-pro-check/layout-horizontal.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-horizontal.gp5",
+    "target": "document:fixtures/guitar-pro-check/layout-horizontal.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-horizontal.gp5",
+    "target": "config:fixtures/guitar-pro-check/layout-horizontal.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-parchment.gp",
+    "target": "document:fixtures/guitar-pro-check/layout-parchment.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-parchment.gp",
+    "target": "config:fixtures/guitar-pro-check/layout-parchment.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-parchment.gp5",
+    "target": "document:fixtures/guitar-pro-check/layout-parchment.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-parchment.gp5",
+    "target": "config:fixtures/guitar-pro-check/layout-parchment.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-vertical.gp",
+    "target": "document:fixtures/guitar-pro-check/layout-vertical.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-vertical.gp",
+    "target": "config:fixtures/guitar-pro-check/layout-vertical.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-vertical.gp5",
+    "target": "document:fixtures/guitar-pro-check/layout-vertical.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/layout-vertical.gp5",
+    "target": "config:fixtures/guitar-pro-check/layout-vertical.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/let-ring.gp",
+    "target": "document:fixtures/guitar-pro-check/let-ring.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/let-ring.gp",
+    "target": "config:fixtures/guitar-pro-check/let-ring.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/let-ring.gp5",
+    "target": "document:fixtures/guitar-pro-check/let-ring.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/let-ring.gp5",
+    "target": "config:fixtures/guitar-pro-check/let-ring.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/lyrics.gp",
+    "target": "document:fixtures/guitar-pro-check/lyrics.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/lyrics.gp",
+    "target": "config:fixtures/guitar-pro-check/lyrics.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/lyrics.gp5",
+    "target": "document:fixtures/guitar-pro-check/lyrics.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/lyrics.gp5",
+    "target": "config:fixtures/guitar-pro-check/lyrics.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/notation-choice.gp",
+    "target": "document:fixtures/guitar-pro-check/notation-choice.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/notation-choice.gp",
+    "target": "config:fixtures/guitar-pro-check/notation-choice.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/notation-choice.gp5",
+    "target": "document:fixtures/guitar-pro-check/notation-choice.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/notation-choice.gp5",
+    "target": "config:fixtures/guitar-pro-check/notation-choice.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/notes-and-rests.gp",
+    "target": "document:fixtures/guitar-pro-check/notes-and-rests.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/notes-and-rests.gp",
+    "target": "config:fixtures/guitar-pro-check/notes-and-rests.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/notes-and-rests.gp5",
+    "target": "document:fixtures/guitar-pro-check/notes-and-rests.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/notes-and-rests.gp5",
+    "target": "config:fixtures/guitar-pro-check/notes-and-rests.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/page-breaks.gp",
+    "target": "document:fixtures/guitar-pro-check/page-breaks.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/page-breaks.gp",
+    "target": "config:fixtures/guitar-pro-check/page-breaks.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/page-breaks.gp5",
+    "target": "document:fixtures/guitar-pro-check/page-breaks.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/page-breaks.gp5",
+    "target": "config:fixtures/guitar-pro-check/page-breaks.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/paper-letter.gp",
+    "target": "document:fixtures/guitar-pro-check/paper-letter.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/paper-letter.gp",
+    "target": "config:fixtures/guitar-pro-check/paper-letter.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/paper-letter.gp5",
+    "target": "document:fixtures/guitar-pro-check/paper-letter.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/paper-letter.gp5",
+    "target": "config:fixtures/guitar-pro-check/paper-letter.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/piano-grand-staff.gp",
+    "target": "document:fixtures/guitar-pro-check/piano-grand-staff.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/piano-grand-staff.gp",
+    "target": "config:fixtures/guitar-pro-check/piano-grand-staff.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/piano-grand-staff.gp5",
+    "target": "document:fixtures/guitar-pro-check/piano-grand-staff.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/piano-grand-staff.gp5",
+    "target": "config:fixtures/guitar-pro-check/piano-grand-staff.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/repeats-and-endings.gp",
+    "target": "document:fixtures/guitar-pro-check/repeats-and-endings.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/repeats-and-endings.gp",
+    "target": "config:fixtures/guitar-pro-check/repeats-and-endings.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/repeats-and-endings.gp5",
+    "target": "document:fixtures/guitar-pro-check/repeats-and-endings.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/repeats-and-endings.gp5",
+    "target": "config:fixtures/guitar-pro-check/repeats-and-endings.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/rhythm-on-tab.gp",
+    "target": "document:fixtures/guitar-pro-check/rhythm-on-tab.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/rhythm-on-tab.gp",
+    "target": "config:fixtures/guitar-pro-check/rhythm-on-tab.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/rhythm-on-tab.gp5",
+    "target": "document:fixtures/guitar-pro-check/rhythm-on-tab.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/rhythm-on-tab.gp5",
+    "target": "config:fixtures/guitar-pro-check/rhythm-on-tab.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/sections-and-directions.gp",
+    "target": "document:fixtures/guitar-pro-check/sections-and-directions.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/sections-and-directions.gp",
+    "target": "config:fixtures/guitar-pro-check/sections-and-directions.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/sections-and-directions.gp5",
+    "target": "document:fixtures/guitar-pro-check/sections-and-directions.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/sections-and-directions.gp5",
+    "target": "config:fixtures/guitar-pro-check/sections-and-directions.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/seven-string.gp",
+    "target": "document:fixtures/guitar-pro-check/seven-string.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/seven-string.gp",
+    "target": "config:fixtures/guitar-pro-check/seven-string.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/seven-string.gp5",
+    "target": "document:fixtures/guitar-pro-check/seven-string.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/seven-string.gp5",
+    "target": "config:fixtures/guitar-pro-check/seven-string.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/slides.gp",
+    "target": "document:fixtures/guitar-pro-check/slides.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/slides.gp",
+    "target": "config:fixtures/guitar-pro-check/slides.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/slides.gp5",
+    "target": "document:fixtures/guitar-pro-check/slides.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/slides.gp5",
+    "target": "config:fixtures/guitar-pro-check/slides.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/standard-only.gp",
+    "target": "document:fixtures/guitar-pro-check/standard-only.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/standard-only.gp",
+    "target": "config:fixtures/guitar-pro-check/standard-only.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/standard-only.gp5",
+    "target": "document:fixtures/guitar-pro-check/standard-only.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/standard-only.gp5",
+    "target": "config:fixtures/guitar-pro-check/standard-only.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/strings-treble-and-bass.gp",
+    "target": "document:fixtures/guitar-pro-check/strings-treble-and-bass.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/strings-treble-and-bass.gp",
+    "target": "config:fixtures/guitar-pro-check/strings-treble-and-bass.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/strings-treble-and-bass.gp5",
+    "target": "document:fixtures/guitar-pro-check/strings-treble-and-bass.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/strings-treble-and-bass.gp5",
+    "target": "config:fixtures/guitar-pro-check/strings-treble-and-bass.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/strums-and-techniques.gp",
+    "target": "document:fixtures/guitar-pro-check/strums-and-techniques.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/strums-and-techniques.gp",
+    "target": "config:fixtures/guitar-pro-check/strums-and-techniques.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/strums-and-techniques.gp5",
+    "target": "document:fixtures/guitar-pro-check/strums-and-techniques.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/strums-and-techniques.gp5",
+    "target": "config:fixtures/guitar-pro-check/strums-and-techniques.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tall-system-shrinks.gp",
+    "target": "document:fixtures/guitar-pro-check/tall-system-shrinks.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tall-system-shrinks.gp",
+    "target": "config:fixtures/guitar-pro-check/tall-system-shrinks.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tall-system-shrinks.gp5",
+    "target": "document:fixtures/guitar-pro-check/tall-system-shrinks.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tall-system-shrinks.gp5",
+    "target": "config:fixtures/guitar-pro-check/tall-system-shrinks.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tempo-changes.gp",
+    "target": "document:fixtures/guitar-pro-check/tempo-changes.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tempo-changes.gp",
+    "target": "config:fixtures/guitar-pro-check/tempo-changes.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tempo-changes.gp5",
+    "target": "document:fixtures/guitar-pro-check/tempo-changes.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tempo-changes.gp5",
+    "target": "config:fixtures/guitar-pro-check/tempo-changes.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp.gp",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gp.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp.gp",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gp.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp.gp5",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gp.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp.gp5",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gp.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gp3.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gp3.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gp4.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gp4.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gp5.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gp5.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gpx.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gpx.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/time-signatures.gp",
+    "target": "document:fixtures/guitar-pro-check/time-signatures.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/time-signatures.gp",
+    "target": "config:fixtures/guitar-pro-check/time-signatures.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tremolo-picking.gp",
+    "target": "document:fixtures/guitar-pro-check/tremolo-picking.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tremolo-picking.gp",
+    "target": "config:fixtures/guitar-pro-check/tremolo-picking.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/triplets.gp",
+    "target": "document:fixtures/guitar-pro-check/triplets.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/triplets.gp",
+    "target": "config:fixtures/guitar-pro-check/triplets.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/two-voices.gp",
+    "target": "document:fixtures/guitar-pro-check/two-voices.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/two-voices.gp",
+    "target": "config:fixtures/guitar-pro-check/two-voices.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/unusual-tuplets.gp",
+    "target": "document:fixtures/guitar-pro-check/unusual-tuplets.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/unusual-tuplets.gp",
+    "target": "config:fixtures/guitar-pro-check/unusual-tuplets.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+    "target": "document:fixtures/guitar-pro-check/vibrato-and-trill.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp",
+    "target": "config:fixtures/guitar-pro-check/vibrato-and-trill.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+    "target": "document:fixtures/guitar-pro-check/whammy-and-fade-in.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+    "target": "config:fixtures/guitar-pro-check/whammy-and-fade-in.gp"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gp3.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gp3.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gp4.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gp4.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gp5.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gp5.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+    "target": "document:fixtures/guitar-pro-check/test-song-from-gpx.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+    "target": "config:fixtures/guitar-pro-check/test-song-from-gpx.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/time-signatures.gp5",
+    "target": "document:fixtures/guitar-pro-check/time-signatures.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/time-signatures.gp5",
+    "target": "config:fixtures/guitar-pro-check/time-signatures.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tremolo-picking.gp5",
+    "target": "document:fixtures/guitar-pro-check/tremolo-picking.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/tremolo-picking.gp5",
+    "target": "config:fixtures/guitar-pro-check/tremolo-picking.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/triplets.gp5",
+    "target": "document:fixtures/guitar-pro-check/triplets.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/triplets.gp5",
+    "target": "config:fixtures/guitar-pro-check/triplets.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/two-voices.gp5",
+    "target": "document:fixtures/guitar-pro-check/two-voices.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/two-voices.gp5",
+    "target": "config:fixtures/guitar-pro-check/two-voices.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+    "target": "document:fixtures/guitar-pro-check/unusual-tuplets.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/unusual-tuplets.gp5",
+    "target": "config:fixtures/guitar-pro-check/unusual-tuplets.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+    "target": "document:fixtures/guitar-pro-check/vibrato-and-trill.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+    "target": "config:fixtures/guitar-pro-check/vibrato-and-trill.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+    "target": "document:fixtures/guitar-pro-check/whammy-and-fade-in.gp5"
+  },
+  {
+    "source": "file:fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+    "target": "config:fixtures/guitar-pro-check/whammy-and-fade-in.gp5"
+  },
+  {
+    "source": "file:fixtures/plugin/far-line.answer",
+    "target": "document:fixtures/plugin/far-line.answer"
+  },
+  {
+    "source": "file:fixtures/plugin/far-line.answer",
+    "target": "config:fixtures/plugin/far-line.answer"
+  },
+  {
+    "source": "file:fixtures/plugin/panel.answer",
+    "target": "document:fixtures/plugin/panel.answer"
+  },
+  {
+    "source": "file:fixtures/plugin/panel.answer",
+    "target": "config:fixtures/plugin/panel.answer"
+  },
+  {
+    "source": "file:fixtures/reference/README.md",
+    "target": "document:fixtures/reference/README.md"
+  },
+  {
+    "source": "file:fixtures/reference/articulations.gp",
+    "target": "document:fixtures/reference/articulations.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/articulations.gp",
+    "target": "config:fixtures/reference/articulations.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/articulations.gp",
+    "target": "config:fixtures/reference/articulations.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/bass.gp",
+    "target": "document:fixtures/reference/bass.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/bass.gp",
+    "target": "config:fixtures/reference/bass.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/bass.gp",
+    "target": "config:fixtures/reference/bass.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/beams-and-flags.gp",
+    "target": "document:fixtures/reference/beams-and-flags.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/beams-and-flags.gp",
+    "target": "config:fixtures/reference/beams-and-flags.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/beams-and-flags.gp",
+    "target": "config:fixtures/reference/beams-and-flags.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/beat-text.gp",
+    "target": "document:fixtures/reference/beat-text.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/beat-text.gp",
+    "target": "config:fixtures/reference/beat-text.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/beat-text.gp",
+    "target": "config:fixtures/reference/beat-text.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/bends.gp",
+    "target": "document:fixtures/reference/bends.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/bends.gp",
+    "target": "config:fixtures/reference/bends.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/bends.gp",
+    "target": "config:fixtures/reference/bends.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/chord-names.gp",
+    "target": "document:fixtures/reference/chord-names.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/chord-names.gp",
+    "target": "config:fixtures/reference/chord-names.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/chord-names.gp",
+    "target": "config:fixtures/reference/chord-names.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/chords-and-accidentals.gp",
+    "target": "document:fixtures/reference/chords-and-accidentals.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/chords-and-accidentals.gp",
+    "target": "config:fixtures/reference/chords-and-accidentals.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/chords-and-accidentals.gp",
+    "target": "config:fixtures/reference/chords-and-accidentals.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/dark-page.gp",
+    "target": "document:fixtures/reference/dark-page.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/dark-page.gp",
+    "target": "config:fixtures/reference/dark-page.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/dark-page.gp",
+    "target": "config:fixtures/reference/dark-page.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/dead-ghost-palm-mute.gp",
+    "target": "document:fixtures/reference/dead-ghost-palm-mute.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/dead-ghost-palm-mute.gp",
+    "target": "config:fixtures/reference/dead-ghost-palm-mute.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/dead-ghost-palm-mute.gp",
+    "target": "config:fixtures/reference/dead-ghost-palm-mute.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/dots-and-ties.gp",
+    "target": "document:fixtures/reference/dots-and-ties.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/dots-and-ties.gp",
+    "target": "config:fixtures/reference/dots-and-ties.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/dots-and-ties.gp",
+    "target": "config:fixtures/reference/dots-and-ties.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/drop-d-and-capo.gp",
+    "target": "document:fixtures/reference/drop-d-and-capo.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/drop-d-and-capo.gp",
+    "target": "config:fixtures/reference/drop-d-and-capo.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/drop-d-and-capo.gp",
+    "target": "config:fixtures/reference/drop-d-and-capo.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/drums.gp",
+    "target": "document:fixtures/reference/drums.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/drums.gp",
+    "target": "config:fixtures/reference/drums.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/drums.gp",
+    "target": "config:fixtures/reference/drums.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/dynamics-hidden.gp",
+    "target": "document:fixtures/reference/dynamics-hidden.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/dynamics-hidden.gp",
+    "target": "config:fixtures/reference/dynamics-hidden.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/dynamics-hidden.gp",
+    "target": "config:fixtures/reference/dynamics-hidden.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/dynamics.gp",
+    "target": "document:fixtures/reference/dynamics.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/dynamics.gp",
+    "target": "config:fixtures/reference/dynamics.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/dynamics.gp",
+    "target": "config:fixtures/reference/dynamics.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/effects-together.gp",
+    "target": "document:fixtures/reference/effects-together.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/effects-together.gp",
+    "target": "config:fixtures/reference/effects-together.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/effects-together.gp",
+    "target": "config:fixtures/reference/effects-together.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/eight-tracks.gp",
+    "target": "document:fixtures/reference/eight-tracks.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/eight-tracks.gp",
+    "target": "config:fixtures/reference/eight-tracks.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/eight-tracks.gp",
+    "target": "config:fixtures/reference/eight-tracks.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/empty-bars.gp",
+    "target": "document:fixtures/reference/empty-bars.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/empty-bars.gp",
+    "target": "config:fixtures/reference/empty-bars.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/empty-bars.gp",
+    "target": "config:fixtures/reference/empty-bars.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/four-voices.gp",
+    "target": "document:fixtures/reference/four-voices.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/four-voices.gp",
+    "target": "config:fixtures/reference/four-voices.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/four-voices.gp",
+    "target": "config:fixtures/reference/four-voices.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/grace-notes.gp",
+    "target": "document:fixtures/reference/grace-notes.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/grace-notes.gp",
+    "target": "config:fixtures/reference/grace-notes.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/grace-notes.gp",
+    "target": "config:fixtures/reference/grace-notes.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/hammer-on-pull-off.gp",
+    "target": "document:fixtures/reference/hammer-on-pull-off.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/hammer-on-pull-off.gp",
+    "target": "config:fixtures/reference/hammer-on-pull-off.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/hammer-on-pull-off.gp",
+    "target": "config:fixtures/reference/hammer-on-pull-off.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/harmonics.gp",
+    "target": "document:fixtures/reference/harmonics.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/harmonics.gp",
+    "target": "config:fixtures/reference/harmonics.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/harmonics.gp",
+    "target": "config:fixtures/reference/harmonics.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/header-and-credits.gp",
+    "target": "document:fixtures/reference/header-and-credits.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/header-and-credits.gp",
+    "target": "config:fixtures/reference/header-and-credits.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/header-and-credits.gp",
+    "target": "config:fixtures/reference/header-and-credits.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/key-signatures.gp",
+    "target": "document:fixtures/reference/key-signatures.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/key-signatures.gp",
+    "target": "config:fixtures/reference/key-signatures.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/key-signatures.gp",
+    "target": "config:fixtures/reference/key-signatures.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/layout-horizontal.gp",
+    "target": "document:fixtures/reference/layout-horizontal.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/layout-horizontal.gp",
+    "target": "config:fixtures/reference/layout-horizontal.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/layout-horizontal.gp",
+    "target": "config:fixtures/reference/layout-horizontal.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "file:fixtures/reference/layout-parchment.gp",
+    "target": "document:fixtures/reference/layout-parchment.gp",
+    "type": "contains"
+  },
+  {
+    "source": "file:fixtures/reference/layout-parchment.gp",
+    "target": "config:fixtures/reference/layout-parchment.gp",
+    "type": "has_config"
+  },
+  {
+    "source": "document:fixtures/reference/layout-parchment.gp",
+    "target": "config:fixtures/reference/layout-parchment.gp",
+    "type": "uses_config"
+  },
+  {
+    "source": "document:fixtures/reference/dark-page.gp",
+    "target": "document:fixtures/reference/eight-tracks.gp",
+    "type": "similar_theme"
+  },
+  {
+    "source": "config:fixtures/reference/dark-page.gp",
+    "target": "config:fixtures/reference/eight-tracks.gp",
+    "type": "similar_theme"
+  },
+  {
+    "source": "document:fixtures/reference/dynamics.gp",
+    "target": "document:fixtures/reference/dynamics-hidden.gp",
+    "type": "related"
+  },
+  {
+    "source": "config:fixtures/reference/dynamics.gp",
+    "target": "config:fixtures/reference/dynamics-hidden.gp",
+    "type": "related"
+  },
+  {
+    "source": "document:fixtures/reference/layout-horizontal.gp",
+    "target": "document:fixtures/reference/layout-parchment.gp",
+    "type": "related"
+  },
+  {
+    "source": "config:fixtures/reference/layout-horizontal.gp",
+    "target": "config:fixtures/reference/layout-parchment.gp",
+    "type": "related"
+  },
+  {
+    "source": "config:plugins/gp/Cargo.toml",
+    "target": "file:plugins/gp/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:plugins/gp3/Cargo.toml",
+    "target": "file:plugins/gp3/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:plugins/gp4/Cargo.toml",
+    "target": "file:plugins/gp4/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:plugins/gp5/Cargo.toml",
+    "target": "file:plugins/gp5/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:plugins/gpx/Cargo.toml",
+    "target": "file:plugins/gpx/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:plugins/soundfont/Cargo.toml",
+    "target": "file:plugins/soundfont/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:plugins/test-second/Cargo.toml",
+    "target": "file:plugins/test-second/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:plugins/test/Cargo.toml",
+    "target": "file:plugins/test/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/audio/Cargo.toml",
+    "target": "file:spikes/audio/src/main.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/gui/Cargo.toml",
+    "target": "file:spikes/gui/egui/src/main.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/gui/Cargo.toml",
+    "target": "file:spikes/gui/iced/src/main.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/gui/Cargo.toml",
+    "target": "file:spikes/gui/slint/src/main.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/gui/common/Cargo.toml",
+    "target": "file:spikes/gui/common/src/lib.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/gui/egui/Cargo.toml",
+    "target": "file:spikes/gui/egui/src/main.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/gui/iced/Cargo.toml",
+    "target": "file:spikes/gui/iced/src/main.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/gui/slint/Cargo.toml",
+    "target": "file:spikes/gui/slint/src/main.rs",
+    "type": "configures"
+  },
+  {
+    "source": "config:spikes/nam-bench/Cargo.toml",
+    "target": "file:spikes/nam-bench/src/main.rs",
+    "type": "configures"
+  }
+]

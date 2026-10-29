@@ -1,0 +1,213 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 4,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 4,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 4
+    }
+  },
+  "results": [
+    {
+      "path": "docs/plugins/template/Cargo.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 51,
+      "nonEmptyLines": 43,
+      "sections": [
+        {
+          "heading": "package",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "lib",
+          "level": 1,
+          "line": 14
+        },
+        {
+          "heading": "features",
+          "level": 1,
+          "line": 20
+        },
+        {
+          "heading": "dependencies",
+          "level": 1,
+          "line": 25
+        },
+        {
+          "heading": "dev-dependencies",
+          "level": 1,
+          "line": 33
+        },
+        {
+          "heading": "lints.rust",
+          "level": 2,
+          "line": 38
+        },
+        {
+          "heading": "profile.release",
+          "level": 2,
+          "line": 43
+        },
+        {
+          "heading": "workspace",
+          "level": 1,
+          "line": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": "docs/plugins/template/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 67,
+      "nonEmptyLines": 46,
+      "sections": [
+        {
+          "heading": "An OxiGuitar plugin",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Make it yours",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "Build and test",
+          "level": 2,
+          "line": 24
+        },
+        {
+          "heading": "Try it in OxiGuitar",
+          "level": 2,
+          "line": 42
+        },
+        {
+          "heading": "The Example tab format",
+          "level": 2,
+          "line": 54
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "docs/plugins/template/build-oxp.sh",
+      "language": "shell",
+      "fileCategory": "script",
+      "totalLines": 56,
+      "nonEmptyLines": 51,
+      "functions": [
+        {
+          "name": "build",
+          "startLine": 29,
+          "endLine": 31,
+          "params": []
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "docs/plugins/template/manifest.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 27,
+      "nonEmptyLines": 27,
+      "sections": [
+        {
+          "heading": "interface",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "id",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "version",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "description",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "authors",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "license",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "homepage",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "formats",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "services",
+          "level": 1,
+          "line": 20
+        },
+        {
+          "heading": "tabs",
+          "level": 1,
+          "line": 23
+        },
+        {
+          "heading": "events",
+          "level": 1,
+          "line": 26
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 12
+      }
+    }
+  ]
+}

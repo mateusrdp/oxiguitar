@@ -1,0 +1,43 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "docs/manual/src/README.md", "language": "markdown", "sizeLines": 11, "fileCategory": "docs"},
+    {"path": "docs/manual/src/SUMMARY.md", "language": "markdown", "sizeLines": 20, "fileCategory": "docs"},
+    {"path": "docs/manual/src/better-sounds.md", "language": "markdown", "sizeLines": 73, "fileCategory": "docs"},
+    {"path": "docs/manual/src/editing.md", "language": "markdown", "sizeLines": 197, "fileCategory": "docs"},
+    {"path": "docs/manual/src/hear-it.md", "language": "markdown", "sizeLines": 45, "fileCategory": "docs"},
+    {"path": "docs/manual/src/installing.md", "language": "markdown", "sizeLines": 77, "fileCategory": "docs"},
+    {"path": "docs/manual/src/keys.md", "language": "markdown", "sizeLines": 42, "fileCategory": "docs"},
+    {"path": "docs/manual/src/layouts.md", "language": "markdown", "sizeLines": 12, "fileCategory": "docs"},
+    {"path": "docs/manual/src/opening.md", "language": "markdown", "sizeLines": 24, "fileCategory": "docs"},
+    {"path": "docs/manual/src/pdf.md", "language": "markdown", "sizeLines": 10, "fileCategory": "docs"},
+    {"path": "docs/manual/src/playback.md", "language": "markdown", "sizeLines": 49, "fileCategory": "docs"},
+    {"path": "docs/manual/src/plugins.md", "language": "markdown", "sizeLines": 71, "fileCategory": "docs"},
+    {"path": "docs/manual/src/saving.md", "language": "markdown", "sizeLines": 41, "fileCategory": "docs"},
+    {"path": "docs/manual/src/tools.md", "language": "markdown", "sizeLines": 11, "fileCategory": "docs"},
+    {"path": "docs/manual/src/tracks.md", "language": "markdown", "sizeLines": 47, "fileCategory": "docs"},
+    {"path": "docs/manual/src/view.md", "language": "markdown", "sizeLines": 7, "fileCategory": "docs"},
+    {"path": "docs/manual/src/window.md", "language": "markdown", "sizeLines": 16, "fileCategory": "docs"},
+    {"path": "docs/manual/src/zoom.md", "language": "markdown", "sizeLines": 19, "fileCategory": "docs"}
+  ],
+  "batchImportData": {
+    "docs/manual/src/README.md": [],
+    "docs/manual/src/SUMMARY.md": [],
+    "docs/manual/src/better-sounds.md": [],
+    "docs/manual/src/editing.md": [],
+    "docs/manual/src/hear-it.md": [],
+    "docs/manual/src/installing.md": [],
+    "docs/manual/src/keys.md": [],
+    "docs/manual/src/layouts.md": [],
+    "docs/manual/src/opening.md": [],
+    "docs/manual/src/pdf.md": [],
+    "docs/manual/src/playback.md": [],
+    "docs/manual/src/plugins.md": [],
+    "docs/manual/src/saving.md": [],
+    "docs/manual/src/tools.md": [],
+    "docs/manual/src/tracks.md": [],
+    "docs/manual/src/view.md": [],
+    "docs/manual/src/window.md": [],
+    "docs/manual/src/zoom.md": []
+  }
+}

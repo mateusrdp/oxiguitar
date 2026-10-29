@@ -1,0 +1,802 @@
+[
+  {
+    "source": "file:crates/oxiguitar-layout/src/lib.rs",
+    "target": "file:crates/oxiguitar-model/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/lib.rs",
+    "target": "file:crates/oxiguitar-model/src/track.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/lib.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/lib.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/plan.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/grid.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/pitch.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/rhythm.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/engrave.rs",
+    "target": "file:crates/oxiguitar-layout/src/hits.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/plan.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/plan.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/plan.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/system.rs",
+    "target": "file:crates/oxiguitar-layout/src/plan.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/system.rs",
+    "target": "file:crates/oxiguitar-layout/src/hits.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/hits.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/hits.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/pitch.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/pitch.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/grid.rs",
+    "target": "file:crates/oxiguitar-layout/src/plan.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/rhythm.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/rhythm.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/hands.rs",
+    "target": "file:crates/oxiguitar-model/src/track.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/hands.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/page.rs",
+    "target": "file:crates/oxiguitar-layout/src/plan.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/effects.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/effects.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-layout/src/effects.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/score.rs",
+    "target": "file:crates/oxiguitar-model/src/track.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/score.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/track.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/track.rs",
+    "target": "file:crates/oxiguitar-model/src/tuning.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/track.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/bar.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/bar.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/bar.rs",
+    "target": "file:crates/oxiguitar-model/src/lyrics.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/note.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/note.rs",
+    "target": "file:crates/oxiguitar-model/src/ratio.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/duration.rs",
+    "target": "file:crates/oxiguitar-model/src/ratio.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/lyrics.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/lyrics.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/track.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/bar.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/note.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/tuning.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/duration.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/lyrics.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-model/src/wire.rs",
+    "target": "file:crates/oxiguitar-model/src/ratio.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/audio.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/glue.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/main.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/src/syscalls.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/contract.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/ours.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/lib.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/pdf.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/message.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/realtime.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/score2.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/signature.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-render/src/raster.rs",
+    "target": "file:crates/oxiguitar-plugin-api/src/tab.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+    "target": "file:crates/oxiguitar-testgen/src/lib.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+    "target": "file:crates/oxiguitar-model/src/lib.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-testgen/src/references.rs",
+    "target": "file:crates/oxiguitar-model/src/lib.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:crates/oxiguitar-testgen/src/song.rs",
+    "target": "file:crates/oxiguitar-model/src/lib.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/format.rs",
+    "target": "file:docs/plugins/template/src/notes.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/lib.rs",
+    "target": "file:docs/plugins/template/src/format.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/lib.rs",
+    "target": "file:docs/plugins/template/src/notes.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/lib.rs",
+    "target": "file:docs/plugins/template/src/service.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/lib.rs",
+    "target": "file:docs/plugins/template/src/statistics.rs",
+    "type": "imports"
+  },
+  {
+    "source": "file:docs/plugins/template/src/service.rs",
+    "target": "file:docs/plugins/template/src/notes.rs",
+    "type": "imports"
+  }
+]

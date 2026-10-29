@@ -1,0 +1,70 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 1,
+  "filesSkipped": [
+    "fixtures/events/repeats-and-endings.gp.events",
+    "fixtures/events/rhythm-on-tab.gp.events",
+    "fixtures/events/sections-and-directions.gp.events",
+    "fixtures/events/seven-string.gp.events",
+    "fixtures/events/slides.gp.events",
+    "fixtures/events/standard-only.gp.events",
+    "fixtures/events/strings-treble-and-bass.gp.events",
+    "fixtures/events/strums-and-techniques.gp.events",
+    "fixtures/events/tall-system-shrinks.gp.events",
+    "fixtures/events/tempo-changes.gp.events",
+    "fixtures/events/time-signatures.gp.events",
+    "fixtures/events/tremolo-picking.gp.events",
+    "fixtures/events/triplets.gp.events",
+    "fixtures/events/two-voices.gp.events",
+    "fixtures/events/unusual-tuplets.gp.events",
+    "fixtures/events/vibrato-and-trill.gp.events",
+    "fixtures/events/whammy-and-fade-in.gp.events",
+    "fixtures/gp/oxiguitar-test-song.gp",
+    "fixtures/gp/oxiguitar-test-song.gp3",
+    "fixtures/gp/oxiguitar-test-song.gp4",
+    "fixtures/gp/oxiguitar-test-song.gp5",
+    "fixtures/gp/oxiguitar-test-song.gpx",
+    "fixtures/guitar-pro-7.6/bends.gpif",
+    "fixtures/guitar-pro-7.6/chord-names.gpif"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 1,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 1
+    }
+  },
+  "results": [
+    {
+      "path": "fixtures/guitar-pro-7.6/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 20,
+      "nonEmptyLines": 13,
+      "sections": [
+        {
+          "heading": "Reference songs as Guitar Pro 7.6 saves them",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Files made in Guitar Pro 7.6",
+          "level": 2,
+          "line": 15
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    }
+  ]
+}
