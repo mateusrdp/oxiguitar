@@ -1424,11 +1424,22 @@ export component AppWindow inherits Window {
             VerticalLayout {
                 alignment: center;
                 spacing: 6px;
-                Button {
-                    text: "Donate with PayPal";
-                    clicked => {
-                        root.open-donation();
-                        about-popup.close();
+                Rectangle {
+                    width: 150px;
+                    height: 58px;
+                    Image {
+                        source: @image-url("../../../assets/paypal-donate-button.png");
+                        width: 150px;
+                        height: 58px;
+                    }
+                    touch := TouchArea {
+                        clicked => {
+                            root.open-donation();
+                            about-popup.close();
+                        }
+                    }
+                    Tooltip {
+                        text: @markdown("Donate with PayPal");
                     }
                 }
                 Text { text: "or scan the code with your phone"; font-size: 11px; opacity: 0.7; }
