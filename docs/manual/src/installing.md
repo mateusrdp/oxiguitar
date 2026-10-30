@@ -10,7 +10,7 @@ Download the package for your system from the [releases page](https://github.com
 | Windows 10 and 11 | `OxiGuitar-VERSION-windows-x86_64.zip` or `-arm64` | Unzip anywhere and run `oxiguitar.exe` |
 | macOS | `OxiGuitar-VERSION-macos-universal.dmg` | Open it and drag OxiGuitar to Applications |
 
-Linux needs glibc 2.39 or newer: Debian trixie or sid, Ubuntu 24.04, Fedora 40 or later. The .deb and .rpm also install `oxiguitar-cli`, a command-line tool that prints a file's contents, converts it to Guitar Pro 7's .gp, and engraves it to PNG and PDF (`oxiguitar-cli --help`), and both programs' manual pages (`man oxiguitar`, `man oxiguitar-cli`).
+The AppImage needs glibc 2.35 or newer (Debian 12 or later, Ubuntu 22.04 or later, Fedora 36 or later); the .deb and .rpm need glibc 2.39 or newer (Debian trixie or sid, Ubuntu 24.04, Fedora 40 or later). The .deb and .rpm also install `oxiguitar-cli`, a command-line tool that prints a file's contents, converts it to Guitar Pro 7's .gp, and engraves it to PNG and PDF (`oxiguitar-cli --help`), and both programs' manual pages (`man oxiguitar`, `man oxiguitar-cli`).
 
 ### Wayland and X11
 

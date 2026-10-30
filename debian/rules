@@ -84,6 +84,7 @@ override_dh_auto_install:
 		debian/oxiguitar/usr/share/icons/hicolor/scalable/apps/$(app_id).svg
 	install -Dm644 assets/linux/$(app_id).desktop debian/oxiguitar/usr/share/applications/$(app_id).desktop
 	install -Dm644 assets/linux/$(app_id).xml debian/oxiguitar/usr/share/mime/packages/$(app_id).xml
+	install -Dm644 assets/linux/$(app_id).metainfo.xml debian/oxiguitar/usr/share/metainfo/$(app_id).metainfo.xml
 	# The NOTICE files of the vendored crates, as the Apache licence asks.
 	install -d debian/oxiguitar/usr/share/doc/oxiguitar
 	set -e; for f in vendor/*/NOTICE; do \

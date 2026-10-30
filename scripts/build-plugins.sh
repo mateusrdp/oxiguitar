@@ -20,11 +20,13 @@
 # plugin carries only its own code). They are built in target/oxp/, the
 # folder oxiguitar-plugin-test also uses, so tests reuse the builds.
 #
-# Usage: scripts/build-plugins.sh [--debug] [--target TRIPLE] [--out FOLDER]
+# Usage: scripts/build-plugins.sh [--debug] [--target TRIPLE] [--out FOLDER] [--skip NAME]...
 #   --debug   debug builds (default: release builds, as shipped)
 #   --target  build for another target (packages; macOS builds both
 #             architectures and joins them with lipo)
 #   --out     put the files there instead
+#   --skip    leave out the plugin in plugins/NAME (the AppImage's build on
+#             Ubuntu 22.04 leaves out audio-pipewire: scripts/package/build-linux.sh)
 
 set -euo pipefail
 
@@ -32,11 +34,13 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 profile=release
 target=""
 out=""
+skip=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --debug) profile=debug ;;
         --target) target="$2"; shift ;;
         --out) out="$2"; shift ;;
+        --skip) skip+=("$2"); shift ;;
         *) echo "build-plugins: unknown option $1" >&2; exit 2 ;;
     esac
     shift
@@ -75,6 +79,9 @@ esac
 for dir in "$root"/plugins/*/; do
     name="$(basename "$dir")"
     [[ "$name" == test || "$name" == test-* ]] && continue
+    if [[ ${#skip[@]} -gt 0 && " ${skip[*]} " == *" $name "* ]]; then
+        continue
+    fi
     # A plugin for other systems only (an audio device's) isn't built: its
     # manifest's "os" list doesn't name this one.
     systems="$(tr -d '\n' < "$dir/manifest.json" | grep -o '"os"[[:space:]]*:[[:space:]]*\[[^]]*\]' || true)"

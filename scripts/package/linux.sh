@@ -13,6 +13,8 @@
 # AppImage needs squashfs-tools and the AppImage runtime, see below).
 #
 # Usage: scripts/package/linux.sh deb|rpm|appimage|all|plugins VERSION [wayland|x11]
+#   all      the .deb and the .rpm (the AppImage is built apart, from
+#            programs built on Ubuntu 22.04: scripts/package/build-linux.sh)
 #   VERSION  the package version, from scripts/package/version.sh
 #   wayland  the Wayland build (the default): packages `oxiguitar`
 #   x11      the X11 build, deprecated: packages `oxiguitar-x11`, which
@@ -67,8 +69,9 @@ esac
 summary="Guitar tablature and score viewer"
 description="OxiGuitar opens Guitar Pro files (.gp, .gpx, .gp5, .gp4, .gp3) and
 shows them as standard notation and tablature in four layouts, with any
-set of tracks together, and exports them to PDF. Editing and playback
-follow in later versions. No telemetry: it never uploads anything."
+set of tracks together. It edits and saves them, exports them to PDF, and
+plays them with the system's sound set or better ones the user adds
+(SoundFont and SFZ). No telemetry: it never uploads anything."
 if [[ "$build" == x11 ]]; then
     summary="$summary (X11 build, deprecated)"
     description="$description
@@ -129,6 +132,7 @@ stage() {
     install -Dm755 "$bin/oxiguitar-cli" "$to/usr/bin/oxiguitar-cli"
     install -Dm644 "$root/assets/linux/$id.desktop" "$to/usr/share/applications/$id.desktop"
     install -Dm644 "$root/assets/linux/$id.xml" "$to/usr/share/mime/packages/$id.xml"
+    install -Dm644 "$root/assets/linux/$id.metainfo.xml" "$to/usr/share/metainfo/$id.metainfo.xml"
     for s in 16 24 32 48 64 128 256 512; do
         install -Dm644 "$root/assets/icon/png/oxiguitar-$s.png" \
             "$to/usr/share/icons/hicolor/${s}x${s}/apps/$id.png"
@@ -275,6 +279,7 @@ build_rpm() {
         echo "/usr/bin/oxiguitar-cli"
         echo "/usr/share/applications/$id.desktop"
         echo "/usr/share/mime/packages/$id.xml"
+        echo "/usr/share/metainfo/$id.metainfo.xml"
         echo "/usr/share/icons/hicolor/*/apps/$id.*"
         echo "/usr/share/man/man1/oxiguitar.1.gz"
         echo "/usr/share/man/man1/oxiguitar-cli.1.gz"
@@ -430,7 +435,7 @@ case "$what" in
     deb) build_deb ;;
     rpm) build_rpm ;;
     appimage) build_appimage ;;
-    all) build_deb; build_rpm; build_appimage ;;
+    all) build_deb; build_rpm ;;
     plugins) build_plugins ;;
     *) echo "unknown package type $what" >&2; exit 1 ;;
 esac
