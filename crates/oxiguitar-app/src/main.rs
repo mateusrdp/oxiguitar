@@ -101,8 +101,8 @@ mod ui {
 }
 use ui::{
     AltBox, AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField,
-    InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow,
-    PluginSection, PluginSettingsWindow, PluginWidget, SongField, TileItem, ToolRow,
+    InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow,
+    PluginRow, PluginSection, PluginSettingsWindow, PluginWidget, SongField, TileItem, ToolRow,
     ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
 };
 
@@ -1111,6 +1111,7 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     install_plugin_tab_callbacks(&ui, &app);
+    install_plugin_links(&ui.global::<PluginLinks<'_>>(), &app);
     let a = app.clone();
     ui.on_open_plugin_manager(move || open_plugin_manager(&a));
     let a = app.clone();
@@ -1233,6 +1234,17 @@ fn set_tools(ui: &AppWindow, rows: &[ToolRow]) {
 }
 
 /// A message for the footer.
+/// A plugin's link (interface 1.4) opens in the browser when clicked, in
+/// whichever window shows it; `links::open` takes only `https://`.
+fn install_plugin_links(links: &PluginLinks<'_>, app: &Shared) {
+    let a = app.clone();
+    links.on_open(move |url| {
+        if let Err(e) = links::open(&url) {
+            message(&a, Level::Error, e);
+        }
+    });
+}
+
 fn message(app: &Shared, level: Level, text: impl Into<String>) {
     app.borrow_mut().footer.push(level, text);
     sync_footer(app);
@@ -1584,6 +1596,11 @@ fn plugin_widget(w: &Widget, canvases: &HashMap<String, Image>) -> PluginWidget 
             out.canvas_width = c.width;
             out.canvas_height = c.height;
         }
+        Widget::Link { text, url } => {
+            out.kind = "link".into();
+            out.text = text.as_str().into();
+            out.text2 = url.as_str().into();
+        }
     }
     out
 }
@@ -1883,6 +1900,7 @@ fn open_plugin_manager(app: &Shared) {
                 );
                 return;
             };
+            install_plugin_links(&w.global::<PluginLinks<'_>>(), app);
             let a = app.clone();
             w.on_toggled(move |i, on| manager_toggled(&a, i, on));
             let a = app.clone();
@@ -3639,6 +3657,7 @@ fn open_settings_window(app: &Shared, id: String) {
                 );
                 return;
             };
+            install_plugin_links(&w.global::<PluginLinks<'_>>(), app);
             let a = app.clone();
             w.on_clicked(move |widget| settings_event(&a, &widget, TabEvent::Clicked));
             let a = app.clone();

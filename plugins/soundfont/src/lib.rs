@@ -257,7 +257,7 @@ impl SoundFontPlugin {
         }
         self.host.notify_with_link(
             Level::Warning,
-            "Playing with your system's basic sound set. Better ones, free, make a big difference.",
+            "Playing with your system's basic sound set. Free recorded SFZ sets for guitars, basses and drums sound far better.",
             "Better sounds",
             BETTER_SOUNDS,
         );

@@ -9,12 +9,19 @@
 
 import { Button, CheckBox, Slider, LineEdit, ComboBox, StandardListView, Palette } from "std-widgets.slint";
 
+// A plugin's link was clicked (interface 1.4): main.rs opens its address
+// in the browser, `https://` only (links.rs), for whichever window shows it.
+export global PluginLinks {
+    callback open(string);
+}
+
 export struct PluginWidget {
-    // label, button, toggle, slider, field, choice, list or canvas.
+    // label, button, toggle, slider, field, choice, list, canvas or link.
     kind: string,
     id: string,
     text: string,
     // Labels: dimmer, for secondary text. Fields: the placeholder is `text2`.
+    // Links: the address is `text2`.
     muted: bool,
     text2: string,
     on: bool,
@@ -53,6 +60,16 @@ component PluginWidgetView inherits HorizontalLayout {
         font-size: 12px;
         vertical-alignment: center;
         color: Palette.foreground.transparentize(w.muted ? 0.45 : 0.1);
+    }
+    if w.kind == "link" : Text {
+        text: w.text;
+        font-size: 12px;
+        vertical-alignment: center;
+        color: Palette.accent-background;
+        TouchArea {
+            mouse-cursor: MouseCursor.pointer;
+            clicked => { PluginLinks.open(w.text2); }
+        }
     }
     if w.kind == "button" : Button {
         text: w.text;
