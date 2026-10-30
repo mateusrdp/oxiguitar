@@ -141,6 +141,69 @@ fn detect_reports_misleading_extensions() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// Returns the system plugin directories for the target platform.
+/// Mirrors `Folders::resolve()` system_plugins logic so tests can
+/// check whether system plugins are available without importing the
+/// host crate.
+fn system_plugin_folders() -> Vec<PathBuf> {
+    let exe = std::env::current_exe().ok();
+    let bin = exe.as_ref().and_then(|p| p.parent());
+    let system = if cfg!(target_os = "macos") {
+        "macos"
+    } else if cfg!(target_os = "windows") {
+        "windows"
+    } else {
+        "linux"
+    };
+
+    match system {
+        "linux" => {
+            let derived = bin
+                .and_then(Path::parent)
+                .map(|prefix| prefix.join("lib").join("oxiguitar").join("plugins"));
+            let fallbacks = [
+                PathBuf::from("/usr/lib/oxiguitar/plugins"),
+                PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
+            ];
+            let mut out: Vec<PathBuf> = Vec::with_capacity(3);
+            if let Some(p) = derived
+                && !fallbacks.contains(&p)
+            {
+                out.push(p);
+            }
+            out.extend(fallbacks);
+            out
+        }
+        "macos" => bin
+            .and_then(Path::parent)
+            .map(|contents| contents.join("PlugIns"))
+            .into_iter()
+            .chain([PathBuf::from(
+                "/Library/Application Support/OxiGuitar/plugins",
+            )])
+            .collect(),
+        "windows" => bin
+            .map(|b| b.join("plugins"))
+            .into_iter()
+            .chain([PathBuf::from("C:/Program Files/OxiGuitar/plugins")])
+            .collect(),
+        _ => unreachable!(),
+    }
+}
+
+/// True when any system plugin directory exists and contains .oxp files.
+fn system_plugins_available() -> bool {
+    system_plugin_folders().iter().any(|dir| {
+        dir.is_dir()
+            && dir.read_dir().is_ok_and(|mut r| {
+                r.any(|e| {
+                    e.map(|e| e.file_name().to_string_lossy().ends_with(".oxp"))
+                        .unwrap_or(false)
+                })
+            })
+    })
+}
+
 #[test]
 fn without_plugins_nothing_opens() {
     let empty = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-empty-home");
@@ -151,16 +214,30 @@ fn without_plugins_nothing_opens() {
         .arg(fixture("oxiguitar-test-song.gp5"))
         .output()
         .unwrap();
-    // System plugins are discoverable even with an empty home, so the
-    // file opens successfully. The test used to assert exit code 1
-    // when no plugins were available; that no longer applies.
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let text = String::from_utf8_lossy(&out.stdout);
-    assert!(text.contains("Guitar Pro 5"), "{text}");
+    // System plugins are discoverable even with an empty home.
+    // When they are installed (local development) the file opens
+    // successfully; when they are not (CI runners) the CLI reports
+    // that no plugin that opens files is installed.
+    if system_plugins_available() {
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let text = String::from_utf8_lossy(&out.stdout);
+        assert!(text.contains("Guitar Pro 5"), "{text}");
+    } else {
+        assert!(
+            !out.status.success(),
+            "expected failure, got success: {}",
+            String::from_utf8_lossy(&out.stdout)
+        );
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            err.contains("no plugin that opens files is installed"),
+            "{err}"
+        );
+    }
     // Nothing was created in the home folder: the program only reads it.
     assert_eq!(std::fs::read_dir(&empty).unwrap().count(), 0);
 }
