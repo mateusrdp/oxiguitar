@@ -574,18 +574,12 @@ fn main() -> Result<(), slint::PlatformError> {
     let shortcuts = ShortcutData {
         navigation: vec![
             ("Ctrl + ← / →".into(), "bar back / on".into()),
-            ("Page Up / Down".into(), "page scroll".into()),
-            ("Shift + click".into(), "select to caret".into()),
             ("Ctrl + Home / End".into(), "first / last bar".into()),
             ("Tab / Shift + Tab".into(), "next / prev staff".into()),
             ("Ctrl + ↑ / ↓".into(), "prev / next track".into()),
         ],
         editing: vec![
-            ("Shift + arrows".into(), "select".into()),
-            ("Ctrl + Shift + ← / →".into(), "select by bar".into()),
-            ("Ctrl + A".into(), "select all".into()),
             ("Ctrl + 1 to 4".into(), "voice 1 to 4".into()),
-            ("Ctrl + Z / Y".into(), "undo / redo".into()),
             ("F4".into(), "next out-of-tune bar".into()),
         ],
         note_entry: vec![
@@ -593,7 +587,6 @@ fn main() -> Result<(), slint::PlatformError> {
             ("− / +".into(), "longer / shorter".into()),
             ("Shift + . / Ctrl + .".into(), "dot / double dot".into()),
             ("L / Shift + L".into(), "tie note / beat".into()),
-            ("Backspace".into(), "delete note".into()),
             ("Shift + Delete".into(), "delete beat".into()),
             ("Ctrl + Insert".into(), "insert beat".into()),
             ("Alt + Shift + ↑ / ↓".into(), "semitone up / down".into()),
@@ -607,7 +600,6 @@ fn main() -> Result<(), slint::PlatformError> {
             ("A".into(), "chord".into()),
             ("Shift + T".into(), "text above beat".into()),
             ("Ctrl + T".into(), "lyrics".into()),
-            ("Ctrl + F".into(), "search palette".into()),
         ],
         effects: vec![
             ("X".into(), "dead note".into()),
@@ -640,12 +632,18 @@ fn main() -> Result<(), slint::PlatformError> {
             ("Shift + U".into(), "pick stroke up".into()),
             ("Ctrl + Alt + W".into(), "wide vibrato".into()),
         ],
-        ui: vec![("F7 / F8".into(), "show left / bottom panel".into())],
     };
-    let (left, center, right) = shortcuts_to_columns(&shortcuts);
+    let (left, left_w, center, center_w, right, right_w) = shortcuts_to_columns(&shortcuts);
     ui.set_shortcut_left_column(left);
     ui.set_shortcut_center_column(center);
     ui.set_shortcut_right_column(right);
+    // Popup width = sum of column widths + spacing gaps between them.
+    let spacing = 16.0 * 2.0;
+    let popup_w = left_w + center_w + right_w + spacing;
+    ui.set_shortcut_left_column_width(left_w);
+    ui.set_shortcut_center_column_width(center_w);
+    ui.set_shortcut_right_column_width(right_w);
+    ui.set_shortcut_popup_width(popup_w);
     let mut about = vec![
         format!(
             "Guitar tablature and score viewer, editor and player. Version {}.",
@@ -1223,85 +1221,72 @@ struct ShortcutData {
     editing: Vec<(String, String)>,
     note_entry: Vec<(String, String)>,
     effects: Vec<(String, String)>,
-    ui: Vec<(String, String)>,
 }
 
 fn shortcuts_to_columns(
     data: &ShortcutData,
 ) -> (
     ModelRc<ShortcutLine>,
+    f32,
     ModelRc<ShortcutLine>,
+    f32,
     ModelRc<ShortcutLine>,
+    f32,
 ) {
-    let sections = [
-        ("NAVIGATION", &data.navigation),
-        ("EDITING", &data.editing),
-        ("NOTE ENTRY", &data.note_entry),
-        ("EFFECTS", &data.effects),
-        ("UI", &data.ui),
-    ];
+    // Collect all shortcut lines in section order, then distribute
+    // sequentially: every 3rd line goes to the next column.
+    let mut all: Vec<ShortcutLine> = Vec::new();
+    for entries in [
+        &data.navigation,
+        &data.editing,
+        &data.note_entry,
+        &data.effects,
+    ] {
+        for (key, desc) in entries.iter() {
+            all.push(ShortcutLine {
+                text: format!("{}   →   {}", key, desc).into(),
+            });
+        }
+    }
 
     let mut left: Vec<ShortcutLine> = Vec::new();
     let mut center: Vec<ShortcutLine> = Vec::new();
     let mut right: Vec<ShortcutLine> = Vec::new();
-
-    // Collect all entries with their section headers, then distribute
-    // individual lines across 3 columns by greedy line-count balance.
-    // Sections are allowed to span columns so no single column overflows.
-    #[derive(Clone)]
-    struct Entry {
-        is_header: bool,
-        content: String,
-        key: Option<String>,
-        desc: Option<String>,
-    }
-    let mut all: Vec<Entry> = Vec::new();
-    for (section, entries) in &sections {
-        all.push(Entry {
-            is_header: true,
-            content: section.to_owned().to_string(),
-            key: None,
-            desc: None,
-        });
-        for (key, desc) in entries.iter() {
-            all.push(Entry {
-                is_header: false,
-                content: String::new(),
-                key: Some(key.clone()),
-                desc: Some(desc.clone()),
-            });
-        }
-    }
-
-    // Greedy balance: assign each entry to the column with fewest lines.
-    let mut col_lines = [0usize, 0usize, 0usize];
     let cols = [&mut left, &mut center, &mut right];
 
-    for entry in &all {
-        let best = [0, 1, 2].into_iter().min_by_key(|&i| col_lines[i]).unwrap();
-        if entry.is_header {
-            cols[best].push(ShortcutLine {
-                r#type: 0,
-                key: SharedString::new(),
-                description: SharedString::new(),
-                content: entry.content.clone().into(),
-            });
-        } else {
-            cols[best].push(ShortcutLine {
-                r#type: 1,
-                key: entry.key.as_ref().unwrap().clone().into(),
-                description: entry.desc.as_ref().unwrap().clone().into(),
-                content: SharedString::new(),
-            });
-        }
-        col_lines[best] += 1;
+    for (idx, line) in all.iter().enumerate() {
+        cols[idx % 3].push(line.clone());
     }
 
+    let left_w = estimate_column_width(&left);
+    let center_w = estimate_column_width(&center);
+    let right_w = estimate_column_width(&right);
     (
         ModelRc::new(VecModel::from(left)),
+        left_w,
         ModelRc::new(VecModel::from(center)),
+        center_w,
         ModelRc::new(VecModel::from(right)),
+        right_w,
     )
+}
+
+/// Estimate the pixel width needed for a column of shortcut lines.
+///
+/// Finds the longest rendered text in the column and multiplies by a
+/// per-character width factor for the 16px Noto Sans font.  Uses
+/// character count (not byte count) so multi-byte UTF-8 chars like →
+/// and ↑ are measured correctly.
+fn estimate_column_width(lines: &[ShortcutLine]) -> f32 {
+    let mut max_chars: f32 = 0.0;
+    for line in lines {
+        let chars = line.text.chars().count() as f32 * 8.0;
+        if chars > max_chars {
+            max_chars = chars;
+        }
+    }
+    // Small padding so text doesn't touch the column edge.
+    max_chars + 8.0
 }
 
 /// The Tools menu before any score is open: every tool, greyed out.

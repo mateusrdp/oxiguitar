@@ -28,12 +28,9 @@ export struct TileItem {
 // A box over the page, in canvas points (the editor's caret and selection;
 // editing.rs). The window places it with the origin and the zoom, so it
 // follows resizing and zooming by itself.
-// Line types for the shortcut cheatsheet: 0 = section header, 1 = shortcut.
+// A single row in the shortcut cheatsheet: section header, shortcut, or spacer.
 export struct ShortcutLine {
-    type: int,
-    key: string,
-    description: string,
-    content: string,
+    text: string,
 }
 
 export struct BoxItem {
@@ -828,38 +825,21 @@ component SongView inherits Rectangle {
     }
 }
 
-// Renders a single shortcut cheat sheet line: bold section header
-// (type 0) or bold key + separator + normal description (type 1).
+// Renders a single shortcut cheat sheet line — identical for headers,
+// shortcuts, and spacer rows (all use the same `text` field).
 component ShortcutLineItem inherits Rectangle {
-    in property <int> line-type;
-    in property <string> key;
-    in property <string> description;
-    in property <string> content;
+    in property <string> text;
+    in property <length> column-width;
 
-    // Explicit height to prevent Rectangle's default height from adding
-    // extra space between items in the VerticalLayout.
-    height: root.line-type == 0 ? 20px : 18px;
+    // Every row is 18px tall with identical structure.
+    height: 18px;
 
-    // No horizontal-stretch: it causes columns to resize proportionally
-    // (description gets more space than key), making columns uneven.
-    // Arrow alignment isn't perfect but columns are now equal-width.
-    HorizontalLayout {
-        visible: root.line-type == 1;
-        spacing: 2px;
-        Text { text: root.key; font-size: 14px; font-weight: 700; }
-        Text { text: " -> "; font-size: 14px; }
-        Text { text: root.description; font-size: 14px; }
-    }
-    VerticalLayout {
-        visible: root.line-type == 0;
-        spacing: 0px;
-        Rectangle { height: 6px; }
-        Text {
-            text: root.content;
-            font-size: 17px;
-            font-weight: 700; // section headers are uppercase + bold
-        }
-        Rectangle { height: 6px; }
+    Text {
+        text: root.text;
+        font-size: 16px;
+        horizontal-alignment: left;
+        width: root.column-width;
+        height: 18px;
     }
 }
 
@@ -877,8 +857,12 @@ component InfoPopup inherits PopupWindow {
     in property <[ShortcutLine]> left-column;
     in property <[ShortcutLine]> center-column;
     in property <[ShortcutLine]> right-column;
+    in property <length> left-column-width;
+    in property <length> center-column-width;
+    in property <length> right-column-width;
+    in property <length> popup-width: 500px;
     Rectangle {
-        width: parent.width;
+        width: root.popup-width;
         background: Palette.background;
         border-color: Palette.border;
         border-width: 1px;
@@ -903,30 +887,27 @@ component InfoPopup inherits PopupWindow {
                 spacing: 16px; // gap between 3 columns
                 alignment: start; // don't stretch shorter columns to tallest
                 VerticalLayout {
+                    width: root.left-column-width;
                     spacing: 2px; // tight: shortcut lines are short key-desc pairs
                     for line in root.left-column : ShortcutLineItem {
-                        line-type: line.type;
-                        key: line.key;
-                        description: line.description;
-                        content: line.content;
+                        column-width: root.left-column-width;
+                        text: line.text;
                     }
                 }
                 VerticalLayout {
+                    width: root.center-column-width;
                     spacing: 2px; // tight
                     for line in root.center-column : ShortcutLineItem {
-                        line-type: line.type;
-                        key: line.key;
-                        description: line.description;
-                        content: line.content;
+                        column-width: root.center-column-width;
+                        text: line.text;
                     }
                 }
                 VerticalLayout {
+                    width: root.right-column-width;
                     spacing: 2px; // tight
                     for line in root.right-column : ShortcutLineItem {
-                        line-type: line.type;
-                        key: line.key;
-                        description: line.description;
-                        content: line.content;
+                        column-width: root.right-column-width;
+                        text: line.text;
                     }
                 }
             }
@@ -1162,6 +1143,10 @@ export component AppWindow inherits Window {
     in property <[ShortcutLine]> shortcut-left-column;
     in property <[ShortcutLine]> shortcut-center-column;
     in property <[ShortcutLine]> shortcut-right-column;
+    in property <length> shortcut-left-column-width;
+    in property <length> shortcut-center-column-width;
+    in property <length> shortcut-right-column-width;
+    in property <length> shortcut-popup-width;
     in property <[string]> about-lines;
     // Help → About's donation button (links.rs opens the page in the browser).
     callback open-donation();
@@ -1494,6 +1479,10 @@ export component AppWindow inherits Window {
         left-column: root.shortcut-left-column;
         center-column: root.shortcut-center-column;
         right-column: root.shortcut-right-column;
+        left-column-width: root.shortcut-left-column-width;
+        center-column-width: root.shortcut-center-column-width;
+        right-column-width: root.shortcut-right-column-width;
+        popup-width: root.shortcut-popup-width;
     }
     about-popup := InfoPopup {
         x: (root.width - self.width) / 2;
