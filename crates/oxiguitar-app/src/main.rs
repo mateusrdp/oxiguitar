@@ -1285,6 +1285,7 @@ fn shortcuts_to_columns(
                 key: SharedString::new(),
                 description: SharedString::new(),
                 content: entry.content.clone().into(),
+                is_first: false,
             });
         } else {
             cols[best].push(ShortcutLine {
@@ -1292,9 +1293,18 @@ fn shortcuts_to_columns(
                 key: entry.key.as_ref().unwrap().clone().into(),
                 description: entry.desc.as_ref().unwrap().clone().into(),
                 content: SharedString::new(),
+                is_first: false,
             });
         }
         col_lines[best] += 1;
+    }
+
+    // Mark the first entry of each column so the cheatsheet skips
+    // the top spacing rectangle for the very first item.
+    for col in [&mut left, &mut center, &mut right] {
+        if let Some(line) = col.first_mut() {
+            line.is_first = true;
+        }
     }
 
     (

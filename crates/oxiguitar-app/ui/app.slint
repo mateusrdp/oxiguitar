@@ -34,6 +34,7 @@ export struct ShortcutLine {
     key: string,
     description: string,
     content: string,
+    is_first: bool,
 }
 
 export struct BoxItem {
@@ -838,28 +839,37 @@ component ShortcutLineItem inherits Rectangle {
 
     // Explicit height to prevent Rectangle's default height from adding
     // extra space between items in the VerticalLayout.
-    height: root.line-type == 0 ? 20px : 18px;
+    height: root.line-type == 0 ? 40px : 18px;
 
-    // No horizontal-stretch: it causes columns to resize proportionally
-    // (description gets more space than key), making columns uneven.
-    // Arrow alignment isn't perfect but columns are now equal-width.
-    HorizontalLayout {
+    in property <bool> is_first;
+
+    // Single Text element per row to avoid HorizontalLayout sizing gaps.
+    Rectangle {
         visible: root.line-type == 1;
-        spacing: 2px;
-        Text { text: root.key; font-size: 14px; font-weight: 700; }
-        Text { text: " -> "; font-size: 14px; }
-        Text { text: root.description; font-size: 14px; }
+        width: parent.width;
+        Text {
+            text: root.key + "→" + root.description;
+            font-size: 14px;
+            horizontal-alignment: left;
+        }
     }
     VerticalLayout {
         visible: root.line-type == 0;
+        width: parent.width;
         spacing: 0px;
-        Rectangle { height: 6px; }
+        // No top padding for the very first item in each column.
+        Rectangle {
+            visible: !root.is_first;
+            height: 10px;
+        }
         Text {
             text: root.content;
             font-size: 17px;
             font-weight: 700; // section headers are uppercase + bold
+            horizontal-alignment: left;
         }
-        Rectangle { height: 6px; }
+        // Generous bottom padding to separate section from its entries.
+        Rectangle { height: 20px; }
     }
 }
 
@@ -878,7 +888,6 @@ component InfoPopup inherits PopupWindow {
     in property <[ShortcutLine]> center-column;
     in property <[ShortcutLine]> right-column;
     Rectangle {
-        width: parent.width;
         background: Palette.background;
         border-color: Palette.border;
         border-width: 1px;
@@ -905,6 +914,7 @@ component InfoPopup inherits PopupWindow {
                 VerticalLayout {
                     spacing: 2px; // tight: shortcut lines are short key-desc pairs
                     for line in root.left-column : ShortcutLineItem {
+                        is_first: line.is_first;
                         line-type: line.type;
                         key: line.key;
                         description: line.description;
@@ -914,6 +924,7 @@ component InfoPopup inherits PopupWindow {
                 VerticalLayout {
                     spacing: 2px; // tight
                     for line in root.center-column : ShortcutLineItem {
+                        is_first: line.is_first;
                         line-type: line.type;
                         key: line.key;
                         description: line.description;
@@ -923,6 +934,7 @@ component InfoPopup inherits PopupWindow {
                 VerticalLayout {
                     spacing: 2px; // tight
                     for line in root.right-column : ShortcutLineItem {
+                        is_first: line.is_first;
                         line-type: line.type;
                         key: line.key;
                         description: line.description;
