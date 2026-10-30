@@ -12,10 +12,12 @@
 //! used, and stays loaded until the program ends.
 //!
 //! Which plugin file is used when several hold the same plugin id: the
-//! highest version, and on a tie the one in the earlier folder (then the
-//! earlier file name). Plugins listed under `disabled` in settings.json
-//! are never loaded; neither are plugins whose conditions (system,
-//! processor, display system) don't hold here.
+//! highest version. On a version tie the earlier file (in folder order,
+//! then file name) is used; the earlier file is the one whose folder comes
+//! first in the search list (system folders first, user folders after, so
+//! user plugins override system ones). Plugins listed under `disabled` in
+//! settings.json are never loaded; neither are plugins whose conditions
+//! (system, processor, display system) don't hold here.
 //!
 //! Which service is used for an interface: the one settings.json pins
 //! under `services` (`{"audio-device": "PLUGIN-ID/SERVICE-ID"}`) if it can
@@ -214,7 +216,7 @@ pub enum State {
     /// settings.json disables it.
     Disabled,
     /// Another file holds the same plugin at a higher version, or the same
-    /// version in an earlier folder; that file is used.
+    /// version in an earlier folder (earlier folder wins); that file is used.
     Replaced(PathBuf),
 }
 
@@ -544,9 +546,9 @@ impl Plugins {
                 examine(path, &env, &disabled)
             })
             .collect();
-        // One file per plugin id: the highest version, then the one needing
-        // more processor features (a faster build this processor can run),
-        // then the earliest.
+        // One file per plugin id: the highest version wins.
+        // On a version tie the earlier file wins (stable sort: earlier
+        // folder, then earlier filename).
         for i in 0..found.len() {
             let Some(id) = found[i].ready().map(|m| m.id.clone()) else {
                 continue;
@@ -1859,10 +1861,11 @@ fn missing_library(error: &str) -> Option<String> {
 }
 
 /// Whether `c` is to be used rather than `b`, two usable files of one
-/// plugin: a higher version, or the same version needing more processor
-/// features (both usable here, so this processor has them).
+/// plugin: the one with the higher version. On a version tie `better`
+/// returns false, so the `reduce` keeps the earlier file (the one whose
+/// folder comes first in the search list).
 fn better(c: &Manifest, b: &Manifest) -> bool {
-    (&c.version, c.conditions.cpu.len()) > (&b.version, b.conditions.cpu.len())
+    c.version > b.version
 }
 
 /// What a plugin file is, from its manifest alone.
@@ -1953,7 +1956,32 @@ mod tests {
     use crate::folders::tests::scratch;
 
     #[test]
-    fn of_two_builds_at_one_version_the_one_needing_more_features_is_used() {
+    fn system_plugins_are_discovered() {
+        let sys_dir = std::path::PathBuf::from("/usr/lib/oxiguitar/plugins");
+        let Ok(entries) = std::fs::read_dir(&sys_dir) else {
+            println!("System plugins directory not found, skipping");
+            return;
+        };
+        let plugins: Vec<_> = entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.is_file())
+            .collect();
+        
+        println!("Found {} system plugin files", plugins.len());
+        for p in &plugins {
+            println!("\n--- {} ---", p.file_name().unwrap().to_string_lossy());
+            let env = Environment::current("wayland");
+            let found = examine(p.clone(), &env, &[]);
+            println!("  State: {:?}", found.state);
+            if let Some(m) = &found.manifest {
+                println!("  id={}, name={}, version={}", m.id, m.name, m.version);
+            }
+        }
+    }
+
+    #[test]
+    fn higher_version_wins_regardless_of_processor_features() {
         let m = |version: &str, cpu: &[&str]| -> Manifest {
             let mut m: Manifest = serde_json::from_str(&format!(
                 r#"{{"interface": "1.3", "id": "me.nam", "name": "NAM", "version": "{version}"}}"#
@@ -1962,12 +1990,13 @@ mod tests {
             m.conditions.cpu = cpu.iter().map(|f| (*f).to_owned()).collect();
             m
         };
-        let (plain, v3) = (m("1.0.0", &[]), m("1.0.0", &["avx2", "fma"]));
-        assert!(better(&v3, &plain));
-        assert!(!better(&plain, &v3));
-        assert!(!better(&plain, &plain), "a tie keeps the earlier file");
-        // A newer version wins whatever it needs.
-        assert!(better(&m("1.0.1", &[]), &v3));
+        // A newer version wins even if it has no CPU features.
+        assert!(better(&m("1.0.1", &[]), &m("1.0.0", &["avx2", "fma"])));
+        // An older version loses even if it has more CPU features.
+        assert!(!better(&m("1.0.0", &["avx2", "fma"]), &m("1.0.1", &[])));
+        // Same version: neither is better (earlier file wins by stable order).
+        assert!(!better(&m("1.0.0", &[]), &m("1.0.0", &[])));
+        assert!(!better(&m("1.0.0", &["avx2"]), &m("1.0.0", &[])));
     }
 
     fn plain(folders: &[PathBuf]) -> Plugins {
