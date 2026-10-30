@@ -257,7 +257,10 @@ mod tests {
         // System plugins may be discovered via fallback paths; the user
         // plugin folder was just created and is empty.
         assert!(
-            s.inventory.folders.iter().any(|f| f == &home.join("plugins")),
+            s.inventory
+                .folders
+                .iter()
+                .any(|f| f == &home.join("plugins")),
             "user plugin folder should be in inventory"
         );
 

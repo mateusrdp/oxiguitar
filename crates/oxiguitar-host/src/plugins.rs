@@ -1967,7 +1967,7 @@ mod tests {
             .map(|e| e.path())
             .filter(|p| p.is_file())
             .collect();
-        
+
         println!("Found {} system plugin files", plugins.len());
         for p in &plugins {
             println!("\n--- {} ---", p.file_name().unwrap().to_string_lossy());

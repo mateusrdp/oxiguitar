@@ -140,10 +140,10 @@ impl Folders {
                 ];
                 // Deduplicate: the derived path may equal a fallback.
                 let mut out: Vec<PathBuf> = Vec::with_capacity(3);
-                if let Some(p) = derived {
-                    if !fallbacks.contains(&p) {
-                        out.push(p);
-                    }
+                if let Some(p) = derived
+                    && !fallbacks.contains(&p)
+                {
+                    out.push(p);
                 }
                 out.extend(fallbacks);
                 out
@@ -166,9 +166,7 @@ impl Folders {
             System::Windows => bin
                 .map(|b| b.join("plugins"))
                 .into_iter()
-                .chain([PathBuf::from(
-                    "C:/Program Files/OxiGuitar/plugins",
-                )])
+                .chain([PathBuf::from("C:/Program Files/OxiGuitar/plugins")])
                 .collect(),
         };
         Some(Folders {
@@ -294,19 +292,13 @@ pub(crate) mod tests {
                 PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
             ]
         );
-        assert_eq!(
-            f.default_plugin_folders()[0],
-            f.system_plugins[0]
-        );
+        assert_eq!(f.default_plugin_folders()[0], f.system_plugins[0]);
         // The second fallback comes before the user folder.
         assert_eq!(
             f.default_plugin_folders()[1],
             PathBuf::from("/usr/local/lib/oxiguitar/plugins")
         );
-        assert_eq!(
-            f.default_plugin_folders()[2],
-            f.user_plugins
-        );
+        assert_eq!(f.default_plugin_folders()[2], f.user_plugins);
         assert_eq!(f.cache, PathBuf::from("/home/mat/.cache/oxiguitar"));
         assert_eq!(
             f.plugin_data("me.nam"),
@@ -400,9 +392,7 @@ pub(crate) mod tests {
         let f = Folders::resolve(
             System::Linux,
             env(&[("HOME", "/home/mat")]),
-            Some(Path::new(
-                "/home/mat/src/oxiguitar/target/debug/oxiguitar",
-            )),
+            Some(Path::new("/home/mat/src/oxiguitar/target/debug/oxiguitar")),
         )
         .unwrap();
         // The derived path does not exist; fallbacks cover standard installs.
@@ -422,18 +412,21 @@ pub(crate) mod tests {
             PathBuf::from("/home/mat/src/oxiguitar/target/lib/oxiguitar/plugins")
         );
         assert_eq!(folders[1], PathBuf::from("/usr/lib/oxiguitar/plugins"));
-        assert_eq!(folders[2], PathBuf::from("/usr/local/lib/oxiguitar/plugins"));
-        assert_eq!(folders[3], PathBuf::from("/home/mat/.local/share/oxiguitar/plugins"));
+        assert_eq!(
+            folders[2],
+            PathBuf::from("/usr/local/lib/oxiguitar/plugins")
+        );
+        assert_eq!(
+            folders[3],
+            PathBuf::from("/home/mat/.local/share/oxiguitar/plugins")
+        );
     }
 
     #[test]
     fn system_folders_come_before_user_folders() {
         let f = Folders::resolve(
             System::Linux,
-            env(&[
-                ("HOME", "/home/mat"),
-                (HOME_VARIABLE, "/tmp/og-test-var"),
-            ]),
+            env(&[("HOME", "/home/mat"), (HOME_VARIABLE, "/tmp/og-test-var")]),
             Some(Path::new("/usr/bin/oxiguitar")),
         )
         .unwrap();
@@ -441,14 +434,23 @@ pub(crate) mod tests {
         // System folders come first, then user folder.
         assert_eq!(folders.len(), 3);
         assert_eq!(folders[0], PathBuf::from("/usr/lib/oxiguitar/plugins"));
-        assert_eq!(folders[1], PathBuf::from("/usr/local/lib/oxiguitar/plugins"));
+        assert_eq!(
+            folders[1],
+            PathBuf::from("/usr/local/lib/oxiguitar/plugins")
+        );
         assert_eq!(folders[2], PathBuf::from("/tmp/og-test-var/plugins"));
         // The user folder overrides the system folder for the same plugin ID
         // because deduplication prefers the earlier folder, and the system
         // folder comes first.
         assert!(
-            folders.iter().position(|p| p.as_path() == f.system_plugins[0].as_path()).unwrap()
-                < folders.iter().position(|p| p.as_path() == &f.user_plugins).unwrap()
+            folders
+                .iter()
+                .position(|p| p.as_path() == f.system_plugins[0].as_path())
+                .unwrap()
+                < folders
+                    .iter()
+                    .position(|p| p.as_path() == f.user_plugins)
+                    .unwrap()
         );
     }
 

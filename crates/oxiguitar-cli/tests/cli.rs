@@ -154,7 +154,11 @@ fn without_plugins_nothing_opens() {
     // System plugins are discoverable even with an empty home, so the
     // file opens successfully. The test used to assert exit code 1
     // when no plugins were available; that no longer applies.
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("Guitar Pro 5"), "{text}");
     // Nothing was created in the home folder: the program only reads it.
