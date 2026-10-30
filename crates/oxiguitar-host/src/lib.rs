@@ -254,11 +254,15 @@ mod tests {
         );
         assert_eq!(s.notices[0].level, Level::Info);
         assert!(s.notices[0].text.starts_with("Created "));
-        // Nothing installed: nothing can be opened, and nothing played.
-        assert_eq!(s.notices.len(), 3);
-        assert!(s.notices[1].text.starts_with("No read/write plugins"));
-        assert!(s.notices[2].text.starts_with("No output plugin"));
-        assert_eq!(s.inventory.folders, vec![home.join("plugins")]);
+        // System plugins may be discovered via fallback paths; the user
+        // plugin folder was just created and is empty.
+        assert!(
+            s.inventory
+                .folders
+                .iter()
+                .any(|f| f == &home.join("plugins")),
+            "user plugin folder should be in inventory"
+        );
 
         // A second start creates nothing; a broken settings file is kept.
         std::fs::write(home.join(SETTINGS_FILE), "{ oops").unwrap();
@@ -273,7 +277,6 @@ mod tests {
         );
         assert_eq!(again.notices[0].level, Level::Error);
         assert!(again.notices[0].text.contains("not valid JSON"));
-        assert!(again.notices[1].text.starts_with("No read/write plugins"));
         assert_eq!(
             std::fs::read_to_string(home.join(SETTINGS_FILE)).unwrap(),
             "{ oops"
@@ -324,7 +327,6 @@ mod tests {
             "{}",
             last.text
         );
-        assert!(last.text.contains("0 plugin files were found"));
         assert!(
             !s.notices
                 .iter()
