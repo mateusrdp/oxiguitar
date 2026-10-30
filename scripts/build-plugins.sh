@@ -79,7 +79,9 @@ esac
 for dir in "$root"/plugins/*/; do
     name="$(basename "$dir")"
     [[ "$name" == test || "$name" == test-* ]] && continue
-    [[ " ${skip[*]} " == *" $name "* ]] && continue
+    if [[ ${#skip[@]} -gt 0 && " ${skip[*]} " == *" $name "* ]]; then
+        continue
+    fi
     # A plugin for other systems only (an audio device's) isn't built: its
     # manifest's "os" list doesn't name this one.
     systems="$(tr -d '\n' < "$dir/manifest.json" | grep -o '"os"[[:space:]]*:[[:space:]]*\[[^]]*\]' || true)"
