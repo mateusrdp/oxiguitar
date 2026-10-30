@@ -680,6 +680,10 @@ fn main() -> Result<(), slint::PlatformError> {
         s.footer.extend(startup.notices);
         s.stored = startup.settings;
         s.prefs = prefs;
+        // s.zoom and s.ui_zoom default to 1.0; restore the persisted
+        // values so settings_changed() does not overwrite them with defaults.
+        s.zoom = prefs.score_zoom;
+        s.ui_zoom = prefs.ui_zoom;
     }
     settings_changed(&app);
     sync_footer(&app);
@@ -2097,6 +2101,10 @@ fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
     let index = |found: Option<usize>| found.unwrap_or(0) as i32;
     ui.invoke_pick_layout(index(Layout::ALL.iter().position(|l| *l == p.layout)));
     ui.invoke_pick_paper(index(Paper::ALL.iter().position(|q| *q == p.paper)));
+    // Restore the score zoom the user left it at.
+    let zoom = p.score_zoom.clamp(0.25, 4.0);
+    ui.set_zoom_log(zoom.log2());
+    ui.set_zoom_text(format!("{:.0} %", zoom * 100.0).into());
 }
 
 /// A toolbar button was clicked.
@@ -2527,6 +2535,8 @@ fn settings_changed(app: &Shared) {
         dynamics: s.settings.dynamics,
         layout: s.settings.layout,
         paper: s.settings.paper,
+        score_zoom: s.zoom,
+        ui_zoom: s.ui_zoom,
     };
     if prefs != s.prefs {
         s.prefs = prefs;
@@ -2899,6 +2909,23 @@ fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
         s.zoom = zoom;
         s.paint += 1;
         retire_tiles(&mut s, zoom / old);
+        // Persist the new score zoom so it survives restarts.
+        let prefs = ViewPrefs {
+            dark_interface: s.prefs.dark_interface,
+            dark_page: s.prefs.dark_page,
+            dynamics: s.prefs.dynamics,
+            layout: s.prefs.layout,
+            paper: s.prefs.paper,
+            score_zoom: s.zoom,
+            ui_zoom: s.ui_zoom,
+        };
+        if prefs != s.prefs {
+            s.prefs = prefs;
+            let value = prefs.to_value(s.stored.get(prefs::KEY).as_ref());
+            if let Err(e) = s.stored.set(prefs::KEY, value) {
+                s.footer.push(Level::Error, e);
+            }
+        }
     }
     ui.set_pt_scale(PX_PER_PT * zoom);
     set_content_size(app, &ui);
@@ -4468,6 +4495,23 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
             0 => s.ui_zoom,
             n => step_ui_zoom(s.ui_zoom, n),
         };
+        // Persist the new interface zoom so it survives restarts.
+        let prefs = ViewPrefs {
+            dark_interface: s.prefs.dark_interface,
+            dark_page: s.prefs.dark_page,
+            dynamics: s.prefs.dynamics,
+            layout: s.prefs.layout,
+            paper: s.prefs.paper,
+            score_zoom: s.zoom,
+            ui_zoom: s.ui_zoom,
+        };
+        if prefs != s.prefs {
+            s.prefs = prefs;
+            let value = prefs.to_value(s.stored.get(prefs::KEY).as_ref());
+            if let Err(e) = s.stored.set(prefs::KEY, value) {
+                s.footer.push(Level::Error, e);
+            }
+        }
         let scale = s.system_scale * s.ui_zoom;
         drop(s);
         // Apply after winit's own handling of this event has finished.

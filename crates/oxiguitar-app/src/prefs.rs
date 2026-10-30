@@ -15,7 +15,7 @@ pub(crate) const KEY: &str = "view";
 const LAYOUTS: [&str; 4] = ["page", "vertical", "horizontal", "parchment"];
 const PAPERS: [&str; 2] = ["a4", "letter"];
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct ViewPrefs {
     /// The window's own colours: dark by default (Mateus, 18 Oct 2026).
     pub(crate) dark_interface: bool,
@@ -26,7 +26,16 @@ pub(crate) struct ViewPrefs {
     pub(crate) dynamics: bool,
     pub(crate) layout: Layout,
     pub(crate) paper: Paper,
+    /// Score zoom factor (0.25–4.0); persisted as a raw f32.
+    pub(crate) score_zoom: f32,
+    /// Interface zoom factor (snaps to UI_ZOOMS steps); persisted as a raw
+    /// f32. Both default to 1.0 so the user's zoom is remembered across
+    /// restarts (Mateus, 31 Oct 2026).
+    pub(crate) ui_zoom: f32,
 }
+
+// f32 doesn't implement Eq (NaN != NaN), but our zoom values are never NaN.
+impl Eq for ViewPrefs {}
 
 impl Default for ViewPrefs {
     fn default() -> ViewPrefs {
@@ -36,6 +45,8 @@ impl Default for ViewPrefs {
             dynamics: false,
             layout: Layout::Page,
             paper: Paper::A4,
+            score_zoom: 1.0,
+            ui_zoom: 1.0,
         }
     }
 }
@@ -64,6 +75,16 @@ impl ViewPrefs {
             paper: pick("paper", &PAPERS)
                 .and_then(|i| Paper::ALL.get(i).copied())
                 .unwrap_or(d.paper),
+            score_zoom: map
+                .get("score_zoom")
+                .and_then(Value::as_f64)
+                .map(|v| v as f32)
+                .unwrap_or(d.score_zoom),
+            ui_zoom: map
+                .get("ui_zoom")
+                .and_then(Value::as_f64)
+                .map(|v| v as f32)
+                .unwrap_or(d.ui_zoom),
         }
     }
 
@@ -92,6 +113,8 @@ impl ViewPrefs {
                 Paper::ALL.iter().position(|p| *p == self.paper)
             )),
         );
+        map.insert("score_zoom".into(), json!(self.score_zoom));
+        map.insert("ui_zoom".into(), json!(self.ui_zoom));
         Value::Object(map)
     }
 }
@@ -105,6 +128,8 @@ mod tests {
         let d = ViewPrefs::from_value(None);
         assert!(d.dark_interface && !d.dark_page && !d.dynamics);
         assert_eq!(ViewPrefs::from_value(Some(&json!("nonsense"))), d);
+        assert_eq!(d.score_zoom, 1.0);
+        assert_eq!(d.ui_zoom, 1.0);
     }
 
     #[test]
@@ -115,21 +140,27 @@ mod tests {
             dynamics: true,
             layout: Layout::Horizontal,
             paper: Paper::Letter,
+            score_zoom: 2.0,
+            ui_zoom: 1.25,
         };
         let v = p.to_value(Some(&json!({"later": 3})));
         assert_eq!(v["layout"], json!("horizontal"));
         assert_eq!(v["paper"], json!("letter"));
         assert_eq!(v["later"], json!(3));
+        assert_eq!(v["score_zoom"], json!(2.0));
+        assert_eq!(v["ui_zoom"], json!(1.25));
         assert_eq!(ViewPrefs::from_value(Some(&v)), p);
     }
 
     #[test]
     fn wrong_values_keep_their_defaults() {
         let p = ViewPrefs::from_value(Some(
-            &json!({"dark_page": "yes", "layout": "sideways", "paper": "Letter"}),
+            &json!({"dark_page": "yes", "layout": "sideways", "paper": "Letter", "score_zoom": "fast", "ui_zoom": true}),
         ));
         assert!(!p.dark_page);
         assert_eq!(p.layout, Layout::Page);
         assert_eq!(p.paper, Paper::Letter);
+        assert_eq!(p.score_zoom, 1.0);
+        assert_eq!(p.ui_zoom, 1.0);
     }
 }
