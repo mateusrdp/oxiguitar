@@ -1,0 +1,220 @@
+{
+  "reviewDate": "2026-10-29",
+  "assembledGraph": "assembled-graph.json",
+  "summary": {
+    "totalNodes": 3976,
+    "totalEdges": 4235,
+    "validEdges": 3741,
+    "edgesMissingType": 494,
+    "nodesMissingType": 31,
+    "duplicateNodeIds": 0,
+    "danglingEdges": 0,
+    "importEdges": 160,
+    "healthScore": "GOOD"
+  },
+  "nodeTypeDistribution": {
+    "function": 1783,
+    "struct": 474,
+    "file": 454,
+    "document": 229,
+    "config": 206,
+    "property": 138,
+    "track": 120,
+    "conversion": 110,
+    "module": 73,
+    "fixture_file": 51,
+    "song": 50,
+    "concept": 36,
+    "section": 34,
+    "enum": 33,
+    "tempo": 25,
+    "attribute": 20,
+    "build-dependency": 11,
+    "constant": 11,
+    "pipeline": 9,
+    "event_type": 8,
+    "config_section": 7,
+    "docs": 6,
+    "design-doc": 6,
+    "plugin": 6,
+    "license": 5,
+    "direction": 5,
+    "class": 4,
+    "runtime-dependency": 4,
+    "documentation": 4,
+    "format": 4,
+    "recommendation": 3,
+    "config_file": 3,
+    "debian-package": 2,
+    "component": 2,
+    "asset": 2,
+    "script": 2,
+    "data_file": 2,
+    "suggestion": 1,
+    "test_function": 1,
+    "lyrics": 1
+  },
+  "edgeTypeDistribution": {
+    "contains": 1446,
+    "related": 663,
+    "uses": 570,
+    "calls": 542,
+    "exports": 165,
+    "imports": 160,
+    "documents": 74,
+    "demonstrates": 25,
+    "has_config": 25,
+    "uses_config": 25,
+    "configures": 21,
+    "tested_by": 10,
+    "format-variant-of": 4,
+    "related-data": 3,
+    "layout-variant-of": 3,
+    "similar_theme": 2,
+    "licenses": 1,
+    "co-located": 1,
+    "influences": 1
+  },
+  "issues": {
+    "nodesMissingType": {
+      "count": 31,
+      "description": "31 nodes are missing the 'type' field. These fall into two categories:",
+      "categories": {
+        "font_assets": {
+          "count": 22,
+          "description": "Nodes under file:assets/fonts/bravura/Bravura.json — JSON structure fields (engravingDefaults, glyphAdvanceWidths, glyphBBoxes, etc.) that lack a type field. These should likely be typed as 'property' or 'config_section'.",
+          "sampleNodes": [
+            "file:assets/fonts/bravura/Bravura.json:engravingDefaults",
+            "file:assets/fonts/bravura/Bravura.json:glyphAdvanceWidths",
+            "file:assets/fonts/bravura/Bravura.json:glyphBBoxes",
+            "file:assets/fonts/bravura/Bravura.json:glyphsWithAlternates",
+            "file:assets/fonts/bravura/Bravura.json:glyphsWithAnchors"
+          ]
+        },
+        "adr_docs": {
+          "count": 9,
+          "description": "ADR document nodes (0000-template.md through 0008-plugin-architecture.md) that lack a type field. These should likely be typed as 'document' or 'docs'.",
+          "sampleNodes": [
+            "file:docs/adr/0000-template.md",
+            "file:docs/adr/0001-record-decisions.md",
+            "file:docs/adr/0002-score-model.md",
+            "file:docs/adr/0003-file-reader-strategy.md",
+            "file:docs/adr/0004-gui-toolkit.md"
+          ]
+        }
+      }
+    },
+    "edgesMissingType": {
+      "count": 494,
+      "description": "494 edges are missing the 'type' field. These are primarily 'contains' edges that were not assigned a type during assembly. They fall into three source categories:",
+      "categories": {
+        "file_to_section": {
+          "count": 108,
+          "description": "Edges from file: nodes to section nodes (e.g., file:ARCHITECTURE.md -> file:docs:ARCHITECTURE.md:crates). These should be typed as 'contains'.",
+          "sampleEdges": [
+            {"source": "file:ARCHITECTURE.md", "target": "file:docs:ARCHITECTURE.md:crates"},
+            {"source": "file:ARCHITECTURE.md", "target": "file:docs:ARCHITECTURE.md:design-rules"},
+            {"source": "file:CHANGELOG.md", "target": "file:docs:CHANGELOG.md:v0.10.0"},
+            {"source": "file:CONTRIBUTING.md", "target": "file:docs:CONTRIBUTING.md:branches-and-pull-requests"}
+          ]
+        },
+        "document_to_section": {
+          "count": 88,
+          "description": "Edges from document: nodes to their child sections. These should be typed as 'contains'.",
+          "note": "These are section-level containment edges within document nodes."
+        },
+        "config_to_section": {
+          "count": 50,
+          "description": "Edges from config: nodes to their sub-sections. These should be typed as 'contains'.",
+          "note": "These are section-level containment edges within config nodes."
+        },
+        "other_contains": {
+          "count": 248,
+          "description": "Additional contains-like edges from file:, document:, and config: sources that were not explicitly categorized. These also appear to be containment relationships."
+        }
+      }
+    },
+    "duplicateNodeIds": {
+      "count": 0,
+      "status": "PASS"
+    },
+    "danglingEdges": {
+      "sourcesMissing": 0,
+      "targetsMissing": 0,
+      "status": "PASS"
+    }
+  },
+  "importEdges": {
+    "total": 160,
+    "uniqueSources": 42,
+    "uniqueTargets": 25,
+    "description": "160 import edges connect 42 source files to 25 target files across the Rust crate ecosystem.",
+    "scope": "Cross-batch import relationships between Rust source files in crates/ and docs/plugins/template/",
+    "coverage": {
+      "totalRustFilesInProject": 676,
+      "filesWithImportEdges": 67,
+      "importEdgeCoverage": "9.9%"
+    }
+  },
+  "crossBatchAnalysis": {
+    "totalBatches": 35,
+    "totalProjectFiles": 676,
+    "batchesWithImportData": 35,
+    "totalImportEntriesInBatches": 676,
+    "importMapFieldInScanResult": false,
+    "importMapRecovery": "Skipped — scan-result.json lacks an importMap field. Cross-batch import data is available in batches.json batchImportData (676 entries across 35 batches).",
+    "importEdgesVsBatches": {
+      "importEdgesInGraph": 160,
+      "batchImportEntries": 676,
+      "note": "batchImportData contains per-file import lists (all empty for non-Rust files like YAML, MD, TOML). The 160 import edges in the graph represent actual cross-file Rust import relationships, while batchImportData is a per-file listing that happens to include all 676 project files."
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "issue": "494 edges missing 'type' field",
+      "description": "All 494 edges without a type field appear to be 'contains' edges (file-to-section, document-to-section, config-to-section relationships). Assigning 'contains' type to these edges would bring the graph to full consistency.",
+      "effort": "LOW",
+      "fix": "Add 'type': 'contains' to all edges where type is missing."
+    },
+    {
+      "priority": "MEDIUM",
+      "issue": "31 nodes missing 'type' field",
+      "description": "Font asset sub-nodes (22) should be typed as 'property' or 'config_section'. ADR document nodes (9) should be typed as 'document'.",
+      "effort": "LOW",
+      "fix": "Assign appropriate type to each node based on its ID pattern and context."
+    },
+    {
+      "priority": "LOW",
+      "issue": "Import edge coverage is low (9.9%)",
+      "description": "Only 67 out of 676 project files have import edges. This is expected since import edges only capture Rust cross-file imports, not all relationships. However, the 160 import edges cover the most important crate-level dependencies.",
+      "effort": "N/A",
+      "fix": "No action needed — this is an expected characteristic of the graph."
+    },
+    {
+      "priority": "LOW",
+      "issue": "Node category distribution is sparse",
+      "description": "3,888 out of 3,976 nodes (97.8%) have no category. Only 32 docs, 31 config, and 25 code nodes are categorized. Most nodes lack a 'category' field.",
+      "effort": "MEDIUM",
+      "fix": "Consider adding category inference during assembly based on node type and path patterns."
+    }
+  ],
+  "overallAssessment": {
+    "grade": "B+",
+    "strengths": [
+      "No duplicate node IDs — all 3,976 nodes have unique identifiers",
+      "No dangling edges — all 4,235 edge source/target references resolve to existing nodes",
+      "Good node diversity — 40+ distinct node types capture the project's structure well",
+      "Comprehensive edge coverage — 3,741 typed edges across 19 edge types",
+      "Import edges correctly capture cross-crate Rust dependencies",
+      "Large-scale assembly succeeded — 676 project files processed into 3,976 nodes and 4,235 edges"
+    ],
+    "weaknesses": [
+      "494 edges (11.7%) missing 'type' field — should all be 'contains' edges",
+      "31 nodes (0.8%) missing 'type' field — font asset sub-nodes and ADR docs",
+      "97.8% of nodes lack a 'category' field",
+      "Import map recovery was skipped because scan-result.json lacks an importMap field"
+    ],
+    "verdict": "The assembled graph is structurally sound with no integrity issues (no duplicates, no dangling references). The main quality concern is the 494 edges and 31 nodes missing their 'type' field, which is a low-effort fix. The graph successfully captures the OxiGuitar project's structure across 35 batches, 676 files, and 40+ node types."
+  }
+}

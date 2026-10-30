@@ -1,0 +1,253 @@
+{
+  "title": "OxiGuitar Knowledge Graph Tour",
+  "version": "1.0",
+  "description": "A guided tour through the OxiGuitar codebase knowledge graph. Follow each stop in order to understand how the project is organized, from the core data model through file formats, editor, display, application, plugin system, testing, and build infrastructure.",
+  "stoppingCriteria": "After completing all tour stops in order",
+  "tourStops": [
+    {
+      "id": "stop-1",
+      "title": "Welcome to OxiGuitar",
+      "description": "Project overview: what OxiGuitar is, its workspace structure, and how the crates are organized. Start here to understand the big picture before diving into any specific crate.",
+      "layer": "configuration",
+      "nodes": [
+        "file:README.md",
+        "file:Cargo.toml",
+        "file:ARCHITECTURE.md",
+        "file:CHANGELOG.md",
+        "file:CONTRIBUTING.md",
+        "file:ROADMAP.md",
+        "file:about.toml"
+      ],
+      "questions": [
+        "What is OxiGuitar and what problem does it solve?",
+        "What are the main workspace crates and how do they relate?",
+        "How does the workspace dependency graph define crate boundaries?",
+        "What lints and safety rules (unsafe_code = forbid) does the project enforce?",
+        "Where are architectural decisions recorded (docs/adr/)?"
+      ]
+    },
+    {
+      "id": "stop-2",
+      "title": "Core Data Model",
+      "description": "The music data types that everything else builds on: bars, notes, tracks, scores, durations, ratios, and the wire format. This is the foundation of the entire application.",
+      "layer": "core-application",
+      "nodes": [
+        "file:crates/oxiguitar-model/src/lib.rs",
+        "file:crates/oxiguitar-model/src/bar.rs",
+        "file:crates/oxiguitar-model/src/note.rs",
+        "file:crates/oxiguitar-model/src/track.rs",
+        "file:crates/oxiguitar-model/src/score.rs",
+        "file:crates/oxiguitar-model/src/duration.rs",
+        "file:crates/oxiguitar-model/src/ratio.rs",
+        "file:crates/oxiguitar-model/src/tuning.rs",
+        "file:crates/oxiguitar-model/src/wire.rs"
+      ],
+      "questions": [
+        "How are musical concepts (bars, beats, notes) represented as Rust types?",
+        "What is the wire format and why does it exist?",
+        "How are durations and time ratios (tuplets) modeled?",
+        "How does tuning relate to the note representation?",
+        "What invariants does the model enforce at the type level?"
+      ]
+    },
+    {
+      "id": "stop-3",
+      "title": "Playback Engine",
+      "description": "How OxiGuitar plays back music: the scheduling engine, event processing, timing, and plugin source abstraction. This is where the data model becomes audible sound.",
+      "layer": "core-application",
+      "nodes": [
+        "file:crates/oxiguitar-play/src/engine.rs",
+        "file:crates/oxiguitar-play/src/events.rs",
+        "file:crates/oxiguitar-play/src/time.rs",
+        "file:crates/oxiguitar-play/src/schedule.rs",
+        "file:crates/oxiguitar-play/src/plugin_source.rs",
+        "file:crates/oxiguitar-play/src/click.rs",
+        "file:crates/oxiguitar-play/src/order.rs"
+      ],
+      "questions": [
+        "How does the Engine schedule events for the audio thread?",
+        "What is the lock-free queue design (rtrb) used for?",
+        "How are playback events derived from the data model?",
+        "How does the click track and count-in work?",
+        "What is a PluginSource and how does it abstract audio backends?"
+      ]
+    },
+    {
+      "id": "stop-4",
+      "title": "File Format Plugins",
+      "description": "How OxiGuitar reads and writes Guitar Pro files (GP3-8, GPX) and other formats through its plugin architecture. The formats crate handles binary parsing, XML parsing, format detection, and round-trip fidelity.",
+      "layer": "plugin-ecosystem",
+      "nodes": [
+        "file:crates/oxiguitar-formats/src/lib.rs",
+        "file:crates/oxiguitar-formats/src/container.rs",
+        "file:crates/oxiguitar-formats/src/detect.rs",
+        "file:crates/oxiguitar-formats/src/binary.rs",
+        "file:crates/oxiguitar-formats/src/xml.rs",
+        "file:crates/oxiguitar-formats/src/gp/mod.rs",
+        "file:crates/oxiguitar-formats/src/gpif/mod.rs",
+        "file:crates/oxiguitar-formats/src/gp/write.rs",
+        "file:crates/oxiguitar-formats/src/error.rs"
+      ],
+      "questions": [
+        "How does format detection work (container.rs, detect.rs)?",
+        "What is the difference between GP (GP3-5 binary) and GPIF (GP6-8 XML) formats?",
+        "How are ZIP-based GPX files handled?",
+        "What is the round-trip testing strategy (round_trip.rs, gp5_round_trip.rs)?",
+        "How does the format plugin ecosystem extend beyond the core crates?"
+      ]
+    },
+    {
+      "id": "stop-5",
+      "title": "The Editor",
+      "description": "How OxiGuitar edits music: entry, bars, caret, effects, harmony, selection, transpose, and history. The edit crate provides the operations that transform the data model.",
+      "layer": "core-application",
+      "nodes": [
+        "file:crates/oxiguitar-edit/src/lib.rs",
+        "file:crates/oxiguitar-edit/src/entry.rs",
+        "file:crates/oxiguitar-edit/src/bars.rs",
+        "file:crates/oxiguitar-edit/src/caret.rs",
+        "file:crates/oxiguitar-edit/src/effects.rs",
+        "file:crates/oxiguitar-edit/src/harmony.rs",
+        "file:crates/oxiguitar-edit/src/selection.rs",
+        "file:crates/oxiguitar-edit/src/history.rs",
+        "file:crates/oxiguitar-edit/src/transpose.rs"
+      ],
+      "questions": [
+        "How are edit operations modeled and applied to the data model?",
+        "What is the undo/redo system (history.rs)?",
+        "How does the caret track position during editing?",
+        "How are musical effects (bends, slides, vibrato) represented and edited?",
+        "What is the relationship between entry.rs and effects.rs?"
+      ]
+    },
+    {
+      "id": "stop-6",
+      "title": "Display & Layout Engine",
+      "description": "How OxiGuitar renders music: engraving, layout planning, system and page layout, hit detection, and visual rendering. This is where the data model becomes visual notation.",
+      "layer": "core-application",
+      "nodes": [
+        "file:crates/oxiguitar-layout/src/lib.rs",
+        "file:crates/oxiguitar-layout/src/engrave.rs",
+        "file:crates/oxiguitar-layout/src/plan.rs",
+        "file:crates/oxiguitar-layout/src/system.rs",
+        "file:crates/oxiguitar-layout/src/page.rs",
+        "file:crates/oxiguitar-layout/src/draw.rs",
+        "file:crates/oxiguitar-layout/src/hits.rs",
+        "file:crates/oxiguitar-display/src/lib.rs",
+        "file:crates/oxiguitar-display/src/smufl.rs",
+        "file:crates/oxiguitar-display/src/wire.rs"
+      ],
+      "questions": [
+        "What is the engraving pipeline (engrave → plan → system → page → draw)?",
+        "How does SMuFL font rendering work for standard notation?",
+        "How does hit detection (hits.rs) enable mouse interaction?",
+        "What is the wire display and how does it differ from standard notation?",
+        "How do the display and layout crates collaborate?"
+      ]
+    },
+    {
+      "id": "stop-7",
+      "title": "Desktop Application",
+      "description": "The main GUI application: window shell, document management, canvas rendering, track panel, player controls, plugin tabs, and Slint UI. This is where everything comes together.",
+      "layer": "core-application",
+      "nodes": [
+        "file:crates/oxiguitar-app/src/main.rs",
+        "file:crates/oxiguitar-app/src/manager.rs",
+        "file:crates/oxiguitar-app/src/document.rs",
+        "file:crates/oxiguitar-app/src/canvas.rs",
+        "file:crates/oxiguitar-app/src/tracks.rs",
+        "file:crates/oxiguitar-app/src/playing.rs",
+        "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+        "file:crates/oxiguitar-app/src/shell.rs",
+        "file:crates/oxiguitar-app/ui/app.slint"
+      ],
+      "questions": [
+        "How is the application lifecycle managed (main → manager → document)?",
+        "What is the Slint UI architecture and how does it connect to Rust?",
+        "How does the canvas render the layout output?",
+        "How do the track panel and player controls interact?",
+        "What is the relationship between the app and the format/plugin systems?"
+      ]
+    },
+    {
+      "id": "stop-8",
+      "title": "Plugin System",
+      "description": "OxiGuitar's extensibility: the plugin API (ABI, manifests, score/tab/score2 interfaces), the plugin runtime (loading, glue, audio), and the test plugin infrastructure. Every file format, audio output, and tool is a plugin.",
+      "layer": "plugin-ecosystem",
+      "nodes": [
+        "file:crates/oxiguitar-plugin-api/src/lib.rs",
+        "file:crates/oxiguitar-plugin-api/src/manifest.rs",
+        "file:crates/oxiguitar-plugin-api/src/abi.rs",
+        "file:crates/oxiguitar-plugin-api/src/score.rs",
+        "file:crates/oxiguitar-plugin-api/src/tab.rs",
+        "file:crates/oxiguitar-plugin-api/src/message.rs",
+        "file:crates/oxiguitar-plugin/src/lib.rs",
+        "file:crates/oxiguitar-plugin/src/glue.rs",
+        "file:crates/oxiguitar-plugin/src/audio.rs",
+        "file:plugins/soundfont/src/lib.rs",
+        "file:plugins/test/src/lib.rs"
+      ],
+      "questions": [
+        "What is the plugin ABI and how does it ensure binary compatibility?",
+        "How are plugin manifests structured and validated?",
+        "What are the different plugin interfaces (score, tab, score2)?",
+        "How does the glue layer connect plugins to the host?",
+        "How does the SoundFont plugin synthesize audio from SF2/SF3/SFZ files?"
+      ]
+    },
+    {
+      "id": "stop-9",
+      "title": "Testing & Quality Assurance",
+      "description": "How OxiGuitar ensures correctness: corpus-based tests, round-trip tests, interop tests with alphaTab and MuseScore, fuzzing targets, golden file tests, and the extensive fixture collections.",
+      "layer": "test-infrastructure",
+      "nodes": [
+        "file:crates/oxiguitar-formats/tests/round_trip.rs",
+        "file:crates/oxiguitar-formats/tests/guitar_pro.rs",
+        "file:crates/oxiguitar-formats/tests/gp5_round_trip.rs",
+        "file:crates/oxiguitar-play/tests/golden.rs",
+        "file:crates/oxiguitar-play/tests/engine.rs",
+        "file:crates/oxiguitar-edit/tests/entry.rs",
+        "file:fuzz/fuzz_targets/guitar_pro_7.rs",
+        "file:fuzz/fuzz_targets/gpif.rs",
+        "file:fuzz/fuzz_targets/plugin_dispatch.rs",
+        "file:fixtures/gp/oxiguitar-test-song.gp",
+        "file:fixtures/guitar-pro-check/repeats-and-endings.gp",
+        "file:fixtures/reference/articulations.gp",
+        "document:corpus/README.md",
+        "document:fuzz/README.md"
+      ],
+      "questions": [
+        "How does the corpus testing strategy work?",
+        "What is the round-trip test pipeline (read → edit → write → read)?",
+        "How do interop tests verify output compatibility with other tools?",
+        "What do the fuzzing targets cover and how are seeds managed?",
+        "How are golden file tests used for the playback engine?"
+      ]
+    },
+    {
+      "id": "stop-10",
+      "title": "Build System & CI/CD",
+      "description": "How OxiGuitar is built and shipped: GitHub Actions workflows for CI, multi-platform builds, Debian packaging, releases, fuzzing, and documentation deployment.",
+      "layer": "ci-cd-pipelines",
+      "nodes": [
+        "file:.github/workflows/ci.yml",
+        "file:.github/workflows/builds.yml",
+        "file:.github/workflows/release.yml",
+        "file:.github/workflows/debian.yml",
+        "file:.github/workflows/fuzz.yml",
+        "file:.github/workflows/interop.yml",
+        "file:.github/workflows/listening.yml",
+        "file:debian/control",
+        "file:debian/rules",
+        "file:scripts/build-plugins.sh"
+      ],
+      "questions": [
+        "What checks run in CI and how are they organized?",
+        "How does the release pipeline produce packages for all platforms?",
+        "What is the Debian packaging workflow and how does it audit crates?",
+        "How do the fuzz and interop workflows differ from the main CI?",
+        "What does the listening pack workflow produce and how is it used?"
+      ]
+    }
+  ]
+}

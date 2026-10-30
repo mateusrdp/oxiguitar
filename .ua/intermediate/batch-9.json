@@ -1,0 +1,104 @@
+{
+  "nodes": [
+    {
+      "id": "config:docs/plugins/template/Cargo.toml",
+      "type": "config",
+      "name": "Cargo.toml",
+      "filePath": "docs/plugins/template/Cargo.toml",
+      "summary": "Rust package manifest defining the OxiGuitar plugin template's crate metadata, dependencies (including oxiguitar-plugin and serde), features, and build profile.",
+      "tags": [
+        "rust-crate",
+        "plugin-template",
+        "dependency-config",
+        "build-config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/plugins/template/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "docs/plugins/template/README.md",
+      "summary": "Documentation for the OxiGuitar plugin template covering setup, build steps, usage in OxiGuitar, and the example tab format.",
+      "tags": [
+        "plugin-template",
+        "user-guide",
+        "getting-started",
+        "tab-format"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:docs/plugins/template/build-oxp.sh",
+      "type": "file",
+      "name": "build-oxp.sh",
+      "filePath": "docs/plugins/template/build-oxp.sh",
+      "summary": "Shell script that builds the OxiGuitar plugin into an .oxp package format via the build function.",
+      "tags": [
+        "build-script",
+        "plugin-packaging",
+        "shell-script",
+        "oxp-format"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:docs/plugins/template/manifest.json",
+      "type": "config",
+      "name": "manifest.json",
+      "filePath": "docs/plugins/template/manifest.json",
+      "summary": "JSON manifest declaring the OxiGuitar plugin's identity, metadata, supported formats, services, tabs, and events.",
+      "tags": [
+        "plugin-manifest",
+        "metadata",
+        "oxiguitar-plugin",
+        "service-config"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:docs/plugins/template/README.md",
+      "target": "config:docs/plugins/template/Cargo.toml",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/plugins/template/README.md",
+      "target": "file:docs/plugins/template/build-oxp.sh",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/plugins/template/README.md",
+      "target": "config:docs/plugins/template/manifest.json",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:docs/plugins/template/Cargo.toml",
+      "target": "config:docs/plugins/template/manifest.json",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:docs/plugins/template/build-oxp.sh",
+      "target": "config:docs/plugins/template/Cargo.toml",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:docs/plugins/template/build-oxp.sh",
+      "target": "config:docs/plugins/template/manifest.json",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

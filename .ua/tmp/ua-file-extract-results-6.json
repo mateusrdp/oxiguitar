@@ -1,0 +1,228 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 4,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 4,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 4
+    }
+  },
+  "results": [
+    {
+      "path": "docs/formats/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 7,
+      "nonEmptyLines": 5,
+      "sections": [
+        {
+          "heading": "File formats",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/formats/guitar-pro-3-5.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 137,
+      "nonEmptyLines": 93,
+      "sections": [
+        {
+          "heading": "Guitar Pro 3, 4 and 5 (.gp3, .gp4, .gp5)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Primitives",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "File layout",
+          "level": 2,
+          "line": 22
+        },
+        {
+          "heading": "Bar header",
+          "level": 2,
+          "line": 39
+        },
+        {
+          "heading": "Track",
+          "level": 2,
+          "line": 62
+        },
+        {
+          "heading": "Bar of one track",
+          "level": 2,
+          "line": 70
+        },
+        {
+          "heading": "Beat",
+          "level": 2,
+          "line": 74
+        },
+        {
+          "heading": "Beat effects",
+          "level": 3,
+          "line": 92
+        },
+        {
+          "heading": "Mix-table change",
+          "level": 3,
+          "line": 98
+        },
+        {
+          "heading": "Note",
+          "level": 2,
+          "line": 102
+        },
+        {
+          "heading": "Note effects",
+          "level": 3,
+          "line": 108
+        },
+        {
+          "heading": "Chord diagram",
+          "level": 2,
+          "line": 118
+        },
+        {
+          "heading": "Writing GP5 (M3 slice 7)",
+          "level": 2,
+          "line": 128
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 13
+      }
+    },
+    {
+      "path": "docs/formats/guitar-pro-6-8.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 139,
+      "nonEmptyLines": 96,
+      "sections": [
+        {
+          "heading": "Guitar Pro 6, 7 and 8 (.gpx, .gp)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Containers",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": ".gp (Guitar Pro 7 and 8)",
+          "level": 3,
+          "line": 9
+        },
+        {
+          "heading": ".gpx (Guitar Pro 6)",
+          "level": 3,
+          "line": 25
+        },
+        {
+          "heading": "PartConfiguration",
+          "level": 3,
+          "line": 36
+        },
+        {
+          "heading": "GPIF",
+          "level": 2,
+          "line": 40
+        },
+        {
+          "heading": "Header and master track",
+          "level": 3,
+          "line": 54
+        },
+        {
+          "heading": "Tracks",
+          "level": 3,
+          "line": 64
+        },
+        {
+          "heading": "Master bars",
+          "level": 3,
+          "line": 88
+        },
+        {
+          "heading": "Bars, voices, beats, notes",
+          "level": 3,
+          "line": 92
+        },
+        {
+          "heading": "Writing .gp files",
+          "level": 2,
+          "line": 110
+        },
+        {
+          "heading": "Checking",
+          "level": 2,
+          "line": 123
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 12
+      }
+    },
+    {
+      "path": "docs/formats/guitar-pro-sounds.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 239,
+      "nonEmptyLines": 231,
+      "sections": [
+        {
+          "heading": "Guitar Pro 7.6's sounds",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "By General MIDI program",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Guitar Pro's instrument list",
+          "level": 2,
+          "line": 142
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    }
+  ]
+}

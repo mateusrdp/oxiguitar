@@ -1,0 +1,2717 @@
+{
+  "nodes": [
+    {
+      "id": "file:scripts/wayland-dnd-test/xdrag.py",
+      "type": "file",
+      "path": "scripts/wayland-dnd-test/xdrag.py",
+      "name": "scripts/wayland-dnd-test/xdrag.py",
+      "metadata": {
+        "language": "python",
+        "lines": 18
+      }
+    },
+    {
+      "id": "function:scripts/wayland-dnd-test/xdrag.py:move",
+      "type": "function",
+      "path": "scripts/wayland-dnd-test/xdrag.py",
+      "name": "move",
+      "metadata": {
+        "startLine": 11,
+        "endLine": 12,
+        "params": [
+          "x",
+          "y"
+        ]
+      }
+    },
+    {
+      "id": "document:spikes/README.md",
+      "type": "document",
+      "path": "spikes/README.md",
+      "name": "spikes/README.md",
+      "metadata": {
+        "language": "markdown",
+        "lines": 67
+      }
+    },
+    {
+      "id": "config:spikes/audio/Cargo.toml",
+      "type": "config",
+      "path": "spikes/audio/Cargo.toml",
+      "name": "spikes/audio/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "lines": 29
+      }
+    },
+    {
+      "id": "file:spikes/audio/src/alloc.rs",
+      "type": "file",
+      "path": "spikes/audio/src/alloc.rs",
+      "name": "spikes/audio/src/alloc.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 44
+      }
+    },
+    {
+      "id": "struct:spikes/audio/src/alloc.rs:Counting",
+      "type": "struct",
+      "path": "spikes/audio/src/alloc.rs",
+      "name": "Counting",
+      "metadata": {
+        "startLine": 8,
+        "endLine": 8,
+        "methods": [
+          "alloc",
+          "dealloc",
+          "realloc"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/alloc.rs:alloc",
+      "type": "function",
+      "path": "spikes/audio/src/alloc.rs",
+      "name": "alloc",
+      "metadata": {
+        "startLine": 14,
+        "endLine": 20,
+        "params": [
+          "layout"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/alloc.rs:dealloc",
+      "type": "function",
+      "path": "spikes/audio/src/alloc.rs",
+      "name": "dealloc",
+      "metadata": {
+        "startLine": 21,
+        "endLine": 27,
+        "params": [
+          "ptr",
+          "layout"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/alloc.rs:realloc",
+      "type": "function",
+      "path": "spikes/audio/src/alloc.rs",
+      "name": "realloc",
+      "metadata": {
+        "startLine": 28,
+        "endLine": 34,
+        "params": [
+          "ptr",
+          "layout",
+          "new_size"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/alloc.rs:count",
+      "type": "function",
+      "path": "spikes/audio/src/alloc.rs",
+      "name": "count",
+      "metadata": {
+        "startLine": 38,
+        "endLine": 44,
+        "params": [
+          "f"
+        ]
+      }
+    },
+    {
+      "id": "file:spikes/audio/src/amp.rs",
+      "type": "file",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "spikes/audio/src/amp.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 173
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/amp.rs:write16",
+      "type": "function",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "write16",
+      "metadata": {
+        "startLine": 16,
+        "endLine": 24,
+        "params": [
+          "path",
+          "left",
+          "right"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/amp.rs:peak",
+      "type": "function",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "peak",
+      "metadata": {
+        "startLine": 26,
+        "endLine": 28,
+        "params": [
+          "x"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/amp.rs:rms",
+      "type": "function",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "rms",
+      "metadata": {
+        "startLine": 30,
+        "endLine": 32,
+        "params": [
+          "x"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/amp.rs:normalise",
+      "type": "function",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "normalise",
+      "metadata": {
+        "startLine": 35,
+        "endLine": 38,
+        "params": [
+          "v"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/amp.rs:timed",
+      "type": "function",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "timed",
+      "metadata": {
+        "startLine": 40,
+        "endLine": 50,
+        "params": [
+          "f"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/amp.rs:di_guitar",
+      "type": "function",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "di_guitar",
+      "metadata": {
+        "startLine": 54,
+        "endLine": 88,
+        "params": [
+          "di_sf"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/amp.rs:backing",
+      "type": "function",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "backing",
+      "metadata": {
+        "startLine": 91,
+        "endLine": 97,
+        "params": [
+          "gm_sf"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/amp.rs:run",
+      "type": "function",
+      "path": "spikes/audio/src/amp.rs",
+      "name": "run",
+      "metadata": {
+        "startLine": 99,
+        "endLine": 173,
+        "params": [
+          "di_sf",
+          "gm_sf",
+          "model",
+          "ir",
+          "out_dir",
+          "name"
+        ]
+      }
+    },
+    {
+      "id": "file:spikes/audio/src/engines.rs",
+      "type": "file",
+      "path": "spikes/audio/src/engines.rs",
+      "name": "spikes/audio/src/engines.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 96
+      }
+    },
+    {
+      "id": "struct:spikes/audio/src/engines.rs:Engine",
+      "type": "struct",
+      "path": "spikes/audio/src/engines.rs",
+      "name": "Engine",
+      "metadata": {
+        "startLine": 8,
+        "endLine": 12,
+        "methods": [
+          "name",
+          "send",
+          "render"
+        ]
+      }
+    },
+    {
+      "id": "struct:spikes/audio/src/engines.rs:Rusty",
+      "type": "struct",
+      "path": "spikes/audio/src/engines.rs",
+      "name": "Rusty",
+      "metadata": {
+        "startLine": 14,
+        "endLine": 17,
+        "methods": [
+          "new",
+          "name",
+          "send",
+          "render"
+        ]
+      }
+    },
+    {
+      "id": "struct:spikes/audio/src/engines.rs:Oxi",
+      "type": "struct",
+      "path": "spikes/audio/src/engines.rs",
+      "name": "Oxi",
+      "metadata": {
+        "startLine": 52,
+        "endLine": 54,
+        "methods": [
+          "new",
+          "name",
+          "send",
+          "render"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/engines.rs:new",
+      "type": "function",
+      "path": "spikes/audio/src/engines.rs",
+      "name": "new",
+      "metadata": {
+        "startLine": 20,
+        "endLine": 25,
+        "params": [
+          "font",
+          "block"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/engines.rs:name",
+      "type": "function",
+      "path": "spikes/audio/src/engines.rs",
+      "name": "name",
+      "metadata": {
+        "startLine": 29,
+        "endLine": 31,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/engines.rs:send",
+      "type": "function",
+      "path": "spikes/audio/src/engines.rs",
+      "name": "send",
+      "metadata": {
+        "startLine": 32,
+        "endLine": 46,
+        "params": [
+          "ch",
+          "msg"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/engines.rs:render",
+      "type": "function",
+      "path": "spikes/audio/src/engines.rs",
+      "name": "render",
+      "metadata": {
+        "startLine": 47,
+        "endLine": 49,
+        "params": [
+          "left",
+          "right"
+        ]
+      }
+    },
+    {
+      "id": "file:spikes/audio/src/main.rs",
+      "type": "file",
+      "path": "spikes/audio/src/main.rs",
+      "name": "spikes/audio/src/main.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 541
+      }
+    },
+    {
+      "id": "struct:spikes/audio/src/main.rs:Stems",
+      "type": "struct",
+      "path": "spikes/audio/src/main.rs",
+      "name": "Stems",
+      "metadata": {
+        "startLine": 56,
+        "endLine": 61,
+        "methods": []
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:load_sf2_bytes",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "load_sf2_bytes",
+      "metadata": {
+        "startLine": 22,
+        "endLine": 37,
+        "params": [
+          "path"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:engine",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "engine",
+      "metadata": {
+        "startLine": 39,
+        "endLine": 49,
+        "params": [
+          "kind",
+          "sf",
+          "rusty_font"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:render_song",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "render_song",
+      "metadata": {
+        "startLine": 63,
+        "endLine": 104,
+        "params": [
+          "engines",
+          "events",
+          "callback"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:write_wav",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "write_wav",
+      "metadata": {
+        "startLine": 106,
+        "endLine": 114,
+        "params": [
+          "path",
+          "left",
+          "right"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:read_wav_mono",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "read_wav_mono",
+      "metadata": {
+        "startLine": 116,
+        "endLine": 129,
+        "params": [
+          "path"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:mix",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "mix",
+      "metadata": {
+        "startLine": 131,
+        "endLine": 142,
+        "params": [
+          "tracks"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:envelope",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "envelope",
+      "metadata": {
+        "startLine": 145,
+        "endLine": 152,
+        "params": [
+          "x"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:correlation",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "correlation",
+      "metadata": {
+        "startLine": 154,
+        "endLine": 166,
+        "params": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:spectrum",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "spectrum",
+      "metadata": {
+        "startLine": 170,
+        "endLine": 197,
+        "params": [
+          "x"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:compare",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "compare",
+      "metadata": {
+        "startLine": 199,
+        "endLine": 208,
+        "params": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:onset_error",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "onset_error",
+      "metadata": {
+        "startLine": 212,
+        "endLine": 226,
+        "params": [
+          "kind",
+          "sf",
+          "offset"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:main",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "main",
+      "metadata": {
+        "startLine": 228,
+        "endLine": 277,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:nam",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "nam",
+      "metadata": {
+        "startLine": 279,
+        "endLine": 319,
+        "params": [
+          "model",
+          "input",
+          "out"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:pipeline",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "pipeline",
+      "metadata": {
+        "startLine": 324,
+        "endLine": 391,
+        "params": [
+          "sf",
+          "model",
+          "out"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:devices",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "devices",
+      "metadata": {
+        "startLine": 394,
+        "endLine": 407,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:dls",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "dls",
+      "metadata": {
+        "startLine": 411,
+        "endLine": 445,
+        "params": [
+          "path"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/main.rs:stream",
+      "type": "function",
+      "path": "spikes/audio/src/main.rs",
+      "name": "stream",
+      "metadata": {
+        "startLine": 452,
+        "endLine": 541,
+        "params": [
+          "sf"
+        ]
+      }
+    },
+    {
+      "id": "file:spikes/audio/src/sf3.rs",
+      "type": "file",
+      "path": "spikes/audio/src/sf3.rs",
+      "name": "spikes/audio/src/sf3.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 182
+      }
+    },
+    {
+      "id": "struct:spikes/audio/src/sf3.rs:Converted",
+      "type": "struct",
+      "path": "spikes/audio/src/sf3.rs",
+      "name": "Converted",
+      "metadata": {
+        "startLine": 13,
+        "endLine": 17,
+        "methods": []
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/sf3.rs:u32le",
+      "type": "function",
+      "path": "spikes/audio/src/sf3.rs",
+      "name": "u32le",
+      "metadata": {
+        "startLine": 19,
+        "endLine": 21,
+        "params": [
+          "b",
+          "at"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/sf3.rs:chunks",
+      "type": "function",
+      "path": "spikes/audio/src/sf3.rs",
+      "name": "chunks",
+      "metadata": {
+        "startLine": 24,
+        "endLine": 43,
+        "params": [
+          "body"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/sf3.rs:chunk",
+      "type": "function",
+      "path": "spikes/audio/src/sf3.rs",
+      "name": "chunk",
+      "metadata": {
+        "startLine": 45,
+        "endLine": 54,
+        "params": [
+          "id",
+          "data"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/sf3.rs:list",
+      "type": "function",
+      "path": "spikes/audio/src/sf3.rs",
+      "name": "list",
+      "metadata": {
+        "startLine": 56,
+        "endLine": 62,
+        "params": [
+          "kind",
+          "parts"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/sf3.rs:decode_vorbis",
+      "type": "function",
+      "path": "spikes/audio/src/sf3.rs",
+      "name": "decode_vorbis",
+      "metadata": {
+        "startLine": 64,
+        "endLine": 77,
+        "params": [
+          "data"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/sf3.rs:to_sf2",
+      "type": "function",
+      "path": "spikes/audio/src/sf3.rs",
+      "name": "to_sf2",
+      "metadata": {
+        "startLine": 80,
+        "endLine": 182,
+        "params": [
+          "file"
+        ]
+      }
+    },
+    {
+      "id": "file:spikes/audio/src/song.rs",
+      "type": "file",
+      "path": "spikes/audio/src/song.rs",
+      "name": "spikes/audio/src/song.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 159
+      }
+    },
+    {
+      "id": "struct:spikes/audio/src/song.rs:Msg",
+      "type": "struct",
+      "path": "spikes/audio/src/song.rs",
+      "name": "Msg",
+      "metadata": {
+        "startLine": 12,
+        "endLine": 22,
+        "methods": []
+      }
+    },
+    {
+      "id": "struct:spikes/audio/src/song.rs:Event",
+      "type": "struct",
+      "path": "spikes/audio/src/song.rs",
+      "name": "Event",
+      "metadata": {
+        "startLine": 25,
+        "endLine": 30,
+        "methods": []
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/song.rs:file_channel",
+      "type": "function",
+      "path": "spikes/audio/src/song.rs",
+      "name": "file_channel",
+      "metadata": {
+        "startLine": 35,
+        "endLine": 41,
+        "params": [
+          "track",
+          "channel"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/song.rs:events",
+      "type": "function",
+      "path": "spikes/audio/src/song.rs",
+      "name": "events",
+      "metadata": {
+        "startLine": 43,
+        "endLine": 113,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/song.rs:length",
+      "type": "function",
+      "path": "spikes/audio/src/song.rs",
+      "name": "length",
+      "metadata": {
+        "startLine": 116,
+        "endLine": 118,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/audio/src/song.rs:midi_file",
+      "type": "function",
+      "path": "spikes/audio/src/song.rs",
+      "name": "midi_file",
+      "metadata": {
+        "startLine": 121,
+        "endLine": 159,
+        "params": [
+          "events"
+        ]
+      }
+    },
+    {
+      "id": "config:spikes/gui/Cargo.toml",
+      "type": "config",
+      "path": "spikes/gui/Cargo.toml",
+      "name": "spikes/gui/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "lines": 23
+      }
+    },
+    {
+      "id": "config:spikes/gui/common/Cargo.toml",
+      "type": "config",
+      "path": "spikes/gui/common/Cargo.toml",
+      "name": "spikes/gui/common/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "lines": 13
+      }
+    },
+    {
+      "id": "file:spikes/gui/common/examples/icon_sheet.rs",
+      "type": "file",
+      "path": "spikes/gui/common/examples/icon_sheet.rs",
+      "name": "spikes/gui/common/examples/icon_sheet.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 65
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/examples/icon_sheet.rs:main",
+      "type": "function",
+      "path": "spikes/gui/common/examples/icon_sheet.rs",
+      "name": "main",
+      "metadata": {
+        "startLine": 10,
+        "endLine": 65,
+        "params": []
+      }
+    },
+    {
+      "id": "file:spikes/gui/common/src/icons.rs",
+      "type": "file",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "spikes/gui/common/src/icons.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 241
+      }
+    },
+    {
+      "id": "struct:spikes/gui/common/src/icons.rs:Icon",
+      "type": "struct",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "Icon",
+      "metadata": {
+        "startLine": 40,
+        "endLine": 45,
+        "methods": []
+      }
+    },
+    {
+      "id": "struct:spikes/gui/common/src/icons.rs:Ink",
+      "type": "struct",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "Ink",
+      "metadata": {
+        "startLine": 49,
+        "endLine": 54,
+        "methods": [
+          "width",
+          "height",
+          "centre"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/icons.rs:width",
+      "type": "function",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "width",
+      "metadata": {
+        "startLine": 57,
+        "endLine": 59,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/icons.rs:height",
+      "type": "function",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "height",
+      "metadata": {
+        "startLine": 60,
+        "endLine": 62,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/icons.rs:centre",
+      "type": "function",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "centre",
+      "metadata": {
+        "startLine": 63,
+        "endLine": 65,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/icons.rs:font_and_text",
+      "type": "function",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "font_and_text",
+      "metadata": {
+        "startLine": 81,
+        "endLine": 86,
+        "params": [
+          "face"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/icons.rs:draw",
+      "type": "function",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "draw",
+      "metadata": {
+        "startLine": 88,
+        "endLine": 109,
+        "params": [
+          "fonts",
+          "raster",
+          "face",
+          "size",
+          "origin",
+          "px"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/icons.rs:ink_of",
+      "type": "function",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "ink_of",
+      "metadata": {
+        "startLine": 112,
+        "endLine": 133,
+        "params": [
+          "pixmap",
+          "origin"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/icons.rs:tool_icons",
+      "type": "function",
+      "path": "spikes/gui/common/src/icons.rs",
+      "name": "tool_icons",
+      "metadata": {
+        "startLine": 136,
+        "endLine": 202,
+        "params": [
+          "px"
+        ]
+      }
+    },
+    {
+      "id": "file:spikes/gui/common/src/lib.rs",
+      "type": "file",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "spikes/gui/common/src/lib.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 456
+      }
+    },
+    {
+      "id": "struct:spikes/gui/common/src/lib.rs:Tool",
+      "type": "struct",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "Tool",
+      "metadata": {
+        "startLine": 23,
+        "endLine": 36,
+        "methods": []
+      }
+    },
+    {
+      "id": "struct:spikes/gui/common/src/lib.rs:Face",
+      "type": "struct",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "Face",
+      "metadata": {
+        "startLine": 40,
+        "endLine": 45,
+        "methods": []
+      }
+    },
+    {
+      "id": "struct:spikes/gui/common/src/lib.rs:PaletteState",
+      "type": "struct",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "PaletteState",
+      "metadata": {
+        "startLine": 211,
+        "endLine": 213,
+        "methods": [
+          "default",
+          "is_on",
+          "toggle",
+          "press",
+          "summary"
+        ]
+      }
+    },
+    {
+      "id": "struct:spikes/gui/common/src/lib.rs:Track",
+      "type": "struct",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "Track",
+      "metadata": {
+        "startLine": 283,
+        "endLine": 294,
+        "methods": []
+      }
+    },
+    {
+      "id": "struct:spikes/gui/common/src/lib.rs:Canvas",
+      "type": "struct",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "Canvas",
+      "metadata": {
+        "startLine": 320,
+        "endLine": 324,
+        "methods": [
+          "default",
+          "new",
+          "page_size",
+          "frame",
+          "frame_themed",
+          "page_pixels"
+        ]
+      }
+    },
+    {
+      "id": "struct:spikes/gui/common/src/lib.rs:Frame",
+      "type": "struct",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "Frame",
+      "metadata": {
+        "startLine": 327,
+        "endLine": 334,
+        "methods": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:t",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "t",
+      "metadata": {
+        "startLine": 188,
+        "endLine": 204,
+        "params": [
+          "id",
+          "name",
+          "face",
+          "key",
+          "group",
+          "exclusive"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:default",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "default",
+      "metadata": {
+        "startLine": 216,
+        "endLine": 222,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:is_on",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "is_on",
+      "metadata": {
+        "startLine": 227,
+        "endLine": 229,
+        "params": [
+          "i"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:toggle",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "toggle",
+      "metadata": {
+        "startLine": 232,
+        "endLine": 243,
+        "params": [
+          "i"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:press",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "press",
+      "metadata": {
+        "startLine": 246,
+        "endLine": 252,
+        "params": [
+          "key"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:summary",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "summary",
+      "metadata": {
+        "startLine": 255,
+        "endLine": 267,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:search",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "search",
+      "metadata": {
+        "startLine": 271,
+        "endLine": 279,
+        "params": [
+          "query"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:tracks",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "tracks",
+      "metadata": {
+        "startLine": 299,
+        "endLine": 307,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:track",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "track",
+      "metadata": {
+        "startLine": 309,
+        "endLine": 317,
+        "params": [
+          "name",
+          "instrument"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:new",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "new",
+      "metadata": {
+        "startLine": 344,
+        "endLine": 353,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:page_size",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "page_size",
+      "metadata": {
+        "startLine": 356,
+        "endLine": 358,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:frame",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "frame",
+      "metadata": {
+        "startLine": 364,
+        "endLine": 376,
+        "params": [
+          "x",
+          "y",
+          "width",
+          "height",
+          "zoom",
+          "dpr",
+          "dark"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:frame_themed",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "frame_themed",
+      "metadata": {
+        "startLine": 380,
+        "endLine": 408,
+        "params": [
+          "x",
+          "y",
+          "width",
+          "height",
+          "zoom",
+          "dpr",
+          "theme"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:page_pixels",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "page_pixels",
+      "metadata": {
+        "startLine": 411,
+        "endLine": 414,
+        "params": [
+          "zoom"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/common/src/lib.rs:step_zoom",
+      "type": "function",
+      "path": "spikes/gui/common/src/lib.rs",
+      "name": "step_zoom",
+      "metadata": {
+        "startLine": 421,
+        "endLine": 428,
+        "params": [
+          "zoom",
+          "dir"
+        ]
+      }
+    },
+    {
+      "id": "config:spikes/gui/egui/Cargo.toml",
+      "type": "config",
+      "path": "spikes/gui/egui/Cargo.toml",
+      "name": "spikes/gui/egui/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "lines": 12
+      }
+    },
+    {
+      "id": "file:spikes/gui/egui/src/main.rs",
+      "type": "file",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "spikes/gui/egui/src/main.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 294
+      }
+    },
+    {
+      "id": "struct:spikes/gui/egui/src/main.rs:App",
+      "type": "struct",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "App",
+      "metadata": {
+        "startLine": 52,
+        "endLine": 62,
+        "methods": [
+          "default",
+          "ui",
+          "tool_button",
+          "shortcuts",
+          "score"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/egui/src/main.rs:main",
+      "type": "function",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "main",
+      "metadata": {
+        "startLine": 15,
+        "endLine": 30,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/egui/src/main.rs:install_fonts",
+      "type": "function",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "install_fonts",
+      "metadata": {
+        "startLine": 33,
+        "endLine": 50,
+        "params": [
+          "ctx"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/egui/src/main.rs:default",
+      "type": "function",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "default",
+      "metadata": {
+        "startLine": 65,
+        "endLine": 76,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/egui/src/main.rs:ui",
+      "type": "function",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "ui",
+      "metadata": {
+        "startLine": 80,
+        "endLine": 166,
+        "params": [
+          "ui",
+          "_frame"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/egui/src/main.rs:tool_button",
+      "type": "function",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "tool_button",
+      "metadata": {
+        "startLine": 170,
+        "endLine": 204,
+        "params": [
+          "ui",
+          "i",
+          "tool"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/egui/src/main.rs:shortcuts",
+      "type": "function",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "shortcuts",
+      "metadata": {
+        "startLine": 207,
+        "endLine": 232,
+        "params": [
+          "ctx"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/egui/src/main.rs:score",
+      "type": "function",
+      "path": "spikes/gui/egui/src/main.rs",
+      "name": "score",
+      "metadata": {
+        "startLine": 236,
+        "endLine": 293,
+        "params": [
+          "ui"
+        ]
+      }
+    },
+    {
+      "id": "config:spikes/gui/iced/Cargo.toml",
+      "type": "config",
+      "path": "spikes/gui/iced/Cargo.toml",
+      "name": "spikes/gui/iced/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "lines": 12
+      }
+    },
+    {
+      "id": "file:spikes/gui/iced/src/main.rs",
+      "type": "file",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "spikes/gui/iced/src/main.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 318
+      }
+    },
+    {
+      "id": "struct:spikes/gui/iced/src/main.rs:Message",
+      "type": "struct",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "Message",
+      "metadata": {
+        "startLine": 32,
+        "endLine": 43,
+        "methods": []
+      }
+    },
+    {
+      "id": "struct:spikes/gui/iced/src/main.rs:App",
+      "type": "struct",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "App",
+      "metadata": {
+        "startLine": 45,
+        "endLine": 54,
+        "methods": [
+          "default",
+          "theme",
+          "subscription",
+          "update",
+          "view",
+          "tool_button",
+          "palette_view",
+          "tracks_view",
+          "score_view"
+        ]
+      }
+    },
+    {
+      "id": "struct:spikes/gui/iced/src/main.rs:CanvasCache",
+      "type": "struct",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "CanvasCache",
+      "metadata": {
+        "startLine": 56,
+        "endLine": 60,
+        "methods": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:main",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "main",
+      "metadata": {
+        "startLine": 19,
+        "endLine": 29,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:default",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "default",
+      "metadata": {
+        "startLine": 63,
+        "endLine": 77,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:theme",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "theme",
+      "metadata": {
+        "startLine": 81,
+        "endLine": 83,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:subscription",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "subscription",
+      "metadata": {
+        "startLine": 85,
+        "endLine": 89,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:update",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "update",
+      "metadata": {
+        "startLine": 91,
+        "endLine": 125,
+        "params": [
+          "message"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:view",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "view",
+      "metadata": {
+        "startLine": 127,
+        "endLine": 156,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:tool_button",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "tool_button",
+      "metadata": {
+        "startLine": 158,
+        "endLine": 181,
+        "params": [
+          "i"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:palette_view",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "palette_view",
+      "metadata": {
+        "startLine": 183,
+        "endLine": 207,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:tracks_view",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "tracks_view",
+      "metadata": {
+        "startLine": 209,
+        "endLine": 234,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/iced/src/main.rs:score_view",
+      "type": "function",
+      "path": "spikes/gui/iced/src/main.rs",
+      "name": "score_view",
+      "metadata": {
+        "startLine": 238,
+        "endLine": 317,
+        "params": [
+          "size"
+        ]
+      }
+    },
+    {
+      "id": "config:spikes/gui/slint/Cargo.toml",
+      "type": "config",
+      "path": "spikes/gui/slint/Cargo.toml",
+      "name": "spikes/gui/slint/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "lines": 17
+      }
+    },
+    {
+      "id": "file:spikes/gui/slint/build.rs",
+      "type": "file",
+      "path": "spikes/gui/slint/build.rs",
+      "name": "spikes/gui/slint/build.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 8
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/build.rs:main",
+      "type": "function",
+      "path": "spikes/gui/slint/build.rs",
+      "name": "main",
+      "metadata": {
+        "startLine": 4,
+        "endLine": 8,
+        "params": []
+      }
+    },
+    {
+      "id": "file:spikes/gui/slint/src/main.rs",
+      "type": "file",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "spikes/gui/slint/src/main.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 387
+      }
+    },
+    {
+      "id": "struct:spikes/gui/slint/src/main.rs:State",
+      "type": "struct",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "State",
+      "metadata": {
+        "startLine": 29,
+        "endLine": 44,
+        "methods": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:main",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "main",
+      "metadata": {
+        "startLine": 48,
+        "endLine": 166,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:lines",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "lines",
+      "metadata": {
+        "startLine": 168,
+        "endLine": 175,
+        "params": [
+          "items"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:install_interface_zoom",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "install_interface_zoom",
+      "metadata": {
+        "startLine": 180,
+        "endLine": 276,
+        "params": [
+          "ui",
+          "state"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:step_ui_zoom",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "step_ui_zoom",
+      "metadata": {
+        "startLine": 278,
+        "endLine": 284,
+        "params": [
+          "zoom",
+          "steps"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:tool_item",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "tool_item",
+      "metadata": {
+        "startLine": 286,
+        "endLine": 295,
+        "params": [
+          "s",
+          "i"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:refresh_palette",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "refresh_palette",
+      "metadata": {
+        "startLine": 297,
+        "endLine": 332,
+        "params": [
+          "ui",
+          "s"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:set_page_size",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "set_page_size",
+      "metadata": {
+        "startLine": 334,
+        "endLine": 339,
+        "params": [
+          "ui",
+          "s"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:theme",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "theme",
+      "metadata": {
+        "startLine": 341,
+        "endLine": 347,
+        "params": [
+          "ui"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/gui/slint/src/main.rs:render",
+      "type": "function",
+      "path": "spikes/gui/slint/src/main.rs",
+      "name": "render",
+      "metadata": {
+        "startLine": 350,
+        "endLine": 387,
+        "params": [
+          "ui",
+          "s"
+        ]
+      }
+    },
+    {
+      "id": "config:spikes/nam-bench/Cargo.toml",
+      "type": "config",
+      "path": "spikes/nam-bench/Cargo.toml",
+      "name": "spikes/nam-bench/Cargo.toml",
+      "metadata": {
+        "language": "toml",
+        "lines": 22
+      }
+    },
+    {
+      "id": "file:spikes/nam-bench/src/main.rs",
+      "type": "file",
+      "path": "spikes/nam-bench/src/main.rs",
+      "name": "spikes/nam-bench/src/main.rs",
+      "metadata": {
+        "language": "rust",
+        "lines": 89
+      }
+    },
+    {
+      "id": "function:spikes/nam-bench/src/main.rs:plucks",
+      "type": "function",
+      "path": "spikes/nam-bench/src/main.rs",
+      "name": "plucks",
+      "metadata": {
+        "startLine": 9,
+        "endLine": 31,
+        "params": []
+      }
+    },
+    {
+      "id": "function:spikes/nam-bench/src/main.rs:time",
+      "type": "function",
+      "path": "spikes/nam-bench/src/main.rs",
+      "name": "time",
+      "metadata": {
+        "startLine": 33,
+        "endLine": 60,
+        "params": [
+          "name",
+          "x",
+          "f"
+        ]
+      }
+    },
+    {
+      "id": "function:spikes/nam-bench/src/main.rs:main",
+      "type": "function",
+      "path": "spikes/nam-bench/src/main.rs",
+      "name": "main",
+      "metadata": {
+        "startLine": 62,
+        "endLine": 89,
+        "params": []
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:scripts/wayland-dnd-test/xdrag.py",
+      "target": "function:scripts/wayland-dnd-test/xdrag.py:move",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/alloc.rs",
+      "target": "struct:spikes/audio/src/alloc.rs:Counting",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/alloc.rs",
+      "target": "function:spikes/audio/src/alloc.rs:alloc",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/alloc.rs",
+      "target": "function:spikes/audio/src/alloc.rs:dealloc",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/alloc.rs",
+      "target": "function:spikes/audio/src/alloc.rs:realloc",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/alloc.rs",
+      "target": "function:spikes/audio/src/alloc.rs:count",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/amp.rs",
+      "target": "function:spikes/audio/src/amp.rs:write16",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/amp.rs",
+      "target": "function:spikes/audio/src/amp.rs:peak",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/amp.rs",
+      "target": "function:spikes/audio/src/amp.rs:rms",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/amp.rs",
+      "target": "function:spikes/audio/src/amp.rs:normalise",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/amp.rs",
+      "target": "function:spikes/audio/src/amp.rs:timed",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/amp.rs",
+      "target": "function:spikes/audio/src/amp.rs:di_guitar",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/amp.rs",
+      "target": "function:spikes/audio/src/amp.rs:backing",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/amp.rs",
+      "target": "function:spikes/audio/src/amp.rs:run",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "struct:spikes/audio/src/engines.rs:Engine",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "struct:spikes/audio/src/engines.rs:Rusty",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "struct:spikes/audio/src/engines.rs:Oxi",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "function:spikes/audio/src/engines.rs:new",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "function:spikes/audio/src/engines.rs:name",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "function:spikes/audio/src/engines.rs:send",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "function:spikes/audio/src/engines.rs:render",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "function:spikes/audio/src/engines.rs:new",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "function:spikes/audio/src/engines.rs:name",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "function:spikes/audio/src/engines.rs:send",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/engines.rs",
+      "target": "function:spikes/audio/src/engines.rs:render",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "struct:spikes/audio/src/main.rs:Stems",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:load_sf2_bytes",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:engine",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:render_song",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:write_wav",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:read_wav_mono",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:mix",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:envelope",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:correlation",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:spectrum",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:compare",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:onset_error",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:main",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:nam",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:pipeline",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:devices",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:dls",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/main.rs",
+      "target": "function:spikes/audio/src/main.rs:stream",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/sf3.rs",
+      "target": "struct:spikes/audio/src/sf3.rs:Converted",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/sf3.rs",
+      "target": "function:spikes/audio/src/sf3.rs:u32le",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/sf3.rs",
+      "target": "function:spikes/audio/src/sf3.rs:chunks",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/sf3.rs",
+      "target": "function:spikes/audio/src/sf3.rs:chunk",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/sf3.rs",
+      "target": "function:spikes/audio/src/sf3.rs:list",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/sf3.rs",
+      "target": "function:spikes/audio/src/sf3.rs:decode_vorbis",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/sf3.rs",
+      "target": "function:spikes/audio/src/sf3.rs:to_sf2",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/song.rs",
+      "target": "struct:spikes/audio/src/song.rs:Msg",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/song.rs",
+      "target": "struct:spikes/audio/src/song.rs:Event",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/song.rs",
+      "target": "function:spikes/audio/src/song.rs:file_channel",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/song.rs",
+      "target": "function:spikes/audio/src/song.rs:events",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/song.rs",
+      "target": "function:spikes/audio/src/song.rs:length",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/audio/src/song.rs",
+      "target": "function:spikes/audio/src/song.rs:midi_file",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/examples/icon_sheet.rs",
+      "target": "function:spikes/gui/common/examples/icon_sheet.rs:main",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "struct:spikes/gui/common/src/icons.rs:Icon",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "struct:spikes/gui/common/src/icons.rs:Ink",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "function:spikes/gui/common/src/icons.rs:width",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "function:spikes/gui/common/src/icons.rs:height",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "function:spikes/gui/common/src/icons.rs:centre",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "function:spikes/gui/common/src/icons.rs:font_and_text",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "function:spikes/gui/common/src/icons.rs:draw",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "function:spikes/gui/common/src/icons.rs:ink_of",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/icons.rs",
+      "target": "function:spikes/gui/common/src/icons.rs:tool_icons",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "struct:spikes/gui/common/src/lib.rs:Tool",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "struct:spikes/gui/common/src/lib.rs:Face",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "struct:spikes/gui/common/src/lib.rs:PaletteState",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "struct:spikes/gui/common/src/lib.rs:Track",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "struct:spikes/gui/common/src/lib.rs:Canvas",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "struct:spikes/gui/common/src/lib.rs:Frame",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:t",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:default",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:is_on",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:toggle",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:press",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:summary",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:search",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:tracks",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:track",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:default",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:new",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:page_size",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:frame",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:frame_themed",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:page_pixels",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/common/src/lib.rs",
+      "target": "function:spikes/gui/common/src/lib.rs:step_zoom",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/egui/src/main.rs",
+      "target": "struct:spikes/gui/egui/src/main.rs:App",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/egui/src/main.rs",
+      "target": "function:spikes/gui/egui/src/main.rs:main",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/egui/src/main.rs",
+      "target": "function:spikes/gui/egui/src/main.rs:install_fonts",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/egui/src/main.rs",
+      "target": "function:spikes/gui/egui/src/main.rs:default",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/egui/src/main.rs",
+      "target": "function:spikes/gui/egui/src/main.rs:ui",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/egui/src/main.rs",
+      "target": "function:spikes/gui/egui/src/main.rs:tool_button",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/egui/src/main.rs",
+      "target": "function:spikes/gui/egui/src/main.rs:shortcuts",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/egui/src/main.rs",
+      "target": "function:spikes/gui/egui/src/main.rs:score",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "struct:spikes/gui/iced/src/main.rs:Message",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "struct:spikes/gui/iced/src/main.rs:App",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "struct:spikes/gui/iced/src/main.rs:CanvasCache",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:main",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:default",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:theme",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:subscription",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:update",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:view",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:tool_button",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:palette_view",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:tracks_view",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/iced/src/main.rs",
+      "target": "function:spikes/gui/iced/src/main.rs:score_view",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/build.rs",
+      "target": "function:spikes/gui/slint/build.rs:main",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "struct:spikes/gui/slint/src/main.rs:State",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:main",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:lines",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:install_interface_zoom",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:step_ui_zoom",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:tool_item",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:refresh_palette",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:set_page_size",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:theme",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/gui/slint/src/main.rs",
+      "target": "function:spikes/gui/slint/src/main.rs:render",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/nam-bench/src/main.rs",
+      "target": "function:spikes/nam-bench/src/main.rs:plucks",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/nam-bench/src/main.rs",
+      "target": "function:spikes/nam-bench/src/main.rs:time",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:spikes/nam-bench/src/main.rs",
+      "target": "function:spikes/nam-bench/src/main.rs:main",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/audio/Cargo.toml",
+      "target": "file:spikes/audio/src/main.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/gui/Cargo.toml",
+      "target": "file:spikes/gui/egui/src/main.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/gui/Cargo.toml",
+      "target": "file:spikes/gui/iced/src/main.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/gui/Cargo.toml",
+      "target": "file:spikes/gui/slint/src/main.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/gui/common/Cargo.toml",
+      "target": "file:spikes/gui/common/src/lib.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/gui/egui/Cargo.toml",
+      "target": "file:spikes/gui/egui/src/main.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/gui/iced/Cargo.toml",
+      "target": "file:spikes/gui/iced/src/main.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/gui/slint/Cargo.toml",
+      "target": "file:spikes/gui/slint/src/main.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    },
+    {
+      "source": "config:spikes/nam-bench/Cargo.toml",
+      "target": "file:spikes/nam-bench/src/main.rs",
+      "type": "configures",
+      "weight": 0.6,
+      "direction": "forward"
+    }
+  ]
+}

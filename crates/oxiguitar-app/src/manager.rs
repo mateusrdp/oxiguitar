@@ -64,11 +64,13 @@ pub(crate) fn disabled(settings: &SharedSettings) -> Vec<String> {
 
 /// Every plugin file `plugins` found, in folder order and then by name.
 /// `disabled` is settings.json's list now, which may differ from the one
-/// this session started with.
+/// this session started with. Replaced entries are excluded: the winning
+/// version is listed; the replaced file is explained in plugin notices.
 pub(crate) fn rows(plugins: &Plugins, disabled: &[String]) -> Vec<Row> {
     plugins
         .found()
         .iter()
+        .filter(|f| !matches!(f.state, oxiguitar_host::State::Replaced(_)))
         .map(|f| {
             let mut r = row(f, plugins.safe_mode(), disabled);
             let has_window = plugins
@@ -211,11 +213,12 @@ mod tests {
             .iter()
             .map(|r| (r.name.as_str(), r.version.as_str(), r.file.as_str()))
             .collect();
+        // b-test.oxp is replaced by a-test.oxp (same plugin id, a-test
+        // appears first), so only a-test and junk appear in the list.
         assert_eq!(
             names,
             [
                 ("Test plugin", "0.10.0", "a-test.oxp"),
-                ("Test plugin", "0.10.0", "b-test.oxp"),
                 ("junk.oxp", "", "junk.oxp"),
             ]
         );
@@ -226,17 +229,21 @@ mod tests {
             rows[0].state,
             "Not loaded yet: it loads when it is first needed."
         );
-        assert!(rows[1].state.starts_with("Not used: ") && rows[1].state.contains("a-test.oxp"));
         assert!(
-            rows[2].state.starts_with("Can't be used: "),
+            rows[1].state.starts_with("Can't be used: "),
             "{}",
-            rows[2].state
+            rows[1].state
         );
-        // The two copies can be enabled and disabled; the junk can't.
+        // The winner can be enabled and disabled; the junk can't.
         assert_eq!(rows[0].id.as_deref(), Some("oxiguitar.test"));
-        assert_eq!(rows[1].id.as_deref(), Some("oxiguitar.test"));
-        assert_eq!(rows[2].id, None);
-        assert!(rows[0].enabled && rows[1].enabled && !rows[2].enabled);
+        assert_eq!(rows[1].id, None);
+        assert!(rows[0].enabled && !rows[1].enabled);
+        // The replaced file is still in found() for diagnostics.
+        let replaced = plugins
+            .found()
+            .iter()
+            .filter(|f| matches!(f.state, State::Replaced(_)));
+        assert_eq!(replaced.count(), 1);
         // Listing loads nothing.
         assert!(plugins.found().iter().all(|f| !f.is_loaded()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -335,10 +342,11 @@ mod tests {
             "x11",
             Arc::new(Unheard),
         );
-        let rows = rows(&plugins, &[]);
-        assert_eq!(rows.len(), 3);
+        // b-test.oxp is replaced by a-test.oxp; only a-test and junk
+        // appear in the rows list.
+        assert_eq!(rows(&plugins, &[]).len(), 2);
         assert_eq!(
-            rows[0].state,
+            rows(&plugins, &[])[0].state,
             "Not loaded: OxiGuitar was started in safe mode."
         );
         // Disabling a plugin still works in safe mode: that is what it is for.

@@ -16,6 +16,7 @@ import { AltBox, BarDialog, BarFields, BendDialog, ChordDialog, GridPoint, Paste
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
+import "../../../assets/fonts/noto-sans/NotoSans-Bold.ttf";
 
 export struct TileItem {
     image: image,
@@ -27,6 +28,14 @@ export struct TileItem {
 // A box over the page, in canvas points (the editor's caret and selection;
 // editing.rs). The window places it with the origin and the zoom, so it
 // follows resizing and zooming by itself.
+// Line types for the shortcut cheatsheet: 0 = section header, 1 = shortcut.
+export struct ShortcutLine {
+    type: int,
+    key: string,
+    description: string,
+    content: string,
+}
+
 export struct BoxItem {
     x: float,
     y: float,
@@ -819,12 +828,57 @@ component SongView inherits Rectangle {
     }
 }
 
+// Renders a single shortcut cheat sheet line: bold section header
+// (type 0) or bold key + separator + normal description (type 1).
+component ShortcutLineItem inherits Rectangle {
+    in property <int> line-type;
+    in property <string> key;
+    in property <string> description;
+    in property <string> content;
+
+    // Explicit height to prevent Rectangle's default height from adding
+    // extra space between items in the VerticalLayout.
+    height: root.line-type == 0 ? 20px : 18px;
+
+    // No horizontal-stretch: it causes columns to resize proportionally
+    // (description gets more space than key), making columns uneven.
+    // Arrow alignment isn't perfect but columns are now equal-width.
+    HorizontalLayout {
+        visible: root.line-type == 1;
+        spacing: 2px;
+        Text { text: root.key; font-size: 14px; font-weight: 700; }
+        Text { text: " -> "; font-size: 14px; }
+        Text { text: root.description; font-size: 14px; }
+    }
+    VerticalLayout {
+        visible: root.line-type == 0;
+        spacing: 0px;
+        Rectangle { height: 6px; }
+        Text {
+            text: root.content;
+            font-size: 17px;
+            font-weight: 700; // section headers are uppercase + bold
+        }
+        Rectangle { height: 6px; }
+    }
+}
+
 // A small framed note that closes when clicked anywhere.
+// mode 0 = about (single-column lines), mode 1 = shortcuts (three-column).
+//
+// Three columns balance the large shortcut count across ~equal-height
+// columns. Vertical spacing is 2px because shortcut lines are short
+// key-description pairs — no need for generous breathing room.
+// Column separators are 1px lines; horizontal gap between columns is 20px.
 component InfoPopup inherits PopupWindow {
     in property <string> heading;
+    in property <int> mode: 0;
     in property <[string]> lines;
-    width: 420px;
+    in property <[ShortcutLine]> left-column;
+    in property <[ShortcutLine]> center-column;
+    in property <[ShortcutLine]> right-column;
     Rectangle {
+        width: parent.width;
         background: Palette.background;
         border-color: Palette.border;
         border-width: 1px;
@@ -833,9 +887,49 @@ component InfoPopup inherits PopupWindow {
         drop-shadow-color: #00000040;
         VerticalLayout {
             padding: 16px;
-            spacing: 6px;
-            Text { text: root.heading; font-size: 14px; font-weight: 700; }
-            for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+            spacing: 8px;
+            Text { text: root.heading; font-size: 16px; font-weight: 700; }
+            Rectangle {
+                height: 1px;
+                background: Palette.border;
+            }
+            VerticalLayout {
+                visible: root.mode == 0;
+                spacing: 4px;
+                for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+            }
+            HorizontalLayout {
+                visible: root.mode == 1;
+                spacing: 16px; // gap between 3 columns
+                alignment: start; // don't stretch shorter columns to tallest
+                VerticalLayout {
+                    spacing: 2px; // tight: shortcut lines are short key-desc pairs
+                    for line in root.left-column : ShortcutLineItem {
+                        line-type: line.type;
+                        key: line.key;
+                        description: line.description;
+                        content: line.content;
+                    }
+                }
+                VerticalLayout {
+                    spacing: 2px; // tight
+                    for line in root.center-column : ShortcutLineItem {
+                        line-type: line.type;
+                        key: line.key;
+                        description: line.description;
+                        content: line.content;
+                    }
+                }
+                VerticalLayout {
+                    spacing: 2px; // tight
+                    for line in root.right-column : ShortcutLineItem {
+                        line-type: line.type;
+                        key: line.key;
+                        description: line.description;
+                        content: line.content;
+                    }
+                }
+            }
             @children
         }
     }
@@ -1065,7 +1159,9 @@ export component AppWindow inherits Window {
     in property <[FooterRow]> footer-rows;
     in-out property <bool> footer-expanded: false;
 
-    in property <[string]> shortcut-lines;
+    in property <[ShortcutLine]> shortcut-left-column;
+    in property <[ShortcutLine]> shortcut-center-column;
+    in property <[ShortcutLine]> shortcut-right-column;
     in property <[string]> about-lines;
     // Help → About's donation button (links.rs opens the page in the browser).
     callback open-donation();
@@ -1394,7 +1490,10 @@ export component AppWindow inherits Window {
         x: (root.width - self.width) / 2;
         y: 60px;
         heading: "Keyboard and mouse";
-        lines: root.shortcut-lines;
+        mode: 1;
+        left-column: root.shortcut-left-column;
+        center-column: root.shortcut-center-column;
+        right-column: root.shortcut-right-column;
     }
     about-popup := InfoPopup {
         x: (root.width - self.width) / 2;
@@ -1424,11 +1523,22 @@ export component AppWindow inherits Window {
             VerticalLayout {
                 alignment: center;
                 spacing: 6px;
-                Button {
-                    text: "Donate with PayPal";
-                    clicked => {
-                        root.open-donation();
-                        about-popup.close();
+                Rectangle {
+                    width: 150px;
+                    height: 58px;
+                    Image {
+                        source: @image-url("../../../assets/paypal-donate-button.png");
+                        width: 150px;
+                        height: 58px;
+                    }
+                    touch := TouchArea {
+                        clicked => {
+                            root.open-donation();
+                            about-popup.close();
+                        }
+                    }
+                    Tooltip {
+                        text: @markdown("Donate with PayPal");
                     }
                 }
                 Text { text: "or scan the code with your phone"; font-size: 11px; opacity: 0.7; }

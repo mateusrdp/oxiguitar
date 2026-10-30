@@ -127,13 +127,30 @@ impl Folders {
         let system_plugins = match system {
             // /usr/bin/oxiguitar → /usr/lib/oxiguitar/plugins; the same
             // rule finds /usr/local, the AppImage's own tree and a build
-            // installed anywhere else.
-            System::Linux => bin
-                .and_then(Path::parent)
-                .map(|prefix| prefix.join("lib").join("oxiguitar").join("plugins"))
-                .into_iter()
-                .collect(),
+            // installed anywhere else. When the derived path is missing
+            // (a dev build that hasn't been installed), fall back to the
+            // standard Linux plugin directories.
+            System::Linux => {
+                let derived = bin
+                    .and_then(Path::parent)
+                    .map(|prefix| prefix.join("lib").join("oxiguitar").join("plugins"));
+                let fallbacks = [
+                    PathBuf::from("/usr/lib/oxiguitar/plugins"),
+                    PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
+                ];
+                // Deduplicate: the derived path may equal a fallback.
+                let mut out: Vec<PathBuf> = Vec::with_capacity(3);
+                if let Some(p) = derived
+                    && !fallbacks.contains(&p)
+                {
+                    out.push(p);
+                }
+                out.extend(fallbacks);
+                out
+            }
             // OxiGuitar.app/Contents/MacOS/oxiguitar → Contents/PlugIns.
+            // When the derived path is missing (no exe path), fall back to
+            // the system-wide plugin folder.
             System::MacOs => bin
                 .and_then(Path::parent)
                 .map(|contents| contents.join("PlugIns"))
@@ -142,8 +159,15 @@ impl Folders {
                     "/Library/Application Support/OxiGuitar/plugins",
                 )])
                 .collect(),
-            // The portable zip: plugins\ beside oxiguitar.exe.
-            System::Windows => bin.map(|b| b.join("plugins")).into_iter().collect(),
+            // The portable zip: plugins\ beside oxiguitar.exe. When the
+            // derived path is missing (a dev build that hasn't been
+            // installed), fall back to the standard Windows plugin
+            // directory.
+            System::Windows => bin
+                .map(|b| b.join("plugins"))
+                .into_iter()
+                .chain([PathBuf::from("C:/Program Files/OxiGuitar/plugins")])
+                .collect(),
         };
         Some(Folders {
             user_plugins: data.join("plugins"),
@@ -190,10 +214,13 @@ impl Folders {
     }
 
     /// Where plugins are looked for, in order, unless settings.json lists
-    /// its own: the user's folder first, then the system's.
+    /// its own: the system's folders first, then the user's. Later folders
+    /// override earlier ones for the same plugin ID.
     pub fn default_plugin_folders(&self) -> Vec<PathBuf> {
-        std::iter::once(self.user_plugins.clone())
-            .chain(self.system_plugins.iter().cloned())
+        self.system_plugins
+            .iter()
+            .cloned()
+            .chain(std::iter::once(self.user_plugins.clone()))
             .collect()
     }
 
@@ -260,9 +287,18 @@ pub(crate) mod tests {
         );
         assert_eq!(
             f.system_plugins,
-            vec![PathBuf::from("/usr/lib/oxiguitar/plugins")]
+            vec![
+                PathBuf::from("/usr/lib/oxiguitar/plugins"),
+                PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
+            ]
         );
-        assert_eq!(f.default_plugin_folders()[0], f.user_plugins);
+        assert_eq!(f.default_plugin_folders()[0], f.system_plugins[0]);
+        // The second fallback comes before the user folder.
+        assert_eq!(
+            f.default_plugin_folders()[1],
+            PathBuf::from("/usr/local/lib/oxiguitar/plugins")
+        );
+        assert_eq!(f.default_plugin_folders()[2], f.user_plugins);
         assert_eq!(f.cache, PathBuf::from("/home/mat/.cache/oxiguitar"));
         assert_eq!(
             f.plugin_data("me.nam"),
@@ -327,7 +363,10 @@ pub(crate) mod tests {
         );
         assert_eq!(
             win.system_plugins,
-            vec![PathBuf::from("D:/OxiGuitar/plugins")]
+            vec![
+                PathBuf::from("D:/OxiGuitar/plugins"),
+                PathBuf::from("C:/Program Files/OxiGuitar/plugins"),
+            ]
         );
         assert_eq!(
             win.cache,
@@ -345,6 +384,73 @@ pub(crate) mod tests {
         assert_eq!(
             local.cache,
             PathBuf::from("C:/Users/mat/AppData/Local/OxiGuitar/cache")
+        );
+    }
+
+    #[test]
+    fn dev_build_falls_back_to_standard_system_paths() {
+        let f = Folders::resolve(
+            System::Linux,
+            env(&[("HOME", "/home/mat")]),
+            Some(Path::new("/home/mat/src/oxiguitar/target/debug/oxiguitar")),
+        )
+        .unwrap();
+        // The derived path does not exist; fallbacks cover standard installs.
+        assert_eq!(
+            f.system_plugins,
+            vec![
+                PathBuf::from("/home/mat/src/oxiguitar/target/lib/oxiguitar/plugins"),
+                PathBuf::from("/usr/lib/oxiguitar/plugins"),
+                PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
+            ]
+        );
+        // System folders still come before user folders.
+        let folders = f.default_plugin_folders();
+        assert_eq!(folders.len(), 4);
+        assert_eq!(
+            folders[0],
+            PathBuf::from("/home/mat/src/oxiguitar/target/lib/oxiguitar/plugins")
+        );
+        assert_eq!(folders[1], PathBuf::from("/usr/lib/oxiguitar/plugins"));
+        assert_eq!(
+            folders[2],
+            PathBuf::from("/usr/local/lib/oxiguitar/plugins")
+        );
+        assert_eq!(
+            folders[3],
+            PathBuf::from("/home/mat/.local/share/oxiguitar/plugins")
+        );
+    }
+
+    #[test]
+    fn system_folders_come_before_user_folders() {
+        let f = Folders::resolve(
+            System::Linux,
+            env(&[("HOME", "/home/mat"), (HOME_VARIABLE, "/tmp/og-test-var")]),
+            Some(Path::new("/usr/bin/oxiguitar")),
+        )
+        .unwrap();
+        let folders = f.default_plugin_folders();
+        // System folders come first, then user folder.
+        assert_eq!(folders.len(), 3);
+        assert_eq!(folders[0], PathBuf::from("/usr/lib/oxiguitar/plugins"));
+        assert_eq!(
+            folders[1],
+            PathBuf::from("/usr/local/lib/oxiguitar/plugins")
+        );
+        assert_eq!(folders[2], PathBuf::from("/tmp/og-test-var/plugins"));
+        // The user folder overrides the system folder for the same plugin ID
+        // because deduplication prefers the earlier folder, and the system
+        // folder comes first.
+        assert!(
+            folders
+                .iter()
+                .position(|p| p.as_path() == f.system_plugins[0].as_path())
+                .unwrap()
+                < folders
+                    .iter()
+                    .position(|p| p.as_path() == f.user_plugins)
+                    .unwrap()
         );
     }
 
@@ -367,7 +473,13 @@ pub(crate) mod tests {
             f.shared(SharedFolder::Nam),
             PathBuf::from("/media/usb/og/nam")
         );
-        assert!(f.system_plugins.is_empty());
+        assert_eq!(
+            f.system_plugins,
+            vec![
+                PathBuf::from("/usr/lib/oxiguitar/plugins"),
+                PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
+            ]
+        );
         assert!(Folders::resolve(System::Linux, env(&[]), None).is_none());
     }
 

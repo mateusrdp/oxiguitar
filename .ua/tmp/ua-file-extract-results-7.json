@@ -1,0 +1,652 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 18,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 18,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 18
+    }
+  },
+  "results": [
+    {
+      "path": "docs/manual/src/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 11,
+      "nonEmptyLines": 6,
+      "sections": [
+        {
+          "heading": "OxiGuitar",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/manual/src/SUMMARY.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 20,
+      "nonEmptyLines": 18,
+      "sections": [
+        {
+          "heading": "Summary",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/manual/src/better-sounds.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 73,
+      "nonEmptyLines": 44,
+      "sections": [
+        {
+          "heading": "Better sounds",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "The set your system has",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "Using a better set",
+          "level": 2,
+          "line": 12
+        },
+        {
+          "heading": "Choosing a set for each instrument",
+          "level": 2,
+          "line": 28
+        },
+        {
+          "heading": "Sets worth getting",
+          "level": 2,
+          "line": 34
+        },
+        {
+          "heading": "For everything",
+          "level": 3,
+          "line": 38
+        },
+        {
+          "heading": "Guitars",
+          "level": 3,
+          "line": 43
+        },
+        {
+          "heading": "Recorded guitars, basses and drums (SFZ)",
+          "level": 3,
+          "line": 55
+        },
+        {
+          "heading": "Other SFZ sets",
+          "level": 3,
+          "line": 71
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 9
+      }
+    },
+    {
+      "path": "docs/manual/src/editing.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 197,
+      "nonEmptyLines": 136,
+      "sections": [
+        {
+          "heading": "Editing",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "The caret",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "Selecting",
+          "level": 2,
+          "line": 23
+        },
+        {
+          "heading": "Entering notes",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "Tuplets",
+          "level": 3,
+          "line": 63
+        },
+        {
+          "heading": "Bars",
+          "level": 2,
+          "line": 67
+        },
+        {
+          "heading": "Copy, cut and paste",
+          "level": 2,
+          "line": 90
+        },
+        {
+          "heading": "Transposing",
+          "level": 2,
+          "line": 103
+        },
+        {
+          "heading": "Effects",
+          "level": 2,
+          "line": 113
+        },
+        {
+          "heading": "Bends and the whammy bar",
+          "level": 3,
+          "line": 153
+        },
+        {
+          "heading": "The Inspector's note and beat",
+          "level": 3,
+          "line": 157
+        },
+        {
+          "heading": "Chords, text and lyrics",
+          "level": 2,
+          "line": 163
+        },
+        {
+          "heading": "The song's information",
+          "level": 2,
+          "line": 185
+        },
+        {
+          "heading": "Undo and redo",
+          "level": 2,
+          "line": 189
+        },
+        {
+          "heading": "Bars that don't add up",
+          "level": 2,
+          "line": 193
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 15
+      }
+    },
+    {
+      "path": "docs/manual/src/hear-it.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 45,
+      "nonEmptyLines": 23,
+      "sections": [
+        {
+          "heading": "Hear it",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Recorded guitars, basses and drums",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "General MIDI sets",
+          "level": 2,
+          "line": 25
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "docs/manual/src/installing.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 77,
+      "nonEmptyLines": 54,
+      "sections": [
+        {
+          "heading": "Installing",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Wayland and X11",
+          "level": 3,
+          "line": 15
+        },
+        {
+          "heading": "The plugins",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "The first launch",
+          "level": 2,
+          "line": 47
+        },
+        {
+          "heading": "Opening Guitar Pro files with a double click",
+          "level": 2,
+          "line": 54
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "docs/manual/src/keys.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 42,
+      "nonEmptyLines": 40,
+      "sections": [
+        {
+          "heading": "Keyboard and mouse",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/manual/src/layouts.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 12,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "Layouts",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/manual/src/opening.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 24,
+      "nonEmptyLines": 16,
+      "sections": [
+        {
+          "heading": "Opening files",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/manual/src/pdf.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 10,
+      "nonEmptyLines": 7,
+      "sections": [
+        {
+          "heading": "Exporting a PDF",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/manual/src/playback.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 49,
+      "nonEmptyLines": 31,
+      "sections": [
+        {
+          "heading": "Playing a score",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Play, pause and stop",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Practising",
+          "level": 2,
+          "line": 22
+        },
+        {
+          "heading": "The mixer",
+          "level": 2,
+          "line": 30
+        },
+        {
+          "heading": "Output",
+          "level": 2,
+          "line": 36
+        },
+        {
+          "heading": "When it can't play",
+          "level": 2,
+          "line": 40
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "docs/manual/src/plugins.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 71,
+      "nonEmptyLines": 44,
+      "sections": [
+        {
+          "heading": "Settings and plugins",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Where OxiGuitar keeps things",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "settings.json",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "Messages about plugins",
+          "level": 2,
+          "line": 31
+        },
+        {
+          "heading": "The plugin manager",
+          "level": 2,
+          "line": 40
+        },
+        {
+          "heading": "Safe mode",
+          "level": 2,
+          "line": 55
+        },
+        {
+          "heading": "Privacy",
+          "level": 2,
+          "line": 65
+        },
+        {
+          "heading": "Writing your own",
+          "level": 2,
+          "line": 69
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": "docs/manual/src/saving.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 41,
+      "nonEmptyLines": 25,
+      "sections": [
+        {
+          "heading": "Saving files",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "What a file can't hold",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Plugins' settings for each track",
+          "level": 2,
+          "line": 31
+        },
+        {
+          "heading": "Before closing",
+          "level": 2,
+          "line": 35
+        },
+        {
+          "heading": "From the command line",
+          "level": 2,
+          "line": 39
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "docs/manual/src/tools.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 11,
+      "nonEmptyLines": 6,
+      "sections": [
+        {
+          "heading": "Tools",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Infer Key Signatures",
+          "level": 2,
+          "line": 7
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "docs/manual/src/tracks.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 47,
+      "nonEmptyLines": 30,
+      "sections": [
+        {
+          "heading": "Tracks and notation",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Adding, moving and deleting tracks",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "Track properties",
+          "level": 2,
+          "line": 14
+        },
+        {
+          "heading": "Notation buttons",
+          "level": 2,
+          "line": 26
+        },
+        {
+          "heading": "Mixer",
+          "level": 2,
+          "line": 41
+        },
+        {
+          "heading": "Overview",
+          "level": 2,
+          "line": 45
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "docs/manual/src/view.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 7,
+      "nonEmptyLines": 4,
+      "sections": [
+        {
+          "heading": "Dark page and dynamics",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "docs/manual/src/window.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 16,
+      "nonEmptyLines": 11,
+      "sections": [
+        {
+          "heading": "The window",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Panels",
+          "level": 2,
+          "line": 12
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "docs/manual/src/zoom.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 19,
+      "nonEmptyLines": 13,
+      "sections": [
+        {
+          "heading": "Zoom",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    }
+  ]
+}

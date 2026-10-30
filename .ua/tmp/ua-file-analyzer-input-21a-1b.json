@@ -1,0 +1,9 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "crates/oxiguitar-testgen/src/gpif.rs", "language": "rust", "sizeLines": 628, "fileCategory": "code"}
+  ],
+  "batchImportData": {
+    "crates/oxiguitar-testgen/src/gpif.rs": ["crates/oxiguitar-testgen/src/lib.rs", "crates/oxiguitar-model/src/lib.rs", "crates/oxiguitar-model/src/gpif/mod.rs", "crates/oxiguitar-model/src/gpif/song.rs"]
+  }
+}

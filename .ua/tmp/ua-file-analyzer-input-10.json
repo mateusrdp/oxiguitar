@@ -1,0 +1,15 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "fuzz/Cargo.toml", "language": "toml", "sizeLines": 92, "fileCategory": "config"},
+    {"path": "fuzz/README.md", "language": "markdown", "sizeLines": 43, "fileCategory": "docs"},
+    {"path": "fuzz/run.sh", "language": "shell", "sizeLines": 46, "fileCategory": "script"},
+    {"path": "fuzz/seeds.sh", "language": "shell", "sizeLines": 27, "fileCategory": "script"}
+  ],
+  "batchImportData": {
+    "fuzz/Cargo.toml": [],
+    "fuzz/README.md": [],
+    "fuzz/run.sh": [],
+    "fuzz/seeds.sh": []
+  }
+}

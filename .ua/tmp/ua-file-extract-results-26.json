@@ -1,0 +1,44 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 0,
+  "filesSkipped": [
+    "fixtures/guitar-pro-check/conversions.txt",
+    "fixtures/guitar-pro-check/dark-page.gp",
+    "fixtures/guitar-pro-check/dark-page.gp5",
+    "fixtures/guitar-pro-check/dead-ghost-palm-mute.gp",
+    "fixtures/guitar-pro-check/dead-ghost-palm-mute.gp5",
+    "fixtures/guitar-pro-check/dots-and-ties.gp",
+    "fixtures/guitar-pro-check/dots-and-ties.gp5",
+    "fixtures/guitar-pro-check/drop-d-and-capo.gp",
+    "fixtures/guitar-pro-check/drop-d-and-capo.gp5",
+    "fixtures/guitar-pro-check/drums.gp",
+    "fixtures/guitar-pro-check/drums.gp5",
+    "fixtures/guitar-pro-check/dynamics-hidden.gp",
+    "fixtures/guitar-pro-check/dynamics-hidden.gp5",
+    "fixtures/guitar-pro-check/dynamics.gp",
+    "fixtures/guitar-pro-check/dynamics.gp5",
+    "fixtures/guitar-pro-check/effects-together.gp",
+    "fixtures/guitar-pro-check/effects-together.gp5",
+    "fixtures/guitar-pro-check/eight-tracks.gp",
+    "fixtures/guitar-pro-check/eight-tracks.gp5",
+    "fixtures/guitar-pro-check/empty-bars.gp",
+    "fixtures/guitar-pro-check/empty-bars.gp5",
+    "fixtures/guitar-pro-check/four-voices.gp",
+    "fixtures/guitar-pro-check/four-voices.gp5",
+    "fixtures/guitar-pro-check/grace-notes.gp",
+    "fixtures/guitar-pro-check/grace-notes.gp5"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 0,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": []
+}

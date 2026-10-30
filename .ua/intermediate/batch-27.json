@@ -1,0 +1,1377 @@
+{
+  "nodes": [
+    {
+      "id": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "type": "file",
+      "name": "hammer-on-pull-off.gp",
+      "path": "fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 9
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "type": "document",
+      "name": "Hammer-on and Pull-off",
+      "title": "Hammer-on and Pull-off",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: Hammer-ons and pull-offs, single and in chains, with the arcs and H and P."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/hammer-on-pull-off.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "type": "file",
+      "name": "hammer-on-pull-off.gp5",
+      "path": "fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "type": "document",
+      "name": "Hammer-on and Pull-off",
+      "title": "Hammer-on and Pull-off",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: Hammer-ons and pull-offs, single and in chains, with the arcs and H and P."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/hammer-on-pull-off.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/harmonics.gp",
+      "type": "file",
+      "name": "harmonics.gp",
+      "path": "fixtures/guitar-pro-check/harmonics.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 9
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/harmonics.gp",
+      "type": "document",
+      "name": "Harmonics",
+      "title": "Harmonics",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: Natural, artificial and pinch harmonics."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/harmonics.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/harmonics.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/harmonics.gp5",
+      "type": "file",
+      "name": "harmonics.gp5",
+      "path": "fixtures/guitar-pro-check/harmonics.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 5
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/harmonics.gp5",
+      "type": "document",
+      "name": "Harmonics",
+      "title": "Harmonics",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: Natural, artificial and pinch harmonics."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/harmonics.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/harmonics.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/header-and-credits.gp",
+      "type": "file",
+      "name": "header-and-credits.gp",
+      "path": "fixtures/guitar-pro-check/header-and-credits.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 10
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/header-and-credits.gp",
+      "type": "document",
+      "name": "Header and Credits",
+      "title": "Header and Credits",
+      "artist": "The OxiGuitar Contributors",
+      "format": "gp",
+      "subtitle": "A Subtitle Long Enough to Matter",
+      "album": "Reference Scores",
+      "words": "Someone Who Writes Words",
+      "music": "Someone Who Writes Music",
+      "copyright": "Public domain",
+      "tabber": "oxiguitar-testgen",
+      "instructions": "OxiGuitar test file: A full header: title, subtitle, artist, album, words, music, copyright, tabber, tuning."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/header-and-credits.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/header-and-credits.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/header-and-credits.gp5",
+      "type": "file",
+      "name": "header-and-credits.gp5",
+      "path": "fixtures/guitar-pro-check/header-and-credits.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/header-and-credits.gp5",
+      "type": "document",
+      "name": "Header and Credits",
+      "title": "Header and Credits",
+      "artist": "The OxiGuitar Contributors",
+      "format": "gp5",
+      "subtitle": "A Subtitle Long Enough to Matter",
+      "album": "Reference Scores",
+      "words": "Someone Who Writes Words",
+      "music": "Someone Who Writes Music",
+      "copyright": "Public domain",
+      "tabber": "oxiguitar-testgen",
+      "instructions": "OxiGuitar test file: A full header: title, subtitle, artist, album, words, music, copyright, tabber, tuning."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/header-and-credits.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/header-and-credits.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/key-signatures.gp",
+      "type": "file",
+      "name": "key-signatures.gp",
+      "path": "fixtures/guitar-pro-check/key-signatures.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 9
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/key-signatures.gp",
+      "type": "document",
+      "name": "Key Signatures",
+      "title": "Key Signatures",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: Key changes through sharps and flats, with naturals cancelling the old key."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/key-signatures.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/key-signatures.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/key-signatures.gp5",
+      "type": "file",
+      "name": "key-signatures.gp5",
+      "path": "fixtures/guitar-pro-check/key-signatures.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/key-signatures.gp5",
+      "type": "document",
+      "name": "Key Signatures",
+      "title": "Key Signatures",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: Key changes through sharps and flats, with naturals cancelling the old key."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/key-signatures.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/key-signatures.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/layout-horizontal.gp",
+      "type": "file",
+      "name": "layout-horizontal.gp",
+      "path": "fixtures/guitar-pro-check/layout-horizontal.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 16
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/layout-horizontal.gp",
+      "type": "document",
+      "name": "Horizontal",
+      "title": "Horizontal",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: The Horizontal layout: every bar on one line, no header."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/layout-horizontal.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/layout-horizontal.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "type": "file",
+      "name": "layout-horizontal.gp5",
+      "path": "fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 5
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "type": "document",
+      "name": "Horizontal",
+      "title": "Horizontal",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: The Horizontal layout: every bar on one line, no header."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/layout-horizontal.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/layout-parchment.gp",
+      "type": "file",
+      "name": "layout-parchment.gp",
+      "path": "fixtures/guitar-pro-check/layout-parchment.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 26
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/layout-parchment.gp",
+      "type": "document",
+      "name": "Parchment",
+      "title": "Parchment",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: The Parchment layout: page-wide lines on one sheet, no page breaks."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/layout-parchment.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/layout-parchment.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/layout-parchment.gp5",
+      "type": "file",
+      "name": "layout-parchment.gp5",
+      "path": "fixtures/guitar-pro-check/layout-parchment.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 5
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/layout-parchment.gp5",
+      "type": "document",
+      "name": "Parchment",
+      "title": "Parchment",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: The Parchment layout: page-wide lines on one sheet, no page breaks."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/layout-parchment.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/layout-parchment.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/layout-vertical.gp",
+      "type": "file",
+      "name": "layout-vertical.gp",
+      "path": "fixtures/guitar-pro-check/layout-vertical.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 13
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/layout-vertical.gp",
+      "type": "document",
+      "name": "Vertical",
+      "title": "Vertical",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: The Vertical layout: lines as wide as a narrow window, no pages."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/layout-vertical.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/layout-vertical.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/layout-vertical.gp5",
+      "type": "file",
+      "name": "layout-vertical.gp5",
+      "path": "fixtures/guitar-pro-check/layout-vertical.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/layout-vertical.gp5",
+      "type": "document",
+      "name": "Vertical",
+      "title": "Vertical",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: The Vertical layout: lines as wide as a narrow window, no pages."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/layout-vertical.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/layout-vertical.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/let-ring.gp",
+      "type": "file",
+      "name": "let-ring.gp",
+      "path": "fixtures/guitar-pro-check/let-ring.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 13
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/let-ring.gp",
+      "type": "document",
+      "name": "Let Ring",
+      "title": "Let Ring",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: Let ring over arpeggios."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/let-ring.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/let-ring.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/let-ring.gp5",
+      "type": "file",
+      "name": "let-ring.gp5",
+      "path": "fixtures/guitar-pro-check/let-ring.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/let-ring.gp5",
+      "type": "document",
+      "name": "Let Ring",
+      "title": "Let Ring",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: Let ring over arpeggios."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/let-ring.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/let-ring.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/lyrics.gp",
+      "type": "file",
+      "name": "lyrics.gp",
+      "path": "fixtures/guitar-pro-check/lyrics.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 12
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/lyrics.gp",
+      "type": "document",
+      "name": "Lyrics",
+      "title": "Lyrics",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: A voice with lyrics under the staff, syllables split by hyphens."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/lyrics.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/lyrics.gp/0",
+      "type": "track",
+      "name": "Voice",
+      "instrument": "Voice",
+      "instrumentType": "voice"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/lyrics.gp5",
+      "type": "file",
+      "name": "lyrics.gp5",
+      "path": "fixtures/guitar-pro-check/lyrics.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 6
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/lyrics.gp5",
+      "type": "document",
+      "name": "Lyrics",
+      "title": "Lyrics",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: A voice with lyrics under the staff, syllables split by hyphens."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/lyrics.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/lyrics.gp5/0",
+      "type": "track",
+      "name": "Voice"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/notation-choice.gp",
+      "type": "file",
+      "name": "notation-choice.gp",
+      "path": "fixtures/guitar-pro-check/notation-choice.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 39
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/notation-choice.gp",
+      "type": "document",
+      "name": "Band",
+      "title": "Band",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: The user's notation per track: the lead as tab only, the bass as standard only."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/notation-choice.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 128,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notation-choice.gp/0",
+      "type": "track",
+      "name": "Lead Guitar",
+      "shortName": "Ld.",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notation-choice.gp/1",
+      "type": "track",
+      "name": "Rhythm Guitar",
+      "shortName": "Rhy.",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notation-choice.gp/2",
+      "type": "track",
+      "name": "Bass",
+      "shortName": "Bs.",
+      "instrument": "Electric Bass",
+      "instrumentType": "electricBass"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notation-choice.gp/3",
+      "type": "track",
+      "name": "Drums",
+      "shortName": "Dr.",
+      "instrument": "Drums",
+      "instrumentType": "drumKit"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/notation-choice.gp5",
+      "type": "file",
+      "name": "notation-choice.gp5",
+      "path": "fixtures/guitar-pro-check/notation-choice.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 5
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/notation-choice.gp5",
+      "type": "document",
+      "name": "Band",
+      "title": "Band",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: The user's notation per track: the lead as tab only, the bass as standard only."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/notation-choice.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notation-choice.gp5/0",
+      "type": "track",
+      "name": "Lead Guitar"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notation-choice.gp5/1",
+      "type": "track",
+      "name": "Rhythm Guitar"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notation-choice.gp5/2",
+      "type": "track",
+      "name": "Bass"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notation-choice.gp5/3",
+      "type": "track",
+      "name": "Drums"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/notes-and-rests.gp",
+      "type": "file",
+      "name": "notes-and-rests.gp",
+      "path": "fixtures/guitar-pro-check/notes-and-rests.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 19
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/notes-and-rests.gp",
+      "type": "document",
+      "name": "Notes and Rests",
+      "title": "Notes and Rests",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: Whole to sixty-fourth notes and rests on standard notation and tablature."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/notes-and-rests.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notes-and-rests.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "type": "file",
+      "name": "notes-and-rests.gp5",
+      "path": "fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "type": "document",
+      "name": "Notes and Rests",
+      "title": "Notes and Rests",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: Whole to sixty-fourth notes and rests on standard notation and tablature."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/notes-and-rests.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/page-breaks.gp",
+      "type": "file",
+      "name": "page-breaks.gp",
+      "path": "fixtures/guitar-pro-check/page-breaks.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 27
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/page-breaks.gp",
+      "type": "document",
+      "name": "Page Breaks",
+      "title": "Page Breaks",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: Thirty-two bars over pages, with page numbers."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/page-breaks.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/page-breaks.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/page-breaks.gp5",
+      "type": "file",
+      "name": "page-breaks.gp5",
+      "path": "fixtures/guitar-pro-check/page-breaks.gp5",
+      "category": "code",
+      "language": "gp5",
+      "sizeLines": 4
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/page-breaks.gp5",
+      "type": "document",
+      "name": "Page Breaks",
+      "title": "Page Breaks",
+      "artist": "OxiGuitar references",
+      "format": "gp5",
+      "instructions": "OxiGuitar test file: Thirty-two bars over pages, with page numbers."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/page-breaks.gp5",
+      "type": "config",
+      "format": "gp5",
+      "gpVersion": 5,
+      "gpRevision": "5.10"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/page-breaks.gp5/0",
+      "type": "track",
+      "name": "Guitar"
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/paper-letter.gp",
+      "type": "file",
+      "name": "paper-letter.gp",
+      "path": "fixtures/guitar-pro-check/paper-letter.gp",
+      "category": "code",
+      "language": "gp",
+      "sizeLines": 11
+    },
+    {
+      "id": "document:fixtures/guitar-pro-check/paper-letter.gp",
+      "type": "document",
+      "name": "Letter Paper",
+      "title": "Letter Paper",
+      "artist": "OxiGuitar references",
+      "format": "gp",
+      "instructions": "OxiGuitar test file: US Letter paper instead of A4."
+    },
+    {
+      "id": "config:fixtures/guitar-pro-check/paper-letter.gp",
+      "type": "config",
+      "format": "gp",
+      "gpVersion": 7,
+      "gpRevision": 12025,
+      "tempo": 100,
+      "timeSignature": "4/4"
+    },
+    {
+      "id": "track:fixtures/guitar-pro-check/paper-letter.gp/0",
+      "type": "track",
+      "name": "Guitar",
+      "instrument": "Electric Guitar",
+      "instrumentType": "electricGuitar"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "target": "document:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "target": "config:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+      "target": "track:fixtures/guitar-pro-check/hammer-on-pull-off.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "target": "document:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "target": "config:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+      "target": "track:fixtures/guitar-pro-check/hammer-on-pull-off.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/harmonics.gp",
+      "target": "document:fixtures/guitar-pro-check/harmonics.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/harmonics.gp",
+      "target": "config:fixtures/guitar-pro-check/harmonics.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/harmonics.gp",
+      "target": "track:fixtures/guitar-pro-check/harmonics.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/harmonics.gp5",
+      "target": "document:fixtures/guitar-pro-check/harmonics.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/harmonics.gp5",
+      "target": "config:fixtures/guitar-pro-check/harmonics.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/harmonics.gp5",
+      "target": "track:fixtures/guitar-pro-check/harmonics.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/header-and-credits.gp",
+      "target": "document:fixtures/guitar-pro-check/header-and-credits.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/header-and-credits.gp",
+      "target": "config:fixtures/guitar-pro-check/header-and-credits.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/header-and-credits.gp",
+      "target": "track:fixtures/guitar-pro-check/header-and-credits.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/header-and-credits.gp5",
+      "target": "document:fixtures/guitar-pro-check/header-and-credits.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/header-and-credits.gp5",
+      "target": "config:fixtures/guitar-pro-check/header-and-credits.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/header-and-credits.gp5",
+      "target": "track:fixtures/guitar-pro-check/header-and-credits.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/key-signatures.gp",
+      "target": "document:fixtures/guitar-pro-check/key-signatures.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/key-signatures.gp",
+      "target": "config:fixtures/guitar-pro-check/key-signatures.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/key-signatures.gp",
+      "target": "track:fixtures/guitar-pro-check/key-signatures.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/key-signatures.gp5",
+      "target": "document:fixtures/guitar-pro-check/key-signatures.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/key-signatures.gp5",
+      "target": "config:fixtures/guitar-pro-check/key-signatures.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/key-signatures.gp5",
+      "target": "track:fixtures/guitar-pro-check/key-signatures.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-horizontal.gp",
+      "target": "document:fixtures/guitar-pro-check/layout-horizontal.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-horizontal.gp",
+      "target": "config:fixtures/guitar-pro-check/layout-horizontal.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/layout-horizontal.gp",
+      "target": "track:fixtures/guitar-pro-check/layout-horizontal.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "target": "document:fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "target": "config:fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/layout-horizontal.gp5",
+      "target": "track:fixtures/guitar-pro-check/layout-horizontal.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-parchment.gp",
+      "target": "document:fixtures/guitar-pro-check/layout-parchment.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-parchment.gp",
+      "target": "config:fixtures/guitar-pro-check/layout-parchment.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/layout-parchment.gp",
+      "target": "track:fixtures/guitar-pro-check/layout-parchment.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-parchment.gp5",
+      "target": "document:fixtures/guitar-pro-check/layout-parchment.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-parchment.gp5",
+      "target": "config:fixtures/guitar-pro-check/layout-parchment.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/layout-parchment.gp5",
+      "target": "track:fixtures/guitar-pro-check/layout-parchment.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-vertical.gp",
+      "target": "document:fixtures/guitar-pro-check/layout-vertical.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-vertical.gp",
+      "target": "config:fixtures/guitar-pro-check/layout-vertical.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/layout-vertical.gp",
+      "target": "track:fixtures/guitar-pro-check/layout-vertical.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-vertical.gp5",
+      "target": "document:fixtures/guitar-pro-check/layout-vertical.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/layout-vertical.gp5",
+      "target": "config:fixtures/guitar-pro-check/layout-vertical.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/layout-vertical.gp5",
+      "target": "track:fixtures/guitar-pro-check/layout-vertical.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/let-ring.gp",
+      "target": "document:fixtures/guitar-pro-check/let-ring.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/let-ring.gp",
+      "target": "config:fixtures/guitar-pro-check/let-ring.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/let-ring.gp",
+      "target": "track:fixtures/guitar-pro-check/let-ring.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/let-ring.gp5",
+      "target": "document:fixtures/guitar-pro-check/let-ring.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/let-ring.gp5",
+      "target": "config:fixtures/guitar-pro-check/let-ring.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/let-ring.gp5",
+      "target": "track:fixtures/guitar-pro-check/let-ring.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/lyrics.gp",
+      "target": "document:fixtures/guitar-pro-check/lyrics.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/lyrics.gp",
+      "target": "config:fixtures/guitar-pro-check/lyrics.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/lyrics.gp",
+      "target": "track:fixtures/guitar-pro-check/lyrics.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/lyrics.gp5",
+      "target": "document:fixtures/guitar-pro-check/lyrics.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/lyrics.gp5",
+      "target": "config:fixtures/guitar-pro-check/lyrics.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/lyrics.gp5",
+      "target": "track:fixtures/guitar-pro-check/lyrics.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/notation-choice.gp",
+      "target": "document:fixtures/guitar-pro-check/notation-choice.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/notation-choice.gp",
+      "target": "config:fixtures/guitar-pro-check/notation-choice.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notation-choice.gp",
+      "target": "track:fixtures/guitar-pro-check/notation-choice.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notation-choice.gp",
+      "target": "track:fixtures/guitar-pro-check/notation-choice.gp/1",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 1
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notation-choice.gp",
+      "target": "track:fixtures/guitar-pro-check/notation-choice.gp/2",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 2
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notation-choice.gp",
+      "target": "track:fixtures/guitar-pro-check/notation-choice.gp/3",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 3
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/notation-choice.gp5",
+      "target": "document:fixtures/guitar-pro-check/notation-choice.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/notation-choice.gp5",
+      "target": "config:fixtures/guitar-pro-check/notation-choice.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notation-choice.gp5",
+      "target": "track:fixtures/guitar-pro-check/notation-choice.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notation-choice.gp5",
+      "target": "track:fixtures/guitar-pro-check/notation-choice.gp5/1",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 1
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notation-choice.gp5",
+      "target": "track:fixtures/guitar-pro-check/notation-choice.gp5/2",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 2
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notation-choice.gp5",
+      "target": "track:fixtures/guitar-pro-check/notation-choice.gp5/3",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 3
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/notes-and-rests.gp",
+      "target": "document:fixtures/guitar-pro-check/notes-and-rests.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/notes-and-rests.gp",
+      "target": "config:fixtures/guitar-pro-check/notes-and-rests.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notes-and-rests.gp",
+      "target": "track:fixtures/guitar-pro-check/notes-and-rests.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "target": "document:fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "target": "config:fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/notes-and-rests.gp5",
+      "target": "track:fixtures/guitar-pro-check/notes-and-rests.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/page-breaks.gp",
+      "target": "document:fixtures/guitar-pro-check/page-breaks.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/page-breaks.gp",
+      "target": "config:fixtures/guitar-pro-check/page-breaks.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/page-breaks.gp",
+      "target": "track:fixtures/guitar-pro-check/page-breaks.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/page-breaks.gp5",
+      "target": "document:fixtures/guitar-pro-check/page-breaks.gp5",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/page-breaks.gp5",
+      "target": "config:fixtures/guitar-pro-check/page-breaks.gp5",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/page-breaks.gp5",
+      "target": "track:fixtures/guitar-pro-check/page-breaks.gp5/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/paper-letter.gp",
+      "target": "document:fixtures/guitar-pro-check/paper-letter.gp",
+      "relation": "contains",
+      "relationType": "composition"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/paper-letter.gp",
+      "target": "config:fixtures/guitar-pro-check/paper-letter.gp",
+      "relation": "configured-by",
+      "relationType": "format"
+    },
+    {
+      "source": "document:fixtures/guitar-pro-check/paper-letter.gp",
+      "target": "track:fixtures/guitar-pro-check/paper-letter.gp/0",
+      "relation": "has-track",
+      "relationType": "composition",
+      "index": 0
+    }
+  ]
+}

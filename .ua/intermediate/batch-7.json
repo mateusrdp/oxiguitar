@@ -1,0 +1,413 @@
+{
+  "nodes": [
+    {
+      "id": "document:docs/manual/src/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "docs/manual/src/README.md",
+      "summary": "Main landing page of the OxiGuitar manual, introducing the application as a free guitar tablature and score viewer, editor and player, with a link to the full window description, keyboard shortcuts, and privacy statement.",
+      "tags": ["documentation", "user-manual", "overview", "getting-started", "privacy"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/SUMMARY.md",
+      "type": "document",
+      "name": "SUMMARY.md",
+      "filePath": "docs/manual/src/SUMMARY.md",
+      "summary": "Table of contents for the OxiGuitar manual, listing all 18 documentation pages in reading order from installation through advanced features.",
+      "tags": ["documentation", "user-manual", "table-of-contents", "navigation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/better-sounds.md",
+      "type": "document",
+      "name": "better-sounds.md",
+      "filePath": "docs/manual/src/better-sounds.md",
+      "summary": "Guide to upgrading OxiGuitar's default General MIDI sound with custom SoundFont and SFZ instrument sets, including installation paths per platform, per-instrument assignment, and recommended free sound sets.",
+      "tags": ["documentation", "user-manual", "soundfont", "sfz", "audio-quality"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/editing.md",
+      "type": "document",
+      "name": "editing.md",
+      "filePath": "docs/manual/src/editing.md",
+      "summary": "Comprehensive editing reference covering the caret, note entry, selection, tuplets, bar manipulation, copy/cut/paste, transposing, all guitar effects (including bends and whammy bar), chords, text, lyrics, song information, undo/redo, and bar validation.",
+      "tags": ["documentation", "user-manual", "editing", "note-entry", "effects", "bends", "chords", "lyrics"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/manual/src/hear-it.md",
+      "type": "document",
+      "name": "hear-it.md",
+      "filePath": "docs/manual/src/hear-it.md",
+      "summary": "Audio demonstration page with embedded MP3 samples of reference songs played with both SFZ recorded instruments and General MIDI sets, showcasing OxiGuitar's playback quality.",
+      "tags": ["documentation", "user-manual", "audio-demo", "reference-songs", "playback-quality"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/installing.md",
+      "type": "document",
+      "name": "installing.md",
+      "filePath": "docs/manual/src/installing.md",
+      "summary": "Installation guide covering package formats for Debian/Ubuntu, Fedora, AppImage, Windows, and macOS, including Wayland vs X11 builds, basic plugin installation, first-launch warnings, and file association setup.",
+      "tags": ["documentation", "user-manual", "installation", "setup", "plugins", "wayland", "x11"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/manual/src/keys.md",
+      "type": "document",
+      "name": "keys.md",
+      "filePath": "docs/manual/src/keys.md",
+      "summary": "Complete keyboard and mouse shortcut reference for OxiGuitar, covering navigation, editing, effects, chords, copy/paste, zoom, and panel controls with cross-references to detailed pages.",
+      "tags": ["documentation", "user-manual", "keyboard-shortcuts", "mouse", "reference"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/layouts.md",
+      "type": "document",
+      "name": "layouts.md",
+      "filePath": "docs/manual/src/layouts.md",
+      "summary": "Description of OxiGuitar's four score layout modes: Page, Vertical, Horizontal, and Parchment, with a comparison to Guitar Pro 8 equivalents and scrolling behavior.",
+      "tags": ["documentation", "user-manual", "layouts", "display", "notation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/opening.md",
+      "type": "document",
+      "name": "opening.md",
+      "filePath": "docs/manual/src/opening.md",
+      "summary": "Guide to opening Guitar Pro files (versions 3 through 8) via menu, drag-and-drop, double-click, or command line, including format plugin behavior and file association notes.",
+      "tags": ["documentation", "user-manual", "file-operations", "opening", "guitar-pro", "plugins"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/pdf.md",
+      "type": "document",
+      "name": "pdf.md",
+      "filePath": "docs/manual/src/pdf.md",
+      "summary": "Instructions for exporting a score as a PDF with vector graphics and embedded fonts, covering paper size selection and noting that PDFs always use Page layout with black notation on white.",
+      "tags": ["documentation", "user-manual", "pdf", "export", "printing"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/playback.md",
+      "type": "document",
+      "name": "playback.md",
+      "filePath": "docs/manual/src/playback.md",
+      "summary": "Playback controls documentation covering play/pause/stop, practice mode (loop, count-in, metronome, speed), mixer controls (mute, solo, volume, pan), output selection, and troubleshooting playback issues.",
+      "tags": ["documentation", "user-manual", "playback", "mixer", "practice", "metronome"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/plugins.md",
+      "type": "document",
+      "name": "plugins.md",
+      "filePath": "docs/manual/src/plugins.md",
+      "summary": "Plugin architecture guide covering the plugin system, settings.json configuration, plugin manager, safe mode, privacy policy, and a pointer to the Rust plugin developer guide.",
+      "tags": ["documentation", "user-manual", "plugins", "architecture", "settings", "privacy", "developer"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/saving.md",
+      "type": "document",
+      "name": "saving.md",
+      "filePath": "docs/manual/src/saving.md",
+      "summary": "Saving documentation covering save vs save-as, format conversion (.gp vs .gp5), data loss warnings per format, per-track plugin settings stored in .oxg companion files, and command-line conversion.",
+      "tags": ["documentation", "user-manual", "saving", "file-format", "data-loss", "oxg"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/tools.md",
+      "type": "document",
+      "name": "tools.md",
+      "filePath": "docs/manual/src/tools.md",
+      "summary": "Overview of the Tools menu's score-modifying actions, focusing on the Infer Key Signatures tool that analyzes notes to determine and apply key signatures automatically.",
+      "tags": ["documentation", "user-manual", "tools", "key-signature", "automation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/tracks.md",
+      "type": "document",
+      "name": "tracks.md",
+      "filePath": "docs/manual/src/tracks.md",
+      "summary": "Track management documentation covering adding, duplicating, moving, and deleting tracks, track properties (instrument, strings, tuning, capo), notation buttons (TAB and clef), mixer controls, and the track overview waveform.",
+      "tags": ["documentation", "user-manual", "tracks", "notation", "tuning", "mixer", "overview"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/view.md",
+      "type": "document",
+      "name": "view.md",
+      "filePath": "docs/manual/src/view.md",
+      "summary": "Display settings for the interface (dark/light theme), dark page mode for night use, and toggling dynamics markings visibility on the score page.",
+      "tags": ["documentation", "user-manual", "display", "dark-mode", "dynamics", "view-settings"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/window.md",
+      "type": "document",
+      "name": "window.md",
+      "filePath": "docs/manual/src/window.md",
+      "summary": "Complete layout description of the OxiGuitar main window from top to bottom: menus, toolbar, top panel (Player), left panel (palette), score area, right panel (Inspector and Song tab), bottom panel (Tracks), and the messages line.",
+      "tags": ["documentation", "user-manual", "window", "ui", "panels", "palette", "inspector"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/manual/src/zoom.md",
+      "type": "document",
+      "name": "zoom.md",
+      "filePath": "docs/manual/src/zoom.md",
+      "summary": "Dual zoom system documentation: score zoom (Shift+mouse wheel or slider, 25%-400%) and interface zoom (Ctrl+mouse wheel or Ctrl+/-, 50%-200%), including keyboard shortcuts.",
+      "tags": ["documentation", "user-manual", "zoom", "display", "mouse-wheel", "interface"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:docs/manual/src/README.md",
+      "target": "document:docs/manual/src/window.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/README.md",
+      "target": "document:docs/manual/src/keys.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/README.md",
+      "target": "document:docs/manual/src/playback.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/README.md",
+      "target": "document:docs/manual/src/better-sounds.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/SUMMARY.md",
+      "target": "document:docs/manual/src/README.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "document:docs/manual/src/SUMMARY.md",
+      "target": "document:docs/manual/src/installing.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "document:docs/manual/src/SUMMARY.md",
+      "target": "document:docs/manual/src/editing.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "document:docs/manual/src/SUMMARY.md",
+      "target": "document:docs/manual/src/better-sounds.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "document:docs/manual/src/editing.md",
+      "target": "document:docs/manual/src/keys.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/editing.md",
+      "target": "document:docs/manual/src/tracks.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/installing.md",
+      "target": "document:docs/manual/src/plugins.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/installing.md",
+      "target": "document:docs/manual/src/opening.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/keys.md",
+      "target": "document:docs/manual/src/editing.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/keys.md",
+      "target": "document:docs/manual/src/playback.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/opening.md",
+      "target": "document:docs/manual/src/installing.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/playback.md",
+      "target": "document:docs/manual/src/better-sounds.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/playback.md",
+      "target": "document:docs/manual/src/plugins.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/plugins.md",
+      "target": "document:docs/manual/src/installing.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/plugins.md",
+      "target": "document:docs/manual/src/better-sounds.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/saving.md",
+      "target": "document:docs/manual/src/plugins.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/saving.md",
+      "target": "document:docs/manual/src/opening.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/tools.md",
+      "target": "document:docs/manual/src/plugins.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/tools.md",
+      "target": "document:docs/manual/src/editing.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/tracks.md",
+      "target": "document:docs/manual/src/editing.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/tracks.md",
+      "target": "document:docs/manual/src/playback.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/tracks.md",
+      "target": "document:docs/manual/src/window.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/window.md",
+      "target": "document:docs/manual/src/editing.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/window.md",
+      "target": "document:docs/manual/src/playback.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/window.md",
+      "target": "document:docs/manual/src/tracks.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/window.md",
+      "target": "document:docs/manual/src/zoom.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/layouts.md",
+      "target": "document:docs/manual/src/zoom.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/view.md",
+      "target": "document:docs/manual/src/window.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/view.md",
+      "target": "document:docs/manual/src/pdf.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/better-sounds.md",
+      "target": "document:docs/manual/src/hear-it.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/manual/src/hear-it.md",
+      "target": "document:docs/manual/src/better-sounds.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

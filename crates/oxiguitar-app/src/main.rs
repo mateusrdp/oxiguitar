@@ -102,7 +102,7 @@ mod ui {
 use ui::{
     AltBox, AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField,
     InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginManagerWindow, PluginRow,
-    PluginSection, PluginSettingsWindow, PluginWidget, SongField, TileItem, ToolRow,
+    PluginSection, PluginSettingsWindow, PluginWidget, ShortcutLine, SongField, TileItem, ToolRow,
     ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
 };
 
@@ -571,36 +571,81 @@ fn main() -> Result<(), slint::PlatformError> {
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
     measure_palette();
 
-    ui.set_shortcut_lines(lines(&[
-        "Ctrl + N: a new score;  Ctrl + O: open a file;  Ctrl + S: save it;  Ctrl + Shift + S: save it as another file;  Ctrl + Q: quit;  F7 / F8: show or hide the left / bottom panel",
-        "Escape or a click: close this note",
-        "Space: play from the caret, or pause;  Ctrl + Left / Ctrl + Right: a bar back / on (the sound while it plays, else the caret)",
-        "Mouse wheel over the page: scroll it;  Shift + wheel: zoom the page around the pointer",
-        "Page Up / Page Down, the scroll bars: scroll the page;  with no score open, the arrow keys too",
-        "A click on the page puts the caret there; Shift + click selects up to it",
-        "Left / Right: the previous / next beat;  Up / Down: the string above / below;  Home / End: the bar's first / last beat",
-        "Ctrl + Home / Ctrl + End: the first / last bar;  Tab / Shift + Tab: the next / previous staff;  Ctrl + Up / Ctrl + Down: the previous / next track",
-        "Shift + the arrows, Home, End: select;  Ctrl + Shift + Left / Right: select by bar;  Ctrl + A: select all;  Escape: drop the selection",
-        "Ctrl + 1 to Ctrl + 4: voice 1 to 4;  Ctrl + Z / Ctrl + Y: undo / redo;  F4: the next bar that doesn't add up (shown in red)",
-        "0 to 9: a fret on the caret's string (two digits in a row: 10 to 24);  R: rest;  − / +: longer / shorter;  Shift + . / Ctrl + .: dot / double dot",
-        "L / Shift + L: tie the note / the beat;  Backspace: delete the note;  Shift + Delete: delete the beat;  Ctrl + Insert: insert a beat",
-        "Alt + Shift + Up / Down: a semitone up / down;  Alt + Up / Down: the same note on the string above / below",
-        "On the standard staff: click a line or space, Up / Down to move it, Enter to put a note there;  Alt + 1 to 4: move the beat to that voice;  Ctrl + Shift + Delete: clear the beat;  Right at the end: add a bar",
-        "/: triplet;  Insert: insert a bar;  Ctrl + Delete: delete the bar;  [ and ]: repeat open and close;  |: free time;  Ctrl + K, Ctrl + /, D: the Bar dialog;  A: a chord;  Shift + T: text above the beat",
-        "Ctrl + T: type lyrics under the beat (Space or − the next note, Backspace back, Up / Down another verse, Enter done)",
-        "Ctrl + F: search the palette (Escape empties it, Enter goes back to the score)",
-        "Effects: X dead, O ghost, ; and : accent and heavy accent, ! staccato, H hammer-on, S / Alt + S / Shift + S legato / shift slide / slide out down, V vibrato, P / Shift + P palm mute (note / beat), I let ring",
-        "Y natural harmonic, Ctrl + Alt + Y artificial, Alt + P pinch, Alt + T tapped;  N trill;  \": tremolo picking;  T or ) tapping;  $ slap;  ( left-hand tapping;  < fade in;  G / Ctrl + Alt + G grace note",
-        "Ctrl + D / Ctrl + U: brush down / up;  Shift + D / Shift + U: pick stroke down / up;  Ctrl + Alt + W: wide vibrato;  B: bend;  Ctrl + Alt + V: whammy bar",
-        "Ctrl + C, Ctrl + X, Ctrl + V: copy, cut, paste;  Ctrl + Shift + V: Special Paste (several times, or replacing)",
-        "Score zoom also: the slider at the bottom right of the page; click its percentage for 100 %",
-        "Ctrl + mouse wheel: zoom the interface",
-        "Ctrl + +  /  Ctrl + −  /  Ctrl + 0: zoom the interface in, out, back to 100 %",
-        "Panels: click a tab's name to open it, the open tab's name (or the chevron) to collapse its panel",
-        "Footer: click it to see every message; the chevron folds it back",
-        "Track list: the clef and TAB buttons show a track's notation, both off hides it; click a name to select the track",
-        "Tools → Plugins: every plugin file, and a tickbox to enable or disable each from the next start;  oxiguitar --safe-mode starts without any plugin",
-    ]));
+    let shortcuts = ShortcutData {
+        navigation: vec![
+            ("Ctrl + ← / →".into(), "bar back / on".into()),
+            ("Page Up / Down".into(), "page scroll".into()),
+            ("Shift + click".into(), "select to caret".into()),
+            ("Ctrl + Home / End".into(), "first / last bar".into()),
+            ("Tab / Shift + Tab".into(), "next / prev staff".into()),
+            ("Ctrl + ↑ / ↓".into(), "prev / next track".into()),
+        ],
+        editing: vec![
+            ("Shift + arrows".into(), "select".into()),
+            ("Ctrl + Shift + ← / →".into(), "select by bar".into()),
+            ("Ctrl + A".into(), "select all".into()),
+            ("Ctrl + 1 to 4".into(), "voice 1 to 4".into()),
+            ("Ctrl + Z / Y".into(), "undo / redo".into()),
+            ("F4".into(), "next out-of-tune bar".into()),
+        ],
+        note_entry: vec![
+            ("R".into(), "rest".into()),
+            ("− / +".into(), "longer / shorter".into()),
+            ("Shift + . / Ctrl + .".into(), "dot / double dot".into()),
+            ("L / Shift + L".into(), "tie note / beat".into()),
+            ("Backspace".into(), "delete note".into()),
+            ("Shift + Delete".into(), "delete beat".into()),
+            ("Ctrl + Insert".into(), "insert beat".into()),
+            ("Alt + Shift + ↑ / ↓".into(), "semitone up / down".into()),
+            ("Alt + ↑ / ↓".into(), "same note, adjacent string".into()),
+            ("Ctrl + Shift + Delete".into(), "clear beat".into()),
+            ("/".into(), "triplet".into()),
+            ("Insert".into(), "insert bar".into()),
+            ("Ctrl + Delete".into(), "delete bar".into()),
+            ("[ / ]".into(), "repeat open / close".into()),
+            ("|".into(), "free time".into()),
+            ("A".into(), "chord".into()),
+            ("Shift + T".into(), "text above beat".into()),
+            ("Ctrl + T".into(), "lyrics".into()),
+            ("Ctrl + F".into(), "search palette".into()),
+        ],
+        effects: vec![
+            ("X".into(), "dead note".into()),
+            ("O".into(), "ghost note".into()),
+            ("; / :".into(), "accent / heavy accent".into()),
+            ("!".into(), "staccato".into()),
+            ("H".into(), "hammer-on".into()),
+            ("S".into(), "legato".into()),
+            ("Alt + S".into(), "shift slide".into()),
+            ("Shift + S".into(), "slide out".into()),
+            ("V".into(), "vibrato".into()),
+            ("P / Shift + P".into(), "palm mute note / beat".into()),
+            ("I".into(), "let ring".into()),
+            ("Y".into(), "natural harmonic".into()),
+            ("Ctrl + Alt + Y".into(), "artificial harmonic".into()),
+            ("Alt + P".into(), "pinch harmonic".into()),
+            ("Alt + T".into(), "tapped harmonic".into()),
+            ("N".into(), "trill".into()),
+            ("\"".into(), "tremolo picking".into()),
+            ("T / )".into(), "tapping".into()),
+            ("$".into(), "slap".into()),
+            ("(".into(), "left-hand tap".into()),
+            ("<".into(), "fade in".into()),
+            ("G".into(), "normal grace note".into()),
+            ("Ctrl + Alt + G".into(), "grace note".into()),
+            ("B".into(), "bend".into()),
+            ("Ctrl + Alt + V".into(), "whammy bar".into()),
+            ("Ctrl + D / U".into(), "brush down / up".into()),
+            ("Shift + D".into(), "pick stroke down".into()),
+            ("Shift + U".into(), "pick stroke up".into()),
+            ("Ctrl + Alt + W".into(), "wide vibrato".into()),
+        ],
+        ui: vec![("F7 / F8".into(), "show left / bottom panel".into())],
+    };
+    let (left, center, right) = shortcuts_to_columns(&shortcuts);
+    ui.set_shortcut_left_column(left);
+    ui.set_shortcut_center_column(center);
+    ui.set_shortcut_right_column(right);
     let mut about = vec![
         format!(
             "Guitar tablature and score viewer, editor and player. Version {}.",
@@ -1170,6 +1215,93 @@ fn lines(items: &[&str]) -> ModelRc<SharedString> {
             .map(|s| SharedString::from(*s))
             .collect::<Vec<_>>(),
     ))
+}
+
+#[derive(Clone, Default)]
+struct ShortcutData {
+    navigation: Vec<(String, String)>,
+    editing: Vec<(String, String)>,
+    note_entry: Vec<(String, String)>,
+    effects: Vec<(String, String)>,
+    ui: Vec<(String, String)>,
+}
+
+fn shortcuts_to_columns(
+    data: &ShortcutData,
+) -> (
+    ModelRc<ShortcutLine>,
+    ModelRc<ShortcutLine>,
+    ModelRc<ShortcutLine>,
+) {
+    let sections = [
+        ("NAVIGATION", &data.navigation),
+        ("EDITING", &data.editing),
+        ("NOTE ENTRY", &data.note_entry),
+        ("EFFECTS", &data.effects),
+        ("UI", &data.ui),
+    ];
+
+    let mut left: Vec<ShortcutLine> = Vec::new();
+    let mut center: Vec<ShortcutLine> = Vec::new();
+    let mut right: Vec<ShortcutLine> = Vec::new();
+
+    // Collect all entries with their section headers, then distribute
+    // individual lines across 3 columns by greedy line-count balance.
+    // Sections are allowed to span columns so no single column overflows.
+    #[derive(Clone)]
+    struct Entry {
+        is_header: bool,
+        content: String,
+        key: Option<String>,
+        desc: Option<String>,
+    }
+    let mut all: Vec<Entry> = Vec::new();
+    for (section, entries) in &sections {
+        all.push(Entry {
+            is_header: true,
+            content: section.to_owned().to_string(),
+            key: None,
+            desc: None,
+        });
+        for (key, desc) in entries.iter() {
+            all.push(Entry {
+                is_header: false,
+                content: String::new(),
+                key: Some(key.clone()),
+                desc: Some(desc.clone()),
+            });
+        }
+    }
+
+    // Greedy balance: assign each entry to the column with fewest lines.
+    let mut col_lines = [0usize, 0usize, 0usize];
+    let cols = [&mut left, &mut center, &mut right];
+
+    for entry in &all {
+        let best = [0, 1, 2].into_iter().min_by_key(|&i| col_lines[i]).unwrap();
+        if entry.is_header {
+            cols[best].push(ShortcutLine {
+                r#type: 0,
+                key: SharedString::new(),
+                description: SharedString::new(),
+                content: entry.content.clone().into(),
+            });
+        } else {
+            cols[best].push(ShortcutLine {
+                r#type: 1,
+                key: entry.key.as_ref().unwrap().clone().into(),
+                description: entry.desc.as_ref().unwrap().clone().into(),
+                content: SharedString::new(),
+            });
+        }
+        col_lines[best] += 1;
+    }
+
+    (
+        ModelRc::new(VecModel::from(left)),
+        ModelRc::new(VecModel::from(center)),
+        ModelRc::new(VecModel::from(right)),
+    )
 }
 
 /// The Tools menu before any score is open: every tool, greyed out.

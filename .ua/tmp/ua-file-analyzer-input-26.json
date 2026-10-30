@@ -1,0 +1,32 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "fixtures/guitar-pro-check/conversions.txt", "language": "txt", "sizeLines": 248, "fileCategory": "docs"},
+    {"path": "fixtures/guitar-pro-check/dark-page.gp", "language": "gp", "sizeLines": 33, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dark-page.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dead-ghost-palm-mute.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dead-ghost-palm-mute.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dots-and-ties.gp", "language": "gp", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dots-and-ties.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/drop-d-and-capo.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/drop-d-and-capo.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/drums.gp", "language": "gp", "sizeLines": 20, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/drums.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dynamics-hidden.gp", "language": "gp", "sizeLines": 8, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dynamics-hidden.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dynamics.gp", "language": "gp", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/dynamics.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/effects-together.gp", "language": "gp", "sizeLines": 13, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/effects-together.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/eight-tracks.gp", "language": "gp", "sizeLines": 38, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/eight-tracks.gp5", "language": "gp5", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/empty-bars.gp", "language": "gp", "sizeLines": 8, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/empty-bars.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/four-voices.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/four-voices.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/grace-notes.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/grace-notes.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"}
+  ],
+  "batchImportData": {},
+  "neighborMap": {}
+}

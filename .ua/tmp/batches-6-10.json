@@ -1,0 +1,373 @@
+{
+  "6": {
+    "files": [
+      {
+        "path": "docs/formats/README.md",
+        "language": "markdown",
+        "sizeLines": 7,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/formats/guitar-pro-3-5.md",
+        "language": "markdown",
+        "sizeLines": 137,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/formats/guitar-pro-6-8.md",
+        "language": "markdown",
+        "sizeLines": 139,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/formats/guitar-pro-sounds.md",
+        "language": "markdown",
+        "sizeLines": 239,
+        "fileCategory": "docs"
+      }
+    ],
+    "importData": {
+      "docs/formats/README.md": [],
+      "docs/formats/guitar-pro-3-5.md": [],
+      "docs/formats/guitar-pro-6-8.md": [],
+      "docs/formats/guitar-pro-sounds.md": []
+    },
+    "neighborMap": {}
+  },
+  "7": {
+    "files": [
+      {
+        "path": "docs/manual/src/README.md",
+        "language": "markdown",
+        "sizeLines": 11,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/SUMMARY.md",
+        "language": "markdown",
+        "sizeLines": 20,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/better-sounds.md",
+        "language": "markdown",
+        "sizeLines": 73,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/editing.md",
+        "language": "markdown",
+        "sizeLines": 197,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/hear-it.md",
+        "language": "markdown",
+        "sizeLines": 45,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/installing.md",
+        "language": "markdown",
+        "sizeLines": 77,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/keys.md",
+        "language": "markdown",
+        "sizeLines": 42,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/layouts.md",
+        "language": "markdown",
+        "sizeLines": 12,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/opening.md",
+        "language": "markdown",
+        "sizeLines": 24,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/pdf.md",
+        "language": "markdown",
+        "sizeLines": 10,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/playback.md",
+        "language": "markdown",
+        "sizeLines": 49,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/plugins.md",
+        "language": "markdown",
+        "sizeLines": 71,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/saving.md",
+        "language": "markdown",
+        "sizeLines": 41,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/tools.md",
+        "language": "markdown",
+        "sizeLines": 11,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/tracks.md",
+        "language": "markdown",
+        "sizeLines": 47,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/view.md",
+        "language": "markdown",
+        "sizeLines": 7,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/window.md",
+        "language": "markdown",
+        "sizeLines": 16,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/manual/src/zoom.md",
+        "language": "markdown",
+        "sizeLines": 19,
+        "fileCategory": "docs"
+      }
+    ],
+    "importData": {
+      "docs/manual/src/README.md": [],
+      "docs/manual/src/SUMMARY.md": [],
+      "docs/manual/src/better-sounds.md": [],
+      "docs/manual/src/editing.md": [],
+      "docs/manual/src/hear-it.md": [],
+      "docs/manual/src/installing.md": [],
+      "docs/manual/src/keys.md": [],
+      "docs/manual/src/layouts.md": [],
+      "docs/manual/src/opening.md": [],
+      "docs/manual/src/pdf.md": [],
+      "docs/manual/src/playback.md": [],
+      "docs/manual/src/plugins.md": [],
+      "docs/manual/src/saving.md": [],
+      "docs/manual/src/tools.md": [],
+      "docs/manual/src/tracks.md": [],
+      "docs/manual/src/view.md": [],
+      "docs/manual/src/window.md": [],
+      "docs/manual/src/zoom.md": []
+    },
+    "neighborMap": {}
+  },
+  "8": {
+    "files": [
+      {
+        "path": "docs/plugins/src/README.md",
+        "language": "markdown",
+        "sizeLines": 32,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/SUMMARY.md",
+        "language": "markdown",
+        "sizeLines": 20,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/building.md",
+        "language": "markdown",
+        "sizeLines": 62,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/events.md",
+        "language": "markdown",
+        "sizeLines": 49,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/formats.md",
+        "language": "markdown",
+        "sizeLines": 124,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/installing.md",
+        "language": "markdown",
+        "sizeLines": 55,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/instruments.md",
+        "language": "markdown",
+        "sizeLines": 50,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/manifest.md",
+        "language": "markdown",
+        "sizeLines": 77,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/sdk.md",
+        "language": "markdown",
+        "sizeLines": 89,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/services.md",
+        "language": "markdown",
+        "sizeLines": 85,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/settings.md",
+        "language": "markdown",
+        "sizeLines": 40,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/tabs.md",
+        "language": "markdown",
+        "sizeLines": 120,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/template.md",
+        "language": "markdown",
+        "sizeLines": 78,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/testing.md",
+        "language": "markdown",
+        "sizeLines": 88,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/tools.md",
+        "language": "markdown",
+        "sizeLines": 39,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/track-sections.md",
+        "language": "markdown",
+        "sizeLines": 22,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/versions.md",
+        "language": "markdown",
+        "sizeLines": 21,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/src/what.md",
+        "language": "markdown",
+        "sizeLines": 37,
+        "fileCategory": "docs"
+      }
+    ],
+    "importData": {
+      "docs/plugins/src/README.md": [],
+      "docs/plugins/src/SUMMARY.md": [],
+      "docs/plugins/src/building.md": [],
+      "docs/plugins/src/events.md": [],
+      "docs/plugins/src/formats.md": [],
+      "docs/plugins/src/installing.md": [],
+      "docs/plugins/src/instruments.md": [],
+      "docs/plugins/src/manifest.md": [],
+      "docs/plugins/src/sdk.md": [],
+      "docs/plugins/src/services.md": [],
+      "docs/plugins/src/settings.md": [],
+      "docs/plugins/src/tabs.md": [],
+      "docs/plugins/src/template.md": [],
+      "docs/plugins/src/testing.md": [],
+      "docs/plugins/src/tools.md": [],
+      "docs/plugins/src/track-sections.md": [],
+      "docs/plugins/src/versions.md": [],
+      "docs/plugins/src/what.md": []
+    },
+    "neighborMap": {}
+  },
+  "9": {
+    "files": [
+      {
+        "path": "docs/plugins/template/Cargo.toml",
+        "language": "toml",
+        "sizeLines": 51,
+        "fileCategory": "config"
+      },
+      {
+        "path": "docs/plugins/template/README.md",
+        "language": "markdown",
+        "sizeLines": 67,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "docs/plugins/template/build-oxp.sh",
+        "language": "shell",
+        "sizeLines": 56,
+        "fileCategory": "script"
+      },
+      {
+        "path": "docs/plugins/template/manifest.json",
+        "language": "json",
+        "sizeLines": 27,
+        "fileCategory": "config"
+      }
+    ],
+    "importData": {
+      "docs/plugins/template/Cargo.toml": [],
+      "docs/plugins/template/README.md": [],
+      "docs/plugins/template/build-oxp.sh": [],
+      "docs/plugins/template/manifest.json": []
+    },
+    "neighborMap": {}
+  },
+  "10": {
+    "files": [
+      {
+        "path": "fuzz/Cargo.toml",
+        "language": "toml",
+        "sizeLines": 92,
+        "fileCategory": "config"
+      },
+      {
+        "path": "fuzz/README.md",
+        "language": "markdown",
+        "sizeLines": 43,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "fuzz/run.sh",
+        "language": "shell",
+        "sizeLines": 46,
+        "fileCategory": "script"
+      },
+      {
+        "path": "fuzz/seeds.sh",
+        "language": "shell",
+        "sizeLines": 27,
+        "fileCategory": "script"
+      }
+    ],
+    "importData": {
+      "fuzz/Cargo.toml": [],
+      "fuzz/README.md": [],
+      "fuzz/run.sh": [],
+      "fuzz/seeds.sh": []
+    },
+    "neighborMap": {}
+  }
+}
