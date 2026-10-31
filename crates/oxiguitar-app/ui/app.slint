@@ -1314,7 +1314,8 @@ export component AppWindow inherits Window {
     callback undo();
     callback redo();
     callback next-bad-bar();
-    callback track-selected(int);
+    callback track-selected(int, bool);
+    callback track-double-clicked(int);
     // Plugins' tabs (plugin_tab.slint), by area number (0 top, 1 bottom,
     // 2 left, 3 right): their rows, or a message instead; what the user does
     // to their widgets; a canvas's room.
@@ -2157,9 +2158,8 @@ export component AppWindow inherits Window {
                 background: Palette.alternate-background;
                 if root.bottom-area.active-id == "tracks" && !root.has-score : Placeholder { text: "The tracks of the open score appear here."; }
                 // Track list: each track's notation buttons show it (both
-                // off hides it); a click on a name selects the track for the
-                // editor (Mateus, 19 Oct 2026). No show tick: the buttons do
-                // that (Mateus, 17 Oct 2026).
+                // off hides it); a left-click on a name shows only that
+                // track, Shift-click toggles it (Mateus, 31 Oct 2026).
                 if root.bottom-area.active-id == "tracks" && root.has-score : ScrollView {
                     VerticalLayout {
                         alignment: start;
@@ -2189,7 +2189,12 @@ export component AppWindow inherits Window {
                                 }
                                 TouchArea {
                                     mouse-cursor: pointer;
-                                    clicked => { root.track-selected(i); }
+                                    pointer-event(e) => {
+                                        if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                                            root.track-selected(i, e.modifiers.shift);
+                                        }
+                                    }
+                                    double-clicked => { root.track-double-clicked(i); }
                                 }
                                 // Right-click: the track's own commands
                                 // (docs/design/ui.md, "The track dialog").

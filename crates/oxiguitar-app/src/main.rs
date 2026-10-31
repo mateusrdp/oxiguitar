@@ -925,11 +925,31 @@ fn main() -> Result<(), slint::PlatformError> {
         sync_tracks(&a);
     });
     let a = app.clone();
-    ui.on_track_selected(move |i| {
-        let moved = usize::try_from(i).is_ok_and(|i| a.borrow_mut().editing.select_track(i));
+    ui.on_track_selected(move |i, shift| {
+        let track = match usize::try_from(i) {
+            Ok(t) => t,
+            Err(_) => return,
+        };
+        let handled = a.borrow_mut().tracks.select_track(track, shift);
+        if handled {
+            sync_tracks(&a);
+        }
+        let moved = a.borrow_mut().editing.select_track(track);
         if moved {
             caret_moved(&a);
         }
+    });
+    let a = app.clone();
+    ui.on_track_double_clicked(move |i| {
+        let Ok(track) = usize::try_from(i) else {
+            return;
+        };
+        // Select the track and open its properties dialog.
+        let moved = a.borrow_mut().editing.select_track(track);
+        if moved {
+            caret_moved(&a);
+        }
+        open_track_dialog(&a);
     });
     let a = app.clone();
     ui.on_page_pressed(move |x, y, shift| page_pressed(&a, x, y, shift));
