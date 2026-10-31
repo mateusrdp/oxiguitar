@@ -34,7 +34,7 @@
 | Ctrl + mouse wheel | Zoom the interface in or out |
 | Ctrl + + / Ctrl + − / Ctrl + 0 | Zoom the interface in, out, back to 100 % |
 | Score zoom slider, bottom right | Zoom the score; click the percentage for 100 % |
-| Click a track's name | Select that track |
+| Click a track's name | Select that track (left-click shows only it; Shift-click toggles it in multitrack) |
 | Click a track's overview | Move the playback (or the caret) there |
 | Click a hidden track's clef or TAB | Show it with the others |
 | Click a panel's open tab, or its chevron | Fold the panel away or open it again |

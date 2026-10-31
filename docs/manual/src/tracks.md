@@ -2,7 +2,7 @@
 
 The **Tracks** tab of the bottom panel shows every track of the song: its name, its mixer, its notation buttons and an overview of the track across the song. **View → Panels → Bottom** (F8) hides or shows the panel, a click on the open tab's name folds it away, and dragging its top edge makes it taller or shorter.
 
-- **Click a name** to select that track: the caret moves to it ([Editing](editing.md)). A track is shown while its clef or TAB button is on.
+- **Click a name** to select that track: the caret moves to it ([Editing](editing.md)). Shift-click a shown track to hide it (at least one must remain); Shift-click a hidden track to add it. Ctrl-click does nothing. A track is shown while its clef or TAB button is on.
 - **Click a hidden track's notation button** to show it with the others, lined up bar by bar in one score. There's no separate "show all" switch: showing each track you want is enough.
 - With several tracks, each system starts with the tracks' names.
 - **Right-click a name** for the track's menu: Properties…, Transpose…, Add Track, Duplicate, Move Up, Move Down and Delete…. Delete asks first; Undo brings a deleted track back.
