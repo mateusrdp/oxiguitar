@@ -255,10 +255,10 @@ impl TabContent {
                             out.push(format!("{at}: {p}"));
                         }
                     }
-                    Widget::Link { url, .. } => {
-                        if !url.starts_with("https://") || url.chars().any(char::is_whitespace) {
-                            out.push(format!("{at}: the link {url:?} is not an https:// address"));
-                        }
+                    Widget::Link { url, .. }
+                        if !url.starts_with("https://") || url.chars().any(char::is_whitespace) =>
+                    {
+                        out.push(format!("{at}: the link {url:?} is not an https:// address"));
                     }
                     _ => {}
                 }
