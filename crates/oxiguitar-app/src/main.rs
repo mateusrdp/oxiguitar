@@ -685,6 +685,8 @@ fn main() -> Result<(), slint::PlatformError> {
         s.zoom = prefs.score_zoom;
         s.ui_zoom = prefs.ui_zoom;
     }
+    // Establish the scrollable area dimensions for the restored zoom.
+    set_content_size(&app, &ui);
     settings_changed(&app);
     sync_footer(&app);
     sync_shell(&app);
@@ -2125,6 +2127,8 @@ fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
     let zoom = p.score_zoom.clamp(0.25, 4.0);
     ui.set_zoom_log(zoom.log2());
     ui.set_zoom_text(format!("{:.0} %", zoom * 100.0).into());
+    // Match the canvas rendering scale to the zoom level.
+    ui.set_pt_scale(PX_PER_PT * zoom);
 }
 
 /// A toolbar button was clicked.
@@ -2202,6 +2206,9 @@ fn handle(app: &Shared, event: Event) {
             sync_toolbar(app);
             sync_edit_state(app, &edit);
             ui.invoke_scroll_to(0.0, 0.0);
+            // Set the scrollable area to match the score dimensions at the
+            // restored zoom level.
+            set_content_size(app, &ui);
             settings_changed(app);
             playing::score_changed(app, true);
         }
