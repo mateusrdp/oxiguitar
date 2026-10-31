@@ -325,6 +325,17 @@ build_appimage() {
     install -Dm755 "$x11_app" "$dir/usr/bin/oxiguitar-x11"
     install -d "$dir/usr/lib/oxiguitar/plugins"
     install -m644 "$plugins"/*.oxp "$dir/usr/lib/oxiguitar/plugins/"
+    # The libraries the programs load that not every system has
+    # (scripts/package/build-linux.sh), found through the programs' RPATH,
+    # and their copyright files.
+    local libs="$root/target/appimage-libs"
+    compgen -G "$libs/*.so*" > /dev/null || {
+        echo "missing $libs: build with scripts/package/build-linux.sh" >&2
+        exit 1
+    }
+    install -d "$dir/usr/lib/oxiguitar/libs" "$dir/usr/share/doc/$package/bundled"
+    install -m644 "$libs"/*.so* "$dir/usr/lib/oxiguitar/libs/"
+    install -m644 "$libs"/licenses/* "$dir/usr/share/doc/$package/bundled/"
     # The desktop entry and icon at the top, as the AppImage format wants,
     # and AppRun choosing the program. The mime file stays inside, unused.
     cp "$dir/usr/share/applications/$id.desktop" "$dir/$id.desktop"

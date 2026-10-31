@@ -313,6 +313,11 @@ jobs:
           test ! -e "$root/usr/lib/oxiguitar/plugins/audio-pipewire.oxp"
           test -f "$root/usr/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml"
           scripts/package/check-glibc.sh 2.35 "$root"
+          # The libraries it brings, found through the programs' RPATH.
+          test -f "$root/usr/lib/oxiguitar/libs/libxkbcommon-x11.so.0"
+          for b in oxiguitar oxiguitar-x11; do
+            readelf -d "$root/usr/bin/$b" | grep -F '(RPATH)' | grep -qF '$ORIGIN/../lib/oxiguitar/libs'
+          done
           OXIGUITAR_HOME="$home" "$root/usr/bin/oxiguitar-cli" info "$SAMPLE" > /dev/null
           # Each build holds only its own display system's code
           # (scripts/check-display-crates.sh checks the crates; this, the files).
