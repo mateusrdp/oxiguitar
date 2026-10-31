@@ -411,13 +411,14 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
             Widget::Choice { .. } => "choice",
             Widget::List { .. } => "list",
             Widget::Canvas(_) => "canvas",
+            Widget::Link { .. } => "link",
         })
         .collect();
     assert_eq!(
         kinds,
         [
             "label", "button", "button", "toggle", "slider", "field", "choice", "list", "canvas",
-            "label", "label"
+            "label", "label", "link"
         ]
     );
 
