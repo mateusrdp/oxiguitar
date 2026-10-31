@@ -2044,7 +2044,11 @@ export component AppWindow inherits Window {
                                     single-line: true;
                                     init => {
                                         self.focus();
-                                        self.set-selection-offsets(0, 999);
+                                    }
+                                    changed text => {
+                                        if (self.text != "") {
+                                            self.set-selection-offsets(self.text.character-count, 999);
+                                        }
                                     }
                                 }
                             }
