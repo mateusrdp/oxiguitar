@@ -11,7 +11,7 @@ use oxiguitar_host::Plugins;
 use oxiguitar_host::realtime::Instance;
 use oxiguitar_model::Score;
 use oxiguitar_plugin_api::class::InstrumentClass;
-use oxiguitar_plugin_api::message::{Prepare, PreparedTrack, TrackInfo};
+use oxiguitar_plugin_api::message::{Prepare, PrepareEffect, PreparedTrack, TrackInfo};
 use oxiguitar_plugin_api::realtime::{PitchPoint, RtEvent};
 
 use crate::engine::{Buffers, Slot, Source, Sources};
@@ -28,6 +28,23 @@ pub struct Group {
     pub tracks: Vec<usize>,
     /// Each of them as the instrument is told about it.
     pub prepared: Vec<PreparedTrack>,
+    /// The effects after each of them, in order: every installed effect
+    /// offered for the track's class (interface 1.3), each with the track's
+    /// settings for its own plugin, so a change in the track dialog's
+    /// section makes a new plan. An effect its settings leave off passes
+    /// the sound through.
+    pub effects: Vec<Vec<EffectPick>>,
+}
+
+/// One effect on a track, as it is prepared.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EffectPick {
+    /// The effect's plugin's id.
+    pub plugin: String,
+    /// The effect's id in the plugin.
+    pub effect: String,
+    /// The track's settings for that plugin, a JSON object as text.
+    pub settings: String,
 }
 
 /// What a score's instruments are prepared for: each track goes to the
@@ -90,6 +107,22 @@ pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
                 .cloned()
                 .unwrap_or_else(|| "{}".into()),
         };
+        let effects: Vec<EffectPick> = plugins
+            .effects_for(class_of(score, t))
+            .into_iter()
+            .filter_map(|e| {
+                let plugin = e.plugin.manifest.as_ref()?.id.clone();
+                Some(EffectPick {
+                    settings: track
+                        .plugins
+                        .get(&plugin)
+                        .cloned()
+                        .unwrap_or_else(|| "{}".into()),
+                    plugin,
+                    effect: e.spec.id.clone(),
+                })
+            })
+            .collect();
         match out
             .groups
             .iter_mut()
@@ -98,12 +131,14 @@ pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
             Some(g) => {
                 g.tracks.push(t);
                 g.prepared.push(prepared);
+                g.effects.push(effects);
             }
             None => out.groups.push(Group {
                 plugin,
                 instrument: id,
                 tracks: vec![t],
                 prepared: vec![prepared],
+                effects: vec![effects],
             }),
         }
     }
@@ -120,8 +155,9 @@ pub struct Prepared {
     pub routes: Vec<Option<Route>>,
     /// The instruments' names.
     pub names: Vec<String>,
-    /// Sentences about tracks left silent: no instrument plays them, or
-    /// theirs couldn't get ready.
+    /// Sentences about tracks left silent (no instrument plays them, or
+    /// theirs couldn't get ready) and about effects that couldn't get
+    /// ready (their tracks play without them).
     pub silent: Vec<String>,
 }
 
@@ -191,7 +227,47 @@ pub fn prepare(
             routes[t] = Some(Route { source, slot });
         }
         names.push(iname);
-        let effects = g.tracks.iter().map(|_| Vec::new()).collect();
+        let mut effects = Vec::with_capacity(g.tracks.len());
+        for (k, &t) in g.tracks.iter().enumerate() {
+            let mut chain = Vec::new();
+            for pick in g.effects.get(k).into_iter().flatten() {
+                let Some(effect) = plugins
+                    .effects_for(class_of(score, t))
+                    .into_iter()
+                    .find(|e| {
+                        e.spec.id == pick.effect
+                            && e.plugin
+                                .manifest
+                                .as_ref()
+                                .is_some_and(|m| m.id == pick.plugin)
+                    })
+                else {
+                    continue;
+                };
+                let ename = effect.spec.name.clone();
+                // The effect hears the track with its own plugin's settings.
+                let track = PreparedTrack {
+                    settings: pick.settings.clone(),
+                    ..g.prepared[k].clone()
+                };
+                match plugins.prepare_effect(
+                    effect,
+                    PrepareEffect {
+                        effect: pick.effect.clone(),
+                        rate,
+                        frames: capacity as u32,
+                        track,
+                    },
+                ) {
+                    Ok(i) => chain.push(i),
+                    Err(e) => silent.push(format!(
+                        "{ename} couldn't get ready on {}: {e}. It plays without it.",
+                        name_of(t)
+                    )),
+                }
+            }
+            effects.push(chain);
+        }
         slots.push(Slot::new(
             Box::new(PluginSource::new(instance, effects)),
             g.tracks.clone(),
@@ -259,12 +335,17 @@ impl Source for PluginSource {
     }
 
     fn latency(&self) -> u32 {
+        (0..self.effects.len().max(1))
+            .map(|k| self.track_latency(k))
+            .max()
+            .unwrap_or(0)
+    }
+
+    fn track_latency(&self, slot: usize) -> u32 {
         let effects = self
             .effects
-            .iter()
-            .map(|c| c.iter().map(Instance::latency).sum::<u32>())
-            .max()
-            .unwrap_or(0);
+            .get(slot)
+            .map_or(0, |c| c.iter().map(Instance::latency).sum::<u32>());
         self.instrument.latency() + effects
     }
 }
