@@ -2368,7 +2368,7 @@ fn sync_edit_state(app: &Shared, edit: &document::EditState) {
 }
 
 /// A press on the page, at (`x`, `y`) in the viewport's logical pixels:
-/// the caret goes there (with Shift, the selection grows to it).
+/// when playing, skip to the clicked note; when stopped, put the caret there.
 fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
     // A click elsewhere ends typing lyrics, keeping what was typed.
     let typing = app
@@ -2379,6 +2379,17 @@ fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
     if let Some((true, text)) = typing {
         lyric_key(app, "done", &text);
     }
+    // When playing: click on notation to skip to that note's time.
+    let state = app.borrow().player.state();
+    if matches!(
+        state,
+        crate::player::State::Playing | crate::player::State::Starting
+    ) && let Some((sheet, sx, sy)) = on_sheet(app, x, y)
+    {
+        playing::notation_clicked(app, sheet, sx, sy);
+        return;
+    }
+    // When stopped/paused: existing editing behavior (caret placement, selection).
     let moved = on_sheet(app, x, y)
         .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.press_at(i, sx, sy, shift));
     if moved {

@@ -12,6 +12,9 @@ use std::time::Duration;
 use oxiguitar_host::Level;
 use slint::{ModelRc, SharedString, VecModel};
 
+use oxiguitar_edit::onsets;
+use oxiguitar_model::Ratio;
+
 use crate::player::{Do, Place, State, span_of};
 use crate::sound::{FromSound, ToSound};
 use crate::ui::PlayFrame;
@@ -495,7 +498,9 @@ fn follow(app: &Shared, f: PlayFrame) {
 }
 
 /// A click on a track's overview, at `fraction` of the song: the sound
-/// goes there while it plays, else the caret does.
+/// goes there while it plays, else the caret does. Always attempts the
+/// seek (so the engine updates its position) and moves the caret as a
+/// fallback when not playing.
 pub(crate) fn overview_clicked(app: &Shared, fraction: f32) {
     let place = {
         let mut s = app.borrow_mut();
@@ -503,13 +508,101 @@ pub(crate) fn overview_clicked(app: &Shared, fraction: f32) {
             return;
         };
         let t = f64::from(fraction.clamp(0.0, 1.0)) * tl.length();
-        if s.player.seek(t) {
-            return;
-        }
+        let before = s.player.heard().unwrap_or(0.0);
+        eprintln!(
+            "[overview_clicked] fraction={:.3} time={:.3} state={:?} heard_before={:.3}",
+            fraction,
+            t,
+            s.player.state(),
+            before
+        );
+        s.player.seek(t);
         crate::player::place_at(&tl, t.min(tl.length() - 1e-6).max(0.0))
     };
     if let Some(p) = place {
         put_caret_at(app, p);
+    }
+}
+
+/// A click on the page's notation, at (`x`, `y`) on sheet `sheet` (in
+/// points): the sound goes there while it plays, else the caret does.
+/// Uses the hit map to find the nearest beat, converts it to audio time,
+/// and seeks.
+pub(crate) fn notation_clicked(app: &Shared, sheet: usize, x: f32, y: f32) {
+    let place = {
+        let mut s = app.borrow_mut();
+        let Some(tl) = s.player.timeline().cloned() else {
+            return;
+        };
+        let Some(score) = s.editing.score().clone() else {
+            return;
+        };
+        let hits = s.editing.hits().clone();
+        let voice = s.editing.caret().map_or(0, |c| c.voice);
+        let spot = match hits.hit(sheet, x, y, voice) {
+            Some(s) => s,
+            None => return,
+        };
+        // Convert Spot → Place: beat index → whole-note offset.
+        let bar = match score
+            .tracks
+            .get(spot.track)
+            .and_then(|t| t.staves.get(spot.staff))
+            .and_then(|s| s.bars.get(spot.bar))
+        {
+            Some(b) => b,
+            None => return,
+        };
+        let bar_len = bar
+            .voices
+            .first()
+            .and_then(|v| v.length())
+            .unwrap_or(Ratio::ZERO);
+        let offset = match spot.beat {
+            Some(beat) => {
+                // Try the clicked voice first, then fall back to voice 0.
+                let onset = bar
+                    .voices
+                    .get(voice)
+                    .map(onsets)
+                    .or_else(|| bar.voices.first().map(onsets))
+                    .and_then(|o| o.get(beat).copied())
+                    .unwrap_or(bar_len);
+                if onset >= bar_len {
+                    // Past the bar: seek to its end.
+                    bar_len
+                } else {
+                    onset
+                }
+            }
+            None => Ratio::ZERO, // No beat in this voice: seek to bar start.
+        };
+        let place = Place {
+            bar: spot.bar,
+            offset,
+        };
+        let Some((_, t)) = crate::player::time_of(&tl, place, 0) else {
+            return;
+        };
+        eprintln!(
+            "[notation_clicked] sheet={} x={:.1} y={:.1} spot=(t={},s={},b={},beat={:?}) place=(bar={},offset={:.4}) time={:.3}",
+            sheet,
+            x,
+            y,
+            spot.track,
+            spot.staff,
+            spot.bar,
+            spot.beat,
+            spot.bar,
+            offset.to_f64(),
+            t
+        );
+        s.player.seek(t);
+        crate::player::place_at(&tl, t.min(tl.length() - 1e-6).max(0.0))
+    };
+    if let Some(p) = place {
+        put_caret_at(app, p);
+        sync(app);
     }
 }
 
