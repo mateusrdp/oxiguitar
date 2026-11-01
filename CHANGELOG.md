@@ -28,6 +28,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 - Plugin interface 1.4: **a plugin can show advice** (`Host::advise`): a dialog with a title, a text and up to three links, shown once the window is up and one at a time, with a "Don't show this again" box. What the user ticks is kept in settings.json under `advice`, one entry for each plugin and advice (`"advice": {"yourname.example": {"no-model": "hidden"}}`); delete a line to get its dialog back. Links open in the browser only when clicked, `https://` addresses only. The plugin guide has a new page, Advice (#165).
 
+- **OxiGuitar says once what it can't do**: when no plugin reads files, no plugin plays a score, or (with one that does) no plugin sends the sound to your speakers, a dialog appears when the window is up, with links to the manual's new page of **official plugins** and to its install page for your system, and a "Don't show this again" box for each of the three (`advice.oxiguitar` in settings.json). Safe mode shows none. The manual has new install pages for Linux, Windows and macOS, which say where plugins go and how they will be kept up to date once the plugins have their own releases (#165).
+
 - AppStream metainfo in the .deb, the .rpm and the AppImage, so software centres (GNOME Software, KDE Discover) and the AppImage catalog show OxiGuitar with its description, screenshots and releases.
 - The release workflow runs the AppImage catalog's own test (appimage.github.io) on the AppImage: on Ubuntu 22.04, under X11, without network, with its lint, its C library check and its screenshot checks.
 

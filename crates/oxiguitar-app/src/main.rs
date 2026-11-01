@@ -721,6 +721,12 @@ fn main() -> Result<(), slint::PlatformError> {
     {
         let mut s = app.borrow_mut();
         s.footer.extend(startup.notices);
+        // What the core can't do, as advice for the window's first moments
+        // (the host left out what the user silenced, and all of it in safe
+        // mode).
+        for asked in startup.advice {
+            advice::ask(asked);
+        }
         s.stored = startup.settings;
         s.prefs = prefs;
         // s.zoom and s.ui_zoom default to 1.0; restore the persisted

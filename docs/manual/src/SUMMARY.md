@@ -3,6 +3,9 @@
 [OxiGuitar](README.md)
 
 - [Installing](installing.md)
+  - [On Linux](install-linux.md)
+  - [On Windows](install-windows.md)
+  - [On macOS](install-macos.md)
 - [The window](window.md)
 - [Opening files](opening.md)
 - [Saving files](saving.md)
@@ -17,6 +20,7 @@
 - [Exporting audio](audio-export.md)
 - [Keyboard and mouse](keys.md)
 - [Settings and plugins](plugins.md)
+- [The official plugins](official-plugins.md)
 - [Better sounds](better-sounds.md)
 - [Amp models (NAM)](amp-models.md)
 - [Hear it](hear-it.md)
