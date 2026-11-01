@@ -77,7 +77,8 @@ use std::sync::Arc;
 
 use oxiguitar_plugin_api::Blob;
 use oxiguitar_plugin_api::manifest::Manifest;
-use oxiguitar_plugin_api::message::{Answer, HostAnswer, HostRequest, Link, Request};
+pub use oxiguitar_plugin_api::message::Link;
+use oxiguitar_plugin_api::message::{Answer, HostAnswer, HostRequest, Request};
 
 #[doc(hidden)]
 pub mod audio;

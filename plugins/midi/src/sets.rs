@@ -4,7 +4,7 @@
 //! Finding sound sets (docs/design/player.md, "Sounds"): the files in the
 //! user's `soundfonts` folder and the system's own, read only, never
 //! fetched. Until the user picks, the best set plays: the user's before the
-//! system's, the larger before the smaller. SFZ instruments are found too,
+//! installed ones, those before the system's, the larger before the smaller. SFZ instruments are found too,
 //! but play only where the user picks them (Mateus, 26 Oct 2026): one is a
 //! single instrument, not a General MIDI set.
 
@@ -15,6 +15,10 @@ use std::path::{Path, PathBuf};
 pub(crate) enum Origin {
     /// The user's `soundfonts` folder.
     User,
+    /// The sets the sound-set installer put in the system's own folder for
+    /// them (`/usr/share/oxiguitar/soundfonts` on Linux): recorded sets,
+    /// not basic ones.
+    Installed,
     /// The system's own sets: every one of them counts as basic.
     System,
 }
@@ -58,6 +62,22 @@ pub(crate) struct Found {
     pub(crate) origin: Origin,
     /// Its format.
     pub(crate) kind: Kind,
+    /// What its folder's `oxiguitar-set.json` says, if it has one.
+    pub(crate) info: Option<crate::info::Info>,
+}
+
+/// The places the sound-set installer puts sets, read only: the .deb and
+/// .rpm of the better sounds put them in `/usr/share/oxiguitar/soundfonts`.
+/// The installers for Windows and macOS put them in the user's folder.
+pub(crate) fn installed_places() -> Vec<PathBuf> {
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    {
+        Vec::new()
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        vec![PathBuf::from("/usr/share/oxiguitar/soundfonts")]
+    }
 }
 
 /// The system's own places for sets, files or folders, read only.
@@ -90,16 +110,20 @@ pub(crate) fn system_places() -> Vec<PathBuf> {
 /// Audio/Naked Drums/*.sfz`).
 const DEPTH: usize = 5;
 
-/// Every set in the user's folder `user` and the system's `system` (files
-/// or folders), the best first: the user's before the system's, then the
-/// larger before the smaller (then by path, so the order is always the
-/// same). A file reached twice (a link, a folder inside another) counts
-/// once, where it is first found.
-pub(crate) fn find(user: Option<&Path>, system: &[PathBuf]) -> Vec<Found> {
+/// Every set in the user's folder `user`, the installer's `installed` and
+/// the system's `system` (files or folders), the best first: the user's
+/// before the installed ones, those before the system's, then the larger
+/// before the smaller (then by path, so the order is always the same). A
+/// file reached twice (a link, a folder inside another) counts once, where
+/// it is first found.
+pub(crate) fn find(user: Option<&Path>, installed: &[PathBuf], system: &[PathBuf]) -> Vec<Found> {
     let mut found = Vec::new();
     let mut seen = Vec::new();
     if let Some(user) = user {
         look(user, Origin::User, DEPTH, &mut found, &mut seen);
+    }
+    for place in installed {
+        look(place, Origin::Installed, DEPTH, &mut found, &mut seen);
     }
     for place in system {
         look(place, Origin::System, DEPTH, &mut found, &mut seen);
@@ -139,6 +163,19 @@ fn look(
     found: &mut Vec<Found>,
     seen: &mut Vec<PathBuf>,
 ) {
+    let root = std::fs::canonicalize(place).unwrap_or_else(|_| place.to_path_buf());
+    look_in(place, &root, origin, depth, found, seen);
+}
+
+/// [`look`] below `root`, the place the search began in (canonical), which a set's `oxiguitar-set.json` may not be in.
+fn look_in(
+    place: &Path,
+    root: &Path,
+    origin: Origin,
+    depth: usize,
+    found: &mut Vec<Found>,
+    seen: &mut Vec<PathBuf>,
+) {
     let Ok(real) = std::fs::canonicalize(place) else {
         return;
     };
@@ -153,11 +190,15 @@ fn look(
         // The kind goes by the name the set was found under: a link named
         // .sf2 to a file without an extension is still a SoundFont.
         if let Some(kind) = Kind::of(place).or_else(|| Kind::of(&real)) {
+            // Where the file was reached, not where its link points: the
+            // folder it was reached in says what it is.
+            let info = crate::info::of(place, root);
             found.push(Found {
                 path: real,
                 size: meta.len(),
                 origin,
                 kind,
+                info,
             });
         }
         return;
@@ -171,7 +212,7 @@ fn look(
     let mut names: Vec<PathBuf> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
     names.sort();
     for name in names {
-        look(&name, origin, depth - 1, found, seen);
+        look_in(&name, root, origin, depth - 1, found, seen);
     }
 }
 
@@ -203,7 +244,7 @@ mod tests {
         file(&user.join("notes.txt"), 99);
         file(&system.join("huge.sf2"), 1000);
         file(&system.join("gm.dls"), 20);
-        let found = find(Some(&user), std::slice::from_ref(&system));
+        let found = find(Some(&user), &[], std::slice::from_ref(&system));
         let names: Vec<_> = found
             .iter()
             .map(|f| f.path.file_name().unwrap().to_string_lossy().into_owned())
@@ -223,6 +264,7 @@ mod tests {
         file(&system.join("FluidR3_GM.sf2"), 100);
         let found = find(
             None,
+            &[],
             &[
                 system.clone(),
                 system.join("FluidR3_GM.sf2"),
@@ -237,7 +279,7 @@ mod tests {
                 system.join("default-GM.sf2"),
             )
             .unwrap();
-            let found = find(None, std::slice::from_ref(&system));
+            let found = find(None, &[], std::slice::from_ref(&system));
             assert_eq!(found.len(), 1, "{found:?}");
         }
         let _ = std::fs::remove_dir_all(&dir);
@@ -248,7 +290,7 @@ mod tests {
         let dir = scratch("deep");
         file(&dir.join("a/b/c/d/found.sf2"), 1);
         file(&dir.join("a/b/c/d/e/lost.sf2"), 1);
-        let found = find(Some(&dir), &[]);
+        let found = find(Some(&dir), &[], &[]);
         assert_eq!(found.len(), 1);
         assert!(found[0].path.ends_with("found.sf2"));
         let _ = std::fs::remove_dir_all(&dir);
@@ -271,7 +313,7 @@ mod tests {
             &dir.join("Naked Drums/Wilkinson Audio/Naked Drums/kit.sfz"),
             10,
         );
-        let found = find(Some(&dir), &[]);
+        let found = find(Some(&dir), &[], &[]);
         let mut names: Vec<_> = found
             .iter()
             .map(|f| f.path.file_name().unwrap().to_string_lossy().into_owned())

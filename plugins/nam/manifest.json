@@ -13,5 +13,6 @@
   "track_sections": [
     { "id": "nam", "title": "Amp (NAM)", "plays": ["fretted", "fretless"] }
   ],
+  "needs": [{ "id": "oxiguitar.midi", "version": "0.10.0" }],
   "folders": ["nam"]
 }

@@ -477,7 +477,7 @@ fn play_into_a_wav_file_needs_no_sound_card() {
         .unwrap();
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
     let said = String::from_utf8_lossy(&o.stdout);
-    assert!(said.contains("with SoundFont"), "{said}");
+    assert!(said.contains("with MIDI (SoundFont, SFZ)"), "{said}");
     let wav = std::fs::read(&out).unwrap();
     assert_eq!(&wav[..4], b"RIFF");
     assert_eq!(&wav[8..16], b"WAVEfmt ");
