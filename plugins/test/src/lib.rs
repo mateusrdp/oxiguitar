@@ -78,6 +78,65 @@ pub struct TestPlugin {
     link: LinkTool,
     settings: SettingsWindow,
     fake: fake::Fake,
+    raw: Raw,
+}
+
+/// The first bytes of a file the exporter `raw` writes: then the rate
+/// (u32), the frames (u64, written over at the end) and the samples (f32),
+/// all little-endian.
+pub const RAW_MAGIC: &[u8; 8] = b"OXGRAW1\n";
+
+/// The rate the exporter `raw` asks for: not the player's usual 48 kHz,
+/// so tests see the host render at the rate asked.
+pub const RAW_RATE: u32 = 44_100;
+
+/// The exporter `raw` (interface 1.4): the samples as they come, after a
+/// header whose frame count is written over when the export finishes.
+#[derive(Debug, Default)]
+struct Raw {
+    /// The frames of the export under way, or none.
+    frames: Mutex<Option<u64>>,
+}
+
+impl Raw {
+    fn header(frames: u64) -> Vec<u8> {
+        let mut h = RAW_MAGIC.to_vec();
+        h.extend_from_slice(&RAW_RATE.to_le_bytes());
+        h.extend_from_slice(&frames.to_le_bytes());
+        h
+    }
+}
+
+impl oxiguitar_plugin::AudioExporter for Raw {
+    fn start(&self) -> Result<oxiguitar_plugin::ExportStart, Error> {
+        *self.frames.lock().unwrap_or_else(|e| e.into_inner()) = Some(0);
+        Ok(oxiguitar_plugin::ExportStart {
+            rate: RAW_RATE,
+            data: Raw::header(0),
+        })
+    }
+
+    fn samples(&self, interleaved: &[f32]) -> Result<Vec<u8>, Error> {
+        let mut frames = self.frames.lock().unwrap_or_else(|e| e.into_inner());
+        let Some(n) = frames.as_mut() else {
+            return Err(Error::new(ErrorKind::Failed, "no export was started"));
+        };
+        *n += (interleaved.len() / 2) as u64;
+        Ok(interleaved.iter().flat_map(|v| v.to_le_bytes()).collect())
+    }
+
+    fn finish(&self, cancelled: bool) -> Result<oxiguitar_plugin::ExportEnd, Error> {
+        let frames = self
+            .frames
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take()
+            .ok_or_else(|| Error::new(ErrorKind::Failed, "no export was started"))?;
+        Ok(oxiguitar_plugin::ExportEnd {
+            data: Vec::new(),
+            start: (!cancelled).then(|| Raw::header(frames)),
+        })
+    }
 }
 
 /// The tool `link`.
@@ -295,8 +354,13 @@ impl Plugin for TestPlugin {
             link: LinkTool { host: host.clone() },
             settings: SettingsWindow { host: host.clone() },
             fake: fake::Fake::new(host.clone()),
+            raw: Raw::default(),
             host,
         })
+    }
+
+    fn audio_exporter(&self, id: &str) -> Option<&dyn oxiguitar_plugin::AudioExporter> {
+        (id == "raw").then_some(&self.raw as &dyn oxiguitar_plugin::AudioExporter)
     }
 
     fn tool(&self, id: &str) -> Option<&dyn Tool> {

@@ -31,6 +31,7 @@
 #[cfg(not(any(feature = "wayland", feature = "x11")))]
 compile_error!("build oxiguitar-app with the `wayland` feature (the default) or `x11`");
 
+mod audio_export;
 mod bar_form;
 mod bend_form;
 mod canvas;
@@ -249,6 +250,11 @@ struct App {
     followed: Option<(i32, i32)>,
     /// Where Pause put the caret: moved from there, the pause ends.
     paused_at: Option<oxiguitar_edit::Caret>,
+    /// File → Export's audio exporters, the one whose dialog is open, and
+    /// the stop switch of the export under way.
+    exporters: Vec<audio_export::Target>,
+    export_with: Option<usize>,
+    export_cancel: Option<Arc<std::sync::atomic::AtomicBool>>,
 }
 
 /// What the question over the window asks.
@@ -571,6 +577,9 @@ fn main() -> Result<(), slint::PlatformError> {
         visual: false,
         followed: None,
         paused_at: None,
+        exporters: audio_export::targets(&startup.plugins),
+        export_with: None,
+        export_cancel: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
     measure_palette();
@@ -916,6 +925,40 @@ fn main() -> Result<(), slint::PlatformError> {
     ));
     let a = app.clone();
     ui.on_export_pdf(move || export_dialog(&a));
+    ui.set_exporters(strings(
+        app.borrow()
+            .exporters
+            .iter()
+            .map(|t| t.name.clone())
+            .collect(),
+    ));
+    let a = app.clone();
+    ui.on_export_with(move |i| export_audio_dialog(&a, i as usize));
+    let a = app.clone();
+    ui.on_export_dialog_done(move |ok| export_audio_chosen(&a, ok));
+    let a = app.clone();
+    ui.on_export_cancel(move || {
+        if let Some(c) = &a.borrow().export_cancel {
+            c.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    });
+    let a = app.clone();
+    ui.on_export_finished(move |level, text| {
+        let ui = a.borrow().ui.upgrade();
+        if let Some(ui) = ui {
+            ui.set_export_running(false);
+        }
+        a.borrow_mut().export_cancel = None;
+        let level = match level {
+            0 => Level::Info,
+            1 => Level::Warning,
+            _ => Level::Error,
+        };
+        // An empty sentence: the file dialog was cancelled.
+        if !text.is_empty() {
+            message(&a, level, text.to_string());
+        }
+    });
     let a = app.clone();
     ui.on_quit(move || unless_unsaved(&a, Then::Quit));
     let a = app.clone();
@@ -4385,6 +4428,126 @@ fn export_dialog(app: &Shared) {
             }
             let _ = sender.send(Request::ExportPdf(path, settings));
         }
+    };
+    run_dialog(pick);
+}
+
+/// File → Export of an audio exporter: the dialog of what to render.
+fn export_audio_dialog(app: &Shared, i: usize) {
+    let mut s = app.borrow_mut();
+    let Some(ui) = s.ui.upgrade() else { return };
+    let Some(target) = s.exporters.get(i).cloned() else {
+        return;
+    };
+    if s.export_cancel.is_some() {
+        return;
+    }
+    s.export_with = Some(i);
+    ui.set_export_heading(format!("Export {}", target.name).into());
+    ui.set_export_has_selection(s.editing.selection().is_some());
+    ui.set_export_selection(false);
+    ui.set_export_practice_speed(s.player.speed() as i32);
+    ui.set_export_at_speed(false);
+    ui.set_export_metronome(false);
+    ui.set_export_dialog_shown(true);
+}
+
+/// The export dialog closed: with OK, the file dialog, then the export on
+/// a thread of its own while the window shows how far it has got.
+fn export_audio_chosen(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_export_dialog_shown(false);
+    let Some(i) = app.borrow_mut().export_with.take() else {
+        return;
+    };
+    if !ok {
+        return;
+    }
+    if let Some(problem) = no_dialogs() {
+        message(app, Level::Warning, problem);
+        return;
+    }
+    let (job, name, folder) = {
+        let mut s = app.borrow_mut();
+        let Some(target) = s.exporters.get(i).cloned() else {
+            return;
+        };
+        let Some(score) = s.open_score.score() else {
+            return;
+        };
+        let timeline = oxiguitar_play::Timeline::new(&score);
+        let span = s
+            .editing
+            .selection()
+            .filter(|_| ui.get_export_selection())
+            .and_then(|sel| player::span_of(sel, &score))
+            .and_then(|span| player::times_of(&timeline, span));
+        let plan = oxiguitar_play::export::Plan {
+            from: span.map_or(0.0, |(a, _)| a),
+            until: span.map(|(_, b)| b),
+            speed: if ui.get_export_at_speed() {
+                f64::from(s.player.speed()) / 100.0
+            } else {
+                1.0
+            },
+            metronome: ui.get_export_metronome(),
+            mixes: s.player.mixes(),
+            master: player::master_gain(s.player.master()),
+        };
+        let cancel = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        s.export_cancel = Some(cancel.clone());
+        let name = audio_export::file_name(&s.pdf_name, &target.extension);
+        let job = audio_export::Job {
+            plugins: s.plugins.clone(),
+            target,
+            score,
+            plan,
+            cancel,
+        };
+        (job, name, s.folder.clone())
+    };
+    let weak = ui.as_weak();
+    let pick = move || {
+        let extension = job.target.extension.clone();
+        let mut dialog = rfd::FileDialog::new()
+            .set_title(format!("Export {}", job.target.name))
+            .set_file_name(&name)
+            .add_filter(&job.target.name, &[&extension]);
+        if let Some(f) = folder {
+            dialog = dialog.set_directory(f);
+        }
+        let Some(path) = dialog.save_file() else {
+            let _ = weak.upgrade_in_event_loop(|ui| {
+                ui.invoke_export_finished(0, SharedString::default());
+            });
+            return;
+        };
+        let path = audio_export::with_extension(path, &extension);
+        let status = format!(
+            "Exporting {}…",
+            path.file_name()
+                .map(|n| n.to_string_lossy())
+                .unwrap_or_default()
+        );
+        let shown = weak.clone();
+        let _ = weak.upgrade_in_event_loop(move |ui| {
+            ui.set_export_status(status.into());
+            ui.set_export_progress(0.0);
+            ui.set_export_running(true);
+        });
+        let done = weak.clone();
+        let _ = std::thread::Builder::new()
+            .name("oxiguitar-export".to_owned())
+            .spawn(move || {
+                let (level, text) = job.run(&path, &mut |p| {
+                    let _ = shown.upgrade_in_event_loop(move |ui| ui.set_export_progress(p));
+                });
+                let _ = done.upgrade_in_event_loop(move |ui| {
+                    ui.invoke_export_finished(level_code(level), text.into());
+                });
+            });
     };
     run_dialog(pick);
 }

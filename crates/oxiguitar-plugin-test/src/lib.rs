@@ -56,7 +56,7 @@ use oxiguitar_host::api::realtime::{RtEvent, RtEventKind, RtNote};
 use oxiguitar_host::api::score::Score;
 use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
 use oxiguitar_host::realtime::Instance;
-use oxiguitar_host::{Core, Folders, Level, Plugins, SharedSettings, State, System};
+use oxiguitar_host::{Core, ExporterRef, Folders, Level, Plugins, SharedSettings, State, System};
 
 /// Builds the plugin crate `package` of the workspace at `workspace` as
 /// `NAME.oxp` (with its `oxp` feature, as a `cdylib`), in the workspace's
@@ -425,6 +425,9 @@ pub fn check(oxp: &Path) -> Report {
                 Err(e) => Err(e.message),
             },
         );
+    }
+    for exporter in plugins.exporters() {
+        check_audio_export(&plugins, exporter, &mut report);
     }
     for tab in plugins.tabs() {
         let id = tab.id();
@@ -906,4 +909,73 @@ fn not_a_crash(e: &Error) -> Result<(), String> {
     } else {
         Ok(())
     }
+}
+
+/// An audio exporter (interface 1.4) through a short export: it starts at
+/// a rate the player can render at, takes a second of sound in pieces of
+/// uneven sizes and finishes with what to write over the start no longer
+/// than the file; a cancelled export finishes too; and a finish with no
+/// export started answers (an error is fine), without crashing.
+fn check_audio_export(plugins: &Plugins, exporter: ExporterRef<'_>, report: &mut Report) {
+    let id = exporter.spec.id.clone();
+    let run = |cancel: bool| -> Result<(), String> {
+        let mut export = plugins
+            .start_audio_export(exporter)
+            .map_err(|e| e.message)?;
+        let rate = export.rate;
+        let mut size = export.first.len();
+        let frames = rate as usize;
+        let mut at = 0;
+        for piece in [1usize, 64, 999, 4096].iter().cycle() {
+            if at >= frames {
+                break;
+            }
+            let n = (*piece).min(frames - at);
+            let samples: Vec<f32> = (at..at + n)
+                .flat_map(|i| {
+                    let v = (i as f32 * 440.0 * std::f32::consts::TAU / rate as f32).sin() * 0.5;
+                    [v, -v]
+                })
+                .collect();
+            size += export.samples(&samples).map_err(|e| e.message)?.len();
+            at += n;
+            if cancel && at > frames / 2 {
+                export.cancel();
+                return Ok(());
+            }
+        }
+        let end = export.finish().map_err(|e| e.message)?;
+        size += end.last.len();
+        match end.start {
+            Some(start) if start.len() > size => Err(format!(
+                "it asked to write {} bytes over a {size}-byte file",
+                start.len()
+            )),
+            _ => Ok(()),
+        }
+    };
+    report.check(
+        format!("exporter {id}: a second of sound in pieces of uneven sizes exports"),
+        run(false),
+    );
+    report.check(
+        format!("exporter {id}: an export cancelled halfway finishes"),
+        run(true),
+    );
+    let found = exporter.plugin;
+    let stray = plugins.send(
+        found,
+        &Request::ExportFinish {
+            exporter: id.clone(),
+            cancelled: false,
+        },
+    );
+    report.check(
+        format!("exporter {id}: a finish with no export started answers"),
+        match stray {
+            Err(e) => not_a_crash(&e),
+            Ok(Answer::ExportFinished { .. }) => Ok(()),
+            Ok(other) => Err(format!("answered {other:?}")),
+        },
+    );
 }

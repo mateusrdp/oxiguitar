@@ -511,3 +511,18 @@ fn play_into_a_wav_file_needs_no_sound_card() {
     left.sort();
     assert_eq!(left, ["plugins", "soundfonts"]);
 }
+
+#[test]
+fn export_names_what_no_plugin_exports() {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("nothing.xyz");
+    let o = cli()
+        .arg("export")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    let said = String::from_utf8_lossy(&o.stderr);
+    assert!(said.contains("exports .xyz files"), "{said}");
+    assert!(!out.exists());
+}

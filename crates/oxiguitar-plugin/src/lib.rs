@@ -84,6 +84,7 @@ pub mod audio;
 pub mod glue;
 
 pub use audio::{Effect, Instrument, Piece, Processor, Renderer};
+pub use oxiguitar_plugin_api::manifest::{ExportKind, ExporterSpec};
 
 /// A plugin: the one value an `.oxp` file holds. Built once when the host
 /// first needs one of its contributions, and kept until the program ends.
@@ -175,6 +176,56 @@ pub trait Plugin: Send + Sync + 'static {
         let _ = id;
         None
     }
+
+    /// The audio exporter `id` (an id from the manifest's `exporters`, of
+    /// kind `audio`; interface 1.4).
+    fn audio_exporter(&self, id: &str) -> Option<&dyn AudioExporter> {
+        let _ = id;
+        None
+    }
+}
+
+/// An entry of File → Export that writes the score's sound to a file
+/// (interface 1.4, `exporters` of kind `audio`). The core renders the score
+/// through the player, faster than real time, and hands the sound over in
+/// pieces; the exporter turns it into the file's bytes, which the core
+/// writes. One export runs at a time, so an exporter keeps the one under
+/// way itself (behind a `Mutex`); the calls come from one thread, never
+/// the audio thread, so it may allocate.
+pub trait AudioExporter: Send + Sync {
+    /// A new export starts (dropping one left unfinished): the rate to
+    /// render at, and the file's first bytes.
+    fn start(&self) -> Result<ExportStart, Error>;
+
+    /// The next stereo frames, left and right interleaved, at the rate
+    /// asked for, as the mixer leaves them (full scale is ±1, and louder
+    /// is possible): the bytes that follow in the file.
+    fn samples(&self, interleaved: &[f32]) -> Result<Vec<u8>, Error>;
+
+    /// The sound is over: the file's last bytes, and bytes to write over
+    /// its start (a header naming the length). With `cancelled`, the user
+    /// stopped the export and the file is thrown away; the answer is
+    /// ignored.
+    fn finish(&self, cancelled: bool) -> Result<ExportEnd, Error>;
+}
+
+/// How an audio export starts ([`AudioExporter::start`]).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ExportStart {
+    /// The rate to render at, in frames a second (8000 to 384000).
+    pub rate: u32,
+    /// The file's first bytes, perhaps none.
+    pub data: Vec<u8>,
+}
+
+/// How an audio export ends ([`AudioExporter::finish`]).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ExportEnd {
+    /// The file's last bytes, perhaps none.
+    pub data: Vec<u8>,
+    /// Bytes to write over the file's start once all is written, or none:
+    /// at most as long as the whole file.
+    pub start: Option<Vec<u8>>,
 }
 
 /// A section of the track dialog (interface 1.3): rows of widgets for one
@@ -483,7 +534,39 @@ pub fn dispatch_kept(
                 Err(Error::not_found(format!("no instance {instance}")))
             }
         }
+        Request::ExportStart { exporter } => {
+            let ExportStart { rate, data } = find_exporter(plugin, &exporter)?.start()?;
+            if !(8_000..=384_000).contains(&rate) {
+                return Err(Error::new(
+                    ErrorKind::Failed,
+                    format!("the exporter asked for the rate {rate}, outside 8000 to 384000"),
+                ));
+            }
+            Ok(Answer::ExportStarted {
+                rate,
+                data: Blob::owned(data),
+            })
+        }
+        Request::ExportSamples { exporter, samples } => Ok(Answer::Exported(Blob::owned(
+            find_exporter(plugin, &exporter)?.samples(&samples)?,
+        ))),
+        Request::ExportFinish {
+            exporter,
+            cancelled,
+        } => {
+            let ExportEnd { data, start } = find_exporter(plugin, &exporter)?.finish(cancelled)?;
+            Ok(Answer::ExportFinished {
+                data: Blob::owned(data),
+                start: start.map(Blob::owned),
+            })
+        }
     }
+}
+
+fn find_exporter<'a>(plugin: &'a dyn Plugin, id: &str) -> Result<&'a dyn AudioExporter, Error> {
+    plugin
+        .audio_exporter(id)
+        .ok_or_else(|| Error::not_found(format!("this plugin has no audio exporter {id:?}")))
 }
 
 fn prepared(
@@ -844,6 +927,14 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
     for t in &manifest.tools {
         if plugin.tool(&t.id).is_none() {
             out.push(format!("tool {:?} is declared, but not implemented", t.id));
+        }
+    }
+    for e in &manifest.exporters {
+        if plugin.audio_exporter(&e.id).is_none() {
+            out.push(format!(
+                "exporter {:?} is declared, but not implemented",
+                e.id
+            ));
         }
     }
     match (manifest.settings_window, plugin.settings_window()) {

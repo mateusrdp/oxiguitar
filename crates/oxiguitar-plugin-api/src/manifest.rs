@@ -113,6 +113,34 @@ pub struct Manifest {
     /// interface 1.3.
     #[serde(default)]
     pub effects: Vec<InstrumentSpec>,
+    /// The exports it adds to File → Export. Since interface 1.4.
+    #[serde(default)]
+    pub exporters: Vec<ExporterSpec>,
+}
+
+/// An export, as the manifest declares it: an entry of File → Export that
+/// writes the open score to a file of another kind. Since interface 1.4.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExporterSpec {
+    /// The id requests name it by, unique in the plugin.
+    pub id: String,
+    /// What it makes, for the menu ("WAV Audio") and the file dialog.
+    pub name: String,
+    /// The file's extension, lowercase and without the dot: `wav`.
+    pub extension: String,
+    /// What it is handed to write.
+    pub kind: ExportKind,
+}
+
+/// What an exporter is handed to write. Since interface 1.4.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ExportKind {
+    /// The score as the player plays it: the core renders it through the
+    /// instruments, effects and mixer, faster than real time, at the rate
+    /// the exporter asks for, and hands it over as stereo samples in
+    /// pieces (`Request::ExportStart`, `ExportSamples`, `ExportFinish`).
+    Audio,
 }
 
 /// A section of the track dialog, as the manifest declares it: rows of
@@ -329,6 +357,34 @@ impl Manifest {
             if self.folders[..i].contains(f) {
                 out.push(format!("folder {:?}: listed twice", f.name()));
             }
+        }
+        let mut exporters: Vec<&str> = Vec::new();
+        for e in &self.exporters {
+            let at = format!("exporter {:?}", e.id);
+            if !is_id(&e.id) || exporters.contains(&e.id.as_str()) {
+                out.push(format!("{at}: not a valid or unique id"));
+            }
+            exporters.push(&e.id);
+            if e.name.trim().is_empty() {
+                out.push(format!("{at}: the name is empty"));
+            }
+            let x = &e.extension;
+            if x.is_empty()
+                || !x
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+            {
+                out.push(format!(
+                    "{at}: the extension {x:?} must be lowercase letters and digits, without a dot"
+                ));
+            }
+        }
+        let since_1_4 = InterfaceVersion { major: 1, minor: 4 };
+        if self.interface < since_1_4 && !self.exporters.is_empty() {
+            out.push(format!(
+                "exporters need interface {since_1_4}, and the manifest asks for {}",
+                self.interface
+            ));
         }
         let since_1_3 = InterfaceVersion { major: 1, minor: 3 };
         if self.interface < since_1_3 {

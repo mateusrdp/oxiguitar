@@ -36,6 +36,7 @@ The template's:
 | `settings_window` | no | `true` for a settings window, opened from the plugin manager; interface 1.3 ([Settings](settings.md)) |
 | `track_sections` | no | Its sections of the track dialog; interface 1.3 ([Track sections](track-sections.md)) |
 | `folders` | no | The shared folders it reads, `"soundfonts"` and `"nam"`, which OxiGuitar creates at start; interface 1.3 ([Settings](settings.md)) |
+| `exporters` | no | Its entries in File → Export; interface 1.4 ([Exporters](exporters.md)) |
 
 **Unknown keys are refused when you build and ignored when OxiGuitar reads.** The test `export_plugin!` adds fails on a key the SDK doesn't know, so a typing mistake (`"servces"`) shows up in `cargo test`. An older OxiGuitar reading a newer plugin's manifest skips keys it doesn't know, so new keys never stop a plugin from loading.
 
