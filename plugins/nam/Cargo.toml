@@ -11,16 +11,32 @@ publish = false
 
 [lib]
 # An ordinary library for tests, and nam.oxp when built with
-# `--features oxp --crate-type cdylib` (scripts/build-plugins.sh).
+# `--features oxp --crate-type cdylib` (scripts/build-plugins.sh); with
+# `x86-64-v3` too, and RUSTFLAGS="-C target-cpu=x86-64-v3", it is
+# nam-x86-64-v3.oxp, the build for Linux on processors with AVX2 and FMA.
 crate-type = ["lib"]
 
 [features]
 oxp = []
+# NeuralAmpModeler-rs in place of nam-rs and our convolution, with the
+# manifest manifest-x86-64-v3.json: on Linux x86_64 with
+# RUSTFLAGS="-C target-cpu=x86-64-v3" (build.rs checks the eight features
+# of that level); elsewhere the crate builds as usual.
+x86-64-v3 = ["dep:NeuralAmpModeler-rs"]
 
 [dependencies]
 oxiguitar-plugin.workspace = true
 nam-rs.workspace = true
 rustfft.workspace = true
+
+# Linux on x86_64 only (Windows and macOS can't build it). The feature also
+# needs RUSTFLAGS="-C target-cpu=x86-64-v3": without it the library's build
+# script stops the build, so `cargo clippy --workspace --all-features`
+# leaves this crate out (CI's lint job; CONTRIBUTING.md). The condition
+# names no processor features so that the licence and advisory tools
+# (cargo-about, cargo-deny), which don't know the build's, still see it.
+[target.'cfg(all(target_os = "linux", target_env = "gnu", target_arch = "x86_64"))'.dependencies]
+NeuralAmpModeler-rs = { workspace = true, optional = true }
 
 # Plugins deny `unsafe` rather than forbid it: `export_plugin!` allows it on
 # the two attributes it generates, and nowhere else.

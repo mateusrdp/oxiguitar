@@ -21,8 +21,11 @@ cd "$root"
 # crates (oxiguitar-testgen, oxiguitar-plugin-test, plugins/test) bring no
 # crate of their own outside dev-dependencies, which about.toml ignores,
 # so this is exactly what the packages are built from. (The app alone
-# would miss oxiguitar-cli's and the plugins' crates.)
-cargo about generate --locked --fail --workspace \
+# would miss oxiguitar-cli's and the plugins' crates.) With the NAM
+# plugin's feature x86-64-v3, the build of it for those processors on Linux
+# x86_64 (NeuralAmpModeler-rs and its crates), which only reading the
+# crates, as here, can do without its RUSTFLAGS.
+cargo about generate --locked --fail --workspace --features oxiguitar-nam-plugin/x86-64-v3 \
     --output-file dist/THIRD-PARTY-LICENSES.html \
     scripts/package/licenses.hbs
 
@@ -41,6 +44,7 @@ used = set()
 for target in targets:
     out = subprocess.run(
         ["cargo", "tree", "--locked", "--workspace", "-e", "normal", "--target", target,
+         "--features", "oxiguitar-nam-plugin/x86-64-v3",
          "--prefix", "none", "--format", "{p}"],
         cwd=root, check=True, capture_output=True, text=True).stdout
     for line in out.splitlines():

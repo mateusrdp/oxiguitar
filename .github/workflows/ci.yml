@@ -50,12 +50,19 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
         timeout-minutes: 15
-      # Each problem also becomes an annotation on the pull request.
+      # Each problem also becomes an annotation on the pull request. The NAM
+      # plugin apart: its feature x86-64-v3 builds only with
+      # RUSTFLAGS="-C target-cpu=x86-64-v3" (the "NAM for x86-64-v3" job
+      # lints that build), so here it is linted as nam.oxp is built.
       - name: Clippy
         run: |
           set -o pipefail
-          cargo clippy --workspace --all-targets --all-features --locked \
-            --message-format=short -- -D warnings 2>&1 \
+          {
+            cargo clippy --workspace --exclude oxiguitar-nam-plugin --all-targets --all-features --locked \
+              --message-format=short -- -D warnings &&
+            cargo clippy -p oxiguitar-nam-plugin --features oxp --all-targets --locked \
+              --message-format=short -- -D warnings
+          } 2>&1 \
             | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
       # The X11 build of the app (the Wayland one is the default above), and
       # the two builds keeping apart: no X11 crate in the Wayland build, no
@@ -105,8 +112,10 @@ jobs:
           CARGO_TERM_COLOR: never
         run: |
           rustc --version
-          if ! cargo clippy --workspace --all-targets --all-features --locked \
-              --message-format=short -- -D warnings > clippy.log 2>&1; then
+          if ! { cargo clippy --workspace --exclude oxiguitar-nam-plugin --all-targets --all-features --locked \
+                --message-format=short -- -D warnings &&
+              cargo clippy -p oxiguitar-nam-plugin --features oxp --all-targets --locked \
+                --message-format=short -- -D warnings; } > clippy.log 2>&1; then
             sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::warning file=\1,line=\2,col=\3::\5/;t;d' clippy.log
             # Anything without a file position (a crash, a lockfile problem):
             # show the end of the output as one annotation.
@@ -296,6 +305,54 @@ jobs:
       # The Wayland build in a headless Weston, the X11 build under Xvfb.
       - run: scripts/no-network.sh target/debug/oxiguitar-cli --wayland target/debug/oxiguitar --x11 target/debug/oxiguitar-x11
 
+  # The NAM plugin's build for Linux on x86-64-v3 processors
+  # (nam-x86-64-v3.oxp: NeuralAmpModeler-rs, built with
+  # RUSTFLAGS="-C target-cpu=x86-64-v3"), which the other jobs never build
+  # with its library: clippy on that code; the agreement tests (its model
+  # and cabinet play what nam-rs and our convolution play, the cabinet a
+  # 64-frame partition later); and the file scripts/build-plugins.sh makes,
+  # through the contract suite and the real-time checks, chosen by the host
+  # over nam.oxp. GitHub's x86_64 runners have AVX2 and FMA.
+  nam-x86-64-v3:
+    name: NAM for x86-64-v3
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_TERM_COLOR: never
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: x86-64-v3
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
+        timeout-minutes: 15
+      - name: The processor has the features
+        run: |
+          for f in avx avx2 bmi1 bmi2 f16c fma abm movbe; do
+            grep -qw "$f" /proc/cpuinfo || { echo "::error::this runner's processor lacks $f"; exit 1; }
+          done
+      - name: Clippy, the x86-64-v3 build
+        env:
+          RUSTFLAGS: -C target-cpu=x86-64-v3
+        run: >-
+          cargo clippy -p oxiguitar-nam-plugin --features x86-64-v3 --all-targets --locked
+          --target-dir target/oxp-x86-64-v3 -- -D warnings
+      - name: The two builds sound the same
+        env:
+          RUSTFLAGS: -C target-cpu=x86-64-v3
+        run: >-
+          cargo test -p oxiguitar-nam-plugin --features x86-64-v3 --locked
+          --target-dir target/oxp-x86-64-v3 -- --nocapture
+      - run: scripts/build-plugins.sh --debug --only nam --out "$RUNNER_TEMP/nam"
+      - name: The file through the contract suite
+        run: >-
+          OXIGUITAR_TEST_NAM_X86_64_V3="$RUNNER_TEMP/nam/nam-x86-64-v3.oxp"
+          cargo test -p oxiguitar-plugin-test --test ours --locked
+          the_nam_build_for_x86_64_v3 -- --nocapture
+
   dco:
     name: Sign-off (DCO)
     if: github.event_name == 'pull_request'
@@ -312,7 +369,7 @@ jobs:
   ci-success:
     name: ci-success
     if: always()
-    needs: [fmt, lint, test, template, speed, deny, no-network, dco]
+    needs: [fmt, lint, test, template, speed, deny, no-network, nam-x86-64-v3, dco]
     runs-on: ubuntu-24.04
     steps:
       - name: Every job passed
