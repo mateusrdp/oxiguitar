@@ -168,6 +168,7 @@ pub(crate) fn sync(app: &Shared) {
     ui.set_loop_on(p.looping());
     ui.set_metronome_on(p.metronome());
     ui.set_player_speed(p.speed() as i32);
+    ui.set_player_speed_text(format!("{}%", p.speed()).into());
     ui.set_master_level(p.master());
     ui.set_player_running(p.state() == State::Playing);
     ui.set_visual_on(s.visual);
@@ -369,7 +370,7 @@ pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) 
         }
         return true;
     }
-    if name == "Enter" && !shift && !ctrl && !alt {
+    if name == "Return" && !shift && !ctrl && !alt {
         let state = app.borrow().player.state();
         if matches!(state, State::Playing | State::Starting) {
             let _ = stop(app);

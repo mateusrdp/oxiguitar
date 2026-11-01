@@ -1109,6 +1109,7 @@ export component AppWindow inherits Window {
     in property <bool> loop-on;
     in property <bool> metronome-on;
     in property <int> player-speed: 100;
+    in property <string> player-speed-text: "100%";
     in property <float> master-level: 0.7;
     in property <bool> has-selection;
     in property <[string]> outputs: ["System default"];
@@ -1736,15 +1737,6 @@ export component AppWindow inherits Window {
                                 checked: root.loop-on;
                                 clicked => { root.player-action("loop"); }
                             }
-                            IconButton {
-                                icon: @image-url("../../../assets/icons/ui/metronome.svg");
-                                tip: "Metronome";
-                                enabled: root.player-available;
-                                checked: root.metronome-on;
-                                clicked => { root.player-action("metronome"); }
-                            }
-                            // The visual metronome: while on, it flashes on
-                            // each beat. Regular beats in green, accents in amber.
                             Rectangle {
                                 width: 30px;
                                 height: 28px;
@@ -1755,11 +1747,11 @@ export component AppWindow inherits Window {
                                         : Look.accent.transparentize(1 - root.play-frame.flash * 0.9))
                                     : transparent;
                                 IconButton {
-                                    icon: @image-url("../../../assets/icons/ui/visual-metronome.svg");
-                                    tip: "Visual Metronome (flashes on each beat)";
+                                    icon: @image-url("../../../assets/icons/ui/metronome.svg");
+                                    tip: "Metronome";
                                     enabled: root.player-available;
-                                    checked: root.visual-on && !root.player-running;
-                                    clicked => { root.player-action("visual-metronome"); }
+                                    checked: root.metronome-on;
+                                    clicked => { root.player-action("metronome"); }
                                 }
                             }
                         }
@@ -1785,7 +1777,7 @@ export component AppWindow inherits Window {
                                 changed(v) => { root.speed-slider-moved(v); }
                             }
                             Text {
-                                text: "{root.player-speed}%";
+                                text: root.player-speed-text;
                                 font-size: 12px;
                                 vertical-alignment: center;
                                 color: Palette.foreground.transparentize(root.player-available ? 0.2 : 0.6);
