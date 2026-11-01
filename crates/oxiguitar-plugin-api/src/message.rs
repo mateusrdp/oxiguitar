@@ -249,6 +249,36 @@ pub enum Request<'a> {
         /// The instance.
         instance: u64,
     },
+    /// Start an audio export with the exporter `exporter` (an id from the
+    /// manifest's `exporters`, of kind `audio`). Answered with
+    /// [`Answer::ExportStarted`]: the rate to render at and the file's
+    /// first bytes. Then come [`Request::ExportSamples`] until the end,
+    /// and [`Request::ExportFinish`]. One export at a time; a new start
+    /// drops an unfinished one. Since interface 1.4.
+    ExportStart {
+        /// The exporter's id.
+        exporter: String,
+    },
+    /// The next piece of the export's sound: stereo frames, left and right
+    /// interleaved, at the rate the start asked for, as the mixer leaves
+    /// them (full scale is ±1; louder is possible). Answered with
+    /// [`Answer::Exported`], the bytes that follow in the file. Since
+    /// interface 1.4.
+    ExportSamples {
+        /// The exporter's id.
+        exporter: String,
+        /// The frames, interleaved.
+        samples: Vec<f32>,
+    },
+    /// The sound is over (or, with `cancelled`, the user stopped the export
+    /// and the file is thrown away). Answered with
+    /// [`Answer::ExportFinished`]. Since interface 1.4.
+    ExportFinish {
+        /// The exporter's id.
+        exporter: String,
+        /// The export was stopped; nothing more is written.
+        cancelled: bool,
+    },
 }
 
 /// What an instrument is prepared for. Since interface 1.3.
@@ -367,6 +397,27 @@ pub enum Answer<'a> {
         /// blocks of 8); 0 for one that starts every note on its frame.
         resolution: u32,
     },
+    /// An audio export started. Since interface 1.4.
+    ExportStarted {
+        /// The rate to render at, in frames a second.
+        rate: u32,
+        /// The file's first bytes (a header), perhaps none.
+        #[serde(borrow)]
+        data: Blob<'a>,
+    },
+    /// The bytes that follow in the file, perhaps none. Since interface
+    /// 1.4.
+    Exported(#[serde(borrow)] Blob<'a>),
+    /// An audio export finished. Since interface 1.4.
+    ExportFinished {
+        /// The file's last bytes, perhaps none.
+        #[serde(borrow)]
+        data: Blob<'a>,
+        /// Bytes to write over the file's start once all is written (a
+        /// header that names the length, as WAV's does), or none. At most
+        /// as long as what was written.
+        start: Option<Blob<'a>>,
+    },
 }
 
 impl Answer<'_> {
@@ -395,6 +446,15 @@ impl Answer<'_> {
                 instance,
                 latency,
                 resolution,
+            },
+            Answer::ExportStarted { rate, data } => Answer::ExportStarted {
+                rate,
+                data: data.into_owned(),
+            },
+            Answer::Exported(b) => Answer::Exported(b.into_owned()),
+            Answer::ExportFinished { data, start } => Answer::ExportFinished {
+                data: data.into_owned(),
+                start: start.map(Blob::into_owned),
             },
         }
     }
@@ -658,6 +718,51 @@ mod tests {
         );
         let bytes = encode(&error).unwrap();
         assert_eq!(decode::<Error>(&bytes).unwrap(), error);
+    }
+
+    #[test]
+    fn interface_1_4_export_messages_round_trip_and_keep_their_places() {
+        let requests = [
+            Request::ExportStart {
+                exporter: "wav".into(),
+            },
+            Request::ExportSamples {
+                exporter: "wav".into(),
+                samples: vec![0.5, -0.25, 1.5, -1.0],
+            },
+            Request::ExportFinish {
+                exporter: "wav".into(),
+                cancelled: true,
+            },
+        ];
+        for request in requests {
+            let bytes = encode(&request).unwrap();
+            assert_eq!(decode::<Request<'_>>(&bytes).unwrap(), request);
+        }
+        let header = b"RIFF".to_vec();
+        let answers = [
+            Answer::ExportStarted {
+                rate: 48_000,
+                data: Blob::borrowed(&header),
+            },
+            Answer::Exported(Blob::owned(vec![1, 2, 3])),
+            Answer::ExportFinished {
+                data: Blob::owned(Vec::new()),
+                start: Some(Blob::borrowed(&header)),
+            },
+        ];
+        for answer in answers {
+            let bytes = encode(&answer).unwrap();
+            assert_eq!(decode::<Answer<'_>>(&bytes).unwrap(), answer);
+        }
+        // New variants go at the end of their enums: the ones before keep
+        // their numbers (postcard writes a variant's index first).
+        let release = encode(&Request::Release { instance: 0 }).unwrap();
+        let start = encode(&Request::ExportStart {
+            exporter: String::new(),
+        })
+        .unwrap();
+        assert_eq!(start[0], release[0] + 1);
     }
 
     #[test]

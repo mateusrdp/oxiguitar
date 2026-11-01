@@ -61,8 +61,8 @@ use oxiguitar_plugin_api::abi::Status;
 use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::event::{Event, EventKind};
 use oxiguitar_plugin_api::manifest::{
-    Environment, FormatSpec, InstrumentSpec, Manifest, ServiceSpec, SharedFolder, ToolSpec,
-    TrackSectionSpec,
+    Environment, ExportKind, ExporterSpec, FormatSpec, InstrumentSpec, Manifest, ServiceSpec,
+    SharedFolder, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
     Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry, PluginFolders,
@@ -321,6 +321,113 @@ pub struct ToolRef<'a> {
     /// The tool, as its manifest declares it.
     pub spec: &'a ToolSpec,
     index: usize,
+}
+
+/// An export a plugin adds to File → Export (interface 1.4).
+#[derive(Clone, Copy, Debug)]
+pub struct ExporterRef<'a> {
+    /// The plugin.
+    pub plugin: &'a Found,
+    /// The exporter, as its manifest declares it.
+    pub spec: &'a ExporterSpec,
+    index: usize,
+}
+
+impl ExporterRef<'_> {
+    /// The id of the exporter's plugin.
+    pub fn plugin_id(&self) -> &str {
+        self.plugin.manifest.as_ref().map_or("", |m| m.id.as_str())
+    }
+}
+
+/// An audio export under way ([`Plugins::start_audio_export`]): the
+/// exporter's rate and first bytes, and the way to hand it the sound.
+/// Dropped without [`AudioExport::finish`], it tells the exporter the
+/// export was cancelled.
+pub struct AudioExport {
+    plugins: Plugins,
+    index: usize,
+    exporter: String,
+    /// The rate the exporter wants the sound at.
+    pub rate: u32,
+    /// The file's first bytes.
+    pub first: Vec<u8>,
+    finished: bool,
+}
+
+impl fmt::Debug for AudioExport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AudioExport")
+            .field("exporter", &self.exporter)
+            .field("rate", &self.rate)
+            .finish_non_exhaustive()
+    }
+}
+
+/// How an audio export ended ([`AudioExport::finish`]).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ExportEnd {
+    /// The file's last bytes.
+    pub last: Vec<u8>,
+    /// Bytes to write over the file's start, if any.
+    pub start: Option<Vec<u8>>,
+}
+
+impl AudioExport {
+    /// Hands the exporter the next stereo frames (interleaved); returns the
+    /// bytes that follow in the file.
+    pub fn samples(&mut self, interleaved: &[f32]) -> Result<Vec<u8>, Error> {
+        let request = Request::ExportSamples {
+            exporter: self.exporter.clone(),
+            samples: interleaved.to_vec(),
+        };
+        match self.plugins.request(self.index, &request)? {
+            Answer::Exported(b) => Ok(b.as_slice().to_vec()),
+            other => Err(self.plugins.unexpected(self.index, &other)),
+        }
+    }
+
+    /// The sound is over: the file's last bytes and what to write over its
+    /// start.
+    pub fn finish(mut self) -> Result<ExportEnd, Error> {
+        self.finished = true;
+        let request = Request::ExportFinish {
+            exporter: self.exporter.clone(),
+            cancelled: false,
+        };
+        match self.plugins.request(self.index, &request)? {
+            Answer::ExportFinished { data, start } => Ok(ExportEnd {
+                last: data.as_slice().to_vec(),
+                start: start.map(|s| s.as_slice().to_vec()),
+            }),
+            other => Err(self.plugins.unexpected(self.index, &other)),
+        }
+    }
+
+    /// Stops the export: the exporter is told, and nothing more is
+    /// written.
+    pub fn cancel(mut self) {
+        self.cancelled();
+    }
+
+    fn cancelled(&mut self) {
+        if !self.finished {
+            self.finished = true;
+            let _ = self.plugins.request(
+                self.index,
+                &Request::ExportFinish {
+                    exporter: self.exporter.clone(),
+                    cancelled: true,
+                },
+            );
+        }
+    }
+}
+
+impl Drop for AudioExport {
+    fn drop(&mut self) {
+        self.cancelled();
+    }
 }
 
 /// A section a plugin adds to the track dialog (interface 1.3).
@@ -1075,6 +1182,55 @@ impl Plugins {
         }
     }
 
+    /// Every export the ready plugins add to File → Export, in plugin
+    /// order. Only plugins built for interface 1.4 or later have them.
+    pub fn exporters(&self) -> Vec<ExporterRef<'_>> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(4))
+            .flat_map(|(index, plugin, m)| {
+                m.exporters.iter().map(move |spec| ExporterRef {
+                    plugin,
+                    spec,
+                    index,
+                })
+            })
+            .collect()
+    }
+
+    /// Starts an audio export with `exporter` (one of
+    /// [`Plugins::exporters`], of kind audio), loading its plugin if
+    /// needed.
+    pub fn start_audio_export(&self, exporter: ExporterRef<'_>) -> Result<AudioExport, Error> {
+        if exporter.spec.kind != ExportKind::Audio {
+            return Err(Error::new(
+                ErrorKind::Unsupported,
+                format!("{} isn't an audio export", exporter.spec.name),
+            ));
+        }
+        let request = Request::ExportStart {
+            exporter: exporter.spec.id.clone(),
+        };
+        match self.request(exporter.index, &request)? {
+            Answer::ExportStarted { rate, data } => {
+                if !(8_000..=384_000).contains(&rate) {
+                    return Err(self.fail(
+                        exporter.index,
+                        format!("its export asked for the rate {rate}, outside 8000 to 384000"),
+                    ));
+                }
+                Ok(AudioExport {
+                    plugins: self.clone(),
+                    index: exporter.index,
+                    exporter: exporter.spec.id.clone(),
+                    rate,
+                    first: data.as_slice().to_vec(),
+                    finished: false,
+                })
+            }
+            other => Err(self.unexpected(exporter.index, &other)),
+        }
+    }
+
     /// Every tab the ready plugins add, in plugin order. Only plugins built
     /// for interface 1.1 or later have tabs.
     pub fn tabs(&self) -> Vec<TabRef<'_>> {
@@ -1658,6 +1814,9 @@ impl Plugins {
             Answer::Report(_) => "a report",
             Answer::TrackSection { .. } => "a track section",
             Answer::Prepared { .. } => "a prepared instrument",
+            Answer::ExportStarted { .. } | Answer::Exported(_) | Answer::ExportFinished { .. } => {
+                "an export's bytes"
+            }
         };
         self.fail(
             index,

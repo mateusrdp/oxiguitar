@@ -32,6 +32,7 @@ component Card inherits Rectangle {
     // a card whose field takes it instead says no.
     in property <bool> takes-focus: true;
     in property <string> heading;
+    in property <string> ok-text: "OK";
     callback done(bool);
     background: #00000060;
     TouchArea { }
@@ -76,7 +77,7 @@ component Card inherits Rectangle {
             HorizontalLayout {
                 alignment: end;
                 spacing: 8px;
-                Button { text: "OK"; primary: true; clicked => { root.done(true); } }
+                Button { text: root.ok-text; primary: true; clicked => { root.done(true); } }
                 Button { text: "Cancel"; clicked => { root.done(false); } }
             }
         }
@@ -900,6 +901,112 @@ export component ChordDialog inherits Rectangle {
             HorizontalLayout {
                 alignment: start;
                 Button { text: "Remove the chord"; clicked => { root.remove(); } }
+            }
+        }
+    }
+}
+
+// File → Export of an audio exporter (M4 slice 7, PLAY-7): what to render
+// before the file dialog. The whole song or the selected bars, at the
+// written tempo or the practice speed, with or without the metronome.
+export component ExportDialog inherits Rectangle {
+    in property <string> heading: "Export Audio";
+    in property <bool> has-selection: false;
+    in-out property <bool> selection: false;
+    in property <int> practice-speed: 100;
+    in-out property <bool> at-speed: false;
+    in-out property <bool> metronome: false;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        ok-text: "Export…";
+        card-width: 440px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "What"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.has-selection ? ["The whole song", "The selected bars"] : ["The whole song"];
+                    current-index: root.selection && root.has-selection ? 1 : 0;
+                    selected => { root.selection = self.current-index == 1; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Tempo"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.practice-speed == 100
+                        ? ["As written"]
+                        : ["As written", "At the practice speed (" + root.practice-speed + " %)"];
+                    current-index: root.at-speed && root.practice-speed != 100 ? 1 : 0;
+                    selected => { root.at-speed = self.current-index == 1; }
+                }
+            }
+            CheckBox {
+                text: "The metronome's clicks in the sound";
+                checked: root.metronome;
+                toggled => { root.metronome = self.checked; }
+            }
+            Text {
+                text: "Each track plays with its sound, amp and mixer settings as they are now. The file's format (bit depth, rate) is set in the exporter's plugin settings: Tools → Plugins.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+        }
+    }
+}
+
+// An audio export under way: how far it has got, and Cancel. Over the
+// window, so nothing changes the score while it renders.
+export component ExportProgress inherits Rectangle {
+    in property <string> status;
+    in property <float> progress;
+    callback cancel();
+    background: #00000060;
+    TouchArea { }
+    FocusScope {
+        init => { self.focus(); }
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.cancel();
+            }
+            accept
+        }
+    }
+    Rectangle {
+        width: min(400px, root.width - 40px);
+        height: box.preferred-height;
+        background: Palette.background;
+        border-color: Palette.border;
+        border-width: 1px;
+        border-radius: 6px;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000060;
+        box := VerticalLayout {
+            padding: 18px;
+            spacing: 12px;
+            Text { text: root.status; font-size: 13px; wrap: word-wrap; }
+            Rectangle {
+                height: 8px;
+                border-radius: 4px;
+                background: Palette.alternate-background;
+                Rectangle {
+                    x: 0;
+                    width: parent.width * clamp(root.progress, 0, 1);
+                    border-radius: 4px;
+                    background: Palette.accent-background;
+                }
+            }
+            HorizontalLayout {
+                alignment: end;
+                Button { text: "Cancel"; clicked => { root.cancel(); } }
             }
         }
     }

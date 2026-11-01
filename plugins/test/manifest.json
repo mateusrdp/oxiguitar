@@ -45,5 +45,8 @@
   "track_sections": [
     { "id": "test", "title": "Test section", "does_not_play": ["drums"] }
   ],
-  "folders": ["soundfonts"]
+  "folders": ["soundfonts"],
+  "exporters": [
+    { "id": "raw", "name": "Raw Test Audio", "extension": "oxgraw", "kind": "audio" }
+  ]
 }

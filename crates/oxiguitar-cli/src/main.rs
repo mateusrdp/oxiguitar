@@ -6,6 +6,7 @@
 
 mod convert;
 mod events;
+mod export;
 mod info;
 mod play;
 mod plugins;
@@ -62,6 +63,13 @@ Commands:
                              tracks, on an output other than the
                              system's default, or into a WAV file.
                              Ctrl + C stops it
+  export <file> <new file> [--bars FIRST-LAST] [--speed PERCENT] [--metronome]
+                             Export the score's sound, as File → Export
+                             does, through the installed exporter plugin
+                             whose extension the new file has (.wav): the
+                             whole song or some bars, at 25 to 200 %
+                             speed, with the metronome, every track with
+                             its sound, amp and mixer settings
   tools                      List the tools (the app's Tools menu)
   specimen [--png FILE] [--pdf FILE] [--scale N] [--dark]
                              Draw the render spike's test page into a PNG
@@ -86,6 +94,7 @@ fn main() -> ExitCode {
         Some("specimen") => specimen::run(rest),
         Some("events") => events::run(rest),
         Some("play") => play::run(rest),
+        Some("export") => export::run(rest),
         Some("tools") => tools::list(),
         Some("version" | "--version" | "-V") => {
             println!("oxiguitar-cli {}", env!("CARGO_PKG_VERSION"));

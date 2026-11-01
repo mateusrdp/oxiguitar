@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BarDialog, BarFields, BendDialog, ChordDialog, GridPoint, PasteDialog, TextDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
+import { AltBox, BarDialog, BarFields, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -1263,6 +1263,24 @@ export component AppWindow inherits Window {
     in-out property <bool> transpose-steps;
     in-out property <bool> transpose-keep;
     callback transpose-dialog-done(bool);
+    // File → Export's audio exporters (plugin interface 1.4), by name; the
+    // dialog before one exports, and the export under way.
+    in property <[string]> exporters;
+    callback export-with(int);
+    in property <bool> export-dialog-shown: false;
+    in property <string> export-heading;
+    in property <bool> export-has-selection;
+    in-out property <bool> export-selection;
+    in property <int> export-practice-speed: 100;
+    in-out property <bool> export-at-speed;
+    in-out property <bool> export-metronome;
+    callback export-dialog-done(bool);
+    in property <bool> export-running: false;
+    in property <string> export-status;
+    in property <float> export-progress;
+    callback export-cancel();
+    // An export's thread says it is over: the footer's level and sentence.
+    callback export-finished(int, string);
     // A track row's right-click menu: the row and what was chosen.
     callback track-menu(int, string);
     // The page's right-click menu.
@@ -1379,6 +1397,11 @@ export component AppWindow inherits Window {
             MenuItem { title: "Save"; enabled: root.has-score; shortcut: @keys(Control + S); activated => { root.save(); } }
             MenuItem { title: "Save As…"; enabled: root.has-score; shortcut: @keys(Control + Shift + S); activated => { root.save-as(); } }
             MenuItem { title: "Export PDF…"; enabled: root.has-score; activated => { root.export-pdf(); } }
+            for e[i] in root.exporters : MenuItem {
+                title: "Export " + e + "…";
+                enabled: root.has-score && !root.export-running;
+                activated => { root.export-with(i); }
+            }
             Menu {
                 title: "Paper Size";
                 MenuItem { title: "A4"; checkable: true; checked <=> root.paper-0; activated => { root.pick-paper(0); root.settings-changed(); } }
@@ -2507,6 +2530,26 @@ export component AppWindow inherits Window {
         section-slid(i, id, v) => { root.track-section-event(i, id, 2, false, v, "", 0); }
         section-edited(i, id, t) => { root.track-section-event(i, id, 3, false, 0, t, 0); }
         section-chosen(i, id, n) => { root.track-section-event(i, id, 4, false, 0, "", n); }
+    }
+
+    if root.export-dialog-shown : ExportDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.export-heading;
+        has-selection: root.export-has-selection;
+        selection <=> root.export-selection;
+        practice-speed: root.export-practice-speed;
+        at-speed <=> root.export-at-speed;
+        metronome <=> root.export-metronome;
+        done(ok) => { root.export-dialog-done(ok); }
+    }
+
+    if root.export-running : ExportProgress {
+        width: root.width;
+        height: root.height;
+        status: root.export-status;
+        progress: root.export-progress;
+        cancel => { root.export-cancel(); }
     }
 
     if root.transpose-dialog-shown : TransposeDialog {

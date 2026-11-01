@@ -25,6 +25,8 @@
 pub mod click;
 pub mod engine;
 pub mod events;
+#[cfg(feature = "host")]
+pub mod export;
 pub mod order;
 #[cfg(feature = "host")]
 pub mod plugin_source;

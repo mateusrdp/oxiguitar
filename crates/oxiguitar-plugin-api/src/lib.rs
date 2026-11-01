@@ -56,7 +56,9 @@
 //!   track dialog, footer messages with a link, the plugin's own folders
 //!   and the shared ones, instruments, effects and audio devices on the
 //!   audio thread, and the `cpu` condition. 1.4 (in development, frozen
-//!   with OxiGuitar 1.0): a link among a tab's widgets.
+//!   with OxiGuitar 1.0): a link among a tab's widgets, and exporters in
+//!   File → Export (`exporters` in the manifest; audio exports, which the
+//!   core renders and the plugin encodes).
 //!
 //! # Licence
 //!

@@ -118,10 +118,11 @@ fn the_test_plugin_passes_the_contract() {
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
     // of event, the selection in both its forms; 2 tools; the settings
     // window and its 2 widgets; the track section and its 2 widgets; 2
-    // instruments and an effect, 4 real-time checks each.
+    // instruments and an effect, 4 real-time checks each; the exporter's
+    // 3 checks.
     assert_eq!(
         report.passed.len(),
-        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4,
+        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4 + 3,
         "{:#?}",
         report.passed
     );
@@ -1391,4 +1392,84 @@ fn an_audio_device_plays_the_engine_through_the_host() {
     assert!(heard > first, "{heard} after {first}");
     drop(stream);
     control.collect();
+}
+
+/// An audio export (interface 1.4) through the test plugin's exporter
+/// `raw`: the core renders the test song at the rate the exporter asks
+/// for (44.1 kHz), hands it over, writes what it gets under a temporary
+/// name and the header it gets at the end over the start, and renames the
+/// file; the frames the header names are all in the file, and they sound.
+/// A cancelled export leaves nothing, and an existing file is kept.
+#[test]
+fn an_audio_export_writes_the_song_through_the_exporter() {
+    use oxiguitar_play::export::{self, Failure, Plan};
+
+    let dir = folder("export", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
+        .unwrap()
+        .score;
+    let exporters = plugins.exporters();
+    assert_eq!(exporters.len(), 1);
+    assert_eq!(exporters[0].spec.extension, "oxgraw");
+
+    let out = dir.join("song.oxgraw");
+    let mut seen = Vec::new();
+    let plan = Plan::whole(&score);
+    let made = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |p| {
+        seen.push(p);
+        true
+    })
+    .unwrap();
+    assert_eq!(made.rate, 44_100);
+    assert!(
+        !export::partial(&out).exists(),
+        "the temporary file is gone"
+    );
+    let bytes = std::fs::read(&out).unwrap();
+    assert_eq!(&bytes[..8], b"OXGRAW1\n");
+    let rate = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+    let frames = u64::from_le_bytes(bytes[12..20].try_into().unwrap());
+    assert_eq!(rate, 44_100);
+    assert_eq!(bytes.len() as u64, 20 + frames * 8, "every frame is there");
+    let length = export::length(&oxiguitar_play::Timeline::new(&score), &plan);
+    assert!(
+        (frames as f64 / 44_100.0 - length).abs() < 0.1,
+        "{frames} frames for {length} s"
+    );
+    let peak = bytes[20..]
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes(c.try_into().unwrap()).abs())
+        .fold(0.0f32, f32::max);
+    assert!(peak > 0.01, "it sounds: {peak}");
+    assert!(seen.windows(2).all(|w| w[0] <= w[1]), "progress only grows");
+    assert_eq!(seen.last().copied(), Some(1.0));
+
+    // Stopped halfway: nothing is written, and the file there stays.
+    let failed = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |p| {
+        p < 0.5
+    });
+    assert_eq!(failed, Err(Failure::Cancelled));
+    assert!(!export::partial(&out).exists());
+    assert_eq!(std::fs::read(&out).unwrap(), bytes);
+
+    // A selection at half speed with the metronome: as long as it should be.
+    let timeline = oxiguitar_play::Timeline::new(&score);
+    let part = Plan {
+        from: 0.0,
+        until: Some(timeline.length() / 2.0),
+        speed: 0.5,
+        metronome: true,
+        ..plan.clone()
+    };
+    let half = dir.join("half.oxgraw");
+    let made = export::export(&plugins, exporters[0], &score, &part, &half, &mut |_| true).unwrap();
+    let expected = export::length(&timeline, &part);
+    assert!(
+        (made.seconds - expected).abs() < 0.1,
+        "{} s for {expected} s",
+        made.seconds
+    );
 }

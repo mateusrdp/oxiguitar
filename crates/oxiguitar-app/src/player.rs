@@ -621,6 +621,11 @@ impl Player {
         }
     }
 
+    /// Every track's mixer as the engine has it, for an export.
+    pub(crate) fn mixes(&self) -> Vec<TrackMix> {
+        self.mix.clone()
+    }
+
     /// One track's mixer.
     pub(crate) fn set_mix(&mut self, track: usize, mix: Mix) {
         let m = track_mix(mix);
