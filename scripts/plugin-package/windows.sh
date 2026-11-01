@@ -58,7 +58,9 @@ args=(
 if [[ -n "$extra" ]]; then
     args+=("/DSource2=$(win "${extra%%:*}")" "/DDest2=${extra#*:}")
 fi
-"$iscc" "${args[@]}" "$(win "$here/windows.iss")"
+# Git Bash would turn the /D options into paths; every path is already
+# a Windows one.
+MSYS2_ARG_CONV_EXCL="*" "$iscc" "${args[@]}" "$(win "$here/windows.iss")"
 
 built="$out_dir/oxiguitar-$name-$plain-windows-$inno_arch-setup.exe"
 [[ -f "$built" ]] || { echo "windows.sh: $built wasn't made" >&2; exit 1; }
