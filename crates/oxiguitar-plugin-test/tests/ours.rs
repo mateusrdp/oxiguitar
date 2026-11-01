@@ -743,7 +743,9 @@ fn our_wav_plugin_exports_the_song() {
         "{frames} frames for {length} s"
     );
     let peak = wav[44..]
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|c| (i32::from_le_bytes([0, c[0], c[1], c[2]]) >> 8).unsigned_abs())
         .max()
         .unwrap();
