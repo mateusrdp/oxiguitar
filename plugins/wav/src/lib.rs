@@ -461,8 +461,10 @@ mod tests {
         let quiet: Vec<f32> = vec![0.25; 2000];
         let b = w.samples(&quiet).unwrap();
         let values: Vec<i16> = b
-            .chunks_exact(2)
-            .map(|c| i16::from_le_bytes([c[0], c[1]]))
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|c| i16::from_le_bytes(*c))
             .collect();
         assert!(values.iter().all(|v| (*v - 8192).abs() <= 1), "{values:?}");
         let mean = values.iter().map(|v| f64::from(*v)).sum::<f64>() / values.len() as f64;
