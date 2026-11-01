@@ -11,12 +11,14 @@
 //!   `plugins` and `soundfonts`); nothing is ever fetched.
 //! - `settings` is a track's choice; `section` shows it in the track
 //!   dialog.
-//! - The model runs through nam-rs 0.4.0 (MIT), used exactly as published,
-//!   at the rate it was captured at: a track played at another rate goes
-//!   there and back through `resample`.
-//! - `convolve` applies the cabinet's response with no latency; four
-//!   responses from Guitarix's BestPlugins pack (GPL-2.0-or-later) are
-//!   built in (`irs/`).
+//! - `engine` plays the model and the cabinet: nam-rs 0.4.0 (MIT) and
+//!   `convolve` (with no latency), or in the build for Linux on x86-64-v3
+//!   processors (`nam-x86-64-v3.oxp`, with its own manifest) NeuralAmpModeler-rs
+//!   1.0.1 (Apache-2.0) for both, several times faster; both used exactly
+//!   as published. The model plays at the rate it was captured at: a track
+//!   played at another rate goes there and back through `resample`.
+//! - Four cabinet responses from Guitarix's BestPlugins pack
+//!   (GPL-2.0-or-later) are built in (`irs/`).
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -27,7 +29,9 @@ use oxiguitar_plugin::{
     Effect, Error, ErrorKind, Host, Plugin, Processor, SharedFolder, TrackSection,
 };
 
+#[cfg_attr(all(x86_64_v3, not(test)), allow(dead_code))]
 pub(crate) mod convolve;
+pub mod engine;
 pub(crate) mod files;
 pub(crate) mod resample;
 pub(crate) mod section;
@@ -214,12 +218,8 @@ impl Effect for NamPlugin {
             if let Some(loudness) = file.loudness() {
                 level = decibels(TARGET - loudness);
             }
-            let mut runtime = nam_rs::Model::from_nam(&file)
+            let runtime = engine::Model::new(&path, &file)
                 .map_err(|e| failed(format!("{name} can't be played: {e}")))?;
-            // A fresh model's first sound is a transient against silence:
-            // spent now, not on the first note.
-            let mut warm = vec![0.0f32; runtime.receptive_field().max(1)];
-            runtime.process_buffer(&mut warm);
             let theirs = file.expected_sample_rate().round() as u32;
             let converted = (theirs != prepare.rate && theirs > 0)
                 .then(|| resample::Converted::new(prepare.rate, theirs, frames));
@@ -227,7 +227,9 @@ impl Effect for NamPlugin {
         }
         let cabinet = self
             .cabinet(&track, includes_cab, nam.as_deref(), prepare.rate)?
-            .map(|taps| convolve::Convolver::new(&taps));
+            .map(|taps| engine::Cabinet::new(&taps))
+            .transpose()
+            .map_err(|e| failed(format!("the cabinet can't be played: {e}")))?;
         Ok(Box::new(Amp {
             model,
             cabinet,
@@ -247,8 +249,8 @@ impl Processor for Through {
 
 /// A track through its amp model and cabinet.
 struct Amp {
-    model: Option<(nam_rs::Model, Option<resample::Converted>)>,
-    cabinet: Option<convolve::Convolver>,
+    model: Option<(engine::Model, Option<resample::Converted>)>,
+    cabinet: Option<engine::Cabinet>,
     input: f32,
     output: f32,
     /// The track's sound in mono, as long as the longest piece.
@@ -268,8 +270,8 @@ impl Processor for Amp {
             }
             if let Some((model, converted)) = &mut self.model {
                 match converted {
-                    Some(c) => c.process(mono, |x| model.process_buffer(x)),
-                    None => model.process_buffer(mono),
+                    Some(c) => c.process(mono, |x| model.process(x)),
+                    None => model.process(mono),
                 }
             }
             if let Some(c) = &mut self.cabinet {
@@ -285,11 +287,58 @@ impl Processor for Amp {
     }
 
     fn latency(&self) -> u32 {
-        self.model
+        let model = self
+            .model
             .as_ref()
             .and_then(|(_, c)| c.as_ref())
-            .map_or(0, |c| c.latency() as u32)
+            .map_or(0, resample::Converted::latency);
+        let cabinet = self.cabinet.as_ref().map_or(0, engine::Cabinet::latency);
+        (model + cabinet) as u32
     }
 }
 
+#[cfg(not(x86_64_v3))]
 oxiguitar_plugin::export_plugin!(NamPlugin);
+// The build for x86-64-v3 processors carries the manifest saying so, so a
+// processor without them never loads it (and takes nam.oxp instead).
+#[cfg(x86_64_v3)]
+oxiguitar_plugin::export_plugin!(NamPlugin, "manifest-x86-64-v3.json");
+
+#[cfg(test)]
+mod tests {
+    use oxiguitar_plugin::serde_json::{self, Value};
+
+    const PLAIN: &str = include_str!("../manifest.json");
+    const V3: &str = include_str!("../manifest-x86-64-v3.json");
+
+    /// The two builds are one plugin: the second manifest is the first with
+    /// the conditions only x86-64-v3 processors on Linux meet, and both
+    /// are valid for the plugin (the version, the contributions).
+    #[test]
+    fn the_two_manifests_differ_only_in_their_conditions() {
+        let plain: Value = serde_json::from_str(PLAIN).unwrap();
+        let mut v3: Value = serde_json::from_str(V3).unwrap();
+        let conditions = v3.as_object_mut().unwrap().remove("conditions").unwrap();
+        assert_eq!(plain, v3);
+        assert_eq!(conditions["os"], serde_json::json!(["linux"]));
+        assert_eq!(conditions["arch"], serde_json::json!(["x86_64"]));
+        // The x86-64-v3 level's features, which the library needs and
+        // build.rs checks, all among them.
+        let cpu: Vec<&str> = conditions["cpu"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f.as_str().unwrap())
+            .collect();
+        for f in [
+            "avx", "avx2", "bmi1", "bmi2", "f16c", "fma", "lzcnt", "movbe",
+        ] {
+            assert!(cpu.contains(&f), "{f} is missing");
+        }
+        for manifest in [PLAIN, V3] {
+            let problems =
+                oxiguitar_plugin::check::<super::NamPlugin>(manifest, env!("CARGO_PKG_VERSION"));
+            assert!(problems.is_empty(), "{}", problems.join("; "));
+        }
+    }
+}

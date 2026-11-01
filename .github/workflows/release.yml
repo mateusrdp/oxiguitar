@@ -90,10 +90,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { arch: x86_64, os: ubuntu-24.04 }
-          - { arch: aarch64, os: ubuntu-24.04-arm }
+          # Our nine plugins, and on x86_64 the NAM plugin's second build,
+          # for x86-64-v3 processors (scripts/build-plugins.sh).
+          - { arch: x86_64, os: ubuntu-24.04, plugins: 10 }
+          - { arch: aarch64, os: ubuntu-24.04-arm, plugins: 9 }
     env:
       VERSION: ${{ needs.meta.outputs.version }}
+      PLUGINS: ${{ matrix.plugins }}
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
@@ -128,7 +131,7 @@ jobs:
       # and keeps the plugins.
       - name: Test the .deb packages on Debian sid
         run: |
-          docker run --rm -v "$PWD:/w" -w /w debian:sid bash -euxc '
+          docker run --rm -e PLUGINS -v "$PWD:/w" -w /w debian:sid bash -euxc '
             apt-get update
             # The databases first, so the package triggers rebuild them.
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -139,7 +142,7 @@ jobs:
             dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends):"
             dpkg -s oxiguitar | grep -E "^Depends:.*oxiguitar-plugins-basic \(= "
             dpkg -s oxiguitar-plugins-basic | grep -E "^(Version|Depends|Enhances):"
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 9
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq "$PLUGINS"
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             grep -q "application/x-gtp=io.github.mateusrdp.OxiGuitar.desktop" /usr/share/applications/mimeinfo.cache
@@ -150,7 +153,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-x11_*.deb
             ! dpkg -s oxiguitar 2> /dev/null | grep -q "^Status: install ok installed"
             dpkg -s oxiguitar-x11 | grep -E "^(Version|Depends|Recommends|Provides|Conflicts|Replaces):"
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 9
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq "$PLUGINS"
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
             apt-get remove -y oxiguitar-x11 oxiguitar-plugins-basic
             test ! -e /usr/lib/oxiguitar
@@ -171,20 +174,20 @@ jobs:
           '
       - name: Test the .rpm packages on Fedora
         run: |
-          docker run --rm -v "$PWD:/w" -w /w fedora:latest bash -euxc '
+          docker run --rm -e PLUGINS -v "$PWD:/w" -w /w fedora:latest bash -euxc '
             dnf install -y shared-mime-info desktop-file-utils xorg-x11-server-Xvfb xorg-x11-xauth weston mesa-dri-drivers mesa-libEGL
             ! dnf install -y $(ls ./dist/oxiguitar-[0-9]*.rpm)
             dnf install -y $(ls ./dist/oxiguitar-[0-9]*.rpm) ./dist/oxiguitar-plugins-basic-*.rpm
             rpm -q --requires oxiguitar
             rpm -q --requires oxiguitar | grep -q "^oxiguitar-plugins-basic = "
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 9
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq "$PLUGINS"
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar "$0"
             dnf remove -y oxiguitar
             dnf install -y ./dist/oxiguitar-x11-*.rpm
             rpm -q --provides oxiguitar-x11 | grep -q "^oxiguitar = "
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 9
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq "$PLUGINS"
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
             dnf remove -y oxiguitar-x11 oxiguitar-plugins-basic
           ' "$SAMPLE"
@@ -308,8 +311,14 @@ jobs:
           test -x "$root/AppRun"
           test -x "$root/usr/bin/oxiguitar"
           test -x "$root/usr/bin/oxiguitar-x11"
-          # Our plugins but PipeWire's (see the job's comment): eight.
-          test "$(ls "$root"/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 8
+          # Our plugins but PipeWire's (see the job's comment): eight, and
+          # on x86_64 the NAM plugin's build for x86-64-v3 processors.
+          expected=8
+          if [ "${{ matrix.arch }}" = x86_64 ]; then
+            expected=9
+            test -f "$root/usr/lib/oxiguitar/plugins/nam-x86-64-v3.oxp"
+          fi
+          test "$(ls "$root"/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq "$expected"
           test ! -e "$root/usr/lib/oxiguitar/plugins/audio-pipewire.oxp"
           test -f "$root/usr/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml"
           scripts/package/check-glibc.sh 2.35 "$root"

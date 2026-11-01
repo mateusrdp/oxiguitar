@@ -943,13 +943,18 @@ fn compare(
 ///
 /// Call it once, in the crate's `lib.rs`, with the type implementing
 /// [`Plugin`]. The manifest is the file `manifest.json` beside the crate's
-/// `Cargo.toml`.
+/// `Cargo.toml`, or the file named after the type: a crate built in two
+/// ways for different processors names each build's manifest (the NAM
+/// plugin's `manifest-x86-64-v3.json`), under a `cfg` of its own.
 #[macro_export]
 macro_rules! export_plugin {
     ($plugin:ty) => {
-        /// The plugin's manifest, `manifest.json`.
+        $crate::export_plugin!($plugin, "manifest.json");
+    };
+    ($plugin:ty, $manifest:literal) => {
+        /// The plugin's manifest.
         pub const MANIFEST_JSON: &str =
-            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/manifest.json"));
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/", $manifest));
 
         // The section and the entry symbol need `unsafe` attributes, which
         // the plugin crate's `unsafe_code = "deny"` allows here only.
@@ -966,7 +971,7 @@ macro_rules! export_plugin {
             )]
             #[used]
             static MANIFEST: [u8; MANIFEST_JSON.len()] =
-                *include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/manifest.json"));
+                *include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", $manifest));
 
             static TABLE: $crate::glue::Table = $crate::glue::table::<$plugin>(&MANIFEST);
 
@@ -994,7 +999,8 @@ macro_rules! export_plugin {
                     $crate::check::<$plugin>(super::MANIFEST_JSON, env!("CARGO_PKG_VERSION"));
                 assert!(
                     problems.is_empty(),
-                    "manifest.json: {}",
+                    "{}: {}",
+                    $manifest,
                     problems.join("; ")
                 );
             }

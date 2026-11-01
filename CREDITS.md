@@ -43,6 +43,7 @@ Direct dependencies so far, all Rust (the desktop app also links the system's fo
 | [claxon](https://github.com/ruuda/claxon) 0.4 | Ruud van Asseldonk | Apache-2.0 | FLAC: SFZ instruments' samples |
 | [nam-rs](https://crates.io/crates/nam-rs) 0.4 | Leigh; ports inference from Steven Atkinson's [Neural Amp Modeler](https://github.com/sdatkinson/neural-amp-modeler) and NeuralAmpModelerCore and Mike Oliphant's NeuralAudio (all MIT) | MIT | Amp models: the NAM plugin runs `.nam` captures through it, as published |
 | [rustfft](https://github.com/ejmahler/RustFFT) 6.4 | Elliott Mahler, Allen Welkie, Henrik Enquist and contributors | MIT OR Apache-2.0 | The NAM plugin's cabinet convolution |
+| [NeuralAmpModeler-rs](https://github.com/fabiohl/NeuralAmpModeler-rs) 1.0 | Fábio Henrique de Lima Silva | Apache-2.0 | Amp models and cabinets in the NAM plugin's build for Linux on x86-64-v3 processors (`nam-x86-64-v3.oxp`), as published |
 | [rtrb](https://github.com/mgeier/rtrb) 0.4 | Matthias Geier and contributors | MIT OR Apache-2.0 | The player's lock-free queues to and from the audio thread |
 | [cpal](https://github.com/RustAudio/cpal) 0.18 | The RustAudio contributors | Apache-2.0 | Sound output: the audio-device plugins for PipeWire, ALSA, WASAPI and Core Audio; compatible with GPL-3.0, not GPL-2.0 |
 | [object](https://github.com/gimli-rs/object) 0.37 | The gimli-rs developers | Apache-2.0 OR MIT | Reading a plugin's manifest section without loading the plugin |

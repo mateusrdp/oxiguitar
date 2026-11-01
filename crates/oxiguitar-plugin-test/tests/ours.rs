@@ -75,15 +75,19 @@ fn our_instruments_pass_the_contract() {
 /// The NAM plugin with a model in its `nam` folder: a host over a copy of
 /// it (a library loads once per process), and that folder.
 fn nam_plugins(tag: &str) -> (Plugins, PathBuf) {
+    nam_plugins_of(&[(ours().join("nam.oxp"), format!("nam-{tag}.oxp"))], tag)
+}
+
+/// Like [`nam_plugins`], with the plugin files `files` (each copied under
+/// its new name) in the folder.
+fn nam_plugins_of(files: &[(PathBuf, String)], tag: &str) -> (Plugins, PathBuf) {
     let scratch = std::env::temp_dir().join(format!("oxiguitar-nam-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&scratch);
     let folder = scratch.join("plugins");
     std::fs::create_dir_all(&folder).unwrap();
-    std::fs::copy(
-        ours().join("nam.oxp"),
-        folder.join(format!("nam-{tag}.oxp")),
-    )
-    .unwrap();
+    for (file, name) in files {
+        std::fs::copy(file, folder.join(name)).unwrap();
+    }
     let home = scratch.join("home");
     std::fs::create_dir_all(home.join("nam/Amps")).unwrap();
     std::fs::copy(
@@ -567,4 +571,87 @@ fn format_plugins_add_no_tabs_and_hear_no_events() {
     // Pushed anyway: nobody is told, and nothing waits.
     plugins.push(Event::ScoreClosed);
     plugins.wait_for_events();
+}
+
+/// The NAM plugin's build for x86-64-v3 processors (nam-x86-64-v3.oxp, made
+/// by scripts/build-plugins.sh on Linux x86_64 with Rust 1.99), when
+/// `OXIGUITAR_TEST_NAM_X86_64_V3` names it (CI's "NAM for x86-64-v3" job):
+/// it passes the contract and the real-time checks as nam.oxp does, comes a
+/// cabinet's partition (64 frames) later than it, and the host uses it
+/// rather than nam.oxp, whatever the order of their names (the
+/// processor-features step of the choice: docs/design/plugins.md). Without
+/// the variable there is nothing to test.
+#[test]
+fn the_nam_build_for_x86_64_v3_processors_runs_in_real_time_and_is_chosen() {
+    use oxiguitar_host::State;
+    use oxiguitar_host::api::class::InstrumentClass;
+    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
+
+    let Some(v3) = std::env::var_os("OXIGUITAR_TEST_NAM_X86_64_V3") else {
+        println!("OXIGUITAR_TEST_NAM_X86_64_V3 isn't set: nothing to test");
+        return;
+    };
+    let v3 = PathBuf::from(v3);
+    let report = check(&v3);
+    assert!(report.ok(), "{}: {:#?}", v3.display(), report.failed);
+
+    // Named to come after nam.oxp: the host must still take it.
+    let (plugins, scratch) = nam_plugins_of(
+        &[
+            (ours().join("nam.oxp"), "a-nam.oxp".into()),
+            (v3.clone(), "b-nam.oxp".into()),
+        ],
+        "v3",
+    );
+    let states: Vec<(String, &State)> = plugins
+        .found()
+        .iter()
+        .map(|f| {
+            (
+                f.path.file_name().unwrap().to_string_lossy().into_owned(),
+                &f.state,
+            )
+        })
+        .collect();
+    assert_eq!(states.len(), 2, "{states:#?}");
+    assert!(
+        matches!(states[0].1, State::Replaced(p) if p.ends_with("b-nam.oxp")),
+        "{states:#?}"
+    );
+    assert_eq!(states[1].1, &State::Ready, "{states:#?}");
+
+    let settings =
+        r#"{"on": true, "model": "Amps/wavenet.nam", "cabinet": "built-in:evh-5150-iii"}"#;
+    let report = oxiguitar_plugin_test::check_realtime(&plugins, settings);
+    assert!(report.ok(), "{:#?}", report.failed);
+    assert!(
+        report
+            .passed
+            .iter()
+            .any(|p| p.contains("effect nam: it allocates nothing")),
+        "{:#?}",
+        report.passed
+    );
+
+    let effect = plugins.effects_for(InstrumentClass::Fretted)[0];
+    let prepare = PrepareEffect {
+        effect: "nam".into(),
+        rate: 48_000,
+        frames: 512,
+        track: PreparedTrack {
+            info: TrackInfo {
+                index: 0,
+                name: "Lead".into(),
+                class: InstrumentClass::Fretted,
+            },
+            program: 29,
+            percussion: false,
+            tuning: vec![64, 59, 55, 50, 45, 40],
+            capo: 0,
+            settings: settings.into(),
+        },
+    };
+    let amp = plugins.prepare_effect(effect, prepare).unwrap();
+    assert_eq!(amp.latency(), 64, "the cabinet's partition");
+    let _ = std::fs::remove_dir_all(&scratch);
 }

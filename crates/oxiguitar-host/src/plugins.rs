@@ -12,10 +12,11 @@
 //! used, and stays loaded until the program ends.
 //!
 //! Which plugin file is used when several hold the same plugin id: the
-//! highest version. On a version tie the earlier file (in folder order,
-//! then file name) is used; the earlier file is the one whose folder comes
-//! first in the search list (system folders first, user folders after, so
-//! user plugins override system ones). Plugins listed under `disabled` in
+//! highest version; on a version tie, the build needing more processor
+//! features (a faster build this processor can run: the NAM plugin's for
+//! x86-64-v3 processors); then the earlier file (in folder order, then file
+//! name), the one whose folder comes first in the search list (system
+//! folders first, user folders after). Plugins listed under `disabled` in
 //! settings.json are never loaded; neither are plugins whose conditions
 //! (system, processor, display system) don't hold here.
 //!
@@ -216,7 +217,8 @@ pub enum State {
     /// settings.json disables it.
     Disabled,
     /// Another file holds the same plugin at a higher version, or the same
-    /// version in an earlier folder (earlier folder wins); that file is used.
+    /// version built for more of this processor's features, or the same
+    /// version and build in an earlier folder; that file is used.
     Replaced(PathBuf),
 }
 
@@ -546,9 +548,9 @@ impl Plugins {
                 examine(path, &env, &disabled)
             })
             .collect();
-        // One file per plugin id: the highest version wins.
-        // On a version tie the earlier file wins (stable sort: earlier
-        // folder, then earlier filename).
+        // One file per plugin id: the highest version wins; on a version
+        // tie, the build needing more processor features; then the earlier
+        // file (earlier folder, then earlier file name).
         for i in 0..found.len() {
             let Some(id) = found[i].ready().map(|m| m.id.clone()) else {
                 continue;
@@ -1861,11 +1863,13 @@ fn missing_library(error: &str) -> Option<String> {
 }
 
 /// Whether `c` is to be used rather than `b`, two usable files of one
-/// plugin: the one with the higher version. On a version tie `better`
-/// returns false, so the `reduce` keeps the earlier file (the one whose
-/// folder comes first in the search list).
+/// plugin: a higher version, or the same version needing more processor
+/// features (both are usable here, so this processor has them all: the
+/// build made for it is the faster one). On a full tie `better` returns
+/// false, so the `reduce` keeps the earlier file (the one whose folder
+/// comes first in the search list).
 fn better(c: &Manifest, b: &Manifest) -> bool {
-    c.version > b.version
+    (&c.version, c.conditions.cpu.len()) > (&b.version, b.conditions.cpu.len())
 }
 
 /// What a plugin file is, from its manifest alone.
@@ -1981,7 +1985,7 @@ mod tests {
     }
 
     #[test]
-    fn higher_version_wins_regardless_of_processor_features() {
+    fn the_highest_version_wins_then_the_build_for_this_processor() {
         let m = |version: &str, cpu: &[&str]| -> Manifest {
             let mut m: Manifest = serde_json::from_str(&format!(
                 r#"{{"interface": "1.3", "id": "me.nam", "name": "NAM", "version": "{version}"}}"#
@@ -1994,9 +1998,14 @@ mod tests {
         assert!(better(&m("1.0.1", &[]), &m("1.0.0", &["avx2", "fma"])));
         // An older version loses even if it has more CPU features.
         assert!(!better(&m("1.0.0", &["avx2", "fma"]), &m("1.0.1", &[])));
-        // Same version: neither is better (earlier file wins by stable order).
+        // Same version: the build needing more of this processor's
+        // features (both usable here, so it has them), whatever the files'
+        // folders and names.
+        assert!(better(&m("1.0.0", &["avx2", "fma"]), &m("1.0.0", &[])));
+        assert!(!better(&m("1.0.0", &[]), &m("1.0.0", &["avx2", "fma"])));
+        // A full tie: neither is better, so the earlier file wins.
         assert!(!better(&m("1.0.0", &[]), &m("1.0.0", &[])));
-        assert!(!better(&m("1.0.0", &["avx2"]), &m("1.0.0", &[])));
+        assert!(!better(&m("1.0.0", &["avx2"]), &m("1.0.0", &["avx2"])));
     }
 
     fn plain(folders: &[PathBuf]) -> Plugins {
