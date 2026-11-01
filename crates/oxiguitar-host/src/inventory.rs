@@ -106,7 +106,7 @@ impl Inventory {
     pub fn notices(&self, user_plugins: &Path) -> Vec<Notice> {
         let mut out = Vec::new();
         let get = format!(
-            "Download plugins from {PLUGINS_URL} and put them in {}.",
+            "The basic plugins come with every OxiGuitar download ({PLUGINS_URL}): install it again, or put plugins in {}.",
             user_plugins.display()
         );
         let (reads, writes) = (

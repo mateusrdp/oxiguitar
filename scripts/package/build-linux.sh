@@ -18,7 +18,9 @@
 # Writes: target/release/oxiguitar (the Wayland build), oxiguitar-cli,
 #         target/x11/release/oxiguitar (the X11 build) and
 #         target/lib/oxiguitar/plugins/*.oxp (scripts/build-plugins.sh,
-#         without the PipeWire plugin),
+#         without the PipeWire plugin), and target/appimage-libs/: the
+#         libraries the programs load that an AppImage must bring, with
+#         their copyright files (see below),
 #         then gives them back to the user who owns the working directory.
 # scripts/package/check-glibc.sh checks the result.
 
@@ -29,7 +31,7 @@ apt-get update -qq
 apt-get install -y -qq --no-install-recommends \
     ca-certificates curl git build-essential pkg-config \
     libfontconfig1-dev libxkbcommon-dev libwayland-dev \
-    libasound2-dev libpipewire-0.3-dev libclang-dev > /dev/null
+    libasound2-dev libpipewire-0.3-dev libclang-dev libxkbcommon-x11-0 > /dev/null
 
 # Rust from rustup, like everywhere else we build (Mateus, 24 Oct 2026):
 # stable, as dtolnay/rust-toolchain@stable gives the other jobs.
@@ -43,8 +45,30 @@ rustc --version
 ldd --version | sed -n 1p
 
 export CARGO_TERM_COLOR=always CARGO_INCREMENTAL=0
+# The programs find the libraries the AppImage brings beside them, in
+# usr/lib/oxiguitar/libs, through an RPATH: unlike a RUNPATH, it also
+# serves those libraries' own dependencies (libxkbcommon-x11 needs
+# libxcb-xkb), and unlike LD_LIBRARY_PATH it reaches no other program
+# OxiGuitar starts (the browser, for a link).
+export RUSTFLAGS='-C link-arg=-Wl,--disable-new-dtags,-rpath,$ORIGIN/../lib/oxiguitar/libs'
 cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
 cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
+unset RUSTFLAGS
+
+# Libraries the programs load at run time that aren't on every system and
+# aren't on the AppImage project's exclude list (libraries every system
+# has and that must come from it: github.com/AppImage/AppImages,
+# excludelist): xkbcommon's, which the X11 build needs and Ubuntu 22.04
+# installs only with a desktop (the AppImage catalog's test system has
+# none: "Library libxkbcommon-x11.so could not be loaded"). All MIT.
+libs="target/appimage-libs"
+rm -rf "$libs"
+mkdir -p "$libs/licenses"
+triplet="$(gcc -dumpmachine)"
+for pair in libxkbcommon.so.0:libxkbcommon0 libxkbcommon-x11.so.0:libxkbcommon-x11-0 libxcb-xkb.so.1:libxcb-xkb1; do
+    cp -L "/usr/lib/$triplet/${pair%%:*}" "$libs/"
+    cp "/usr/share/doc/${pair##*:}/copyright" "$libs/licenses/${pair##*:}.copyright"
+done
 # The PipeWire plugin doesn't build here: cpal 0.18's libspa 0.10 needs
 # newer PipeWire headers than 22.04's 0.3.48. The AppImages play through
 # ALSA, which PipeWire desktops route to PipeWire (Mateus, 27 Oct 2026);
