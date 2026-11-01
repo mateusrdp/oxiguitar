@@ -1744,11 +1744,13 @@ export component AppWindow inherits Window {
                                 checked: root.loop-on;
                                 clicked => { root.player-action("loop"); }
                             }
+                            // The visual metronome: flashes on each beat.
+                            // Green for regular beats, amber for accents.
                             Rectangle {
                                 width: 30px;
                                 height: 28px;
                                 border-radius: 4px;
-                                background: root.metronome-on && root.player-running
+                                background: root.player-running
                                     ? (root.play-frame.strong
                                         ? Look.warning.transparentize(1 - root.play-frame.flash * 0.9)
                                         : Look.accent.transparentize(1 - root.play-frame.flash * 0.9))

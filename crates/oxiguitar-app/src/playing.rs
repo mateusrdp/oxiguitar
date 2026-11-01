@@ -254,11 +254,6 @@ pub(crate) fn action(app: &Shared, name: &str) {
             s.player.set_metronome(on);
             Vec::new()
         }
-        "visual-metronome" => {
-            let mut s = app.borrow_mut();
-            s.visual = !s.visual;
-            Vec::new()
-        }
         "loop" => {
             let mut s = app.borrow_mut();
             let on = !s.player.looping();
