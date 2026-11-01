@@ -32,6 +32,9 @@ export struct PluginWidget {
     options: [string],
     items: [StandardListViewItem],
     selected: int,
+    // Choices: wide enough for their longest option (its text's length,
+    // estimated in main.rs), so the list doesn't cut options short.
+    wide: length,
     // Canvases: the drawing, and the canvas's size in its own units.
     canvas: image,
     canvas-width: float,
@@ -98,7 +101,7 @@ component PluginWidgetView inherits HorizontalLayout {
         accepted(t) => { root.edited(w.id, t); }
     }
     if w.kind == "choice" : ComboBox {
-        min-width: 100px;
+        min-width: max(100px, w.wide);
         model: w.options;
         current-index: w.selected;
         enabled: w.enabled;

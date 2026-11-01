@@ -147,6 +147,11 @@ pub const OURS: &[(&str, &str)] = &[
 /// them too.
 pub const OUR_INSTRUMENTS: &[(&str, &str)] = &[("oxiguitar-soundfont-plugin", "soundfont")];
 
+/// Our effect plugins (interface 1.3), shipped with the others: each
+/// crate's package name and its file's name. [`build_ours`] builds them
+/// too.
+pub const OUR_EFFECTS: &[(&str, &str)] = &[("oxiguitar-nam-plugin", "nam")];
+
 /// Our audio-device plugins (interface 1.3), shipped with the format
 /// plugins: each crate's package name, its file's name and the system it
 /// runs on (its manifest's `os`). Elsewhere each builds as a plugin whose
@@ -187,7 +192,7 @@ pub fn build_devices(workspace: &Path, release: bool) -> Result<(PathBuf, Vec<St
     Ok((folder, names))
 }
 
-/// Builds every plugin of [`OURS`] and [`OUR_INSTRUMENTS`], each on its own so it carries only its
+/// Builds every plugin of [`OURS`], [`OUR_INSTRUMENTS`] and [`OUR_EFFECTS`], each on its own so it carries only its
 /// own code (built together, Cargo would give each the features of all),
 /// and puts the files in the workspace's `target/oxp/ours-debug/` or
 /// `ours-release/`, replacing what was there. Returns that folder, a plugin
@@ -199,7 +204,7 @@ pub fn build_ours(workspace: &Path, release: bool) -> Result<PathBuf, String> {
         "ours-debug"
     });
     std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
-    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS) {
+    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS).chain(OUR_EFFECTS) {
         let built = build(workspace, package, name, release)?;
         let to = folder.join(format!("{name}.oxp"));
         // A new file: a program that loaded the old one keeps its own.

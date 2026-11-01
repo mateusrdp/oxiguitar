@@ -60,7 +60,7 @@ If you'd rather keep disk use small, FreePats' electric guitars (CC0) are SoundF
 | Jazz | [electric-guitar-FSBS-jazz](https://github.com/freepats/electric-guitar-FSBS-jazz/releases) | 66 MB (or `bridge-small`, 5 MB) |
 | Direct | [electric-guitar-FSBS-direct](https://github.com/freepats/electric-guitar-FSBS-direct/releases) | 60 MB |
 
-Pick one for **Electric guitars**. **Direct** sounds thin on its own: it is the raw signal an amp model starts from, for the amp modelling (NAM) that OxiGuitar 1.0 brings.
+Pick one for **Electric guitars**. **Direct** sounds thin on its own: it is the raw signal an amp model starts from ([Amp models (NAM)](amp-models.md)).
 
 ## How the settings window chooses
 

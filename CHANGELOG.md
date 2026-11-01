@@ -13,6 +13,9 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- **Amp models (NAM)**: guitar and bass tracks can play through an amp model, a Neural Amp Modeler capture (`.nam`), and a cabinet impulse response, picked per track in the track dialog's new **Amp (NAM)** section, with input and output levels. Models and impulse responses are files you put in the new `nam` folder beside `soundfonts`; four cabinets come built in (BestPlugins, through Guitarix, GPL-2.0-or-later). At a device rate other than the model's, the track is converted to 48 kHz and back, and the other tracks and the cursor wait for it. The manual's new Amp models page says where to get models and a DI guitar sound for them. The NAM plugin comes in every download.
+- The player plays each track's effects after its instrument, and lines up tracks whose effects make them late.
+
 - The SoundFont plugin's settings window says, with a link to the manual's Better sounds page, which free recorded sets to get, and says so plainly while only your system's basic set plays. The page itself is rewritten as steps: the three recommended SFZ sets (Black and Green Guitars, Black and Blue Basses, the MuldjordKit) first, where to download each, where to unpack it and what to pick. OxiGuitar still downloads nothing: the link opens the page in your browser.
 - Plugin interface **1.4** (in development, frozen with v1.0): a link among a tab's widgets (`Widget::Link`), which OxiGuitar opens in the browser, `https://` addresses only. Plugins built for 1.3 load as they are.
 

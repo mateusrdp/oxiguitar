@@ -359,7 +359,9 @@ build_plugins() {
 Guitar Pro format (3, 4, 5, 6 and 7-8), so OxiGuitar can open those
 files; the SoundFont player, which plays the tracks with a General MIDI
 sound set (the recommended package) or better SoundFont and SFZ sets of
-your own; and the ones that play its sound through PipeWire or ALSA.
+your own; NAM, which plays guitars and basses through amp models and
+cabinet impulse responses; and the ones that play its sound through
+PipeWire or ALSA.
 OxiGuitar depends on them and finds them in /usr/lib/oxiguitar/plugins."
     local tree="$work/plugins-deb"
     install -d "$tree/usr/lib/oxiguitar/plugins"
