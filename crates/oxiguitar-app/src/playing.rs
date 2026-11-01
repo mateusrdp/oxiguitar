@@ -370,7 +370,7 @@ pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) 
         }
         return true;
     }
-    if (name == "Return" || name == "Enter") && !shift && !ctrl && !alt {
+    if (name == "Return" || name == "Enter" || name == "enter") && !shift && !ctrl && !alt {
         let state = app.borrow().player.state();
         if matches!(state, State::Playing | State::Starting) {
             let _ = stop(app);
@@ -482,7 +482,7 @@ fn shown_at(s: &crate::App, t: f64, running: bool) -> PlayFrame {
             };
         }
     }
-    if running && s.visual {
+    if running && s.player.metronome() {
         // The latest click: bright for a moment, then dark.
         let i = tl.clicks.partition_point(|c| c.time <= t);
         if let Some(c) = i.checked_sub(1).and_then(|i| tl.clicks.get(i)) {

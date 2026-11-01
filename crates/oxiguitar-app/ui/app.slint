@@ -1578,6 +1578,12 @@ export component AppWindow inherits Window {
 
     keys := FocusScope {
         key-pressed(event) => {
+            // Player keys: play/pause with Space, play/stop with Enter.
+            if (event.text == Key.Return) {
+                if (root.has-score && root.player-key("enter", event.modifiers.shift, event.modifiers.control, event.modifiers.alt)) {
+                    return accept;
+                }
+            }
             // The editor's keys first (editing.rs): the caret and the
             // selection, as Guitar Pro 8 moves its cursor.
             let name = event.text == Key.LeftArrow ? "left"
@@ -1779,6 +1785,7 @@ export component AppWindow inherits Window {
                             }
                             LineEdit {
                                 width: 48px;
+                                font-size: 11px;
                                 text: root.player-speed-text;
                                 enabled: root.player-available;
                                 edited(v) => { root.speed-text-edited(v); }
