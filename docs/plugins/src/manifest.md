@@ -37,10 +37,33 @@ The template's:
 | `track_sections` | no | Its sections of the track dialog; interface 1.3 ([Track sections](track-sections.md)) |
 | `folders` | no | The shared folders it reads, `"soundfonts"` and `"nam"`, which OxiGuitar creates at start; interface 1.3 ([Settings](settings.md)) |
 | `exporters` | no | Its entries in File → Export; interface 1.4 ([Exporters](exporters.md)) |
+| `needs` | no | The plugins it can't work without, each `{"id": …, "version": …}` with the lowest version that will do; interface 1.4 (below) |
+| `replaces` | no | The ids of plugins it succeeds; interface 1.4 (below) |
 
 **Unknown keys are refused when you build and ignored when OxiGuitar reads.** The test `export_plugin!` adds fails on a key the SDK doesn't know, so a typing mistake (`"servces"`) shows up in `cargo test`. An older OxiGuitar reading a newer plugin's manifest skips keys it doesn't know, so new keys never stop a plugin from loading.
 
 A manifest is at most 1 MiB. Real ones are a few hundred bytes.
+
+## Plugins that need other plugins
+
+A plugin that is no use without another one lists it under `needs` (interface 1.4): an amp plugin that processes what an instrument plugin plays, say.
+
+```json
+"needs": [{ "id": "oxiguitar.midi", "version": "1.0.0" }]
+```
+
+When a need isn't met (the plugin is missing, older than the version given, disabled, or can't be used here), OxiGuitar doesn't use yours: the footer says so as an error, and Tools → Plugins says why. A plugin that `replaces` the id you need meets the need too. For a service you can do without, list its interface under `requires` instead and handle the error when no plugin implements it ([Services](services.md)).
+
+## Taking over another plugin's id
+
+`replaces` (interface 1.4) lists the ids of plugins yours succeeds, when a plugin is renamed or two are merged into one:
+
+```json
+"id": "jane.chords",
+"replaces": ["jane.chord-finder"]
+```
+
+A file with a replaced id is then treated as an older version of yours, whatever its version: Tools → Plugins lists it as replaced and it is never loaded. On the first start with your plugin, OxiGuitar copies what it kept under the old id to the new one, where the new id has nothing yet: the plugin's object in settings.json and its data folder (not its cache), and each score's track sections as the score is opened. Nothing old is deleted, so going back to an older version still works. A plugin can't need what it replaces.
 
 ## Conditions
 

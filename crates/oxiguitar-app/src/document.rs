@@ -288,7 +288,8 @@ impl Document {
         })?;
         // What plugins keep per track lives beside the file (FILE.oxg).
         let sidecar_problem = match Sidecar::read_for(path) {
-            Ok(Some(sidecar)) => {
+            Ok(Some(mut sidecar)) => {
+                sidecar.adopt(&plugins.replaced_ids());
                 let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
                 let settled = sidecar.settle(&names);
                 for (track, plugins) in score.tracks.iter_mut().zip(settled) {

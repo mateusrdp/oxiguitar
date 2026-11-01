@@ -204,6 +204,10 @@ fn begin(
             )),
         }
     }
+    // What a replaced plugin kept, carried to its successor (interface 1.4).
+    if app && !safe {
+        notices.extend(plugins.carry_over(&folders));
+    }
     let inventory = Inventory::of(searched, &plugins);
     if safe {
         notices.push(Notice::new(

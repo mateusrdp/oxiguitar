@@ -168,6 +168,10 @@ pub fn plugin_notices(plugins: &Plugins) -> Vec<Notice> {
                     f.name()
                 ),
             )),
+            State::Unmet(why) => out.push(Notice::new(
+                Level::Error,
+                format!("{} can't be used: {why}.", f.name()),
+            )),
             State::Unusable(why) => out.push(Notice::new(
                 Level::Warning,
                 format!(
