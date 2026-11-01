@@ -43,8 +43,9 @@ if [[ -z "$iscc" ]]; then
 fi
 
 here="$(cd "$(dirname "$0")" && pwd)"
-win() { cygpath -w "$1"; }
+win() { cygpath -aw "$1"; }
 mkdir -p "$out_dir"
+out_dir="$(cd "$out_dir" && pwd)"
 
 args=(
     "/DName=$name"
