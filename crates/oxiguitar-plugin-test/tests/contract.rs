@@ -1440,8 +1440,10 @@ fn an_audio_export_writes_the_song_through_the_exporter() {
         "{frames} frames for {length} s"
     );
     let peak = bytes[20..]
-        .chunks_exact(4)
-        .map(|c| f32::from_le_bytes(c.try_into().unwrap()).abs())
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|c| f32::from_le_bytes(*c).abs())
         .fold(0.0f32, f32::max);
     assert!(peak > 0.01, "it sounds: {peak}");
     assert!(seen.windows(2).all(|w| w[0] <= w[1]), "progress only grows");
