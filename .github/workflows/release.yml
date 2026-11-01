@@ -139,7 +139,7 @@ jobs:
             dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends):"
             dpkg -s oxiguitar | grep -E "^Depends:.*oxiguitar-plugins-basic \(= "
             dpkg -s oxiguitar-plugins-basic | grep -E "^(Version|Depends|Enhances):"
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 8
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 9
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             grep -q "application/x-gtp=io.github.mateusrdp.OxiGuitar.desktop" /usr/share/applications/mimeinfo.cache
@@ -150,7 +150,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar-x11_*.deb
             ! dpkg -s oxiguitar 2> /dev/null | grep -q "^Status: install ok installed"
             dpkg -s oxiguitar-x11 | grep -E "^(Version|Depends|Recommends|Provides|Conflicts|Replaces):"
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 8
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 9
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
             apt-get remove -y oxiguitar-x11 oxiguitar-plugins-basic
             test ! -e /usr/lib/oxiguitar
@@ -177,14 +177,14 @@ jobs:
             dnf install -y $(ls ./dist/oxiguitar-[0-9]*.rpm) ./dist/oxiguitar-plugins-basic-*.rpm
             rpm -q --requires oxiguitar
             rpm -q --requires oxiguitar | grep -q "^oxiguitar-plugins-basic = "
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 8
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 9
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
             OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar "$0"
             dnf remove -y oxiguitar
             dnf install -y ./dist/oxiguitar-x11-*.rpm
             rpm -q --provides oxiguitar-x11 | grep -q "^oxiguitar = "
-            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 8
+            test "$(ls /usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 9
             OXIGUITAR_EXIT_AFTER_MS=3000 xvfb-run -a oxiguitar "$0"
             dnf remove -y oxiguitar-x11 oxiguitar-plugins-basic
           ' "$SAMPLE"
@@ -308,8 +308,8 @@ jobs:
           test -x "$root/AppRun"
           test -x "$root/usr/bin/oxiguitar"
           test -x "$root/usr/bin/oxiguitar-x11"
-          # Our plugins but PipeWire's (see the job's comment).
-          test "$(ls "$root"/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 7
+          # Our plugins but PipeWire's (see the job's comment): eight.
+          test "$(ls "$root"/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq 8
           test ! -e "$root/usr/lib/oxiguitar/plugins/audio-pipewire.oxp"
           test -f "$root/usr/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml"
           scripts/package/check-glibc.sh 2.35 "$root"
@@ -421,7 +421,7 @@ jobs:
           Copy-Item assets/fonts/bravura/OFL.txt "$dir/licenses/Bravura-OFL.txt"
           Copy-Item assets/fonts/noto-sans/OFL.txt "$dir/licenses/NotoSans-OFL.txt"
           $plugins = Get-ChildItem target/release/plugins/*.oxp
-          if ($plugins.Count -ne 7) { throw 'expected our seven plugins' }
+          if ($plugins.Count -ne 8) { throw 'expected our eight plugins' }
           Copy-Item $plugins "$dir/plugins"
           Compress-Archive -Path $dir -DestinationPath "dist/$name.zip"
           Get-Item "dist/$name.zip"
@@ -432,7 +432,7 @@ jobs:
           $t = "$env:RUNNER_TEMP/zip-test"
           Expand-Archive "dist/OxiGuitar-$env:VERSION-windows-${{ matrix.arch }}.zip" $t
           $core = Get-ChildItem $t -Directory | Select-Object -First 1
-          if ((Get-ChildItem "$($core.FullName)/plugins/*.oxp").Count -ne 7) { throw 'the zip lacks our seven plugins' }
+          if ((Get-ChildItem "$($core.FullName)/plugins/*.oxp").Count -ne 8) { throw 'the zip lacks our eight plugins' }
           $env:OXIGUITAR_HOME = "$env:RUNNER_TEMP/empty-home"
           & "$($core.FullName)/oxiguitar-cli.exe" info $env:SAMPLE | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'the zip opened nothing' }
@@ -492,11 +492,11 @@ jobs:
           lipo -info "$app/Contents/MacOS/oxiguitar" | grep -q "x86_64 arm64"
           test -f "$app/Contents/Resources/OxiGuitar.icns"
           codesign --verify --verbose "$app"
-          # The app holds our seven plugins, universal and signed, where it
+          # The app holds our eight plugins, universal and signed, where it
           # searches (Contents/PlugIns). The command-line tool, copied into
           # a bundle of the same shape, opens the sample through them with
           # an empty user folder.
-          test "$(ls "$app"/Contents/PlugIns/*.oxp | wc -l)" -eq 7
+          test "$(ls "$app"/Contents/PlugIns/*.oxp | wc -l)" -eq 8
           for plugin in "$app"/Contents/PlugIns/*.oxp; do
             lipo -info "$plugin" | grep -q "x86_64 arm64"
             codesign --verify "$plugin"
@@ -576,8 +576,8 @@ jobs:
           for f in dist/OxiGuitar-[0-9]*-windows-*.zip; do
             unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
             unzip -l "$f" | grep -q 'oxiguitar.exe' || { echo "::error::$f has no oxiguitar.exe" >&2; exit 1; }
-            # Five format plugins, the SoundFont instrument and WASAPI.
-            [ "$(unzip -l "$f" | grep -cE 'plugins[/\\][^/\\]*\.oxp$')" -eq 7 ] || { echo "::error::$f lacks our seven plugins in plugins/" >&2; exit 1; }
+            # Five format plugins, the SoundFont instrument, NAM and WASAPI.
+            [ "$(unzip -l "$f" | grep -cE 'plugins[/\\][^/\\]*\.oxp$')" -eq 8 ] || { echo "::error::$f lacks our eight plugins in plugins/" >&2; exit 1; }
           done
       - name: Checksums
         run: (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)

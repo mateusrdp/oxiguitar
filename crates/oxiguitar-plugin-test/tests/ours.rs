@@ -13,7 +13,9 @@ use std::sync::{Arc, OnceLock};
 use oxiguitar_host::api::Blob;
 use oxiguitar_host::api::message::{Answer, ErrorKind, LogEntry, Request};
 use oxiguitar_host::{Plugins, SharedSettings, Unheard, Unrecognised};
-use oxiguitar_plugin_test::{OUR_DEVICES, OUR_INSTRUMENTS, OURS, build_devices, build_ours, check};
+use oxiguitar_plugin_test::{
+    OUR_DEVICES, OUR_EFFECTS, OUR_INSTRUMENTS, OURS, build_devices, build_ours, check,
+};
 
 fn workspace() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -68,6 +70,144 @@ fn our_instruments_pass_the_contract() {
             report.passed
         );
     }
+}
+
+/// The NAM plugin with a model in its `nam` folder: a host over a copy of
+/// it (a library loads once per process), and that folder.
+fn nam_plugins(tag: &str) -> (Plugins, PathBuf) {
+    let scratch = std::env::temp_dir().join(format!("oxiguitar-nam-{tag}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&scratch);
+    let folder = scratch.join("plugins");
+    std::fs::create_dir_all(&folder).unwrap();
+    std::fs::copy(
+        ours().join("nam.oxp"),
+        folder.join(format!("nam-{tag}.oxp")),
+    )
+    .unwrap();
+    let home = scratch.join("home");
+    std::fs::create_dir_all(home.join("nam/Amps")).unwrap();
+    std::fs::copy(
+        workspace().join("fixtures/nam/wavenet.nam"),
+        home.join("nam/Amps/wavenet.nam"),
+    )
+    .unwrap();
+    let plugins = Plugins::discover(
+        &[folder],
+        SharedSettings::default(),
+        oxiguitar_host::display_system(),
+        Arc::new(Unheard),
+    );
+    let folders = oxiguitar_host::Folders::resolve(
+        oxiguitar_host::System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    plugins.use_folders(folders);
+    (plugins, scratch)
+}
+
+/// The NAM plugin passes the contract, and plays a model and a built-in
+/// cabinet through the suite's real-time checks: nothing allocated and
+/// (on Linux) no system call made while it runs (M4 slice 6).
+#[test]
+fn our_nam_plugin_runs_a_model_in_real_time() {
+    for (_, name) in OUR_EFFECTS {
+        let report = check(&ours().join(format!("{name}.oxp")));
+        assert!(report.ok(), "{name}.oxp: {:#?}", report.failed);
+    }
+    let (plugins, scratch) = nam_plugins("realtime");
+    let settings =
+        r#"{"on": true, "model": "Amps/wavenet.nam", "cabinet": "built-in:evh-5150-iii"}"#;
+    let report = oxiguitar_plugin_test::check_realtime(&plugins, settings);
+    assert!(report.ok(), "{:#?}", report.failed);
+    for wanted in [
+        "effect nam: it prepares",
+        "effect nam: it allocates nothing",
+    ] {
+        assert!(
+            report.passed.iter().any(|p| p.contains(wanted)),
+            "{wanted}: {:#?}",
+            report.passed
+        );
+    }
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// At a rate other than the model's, the track goes to 48 kHz and back:
+/// it says its latency, makes sound, and allocates nothing while running;
+/// a model that isn't there is refused with its name.
+#[test]
+fn our_nam_plugin_converts_the_rate_for_its_model() {
+    use oxiguitar_host::api::class::InstrumentClass;
+    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
+
+    let (plugins, scratch) = nam_plugins("rate");
+    let effect = plugins.effects_for(InstrumentClass::Fretted)[0];
+    let prepare = |settings: &str| PrepareEffect {
+        effect: "nam".into(),
+        rate: 44_100,
+        frames: 512,
+        track: PreparedTrack {
+            info: TrackInfo {
+                index: 0,
+                name: "Lead".into(),
+                class: InstrumentClass::Fretted,
+            },
+            program: 29,
+            percussion: false,
+            tuning: vec![64, 59, 55, 50, 45, 40],
+            capo: 0,
+            settings: settings.into(),
+        },
+    };
+    let mut amp = plugins
+        .prepare_effect(
+            effect,
+            prepare(r#"{"on": true, "model": "Amps/wavenet.nam"}"#),
+        )
+        .unwrap();
+    assert!(
+        amp.latency() > 16,
+        "the conversion's latency: {}",
+        amp.latency()
+    );
+    let mut peak = 0.0f32;
+    let mut allocated = 0;
+    for k in 0..200 {
+        let mut l: Vec<f32> = (0..300)
+            .map(|n| (((k * 300 + n) as f32) * 0.06).sin() * 0.3)
+            .collect();
+        let mut r = l.clone();
+        let before = amp.allocations();
+        assert!(amp.process(&mut l, &mut r));
+        if k > 0 {
+            allocated += amp.allocations().saturating_sub(before);
+        }
+        peak = l.iter().fold(peak, |p, v| p.max(v.abs()));
+        assert_eq!(l, r, "the same on both sides");
+    }
+    assert!(peak > 0.01, "it makes sound: {peak}");
+    assert_eq!(allocated, 0, "nothing allocated while running");
+    let off = plugins
+        .prepare_effect(
+            effect,
+            prepare(r#"{"on": false, "model": "Amps/wavenet.nam"}"#),
+        )
+        .unwrap();
+    assert_eq!(off.latency(), 0);
+    let missing = plugins
+        .prepare_effect(effect, prepare(r#"{"on": true, "model": "gone.nam"}"#))
+        .unwrap_err();
+    assert!(missing.to_string().contains("gone.nam"), "{missing}");
+    let escaping = plugins
+        .prepare_effect(effect, prepare(r#"{"on": true, "model": "../../x.nam"}"#))
+        .unwrap_err();
+    assert!(
+        escaping.to_string().contains("isn't in the nam folder"),
+        "{escaping}"
+    );
+    let _ = std::fs::remove_dir_all(&scratch);
 }
 
 /// A mono 16-bit WAV file of a 440 Hz sine at half scale, `seconds`
@@ -173,12 +313,13 @@ fn the_list_of_our_plugins_is_the_plugins_folder() {
         .iter()
         .map(|(_, n)| *n)
         .chain(OUR_INSTRUMENTS.iter().map(|(_, n)| *n))
+        .chain(OUR_EFFECTS.iter().map(|(_, n)| *n))
         .chain(OUR_DEVICES.iter().map(|(_, n, _)| *n))
         .map(str::to_owned)
         .collect();
     listed.sort();
     assert_eq!(folders, listed);
-    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS) {
+    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS).chain(OUR_EFFECTS) {
         assert_eq!(*package, format!("oxiguitar-{name}-plugin"));
     }
     for (package, name, os) in OUR_DEVICES {

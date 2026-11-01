@@ -30,6 +30,18 @@ Files: assets/linux/io.github.mateusrdp.OxiGuitar.metainfo.xml
 Copyright: 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 License: CC0-1.0
 
+Files: plugins/nam/irs/*
+Copyright: 2013 David Fau Casquel
+License: GPL-2.0-or-later
+Comment: Four impulse responses of the BestPlugins Mega Pack 2, as Guitarix
+ ships them (trunk/IR/BestPlugins_Amps/), renamed.
+
+Files: fixtures/nam/*
+Copyright: 2023-2026 Steven Atkinson
+License: MIT
+Comment: Test models from NeuralAmpModelerCore (example_models/), for tests
+ only.
+
 Files: assets/fonts/bravura/*
 Copyright: 2015 Steinberg Media Technologies GmbH
 License: OFL-1.1
@@ -181,3 +193,12 @@ License: CC0-1.0
  .
  On Debian systems, the complete text of the CC0 1.0 Universal Public
  Domain Dedication is in /usr/share/common-licenses/CC0-1.0.
+
+License: GPL-2.0-or-later
+ This program is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the Free
+ Software Foundation; either version 2 of the License, or (at your option)
+ any later version.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 is in /usr/share/common-licenses/GPL-2.

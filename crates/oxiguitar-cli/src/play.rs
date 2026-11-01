@@ -149,7 +149,17 @@ fn sources(score: &Score, rate: u32) -> Result<Ready, String> {
 fn play(asked: &Asked) -> Result<(), String> {
     let data = std::fs::read(&asked.path).map_err(|e| format!("cannot open: {e}"))?;
     let opened = open(&asked.path, &data)?;
-    let score = opened.score;
+    let mut score = opened.score;
+    // The tracks' plugin settings (the track dialog's sections: NAM's amp,
+    // say) live beside the file, FILE.oxg, as the window reads them.
+    let sidecar = oxiguitar_host::sidecar::Sidecar::read_for(std::path::Path::new(&asked.path))?;
+    if let Some(sidecar) = sidecar {
+        let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
+        let settled = sidecar.settle(&names);
+        for (track, plugins) in score.tracks.iter_mut().zip(settled) {
+            track.plugins = plugins;
+        }
+    }
     let timeline = Timeline::new(&score);
     let visits = timeline.visits();
     let start_of = |bar: usize| -> Result<f64, String> {

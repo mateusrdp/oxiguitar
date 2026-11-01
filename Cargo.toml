@@ -57,6 +57,13 @@ lewton = "0.10.2"
 # FLAC, to decode SFZ instruments' samples (the SoundFont plugin).
 # Apache-2.0, no dependencies.
 claxon = "0.4.3"
+# Neural Amp Modeler models (the NAM plugin): pure Rust, real-time safe,
+# every system. MIT; serde, serde_json and thiserror only. Used exactly as
+# published (Mateus, 25 Oct 2026).
+nam-rs = "0.4.0"
+# FFTs for cabinet impulse responses (the NAM plugin). MIT OR Apache-2.0;
+# Debian has it.
+rustfft = "6.4.1"
 # The plugin interface's messages (oxiguitar-plugin-api). No default
 # features: the defaults add nothing we use. Debian ships 1.1.3.
 postcard = { version = "1.1", default-features = false, features = ["use-std"] }

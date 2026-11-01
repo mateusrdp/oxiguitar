@@ -17,4 +17,5 @@
 - [Keyboard and mouse](keys.md)
 - [Settings and plugins](plugins.md)
 - [Better sounds](better-sounds.md)
+- [Amp models (NAM)](amp-models.md)
 - [Hear it](hear-it.md)

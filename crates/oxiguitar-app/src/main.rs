@@ -1644,6 +1644,14 @@ fn drawn_image(drawn: &plugin_tabs::Drawn) -> Image {
     Image::from_rgba8_premultiplied(buf)
 }
 
+/// How wide a plugin's drop-down is: room for its longest option at the
+/// window's 12–13 px text (about 7 px a character) and the arrow, within
+/// reason.
+fn choice_width(options: &[String]) -> f32 {
+    let longest = options.iter().map(|o| o.chars().count()).max().unwrap_or(0);
+    (longest as f32 * 7.0 + 44.0).clamp(100.0, 440.0)
+}
+
 /// One plugin widget, as the window's `PluginTab` shows it.
 fn plugin_widget(w: &Widget, canvases: &HashMap<String, Image>) -> PluginWidget {
     let mut out = PluginWidget {
@@ -1716,6 +1724,7 @@ fn plugin_widget(w: &Widget, canvases: &HashMap<String, Image>) -> PluginWidget 
             ));
             out.selected = *selected as i32;
             out.enabled = *enabled;
+            out.wide = choice_width(options);
         }
         Widget::List {
             id,
