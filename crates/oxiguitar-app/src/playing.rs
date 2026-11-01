@@ -352,36 +352,15 @@ fn put_caret_at(app: &Shared, p: Place) {
 }
 
 /// The player's keys, before the editor's: Space plays and pauses (as in
-/// Guitar Pro 8); Enter plays and stops; Ctrl + Left and Right move a bar
-/// back and on (the sound while it runs, else the caret). Returns whether
-/// the key was taken.
+/// Guitar Pro 8). Ctrl + Left and Right move a bar back and on (the sound
+/// while it runs, else the caret). Returns whether the key was taken.
 pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) -> bool {
     if name == " " && !shift && !ctrl && !alt {
-        eprintln!(
-            "[playing::key] space: state={:?}",
-            app.borrow().player.state()
-        );
         let state = app.borrow().player.state();
         if matches!(state, State::Playing | State::Starting) {
             action(app, "pause");
         } else if app.borrow().player.can_play() {
             action(app, "play");
-        }
-        return true;
-    }
-    if name == "return" && !shift && !ctrl && !alt {
-        eprintln!(
-            "[playing::key] return: state={:?} can_play={}",
-            app.borrow().player.state(),
-            app.borrow().player.can_play()
-        );
-        let state = app.borrow().player.state();
-        if matches!(state, State::Playing | State::Starting) {
-            eprintln!("[playing::key] return: stop");
-            let _ = stop(app);
-        } else if app.borrow().player.can_play() {
-            eprintln!("[playing::key] return: play");
-            let _ = play(app, false);
         }
         return true;
     }

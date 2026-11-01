@@ -1592,7 +1592,6 @@ export component AppWindow inherits Window {
                 : event.text == Key.Backspace ? "backspace"
                 : event.text == Key.Delete ? "delete"
                 : event.text == Key.Insert ? "insert"
-                : event.text == Key.Return ? "return"
                 : event.text;
             if (event.text == Key.Escape) {
                 // Closes the Help popups (a click anywhere does too).
@@ -1692,12 +1691,6 @@ export component AppWindow inherits Window {
                                 tip: root.player-available ? "Rewind (Ctrl + Left / Right: a bar back / on while playing)" : "Rewind" + root.player-why;
                                 enabled: root.player-available;
                                 clicked => { root.player-action("rewind"); }
-                            }
-                            IconButton {
-                                icon: @image-url("../../../assets/icons/ui/stop.svg");
-                                tip: "Stop (Enter: back to where playing began)";
-                                enabled: root.player-available && root.player-state != 0;
-                                clicked => { root.player-action("stop"); }
                             }
                             IconButton {
                                 icon: root.player-state == 1 || root.player-state == 2
