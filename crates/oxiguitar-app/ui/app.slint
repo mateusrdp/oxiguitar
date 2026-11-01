@@ -1120,6 +1120,7 @@ export component AppWindow inherits Window {
     callback overview-clicked(float);
     in property <bool> visual-on;
     callback speed-slider-moved(float);
+    callback speed-text-edited(string);
     callback master-moved(float);
     callback output-chosen(int);
     // What shows of playback while the sound doesn't run: where it
@@ -1741,7 +1742,7 @@ export component AppWindow inherits Window {
                                 width: 30px;
                                 height: 28px;
                                 border-radius: 4px;
-                                background: root.visual-on && root.player-running
+                                background: root.metronome-on && root.player-running
                                     ? (root.play-frame.strong
                                         ? Look.warning.transparentize(1 - root.play-frame.flash * 0.9)
                                         : Look.accent.transparentize(1 - root.play-frame.flash * 0.9))
@@ -1776,11 +1777,11 @@ export component AppWindow inherits Window {
                                 enabled: root.player-available;
                                 changed(v) => { root.speed-slider-moved(v); }
                             }
-                            Text {
+                            LineEdit {
+                                width: 48px;
                                 text: root.player-speed-text;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                                color: Palette.foreground.transparentize(root.player-available ? 0.2 : 0.6);
+                                enabled: root.player-available;
+                                edited(v) => { root.speed-text-edited(v); }
                             }
                             Rectangle { width: 8px; }
                             Text {

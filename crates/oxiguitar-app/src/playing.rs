@@ -370,7 +370,7 @@ pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) 
         }
         return true;
     }
-    if name == "Return" && !shift && !ctrl && !alt {
+    if (name == "Return" || name == "Enter") && !shift && !ctrl && !alt {
         let state = app.borrow().player.state();
         if matches!(state, State::Playing | State::Starting) {
             let _ = stop(app);

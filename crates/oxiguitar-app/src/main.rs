@@ -1135,6 +1135,14 @@ fn main() -> Result<(), slint::PlatformError> {
         playing::sync(&a);
     });
     let a = app.clone();
+    ui.on_speed_text_edited(move |v| {
+        if let Ok(n) = v.parse::<u32>() {
+            let speed = n.clamp(25, 200);
+            a.borrow_mut().player.set_speed(speed);
+            playing::sync(&a);
+        }
+    });
+    let a = app.clone();
     ui.on_master_moved(move |v| {
         a.borrow_mut().player.set_master(v);
     });
