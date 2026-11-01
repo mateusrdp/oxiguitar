@@ -2,7 +2,7 @@
   "interface": "1.4",
   "id": "oxiguitar.nam",
   "name": "NAM",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Amp models (Neural Amp Modeler captures) and cabinet impulse responses on guitar and bass tracks, set in the track dialog. Models and impulse responses are files you put in the nam folder.",
   "authors": [
     "Mateus Rocha de Paula",
@@ -56,7 +56,7 @@
   "needs": [
     {
       "id": "oxiguitar.midi",
-      "version": "0.10.0"
+      "version": "0.11.0"
     }
   ],
   "folders": [

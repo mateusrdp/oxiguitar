@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-01
+
+A pre-release, with every plugin still inside, that releases what milestone M4 built (MIDI with SFZ, NAM, WAV export, the audio outputs) and **freezes plugin interface 1.4**: the plugins move to repositories of their own from here (#165), and depend on this tag. The SDK crates are at version 1.4.0; from now on they change only by interface 1.5. The MIDI plugin has a new id, `oxiguitar.midi`, and takes over the settings of `oxiguitar.soundfont`.
+
 ### Changed
 
 - **The Inspector is now the Bar and Note tabs** (#177), beside the Song tab on the right. **Bar** shows the caret's bar and each voice's beats as before, and now holds everything the Bar dialog did: time signature, free time, key, clef, tempo, feel, repeats and how often they play, alternate endings, section, double bar line and directions. **Note** shows the caret's note and beat as the Inspector did. The Bar tab's fields change the bar as you use them, each change a step to undo, and change all the selected bars when several are selected. The Bar dialog is gone, with its entries in the Edit menu and the page's right-click menu: click the **Bar** tab instead. Ctrl + K, Ctrl + /, D, Shift + Insert, the palette's bar tools and a double-click on a time signature show it. Keys are shown shorter in the key drop-down ("G / Em (1♯)").
@@ -25,7 +29,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 - The player plays each track's effects after its instrument, and lines up tracks whose effects make them late.
 
 - The SoundFont plugin's settings window says, with a link to the manual's Better sounds page, which free recorded sets to get, and says so plainly while only your system's basic set plays. The page itself is rewritten as steps: the three recommended SFZ sets (Black and Green Guitars, Black and Blue Basses, the MuldjordKit) first, where to download each, where to unpack it and what to pick. OxiGuitar still downloads nothing: the link opens the page in your browser.
-- Plugin interface **1.4** (in development, frozen with v1.0): a link among a tab's widgets (`Widget::Link`), which OxiGuitar opens in the browser, `https://` addresses only. Plugins built for 1.3 load as they are.
+- Plugin interface **1.4** (frozen with this release): a link among a tab's widgets (`Widget::Link`), which OxiGuitar opens in the browser, `https://` addresses only. Plugins built for 1.3 load as they are.
 - Plugin interface 1.4: **a plugin can need another plugin** (`needs` in its manifest, with a lowest version). When the other one is missing, too old, disabled or can't be used, OxiGuitar doesn't use the plugin, the footer shows an error saying which plugin it needs, and Tools → Plugins says why. **A plugin can take over another plugin's id** (`replaces`): the old plugin's files are then treated as older versions of the new one, and what OxiGuitar kept under the old id (its settings, its data folder, the tracks' sections saved beside scores) is copied to the new one on the first start, keeping the old copy for older versions. The plugin guide's manifest page explains both (#165).
 
 - Plugin interface 1.4: **a plugin can show advice** (`Host::advise`): a dialog with a title, a text and up to three links, shown once the window is up and one at a time, with a "Don't show this again" box. What the user ticks is kept in settings.json under `advice`, one entry for each plugin and advice (`"advice": {"yourname.example": {"no-model": "hidden"}}`); delete a line to get its dialog back. Links open in the browser only when clicked, `https://` addresses only. The plugin guide has a new page, Advice (#165).
