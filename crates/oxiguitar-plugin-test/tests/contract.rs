@@ -1258,6 +1258,98 @@ fn the_engine_plays_a_plugin_instrument_on_its_frames() {
     control.collect();
 }
 
+/// The left channel's loudest frame over a second of the test song from
+/// its first note, as `plan` is prepared.
+fn peak_of(
+    plugins: &Plugins,
+    score: &oxiguitar_model::Score,
+    plan: &oxiguitar_play::plugin_source::Plan,
+) -> f32 {
+    use oxiguitar_play::{Schedule, Timeline, engine};
+    let prepared =
+        oxiguitar_play::plugin_source::prepare(plugins, score, plan, 48_000, 512).unwrap();
+    assert!(prepared.silent.is_empty(), "{:?}", prepared.silent);
+    let timeline = Timeline::new(score);
+    let schedule = Arc::new(Schedule::new(&timeline, &prepared.routes, prepared.count));
+    let (mut engine, mut control) = engine(48_000, 512);
+    let mut sources = prepared.sources;
+    sources.fit(&schedule);
+    control.set_schedule(schedule);
+    control.set_sources(sources);
+    let first = timeline
+        .notes
+        .iter()
+        .map(|n| n.start)
+        .fold(f64::MAX, f64::min);
+    control.play(first, false);
+    let mut out = vec![0.0f32; 1024];
+    let mut peak = 0.0f32;
+    for _ in 0..96 {
+        engine.render(&mut out, 2, 0);
+        peak = out.iter().step_by(2).fold(peak, |p, v| p.max(v.abs()));
+    }
+    control.pause();
+    engine.render(&mut out, 2, 0);
+    control.set_sources(oxiguitar_play::Sources::new(Vec::new()));
+    engine.render(&mut out, 2, 0);
+    control.collect();
+    peak
+}
+
+#[test]
+fn the_player_puts_each_track_s_effects_after_its_instrument() {
+    use oxiguitar_play::plugin_source::plan;
+
+    let dir = folder("effects", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let mut score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
+        .unwrap()
+        .score;
+    // Every track gets the test plugin's gain, which plays every class.
+    let with = plan(&plugins, &score);
+    assert!(!with.is_empty());
+    for g in &with.groups {
+        assert_eq!(g.effects.len(), g.tracks.len());
+        for chain in &g.effects {
+            assert_eq!(chain.len(), 1);
+            assert_eq!(
+                (chain[0].plugin.as_str(), chain[0].effect.as_str()),
+                ("oxiguitar.test", "gain")
+            );
+            assert_eq!(chain[0].settings, "{}");
+        }
+    }
+    // Without its effects, the same instruments play twice as loud.
+    let mut without = with.clone();
+    for g in &mut without.groups {
+        for chain in &mut g.effects {
+            chain.clear();
+        }
+    }
+    let (loud, quiet) = (
+        peak_of(&plugins, &score, &without),
+        peak_of(&plugins, &score, &with),
+    );
+    assert!(loud > 0.01, "it plays: {loud}");
+    assert!(
+        (quiet / loud - 0.5).abs() < 0.01,
+        "the gain halves it: {quiet} against {loud}"
+    );
+    // The track dialog's settings for the effect's plugin reach it, and a
+    // change of them is a new plan, so the player prepares again.
+    score.tracks[0]
+        .plugins
+        .insert("oxiguitar.test".into(), r#"{"gain": true}"#.into());
+    let changed = plan(&plugins, &score);
+    assert_ne!(changed, with);
+    assert_eq!(
+        changed.groups[0].effects[0][0].settings,
+        r#"{"gain": true}"#
+    );
+}
+
 #[test]
 fn an_audio_device_plays_the_engine_through_the_host() {
     // The fake device (priority -100) is the only one here, so it is

@@ -62,12 +62,53 @@ pub trait Source: Send {
         out: &mut Buffers,
     );
 
-    /// The frames its sound comes late by (a resampler's, an oversampler's).
-    /// The clock moves the cursor back by the largest source's. (Lining
-    /// sources of different latencies up with each other comes with the
-    /// first one that has any: ours have none.)
+    /// The frames its sound comes late by (a resampler's, an oversampler's):
+    /// its latest track's.
     fn latency(&self) -> u32 {
         0
+    }
+
+    /// The frames track `slot`'s sound comes late by: an instrument's
+    /// latency plus that of the effects after it on that track (NAM
+    /// resampling for a device that isn't at 48 kHz). [`Sources`] delays
+    /// every other track to the latest one's, so the tracks stay together,
+    /// and the clock moves the cursor back by it. By default, [`latency`].
+    ///
+    /// [`latency`]: Source::latency
+    fn track_latency(&self, slot: usize) -> u32 {
+        let _ = slot;
+        self.latency()
+    }
+}
+
+/// A fixed delay of a few frames, in place: what lines a track up with a
+/// later one. Allocated off the audio thread.
+#[derive(Debug, Default)]
+struct Delay {
+    line: Vec<f32>,
+    at: usize,
+}
+
+impl Delay {
+    fn new(frames: usize) -> Delay {
+        Delay {
+            line: vec![0.0; frames],
+            at: 0,
+        }
+    }
+
+    fn process(&mut self, x: &mut [f32]) {
+        let n = self.line.len();
+        if n == 0 {
+            return;
+        }
+        for s in x {
+            std::mem::swap(s, &mut self.line[self.at]);
+            self.at += 1;
+            if self.at == n {
+                self.at = 0;
+            }
+        }
     }
 }
 
@@ -126,6 +167,9 @@ pub struct Slot {
     events: Vec<RtEvent>,
     /// The score's track of each of the source's tracks.
     tracks: Vec<usize>,
+    /// Each track's left and right delay, up to the latest track's
+    /// latency (set by [`Sources::new`]).
+    delays: Vec<[Delay; 2]>,
 }
 
 /// The events a source's list holds at least.
@@ -138,6 +182,7 @@ impl Slot {
         Slot {
             buffers: Buffers::new(tracks.len(), capacity),
             events: Vec::with_capacity(EVENTS),
+            delays: Vec::new(),
             source,
             tracks,
         }
@@ -150,8 +195,22 @@ pub struct Sources {
 }
 
 impl Sources {
-    /// `slots`, in the order routes name them.
-    pub fn new(slots: Vec<Slot>) -> Sources {
+    /// `slots`, in the order routes name them. Every track is delayed to
+    /// the latest one's latency, so all of them sound together.
+    pub fn new(mut slots: Vec<Slot>) -> Sources {
+        let latest = slots
+            .iter()
+            .flat_map(|s| (0..s.tracks.len()).map(|k| s.source.track_latency(k)))
+            .max()
+            .unwrap_or(0);
+        for s in &mut slots {
+            s.delays = (0..s.tracks.len())
+                .map(|k| {
+                    let d = (latest - s.source.track_latency(k).min(latest)) as usize;
+                    [Delay::new(d), Delay::new(d)]
+                })
+                .collect();
+        }
         Sources { slots }
     }
 
@@ -166,10 +225,11 @@ impl Sources {
         }
     }
 
+    /// The latest track's latency, which every track now has.
     fn latency(&self) -> u32 {
         self.slots
             .iter()
-            .map(|s| s.source.latency())
+            .flat_map(|s| (0..s.tracks.len()).map(|k| s.source.track_latency(k)))
             .max()
             .unwrap_or(0)
     }
@@ -873,6 +933,12 @@ fn render_slot(slot: &mut Slot, pitch: &[PitchPoint], frames: usize, time: f64, 
     slot.buffers.clear(frames);
     slot.source
         .render(&slot.events, pitch, time, step, &mut slot.buffers);
+    for (k, [left, right]) in slot.delays.iter_mut().enumerate() {
+        if let Some((l, r)) = slot.buffers.track(k) {
+            left.process(l);
+            right.process(r);
+        }
+    }
     true
 }
 

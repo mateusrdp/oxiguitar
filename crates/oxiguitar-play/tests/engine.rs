@@ -306,3 +306,73 @@ fn the_mixer_pans_mutes_and_solos_and_the_metronome_clicks() {
     );
     let _ = schedule;
 }
+
+/// Writes one click on each of its tracks, track `k` late by `late[k]`
+/// frames as an effect would make it, and says so.
+struct Late {
+    late: [u32; 2],
+    frame: u64,
+}
+
+impl oxiguitar_play::Source for Late {
+    fn render(
+        &mut self,
+        _events: &[oxiguitar_play::realtime::RtEvent],
+        _pitch: &[oxiguitar_play::realtime::PitchPoint],
+        _time: f64,
+        _step: f64,
+        out: &mut oxiguitar_play::Buffers,
+    ) {
+        let n = out.frames() as u64;
+        for k in 0..2 {
+            let at = 100 + u64::from(self.late[k]);
+            if (self.frame..self.frame + n).contains(&at)
+                && let Some((l, r)) = out.track(k)
+            {
+                l[(at - self.frame) as usize] = 0.25;
+                r[(at - self.frame) as usize] = 0.25;
+            }
+        }
+        self.frame += n;
+    }
+
+    fn latency(&self) -> u32 {
+        self.late[0].max(self.late[1])
+    }
+
+    fn track_latency(&self, slot: usize) -> u32 {
+        self.late[slot]
+    }
+}
+
+#[test]
+fn tracks_whose_effects_come_late_are_lined_up_with_the_others() {
+    use oxiguitar_play::{Slot, Sources, engine};
+
+    // Track 1's effect delays it by 10 frames; track 0 has none; a second
+    // source has no latency at all. Each track is delayed to the latest.
+    let (mut engine, mut control) = engine(RATE, 512);
+    let sources = Sources::new(vec![
+        Slot::new(
+            Box::new(Late {
+                late: [0, 10],
+                frame: 0,
+            }),
+            vec![0, 1],
+            512,
+        ),
+        Slot::new(
+            Box::new(Late {
+                late: [0, 0],
+                frame: 0,
+            }),
+            vec![2, 3],
+            512,
+        ),
+    ]);
+    control.set_sources(sources);
+    let (left, _) = run(&mut engine, 1000, true);
+    let loud: Vec<usize> = (0..left.len()).filter(|&i| left[i].abs() > 1e-6).collect();
+    assert_eq!(loud, [110], "every track's click on the latest one's frame");
+    control.collect();
+}
