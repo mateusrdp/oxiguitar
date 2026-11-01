@@ -605,19 +605,6 @@ pub(crate) fn notation_clicked(app: &Shared, sheet: usize, x: f32, y: f32) {
         let Some((_, t)) = crate::player::time_of(&tl, place, 0) else {
             return;
         };
-        eprintln!(
-            "[notation_clicked] sheet={} x={:.1} y={:.1} spot=(t={},s={},b={},beat={:?}) place=(bar={},offset={:.4}) time={:.3}",
-            sheet,
-            x,
-            y,
-            spot.track,
-            spot.staff,
-            spot.bar,
-            spot.beat,
-            spot.bar,
-            offset.to_f64(),
-            t
-        );
         s.player.seek(t);
         crate::player::place_at(&tl, t.min(tl.length() - 1e-6).max(0.0))
     };
