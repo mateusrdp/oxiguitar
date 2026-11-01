@@ -357,6 +357,10 @@ fn put_caret_at(app: &Shared, p: Place) {
 /// the key was taken.
 pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) -> bool {
     if name == " " && !shift && !ctrl && !alt {
+        eprintln!(
+            "[playing::key] space: state={:?}",
+            app.borrow().player.state()
+        );
         let state = app.borrow().player.state();
         if matches!(state, State::Playing | State::Starting) {
             action(app, "pause");
@@ -365,11 +369,18 @@ pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) 
         }
         return true;
     }
-    if (name == "Return" || name == "Enter" || name == "enter") && !shift && !ctrl && !alt {
+    if name == "return" && !shift && !ctrl && !alt {
+        eprintln!(
+            "[playing::key] return: state={:?} can_play={}",
+            app.borrow().player.state(),
+            app.borrow().player.can_play()
+        );
         let state = app.borrow().player.state();
         if matches!(state, State::Playing | State::Starting) {
+            eprintln!("[playing::key] return: stop");
             let _ = stop(app);
         } else if app.borrow().player.can_play() {
+            eprintln!("[playing::key] return: play");
             let _ = play(app, false);
         }
         return true;
