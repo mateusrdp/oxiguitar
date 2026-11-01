@@ -1,0 +1,99 @@
+{
+  "total_nodes": 3976,
+  "total_edges": 4235,
+  "checks": [
+    {
+      "name": "duplicate_node_ids",
+      "status": "pass",
+      "details": "No duplicate node IDs"
+    },
+    {
+      "name": "dangling_edges",
+      "status": "pass",
+      "details": "No dangling edges"
+    },
+    {
+      "name": "edge_type_field",
+      "status": "warn",
+      "details": "494 edges missing 'type' field"
+    },
+    {
+      "name": "node_type_field",
+      "status": "warn",
+      "details": "31 nodes missing 'type' field"
+    },
+    {
+      "name": "node_category_field",
+      "status": "info",
+      "details": "3888 nodes missing 'category' field",
+      "category_distribution": {
+        "none": 3888,
+        "docs": 32,
+        "config": 31,
+        "code": 25
+      }
+    },
+    {
+      "name": "layer_coverage",
+      "status": "pass",
+      "details": "898 nodes covered by layers, 0 layer nodes not in graph, 3078 graph nodes not in any layer",
+      "layers_count": 7,
+      "not_in_graph_examples": []
+    },
+    {
+      "name": "edge_type_distribution",
+      "status": "info",
+      "distribution": {
+        "contains": 1446,
+        "related": 663,
+        "uses": 570,
+        "calls": 542,
+        "missing": 494,
+        "exports": 165,
+        "imports": 160,
+        "documents": 74,
+        "demonstrates": 25,
+        "has_config": 25,
+        "uses_config": 25,
+        "configures": 21,
+        "tested_by": 10,
+        "format-variant-of": 4,
+        "related-data": 3,
+        "layout-variant-of": 3,
+        "similar_theme": 2,
+        "licenses": 1,
+        "co-located": 1,
+        "influences": 1
+      }
+    },
+    {
+      "name": "node_type_distribution",
+      "status": "info",
+      "distribution": {
+        "function": 1783,
+        "struct": 474,
+        "file": 454,
+        "document": 229,
+        "config": 206,
+        "property": 138,
+        "track": 120,
+        "conversion": 110,
+        "module": 73,
+        "fixture_file": 51,
+        "song": 50,
+        "concept": 36,
+        "section": 34,
+        "enum": 33,
+        "unknown": 31,
+        "tempo": 25,
+        "attribute": 20,
+        "build-dependency": 11,
+        "constant": 11,
+        "pipeline": 9
+      }
+    }
+  ],
+  "grade": "B",
+  "fail_count": 0,
+  "warn_count": 2
+}

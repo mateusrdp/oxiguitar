@@ -141,6 +141,69 @@ fn detect_reports_misleading_extensions() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// Returns the system plugin directories for the target platform.
+/// Mirrors `Folders::resolve()` system_plugins logic so tests can
+/// check whether system plugins are available without importing the
+/// host crate.
+fn system_plugin_folders() -> Vec<PathBuf> {
+    let exe = std::env::current_exe().ok();
+    let bin = exe.as_ref().and_then(|p| p.parent());
+    let system = if cfg!(target_os = "macos") {
+        "macos"
+    } else if cfg!(target_os = "windows") {
+        "windows"
+    } else {
+        "linux"
+    };
+
+    match system {
+        "linux" => {
+            let derived = bin
+                .and_then(Path::parent)
+                .map(|prefix| prefix.join("lib").join("oxiguitar").join("plugins"));
+            let fallbacks = [
+                PathBuf::from("/usr/lib/oxiguitar/plugins"),
+                PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
+            ];
+            let mut out: Vec<PathBuf> = Vec::with_capacity(3);
+            if let Some(p) = derived
+                && !fallbacks.contains(&p)
+            {
+                out.push(p);
+            }
+            out.extend(fallbacks);
+            out
+        }
+        "macos" => bin
+            .and_then(Path::parent)
+            .map(|contents| contents.join("PlugIns"))
+            .into_iter()
+            .chain([PathBuf::from(
+                "/Library/Application Support/OxiGuitar/plugins",
+            )])
+            .collect(),
+        "windows" => bin
+            .map(|b| b.join("plugins"))
+            .into_iter()
+            .chain([PathBuf::from("C:/Program Files/OxiGuitar/plugins")])
+            .collect(),
+        _ => unreachable!(),
+    }
+}
+
+/// True when any system plugin directory exists and contains .oxp files.
+fn system_plugins_available() -> bool {
+    system_plugin_folders().iter().any(|dir| {
+        dir.is_dir()
+            && dir.read_dir().is_ok_and(|mut r| {
+                r.any(|e| {
+                    e.map(|e| e.file_name().to_string_lossy().ends_with(".oxp"))
+                        .unwrap_or(false)
+                })
+            })
+    })
+}
+
 #[test]
 fn without_plugins_nothing_opens() {
     let empty = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-empty-home");
@@ -151,12 +214,30 @@ fn without_plugins_nothing_opens() {
         .arg(fixture("oxiguitar-test-song.gp5"))
         .output()
         .unwrap();
-    assert_eq!(out.status.code(), Some(1));
-    let text = String::from_utf8(out.stderr).unwrap();
-    assert!(
-        text.contains("no plugin that opens files is installed"),
-        "{text}"
-    );
+    // System plugins are discoverable even with an empty home.
+    // When they are installed (local development) the file opens
+    // successfully; when they are not (CI runners) the CLI reports
+    // that no plugin that opens files is installed.
+    if system_plugins_available() {
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let text = String::from_utf8_lossy(&out.stdout);
+        assert!(text.contains("Guitar Pro 5"), "{text}");
+    } else {
+        assert!(
+            !out.status.success(),
+            "expected failure, got success: {}",
+            String::from_utf8_lossy(&out.stdout)
+        );
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            err.contains("no plugin that opens files is installed"),
+            "{err}"
+        );
+    }
     // Nothing was created in the home folder: the program only reads it.
     assert_eq!(std::fs::read_dir(&empty).unwrap().count(), 0);
 }
@@ -351,7 +432,8 @@ fn events_prints_the_score_as_it_plays() {
     );
 }
 
-/// A home whose plugin folder holds our format and instrument plugins and
+/// A home whose plugin folder holds our format, instrument and exporter
+/// plugins and
 /// whose `soundfonts` folder holds the contract suite's test set, which
 /// the SoundFont plugin plays before any set of the system's.
 fn sound_home() -> &'static Path {
@@ -367,6 +449,7 @@ fn sound_home() -> &'static Path {
         for (_, name) in oxiguitar_plugin_test::OURS
             .iter()
             .chain(oxiguitar_plugin_test::OUR_INSTRUMENTS)
+            .chain(oxiguitar_plugin_test::OUR_EXPORTERS)
         {
             let file = format!("{name}.oxp");
             std::fs::copy(built.join(&file), home.join("plugins").join(&file)).unwrap();
@@ -394,7 +477,7 @@ fn play_into_a_wav_file_needs_no_sound_card() {
         .unwrap();
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
     let said = String::from_utf8_lossy(&o.stdout);
-    assert!(said.contains("with SoundFont"), "{said}");
+    assert!(said.contains("with MIDI (SoundFont, SFZ)"), "{said}");
     let wav = std::fs::read(&out).unwrap();
     assert_eq!(&wav[..4], b"RIFF");
     assert_eq!(&wav[8..16], b"WAVEfmt ");
@@ -429,4 +512,44 @@ fn play_into_a_wav_file_needs_no_sound_card() {
         .collect();
     left.sort();
     assert_eq!(left, ["plugins", "soundfonts"]);
+}
+
+#[test]
+fn export_names_what_no_plugin_exports() {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("nothing.xyz");
+    let o = cli()
+        .arg("export")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    let said = String::from_utf8_lossy(&o.stderr);
+    assert!(said.contains("exports .xyz files"), "{said}");
+    assert!(!out.exists());
+}
+
+#[test]
+fn export_writes_a_wav_file_through_the_wav_plugin() {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("exported.wav");
+    let _ = std::fs::remove_file(&out);
+    let o = Command::new(env!("CARGO_BIN_EXE_oxiguitar-cli"))
+        .env("OXIGUITAR_HOME", sound_home())
+        .arg("export")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .arg(&out)
+        .args(["--bars", "1-2", "--speed", "50"])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let said = String::from_utf8_lossy(&o.stdout);
+    assert!(said.contains("through WAV Audio"), "{said}");
+    let wav = std::fs::read(&out).unwrap();
+    assert_eq!(&wav[..4], b"RIFF");
+    // The defaults: 24 bits at 48 kHz.
+    assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 48_000);
+    assert_eq!(u16::from_le_bytes([wav[34], wav[35]]), 24);
+    // Bars 1 and 2 (4/4 at 96 bpm: 5 s) at half speed, and the tail.
+    let seconds = (wav.len() - 44) as f64 / 6.0 / 48_000.0;
+    assert!((seconds - 12.0).abs() < 0.1, "{seconds} s");
 }

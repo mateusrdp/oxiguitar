@@ -1,0 +1,1053 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 1,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 1,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": [
+    {
+      "path": "crates/oxiguitar-testgen/src/gpif.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 628,
+      "nonEmptyLines": 612,
+      "functions": [
+        {
+          "name": "to_gp",
+          "startLine": 16,
+          "endLine": 18,
+          "params": [
+            "song"
+          ]
+        },
+        {
+          "name": "pack",
+          "startLine": 21,
+          "endLine": 35,
+          "params": [
+            "gpif",
+            "part_configuration"
+          ]
+        },
+        {
+          "name": "part_configuration",
+          "startLine": 38,
+          "endLine": 45,
+          "params": [
+            "song"
+          ]
+        },
+        {
+          "name": "cdata",
+          "startLine": 47,
+          "endLine": 49,
+          "params": [
+            "x",
+            "tag",
+            "text"
+          ]
+        },
+        {
+          "name": "to_gpif",
+          "startLine": 62,
+          "endLine": 249,
+          "params": [
+            "song"
+          ]
+        },
+        {
+          "name": "write_track",
+          "startLine": 251,
+          "endLine": 357,
+          "params": [
+            "x",
+            "ti",
+            "track"
+          ]
+        },
+        {
+          "name": "pitch_xml",
+          "startLine": 361,
+          "endLine": 381,
+          "params": [
+            "midi"
+          ]
+        },
+        {
+          "name": "tie_origins",
+          "startLine": 384,
+          "endLine": 406,
+          "params": [
+            "track"
+          ]
+        },
+        {
+          "name": "write_beat",
+          "startLine": 408,
+          "endLine": 628,
+          "params": [
+            "id",
+            "track",
+            "beat",
+            "is_origin"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Ids",
+          "startLine": 53,
+          "endLine": 59,
+          "methods": [],
+          "properties": [
+            "bars",
+            "voices",
+            "beats",
+            "notes",
+            "rhythms"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "to_gp",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "pack",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "part_configuration",
+          "line": 38,
+          "isDefault": false
+        },
+        {
+          "name": "to_gpif",
+          "line": 62,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "to_gp",
+          "callee": "pack",
+          "lineNumber": 17
+        },
+        {
+          "caller": "to_gp",
+          "callee": "to_gpif",
+          "lineNumber": 17
+        },
+        {
+          "caller": "to_gp",
+          "callee": "part_configuration",
+          "lineNumber": 17
+        },
+        {
+          "caller": "pack",
+          "callee": "zip::ZipWriter::new",
+          "lineNumber": 22
+        },
+        {
+          "caller": "pack",
+          "callee": "std::io::Cursor::new",
+          "lineNumber": 22
+        },
+        {
+          "caller": "pack",
+          "callee": "Vec::new",
+          "lineNumber": 22
+        },
+        {
+          "caller": "pack",
+          "callee": "zip::write::SimpleFileOptions::default()\n        .compression_method(zip::CompressionMethod::Deflated).last_modified_time",
+          "lineNumber": 24
+        },
+        {
+          "caller": "pack",
+          "callee": "zip::write::SimpleFileOptions::default().compression_method",
+          "lineNumber": 24
+        },
+        {
+          "caller": "pack",
+          "callee": "zip::write::SimpleFileOptions::default",
+          "lineNumber": 24
+        },
+        {
+          "caller": "pack",
+          "callee": "zip::DateTime::default",
+          "lineNumber": 26
+        },
+        {
+          "caller": "pack",
+          "callee": "zip.start_file(name, opts).expect",
+          "lineNumber": 28
+        },
+        {
+          "caller": "pack",
+          "callee": "zip.start_file",
+          "lineNumber": 28
+        },
+        {
+          "caller": "pack",
+          "callee": "zip.write_all(data).expect",
+          "lineNumber": 29
+        },
+        {
+          "caller": "pack",
+          "callee": "zip.write_all",
+          "lineNumber": 29
+        },
+        {
+          "caller": "pack",
+          "callee": "put",
+          "lineNumber": 31
+        },
+        {
+          "caller": "pack",
+          "callee": "put",
+          "lineNumber": 32
+        },
+        {
+          "caller": "pack",
+          "callee": "gpif.as_bytes",
+          "lineNumber": 32
+        },
+        {
+          "caller": "pack",
+          "callee": "put",
+          "lineNumber": 33
+        },
+        {
+          "caller": "pack",
+          "callee": "zip.finish().expect(\"in-memory zip\").into_inner",
+          "lineNumber": 34
+        },
+        {
+          "caller": "pack",
+          "callee": "zip.finish().expect",
+          "lineNumber": 34
+        },
+        {
+          "caller": "pack",
+          "callee": "zip.finish",
+          "lineNumber": 34
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "Vec::new",
+          "lineNumber": 39
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "v.extend_from_slice",
+          "lineNumber": 40
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "1u32.to_be_bytes",
+          "lineNumber": 40
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "v.push",
+          "lineNumber": 41
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "v.extend_from_slice",
+          "lineNumber": 42
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "(song.tracks.len() as u32).to_be_bytes",
+          "lineNumber": 42
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "song.tracks.len",
+          "lineNumber": 42
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "v.extend",
+          "lineNumber": 43
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "song.tracks.iter().map",
+          "lineNumber": 43
+        },
+        {
+          "caller": "part_configuration",
+          "callee": "song.tracks.iter",
+          "lineNumber": 43
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "String::new",
+          "lineNumber": 63
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 64
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 65
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 66
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "String::new",
+          "lineNumber": 74
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "\"Generated by oxiguitar-testgen\".to_owned",
+          "lineNumber": 78
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "cdata",
+          "lineNumber": 80
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 82
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "(0..song.tracks.len()).map(|i| i.to_string()).collect",
+          "lineNumber": 83
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "(0..song.tracks.len()).map",
+          "lineNumber": 83
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "song.tracks.len",
+          "lineNumber": 83
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "i.to_string",
+          "lineNumber": 83
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 98
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "song.tracks.iter().enumerate",
+          "lineNumber": 99
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "song.tracks.iter",
+          "lineNumber": 99
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "write_track",
+          "lineNumber": 100
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 102
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "Ids::default",
+          "lineNumber": 105
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "tie_origins",
+          "lineNumber": 108
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "master_bar_ids.iter_mut().enumerate",
+          "lineNumber": 109
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "master_bar_ids.iter_mut",
+          "lineNumber": 109
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "Vec::new",
+          "lineNumber": 110
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "track.voices.iter().enumerate",
+          "lineNumber": 111
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "track.voices.iter",
+          "lineNumber": 111
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "voice.get",
+          "lineNumber": 112
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "beats.is_empty",
+          "lineNumber": 113
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "Vec::new",
+          "lineNumber": 114
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "beats.iter().enumerate",
+          "lineNumber": 115
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "beats.iter",
+          "lineNumber": 115
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "beat_ids.push",
+          "lineNumber": 116
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "write_beat",
+          "lineNumber": 116
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "origins.contains",
+          "lineNumber": 117
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "voice_ids.push",
+          "lineNumber": 120
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.voices.len().to_string",
+          "lineNumber": 120
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.voices.len",
+          "lineNumber": 120
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.voices.push",
+          "lineNumber": 121
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "voice_ids.push",
+          "lineNumber": 127
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "\"-1\".to_owned",
+          "lineNumber": 127
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "voice_ids.resize",
+          "lineNumber": 130
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "\"-1\".to_owned",
+          "lineNumber": 130
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.voices.len().to_string",
+          "lineNumber": 133
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.voices.len",
+          "lineNumber": 133
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.voices.push",
+          "lineNumber": 134
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "ids.push",
+          "lineNumber": 149
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.bars.len",
+          "lineNumber": 149
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.bars.push",
+          "lineNumber": 150
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 158
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "song.bars.iter().zip",
+          "lineNumber": 159
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "song.bars.iter",
+          "lineNumber": 159
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "ids.iter().map(ToString::to_string).collect",
+          "lineNumber": 168
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "ids.iter().map",
+          "lineNumber": 168
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "ids.iter",
+          "lineNumber": 168
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "mb.repeat_end.is_some",
+          "lineNumber": 170
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "mb.endings.is_empty",
+          "lineNumber": 179
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "mb.endings.iter().map(ToString::to_string).collect",
+          "lineNumber": 180
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "mb.endings.iter().map",
+          "lineNumber": 180
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "mb.endings.iter",
+          "lineNumber": 180
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 190
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "mb.directions.is_empty",
+          "lineNumber": 195
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 196
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 205
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 207
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 209
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 213
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 217
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 221
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 225
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.rhythms.iter().collect",
+          "lineNumber": 226
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "id.rhythms.iter",
+          "lineNumber": 226
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "rhythms.sort_by_key",
+          "lineNumber": 227
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 245
+        },
+        {
+          "caller": "to_gpif",
+          "callee": "x.push_str",
+          "lineNumber": 247
+        },
+        {
+          "caller": "write_track",
+          "callee": "cdata",
+          "lineNumber": 253
+        },
+        {
+          "caller": "write_track",
+          "callee": "cdata",
+          "lineNumber": 254
+        },
+        {
+          "caller": "write_track",
+          "callee": "x.push_str",
+          "lineNumber": 297
+        },
+        {
+          "caller": "write_track",
+          "callee": "tuning.iter().map(ToString::to_string).collect",
+          "lineNumber": 299
+        },
+        {
+          "caller": "write_track",
+          "callee": "tuning.iter().map",
+          "lineNumber": 299
+        },
+        {
+          "caller": "write_track",
+          "callee": "tuning.iter",
+          "lineNumber": 299
+        },
+        {
+          "caller": "write_track",
+          "callee": "track.chords.is_empty",
+          "lineNumber": 308
+        },
+        {
+          "caller": "write_track",
+          "callee": "x.push_str",
+          "lineNumber": 309
+        },
+        {
+          "caller": "write_track",
+          "callee": "track.chords.iter().enumerate",
+          "lineNumber": 310
+        },
+        {
+          "caller": "write_track",
+          "callee": "track.chords.iter",
+          "lineNumber": 310
+        },
+        {
+          "caller": "write_track",
+          "callee": "d.base_fret.saturating_sub",
+          "lineNumber": 311
+        },
+        {
+          "caller": "write_track",
+          "callee": "d.frets.iter().enumerate",
+          "lineNumber": 320
+        },
+        {
+          "caller": "write_track",
+          "callee": "d.frets.iter",
+          "lineNumber": 320
+        },
+        {
+          "caller": "write_track",
+          "callee": "x.push_str",
+          "lineNumber": 329
+        },
+        {
+          "caller": "write_track",
+          "callee": "x.push_str",
+          "lineNumber": 331
+        },
+        {
+          "caller": "write_track",
+          "callee": "x.push_str",
+          "lineNumber": 333
+        },
+        {
+          "caller": "write_track",
+          "callee": "track.lyrics.is_empty",
+          "lineNumber": 346
+        },
+        {
+          "caller": "write_track",
+          "callee": "x.push_str",
+          "lineNumber": 347
+        },
+        {
+          "caller": "write_track",
+          "callee": "x.push_str",
+          "lineNumber": 354
+        },
+        {
+          "caller": "write_track",
+          "callee": "x.push_str",
+          "lineNumber": 356
+        },
+        {
+          "caller": "pitch_xml",
+          "callee": "usize::from",
+          "lineNumber": 376
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "HashSet::new",
+          "lineNumber": 385
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "track.voices.iter().enumerate",
+          "lineNumber": 386
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "track.voices.iter",
+          "lineNumber": 386
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "BTreeMap::new",
+          "lineNumber": 387
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "voice.iter().enumerate",
+          "lineNumber": 388
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "voice.iter",
+          "lineNumber": 388
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "bar.iter().enumerate",
+          "lineNumber": 389
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "bar.iter",
+          "lineNumber": 389
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "beat.notes.iter().enumerate",
+          "lineNumber": 390
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "beat.notes.iter",
+          "lineNumber": 390
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "u16::from",
+          "lineNumber": 392
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "u16::from",
+          "lineNumber": 393
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "last.get",
+          "lineNumber": 396
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "out.insert",
+          "lineNumber": 398
+        },
+        {
+          "caller": "tie_origins",
+          "callee": "last.insert",
+          "lineNumber": 400
+        },
+        {
+          "caller": "write_beat",
+          "callee": "id.rhythms.len",
+          "lineNumber": 414
+        },
+        {
+          "caller": "write_beat",
+          "callee": "id.rhythms.entry(beat.dur).or_insert",
+          "lineNumber": 415
+        },
+        {
+          "caller": "write_beat",
+          "callee": "id.rhythms.entry",
+          "lineNumber": 415
+        },
+        {
+          "caller": "write_beat",
+          "callee": "tuning.len",
+          "lineNumber": 417
+        },
+        {
+          "caller": "write_beat",
+          "callee": "Vec::new",
+          "lineNumber": 420
+        },
+        {
+          "caller": "write_beat",
+          "callee": "beat.notes.iter().enumerate",
+          "lineNumber": 421
+        },
+        {
+          "caller": "write_beat",
+          "callee": "beat.notes.iter",
+          "lineNumber": 421
+        },
+        {
+          "caller": "write_beat",
+          "callee": "id.notes.len",
+          "lineNumber": 422
+        },
+        {
+          "caller": "write_beat",
+          "callee": "note_ids.push",
+          "lineNumber": 423
+        },
+        {
+          "caller": "write_beat",
+          "callee": "nid.to_string",
+          "lineNumber": 423
+        },
+        {
+          "caller": "write_beat",
+          "callee": "is_origin",
+          "lineNumber": 425
+        },
+        {
+          "caller": "write_beat",
+          "callee": "String::new",
+          "lineNumber": 434
+        },
+        {
+          "caller": "write_beat",
+          "callee": "n.push_str",
+          "lineNumber": 438
+        },
+        {
+          "caller": "write_beat",
+          "callee": "n.push_str",
+          "lineNumber": 439
+        },
+        {
+          "caller": "write_beat",
+          "callee": "n.push_str",
+          "lineNumber": 440
+        },
+        {
+          "caller": "write_beat",
+          "callee": "usize::from",
+          "lineNumber": 448
+        },
+        {
+          "caller": "write_beat",
+          "callee": "props.push_str",
+          "lineNumber": 460
+        },
+        {
+          "caller": "write_beat",
+          "callee": "props.push_str",
+          "lineNumber": 462
+        },
+        {
+          "caller": "write_beat",
+          "callee": "props.push_str",
+          "lineNumber": 463
+        },
+        {
+          "caller": "write_beat",
+          "callee": "Some",
+          "lineNumber": 490
+        },
+        {
+          "caller": "write_beat",
+          "callee": "Some",
+          "lineNumber": 491
+        },
+        {
+          "caller": "write_beat",
+          "callee": "Some",
+          "lineNumber": 492
+        },
+        {
+          "caller": "write_beat",
+          "callee": "n.push_str",
+          "lineNumber": 501
+        },
+        {
+          "caller": "write_beat",
+          "callee": "usize::from",
+          "lineNumber": 509
+        },
+        {
+          "caller": "write_beat",
+          "callee": "Some",
+          "lineNumber": 561
+        },
+        {
+          "caller": "write_beat",
+          "callee": "n.push_str",
+          "lineNumber": 562
+        },
+        {
+          "caller": "write_beat",
+          "callee": "n.push_str",
+          "lineNumber": 564
+        },
+        {
+          "caller": "write_beat",
+          "callee": "n.push_str",
+          "lineNumber": 565
+        },
+        {
+          "caller": "write_beat",
+          "callee": "id.notes.push",
+          "lineNumber": 566
+        },
+        {
+          "caller": "write_beat",
+          "callee": "id.beats.len",
+          "lineNumber": 569
+        },
+        {
+          "caller": "write_beat",
+          "callee": "note_ids.is_empty",
+          "lineNumber": 576
+        },
+        {
+          "caller": "write_beat",
+          "callee": "b.push_str",
+          "lineNumber": 580
+        },
+        {
+          "caller": "write_beat",
+          "callee": "b.push_str",
+          "lineNumber": 592
+        },
+        {
+          "caller": "write_beat",
+          "callee": "String::new",
+          "lineNumber": 594
+        },
+        {
+          "caller": "write_beat",
+          "callee": "props.push_str",
+          "lineNumber": 596
+        },
+        {
+          "caller": "write_beat",
+          "callee": "beat.technique.filter",
+          "lineNumber": 607
+        },
+        {
+          "caller": "write_beat",
+          "callee": "props.push_str",
+          "lineNumber": 611
+        },
+        {
+          "caller": "write_beat",
+          "callee": "props.is_empty",
+          "lineNumber": 622
+        },
+        {
+          "caller": "write_beat",
+          "callee": "b.push_str",
+          "lineNumber": 625
+        },
+        {
+          "caller": "write_beat",
+          "callee": "id.beats.push",
+          "lineNumber": 626
+        },
+        {
+          "caller": "write_beat",
+          "callee": "bid.to_string",
+          "lineNumber": 627
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 4,
+        "functionCount": 9,
+        "classCount": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,949 @@
+{
+  "batchIndex": 22,
+  "nodes": [
+    {
+      "id": "file:docs/manual/book.toml",
+      "label": "docs/manual/book.toml",
+      "type": "config_file",
+      "filePath": "docs/manual/book.toml",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/book.toml",
+      "label": "docs/plugins/book.toml",
+      "type": "config_file",
+      "filePath": "docs/plugins/book.toml",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/template/.github/workflows/build.yml",
+      "label": "docs/plugins/template/.github/workflows/build.yml",
+      "type": "config_file",
+      "filePath": "docs/plugins/template/.github/workflows/build.yml",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/template/samples/open-strings.extab",
+      "label": "docs/plugins/template/samples/open-strings.extab",
+      "type": "data_file",
+      "filePath": "docs/plugins/template/samples/open-strings.extab",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/template/src/format.rs",
+      "label": "docs/plugins/template/src/format.rs",
+      "type": "file",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/template/src/lib.rs",
+      "label": "docs/plugins/template/src/lib.rs",
+      "type": "file",
+      "filePath": "docs/plugins/template/src/lib.rs",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/template/src/notes.rs",
+      "label": "docs/plugins/template/src/notes.rs",
+      "type": "file",
+      "filePath": "docs/plugins/template/src/notes.rs",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/template/src/service.rs",
+      "label": "docs/plugins/template/src/service.rs",
+      "type": "file",
+      "filePath": "docs/plugins/template/src/service.rs",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/template/src/statistics.rs",
+      "label": "docs/plugins/template/src/statistics.rs",
+      "type": "file",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 1
+    },
+    {
+      "id": "file:docs/plugins/template/tests/contract.rs",
+      "label": "docs/plugins/template/tests/contract.rs",
+      "type": "file",
+      "filePath": "docs/plugins/template/tests/contract.rs",
+      "line": 1
+    },
+    {
+      "id": "file:docs/testing.md",
+      "label": "docs/testing.md",
+      "type": "documentation",
+      "filePath": "docs/testing.md",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/README.md",
+      "label": "fixtures/README.md",
+      "type": "documentation",
+      "filePath": "fixtures/README.md",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/articulations.gp.events",
+      "label": "fixtures/events/articulations.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/articulations.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/bass.gp.events",
+      "label": "fixtures/events/bass.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/bass.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/beams-and-flags.gp.events",
+      "label": "fixtures/events/beams-and-flags.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/beams-and-flags.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/beat-text.gp.events",
+      "label": "fixtures/events/beat-text.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/beat-text.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/bends.gp.events",
+      "label": "fixtures/events/bends.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/bends.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/chord-names.gp.events",
+      "label": "fixtures/events/chord-names.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/chord-names.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/chords-and-accidentals.gp.events",
+      "label": "fixtures/events/chords-and-accidentals.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/chords-and-accidentals.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/dark-page.gp.events",
+      "label": "fixtures/events/dark-page.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dark-page.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/dead-ghost-palm-mute.gp.events",
+      "label": "fixtures/events/dead-ghost-palm-mute.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dead-ghost-palm-mute.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/dots-and-ties.gp.events",
+      "label": "fixtures/events/dots-and-ties.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dots-and-ties.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/drop-d-and-capo.gp.events",
+      "label": "fixtures/events/drop-d-and-capo.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/drop-d-and-capo.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/drums.gp.events",
+      "label": "fixtures/events/drums.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/drums.gp.events",
+      "line": 1
+    },
+    {
+      "id": "file:fixtures/events/dynamics-hidden.gp.events",
+      "label": "fixtures/events/dynamics-hidden.gp.events",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dynamics-hidden.gp.events",
+      "line": 1
+    },
+    {
+      "id": "struct:docs/plugins/template/src/format.rs:ExampleTab",
+      "label": "ExampleTab",
+      "type": "struct",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 47
+    },
+    {
+      "id": "const:docs/plugins/template/src/format.rs:ID",
+      "label": "ID = \"extab\"",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 35
+    },
+    {
+      "id": "const:docs/plugins/template/src/format.rs:MAGIC",
+      "label": "MAGIC = \"EXAMPLE TAB\"",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 38
+    },
+    {
+      "id": "const:docs/plugins/template/src/format.rs:PER_BAR",
+      "label": "PER_BAR = 8",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 41
+    },
+    {
+      "id": "const:docs/plugins/template/src/format.rs:FRETS",
+      "label": "FRETS = 24",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 44
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:read",
+      "label": "read",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 51
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:lines",
+      "label": "lines",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 109
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:header",
+      "label": "header",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 118
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:bar",
+      "label": "bar",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 125
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:beat",
+      "label": "beat",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 153
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:eighth",
+      "label": "eighth",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 188
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:rest",
+      "label": "rest",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 196
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:score",
+      "label": "score",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 210
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:write",
+      "label": "write",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 275
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:token",
+      "label": "token",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 352
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:invalid",
+      "label": "invalid",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 390
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:add",
+      "label": "add",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 400
+    },
+    {
+      "id": "function:docs/plugins/template/src/format.rs:add_n",
+      "label": "add_n",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/format.rs",
+      "line": 413
+    },
+    {
+      "id": "struct:docs/plugins/template/src/lib.rs:Example",
+      "label": "Example",
+      "type": "struct",
+      "filePath": "docs/plugins/template/src/lib.rs",
+      "line": 28
+    },
+    {
+      "id": "module:docs/plugins/template/src/lib.rs:format",
+      "label": "format",
+      "type": "module",
+      "filePath": "docs/plugins/template/src/lib.rs",
+      "line": 18
+    },
+    {
+      "id": "module:docs/plugins/template/src/lib.rs:notes",
+      "label": "notes",
+      "type": "module",
+      "filePath": "docs/plugins/template/src/lib.rs",
+      "line": 19
+    },
+    {
+      "id": "module:docs/plugins/template/src/lib.rs:service",
+      "label": "service",
+      "type": "module",
+      "filePath": "docs/plugins/template/src/lib.rs",
+      "line": 20
+    },
+    {
+      "id": "module:docs/plugins/template/src/lib.rs:statistics",
+      "label": "statistics",
+      "type": "module",
+      "filePath": "docs/plugins/template/src/lib.rs",
+      "line": 21
+    },
+    {
+      "id": "const:docs/plugins/template/src/notes.rs:STANDARD",
+      "label": "STANDARD: [Pitch; 6]",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/notes.rs",
+      "line": 10
+    },
+    {
+      "id": "function:docs/plugins/template/src/notes.rs:name",
+      "label": "name",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/notes.rs",
+      "line": 21
+    },
+    {
+      "id": "const:docs/plugins/template/src/service.rs:INTERFACE",
+      "label": "INTERFACE = \"note-names\"",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/service.rs",
+      "line": 25
+    },
+    {
+      "id": "const:docs/plugins/template/src/service.rs:ID",
+      "label": "ID = \"example\"",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/service.rs",
+      "line": 28
+    },
+    {
+      "id": "struct:docs/plugins/template/src/service.rs:NoteNames",
+      "label": "NoteNames",
+      "type": "struct",
+      "filePath": "docs/plugins/template/src/service.rs",
+      "line": 31
+    },
+    {
+      "id": "const:docs/plugins/template/src/statistics.rs:ID",
+      "label": "ID = \"statistics\"",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 22
+    },
+    {
+      "id": "const:docs/plugins/template/src/statistics.rs:WIDTH",
+      "label": "WIDTH = 120.0",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 25
+    },
+    {
+      "id": "const:docs/plugins/template/src/statistics.rs:HEIGHT",
+      "label": "HEIGHT = 60.0",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 26
+    },
+    {
+      "id": "const:docs/plugins/template/src/statistics.rs:LABELS",
+      "label": "LABELS = 12.0",
+      "type": "constant",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 28
+    },
+    {
+      "id": "struct:docs/plugins/template/src/statistics.rs:Statistics",
+      "label": "Statistics",
+      "type": "struct",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 33
+    },
+    {
+      "id": "struct:docs/plugins/template/src/statistics.rs:State",
+      "label": "State",
+      "type": "struct",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 39
+    },
+    {
+      "id": "struct:docs/plugins/template/src/statistics.rs:Counts",
+      "label": "Counts",
+      "type": "struct",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 56
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:new",
+      "label": "new",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 68
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:event",
+      "label": "event",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 93
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:render",
+      "label": "render",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:handle_event",
+      "label": "handle_event",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:request_score",
+      "label": "request_score",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:refresh",
+      "label": "refresh",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 121
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:count_track",
+      "label": "count_track",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:count_bar",
+      "label": "count_bar",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:count_beat",
+      "label": "count_beat",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:count_note",
+      "label": "count_note",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:draw_bars",
+      "label": "draw_bars",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/src/statistics.rs:draw_label",
+      "label": "draw_label",
+      "type": "function",
+      "filePath": "docs/plugins/template/src/statistics.rs",
+      "line": 0
+    },
+    {
+      "id": "function:docs/plugins/template/tests/contract.rs:the_plugin_file_keeps_the_contract",
+      "label": "the_plugin_file_keeps_the_contract",
+      "type": "test_function",
+      "filePath": "docs/plugins/template/tests/contract.rs",
+      "line": 12
+    },
+    {
+      "id": "section:docs/manual/book.toml:book",
+      "label": "book (mdBook config)",
+      "type": "config_section",
+      "filePath": "docs/manual/book.toml",
+      "line": 5
+    },
+    {
+      "id": "section:docs/manual/book.toml:output.html",
+      "label": "output.html",
+      "type": "config_section",
+      "filePath": "docs/manual/book.toml",
+      "line": 11
+    },
+    {
+      "id": "section:docs/manual/book.toml:output.html.search",
+      "label": "output.html.search",
+      "type": "config_section",
+      "filePath": "docs/manual/book.toml",
+      "line": 18
+    },
+    {
+      "id": "section:docs/plugins/book.toml:book",
+      "label": "book (mdBook config)",
+      "type": "config_section",
+      "filePath": "docs/plugins/book.toml",
+      "line": 10
+    },
+    {
+      "id": "section:docs/plugins/book.toml:output.html",
+      "label": "output.html",
+      "type": "config_section",
+      "filePath": "docs/plugins/book.toml",
+      "line": 16
+    },
+    {
+      "id": "section:docs/plugins/book.toml:output.html.search",
+      "label": "output.html.search",
+      "type": "config_section",
+      "filePath": "docs/plugins/book.toml",
+      "line": 23
+    },
+    {
+      "id": "section:docs/plugins/template/.github/workflows/build.yml:build",
+      "label": "build (GitHub Actions)",
+      "type": "config_section",
+      "filePath": "docs/plugins/template/.github/workflows/build.yml",
+      "line": 1
+    },
+    {
+      "id": "data:docs/plugins/template/samples/open-strings.extab",
+      "label": "open-strings.extab (Example tab sample)",
+      "type": "data_file",
+      "filePath": "docs/plugins/template/samples/open-strings.extab",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/articulations.gp.events",
+      "label": "Articulations (staccato, accent, etc.)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/articulations.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/bass.gp.events",
+      "label": "Bass (bass clef, low strings)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/bass.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/beams-and-flags.gp.events",
+      "label": "Beams and flags (note grouping)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/beams-and-flags.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/beat-text.gp.events",
+      "label": "Beat text (beat annotations)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/beat-text.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/bends.gp.events",
+      "label": "Bends (guitar bend techniques)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/bends.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/chord-names.gp.events",
+      "label": "Chord names (chord symbols)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/chord-names.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/chords-and-accidentals.gp.events",
+      "label": "Chords and accidentals",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/chords-and-accidentals.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/dark-page.gp.events",
+      "label": "Dark page (page style)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dark-page.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/dead-ghost-palm-mute.gp.events",
+      "label": "Dead ghost palm mute",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dead-ghost-palm-mute.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/dots-and-ties.gp.events",
+      "label": "Dots and ties (note duration)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dots-and-ties.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/drop-d-and-capo.gp.events",
+      "label": "Drop D and capo (tuning)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/drop-d-and-capo.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/drums.gp.events",
+      "label": "Drums (percussion track)",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/drums.gp.events",
+      "line": 1
+    },
+    {
+      "id": "fixture:fixtures/events/dynamics-hidden.gp.events",
+      "label": "Dynamics hidden",
+      "type": "fixture_file",
+      "filePath": "fixtures/events/dynamics-hidden.gp.events",
+      "line": 1
+    },
+    {
+      "id": "section:docs/testing.md:testing",
+      "label": "Testing documentation",
+      "type": "documentation",
+      "filePath": "docs/testing.md",
+      "line": 1
+    },
+    {
+      "id": "section:fixtures/README.md:fixtures",
+      "label": "Fixtures README",
+      "type": "documentation",
+      "filePath": "fixtures/README.md",
+      "line": 1
+    }
+  ],
+  "edges": [
+    {
+      "source": "struct:docs/plugins/template/src/format.rs:ExampleTab",
+      "target": "trait:oxiguitar_plugin:FormatReader",
+      "type": "implements"
+    },
+    {
+      "source": "struct:docs/plugins/template/src/format.rs:ExampleTab",
+      "target": "trait:oxiguitar_plugin:FormatWriter",
+      "type": "implements"
+    },
+    {
+      "source": "file:docs/plugins/template/src/format.rs",
+      "target": "file:docs/plugins/template/src/notes.rs",
+      "type": "imports"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:read",
+      "target": "function:docs/plugins/template/src/format.rs:lines",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:read",
+      "target": "function:docs/plugins/template/src/format.rs:header",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:read",
+      "target": "function:docs/plugins/template/src/format.rs:bar",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:read",
+      "target": "function:docs/plugins/template/src/format.rs:score",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:read",
+      "target": "function:docs/plugins/template/src/format.rs:invalid",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:read",
+      "target": "function:docs/plugins/template/src/format.rs:add",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:read",
+      "target": "function:docs/plugins/template/src/format.rs:add_n",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:bar",
+      "target": "function:docs/plugins/template/src/format.rs:beat",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:bar",
+      "target": "function:docs/plugins/template/src/format.rs:invalid",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:bar",
+      "target": "function:docs/plugins/template/src/format.rs:add",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:bar",
+      "target": "function:docs/plugins/template/src/format.rs:add_n",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:beat",
+      "target": "function:docs/plugins/template/src/format.rs:eighth",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:beat",
+      "target": "function:docs/plugins/template/src/format.rs:rest",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:rest",
+      "target": "function:docs/plugins/template/src/format.rs:eighth",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:write",
+      "target": "function:docs/plugins/template/src/format.rs:token",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:write",
+      "target": "function:docs/plugins/template/src/format.rs:add",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:write",
+      "target": "function:docs/plugins/template/src/format.rs:add_n",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:token",
+      "target": "function:docs/plugins/template/src/format.rs:eighth",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/format.rs:token",
+      "target": "function:docs/plugins/template/src/format.rs:add_n",
+      "type": "calls"
+    },
+    {
+      "source": "struct:docs/plugins/template/src/lib.rs:Example",
+      "target": "trait:oxiguitar_plugin:Plugin",
+      "type": "implements"
+    },
+    {
+      "source": "file:docs/plugins/template/src/lib.rs",
+      "target": "file:docs/plugins/template/src/format.rs",
+      "type": "imports"
+    },
+    {
+      "source": "file:docs/plugins/template/src/lib.rs",
+      "target": "file:docs/plugins/template/src/notes.rs",
+      "type": "imports"
+    },
+    {
+      "source": "file:docs/plugins/template/src/lib.rs",
+      "target": "file:docs/plugins/template/src/service.rs",
+      "type": "imports"
+    },
+    {
+      "source": "file:docs/plugins/template/src/lib.rs",
+      "target": "file:docs/plugins/template/src/statistics.rs",
+      "type": "imports"
+    },
+    {
+      "source": "function:docs/plugins/template/src/lib.rs:start",
+      "target": "function:docs/plugins/template/src/statistics.rs:new",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/lib.rs:event",
+      "target": "function:docs/plugins/template/src/statistics.rs:event",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/lib.rs:reader",
+      "target": "struct:docs/plugins/template/src/format.rs:ExampleTab",
+      "type": "uses"
+    },
+    {
+      "source": "function:docs/plugins/template/src/lib.rs:writer",
+      "target": "struct:docs/plugins/template/src/format.rs:ExampleTab",
+      "type": "uses"
+    },
+    {
+      "source": "function:docs/plugins/template/src/lib.rs:service",
+      "target": "struct:docs/plugins/template/src/service.rs:NoteNames",
+      "type": "uses"
+    },
+    {
+      "source": "function:docs/plugins/template/src/lib.rs:tab",
+      "target": "struct:docs/plugins/template/src/statistics.rs:Statistics",
+      "type": "uses"
+    },
+    {
+      "source": "function:docs/plugins/template/src/notes.rs:name",
+      "target": "type:oxiguitar_plugin:Pitch",
+      "type": "uses"
+    },
+    {
+      "source": "struct:docs/plugins/template/src/service.rs:NoteNames",
+      "target": "trait:oxiguitar_plugin:Service",
+      "type": "implements"
+    },
+    {
+      "source": "file:docs/plugins/template/src/service.rs",
+      "target": "file:docs/plugins/template/src/notes.rs",
+      "type": "imports"
+    },
+    {
+      "source": "function:docs/plugins/template/src/service.rs:call",
+      "target": "function:docs/plugins/template/src/notes.rs:name",
+      "type": "calls"
+    },
+    {
+      "source": "struct:docs/plugins/template/src/statistics.rs:Statistics",
+      "target": "trait:oxiguitar_plugin:Tab",
+      "type": "implements"
+    },
+    {
+      "source": "file:docs/plugins/template/src/statistics.rs",
+      "target": "type:oxiguitar_plugin:score::Score",
+      "type": "uses"
+    },
+    {
+      "source": "file:docs/plugins/template/src/statistics.rs",
+      "target": "type:oxiguitar_plugin:display::Canvas",
+      "type": "uses"
+    },
+    {
+      "source": "function:docs/plugins/template/src/statistics.rs:render",
+      "target": "function:docs/plugins/template/src/statistics.rs:draw_bars",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/statistics.rs:render",
+      "target": "function:docs/plugins/template/src/statistics.rs:draw_label",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/statistics.rs:handle_event",
+      "target": "function:docs/plugins/template/src/statistics.rs:refresh",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/statistics.rs:handle_event",
+      "target": "function:docs/plugins/template/src/statistics.rs:draw_bars",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/statistics.rs:count_track",
+      "target": "function:docs/plugins/template/src/statistics.rs:count_bar",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/statistics.rs:count_bar",
+      "target": "function:docs/plugins/template/src/statistics.rs:count_beat",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/src/statistics.rs:count_beat",
+      "target": "function:docs/plugins/template/src/statistics.rs:count_note",
+      "type": "calls"
+    },
+    {
+      "source": "function:docs/plugins/template/tests/contract.rs:the_plugin_file_keeps_the_contract",
+      "target": "type:oxiguitar_plugin_test:build",
+      "type": "uses"
+    },
+    {
+      "source": "function:docs/plugins/template/tests/contract.rs:the_plugin_file_keeps_the_contract",
+      "target": "type:oxiguitar_plugin_test:check",
+      "type": "uses"
+    },
+    {
+      "source": "data:docs/plugins/template/samples/open-strings.extab",
+      "target": "struct:docs/plugins/template/src/format.rs:ExampleTab",
+      "type": "uses"
+    },
+    {
+      "source": "section:fixtures/README.md:fixtures",
+      "target": "fixture:fixtures/events/oxiguitar-test-song.gp.events",
+      "type": "related"
+    },
+    {
+      "source": "section:docs/manual/book.toml:book",
+      "target": "file:docs/testing.md",
+      "type": "related"
+    },
+    {
+      "source": "section:docs/plugins/book.toml:book",
+      "target": "file:docs/plugins/template/src/lib.rs",
+      "type": "related"
+    },
+    {
+      "source": "data:docs/plugins/template/samples/open-strings.extab",
+      "target": "function:docs/plugins/template/src/format.rs:read",
+      "type": "related"
+    }
+  ]
+}

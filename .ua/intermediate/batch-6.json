@@ -1,0 +1,70 @@
+{
+  "nodes": [
+    {
+      "id": "document:docs/formats/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "docs/formats/README.md",
+      "summary": "Index page for the file-format documentation directory. Lists the three format-family docs (GP3/4/5, GP6/7/8, GP7.6 sounds) and explains that each doc records its knowledge sources for traceability.",
+      "tags": ["documentation", "format-index", "file-formats", "guitar-pro"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/formats/guitar-pro-3-5.md",
+      "type": "document",
+      "name": "guitar-pro-3-5.md",
+      "filePath": "docs/formats/guitar-pro-3-5.md",
+      "summary": "Binary-format specification for Guitar Pro 3, 4 and 5 (.gp3, .gp4, .gp5). Covers byte primitives, file layout, bar headers, tracks, beats, notes, effects, chord diagrams, and the writer's round-trip invariants.",
+      "tags": ["documentation", "guitar-pro", "binary-format", "gp3", "gp4", "gp5"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/formats/guitar-pro-6-8.md",
+      "type": "document",
+      "name": "guitar-pro-6-8.md",
+      "filePath": "docs/formats/guitar-pro-6-8.md",
+      "summary": "XML-based format specification for Guitar Pro 6, 7 and 8 (.gpx, .gp). Covers BCFZ/BCFS and ZIP containers, GPIF XML schema (header, tracks, bars, beats, notes, drums), writing rules, and the interop test suite.",
+      "tags": ["documentation", "guitar-pro", "xml-format", "gp6", "gp7", "gp8"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/formats/guitar-pro-sounds.md",
+      "type": "document",
+      "name": "guitar-pro-sounds.md",
+      "filePath": "docs/formats/guitar-pro-sounds.md",
+      "summary": "Reference tables mapping every General MIDI program and every Guitar Pro 7.6 instrument to its instrument set, sound path, MIDI program, and RSE patch. Used by the .gp writer to assign sounds to tracks.",
+      "tags": ["documentation", "guitar-pro", "sound-mapping", "general-midi", "guitar-pro-7-6"],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:docs/formats/README.md",
+      "target": "document:docs/formats/guitar-pro-3-5.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/formats/README.md",
+      "target": "document:docs/formats/guitar-pro-6-8.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/formats/README.md",
+      "target": "document:docs/formats/guitar-pro-sounds.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/formats/guitar-pro-6-8.md",
+      "target": "document:docs/formats/guitar-pro-sounds.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

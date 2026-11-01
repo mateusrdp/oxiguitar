@@ -113,6 +113,56 @@ pub struct Manifest {
     /// interface 1.3.
     #[serde(default)]
     pub effects: Vec<InstrumentSpec>,
+    /// The exports it adds to File → Export. Since interface 1.4.
+    #[serde(default)]
+    pub exporters: Vec<ExporterSpec>,
+    /// The plugins it can't work without, each at a lowest version. When
+    /// one is missing, the host doesn't use this plugin and the footer says
+    /// why. Since interface 1.4.
+    #[serde(default)]
+    pub needs: Vec<Need>,
+    /// The ids of plugins this one succeeds: their files count as older
+    /// versions of this plugin, and what the host keeps under their id
+    /// (settings, the data folder, the tracks' sections) is carried over
+    /// to this one's, once. Since interface 1.4.
+    #[serde(default)]
+    pub replaces: Vec<String>,
+}
+
+/// A plugin another plugin can't work without (`needs`). Since interface
+/// 1.4.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Need {
+    /// The plugin's id. A plugin that `replaces` this id meets the need
+    /// too.
+    pub id: String,
+    /// The lowest version that will do.
+    pub version: Version,
+}
+
+/// An export, as the manifest declares it: an entry of File → Export that
+/// writes the open score to a file of another kind. Since interface 1.4.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExporterSpec {
+    /// The id requests name it by, unique in the plugin.
+    pub id: String,
+    /// What it makes, for the menu ("WAV Audio") and the file dialog.
+    pub name: String,
+    /// The file's extension, lowercase and without the dot: `wav`.
+    pub extension: String,
+    /// What it is handed to write.
+    pub kind: ExportKind,
+}
+
+/// What an exporter is handed to write. Since interface 1.4.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ExportKind {
+    /// The score as the player plays it: the core renders it through the
+    /// instruments, effects and mixer, faster than real time, at the rate
+    /// the exporter asks for, and hands it over as stereo samples in
+    /// pieces (`Request::ExportStart`, `ExportSamples`, `ExportFinish`).
+    Audio,
 }
 
 /// A section of the track dialog, as the manifest declares it: rows of
@@ -328,6 +378,64 @@ impl Manifest {
         for (i, f) in self.folders.iter().enumerate() {
             if self.folders[..i].contains(f) {
                 out.push(format!("folder {:?}: listed twice", f.name()));
+            }
+        }
+        let mut exporters: Vec<&str> = Vec::new();
+        for e in &self.exporters {
+            let at = format!("exporter {:?}", e.id);
+            if !is_id(&e.id) || exporters.contains(&e.id.as_str()) {
+                out.push(format!("{at}: not a valid or unique id"));
+            }
+            exporters.push(&e.id);
+            if e.name.trim().is_empty() {
+                out.push(format!("{at}: the name is empty"));
+            }
+            let x = &e.extension;
+            if x.is_empty()
+                || !x
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+            {
+                out.push(format!(
+                    "{at}: the extension {x:?} must be lowercase letters and digits, without a dot"
+                ));
+            }
+        }
+        let mut needs: Vec<&str> = Vec::new();
+        for n in &self.needs {
+            if !is_id(&n.id) || needs.contains(&n.id.as_str()) {
+                out.push(format!("needs {:?}: not a valid or unique plugin id", n.id));
+            } else if n.id == self.id {
+                out.push(format!("needs {:?}: a plugin can't need itself", n.id));
+            }
+            needs.push(&n.id);
+        }
+        let mut replaces: Vec<&str> = Vec::new();
+        for r in &self.replaces {
+            if !is_id(r) || replaces.contains(&r.as_str()) {
+                out.push(format!("replaces {r:?}: not a valid or unique plugin id"));
+            } else if *r == self.id {
+                out.push(format!("replaces {r:?}: a plugin can't replace itself"));
+            } else if needs.contains(&r.as_str()) {
+                out.push(format!(
+                    "replaces {r:?}: a plugin can't need what it replaces"
+                ));
+            }
+            replaces.push(r);
+        }
+        let since_1_4 = InterfaceVersion { major: 1, minor: 4 };
+        if self.interface < since_1_4 {
+            for (what, used) in [
+                ("exporters need", !self.exporters.is_empty()),
+                ("the key \"needs\" needs", !self.needs.is_empty()),
+                ("the key \"replaces\" needs", !self.replaces.is_empty()),
+            ] {
+                if used {
+                    out.push(format!(
+                        "{what} interface {since_1_4}, and the manifest asks for {}",
+                        self.interface
+                    ));
+                }
             }
         }
         let since_1_3 = InterfaceVersion { major: 1, minor: 3 };
@@ -938,5 +1046,50 @@ mod tests {
             ..Conditions::default()
         };
         assert_eq!(either.unmet(&env), None);
+    }
+
+    #[test]
+    fn needs_and_replaces_are_checked_and_need_interface_1_4() {
+        let m = |interface: &str, rest: &str| -> Manifest {
+            serde_json::from_str(&format!(
+                r#"{{"interface": "{interface}", "id": "me.amp", "name": "Amp",
+                "version": "1.0.0"{rest}}}"#
+            ))
+            .unwrap()
+        };
+        let good = r#", "needs": [{"id": "oxiguitar.midi", "version": "1.0.0"}],
+            "replaces": ["me.old-amp"]"#;
+        assert!(m("1.4", good).problems().is_empty());
+        assert_eq!(
+            m("1.3", good).problems(),
+            [
+                "the key \"needs\" needs interface 1.4, and the manifest asks for 1.3",
+                "the key \"replaces\" needs interface 1.4, and the manifest asks for 1.3",
+            ]
+        );
+        assert_eq!(
+            m(
+                "1.4",
+                r#", "needs": [{"id": "me.amp", "version": "1.0.0"},
+                               {"id": "Bad Id", "version": "1.0.0"},
+                               {"id": "oxiguitar.midi", "version": "1.0.0"}],
+                    "replaces": ["me.amp", "oxiguitar.midi"]"#
+            )
+            .problems(),
+            [
+                "needs \"me.amp\": a plugin can't need itself",
+                "needs \"Bad Id\": not a valid or unique plugin id",
+                "replaces \"me.amp\": a plugin can't replace itself",
+                "replaces \"oxiguitar.midi\": a plugin can't need what it replaces",
+            ]
+        );
+        // A need's version is a version.
+        assert!(
+            serde_json::from_str::<Manifest>(
+                r#"{"interface": "1.4", "id": "me.amp", "name": "Amp", "version": "1.0.0",
+            "needs": [{"id": "oxiguitar.midi", "version": "one"}]}"#
+            )
+            .is_err()
+        );
     }
 }

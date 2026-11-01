@@ -1,8 +1,8 @@
 {
-  "interface": "1.3",
+  "interface": "1.4",
   "id": "oxiguitar.test",
   "name": "Test plugin",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Tests the plugin interface. Never shipped.",
   "authors": ["The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",
@@ -45,5 +45,8 @@
   "track_sections": [
     { "id": "test", "title": "Test section", "does_not_play": ["drums"] }
   ],
-  "folders": ["soundfonts"]
+  "folders": ["soundfonts"],
+  "exporters": [
+    { "id": "raw", "name": "Raw Test Audio", "extension": "oxgraw", "kind": "audio" }
+  ]
 }

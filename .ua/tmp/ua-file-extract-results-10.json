@@ -1,0 +1,162 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 4,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 4,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 4
+    }
+  },
+  "results": [
+    {
+      "path": "fuzz/Cargo.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 92,
+      "nonEmptyLines": 80,
+      "sections": [
+        {
+          "heading": "package",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "package.metadata",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "dependencies",
+          "level": 1,
+          "line": 14
+        },
+        {
+          "heading": "workspace",
+          "level": 1,
+          "line": 32
+        },
+        {
+          "heading": "profile.release",
+          "level": 2,
+          "line": 35
+        },
+        {
+          "heading": "[[bin]]",
+          "level": 1,
+          "line": 38
+        },
+        {
+          "heading": "[[bin]]",
+          "level": 1,
+          "line": 45
+        },
+        {
+          "heading": "[[bin]]",
+          "level": 1,
+          "line": 52
+        },
+        {
+          "heading": "[[bin]]",
+          "level": 1,
+          "line": 59
+        },
+        {
+          "heading": "[[bin]]",
+          "level": 1,
+          "line": 66
+        },
+        {
+          "heading": "[[bin]]",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "[[bin]]",
+          "level": 1,
+          "line": 80
+        },
+        {
+          "heading": "[[bin]]",
+          "level": 1,
+          "line": 87
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 13
+      }
+    },
+    {
+      "path": "fuzz/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 43,
+      "nonEmptyLines": 30,
+      "sections": [
+        {
+          "heading": "Fuzzing",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Targets",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Running",
+          "level": 2,
+          "line": 22
+        },
+        {
+          "heading": "In CI",
+          "level": 2,
+          "line": 36
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "fuzz/run.sh",
+      "language": "shell",
+      "fileCategory": "script",
+      "totalLines": 46,
+      "nonEmptyLines": 43,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "fuzz/seeds.sh",
+      "language": "shell",
+      "fileCategory": "script",
+      "totalLines": 27,
+      "nonEmptyLines": 26,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

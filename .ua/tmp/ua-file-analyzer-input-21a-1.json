@@ -1,0 +1,17 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "crates/oxiguitar-testgen/src/big.rs", "language": "rust", "sizeLines": 302, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/src/gpif.rs", "language": "rust", "sizeLines": 628, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/src/lib.rs", "language": "rust", "sizeLines": 25, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/src/references.rs", "language": "rust", "sizeLines": 801, "fileCategory": "code"},
+    {"path": "crates/oxiguitar-testgen/src/song.rs", "language": "rust", "sizeLines": 774, "fileCategory": "code"}
+  ],
+  "batchImportData": {
+    "crates/oxiguitar-testgen/src/big.rs": [],
+    "crates/oxiguitar-testgen/src/gpif.rs": ["crates/oxiguitar-testgen/src/lib.rs", "crates/oxiguitar-model/src/lib.rs", "crates/oxiguitar-model/src/gpif/mod.rs", "crates/oxiguitar-model/src/gpif/song.rs"],
+    "crates/oxiguitar-testgen/src/lib.rs": [],
+    "crates/oxiguitar-testgen/src/references.rs": ["crates/oxiguitar-model/src/lib.rs", "crates/oxiguitar-model/src/guitar_pro.rs"],
+    "crates/oxiguitar-testgen/src/song.rs": ["crates/oxiguitar-model/src/lib.rs", "crates/oxiguitar-model/src/gpif/mod.rs", "crates/oxiguitar-model/src/gpif/song.rs", "crates/oxiguitar-model/src/guitar_pro.rs"]
+  }
+}

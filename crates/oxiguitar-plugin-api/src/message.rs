@@ -34,6 +34,10 @@
 //! ([`Request::Prepare`], [`Request::PrepareEffect`], [`Answer::Prepared`],
 //! [`Request::Release`]) and run on the audio thread
 //! ([`crate::realtime`]).
+//!
+//! Interface 1.4 added exporters ([`Request::ExportStart`] and its
+//! siblings) and advice, a dialog the user can silence
+//! ([`HostRequest::Advise`]).
 
 use std::fmt;
 
@@ -249,6 +253,36 @@ pub enum Request<'a> {
         /// The instance.
         instance: u64,
     },
+    /// Start an audio export with the exporter `exporter` (an id from the
+    /// manifest's `exporters`, of kind `audio`). Answered with
+    /// [`Answer::ExportStarted`]: the rate to render at and the file's
+    /// first bytes. Then come [`Request::ExportSamples`] until the end,
+    /// and [`Request::ExportFinish`]. One export at a time; a new start
+    /// drops an unfinished one. Since interface 1.4.
+    ExportStart {
+        /// The exporter's id.
+        exporter: String,
+    },
+    /// The next piece of the export's sound: stereo frames, left and right
+    /// interleaved, at the rate the start asked for, as the mixer leaves
+    /// them (full scale is ±1; louder is possible). Answered with
+    /// [`Answer::Exported`], the bytes that follow in the file. Since
+    /// interface 1.4.
+    ExportSamples {
+        /// The exporter's id.
+        exporter: String,
+        /// The frames, interleaved.
+        samples: Vec<f32>,
+    },
+    /// The sound is over (or, with `cancelled`, the user stopped the export
+    /// and the file is thrown away). Answered with
+    /// [`Answer::ExportFinished`]. Since interface 1.4.
+    ExportFinish {
+        /// The exporter's id.
+        exporter: String,
+        /// The export was stopped; nothing more is written.
+        cancelled: bool,
+    },
 }
 
 /// What an instrument is prepared for. Since interface 1.3.
@@ -367,6 +401,27 @@ pub enum Answer<'a> {
         /// blocks of 8); 0 for one that starts every note on its frame.
         resolution: u32,
     },
+    /// An audio export started. Since interface 1.4.
+    ExportStarted {
+        /// The rate to render at, in frames a second.
+        rate: u32,
+        /// The file's first bytes (a header), perhaps none.
+        #[serde(borrow)]
+        data: Blob<'a>,
+    },
+    /// The bytes that follow in the file, perhaps none. Since interface
+    /// 1.4.
+    Exported(#[serde(borrow)] Blob<'a>),
+    /// An audio export finished. Since interface 1.4.
+    ExportFinished {
+        /// The file's last bytes, perhaps none.
+        #[serde(borrow)]
+        data: Blob<'a>,
+        /// Bytes to write over the file's start once all is written (a
+        /// header that names the length, as WAV's does), or none. At most
+        /// as long as what was written.
+        start: Option<Blob<'a>>,
+    },
 }
 
 impl Answer<'_> {
@@ -395,6 +450,15 @@ impl Answer<'_> {
                 instance,
                 latency,
                 resolution,
+            },
+            Answer::ExportStarted { rate, data } => Answer::ExportStarted {
+                rate,
+                data: data.into_owned(),
+            },
+            Answer::Exported(b) => Answer::Exported(b.into_owned()),
+            Answer::ExportFinished { data, start } => Answer::ExportFinished {
+                data: data.into_owned(),
+                start: start.map(Blob::into_owned),
             },
         }
     }
@@ -569,6 +633,104 @@ pub enum HostRequest<'a> {
     /// folders its manifest lists. Answered with [`HostAnswer::Folders`].
     /// Since interface 1.3.
     Folders,
+    /// Show the user advice: a dialog with a title, a text and up to three
+    /// links, once the window is up and one dialog at a time, with a
+    /// "Don't show this again" box. The host keeps what the user ticked,
+    /// and answers [`HostAnswer::Done`] whether it showed the dialog or
+    /// not: a plugin can't tell, and asks again whenever its reason holds.
+    /// Since interface 1.4.
+    Advise(Advice),
+}
+
+/// The longest an [`Advice`]'s id may be, in characters.
+pub const ADVICE_ID_MAX: usize = 64;
+/// The most links an [`Advice`] may have.
+pub const ADVICE_LINKS_MAX: usize = 3;
+/// The longest an [`Advice`]'s title may be, in characters.
+pub const ADVICE_TITLE_MAX: usize = 80;
+/// The longest an [`Advice`]'s text may be, in characters.
+pub const ADVICE_TEXT_MAX: usize = 1200;
+/// The longest an [`Advice`] link's words may be, in characters.
+pub const ADVICE_LINK_TEXT_MAX: usize = 60;
+
+/// Advice a plugin asks the host to show ([`HostRequest::Advise`]). Since
+/// interface 1.4.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Advice {
+    /// What the advice is about, unique within the plugin: lowercase
+    /// letters, digits and hyphens (`no-sound-sets`). What the user
+    /// silences is this id under the plugin's.
+    pub id: String,
+    /// The dialog's heading, a few words.
+    pub title: String,
+    /// What to tell the user, in a few sentences. Lines are separated by
+    /// `\n`; there is no other markup.
+    pub text: String,
+    /// Up to three links, shown after the text; each opens in the
+    /// system's browser only when the user clicks it.
+    pub links: Vec<Link>,
+}
+
+impl Advice {
+    /// What is wrong with the advice, as a sentence for the plugin's
+    /// author, or `None` when the host can show it.
+    pub fn problem(&self) -> Option<String> {
+        let chars = |s: &str| s.chars().count();
+        let id_ok = !self.id.is_empty()
+            && chars(&self.id) <= ADVICE_ID_MAX
+            && !self.id.starts_with('-')
+            && !self.id.ends_with('-')
+            && self
+                .id
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+        if !id_ok {
+            return Some(format!(
+                "the advice id {:?} must be 1 to {ADVICE_ID_MAX} lowercase letters, digits and hyphens, not starting or ending with a hyphen",
+                self.id
+            ));
+        }
+        if self.title.trim().is_empty() || chars(&self.title) > ADVICE_TITLE_MAX {
+            return Some(format!(
+                "the advice's title must be 1 to {ADVICE_TITLE_MAX} characters"
+            ));
+        }
+        if self.text.trim().is_empty() || chars(&self.text) > ADVICE_TEXT_MAX {
+            return Some(format!(
+                "the advice's text must be 1 to {ADVICE_TEXT_MAX} characters"
+            ));
+        }
+        if self.links.len() > ADVICE_LINKS_MAX {
+            return Some(format!(
+                "the advice has {} links, more than {ADVICE_LINKS_MAX}",
+                self.links.len()
+            ));
+        }
+        for link in &self.links {
+            if link.text.trim().is_empty() || chars(&link.text) > ADVICE_LINK_TEXT_MAX {
+                return Some(format!(
+                    "a link's words must be 1 to {ADVICE_LINK_TEXT_MAX} characters"
+                ));
+            }
+            if !is_https(&link.url) {
+                return Some(format!(
+                    "a link must be an https: address, and {:?} isn't",
+                    link.url
+                ));
+            }
+        }
+        None
+    }
+}
+
+/// Whether `url` is an `https:` address with a host, and no white space:
+/// the only addresses the host opens.
+pub fn is_https(url: &str) -> bool {
+    url.get(..8)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https://"))
+        && url.len() > 8
+        && !url[8..].starts_with('/')
+        && !url.chars().any(char::is_whitespace)
 }
 
 /// A link in a footer message. Since interface 1.3.
@@ -661,6 +823,51 @@ mod tests {
     }
 
     #[test]
+    fn interface_1_4_export_messages_round_trip_and_keep_their_places() {
+        let requests = [
+            Request::ExportStart {
+                exporter: "wav".into(),
+            },
+            Request::ExportSamples {
+                exporter: "wav".into(),
+                samples: vec![0.5, -0.25, 1.5, -1.0],
+            },
+            Request::ExportFinish {
+                exporter: "wav".into(),
+                cancelled: true,
+            },
+        ];
+        for request in requests {
+            let bytes = encode(&request).unwrap();
+            assert_eq!(decode::<Request<'_>>(&bytes).unwrap(), request);
+        }
+        let header = b"RIFF".to_vec();
+        let answers = [
+            Answer::ExportStarted {
+                rate: 48_000,
+                data: Blob::borrowed(&header),
+            },
+            Answer::Exported(Blob::owned(vec![1, 2, 3])),
+            Answer::ExportFinished {
+                data: Blob::owned(Vec::new()),
+                start: Some(Blob::borrowed(&header)),
+            },
+        ];
+        for answer in answers {
+            let bytes = encode(&answer).unwrap();
+            assert_eq!(decode::<Answer<'_>>(&bytes).unwrap(), answer);
+        }
+        // New variants go at the end of their enums: the ones before keep
+        // their numbers (postcard writes a variant's index first).
+        let release = encode(&Request::Release { instance: 0 }).unwrap();
+        let start = encode(&Request::ExportStart {
+            exporter: String::new(),
+        })
+        .unwrap();
+        assert_eq!(start[0], release[0] + 1);
+    }
+
+    #[test]
     fn interface_1_3_messages_round_trip() {
         let track = TrackInfo {
             index: 2,
@@ -708,6 +915,15 @@ mod tests {
                 },
             },
             HostRequest::Folders,
+            HostRequest::Advise(Advice {
+                id: "no-sound-sets".into(),
+                title: "Better sounds".into(),
+                text: "Only the system's sound set is installed.".into(),
+                links: vec![Link {
+                    text: "Better sounds".into(),
+                    url: "https://example.org/sounds".into(),
+                }],
+            }),
         ];
         for request in host {
             let bytes = encode(&request).unwrap();
@@ -818,5 +1034,65 @@ mod tests {
             score: None,
         };
         assert_eq!(first(encode(&score2).unwrap()), 4);
+
+        // Interface 1.3 and 1.4.
+        assert_eq!(first(encode(&HostRequest::Folders).unwrap()), 9);
+        let advise = HostRequest::Advise(Advice {
+            id: "a".into(),
+            title: "t".into(),
+            text: "x".into(),
+            links: vec![],
+        });
+        assert_eq!(first(encode(&advise).unwrap()), 10);
+    }
+
+    fn advice(id: &str, links: &[&str]) -> Advice {
+        Advice {
+            id: id.into(),
+            title: "Title".into(),
+            text: "Text.".into(),
+            links: links
+                .iter()
+                .map(|u| Link {
+                    text: "Words".into(),
+                    url: (*u).into(),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn advice_is_checked() {
+        assert_eq!(
+            advice("no-model", &["https://example.org/a"]).problem(),
+            None
+        );
+        assert_eq!(advice("a1-b2", &[]).problem(), None);
+        for id in ["", "No-Model", "no model", "-a", "a-", "é", &"a".repeat(65)] {
+            assert!(advice(id, &[]).problem().is_some(), "{id:?}");
+        }
+        let four = [
+            "https://a.org/",
+            "https://b.org/",
+            "https://c.org/",
+            "https://d.org/",
+        ];
+        assert!(advice("a", &four).problem().unwrap().contains("4 links"));
+        for url in [
+            "http://example.org",
+            "file:///etc/passwd",
+            "https://",
+            "https:///x",
+            "https://a b",
+            "javascript:alert(1)",
+        ] {
+            assert!(advice("a", &[url]).problem().is_some(), "{url:?}");
+        }
+        let mut a = advice("a", &[]);
+        a.title = " ".into();
+        assert!(a.problem().is_some());
+        a.title = "t".into();
+        a.text = "x".repeat(ADVICE_TEXT_MAX + 1);
+        assert!(a.problem().is_some());
     }
 }

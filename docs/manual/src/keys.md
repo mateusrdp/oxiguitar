@@ -22,7 +22,7 @@
 | Ctrl + A / Escape | Select everything / drop the selection |
 | 0 to 9, Enter, R, − / +, Shift + . / Ctrl + ., L / Shift + L, Backspace, Shift + Delete, Ctrl + Shift + Delete, Ctrl + Insert, Alt + arrows, Alt + 1 to 4, / | Enter notes ([Entering notes](editing.md#entering-notes)) |
 | Insert, Ctrl + Delete, [ and ], \| | Insert and delete bars, repeats, free time ([Bars](editing.md#bars)) |
-| Ctrl + K, Ctrl + /, D, Shift + Insert | The Bar dialog ([Bars](editing.md#bars)) |
+| Ctrl + K, Ctrl + /, D, Shift + Insert | Shows the **Bar** tab ([Bars](editing.md#bars)) |
 | X, O, ;, :, !, H, (, S, Alt + S, Shift + S, V, P, Shift + P, I, Y, Ctrl + Alt + Y, Alt + P, Alt + T, N, ", T, ), $, <, G, Ctrl + Alt + G, Ctrl + D, Ctrl + U, Shift + D, Shift + U, Ctrl + Alt + W | Effects ([Effects](editing.md#effects)) |
 | B / Ctrl + Alt + V | The bend editor / the whammy bar's ([Bends and the whammy bar](editing.md#bends-and-the-whammy-bar)) |
 | A / Shift + T | The chord dialog / the beat's text ([Chords, text and lyrics](editing.md#chords-text-and-lyrics)) |
@@ -34,7 +34,7 @@
 | Ctrl + mouse wheel | Zoom the interface in or out |
 | Ctrl + + / Ctrl + − / Ctrl + 0 | Zoom the interface in, out, back to 100 % |
 | Score zoom slider, bottom right | Zoom the score; click the percentage for 100 % |
-| Click a track's name | Select that track |
+| Click a track's name | Select that track (left-click shows only it; Shift-click toggles it in multitrack) |
 | Click a track's overview | Move the playback (or the caret) there |
 | Click a hidden track's clef or TAB | Show it with the others |
 | Click a panel's open tab, or its chevron | Fold the panel away or open it again |

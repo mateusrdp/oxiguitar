@@ -25,7 +25,7 @@ It reads and writes only its own object, through the host:
 - **Show them in a settings window** (interface 1.3): with `"settings_window": true` in the manifest and `Plugin::settings_window` returning a `Tab`, the plugin manager (Tools → Plugins) gives the plugin a Settings… button, which opens a window of the plugin's widgets: the same widgets as a tab's, without a canvas. Its `on` reads the settings, changes them and writes them back. Before 1.3, put them in a tab of your own ([Tabs](tabs.md)).
 - Users can also edit settings.json by hand while OxiGuitar is closed, so read it defensively: a value of the wrong type falls back to your default, as the template's `and_then(|v| v.as_bool())` does.
 
-Settings are for small values, and they are global. What belongs to one track of one score goes in a [section of the track dialog](track-sections.md) instead.
+Settings are for small values, and they are global. What belongs to one track of one score goes in a [section of the Track tab](track-sections.md) instead.
 
 ## Folders (interface 1.3)
 

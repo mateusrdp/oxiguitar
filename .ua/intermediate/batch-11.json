@@ -1,0 +1,111 @@
+{
+  "nodes": [
+    {
+      "id": "file:scripts/build-plugins.sh",
+      "type": "file",
+      "name": "build-plugins.sh",
+      "filePath": "scripts/build-plugins.sh",
+      "summary": "Builds every non-test plugin in the plugins/ directory as .oxp files and copies them into the correct system plugin folder for the current platform (Linux, macOS, or Windows), handling multi-architecture macOS builds and cross-compilation targets.",
+      "tags": ["build", "plugin", "cargo", "oxp"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/check-dco.sh",
+      "type": "file",
+      "name": "check-dco.sh",
+      "filePath": "scripts/check-dco.sh",
+      "summary": "Verifies that every commit in a git range carries a valid Signed-off-by DCO trailer matching the author's email, with special handling to skip commits authored by the Claude GitHub app.",
+      "tags": ["ci", "dco", "git", "compliance"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/check-display-crates.sh",
+      "type": "file",
+      "name": "check-display-crates.sh",
+      "filePath": "scripts/check-display-crates.sh",
+      "summary": "Ensures the Wayland and X11 Linux builds maintain strict crate separation — the Wayland build must not contain X11 crates and vice versa — by analyzing cargo tree output for both feature configurations.",
+      "tags": ["ci", "testing", "display", "wayland"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/check-plugin-template.sh",
+      "type": "file",
+      "name": "check-plugin-template.sh",
+      "filePath": "scripts/check-plugin-template.sh",
+      "summary": "Copies the plugin template to a temporary workspace, rewrites its dependencies to use the local checkout, then runs cargo fmt, clippy, tests, the plugin-test CLI, and a real file render to verify the template produces a working plugin.",
+      "tags": ["testing", "plugin", "template", "ci"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/guitar-pro-check.sh",
+      "type": "file",
+      "name": "guitar-pro-check.sh",
+      "filePath": "scripts/guitar-pro-check.sh",
+      "summary": "Converts all reference songs and test songs through the Guitar Pro plugins into .gp and .gp5 files for manual verification in Guitar Pro, logging all conversions to a tracked fixtures directory.",
+      "tags": ["testing", "guitar-pro", "export", "fixtures"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/install-desktop-entry.sh",
+      "type": "file",
+      "name": "install-desktop-entry.sh",
+      "filePath": "scripts/install-desktop-entry.sh",
+      "summary": "Installs or uninstalls OxiGuitar's desktop entry, icon themes (16–512px plus SVG), and Guitar Pro MIME type registration for the current user on Linux, updating the desktop and MIME databases.",
+      "tags": ["desktop", "linux", "install", "integration"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/no-network.sh",
+      "type": "file",
+      "name": "no-network.sh",
+      "filePath": "scripts/no-network.sh",
+      "summary": "Runs strace on oxiguitar-cli and optionally the desktop app (under Weston or Xvfb) to detect any IPv4/IPv6 network connections during normal operation, failing the build if network access is detected.",
+      "tags": ["testing", "security", "network", "strace"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:scripts/guitar-pro-check.sh",
+      "target": "file:scripts/build-plugins.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/build-plugins.sh",
+      "target": "file:scripts/check-plugin-template.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/check-plugin-template.sh",
+      "target": "file:scripts/check-display-crates.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/guitar-pro-check.sh",
+      "target": "file:scripts/check-plugin-template.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/no-network.sh",
+      "target": "file:scripts/check-dco.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/no-network.sh",
+      "target": "file:scripts/guitar-pro-check.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

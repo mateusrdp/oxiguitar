@@ -1,0 +1,170 @@
+{
+  "nodes": [
+    {
+      "id": "file:.github/workflows/builds.yml",
+      "type": "pipeline",
+      "name": "Test Builds",
+      "filePath": ".github/workflows/builds.yml",
+      "summary": "Builds oxiguitar-app, oxiguitar-cli, and plugins for Linux (x86_64, ARM64, X11), Windows (x86_64, ARM64), and macOS (universal) on push to develop. Uploads 14-day artifacts including binaries and test plugins for manual testing by contributors.",
+      "tags": ["ci-cd", "github-actions", "build-pipeline", "test-builds", "multi-platform"],
+      "complexity": "moderate",
+      "language": "yaml",
+      "languageNotes": ""
+    },
+    {
+      "id": "file:.github/workflows/ci.yml",
+      "type": "pipeline",
+      "name": "CI",
+      "filePath": ".github/workflows/ci.yml",
+      "summary": "Main CI workflow with 8 parallel checks: formatting (rustfmt), lint (clippy on MSRV and stable, including X11 and individual format readers), multi-platform tests (Linux x86_64/ARM64, Windows x86_64/ARM64, macOS), plugin template verification on all platforms, speed budget tests, license/advisory checks (cargo-deny), no-network isolation test, and DCO sign-off check. A ci-success gate job requires all checks to pass before merging.",
+      "tags": ["ci-cd", "github-actions", "ci-gate", "clippy", "testing", "multi-platform", "msrv"],
+      "complexity": "complex",
+      "language": "yaml",
+      "languageNotes": ""
+    },
+    {
+      "id": "file:.github/workflows/debian.yml",
+      "type": "pipeline",
+      "name": "Debian",
+      "filePath": ".github/workflows/debian.yml",
+      "summary": "Weekly and on-change workflow for Debian packaging: audits all Rust crates against Debian sid packages, then builds .deb packages offline in a Docker-based Debian sid container (skipped if sid's rustc is older than the project's MSRV). Runs lintian checks and installs packages into a clean sid for smoke testing.",
+      "tags": ["ci-cd", "github-actions", "debian", "packaging", "linux"],
+      "complexity": "moderate",
+      "language": "yaml",
+      "languageNotes": ""
+    },
+    {
+      "id": "file:.github/workflows/docs.yml",
+      "type": "pipeline",
+      "name": "Manual",
+      "filePath": ".github/workflows/docs.yml",
+      "summary": "Builds the user manual (docs/manual/) and plugin developer guide (docs/plugins/) as mdBook sites. On PRs, builds and checks for broken links without publishing. On pushes to main, builds and deploys the manual to GitHub Pages at mateusrdp.github.io/oxiguitar/ and the guide at mateusrdp.github.io/oxiguitar/plugin-guide/.",
+      "tags": ["ci-cd", "github-actions", "documentation", "mdbook", "github-pages", "deployment"],
+      "complexity": "simple",
+      "language": "yaml",
+      "languageNotes": ""
+    },
+    {
+      "id": "file:.github/workflows/fuzz.yml",
+      "type": "pipeline",
+      "name": "Fuzz",
+      "filePath": ".github/workflows/fuzz.yml",
+      "summary": "Fuzz testing of all file readers (guitar_pro_3_5, guitar_pro_6, guitar_pro_7, gpif), the .gp writer, and plugin dispatch/tabs using cargo-fuzz on nightly Rust. On PRs runs short 4-minute checks; on manual dispatch runs up to 680 minutes split across two jobs sharing corpus. Targets include any_file format detection and plugin_tab on PRs only.",
+      "tags": ["ci-cd", "github-actions", "fuzzing", "cargo-fuzz", "security", "testing"],
+      "complexity": "moderate",
+      "language": "yaml",
+      "languageNotes": ""
+    },
+    {
+      "id": "file:.github/workflows/interop.yml",
+      "type": "pipeline",
+      "name": "Interop",
+      "filePath": ".github/workflows/interop.yml",
+      "summary": "Interoperability testing for .gp file output: writes all fixtures as .gp using oxiguitar-formats' write_gp example, then verifies that alphaTab (a JavaScript Guitar Pro reader) and MuseScore 4 read every file beat-by-beat with matching tracks, bars, and notes. Only runs on PRs touching format crates, fixtures, or interop scripts.",
+      "tags": ["ci-cd", "github-actions", "interop", "testing", "guitar-pro", "musescore"],
+      "complexity": "simple",
+      "language": "yaml",
+      "languageNotes": ""
+    },
+    {
+      "id": "file:.github/workflows/listening.yml",
+      "type": "pipeline",
+      "name": "Listening Pack",
+      "filePath": ".github/workflows/listening.yml",
+      "summary": "On-demand workflow that renders all reference songs (fixtures/reference/*.gp) into WAV files using oxiguitar-cli's SoundFont plugin with every supported sound set: FluidR3 GM, MuseScore General, FreePats electric guitar banks (clean, jazz, direct), and multiple SFZ instruments (Karoryfer guitars/basses, SM Drums, Naked Drums, Big Rusty Drums, MuldjordKit). Each set is a separate artifact kept 14 days for manual listening review.",
+      "tags": ["ci-cd", "github-actions", "audio", "soundfont", "listening-test", "manual-testing"],
+      "complexity": "complex",
+      "language": "yaml",
+      "languageNotes": ""
+    },
+    {
+      "id": "file:.github/workflows/release.yml",
+      "type": "pipeline",
+      "name": "Release Packages",
+      "filePath": ".github/workflows/release.yml",
+      "summary": "Full release pipeline producing .deb, .rpm, AppImage (Linux x86_64/ARM64, Wayland and X11), Windows .zip (x86_64/ARM64), and macOS universal .dmg. Generates third-party license report, builds and smoke-tests each package in its target environment (Debian sid, Fedora, native runner), generates SHA256SUMS, and creates a GitHub draft release on v* tag pushes. Core packages exclude plugins; basic plugins ship separately.",
+      "tags": ["ci-cd", "github-actions", "release", "packaging", "debian", "rpm", "appimage", "dmg", "windows", "multi-platform"],
+      "complexity": "complex",
+      "language": "yaml",
+      "languageNotes": ""
+    },
+    {
+      "id": "file:.github/workflows/spikes.yml",
+      "type": "pipeline",
+      "name": "Spikes",
+      "filePath": ".github/workflows/spikes.yml",
+      "summary": "Advisory-only workflow (never blocks merges) for building and testing experimental spikes: GUI toolkit spikes (slint, iced, egui) on all platforms using MSRV, audio spikes (NeuralAmpModeler, sound synthesis, timing benchmarks) on all platforms, and on-demand NeuralAmpModeler-rs listening renders with FreePats guitars, amp captures, and cabinet IRs.",
+      "tags": ["ci-cd", "github-actions", "spikes", "experimental", "gui", "audio", "neural-amp-modeler"],
+      "complexity": "moderate",
+      "language": "yaml",
+      "languageNotes": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:.github/workflows/ci.yml",
+      "target": "file:.github/workflows/builds.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/ci.yml",
+      "target": "file:.github/workflows/release.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/ci.yml",
+      "target": "file:.github/workflows/debian.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/ci.yml",
+      "target": "file:.github/workflows/fuzz.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/ci.yml",
+      "target": "file:.github/workflows/interop.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/ci.yml",
+      "target": "file:.github/workflows/spikes.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/builds.yml",
+      "target": "file:.github/workflows/release.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/builds.yml",
+      "target": "file:.github/workflows/spikes.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/release.yml",
+      "target": "file:.github/workflows/debian.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/release.yml",
+      "target": "file:.github/workflows/listening.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/fuzz.yml",
+      "target": "file:.github/workflows/interop.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/listening.yml",
+      "target": "file:.github/workflows/spikes.yml",
+      "type": "related"
+    },
+    {
+      "source": "file:.github/workflows/docs.yml",
+      "target": "file:.github/workflows/ci.yml",
+      "type": "related"
+    }
+  ]
+}

@@ -118,10 +118,11 @@ fn the_test_plugin_passes_the_contract() {
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
     // of event, the selection in both its forms; 2 tools; the settings
     // window and its 2 widgets; the track section and its 2 widgets; 2
-    // instruments and an effect, 4 real-time checks each.
+    // instruments and an effect, 4 real-time checks each; the exporter's
+    // 3 checks.
     assert_eq!(
         report.passed.len(),
-        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4,
+        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4 + 3,
         "{:#?}",
         report.passed
     );
@@ -301,11 +302,12 @@ fn one_file_per_plugin_disabled_ones_are_never_loaded() {
     let b = linked("copies-b", &["test.oxp"]);
     let (plugins, _) = discover(&[a.clone(), b.clone()], SharedSettings::default());
     let states: Vec<&State> = plugins.found().iter().map(|f| &f.state).collect();
-    // Same version everywhere: the earliest folder, then the earliest name.
-    assert_eq!(states[0], &State::Ready);
-    assert!(plugins.found()[0].path.ends_with("test-again.oxp"));
-    assert!(matches!(states[1], State::Replaced(p) if p.ends_with("test-again.oxp")));
-    assert!(matches!(states[2], State::Replaced(_)));
+    // Same version and build everywhere: the latest folder (the user's
+    // over the system's), then in one folder the earliest name.
+    assert!(plugins.found()[2].path.starts_with(&b));
+    assert_eq!(states[2], &State::Ready);
+    assert!(matches!(states[0], State::Replaced(p) if p.starts_with(&b)));
+    assert!(matches!(states[1], State::Replaced(p) if p.starts_with(&b)));
     assert_eq!(plugins.readers().len(), 1);
 
     let disabled = SharedSettings::new(
@@ -411,13 +413,14 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
             Widget::Choice { .. } => "choice",
             Widget::List { .. } => "list",
             Widget::Canvas(_) => "canvas",
+            Widget::Link { .. } => "link",
         })
         .collect();
     assert_eq!(
         kinds,
         [
             "label", "button", "button", "toggle", "slider", "field", "choice", "list", "canvas",
-            "label", "label"
+            "label", "label", "link"
         ]
     );
 
@@ -1257,6 +1260,98 @@ fn the_engine_plays_a_plugin_instrument_on_its_frames() {
     control.collect();
 }
 
+/// The left channel's loudest frame over a second of the test song from
+/// its first note, as `plan` is prepared.
+fn peak_of(
+    plugins: &Plugins,
+    score: &oxiguitar_model::Score,
+    plan: &oxiguitar_play::plugin_source::Plan,
+) -> f32 {
+    use oxiguitar_play::{Schedule, Timeline, engine};
+    let prepared =
+        oxiguitar_play::plugin_source::prepare(plugins, score, plan, 48_000, 512).unwrap();
+    assert!(prepared.silent.is_empty(), "{:?}", prepared.silent);
+    let timeline = Timeline::new(score);
+    let schedule = Arc::new(Schedule::new(&timeline, &prepared.routes, prepared.count));
+    let (mut engine, mut control) = engine(48_000, 512);
+    let mut sources = prepared.sources;
+    sources.fit(&schedule);
+    control.set_schedule(schedule);
+    control.set_sources(sources);
+    let first = timeline
+        .notes
+        .iter()
+        .map(|n| n.start)
+        .fold(f64::MAX, f64::min);
+    control.play(first, false);
+    let mut out = vec![0.0f32; 1024];
+    let mut peak = 0.0f32;
+    for _ in 0..96 {
+        engine.render(&mut out, 2, 0);
+        peak = out.iter().step_by(2).fold(peak, |p, v| p.max(v.abs()));
+    }
+    control.pause();
+    engine.render(&mut out, 2, 0);
+    control.set_sources(oxiguitar_play::Sources::new(Vec::new()));
+    engine.render(&mut out, 2, 0);
+    control.collect();
+    peak
+}
+
+#[test]
+fn the_player_puts_each_track_s_effects_after_its_instrument() {
+    use oxiguitar_play::plugin_source::plan;
+
+    let dir = folder("effects", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let mut score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
+        .unwrap()
+        .score;
+    // Every track gets the test plugin's gain, which plays every class.
+    let with = plan(&plugins, &score);
+    assert!(!with.is_empty());
+    for g in &with.groups {
+        assert_eq!(g.effects.len(), g.tracks.len());
+        for chain in &g.effects {
+            assert_eq!(chain.len(), 1);
+            assert_eq!(
+                (chain[0].plugin.as_str(), chain[0].effect.as_str()),
+                ("oxiguitar.test", "gain")
+            );
+            assert_eq!(chain[0].settings, "{}");
+        }
+    }
+    // Without its effects, the same instruments play twice as loud.
+    let mut without = with.clone();
+    for g in &mut without.groups {
+        for chain in &mut g.effects {
+            chain.clear();
+        }
+    }
+    let (loud, quiet) = (
+        peak_of(&plugins, &score, &without),
+        peak_of(&plugins, &score, &with),
+    );
+    assert!(loud > 0.01, "it plays: {loud}");
+    assert!(
+        (quiet / loud - 0.5).abs() < 0.01,
+        "the gain halves it: {quiet} against {loud}"
+    );
+    // The track dialog's settings for the effect's plugin reach it, and a
+    // change of them is a new plan, so the player prepares again.
+    score.tracks[0]
+        .plugins
+        .insert("oxiguitar.test".into(), r#"{"gain": true}"#.into());
+    let changed = plan(&plugins, &score);
+    assert_ne!(changed, with);
+    assert_eq!(
+        changed.groups[0].effects[0][0].settings,
+        r#"{"gain": true}"#
+    );
+}
+
 #[test]
 fn an_audio_device_plays_the_engine_through_the_host() {
     // The fake device (priority -100) is the only one here, so it is
@@ -1297,4 +1392,205 @@ fn an_audio_device_plays_the_engine_through_the_host() {
     assert!(heard > first, "{heard} after {first}");
     drop(stream);
     control.collect();
+}
+
+/// An audio export (interface 1.4) through the test plugin's exporter
+/// `raw`: the core renders the test song at the rate the exporter asks
+/// for (44.1 kHz), hands it over, writes what it gets under a temporary
+/// name and the header it gets at the end over the start, and renames the
+/// file; the frames the header names are all in the file, and they sound.
+/// A cancelled export leaves nothing, and an existing file is kept.
+#[test]
+fn an_audio_export_writes_the_song_through_the_exporter() {
+    use oxiguitar_play::export::{self, Failure, Plan};
+
+    let dir = folder("export", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
+        .unwrap()
+        .score;
+    let exporters = plugins.exporters();
+    assert_eq!(exporters.len(), 1);
+    assert_eq!(exporters[0].spec.extension, "oxgraw");
+
+    let out = dir.join("song.oxgraw");
+    let mut seen = Vec::new();
+    let plan = Plan::whole(&score);
+    let made = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |p| {
+        seen.push(p);
+        true
+    })
+    .unwrap();
+    assert_eq!(made.rate, 44_100);
+    assert!(
+        !export::partial(&out).exists(),
+        "the temporary file is gone"
+    );
+    let bytes = std::fs::read(&out).unwrap();
+    assert_eq!(&bytes[..8], b"OXGRAW1\n");
+    let rate = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+    let frames = u64::from_le_bytes(bytes[12..20].try_into().unwrap());
+    assert_eq!(rate, 44_100);
+    assert_eq!(bytes.len() as u64, 20 + frames * 8, "every frame is there");
+    let length = export::length(&oxiguitar_play::Timeline::new(&score), &plan);
+    assert!(
+        (frames as f64 / 44_100.0 - length).abs() < 0.1,
+        "{frames} frames for {length} s"
+    );
+    let peak = bytes[20..]
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|c| f32::from_le_bytes(*c).abs())
+        .fold(0.0f32, f32::max);
+    assert!(peak > 0.01, "it sounds: {peak}");
+    assert!(seen.windows(2).all(|w| w[0] <= w[1]), "progress only grows");
+    assert_eq!(seen.last().copied(), Some(1.0));
+
+    // Stopped halfway: nothing is written, and the file there stays.
+    let failed = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |p| {
+        p < 0.5
+    });
+    assert_eq!(failed, Err(Failure::Cancelled));
+    assert!(!export::partial(&out).exists());
+    assert_eq!(std::fs::read(&out).unwrap(), bytes);
+
+    // A selection at half speed with the metronome: as long as it should be.
+    let timeline = oxiguitar_play::Timeline::new(&score);
+    let part = Plan {
+        from: 0.0,
+        until: Some(timeline.length() / 2.0),
+        speed: 0.5,
+        metronome: true,
+        ..plan.clone()
+    };
+    let half = dir.join("half.oxgraw");
+    let made = export::export(&plugins, exporters[0], &score, &part, &half, &mut |_| true).unwrap();
+    let expected = export::length(&timeline, &part);
+    assert!(
+        (made.seconds - expected).abs() < 0.1,
+        "{} s for {expected} s",
+        made.seconds
+    );
+}
+
+/// The rest of the core for interface 1.4's advice: what was asked of the
+/// window.
+#[derive(Default)]
+struct Advised(Mutex<Vec<oxiguitar_host::advice::Asked>>);
+
+impl Core for Advised {
+    fn notify(&self, _level: Level, _text: String) {}
+
+    fn advise(&self, asked: oxiguitar_host::advice::Asked) {
+        self.0.lock().unwrap().push(asked);
+    }
+}
+
+fn advice_json(id: &str, links: &[&str]) -> Vec<u8> {
+    serde_json::to_vec(&serde_json::json!({
+        "id": id,
+        "title": "Better sounds",
+        "text": "Only the system's sound set is installed.\nMore are free.",
+        "links": links
+            .iter()
+            .map(|u| serde_json::json!({"text": "Where to get them", "url": u}))
+            .collect::<Vec<_>>(),
+    }))
+    .unwrap()
+}
+
+#[test]
+fn interface_1_4_advice_is_shown_once_and_can_be_silenced() {
+    use oxiguitar_host::advice;
+
+    let dir = folder("advice", &["test.oxp"]);
+    let core = Arc::new(Advised::default());
+    let settings = SharedSettings::default();
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        settings.clone(),
+        "x11",
+        core.clone(),
+    );
+    let asked = || core.0.lock().unwrap().clone();
+    let link = "https://example.org/sounds";
+
+    // Asked: the window hears who, and what.
+    plugins
+        .call_service(
+            "test-echo",
+            "advise",
+            &advice_json("no-sound-sets", &[link]),
+        )
+        .unwrap();
+    let first = asked();
+    assert_eq!(first.len(), 1);
+    assert_eq!(first[0].plugin, "oxiguitar.test");
+    assert_eq!(first[0].plugin_name, "Test plugin");
+    assert_eq!(first[0].advice.id, "no-sound-sets");
+    assert_eq!(first[0].advice.title, "Better sounds");
+    assert_eq!(first[0].advice.links[0].url, link);
+
+    // Asked again, as a plugin does whenever its reason holds: said once
+    // a session, and the plugin is told nothing.
+    plugins
+        .call_service(
+            "test-echo",
+            "advise",
+            &advice_json("no-sound-sets", &[link]),
+        )
+        .unwrap();
+    assert_eq!(asked().len(), 1);
+    // Another advice of the same plugin is its own.
+    plugins
+        .call_service("test-echo", "advise", &advice_json("no-model", &[]))
+        .unwrap();
+    assert_eq!(asked().len(), 2);
+
+    // What the user silenced is never asked again, and nothing else is.
+    advice::hide(&settings, "oxiguitar.test", "other").unwrap();
+    plugins
+        .call_service("test-echo", "advise", &advice_json("other", &[link]))
+        .unwrap();
+    assert_eq!(asked().len(), 2);
+    assert_eq!(
+        settings.get("advice"),
+        Some(serde_json::json!({"oxiguitar.test": {"other": "hidden"}}))
+    );
+    let three = ["https://a.org/", "https://b.org/", "https://c.org/"];
+    plugins
+        .call_service("test-echo", "advise", &advice_json("three-links", &three))
+        .unwrap();
+    assert_eq!(asked().len(), 3);
+
+    // Advice the host can't show is an error for the plugin, and the
+    // window hears nothing.
+    let four = [
+        "https://a.org/",
+        "https://b.org/",
+        "https://c.org/",
+        "https://d.org/",
+    ];
+    for (id, links, why) in [
+        ("four-links", &four[..], "4 links"),
+        ("http", &["http://example.org"][..], "https:"),
+        ("file", &["file:///etc/passwd"][..], "https:"),
+        ("Bad Id", &[][..], "advice id"),
+        ("", &[][..], "advice id"),
+    ] {
+        let e = plugins
+            .call_service("test-echo", "advise", &advice_json(id, links))
+            .unwrap_err();
+        assert_eq!(e.kind, ErrorKind::Invalid, "{id}");
+        assert!(e.message.contains(why), "{id}: {e}");
+    }
+    let blank = serde_json::to_vec(&serde_json::json!(
+        {"id": "blank", "title": " ", "text": "x", "links": []}
+    ))
+    .unwrap();
+    assert!(plugins.call_service("test-echo", "advise", &blank).is_err());
+    assert_eq!(asked().len(), 3);
 }

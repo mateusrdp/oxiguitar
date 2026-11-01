@@ -1,0 +1,32 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "fixtures/guitar-pro-check/hammer-on-pull-off.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/hammer-on-pull-off.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/harmonics.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/harmonics.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/header-and-credits.gp", "language": "gp", "sizeLines": 10, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/header-and-credits.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/key-signatures.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/key-signatures.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/layout-horizontal.gp", "language": "gp", "sizeLines": 16, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/layout-horizontal.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/layout-parchment.gp", "language": "gp", "sizeLines": 26, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/layout-parchment.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/layout-vertical.gp", "language": "gp", "sizeLines": 13, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/layout-vertical.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/let-ring.gp", "language": "gp", "sizeLines": 13, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/let-ring.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/lyrics.gp", "language": "gp", "sizeLines": 12, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/lyrics.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/notation-choice.gp", "language": "gp", "sizeLines": 39, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/notation-choice.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/notes-and-rests.gp", "language": "gp", "sizeLines": 19, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/notes-and-rests.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/page-breaks.gp", "language": "gp", "sizeLines": 27, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/page-breaks.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/paper-letter.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"}
+  ],
+  "batchImportData": {},
+  "neighborMap": {}
+}

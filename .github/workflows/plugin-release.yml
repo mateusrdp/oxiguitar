@@ -1,0 +1,388 @@
+# Release workflow for a plugin in a repository of its own (#165), called
+# from that repository's release.yml:
+#
+#   jobs:
+#     release:
+#       uses: mateusrdp/oxiguitar/.github/workflows/plugin-release.yml@v0.11.0
+#       with:
+#         name: midi
+#         title: "MIDI (SoundFont, SFZ)"
+#         description: "Plays the score with SoundFont and SFZ sound sets."
+#         tools-ref: v0.11.0
+#       permissions:
+#         contents: write
+#
+# It builds the plugin's .oxp for Linux x86_64 and aarch64 (on Ubuntu 22.04,
+# glibc 2.35 checked, so it loads on every newer system), Windows x86_64
+# and ARM64, and macOS (one universal file), and from them
+#
+#   - a zip per target,
+#   - a .deb and an .rpm per Linux processor (oxiguitar-NAME),
+#   - a per-user installer per Windows processor (Inno Setup, no
+#     administrator),
+#   - a macOS .pkg (enable_currentUserHome: no password),
+#   - SHA256SUMS,
+#
+# checks the set is complete, and, for a pushed v* tag (only Mateus creates
+# them), makes a DRAFT release holding all of it. Publishing the draft is
+# what plugin-publish.yml reacts to. On a branch or a pull request nothing
+# is released: the files stay under the run for 14 days, with a
+# ~dev version, and those are the test builds.
+#
+# The repository provides what docs/plugins/template has: a build script
+# (default ./build-oxp.sh) that writes dist/NAME-VERSION-SYSTEM-ARCH.oxp
+# in the working directory, universal on macOS. A Linux x86_64 build may
+# also write dist/NAME-VERSION-linux-x86_64-v3.oxp (NAM's second build for
+# x86-64-v3 processors); it is packaged as NAME-x86-64-v3.oxp beside the
+# first. The tag must be v plus the crate's version.
+#
+# The packaging scripts come from the oxiguitar repository at `tools-ref`,
+# which a plugin repository pins to a tag.
+name: Plugin release
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        description: "The plugin's file name without .oxp, such as midi"
+        type: string
+        required: true
+      title:
+        description: "The name shown to people, such as MIDI (SoundFont, SFZ)"
+        type: string
+        required: true
+      description:
+        description: "One line, for the package"
+        type: string
+        required: true
+      license:
+        description: "The plugin's SPDX licence expression"
+        type: string
+        default: GPL-3.0-or-later
+      working-directory:
+        description: "Where the build script and dist/ are"
+        type: string
+        default: "."
+      build:
+        description: "The build script, relative to the working directory"
+        type: string
+        default: ./build-oxp.sh
+      test:
+        description: "Run cargo test in the working directory on each system first"
+        type: boolean
+        default: true
+      apt-packages:
+        description: "Build packages to install on Linux, space separated"
+        type: string
+        default: ""
+      depends-deb:
+        description: "Depends of the .deb, such as oxiguitar-midi (>= 1.0.0)"
+        type: string
+        default: ""
+      depends-rpm:
+        description: "Requires of the .rpm, such as oxiguitar-midi >= 1.0.0"
+        type: string
+        default: ""
+      tools-ref:
+        description: "The tag (or commit) of mateusrdp/oxiguitar the scripts come from"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  meta:
+    name: Version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - id: version
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          crate="$(cargo pkgid)"
+          crate="${crate##*[#@]}"
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            if [[ "$GITHUB_REF_NAME" != "v$crate" ]]; then
+              echo "::error::the tag $GITHUB_REF_NAME doesn't match the crate's version $crate (expected v$crate)"
+              exit 1
+            fi
+            version="$crate"
+          else
+            # Sorts before the real release in dpkg and rpm.
+            version="$crate~dev.$(date -u +%Y%m%d).g$(git rev-parse --short=7 HEAD)"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Package version: $version" >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build (${{ matrix.system }}-${{ matrix.arch }})
+    needs: meta
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest Ubuntu LTS in standard support: a plugin built there
+          # loads on every newer system.
+          - { system: linux, arch: x86_64, os: ubuntu-22.04 }
+          - { system: linux, arch: aarch64, os: ubuntu-22.04-arm }
+          - { system: windows, arch: x86_64, os: windows-2025 }
+          - { system: windows, arch: arm64, os: windows-11-arm }
+          - { system: macos, arch: universal, os: macos-15 }
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: mateusrdp/oxiguitar
+          ref: ${{ inputs.tools-ref }}
+          path: .oxiguitar-tools
+          sparse-checkout: |
+            scripts/plugin-package
+            scripts/package/check-glibc.sh
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.system == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - if: matrix.system == 'linux' && inputs.apt-packages != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ${{ inputs.apt-packages }}
+      - if: inputs.test
+        run: cargo test
+      - run: rm -rf dist && ${{ inputs.build }}
+      - name: The glibc the Linux files need
+        if: matrix.system == 'linux'
+        run: ${{ github.workspace }}/.oxiguitar-tools/scripts/package/check-glibc.sh 2.35 dist
+      - name: Only .oxp files are in dist
+        run: |
+          ls -l dist
+          test -n "$(ls dist/*.oxp)"
+          test -z "$(ls dist | grep -v '\.oxp$' || true)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: oxp-${{ matrix.system }}-${{ matrix.arch }}
+          path: ${{ inputs.working-directory }}/dist/*.oxp
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-packages:
+    name: .deb and .rpm (${{ matrix.arch }})
+    needs: [meta, build]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: ubuntu-24.04 }
+          - { arch: aarch64, os: ubuntu-24.04-arm }
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      PLUGIN_TITLE: ${{ inputs.title }}
+      PLUGIN_DESCRIPTION: ${{ inputs.description }}
+      PLUGIN_HOMEPAGE: https://github.com/${{ github.repository }}
+      PLUGIN_LICENSE: ${{ inputs.license }}
+      PLUGIN_DEPENDS_DEB: ${{ inputs.depends-deb }}
+      PLUGIN_DEPENDS_RPM: ${{ inputs.depends-rpm }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: mateusrdp/oxiguitar
+          ref: ${{ inputs.tools-ref }}
+          path: tools
+          sparse-checkout: scripts/plugin-package
+      - uses: actions/download-artifact@v8
+        with:
+          name: oxp-linux-${{ matrix.arch }}
+          path: oxp
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends rpm
+      - name: Build the packages
+        run: |
+          name='${{ inputs.name }}'
+          main="$(ls oxp/*-linux-${{ matrix.arch }}.oxp)"
+          files=("$main")
+          # NAM's second build, for x86-64-v3 processors.
+          v3="$(ls oxp/*-linux-x86_64-v3.oxp 2> /dev/null || true)"
+          [[ -n "$v3" ]] && files+=("$v3:$name-x86-64-v3.oxp")
+          tools/scripts/plugin-package/deb.sh "$name" "$VERSION" ${{ matrix.arch }} packages "${files[@]}"
+          tools/scripts/plugin-package/rpm.sh "$name" "$VERSION" ${{ matrix.arch }} packages "${files[@]}"
+      # The .deb installs in Debian (the core isn't needed to install it)
+      # and puts the file where OxiGuitar looks; the .rpm in Fedora.
+      - name: Test the .deb in Debian sid
+        run: |
+          docker run --rm -v "$PWD/packages:/p" debian:sid bash -euxc '
+            dpkg --force-depends -i /p/*.deb
+            test -s /usr/lib/oxiguitar/plugins/${{ inputs.name }}.oxp
+            dpkg -L oxiguitar-${{ inputs.name }}
+            dpkg --remove --force-depends oxiguitar-${{ inputs.name }}
+            ! test -e /usr/lib/oxiguitar/plugins/${{ inputs.name }}.oxp
+          '
+      - name: Test the .rpm in Fedora
+        run: |
+          docker run --rm -v "$PWD/packages:/p" fedora:latest bash -euxc '
+            rpm -i --nodeps /p/*.rpm
+            test -s /usr/lib/oxiguitar/plugins/${{ inputs.name }}.oxp
+            rpm -ql oxiguitar-${{ inputs.name }}
+            rpm -e --nodeps oxiguitar-${{ inputs.name }}
+            ! test -e /usr/lib/oxiguitar/plugins/${{ inputs.name }}.oxp
+          '
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages-linux-${{ matrix.arch }}
+          path: packages/*
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-installers:
+    name: Installer (${{ matrix.arch }})
+    needs: [meta, build]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: windows-2025 }
+          - { arch: arm64, os: windows-11-arm }
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      PLUGIN_TITLE: ${{ inputs.title }}
+      PLUGIN_HOMEPAGE: https://github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: mateusrdp/oxiguitar
+          ref: ${{ inputs.tools-ref }}
+          path: tools
+          sparse-checkout: scripts/plugin-package
+      - uses: actions/download-artifact@v8
+        with:
+          name: oxp-windows-${{ matrix.arch }}
+          path: oxp
+      - name: Build the installer
+        run: tools/scripts/plugin-package/windows.sh '${{ inputs.name }}' "$VERSION" ${{ matrix.arch }} packages "$(ls oxp/*.oxp | head -n 1)"
+      # Installed for the user it is run by, silently, as winget does:
+      # the file is where OxiGuitar looks, and the uninstaller removes it.
+      - name: Test the installer
+        run: |
+          setup="$(ls packages/*-setup.exe)"
+          "$setup" //VERYSILENT //SUPPRESSMSGBOXES //NORESTART //SP-
+          plugin="$APPDATA/OxiGuitar/plugins/${{ inputs.name }}.oxp"
+          test -s "$plugin"
+          uninstaller="$(ls "$LOCALAPPDATA"/OxiGuitar/uninstall/${{ inputs.name }}/unins*.exe | head -n 1)"
+          "$uninstaller" //VERYSILENT //SUPPRESSMSGBOXES //NORESTART
+          sleep 5
+          ! test -e "$plugin"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages-windows-${{ matrix.arch }}
+          path: packages/*
+          if-no-files-found: error
+          retention-days: 14
+
+  macos-package:
+    name: .pkg (macOS)
+    needs: [meta, build]
+    runs-on: macos-15
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      PLUGIN_TITLE: ${{ inputs.title }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: mateusrdp/oxiguitar
+          ref: ${{ inputs.tools-ref }}
+          path: tools
+          sparse-checkout: scripts/plugin-package
+      - uses: actions/download-artifact@v8
+        with:
+          name: oxp-macos-universal
+          path: oxp
+      - name: Build the package
+        run: tools/scripts/plugin-package/macos-pkg.sh '${{ inputs.name }}' "$VERSION" packages "$(ls oxp/*.oxp | head -n 1)"
+      - name: Test the package
+        run: |
+          pkg="$(ls packages/*.pkg)"
+          pkgutil --expand "$pkg" expanded
+          grep -q 'enable_currentUserHome="true"' expanded/Distribution
+          pkgutil --payload-files "$pkg" | grep -q '${{ inputs.name }}.oxp'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages-macos-universal
+          path: packages/*
+          if-no-files-found: error
+          retention-days: 14
+
+  stage:
+    name: Zips and SHA256SUMS
+    needs: [meta, build, linux-packages, windows-installers, macos-package]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: mateusrdp/oxiguitar
+          ref: ${{ inputs.tools-ref }}
+          path: tools
+          sparse-checkout: scripts/plugin-package
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: oxp-*
+          path: oxp
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: packages-*
+          path: release
+          merge-multiple: true
+      - name: A zip per target
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          for dir in oxp/oxp-*; do
+            target="${dir#oxp/oxp-}"
+            (cd "$dir" && zip -9 -j "$GITHUB_WORKSPACE/release/oxiguitar-${{ inputs.name }}-$VERSION-$target.zip" ./*.oxp)
+          done
+          (cd release && sha256sum -- * | grep -v ' SHA256SUMS$' > SHA256SUMS)
+          ls -l release
+      - name: Check every file is there
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: tools/scripts/plugin-package/check-assets.sh '${{ inputs.name }}' "$VERSION" release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-files
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  draft:
+    name: Draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: stage
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-files
+          path: release
+      - name: Create the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd release
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft \
+            --title "${{ inputs.title }} ${GITHUB_REF_NAME#v}" \
+            --notes "The ${{ inputs.title }} plugin for OxiGuitar. The best way to install it is your system's package manager or installer; the install page of the manual says how. The zips hold the plugin file alone, to put in OxiGuitar's plugin folder." \
+            -- *

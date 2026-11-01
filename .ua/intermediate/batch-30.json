@@ -1,0 +1,211 @@
+{
+  "nodes": [
+    {"id": "file:fixtures/reference/articulations.gp", "type": "file", "summary": "Guitar Pro 7 file testing accents, heavy accents and staccato on both staves."},
+    {"id": "document:fixtures/reference/articulations.gp", "type": "document", "summary": "Title: 'Articulations' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major. 3 bars."},
+    {"id": "config:fixtures/reference/articulations.gp", "type": "config", "summary": "Standard tuning (E4-A3-D3-G3-B3-E4), 24 frets, no capo. GP7 format."},
+
+    {"id": "file:fixtures/reference/bass.gp", "type": "file", "summary": "Guitar Pro 7 file testing a four-string bass on bass clef with four-line tab."},
+    {"id": "document:fixtures/reference/bass.gp", "type": "document", "summary": "Title: 'Bass' by OxiGuitar references. 1 track (Bass, Electric Bass). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/bass.gp", "type": "config", "summary": "Bass clef, octave down, 4-line tab. Standard bass tuning."},
+
+    {"id": "file:fixtures/reference/beams-and-flags.gp", "type": "file", "summary": "Guitar Pro 7 file testing beams over eighth/sixteenth note groups, flags on single notes, mixed groups."},
+    {"id": "document:fixtures/reference/beams-and-flags.gp", "type": "document", "summary": "Title: 'Beams and Flags' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/beams-and-flags.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/beat-text.gp", "type": "file", "summary": "Guitar Pro 7 file testing text labels above beats, next to chord names and tempo markings."},
+    {"id": "document:fixtures/reference/beat-text.gp", "type": "document", "summary": "Title: 'Beat Text' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/beat-text.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/bends.gp", "type": "file", "summary": "Guitar Pro 7 file testing full, half and released bends with arrows and labels."},
+    {"id": "document:fixtures/reference/bends.gp", "type": "document", "summary": "Title: 'Bends' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/bends.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/chord-names.gp", "type": "file", "summary": "Guitar Pro 7 file testing chord names over beats and chord diagrams in the header."},
+    {"id": "document:fixtures/reference/chord-names.gp", "type": "document", "summary": "Title: 'Chord Names' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/chord-names.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/chords-and-accidentals.gp", "type": "file", "summary": "Guitar Pro 7 file testing chords, sharps, flats, naturals in C key with accidentals carried through bars."},
+    {"id": "document:fixtures/reference/chords-and-accidentals.gp", "type": "document", "summary": "Title: 'Chords and Accidentals' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/chords-and-accidentals.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/dark-page.gp", "type": "file", "summary": "Guitar Pro 7 file testing dark page layout with four tracks (Lead Guitar, Rhythm Guitar, Bass, Drums)."},
+    {"id": "document:fixtures/reference/dark-page.gp", "type": "document", "summary": "Title: 'Band' by OxiGuitar references. 4 tracks: Lead Guitar, Rhythm Guitar, Bass, Drums. Tempo 128 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/dark-page.gp", "type": "config", "summary": "Standard guitar tuning, electric guitar/bass/drums instruments. Dark page view setting."},
+
+    {"id": "file:fixtures/reference/dead-ghost-palm-mute.gp", "type": "file", "summary": "Guitar Pro 7 file testing dead notes (x), ghost notes in parentheses, and palm mutes (P.M.)."},
+    {"id": "document:fixtures/reference/dead-ghost-palm-mute.gp", "type": "document", "summary": "Title: 'Dead, Ghost and Palm Mute' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/dead-ghost-palm-mute.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/dots-and-ties.gp", "type": "file", "summary": "Guitar Pro 7 file testing dotted and double-dotted notes, ties inside and across bar lines."},
+    {"id": "document:fixtures/reference/dots-and-ties.gp", "type": "document", "summary": "Title: 'Dots and Ties' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/dots-and-ties.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/drop-d-and-capo.gp", "type": "file", "summary": "Guitar Pro 7 file testing Drop D tuning with a capo: tuning and capo info in the header."},
+    {"id": "document:fixtures/reference/drop-d-and-capo.gp", "type": "document", "summary": "Title: 'Drop D and Capo' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/drop-d-and-capo.gp", "type": "config", "summary": "Drop D tuning (D2-A2-D3-G3-B3-D4), capo on fret 2, 24 frets."},
+
+    {"id": "file:fixtures/reference/drums.gp", "type": "file", "summary": "Guitar Pro 7 file testing a drum kit on percussion clef: kick, snare, hi-hat, toms and cymbals."},
+    {"id": "document:fixtures/reference/drums.gp", "type": "document", "summary": "Title: 'Drums' by OxiGuitar references. 1 track (Drums, Drum Kit). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/drums.gp", "type": "config", "summary": "Percussion clef, drum kit instrument."},
+
+    {"id": "file:fixtures/reference/dynamics-hidden.gp", "type": "file", "summary": "Guitar Pro 7 file testing dynamics with View → Dynamics off: none drawn. Tests OxiGuitar rendering."},
+    {"id": "document:fixtures/reference/dynamics-hidden.gp", "type": "document", "summary": "Title: 'Dynamics Hidden' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/dynamics-hidden.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo. Dynamics display hidden."},
+
+    {"id": "file:fixtures/reference/dynamics.gp", "type": "file", "summary": "Guitar Pro 7 file testing dynamics from ppp to fff, marked only where they change."},
+    {"id": "document:fixtures/reference/dynamics.gp", "type": "document", "summary": "Title: 'Dynamics' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/dynamics.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/effects-together.gp", "type": "file", "summary": "Guitar Pro 7 file testing a dense lick with several effects on neighbouring notes in lanes above the tab."},
+    {"id": "document:fixtures/reference/effects-together.gp", "type": "document", "summary": "Title: 'Effects Together' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/effects-together.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/eight-tracks.gp", "type": "file", "summary": "Guitar Pro 7 file testing eight tracks: guitars, bass, drums, piano grand staff, strings, voice, acoustic tab."},
+    {"id": "document:fixtures/reference/eight-tracks.gp", "type": "document", "summary": "Title: 'Band' by OxiGuitar references. 8 tracks: Lead Guitar, Rhythm Guitar, Bass, Drums, Piano, Strings, Voice, Acoustic Guitar. Tempo 128 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/eight-tracks.gp", "type": "config", "summary": "Mixed instruments: electric guitar, electric bass, drum kit, piano, strings, voice, acoustic guitar."},
+
+    {"id": "file:fixtures/reference/empty-bars.gp", "type": "file", "summary": "Guitar Pro 7 file testing bars with only rests: whole rest, dotted half rest in 3/4, rests after notes."},
+    {"id": "document:fixtures/reference/empty-bars.gp", "type": "document", "summary": "Title: 'Empty Bars' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/empty-bars.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/four-voices.gp", "type": "file", "summary": "Guitar Pro 7 file testing four voices: 1 and 3 up, 2 and 4 down, whole-bar rests hidden."},
+    {"id": "document:fixtures/reference/four-voices.gp", "type": "document", "summary": "Title: 'Four Voices' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/four-voices.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo. 4-voice polyphony."},
+
+    {"id": "file:fixtures/reference/grace-notes.gp", "type": "file", "summary": "Guitar Pro 7 file testing grace notes before beats, alone and before chords, on both staves."},
+    {"id": "document:fixtures/reference/grace-notes.gp", "type": "document", "summary": "Title: 'Grace Notes' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/grace-notes.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/hammer-on-pull-off.gp", "type": "file", "summary": "Guitar Pro 7 file testing hammer-ons and pull-offs, single and in chains, with H and P arcs."},
+    {"id": "document:fixtures/reference/hammer-on-pull-off.gp", "type": "document", "summary": "Title: 'Hammer-on and Pull-off' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/hammer-on-pull-off.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/harmonics.gp", "type": "file", "summary": "Guitar Pro 7 file testing natural, artificial and pinch harmonics."},
+    {"id": "document:fixtures/reference/harmonics.gp", "type": "document", "summary": "Title: 'Harmonics' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/harmonics.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo."},
+
+    {"id": "file:fixtures/reference/header-and-credits.gp", "type": "file", "summary": "Guitar Pro 7 file testing a full header: title, subtitle, artist, album, words, music, copyright, tabber, tuning."},
+    {"id": "document:fixtures/reference/header-and-credits.gp", "type": "document", "summary": "Title: 'Header and Credits', Subtitle: 'A Subtitle Long Enough to Matter', Artist: 'The OxiGuitar Contributors', Album: 'Reference Scores', Copyright: 'Public domain'. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/header-and-credits.gp", "type": "config", "summary": "Standard tuning (E4-A3-D3-G3-B3-E4), 24 frets, no capo. Tabber: oxiguitar-testgen."},
+
+    {"id": "file:fixtures/reference/key-signatures.gp", "type": "file", "summary": "Guitar Pro 7 file testing key changes through sharps and flats, with naturals cancelling the old key."},
+    {"id": "document:fixtures/reference/key-signatures.gp", "type": "document", "summary": "Title: 'Key Signatures' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4. Key changes throughout."},
+    {"id": "config:fixtures/reference/key-signatures.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo. Variable key signatures."},
+
+    {"id": "file:fixtures/reference/layout-horizontal.gp", "type": "file", "summary": "Guitar Pro 7 file testing the Horizontal layout: every bar on one line, no header."},
+    {"id": "document:fixtures/reference/layout-horizontal.gp", "type": "document", "summary": "Title: 'Horizontal' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/layout-horizontal.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo. Horizontal layout mode."},
+
+    {"id": "file:fixtures/reference/layout-parchment.gp", "type": "file", "summary": "Guitar Pro 7 file testing the Parchment layout: page-wide lines on one sheet, no page breaks."},
+    {"id": "document:fixtures/reference/layout-parchment.gp", "type": "document", "summary": "Title: 'Parchment' by OxiGuitar references. 1 track (Guitar, Electric Guitar). Tempo 100 BPM, 4/4, C Major."},
+    {"id": "config:fixtures/reference/layout-parchment.gp", "type": "config", "summary": "Standard tuning, 24 frets, no capo. Parchment layout mode."}
+  ],
+  "edges": [
+    {"source": "file:fixtures/reference/articulations.gp", "target": "document:fixtures/reference/articulations.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/articulations.gp", "target": "config:fixtures/reference/articulations.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/articulations.gp", "target": "config:fixtures/reference/articulations.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/bass.gp", "target": "document:fixtures/reference/bass.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/bass.gp", "target": "config:fixtures/reference/bass.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/bass.gp", "target": "config:fixtures/reference/bass.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/beams-and-flags.gp", "target": "document:fixtures/reference/beams-and-flags.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/beams-and-flags.gp", "target": "config:fixtures/reference/beams-and-flags.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/beams-and-flags.gp", "target": "config:fixtures/reference/beams-and-flags.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/beat-text.gp", "target": "document:fixtures/reference/beat-text.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/beat-text.gp", "target": "config:fixtures/reference/beat-text.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/beat-text.gp", "target": "config:fixtures/reference/beat-text.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/bends.gp", "target": "document:fixtures/reference/bends.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/bends.gp", "target": "config:fixtures/reference/bends.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/bends.gp", "target": "config:fixtures/reference/bends.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/chord-names.gp", "target": "document:fixtures/reference/chord-names.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/chord-names.gp", "target": "config:fixtures/reference/chord-names.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/chord-names.gp", "target": "config:fixtures/reference/chord-names.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/chords-and-accidentals.gp", "target": "document:fixtures/reference/chords-and-accidentals.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/chords-and-accidentals.gp", "target": "config:fixtures/reference/chords-and-accidentals.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/chords-and-accidentals.gp", "target": "config:fixtures/reference/chords-and-accidentals.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/dark-page.gp", "target": "document:fixtures/reference/dark-page.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/dark-page.gp", "target": "config:fixtures/reference/dark-page.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/dark-page.gp", "target": "config:fixtures/reference/dark-page.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/dead-ghost-palm-mute.gp", "target": "document:fixtures/reference/dead-ghost-palm-mute.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/dead-ghost-palm-mute.gp", "target": "config:fixtures/reference/dead-ghost-palm-mute.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/dead-ghost-palm-mute.gp", "target": "config:fixtures/reference/dead-ghost-palm-mute.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/dots-and-ties.gp", "target": "document:fixtures/reference/dots-and-ties.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/dots-and-ties.gp", "target": "config:fixtures/reference/dots-and-ties.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/dots-and-ties.gp", "target": "config:fixtures/reference/dots-and-ties.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/drop-d-and-capo.gp", "target": "document:fixtures/reference/drop-d-and-capo.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/drop-d-and-capo.gp", "target": "config:fixtures/reference/drop-d-and-capo.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/drop-d-and-capo.gp", "target": "config:fixtures/reference/drop-d-and-capo.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/drums.gp", "target": "document:fixtures/reference/drums.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/drums.gp", "target": "config:fixtures/reference/drums.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/drums.gp", "target": "config:fixtures/reference/drums.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/dynamics-hidden.gp", "target": "document:fixtures/reference/dynamics-hidden.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/dynamics-hidden.gp", "target": "config:fixtures/reference/dynamics-hidden.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/dynamics-hidden.gp", "target": "config:fixtures/reference/dynamics-hidden.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/dynamics.gp", "target": "document:fixtures/reference/dynamics.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/dynamics.gp", "target": "config:fixtures/reference/dynamics.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/dynamics.gp", "target": "config:fixtures/reference/dynamics.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/effects-together.gp", "target": "document:fixtures/reference/effects-together.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/effects-together.gp", "target": "config:fixtures/reference/effects-together.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/effects-together.gp", "target": "config:fixtures/reference/effects-together.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/eight-tracks.gp", "target": "document:fixtures/reference/eight-tracks.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/eight-tracks.gp", "target": "config:fixtures/reference/eight-tracks.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/eight-tracks.gp", "target": "config:fixtures/reference/eight-tracks.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/empty-bars.gp", "target": "document:fixtures/reference/empty-bars.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/empty-bars.gp", "target": "config:fixtures/reference/empty-bars.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/empty-bars.gp", "target": "config:fixtures/reference/empty-bars.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/four-voices.gp", "target": "document:fixtures/reference/four-voices.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/four-voices.gp", "target": "config:fixtures/reference/four-voices.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/four-voices.gp", "target": "config:fixtures/reference/four-voices.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/grace-notes.gp", "target": "document:fixtures/reference/grace-notes.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/grace-notes.gp", "target": "config:fixtures/reference/grace-notes.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/grace-notes.gp", "target": "config:fixtures/reference/grace-notes.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/hammer-on-pull-off.gp", "target": "document:fixtures/reference/hammer-on-pull-off.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/hammer-on-pull-off.gp", "target": "config:fixtures/reference/hammer-on-pull-off.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/hammer-on-pull-off.gp", "target": "config:fixtures/reference/hammer-on-pull-off.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/harmonics.gp", "target": "document:fixtures/reference/harmonics.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/harmonics.gp", "target": "config:fixtures/reference/harmonics.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/harmonics.gp", "target": "config:fixtures/reference/harmonics.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/header-and-credits.gp", "target": "document:fixtures/reference/header-and-credits.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/header-and-credits.gp", "target": "config:fixtures/reference/header-and-credits.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/header-and-credits.gp", "target": "config:fixtures/reference/header-and-credits.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/key-signatures.gp", "target": "document:fixtures/reference/key-signatures.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/key-signatures.gp", "target": "config:fixtures/reference/key-signatures.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/key-signatures.gp", "target": "config:fixtures/reference/key-signatures.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/layout-horizontal.gp", "target": "document:fixtures/reference/layout-horizontal.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/layout-horizontal.gp", "target": "config:fixtures/reference/layout-horizontal.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/layout-horizontal.gp", "target": "config:fixtures/reference/layout-horizontal.gp", "type": "uses_config"},
+
+    {"source": "file:fixtures/reference/layout-parchment.gp", "target": "document:fixtures/reference/layout-parchment.gp", "type": "contains"},
+    {"source": "file:fixtures/reference/layout-parchment.gp", "target": "config:fixtures/reference/layout-parchment.gp", "type": "has_config"},
+    {"source": "document:fixtures/reference/layout-parchment.gp", "target": "config:fixtures/reference/layout-parchment.gp", "type": "uses_config"},
+
+    {"source": "document:fixtures/reference/dark-page.gp", "target": "document:fixtures/reference/eight-tracks.gp", "type": "similar_theme", "label": "Both titled 'Band' with multi-track band arrangements"},
+    {"source": "config:fixtures/reference/dark-page.gp", "target": "config:fixtures/reference/eight-tracks.gp", "type": "similar_theme", "label": "Both multi-track band configs at 128 BPM"},
+    {"source": "document:fixtures/reference/dynamics.gp", "target": "document:fixtures/reference/dynamics-hidden.gp", "type": "related", "label": "Same content, different display settings"},
+    {"source": "config:fixtures/reference/dynamics.gp", "target": "config:fixtures/reference/dynamics-hidden.gp", "type": "related", "label": "Same config, different rendering"},
+    {"source": "document:fixtures/reference/layout-horizontal.gp", "target": "document:fixtures/reference/layout-parchment.gp", "type": "related", "label": "Both layout mode test files"},
+    {"source": "config:fixtures/reference/layout-horizontal.gp", "target": "config:fixtures/reference/layout-parchment.gp", "type": "related", "label": "Both layout mode configs"}
+  ]
+}

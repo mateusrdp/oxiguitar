@@ -1,0 +1,574 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 11,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 11,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 11
+    }
+  },
+  "results": [
+    {
+      "path": "ARCHITECTURE.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 69,
+      "nonEmptyLines": 58,
+      "sections": [
+        {
+          "heading": "Architecture",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Crates",
+          "level": 2,
+          "line": 29
+        },
+        {
+          "heading": "Design rules",
+          "level": 2,
+          "line": 54
+        },
+        {
+          "heading": "Where decisions are recorded",
+          "level": 2,
+          "line": 67
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "CHANGELOG.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 273,
+      "nonEmptyLines": 226,
+      "sections": [
+        {
+          "heading": "Changelog",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[Unreleased]",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "[0.10.0] - 2026-10-26",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Added",
+          "level": 3,
+          "line": 11
+        },
+        {
+          "heading": "Changed",
+          "level": 3,
+          "line": 17
+        },
+        {
+          "heading": "[0.9.0] - 2026-10-26",
+          "level": 2,
+          "line": 22
+        },
+        {
+          "heading": "Added",
+          "level": 3,
+          "line": 26
+        },
+        {
+          "heading": "Changed",
+          "level": 3,
+          "line": 44
+        },
+        {
+          "heading": "[0.5.0] - 2026-10-21",
+          "level": 2,
+          "line": 50
+        },
+        {
+          "heading": "Added",
+          "level": 3,
+          "line": 54
+        },
+        {
+          "heading": "Fixed",
+          "level": 3,
+          "line": 88
+        },
+        {
+          "heading": "Changed",
+          "level": 3,
+          "line": 101
+        },
+        {
+          "heading": "[0.2.0] - 2026-10-19",
+          "level": 2,
+          "line": 117
+        },
+        {
+          "heading": "Added",
+          "level": 3,
+          "line": 121
+        },
+        {
+          "heading": "Changed",
+          "level": 3,
+          "line": 154
+        },
+        {
+          "heading": "Fixed",
+          "level": 3,
+          "line": 176
+        },
+        {
+          "heading": "[0.1.0] - 2026-10-17",
+          "level": 2,
+          "line": 182
+        },
+        {
+          "heading": "Added",
+          "level": 3,
+          "line": 186
+        },
+        {
+          "heading": "Fixed",
+          "level": 3,
+          "line": 254
+        },
+        {
+          "heading": "Changed",
+          "level": 3,
+          "line": 260
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 20
+      }
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 124,
+      "nonEmptyLines": 84,
+      "sections": [
+        {
+          "heading": "Contributing to OxiGuitar",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Branches and pull requests",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Sign-off (Developer Certificate of Origin)",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "Code standards",
+          "level": 2,
+          "line": 29
+        },
+        {
+          "heading": "Known platform gaps",
+          "level": 2,
+          "line": 43
+        },
+        {
+          "heading": "Design principles",
+          "level": 2,
+          "line": 52
+        },
+        {
+          "heading": "File headers",
+          "level": 2,
+          "line": 63
+        },
+        {
+          "heading": "Test files",
+          "level": 2,
+          "line": 85
+        },
+        {
+          "heading": "Checking what OxiGuitar writes, in Guitar Pro and elsewhere",
+          "level": 3,
+          "line": 92
+        },
+        {
+          "heading": "Adding a file format",
+          "level": 2,
+          "line": 104
+        },
+        {
+          "heading": "Adding an effect",
+          "level": 2,
+          "line": 116
+        },
+        {
+          "heading": "Decisions",
+          "level": 2,
+          "line": 122
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 12
+      }
+    },
+    {
+      "path": "CREDITS.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 78,
+      "nonEmptyLines": 57,
+      "sections": [
+        {
+          "heading": "Credits",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Special thanks",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Projects we port from or study",
+          "level": 2,
+          "line": 13
+        },
+        {
+          "heading": "Rust crates we depend on",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "Fonts and assets",
+          "level": 2,
+          "line": 66
+        },
+        {
+          "heading": "Trademarks",
+          "level": 2,
+          "line": 76
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "Cargo.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 89,
+      "nonEmptyLines": 84,
+      "sections": [
+        {
+          "heading": "workspace",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "workspace.package",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "workspace.dependencies",
+          "level": 2,
+          "line": 22
+        },
+        {
+          "heading": "workspace.lints.rust",
+          "level": 3,
+          "line": 74
+        },
+        {
+          "heading": "workspace.lints.clippy",
+          "level": 3,
+          "line": 80
+        },
+        {
+          "heading": "profile.release",
+          "level": 2,
+          "line": 86
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 145,
+      "nonEmptyLines": 91,
+      "sections": [
+        {
+          "heading": "OxiGuitar",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Privacy",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "Status",
+          "level": 2,
+          "line": 21
+        },
+        {
+          "heading": "How to get involved",
+          "level": 2,
+          "line": 36
+        },
+        {
+          "heading": "Nerd Section",
+          "level": 1,
+          "line": 52
+        },
+        {
+          "heading": "Supported systems",
+          "level": 2,
+          "line": 54
+        },
+        {
+          "heading": "Building from source",
+          "level": 2,
+          "line": 79
+        },
+        {
+          "heading": "Writing plugins",
+          "level": 2,
+          "line": 121
+        },
+        {
+          "heading": "Testers wanted",
+          "level": 2,
+          "line": 125
+        },
+        {
+          "heading": "Contributing",
+          "level": 2,
+          "line": 131
+        },
+        {
+          "heading": "Donations",
+          "level": 2,
+          "line": 135
+        },
+        {
+          "heading": "License",
+          "level": 2,
+          "line": 139
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 12
+      }
+    },
+    {
+      "path": "ROADMAP.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 233,
+      "nonEmptyLines": 184,
+      "sections": [
+        {
+          "heading": "Roadmap",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "M0 — Foundations",
+          "level": 2,
+          "line": 23
+        },
+        {
+          "heading": "M1 — Viewer (v0.1)",
+          "level": 2,
+          "line": 60
+        },
+        {
+          "heading": "M2 — Plugin system and window shell (v0.2)",
+          "level": 2,
+          "line": 96
+        },
+        {
+          "heading": "M2's remaining slices, in order (planned 18 Oct 2026)",
+          "level": 3,
+          "line": 116
+        },
+        {
+          "heading": "M3 — Editor (v0.5)",
+          "level": 2,
+          "line": 162
+        },
+        {
+          "heading": "M3's slices, in order (approved 19 Oct 2026)",
+          "level": 3,
+          "line": 175
+        },
+        {
+          "heading": "M4 — Player (v1.0)",
+          "level": 2,
+          "line": 187
+        },
+        {
+          "heading": "M4's slices (approved 25 Oct 2026)",
+          "level": 3,
+          "line": 198
+        },
+        {
+          "heading": "Later milestones",
+          "level": 2,
+          "line": 214
+        },
+        {
+          "heading": "Wishlist",
+          "level": 2,
+          "line": 225
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 11
+      }
+    },
+    {
+      "path": "about.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 41,
+      "nonEmptyLines": 39,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 0
+      }
+    },
+    {
+      "path": "clippy.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 5,
+      "nonEmptyLines": 5,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 0
+      }
+    },
+    {
+      "path": "deny.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 82,
+      "nonEmptyLines": 76,
+      "sections": [
+        {
+          "heading": "graph",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "advisories",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "licenses",
+          "level": 1,
+          "line": 44
+        },
+        {
+          "heading": "licenses.private",
+          "level": 2,
+          "line": 70
+        },
+        {
+          "heading": "bans",
+          "level": 1,
+          "line": 74
+        },
+        {
+          "heading": "sources",
+          "level": 1,
+          "line": 79
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "rustfmt.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 3,
+      "nonEmptyLines": 3,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,2440 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 11,
+  "filesSkipped": [
+    "docs/plugins/template/samples/open-strings.extab",
+    "fixtures/events/articulations.gp.events",
+    "fixtures/events/bass.gp.events",
+    "fixtures/events/beams-and-flags.gp.events",
+    "fixtures/events/beat-text.gp.events",
+    "fixtures/events/bends.gp.events",
+    "fixtures/events/chord-names.gp.events",
+    "fixtures/events/chords-and-accidentals.gp.events",
+    "fixtures/events/dark-page.gp.events",
+    "fixtures/events/dead-ghost-palm-mute.gp.events",
+    "fixtures/events/dots-and-ties.gp.events",
+    "fixtures/events/drop-d-and-capo.gp.events",
+    "fixtures/events/drums.gp.events",
+    "fixtures/events/dynamics-hidden.gp.events"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 11,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 6,
+      "failed": 0,
+      "skipped": 5
+    }
+  },
+  "results": [
+    {
+      "path": "docs/manual/book.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 19,
+      "nonEmptyLines": 16,
+      "sections": [
+        {
+          "heading": "book",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "output.html",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "output.html.search",
+          "level": 3,
+          "line": 18
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "docs/plugins/book.toml",
+      "language": "toml",
+      "fileCategory": "config",
+      "totalLines": 24,
+      "nonEmptyLines": 21,
+      "sections": [
+        {
+          "heading": "book",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "output.html",
+          "level": 2,
+          "line": 16
+        },
+        {
+          "heading": "output.html.search",
+          "level": 3,
+          "line": 23
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "docs/plugins/template/.github/workflows/build.yml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 76,
+      "nonEmptyLines": 70,
+      "sections": [
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "on",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "permissions",
+          "level": 1,
+          "line": 18
+        },
+        {
+          "heading": "env",
+          "level": 1,
+          "line": 21
+        },
+        {
+          "heading": "jobs",
+          "level": 1,
+          "line": 25
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "docs/plugins/template/src/format.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 490,
+      "nonEmptyLines": 463,
+      "functions": [
+        {
+          "name": "read",
+          "startLine": 51,
+          "endLine": 104,
+          "params": [
+            "data"
+          ]
+        },
+        {
+          "name": "lines",
+          "startLine": 109,
+          "endLine": 115,
+          "params": [
+            "text"
+          ]
+        },
+        {
+          "name": "header",
+          "startLine": 118,
+          "endLine": 122,
+          "params": [
+            "line"
+          ]
+        },
+        {
+          "name": "bar",
+          "startLine": 125,
+          "endLine": 150,
+          "params": [
+            "line",
+            "at",
+            "number",
+            "log"
+          ]
+        },
+        {
+          "name": "beat",
+          "startLine": 153,
+          "endLine": 186,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "eighth",
+          "startLine": 188,
+          "endLine": 194,
+          "params": []
+        },
+        {
+          "name": "rest",
+          "startLine": 196,
+          "endLine": 206,
+          "params": []
+        },
+        {
+          "name": "score",
+          "startLine": 210,
+          "endLine": 270,
+          "params": [
+            "info",
+            "tempo",
+            "bars"
+          ]
+        },
+        {
+          "name": "write",
+          "startLine": 275,
+          "endLine": 347,
+          "params": [
+            "score"
+          ]
+        },
+        {
+          "name": "token",
+          "startLine": 352,
+          "endLine": 387,
+          "params": [
+            "beat",
+            "place",
+            "losses"
+          ]
+        },
+        {
+          "name": "invalid",
+          "startLine": 390,
+          "endLine": 396,
+          "params": [
+            "message",
+            "at",
+            "place"
+          ]
+        },
+        {
+          "name": "add",
+          "startLine": 400,
+          "endLine": 410,
+          "params": [
+            "log",
+            "level",
+            "message",
+            "place"
+          ]
+        },
+        {
+          "name": "add_n",
+          "startLine": 413,
+          "endLine": 418,
+          "params": [
+            "losses",
+            "message",
+            "place",
+            "n"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "ExampleTab",
+          "startLine": 47,
+          "endLine": 47,
+          "methods": [
+            "read",
+            "write"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "ExampleTab",
+          "line": 47,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "read",
+          "callee": "std::str::from_utf8(data).map_err",
+          "lineNumber": 54
+        },
+        {
+          "caller": "read",
+          "callee": "std::str::from_utf8",
+          "lineNumber": 54
+        },
+        {
+          "caller": "read",
+          "callee": "invalid",
+          "lineNumber": 55
+        },
+        {
+          "caller": "read",
+          "callee": "e.valid_up_to",
+          "lineNumber": 55
+        },
+        {
+          "caller": "read",
+          "callee": "lines",
+          "lineNumber": 56
+        },
+        {
+          "caller": "read",
+          "callee": "lines.next().map",
+          "lineNumber": 57
+        },
+        {
+          "caller": "read",
+          "callee": "lines.next",
+          "lineNumber": 57
+        },
+        {
+          "caller": "read",
+          "callee": "line.trim_end",
+          "lineNumber": 57
+        },
+        {
+          "caller": "read",
+          "callee": "Some",
+          "lineNumber": 57
+        },
+        {
+          "caller": "read",
+          "callee": "Err",
+          "lineNumber": 58
+        },
+        {
+          "caller": "read",
+          "callee": "invalid",
+          "lineNumber": 58
+        },
+        {
+          "caller": "read",
+          "callee": "ScoreInfo::default",
+          "lineNumber": 60
+        },
+        {
+          "caller": "read",
+          "callee": "Vec::new",
+          "lineNumber": 62
+        },
+        {
+          "caller": "read",
+          "callee": "Vec::new",
+          "lineNumber": 63
+        },
+        {
+          "caller": "read",
+          "callee": "line.trim",
+          "lineNumber": 65
+        },
+        {
+          "caller": "read",
+          "callee": "line.is_empty",
+          "lineNumber": 66
+        },
+        {
+          "caller": "read",
+          "callee": "line.starts_with",
+          "lineNumber": 66
+        },
+        {
+          "caller": "read",
+          "callee": "header",
+          "lineNumber": 69
+        },
+        {
+          "caller": "read",
+          "callee": "value.into",
+          "lineNumber": 71
+        },
+        {
+          "caller": "read",
+          "callee": "value.into",
+          "lineNumber": 72
+        },
+        {
+          "caller": "read",
+          "callee": "value\n                            .parse::<f64>()\n                            .ok()\n                            .filter(|t| (20.0..=400.0).contains(t)).ok_or_else",
+          "lineNumber": 74
+        },
+        {
+          "caller": "read",
+          "callee": "value\n                            .parse::<f64>()\n                            .ok().filter",
+          "lineNumber": 74
+        },
+        {
+          "caller": "read",
+          "callee": "value\n                            .parse::<f64>().ok",
+          "lineNumber": 74
+        },
+        {
+          "caller": "read",
+          "callee": "value\n                            .parse::<f64>",
+          "lineNumber": 74
+        },
+        {
+          "caller": "read",
+          "callee": "(20.0..=400.0).contains",
+          "lineNumber": 77
+        },
+        {
+          "caller": "read",
+          "callee": "invalid",
+          "lineNumber": 78
+        },
+        {
+          "caller": "read",
+          "callee": "add",
+          "lineNumber": 80
+        },
+        {
+          "caller": "read",
+          "callee": "bars.push",
+          "lineNumber": 89
+        },
+        {
+          "caller": "read",
+          "callee": "bar",
+          "lineNumber": 89
+        },
+        {
+          "caller": "read",
+          "callee": "bars.len",
+          "lineNumber": 89
+        },
+        {
+          "caller": "read",
+          "callee": "bars.is_empty",
+          "lineNumber": 91
+        },
+        {
+          "caller": "read",
+          "callee": "Err",
+          "lineNumber": 92
+        },
+        {
+          "caller": "read",
+          "callee": "Some",
+          "lineNumber": 93
+        },
+        {
+          "caller": "read",
+          "callee": "data.len",
+          "lineNumber": 93
+        },
+        {
+          "caller": "read",
+          "callee": "Error::new",
+          "lineNumber": 94
+        },
+        {
+          "caller": "read",
+          "callee": "Ok",
+          "lineNumber": 100
+        },
+        {
+          "caller": "read",
+          "callee": "score",
+          "lineNumber": 101
+        },
+        {
+          "caller": "lines",
+          "callee": "text.split_inclusive('\\n').scan",
+          "lineNumber": 110
+        },
+        {
+          "caller": "lines",
+          "callee": "text.split_inclusive",
+          "lineNumber": 110
+        },
+        {
+          "caller": "lines",
+          "callee": "line.len",
+          "lineNumber": 112
+        },
+        {
+          "caller": "lines",
+          "callee": "Some",
+          "lineNumber": 113
+        },
+        {
+          "caller": "lines",
+          "callee": "line.trim_end_matches",
+          "lineNumber": 113
+        },
+        {
+          "caller": "header",
+          "callee": "line.split_once",
+          "lineNumber": 119
+        },
+        {
+          "caller": "header",
+          "callee": "key.is_empty",
+          "lineNumber": 120
+        },
+        {
+          "caller": "header",
+          "callee": "key.chars().all",
+          "lineNumber": 120
+        },
+        {
+          "caller": "header",
+          "callee": "key.chars",
+          "lineNumber": 120
+        },
+        {
+          "caller": "header",
+          "callee": "c.is_ascii_alphabetic",
+          "lineNumber": 120
+        },
+        {
+          "caller": "header",
+          "callee": "word.then",
+          "lineNumber": 121
+        },
+        {
+          "caller": "header",
+          "callee": "value.trim",
+          "lineNumber": 121
+        },
+        {
+          "caller": "bar",
+          "callee": "line.split_whitespace().collect",
+          "lineNumber": 126
+        },
+        {
+          "caller": "bar",
+          "callee": "line.split_whitespace",
+          "lineNumber": 126
+        },
+        {
+          "caller": "bar",
+          "callee": "tokens.len",
+          "lineNumber": 127
+        },
+        {
+          "caller": "bar",
+          "callee": "Err",
+          "lineNumber": 129
+        },
+        {
+          "caller": "bar",
+          "callee": "invalid",
+          "lineNumber": 129
+        },
+        {
+          "caller": "bar",
+          "callee": "Vec::with_capacity",
+          "lineNumber": 135
+        },
+        {
+          "caller": "bar",
+          "callee": "tokens.iter().enumerate",
+          "lineNumber": 136
+        },
+        {
+          "caller": "bar",
+          "callee": "tokens.iter",
+          "lineNumber": 136
+        },
+        {
+          "caller": "bar",
+          "callee": "beats.push",
+          "lineNumber": 138
+        },
+        {
+          "caller": "bar",
+          "callee": "beat(token).map_err",
+          "lineNumber": 138
+        },
+        {
+          "caller": "bar",
+          "callee": "beat",
+          "lineNumber": 138
+        },
+        {
+          "caller": "bar",
+          "callee": "invalid",
+          "lineNumber": 138
+        },
+        {
+          "caller": "bar",
+          "callee": "beats.len",
+          "lineNumber": 140
+        },
+        {
+          "caller": "bar",
+          "callee": "add",
+          "lineNumber": 141
+        },
+        {
+          "caller": "bar",
+          "callee": "beats.resize_with",
+          "lineNumber": 147
+        },
+        {
+          "caller": "bar",
+          "callee": "Ok",
+          "lineNumber": 149
+        },
+        {
+          "caller": "beat",
+          "callee": "Ok",
+          "lineNumber": 155
+        },
+        {
+          "caller": "beat",
+          "callee": "rest",
+          "lineNumber": 155
+        },
+        {
+          "caller": "beat",
+          "callee": "Vec::new",
+          "lineNumber": 157
+        },
+        {
+          "caller": "beat",
+          "callee": "token.split",
+          "lineNumber": 158
+        },
+        {
+          "caller": "beat",
+          "callee": "part\n            .split_once(':')\n            .and_then(|(s, f)| Some((s.parse::<u8>().ok()?, f.parse::<u8>().ok()?))).ok_or_else",
+          "lineNumber": 159
+        },
+        {
+          "caller": "beat",
+          "callee": "part\n            .split_once(':').and_then",
+          "lineNumber": 159
+        },
+        {
+          "caller": "beat",
+          "callee": "part.split_once",
+          "lineNumber": 159
+        },
+        {
+          "caller": "beat",
+          "callee": "Some",
+          "lineNumber": 161
+        },
+        {
+          "caller": "beat",
+          "callee": "s.parse::<u8>().ok",
+          "lineNumber": 161
+        },
+        {
+          "caller": "beat",
+          "callee": "s.parse::<u8>",
+          "lineNumber": 161
+        },
+        {
+          "caller": "beat",
+          "callee": "f.parse::<u8>().ok",
+          "lineNumber": 161
+        },
+        {
+          "caller": "beat",
+          "callee": "f.parse::<u8>",
+          "lineNumber": 161
+        },
+        {
+          "caller": "beat",
+          "callee": "(1..=STANDARD.len() as u8).contains",
+          "lineNumber": 163
+        },
+        {
+          "caller": "beat",
+          "callee": "STANDARD.len",
+          "lineNumber": 163
+        },
+        {
+          "caller": "beat",
+          "callee": "Err",
+          "lineNumber": 164
+        },
+        {
+          "caller": "beat",
+          "callee": "notes\n            .iter().any",
+          "lineNumber": 168
+        },
+        {
+          "caller": "beat",
+          "callee": "notes.iter",
+          "lineNumber": 168
+        },
+        {
+          "caller": "beat",
+          "callee": "Err",
+          "lineNumber": 172
+        },
+        {
+          "caller": "beat",
+          "callee": "notes.push",
+          "lineNumber": 174
+        },
+        {
+          "caller": "beat",
+          "callee": "NoteEffects::default",
+          "lineNumber": 178
+        },
+        {
+          "caller": "beat",
+          "callee": "Ok",
+          "lineNumber": 181
+        },
+        {
+          "caller": "beat",
+          "callee": "rest",
+          "lineNumber": 184
+        },
+        {
+          "caller": "eighth",
+          "callee": "Vec::new",
+          "lineNumber": 192
+        },
+        {
+          "caller": "rest",
+          "callee": "eighth",
+          "lineNumber": 199
+        },
+        {
+          "caller": "rest",
+          "callee": "Vec::new",
+          "lineNumber": 200
+        },
+        {
+          "caller": "rest",
+          "callee": "BeatEffects::default",
+          "lineNumber": 202
+        },
+        {
+          "caller": "rest",
+          "callee": "String::new",
+          "lineNumber": 204
+        },
+        {
+          "caller": "score",
+          "callee": "Vec::new",
+          "lineNumber": 226
+        },
+        {
+          "caller": "score",
+          "callee": "Vec::new",
+          "lineNumber": 227
+        },
+        {
+          "caller": "score",
+          "callee": "STANDARD.to_vec",
+          "lineNumber": 230
+        },
+        {
+          "caller": "score",
+          "callee": "bars\n            .iter()\n            .map(|beats| Bar {\n                clef: Clef::Treble8vb,\n                voices: vec![Voice {\n                    beats: beats.clone(),\n                }],\n            }).collect",
+          "lineNumber": 236
+        },
+        {
+          "caller": "score",
+          "callee": "bars\n            .iter().map",
+          "lineNumber": 236
+        },
+        {
+          "caller": "score",
+          "callee": "bars.iter",
+          "lineNumber": 236
+        },
+        {
+          "caller": "score",
+          "callee": "Staff::default",
+          "lineNumber": 245
+        },
+        {
+          "caller": "score",
+          "callee": "String::new",
+          "lineNumber": 250
+        },
+        {
+          "caller": "write",
+          "callee": "Vec::new",
+          "lineNumber": 277
+        },
+        {
+          "caller": "write",
+          "callee": "value.is_empty",
+          "lineNumber": 279
+        },
+        {
+          "caller": "write",
+          "callee": "out.push_str",
+          "lineNumber": 280
+        },
+        {
+          "caller": "write",
+          "callee": "out.push_str",
+          "lineNumber": 283
+        },
+        {
+          "caller": "write",
+          "callee": "score.tracks.len",
+          "lineNumber": 289
+        },
+        {
+          "caller": "write",
+          "callee": "score.tracks.len",
+          "lineNumber": 290
+        },
+        {
+          "caller": "write",
+          "callee": "add_n",
+          "lineNumber": 291
+        },
+        {
+          "caller": "write",
+          "callee": "score.tracks.first().and_then",
+          "lineNumber": 293
+        },
+        {
+          "caller": "write",
+          "callee": "score.tracks.first",
+          "lineNumber": 293
+        },
+        {
+          "caller": "write",
+          "callee": "t.staves.first",
+          "lineNumber": 293
+        },
+        {
+          "caller": "write",
+          "callee": "Ok",
+          "lineNumber": 294
+        },
+        {
+          "caller": "write",
+          "callee": "out.into_bytes",
+          "lineNumber": 295
+        },
+        {
+          "caller": "write",
+          "callee": "add",
+          "lineNumber": 300
+        },
+        {
+          "caller": "write",
+          "callee": "String::new",
+          "lineNumber": 304
+        },
+        {
+          "caller": "write",
+          "callee": "staff.bars.iter().enumerate",
+          "lineNumber": 307
+        },
+        {
+          "caller": "write",
+          "callee": "staff.bars.iter",
+          "lineNumber": 307
+        },
+        {
+          "caller": "write",
+          "callee": "score\n                .master_bars\n                .get(i).is_some_and",
+          "lineNumber": 313
+        },
+        {
+          "caller": "write",
+          "callee": "score\n                .master_bars.get",
+          "lineNumber": 313
+        },
+        {
+          "caller": "write",
+          "callee": "add_n",
+          "lineNumber": 318
+        },
+        {
+          "caller": "write",
+          "callee": "bar.voices.len",
+          "lineNumber": 320
+        },
+        {
+          "caller": "write",
+          "callee": "add_n",
+          "lineNumber": 321
+        },
+        {
+          "caller": "write",
+          "callee": "bar.voices.first().map_or",
+          "lineNumber": 323
+        },
+        {
+          "caller": "write",
+          "callee": "bar.voices.first",
+          "lineNumber": 323
+        },
+        {
+          "caller": "write",
+          "callee": "beats\n                .iter()\n                .map(|b| token(b, &place, &mut losses)).collect",
+          "lineNumber": 324
+        },
+        {
+          "caller": "write",
+          "callee": "beats\n                .iter().map",
+          "lineNumber": 324
+        },
+        {
+          "caller": "write",
+          "callee": "beats.iter",
+          "lineNumber": 324
+        },
+        {
+          "caller": "write",
+          "callee": "token",
+          "lineNumber": 326
+        },
+        {
+          "caller": "write",
+          "callee": "tokens.len",
+          "lineNumber": 328
+        },
+        {
+          "caller": "write",
+          "callee": "add_n",
+          "lineNumber": 329
+        },
+        {
+          "caller": "write",
+          "callee": "tokens.truncate",
+          "lineNumber": 335
+        },
+        {
+          "caller": "write",
+          "callee": "tokens.is_empty",
+          "lineNumber": 337
+        },
+        {
+          "caller": "write",
+          "callee": "tokens.push",
+          "lineNumber": 338
+        },
+        {
+          "caller": "write",
+          "callee": "\"-\".into",
+          "lineNumber": 338
+        },
+        {
+          "caller": "write",
+          "callee": "out.push_str",
+          "lineNumber": 340
+        },
+        {
+          "caller": "write",
+          "callee": "tokens.join",
+          "lineNumber": 340
+        },
+        {
+          "caller": "write",
+          "callee": "out.push",
+          "lineNumber": 341
+        },
+        {
+          "caller": "write",
+          "callee": "Ok",
+          "lineNumber": 343
+        },
+        {
+          "caller": "write",
+          "callee": "out.into_bytes",
+          "lineNumber": 344
+        },
+        {
+          "caller": "token",
+          "callee": "eighth",
+          "lineNumber": 353
+        },
+        {
+          "caller": "token",
+          "callee": "add_n",
+          "lineNumber": 354
+        },
+        {
+          "caller": "token",
+          "callee": "BeatEffects::default",
+          "lineNumber": 356
+        },
+        {
+          "caller": "token",
+          "callee": "beat\n            .notes\n            .iter().any",
+          "lineNumber": 357
+        },
+        {
+          "caller": "token",
+          "callee": "beat\n            .notes.iter",
+          "lineNumber": 357
+        },
+        {
+          "caller": "token",
+          "callee": "NoteEffects::default",
+          "lineNumber": 360
+        },
+        {
+          "caller": "token",
+          "callee": "add_n",
+          "lineNumber": 362
+        },
+        {
+          "caller": "token",
+          "callee": "beat\n        .notes\n        .iter()\n        .filter_map(|n| match n.place {\n            NotePlace::Fretted { string, fret } if (1..=6).contains(&string) && fret <= FRETS => {\n                Some(format!(\"{string}:{fret}\"))\n            }\n            _ => {\n                add_n(\n                    losses,\n                    \"notes off a six-string guitar's 24 frets are left out\",\n                    place,\n                    1,\n                );\n                None\n            }\n        }).collect",
+          "lineNumber": 364
+        },
+        {
+          "caller": "token",
+          "callee": "beat\n        .notes\n        .iter().filter_map",
+          "lineNumber": 364
+        },
+        {
+          "caller": "token",
+          "callee": "beat\n        .notes.iter",
+          "lineNumber": 364
+        },
+        {
+          "caller": "token",
+          "callee": "(1..=6).contains",
+          "lineNumber": 368
+        },
+        {
+          "caller": "token",
+          "callee": "Some",
+          "lineNumber": 369
+        },
+        {
+          "caller": "token",
+          "callee": "add_n",
+          "lineNumber": 372
+        },
+        {
+          "caller": "token",
+          "callee": "notes.is_empty",
+          "lineNumber": 382
+        },
+        {
+          "caller": "token",
+          "callee": "\"-\".into",
+          "lineNumber": 383
+        },
+        {
+          "caller": "token",
+          "callee": "notes.join",
+          "lineNumber": 385
+        },
+        {
+          "caller": "invalid",
+          "callee": "Some",
+          "lineNumber": 392
+        },
+        {
+          "caller": "invalid",
+          "callee": "place.into",
+          "lineNumber": 393
+        },
+        {
+          "caller": "invalid",
+          "callee": "Error::new",
+          "lineNumber": 394
+        },
+        {
+          "caller": "add",
+          "callee": "log.iter_mut().find",
+          "lineNumber": 401
+        },
+        {
+          "caller": "add",
+          "callee": "log.iter_mut",
+          "lineNumber": 401
+        },
+        {
+          "caller": "add",
+          "callee": "log.push",
+          "lineNumber": 403
+        },
+        {
+          "caller": "add",
+          "callee": "message.into",
+          "lineNumber": 405
+        },
+        {
+          "caller": "add_n",
+          "callee": "add",
+          "lineNumber": 414
+        },
+        {
+          "caller": "add_n",
+          "callee": "place.into",
+          "lineNumber": 414
+        },
+        {
+          "caller": "add_n",
+          "callee": "losses.iter_mut().find",
+          "lineNumber": 415
+        },
+        {
+          "caller": "add_n",
+          "callee": "losses.iter_mut",
+          "lineNumber": 415
+        },
+        {
+          "caller": "reads_the_sample",
+          "callee": "ExampleTab.read(SAMPLE.as_bytes()).unwrap",
+          "lineNumber": 428
+        },
+        {
+          "caller": "reads_the_sample",
+          "callee": "ExampleTab.read",
+          "lineNumber": 428
+        },
+        {
+          "caller": "reads_the_sample",
+          "callee": "SAMPLE.as_bytes",
+          "lineNumber": 428
+        },
+        {
+          "caller": "writes_what_it_reads",
+          "callee": "ExampleTab.read(SAMPLE.as_bytes()).unwrap",
+          "lineNumber": 444
+        },
+        {
+          "caller": "writes_what_it_reads",
+          "callee": "ExampleTab.read",
+          "lineNumber": 444
+        },
+        {
+          "caller": "writes_what_it_reads",
+          "callee": "SAMPLE.as_bytes",
+          "lineNumber": 444
+        },
+        {
+          "caller": "writes_what_it_reads",
+          "callee": "ExampleTab.write(&read.score).unwrap",
+          "lineNumber": 445
+        },
+        {
+          "caller": "writes_what_it_reads",
+          "callee": "ExampleTab.write",
+          "lineNumber": 445
+        },
+        {
+          "caller": "writes_what_it_reads",
+          "callee": "ExampleTab.read(&written.data).unwrap",
+          "lineNumber": 447
+        },
+        {
+          "caller": "writes_what_it_reads",
+          "callee": "ExampleTab.read",
+          "lineNumber": 447
+        },
+        {
+          "caller": "damaged_files_say_where",
+          "callee": "ExampleTab.read(text.as_bytes()).unwrap_err",
+          "lineNumber": 454
+        },
+        {
+          "caller": "damaged_files_say_where",
+          "callee": "ExampleTab.read",
+          "lineNumber": 454
+        },
+        {
+          "caller": "damaged_files_say_where",
+          "callee": "text.as_bytes",
+          "lineNumber": 454
+        },
+        {
+          "caller": "damaged_files_say_where",
+          "callee": "err",
+          "lineNumber": 456
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "ExampleTab.read(SAMPLE.as_bytes()).unwrap",
+          "lineNumber": 468
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "ExampleTab.read",
+          "lineNumber": 468
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "SAMPLE.as_bytes",
+          "lineNumber": 468
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "score.tracks.push",
+          "lineNumber": 469
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "score.tracks[0].clone",
+          "lineNumber": 469
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "ExampleTab.write(&score).unwrap",
+          "lineNumber": 473
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "ExampleTab.write",
+          "lineNumber": 473
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "losses.iter().map(|l| l.message.as_str()).collect",
+          "lineNumber": 474
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "losses.iter().map",
+          "lineNumber": 474
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "losses.iter",
+          "lineNumber": 474
+        },
+        {
+          "caller": "says_what_it_cannot_write",
+          "callee": "l.message.as_str",
+          "lineNumber": 474
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 13,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "docs/plugins/template/src/lib.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 66,
+      "nonEmptyLines": 54,
+      "functions": [
+        {
+          "name": "start",
+          "startLine": 33,
+          "endLine": 37,
+          "params": [
+            "host"
+          ]
+        },
+        {
+          "name": "reader",
+          "startLine": 41,
+          "endLine": 43,
+          "params": [
+            "format"
+          ]
+        },
+        {
+          "name": "writer",
+          "startLine": 45,
+          "endLine": 47,
+          "params": [
+            "format"
+          ]
+        },
+        {
+          "name": "service",
+          "startLine": 49,
+          "endLine": 52,
+          "params": [
+            "interface",
+            "id"
+          ]
+        },
+        {
+          "name": "tab",
+          "startLine": 54,
+          "endLine": 56,
+          "params": [
+            "id"
+          ]
+        },
+        {
+          "name": "event",
+          "startLine": 58,
+          "endLine": 60,
+          "params": [
+            "event"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Example",
+          "startLine": 28,
+          "endLine": 30,
+          "methods": [
+            "start",
+            "reader",
+            "writer",
+            "service",
+            "tab",
+            "event"
+          ],
+          "properties": [
+            "statistics"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Example",
+          "line": 28,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "start",
+          "callee": "Ok",
+          "lineNumber": 34
+        },
+        {
+          "caller": "start",
+          "callee": "statistics::Statistics::new",
+          "lineNumber": 35
+        },
+        {
+          "caller": "reader",
+          "callee": "(format == format::ID).then_some",
+          "lineNumber": 42
+        },
+        {
+          "caller": "writer",
+          "callee": "(format == format::ID).then_some",
+          "lineNumber": 46
+        },
+        {
+          "caller": "service",
+          "callee": "(interface == service::INTERFACE && id == service::ID).then_some",
+          "lineNumber": 50
+        },
+        {
+          "caller": "tab",
+          "callee": "(id == statistics::ID).then_some",
+          "lineNumber": 55
+        },
+        {
+          "caller": "event",
+          "callee": "self.statistics.event",
+          "lineNumber": 59
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 6,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "docs/plugins/template/src/notes.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 44,
+      "nonEmptyLines": 38,
+      "functions": [
+        {
+          "name": "name",
+          "startLine": 21,
+          "endLine": 31,
+          "params": [
+            "pitch",
+            "flats"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "name",
+          "line": 21,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "name",
+          "callee": "i32::from",
+          "lineNumber": 29
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "docs/plugins/template/src/service.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 75,
+      "nonEmptyLines": 65,
+      "functions": [
+        {
+          "name": "probe",
+          "startLine": 35,
+          "endLine": 39,
+          "params": []
+        },
+        {
+          "name": "call",
+          "startLine": 41,
+          "endLine": 54,
+          "params": [
+            "method",
+            "input"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "NoteNames",
+          "startLine": 31,
+          "endLine": 31,
+          "methods": [
+            "probe",
+            "call"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "NoteNames",
+          "line": 31,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "call",
+          "callee": "Ok",
+          "lineNumber": 44
+        },
+        {
+          "caller": "call",
+          "callee": "notes::name(Pitch(pitch), flats == 1).into_bytes",
+          "lineNumber": 44
+        },
+        {
+          "caller": "call",
+          "callee": "notes::name",
+          "lineNumber": 44
+        },
+        {
+          "caller": "call",
+          "callee": "Pitch",
+          "lineNumber": 44
+        },
+        {
+          "caller": "call",
+          "callee": "Err",
+          "lineNumber": 46
+        },
+        {
+          "caller": "call",
+          "callee": "Error::new",
+          "lineNumber": 46
+        },
+        {
+          "caller": "call",
+          "callee": "Err",
+          "lineNumber": 50
+        },
+        {
+          "caller": "call",
+          "callee": "Error::not_found",
+          "lineNumber": 50
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "docs/plugins/template/src/statistics.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 403,
+      "nonEmptyLines": 375,
+      "functions": [
+        {
+          "name": "new",
+          "startLine": 68,
+          "endLine": 83,
+          "params": [
+            "host"
+          ]
+        },
+        {
+          "name": "state",
+          "startLine": 85,
+          "endLine": 87,
+          "params": []
+        },
+        {
+          "name": "event",
+          "startLine": 93,
+          "endLine": 106,
+          "params": [
+            "event"
+          ]
+        },
+        {
+          "name": "save",
+          "startLine": 112,
+          "endLine": 116,
+          "params": [
+            "count_tied"
+          ]
+        },
+        {
+          "name": "refresh",
+          "startLine": 121,
+          "endLine": 137,
+          "params": []
+        },
+        {
+          "name": "count",
+          "startLine": 142,
+          "endLine": 176,
+          "params": [
+            "score"
+          ]
+        },
+        {
+          "name": "per_string",
+          "startLine": 180,
+          "endLine": 189,
+          "params": []
+        },
+        {
+          "name": "content",
+          "startLine": 194,
+          "endLine": 247,
+          "params": []
+        },
+        {
+          "name": "on",
+          "startLine": 251,
+          "endLine": 285,
+          "params": [
+            "widget",
+            "event"
+          ]
+        },
+        {
+          "name": "slot",
+          "startLine": 290,
+          "endLine": 292,
+          "params": [
+            "strings"
+          ]
+        },
+        {
+          "name": "bar_at",
+          "startLine": 296,
+          "endLine": 301,
+          "params": [
+            "pointer",
+            "strings"
+          ]
+        },
+        {
+          "name": "draw",
+          "startLine": 308,
+          "endLine": 341,
+          "params": [
+            "counts",
+            "picked"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Statistics",
+          "startLine": 33,
+          "endLine": 36,
+          "methods": [
+            "new",
+            "state",
+            "event",
+            "save",
+            "refresh",
+            "content",
+            "on"
+          ],
+          "properties": [
+            "host",
+            "state"
+          ]
+        },
+        {
+          "name": "State",
+          "startLine": 39,
+          "endLine": 52,
+          "methods": [
+            "per_string"
+          ],
+          "properties": [
+            "stale",
+            "title",
+            "tracks",
+            "track",
+            "picked",
+            "count_tied"
+          ]
+        },
+        {
+          "name": "Counts",
+          "startLine": 56,
+          "endLine": 63,
+          "methods": [],
+          "properties": [
+            "name",
+            "struck",
+            "tied"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Statistics",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "new",
+          "line": 68,
+          "isDefault": false
+        },
+        {
+          "name": "event",
+          "line": 93,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "new",
+          "callee": "host\n            .settings()\n            .ok()\n            .and_then(|s| s.get(\"count_tied\").and_then(|v| v.as_bool())).unwrap_or",
+          "lineNumber": 70
+        },
+        {
+          "caller": "new",
+          "callee": "host\n            .settings()\n            .ok().and_then",
+          "lineNumber": 70
+        },
+        {
+          "caller": "new",
+          "callee": "host\n            .settings().ok",
+          "lineNumber": 70
+        },
+        {
+          "caller": "new",
+          "callee": "host.settings",
+          "lineNumber": 70
+        },
+        {
+          "caller": "new",
+          "callee": "s.get(\"count_tied\").and_then",
+          "lineNumber": 73
+        },
+        {
+          "caller": "new",
+          "callee": "s.get",
+          "lineNumber": 73
+        },
+        {
+          "caller": "new",
+          "callee": "v.as_bool",
+          "lineNumber": 73
+        },
+        {
+          "caller": "new",
+          "callee": "Mutex::new",
+          "lineNumber": 78
+        },
+        {
+          "caller": "new",
+          "callee": "State::default",
+          "lineNumber": 80
+        },
+        {
+          "caller": "state",
+          "callee": "self.state.lock().unwrap_or_else",
+          "lineNumber": 86
+        },
+        {
+          "caller": "state",
+          "callee": "self.state.lock",
+          "lineNumber": 86
+        },
+        {
+          "caller": "event",
+          "callee": "self.state",
+          "lineNumber": 95
+        },
+        {
+          "caller": "event",
+          "callee": "self.state",
+          "lineNumber": 97
+        },
+        {
+          "caller": "event",
+          "callee": "self.state",
+          "lineNumber": 98
+        },
+        {
+          "caller": "event",
+          "callee": "State::default",
+          "lineNumber": 100
+        },
+        {
+          "caller": "event",
+          "callee": "self.host.redraw",
+          "lineNumber": 105
+        },
+        {
+          "caller": "save",
+          "callee": "self.host.settings",
+          "lineNumber": 113
+        },
+        {
+          "caller": "save",
+          "callee": "settings.insert",
+          "lineNumber": 114
+        },
+        {
+          "caller": "save",
+          "callee": "\"count_tied\".into",
+          "lineNumber": 114
+        },
+        {
+          "caller": "save",
+          "callee": "count_tied.into",
+          "lineNumber": 114
+        },
+        {
+          "caller": "save",
+          "callee": "self.host.set_settings",
+          "lineNumber": 115
+        },
+        {
+          "caller": "refresh",
+          "callee": "std::mem::take",
+          "lineNumber": 122
+        },
+        {
+          "caller": "refresh",
+          "callee": "self.state",
+          "lineNumber": 122
+        },
+        {
+          "caller": "refresh",
+          "callee": "self.host.score",
+          "lineNumber": 126
+        },
+        {
+          "caller": "refresh",
+          "callee": "self.state",
+          "lineNumber": 127
+        },
+        {
+          "caller": "refresh",
+          "callee": "score.info.title.clone",
+          "lineNumber": 130
+        },
+        {
+          "caller": "refresh",
+          "callee": "count",
+          "lineNumber": 131
+        },
+        {
+          "caller": "refresh",
+          "callee": "s.tracks.clear",
+          "lineNumber": 133
+        },
+        {
+          "caller": "refresh",
+          "callee": "s.track.min",
+          "lineNumber": 135
+        },
+        {
+          "caller": "refresh",
+          "callee": "s.tracks.len().saturating_sub",
+          "lineNumber": 135
+        },
+        {
+          "caller": "refresh",
+          "callee": "s.tracks.len",
+          "lineNumber": 135
+        },
+        {
+          "caller": "count",
+          "callee": "score\n        .tracks\n        .iter()\n        .map(|track| {\n            let strings = track\n                .staves\n                .iter()\n                .map(|s| s.tuning.len())\n                .max()\n                .unwrap_or(0);\n            let mut counts = Counts {\n                name: track.name.clone(),\n                struck: vec![0; strings],\n                tied: vec![0; strings],\n            };\n            let notes = track\n                .staves\n                .iter()\n                .flat_map(|s| &s.bars)\n                .flat_map(|b| &b.voices)\n                .flat_map(|v| &v.beats)\n                .flat_map(|b| &b.notes);\n            for note in notes {\n                if let NotePlace::Fretted { string, .. } = note.place\n                    && let Some(i) = usize::from(string).checked_sub(1).filter(|&i| i < strings)\n                {\n                    counts.struck[i] += 1;\n                    counts.tied[i] += u32::from(note.tie);\n                }\n            }\n            counts\n        }).collect",
+          "lineNumber": 143
+        },
+        {
+          "caller": "count",
+          "callee": "score\n        .tracks\n        .iter().map",
+          "lineNumber": 143
+        },
+        {
+          "caller": "count",
+          "callee": "score\n        .tracks.iter",
+          "lineNumber": 143
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves\n                .iter()\n                .map(|s| s.tuning.len())\n                .max().unwrap_or",
+          "lineNumber": 147
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves\n                .iter()\n                .map(|s| s.tuning.len()).max",
+          "lineNumber": 147
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves\n                .iter().map",
+          "lineNumber": 147
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves.iter",
+          "lineNumber": 147
+        },
+        {
+          "caller": "count",
+          "callee": "s.tuning.len",
+          "lineNumber": 150
+        },
+        {
+          "caller": "count",
+          "callee": "track.name.clone",
+          "lineNumber": 154
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves\n                .iter()\n                .flat_map(|s| &s.bars)\n                .flat_map(|b| &b.voices)\n                .flat_map(|v| &v.beats).flat_map",
+          "lineNumber": 158
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves\n                .iter()\n                .flat_map(|s| &s.bars)\n                .flat_map(|b| &b.voices).flat_map",
+          "lineNumber": 158
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves\n                .iter()\n                .flat_map(|s| &s.bars).flat_map",
+          "lineNumber": 158
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves\n                .iter().flat_map",
+          "lineNumber": 158
+        },
+        {
+          "caller": "count",
+          "callee": "track\n                .staves.iter",
+          "lineNumber": 158
+        },
+        {
+          "caller": "count",
+          "callee": "usize::from(string).checked_sub(1).filter",
+          "lineNumber": 167
+        },
+        {
+          "caller": "count",
+          "callee": "usize::from(string).checked_sub",
+          "lineNumber": 167
+        },
+        {
+          "caller": "count",
+          "callee": "usize::from",
+          "lineNumber": 167
+        },
+        {
+          "caller": "count",
+          "callee": "u32::from",
+          "lineNumber": 170
+        },
+        {
+          "caller": "per_string",
+          "callee": "self.tracks.get",
+          "lineNumber": 181
+        },
+        {
+          "caller": "per_string",
+          "callee": "Vec::new",
+          "lineNumber": 182
+        },
+        {
+          "caller": "per_string",
+          "callee": "t.struck.clone",
+          "lineNumber": 185
+        },
+        {
+          "caller": "per_string",
+          "callee": "t.struck.iter().zip(&t.tied).map(|(s, t)| s - t).collect",
+          "lineNumber": 187
+        },
+        {
+          "caller": "per_string",
+          "callee": "t.struck.iter().zip(&t.tied).map",
+          "lineNumber": 187
+        },
+        {
+          "caller": "per_string",
+          "callee": "t.struck.iter().zip",
+          "lineNumber": 187
+        },
+        {
+          "caller": "per_string",
+          "callee": "t.struck.iter",
+          "lineNumber": 187
+        },
+        {
+          "caller": "content",
+          "callee": "self.refresh",
+          "lineNumber": 195
+        },
+        {
+          "caller": "content",
+          "callee": "self.state",
+          "lineNumber": 196
+        },
+        {
+          "caller": "content",
+          "callee": "s.tracks.is_empty",
+          "lineNumber": 198
+        },
+        {
+          "caller": "content",
+          "callee": "s.per_string",
+          "lineNumber": 205
+        },
+        {
+          "caller": "content",
+          "callee": "counts.iter().sum",
+          "lineNumber": 206
+        },
+        {
+          "caller": "content",
+          "callee": "counts.iter",
+          "lineNumber": 206
+        },
+        {
+          "caller": "content",
+          "callee": "s.picked.and_then",
+          "lineNumber": 207
+        },
+        {
+          "caller": "content",
+          "callee": "Some",
+          "lineNumber": 207
+        },
+        {
+          "caller": "content",
+          "callee": "counts.get",
+          "lineNumber": 207
+        },
+        {
+          "caller": "content",
+          "callee": "counts.is_empty",
+          "lineNumber": 209
+        },
+        {
+          "caller": "content",
+          "callee": "\"This track has no strings\".into",
+          "lineNumber": 209
+        },
+        {
+          "caller": "content",
+          "callee": "counts.is_empty",
+          "lineNumber": 236
+        },
+        {
+          "caller": "content",
+          "callee": "rows.push",
+          "lineNumber": 237
+        },
+        {
+          "caller": "on",
+          "callee": "self.state",
+          "lineNumber": 254
+        },
+        {
+          "caller": "on",
+          "callee": "s.per_string().len",
+          "lineNumber": 255
+        },
+        {
+          "caller": "on",
+          "callee": "s.per_string",
+          "lineNumber": 255
+        },
+        {
+          "caller": "on",
+          "callee": "bar_at",
+          "lineNumber": 256
+        },
+        {
+          "caller": "on",
+          "callee": "Some",
+          "lineNumber": 257
+        },
+        {
+          "caller": "on",
+          "callee": "self.state",
+          "lineNumber": 261
+        },
+        {
+          "caller": "on",
+          "callee": "s.tracks.len",
+          "lineNumber": 262
+        },
+        {
+          "caller": "on",
+          "callee": "self.state",
+          "lineNumber": 268
+        },
+        {
+          "caller": "on",
+          "callee": "self.save",
+          "lineNumber": 271
+        },
+        {
+          "caller": "on",
+          "callee": "self.host.notify",
+          "lineNumber": 273
+        },
+        {
+          "caller": "on",
+          "callee": "Err",
+          "lineNumber": 277
+        },
+        {
+          "caller": "on",
+          "callee": "Error::new",
+          "lineNumber": 277
+        },
+        {
+          "caller": "on",
+          "callee": "Ok",
+          "lineNumber": 284
+        },
+        {
+          "caller": "slot",
+          "callee": "strings.max",
+          "lineNumber": 291
+        },
+        {
+          "caller": "bar_at",
+          "callee": "(0.0..WIDTH).contains",
+          "lineNumber": 298
+        },
+        {
+          "caller": "bar_at",
+          "callee": "(0.0..HEIGHT).contains",
+          "lineNumber": 298
+        },
+        {
+          "caller": "bar_at",
+          "callee": "(pointer.kind == PointerKind::Down && inside && strings > 0).then",
+          "lineNumber": 299
+        },
+        {
+          "caller": "bar_at",
+          "callee": "((x / slot(strings)) as usize).min",
+          "lineNumber": 300
+        },
+        {
+          "caller": "bar_at",
+          "callee": "slot",
+          "lineNumber": 300
+        },
+        {
+          "caller": "draw",
+          "callee": "counts.iter().copied().max().unwrap_or(0).max",
+          "lineNumber": 309
+        },
+        {
+          "caller": "draw",
+          "callee": "counts.iter().copied().max().unwrap_or",
+          "lineNumber": 309
+        },
+        {
+          "caller": "draw",
+          "callee": "counts.iter().copied().max",
+          "lineNumber": 309
+        },
+        {
+          "caller": "draw",
+          "callee": "counts.iter().copied",
+          "lineNumber": 309
+        },
+        {
+          "caller": "draw",
+          "callee": "counts.iter",
+          "lineNumber": 309
+        },
+        {
+          "caller": "draw",
+          "callee": "slot",
+          "lineNumber": 310
+        },
+        {
+          "caller": "draw",
+          "callee": "counts.len",
+          "lineNumber": 310
+        },
+        {
+          "caller": "draw",
+          "callee": "counts.iter().enumerate",
+          "lineNumber": 318
+        },
+        {
+          "caller": "draw",
+          "callee": "counts.iter",
+          "lineNumber": 318
+        },
+        {
+          "caller": "draw",
+          "callee": "items.push",
+          "lineNumber": 321
+        },
+        {
+          "caller": "draw",
+          "callee": "Point::new",
+          "lineNumber": 322
+        },
+        {
+          "caller": "draw",
+          "callee": "Some",
+          "lineNumber": 325
+        },
+        {
+          "caller": "draw",
+          "callee": "items.push",
+          "lineNumber": 331
+        },
+        {
+          "caller": "draw",
+          "callee": "(i + 1).to_string",
+          "lineNumber": 332
+        },
+        {
+          "caller": "draw",
+          "callee": "Point::new",
+          "lineNumber": 333
+        },
+        {
+          "caller": "down",
+          "callee": "TabEvent::Pointer",
+          "lineNumber": 351
+        },
+        {
+          "caller": "down",
+          "callee": "Point::new",
+          "lineNumber": 353
+        },
+        {
+          "caller": "label",
+          "callee": "text.clone",
+          "lineNumber": 360
+        },
+        {
+          "caller": "sample",
+          "callee": "crate::format::ExampleTab.read(file).unwrap",
+          "lineNumber": 367
+        },
+        {
+          "caller": "sample",
+          "callee": "crate::format::ExampleTab.read",
+          "lineNumber": 367
+        },
+        {
+          "caller": "counts_each_string",
+          "callee": "sample",
+          "lineNumber": 372
+        },
+        {
+          "caller": "counts_each_string",
+          "callee": "count",
+          "lineNumber": 373
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "Statistics::new",
+          "lineNumber": 381
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "Host::detached",
+          "lineNumber": 381
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.content",
+          "lineNumber": 382
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.event",
+          "lineNumber": 386
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.state",
+          "lineNumber": 389
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "\"Open Strings\".into",
+          "lineNumber": 389
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.state",
+          "lineNumber": 390
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "count",
+          "lineNumber": 390
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "sample",
+          "lineNumber": 390
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.content",
+          "lineNumber": 391
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.on(\"chart\", down(slot(6) * 2.5, 30.0)).unwrap",
+          "lineNumber": 395
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.on",
+          "lineNumber": 395
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "down",
+          "lineNumber": 395
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "slot",
+          "lineNumber": 395
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.on(\"chart\", down(500.0, 30.0)).unwrap",
+          "lineNumber": 397
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.on",
+          "lineNumber": 397
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "down",
+          "lineNumber": 397
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.on(\"tied\", TabEvent::Toggled(true)).unwrap",
+          "lineNumber": 399
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "tab.on",
+          "lineNumber": 399
+        },
+        {
+          "caller": "shows_nothing_without_a_score_and_follows_clicks",
+          "callee": "TabEvent::Toggled",
+          "lineNumber": 399
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 12,
+        "classCount": 3
+      }
+    },
+    {
+      "path": "docs/plugins/template/tests/contract.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 23,
+      "nonEmptyLines": 20,
+      "functions": [
+        {
+          "name": "the_plugin_file_keeps_the_contract",
+          "startLine": 12,
+          "endLine": 22,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "the_plugin_file_keeps_the_contract",
+          "callee": "Path::new",
+          "lineNumber": 13
+        },
+        {
+          "caller": "the_plugin_file_keeps_the_contract",
+          "callee": "oxiguitar_plugin_test::build(crate_folder, env!(\"CARGO_PKG_NAME\"), \"example\", false).expect",
+          "lineNumber": 15
+        },
+        {
+          "caller": "the_plugin_file_keeps_the_contract",
+          "callee": "oxiguitar_plugin_test::build",
+          "lineNumber": 15
+        },
+        {
+          "caller": "the_plugin_file_keeps_the_contract",
+          "callee": "oxiguitar_plugin_test::check",
+          "lineNumber": 17
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "docs/testing.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 86,
+      "nonEmptyLines": 59,
+      "sections": [
+        {
+          "heading": "Testing",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Kinds of tests",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Speed budget",
+          "level": 2,
+          "line": 20
+        },
+        {
+          "heading": "Visual regression",
+          "level": 2,
+          "line": 38
+        },
+        {
+          "heading": "Fuzzing",
+          "level": 2,
+          "line": 61
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "fixtures/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 35,
+      "nonEmptyLines": 22,
+      "sections": [
+        {
+          "heading": "Public test fixtures",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "SFZ samples",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "Guitar Pro 7.6's own files",
+          "level": 2,
+          "line": 23
+        },
+        {
+          "heading": "Files for checking the .gp writer",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "Visual-regression references",
+          "level": 2,
+          "line": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    }
+  ]
+}

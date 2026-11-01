@@ -1,0 +1,15 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": ".github/workflows/builds.yml", "language": "yaml", "sizeLines": 140, "fileCategory": "infra"},
+    {"path": ".github/workflows/ci.yml", "language": "yaml", "sizeLines": 326, "fileCategory": "infra"},
+    {"path": ".github/workflows/debian.yml", "language": "yaml", "sizeLines": 145, "fileCategory": "infra"},
+    {"path": ".github/workflows/docs.yml", "language": "yaml", "sizeLines": 106, "fileCategory": "infra"},
+    {"path": ".github/workflows/fuzz.yml", "language": "yaml", "sizeLines": 142, "fileCategory": "infra"},
+    {"path": ".github/workflows/interop.yml", "language": "yaml", "sizeLines": 95, "fileCategory": "infra"},
+    {"path": ".github/workflows/listening.yml", "language": "yaml", "sizeLines": 289, "fileCategory": "infra"},
+    {"path": ".github/workflows/release.yml", "language": "yaml", "sizeLines": 548, "fileCategory": "infra"},
+    {"path": ".github/workflows/spikes.yml", "language": "yaml", "sizeLines": 266, "fileCategory": "infra"}
+  ],
+  "batchImportData": {".github/workflows/builds.yml":[],".github/workflows/ci.yml":[],".github/workflows/debian.yml":[],".github/workflows/docs.yml":[],".github/workflows/fuzz.yml":[],".github/workflows/interop.yml":[],".github/workflows/listening.yml":[],".github/workflows/release.yml":[],".github/workflows/spikes.yml":[]}
+}

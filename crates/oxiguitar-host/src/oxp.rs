@@ -186,4 +186,42 @@ mod tests {
         says(&std::env::current_exe().unwrap(), "no manifest");
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn system_plugins_manifests_are_readable() {
+        let dir = std::path::PathBuf::from("/usr/lib/oxiguitar/plugins");
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            println!("System plugins directory not found, skipping");
+            return;
+        };
+        let plugins: Vec<_> = entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.is_file())
+            .collect();
+        println!("Found {} system plugin files", plugins.len());
+        for p in &plugins {
+            println!("\n--- {} ---", p.file_name().unwrap().to_string_lossy());
+            let result = read_manifest(p);
+            match result {
+                Ok(mf) => {
+                    println!(
+                        "  OK: id={}, name={}, version={}, interface={}",
+                        mf.manifest.id,
+                        mf.manifest.name,
+                        mf.manifest.version,
+                        mf.manifest.interface
+                    );
+                    println!(
+                        "  OS: {:?}, Arch: {:?}, Display: {:?}, CPU: {:?}",
+                        mf.manifest.conditions.os,
+                        mf.manifest.conditions.arch,
+                        mf.manifest.conditions.display,
+                        mf.manifest.conditions.cpu
+                    );
+                }
+                Err(e) => println!("  ERROR: {}", e),
+            }
+        }
+    }
 }

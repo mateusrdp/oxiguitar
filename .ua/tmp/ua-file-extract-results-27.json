@@ -1,0 +1,44 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 0,
+  "filesSkipped": [
+    "fixtures/guitar-pro-check/hammer-on-pull-off.gp",
+    "fixtures/guitar-pro-check/hammer-on-pull-off.gp5",
+    "fixtures/guitar-pro-check/harmonics.gp",
+    "fixtures/guitar-pro-check/harmonics.gp5",
+    "fixtures/guitar-pro-check/header-and-credits.gp",
+    "fixtures/guitar-pro-check/header-and-credits.gp5",
+    "fixtures/guitar-pro-check/key-signatures.gp",
+    "fixtures/guitar-pro-check/key-signatures.gp5",
+    "fixtures/guitar-pro-check/layout-horizontal.gp",
+    "fixtures/guitar-pro-check/layout-horizontal.gp5",
+    "fixtures/guitar-pro-check/layout-parchment.gp",
+    "fixtures/guitar-pro-check/layout-parchment.gp5",
+    "fixtures/guitar-pro-check/layout-vertical.gp",
+    "fixtures/guitar-pro-check/layout-vertical.gp5",
+    "fixtures/guitar-pro-check/let-ring.gp",
+    "fixtures/guitar-pro-check/let-ring.gp5",
+    "fixtures/guitar-pro-check/lyrics.gp",
+    "fixtures/guitar-pro-check/lyrics.gp5",
+    "fixtures/guitar-pro-check/notation-choice.gp",
+    "fixtures/guitar-pro-check/notation-choice.gp5",
+    "fixtures/guitar-pro-check/notes-and-rests.gp",
+    "fixtures/guitar-pro-check/notes-and-rests.gp5",
+    "fixtures/guitar-pro-check/page-breaks.gp",
+    "fixtures/guitar-pro-check/page-breaks.gp5",
+    "fixtures/guitar-pro-check/paper-letter.gp"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 0,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": []
+}

@@ -118,7 +118,7 @@ jobs:
             mine="$(readlink -f "$home/soundfonts/$(basename "$sf2")")"
             # The plugin's settings window's picks: this bank for guitars,
             # FluidR3 for the rest.
-            printf '{"oxiguitar.soundfont":{"electric-guitars":"%s","acoustic-guitars":"%s","basses":"%s","drums":"%s","other":"%s","warned_basic_sets":true}}\n' \
+            printf '{"oxiguitar.midi":{"electric-guitars":"%s","acoustic-guitars":"%s","basses":"%s","drums":"%s","other":"%s"}}\n' \
               "$mine" "$mine" "$fluid" "$fluid" "$fluid" > "$home/settings.json"
             for song in fixtures/reference/*.gp; do
               out="listening/freepats-$b/$(basename "$song" .gp).wav"
@@ -262,7 +262,7 @@ jobs:
               picks+="\"$role\":\"$fluid\","
             fi
           done
-          printf '{"oxiguitar.soundfont":{%s"warned_basic_sets":true}}\n' "$picks" > "$home/settings.json"
+          printf '{"oxiguitar.midi":{%s}}\n' "${picks%,}" > "$home/settings.json"
           cat "$home/settings.json"
           out="listening/sfz-${{ matrix.name }}"
           mkdir -p "$out"

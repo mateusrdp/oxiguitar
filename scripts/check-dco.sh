@@ -5,14 +5,17 @@
 # Checks that every commit in BASE..HEAD carries a Developer Certificate of
 # Origin sign-off (git commit -s) matching its author's email.
 #
-# Commits made by the Claude GitHub app are skipped: the DCO is a statement by
-# a person. They are recognised two ways:
-#   - authored by noreply@anthropic.com (commits on Claude's branches);
-#   - committed by GitHub (noreply@github.com) with a Co-Authored-By trailer
-#     for noreply@anthropic.com: the squash merges of Claude's pull requests
-#     into develop, which GitHub attributes to the account that merged them.
-# The maintainer's review and merge of the pull request into main is the
-# human sign-off for them. See CONTRIBUTING.md.
+# Commits made by automated bots are skipped: the DCO is a statement by a
+# person, and bots cannot satisfy it. They are recognised by their author
+# email or by being committed by GitHub on behalf of the bot:
+#   - Claude GitHub app (noreply@anthropic.com, or noreply@github.com with
+#     a Co-Authored-By for noreply@anthropic.com — squash merges into develop);
+#   - Dependabot (noreply@github.com with a Co-Authored-By for dependabot[bot],
+#     or authored directly by dependabot[bot]@users.noreply.github.com);
+#     Dependabot adds a Signed-off-by line, but its email (support@github.com)
+#     never matches the author email, so the DCO check would always fail.
+# The maintainer's review and merge of the pull request is the human sign-off
+# for bot commits. See CONTRIBUTING.md.
 #
 # Usage: scripts/check-dco.sh BASE_SHA HEAD_SHA
 
@@ -34,6 +37,20 @@ for sha in $(git rev-list --no-merges "$base..$head"); do
         && git show -s --format='%(trailers:key=Co-authored-by,valueonly)' "$sha" \
             | grep -qiF "<noreply@anthropic.com>"; then
         echo "skip  ${sha:0:10} (squash merge of a Claude pull request) $subject"
+        continue
+    fi
+    # Dependabot: authored directly by the bot, or committed by GitHub with
+    # a Co-Authored-By for dependabot[bot]. Dependabot's Signed-off-by email
+    # (support@github.com) never matches its author email, so the DCO check
+    # would always fail; the maintainer's review is the human sign-off.
+    if [[ "$email" == *dependabot* ]]; then
+        echo "skip  ${sha:0:10} (Dependabot commit) $subject"
+        continue
+    fi
+    if [[ "$committer" == "noreply@github.com" ]] \
+        && git show -s --format='%(trailers:key=Co-authored-by,valueonly)' "$sha" \
+            | grep -qiF "<dependabot[bot]@users.noreply.github.com>"; then
+        echo "skip  ${sha:0:10} (Dependabot squash merge) $subject"
         continue
     fi
     if git show -s --format='%(trailers:key=Signed-off-by,valueonly)' "$sha" \

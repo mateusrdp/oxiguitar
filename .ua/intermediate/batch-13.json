@@ -1,0 +1,513 @@
+{
+  "nodes": [
+    {
+      "id": "file:crates/oxiguitar-app/src/document.rs",
+      "type": "file",
+      "name": "document.rs",
+      "filePath": "crates/oxiguitar-app/src/document.rs",
+      "summary": "Core document model for the open score and its presentation: reading files, View settings, engraving, tools, and PDF export. Defines the Settings struct (layout, paper, tracks, dynamics, notation map, active voice) and OpenScore (the central score container with document, settings, canvas, and cursor state). No window code so it is tested without a display.",
+      "tags": ["document-model", "score", "settings", "engraving", "central"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:document.Settings",
+      "type": "struct",
+      "name": "Settings",
+      "filePath": "crates/oxiguitar-app/src/document.rs",
+      "summary": "How the score is shown: layout mode, paper size, visible tracks, dynamics toggle, screen width, per-track notation, and the active voice for greyed-out display. Implements Default with Page layout, A4 paper, and voice 0 active.",
+      "tags": ["struct", "view-settings", "layout", "notation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:document.OpenScore",
+      "type": "struct",
+      "name": "OpenScore",
+      "filePath": "crates/oxiguitar-app/src/document.rs",
+      "summary": "The open score container holding the model Score, document settings, canvas sheets, cursor state, and history. Central data structure that 10 other files in the crate import from.",
+      "tags": ["struct", "score-container", "central"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/editing.rs",
+      "type": "file",
+      "name": "editing.rs",
+      "filePath": "crates/oxiguitar-app/src/editing.rs",
+      "summary": "Editor state in the window: caret position, selection, key handling (arrows, Tab, voices, select-all), and where to draw them as boxes over engraved pages. Defines Key enum and SECOND_DIGIT constant for two-digit fret entry. No window code so tested without a display.",
+      "tags": ["editor", "caret", "selection", "key-handling"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "enum:editing.Key",
+      "type": "enum",
+      "name": "Key",
+      "filePath": "crates/oxiguitar-app/src/editing.rs",
+      "summary": "The keys the editor takes: directional arrows, Home/End, Tab/BackTab, voice selection (Ctrl+1-4), SelectAll (Ctrl+A), and Escape. Maps keyboard input to editor actions.",
+      "tags": ["enum", "keymap", "input"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/bar_form.rs",
+      "type": "file",
+      "name": "bar_form.rs",
+      "filePath": "crates/oxiguitar-app/src/bar_form.rs",
+      "summary": "The Bar dialog's fields: time signature denominators, clef options (treble, bass, alto, tenor, neutral), triplet feels (7 options), musical directions (19 signs and jumps like Segno, Coda, D.C., D.S.), key signatures, and markers. Data constants for the BarState dialog without window code.",
+      "tags": ["dialog", "bar-editing", "time-signature", "clef", "directions"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/bend_form.rs",
+      "type": "file",
+      "name": "bend_form.rs",
+      "filePath": "crates/oxiguitar-app/src/bend_form.rs",
+      "summary": "The bend and whammy-bar editor matching Guitar Pro 8's Bend window: bend types (bend, release, prebend variants), whammy bar types (dive, dip, return, predive), pitch amounts from ¼ tone to 3 tones, and a curve grid with 12 columns (twelfths) and 12 rows (quarter tones). Defines BendForm dialog state.",
+      "tags": ["dialog", "bend", "whammy-bar", "guitar-effects"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/canvas.rs",
+      "type": "file",
+      "name": "canvas.rs",
+      "filePath": "crates/oxiguitar-app/src/canvas.rs",
+      "summary": "The score canvas as tiles: where engraved sheets sit, which tiles a scrolled view needs, and drawing one tile. Defines Sheets struct (list of DisplayLists with rects), TILE constant (512px), PAGE_GAP (18pt), and tile calculation for visible areas. No window code.",
+      "tags": ["canvas", "tiles", "rendering", "scrolling"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:canvas.Sheets",
+      "type": "struct",
+      "name": "Sheets",
+      "filePath": "crates/oxiguitar-app/src/canvas.rs",
+      "summary": "Engraved sheets on the canvas: a vector of DisplayLists and their corresponding Rect positions. Provides stack() to arrange pages vertically, size() to get canvas dimensions, and tiles_for() to compute visible tile grid.",
+      "tags": ["struct", "sheets", "canvas", "display-list"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/chord_form.rs",
+      "type": "file",
+      "name": "chord_form.rs",
+      "filePath": "crates/oxiguitar-app/src/chord_form.rs",
+      "summary": "The chord dialog matching Guitar Pro 8's Chord window: a builder (root, type, extension, alterations, bass) that names chords and lists voicings, a clickable grid diagram for placing/taking notes, open and muted string indicators, and a chord library. Defines ChordForm dialog state.",
+      "tags": ["dialog", "chord", "harmony", "guitar-pro"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:chord_form.ChordForm",
+      "type": "struct",
+      "name": "ChordForm",
+      "filePath": "crates/oxiguitar-app/src/chord_form.rs",
+      "summary": "The chord dialog state: tuning, max frets, chord name (manual or auto-generated), builder chord, frets per string, first fret offset, voicings list, and chord library. 5 rows on the grid, up to 12 voicings.",
+      "tags": ["struct", "dialog-state", "chord-builder"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/cursor.rs",
+      "type": "file",
+      "name": "cursor.rs",
+      "filePath": "crates/oxiguitar-app/src/cursor.rs",
+      "summary": "The playback cursor position: where the sound is drawn on the page as a line moving through bars and beats, with a beat box spanning staves. Defines Cursor struct (sheet, x position, top/bottom, beat rect) and at() function to compute cursor position from hits, score, bar, and offset.",
+      "tags": ["cursor", "playback", "timing"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:cursor.Cursor",
+      "type": "struct",
+      "name": "Cursor",
+      "filePath": "crates/oxiguitar-app/src/cursor.rs",
+      "summary": "Where the cursor is drawn on one sheet: sheet index, x position of the beat line, system top/bottom bounds, and the beat's Rect across staves. Created by at() from score position data.",
+      "tags": ["struct", "playback-cursor", "position"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/effect_form.rs",
+      "type": "file",
+      "name": "effect_form.rs",
+      "filePath": "crates/oxiguitar-app/src/effect_form.rs",
+      "summary": "The Inspector's note and beat fields: rows of switches, choices, numbers, and buttons that open editors for bend/whammy. Defines Kind enum (Heading, Switch, Choice, Number, Button) and Field struct (id, label, kind, value, options, range). No window code.",
+      "tags": ["inspector", "fields", "effects", "note-editing"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "enum:effect_form.Kind",
+      "type": "enum",
+      "name": "Kind",
+      "filePath": "crates/oxiguitar-app/src/effect_form.rs",
+      "summary": "What a row in the Inspector shows: Heading for section titles, Switch for tickboxes, Choice for drop-downs, Number for numeric inputs, and Button for opening sub-editors with a summary.",
+      "tags": ["enum", "field-types", "inspector"],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:effect_form.Field",
+      "type": "struct",
+      "name": "Field",
+      "filePath": "crates/oxiguitar-app/src/effect_form.rs",
+      "summary": "One row of the Inspector's note or beat editor: identifier, label, kind (heading/switch/choice/number/button), value, options list, and numeric range. Represents editable note/beat properties.",
+      "tags": ["struct", "field", "inspector", "note-editing"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/footer.rs",
+      "type": "file",
+      "name": "footer.rs",
+      "filePath": "crates/oxiguitar-app/src/footer.rs",
+      "summary": "The footer's message system: errors and warnings only (not a full log), with clickable links. Defines Message struct (level, text, optional link) and Footer struct with push() and push_with_link() methods. Keeps at most 500 messages per session.",
+      "tags": ["footer", "messages", "logging", "error-handling"],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:footer.Message",
+      "type": "struct",
+      "name": "Message",
+      "filePath": "crates/oxiguitar-app/src/footer.rs",
+      "summary": "One footer message with its severity level, text content, and optional clickable link (https URL with display text).",
+      "tags": ["struct", "message", "footer"],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:footer.Footer",
+      "type": "struct",
+      "name": "Footer",
+      "filePath": "crates/oxiguitar-app/src/footer.rs",
+      "summary": "Session message store: oldest-first vector of Message with a 500-message cap. Provides push() for simple messages and push_with_link() for messages with clickable URLs. Validates https links via oxiguitar_host.",
+      "tags": ["struct", "message-store", "session"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/icons.rs",
+      "type": "file",
+      "name": "icons.rs",
+      "filePath": "crates/oxiguitar-app/src/icons.rs",
+      "summary": "Custom button icons drawn by the app's own renderer: notation buttons (treble clef, tab clef), mixer toggles, and palette icons. Uses SMuFL symbols, text faces, and hand-drawn Pen graphics. Each face is measured once then scaled. No imports from this batch.",
+      "tags": ["icons", "smufl", "renderer", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/inspector.rs",
+      "type": "file",
+      "name": "inspector.rs",
+      "filePath": "crates/oxiguitar-app/src/inspector.rs",
+      "summary": "The Inspector's view of the caret's bar: each voice's beats counted against the time signature, showing whether the voice is full, short, or too long. Defines Fill enum (Full, Short, Long, Unknown), VoiceRow struct, and BarView struct with heading and voice rows.",
+      "tags": ["inspector", "bar-analysis", "time-signature", "debugging"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "enum:inspector.Fill",
+      "type": "enum",
+      "name": "Fill",
+      "filePath": "crates/oxiguitar-app/src/inspector.rs",
+      "summary": "How a voice fills its bar: Full (exactly the time signature), Short (less than it), Long (more than it), or Unknown (no beats, free time, or uncountable length).",
+      "tags": ["enum", "bar-analysis", "fill-state"],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:inspector.VoiceRow",
+      "type": "struct",
+      "name": "VoiceRow",
+      "filePath": "crates/oxiguitar-app/src/inspector.rs",
+      "summary": "One voice's row in the Inspector: name (e.g. 'Voice 1'), count string (e.g. '1.5/4'), state description ('Full', '½ beat short'), fill state, beat count, and whether the caret is in this voice.",
+      "tags": ["struct", "voice", "bar-analysis"],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:inspector.BarView",
+      "type": "struct",
+      "name": "BarView",
+      "filePath": "crates/oxiguitar-app/src/inspector.rs",
+      "summary": "What the Inspector shows of the caret's bar: heading ('Bar 5 · 4/4'), beat description ('Beats are quarter notes'), and per-voice rows with fill analysis. Essential for debugging and composing.",
+      "tags": ["struct", "bar-view", "inspector"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/build.rs",
+      "type": "file",
+      "name": "build.rs",
+      "filePath": "crates/oxiguitar-app/build.rs",
+      "summary": "Build script that compiles the Slint UI file (ui/app.slint) with Fluent style and, on Windows MSVC, generates a .res file with program icon and version information from PNG assets. References build/winres.rs module.",
+      "tags": ["build-script", "slint", "windows", "resources"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:crates/oxiguitar-app/Cargo.toml",
+      "type": "config",
+      "name": "Cargo.toml",
+      "filePath": "crates/oxiguitar-app/Cargo.toml",
+      "summary": "Rust package manifest for the OxiGuitar desktop window crate. Defines two Linux builds (Wayland default, X11 deprecated), dependencies on oxiguitar-model, oxiguitar-display, oxiguitar-layout, oxiguitar-edit, oxiguitar-render, oxiguitar-tools, oxiguitar-host, oxiguitar-play, serde_json, tiny-skia, slint (pinned 1.17.1), i-slint-backend-winit, and rfd. Build dependency on slint-build.",
+      "tags": ["cargo", "manifest", "dependencies", "wayland", "x11", "slint"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:crates/oxiguitar-app/ui/app.slint",
+      "type": "config",
+      "name": "app.slint",
+      "filePath": "crates/oxiguitar-app/ui/app.slint",
+      "summary": "Main Slint UI definition for the OxiGuitar desktop window, compiled by build.rs with Fluent style.",
+      "tags": ["slint", "ui", "main-window"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:crates/oxiguitar-app/ui/bar_dialog.slint",
+      "type": "config",
+      "name": "bar_dialog.slint",
+      "filePath": "crates/oxiguitar-app/ui/bar_dialog.slint",
+      "summary": "Slint UI definition for the Bar dialog, providing the window interface for bar_form.rs data.",
+      "tags": ["slint", "ui", "bar-dialog"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:crates/oxiguitar-app/ui/plugin_manager.slint",
+      "type": "config",
+      "name": "plugin_manager.slint",
+      "filePath": "crates/oxiguitar-app/ui/plugin_manager.slint",
+      "summary": "Slint UI definition for the plugin manager window.",
+      "tags": ["slint", "ui", "plugin-manager"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:crates/oxiguitar-app/ui/plugin_tab.slint",
+      "type": "config",
+      "name": "plugin_tab.slint",
+      "filePath": "crates/oxiguitar-app/ui/plugin_tab.slint",
+      "summary": "Slint UI definition for a plugin tab panel.",
+      "tags": ["slint", "ui", "plugin-tab"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:corpus/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "corpus/README.md",
+      "summary": "Documentation for the OxiGuitar score corpus: reference files used for testing, format validation, and quality assurance across the project's format plugins.",
+      "tags": ["documentation", "corpus", "testing", "fixtures"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:corpus/MANIFEST.toml",
+      "type": "config",
+      "name": "MANIFEST.toml",
+      "filePath": "corpus/MANIFEST.toml",
+      "summary": "TOML manifest describing the OxiGuitar corpus files: their format, source, version, and metadata for testing and validation.",
+      "tags": ["manifest", "corpus", "testing", "metadata"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.gitattributes",
+      "type": "config",
+      "name": ".gitattributes",
+      "filePath": ".gitattributes",
+      "summary": "Git attributes configuration for the OxiGuitar repository, controlling line endings, export-ignore, and binary file handling for music fonts and other assets.",
+      "tags": ["git", "configuration", "line-endings"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:crates/oxiguitar-app/src/document.rs",
+      "target": "struct:document.Settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/document.rs",
+      "target": "struct:document.OpenScore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/editing.rs",
+      "target": "enum:editing.Key",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/canvas.rs",
+      "target": "struct:canvas.Sheets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/chord_form.rs",
+      "target": "struct:chord_form.ChordForm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/cursor.rs",
+      "target": "struct:cursor.Cursor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/effect_form.rs",
+      "target": "enum:effect_form.Kind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/effect_form.rs",
+      "target": "struct:effect_form.Field",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/footer.rs",
+      "target": "struct:footer.Message",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/footer.rs",
+      "target": "struct:footer.Footer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/inspector.rs",
+      "target": "enum:inspector.Fill",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/inspector.rs",
+      "target": "struct:inspector.VoiceRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/inspector.rs",
+      "target": "struct:inspector.BarView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/Cargo.toml",
+      "target": "file:crates/oxiguitar-app/build.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/build.rs",
+      "target": "config:crates/oxiguitar-app/ui/app.slint",
+      "type": "uses",
+      "direction": "forward",
+      "weight": 2
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/bar_form.rs",
+      "target": "config:crates/oxiguitar-app/ui/bar_dialog.slint",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/document.rs",
+      "target": "file:crates/oxiguitar-app/src/canvas.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/document.rs",
+      "target": "file:crates/oxiguitar-app/src/editing.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/document.rs",
+      "target": "file:crates/oxiguitar-app/src/cursor.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/document.rs",
+      "target": "file:crates/oxiguitar-app/src/inspector.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/bar_form.rs",
+      "target": "file:crates/oxiguitar-app/src/editing.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/bend_form.rs",
+      "target": "file:crates/oxiguitar-app/src/effect_form.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/chord_form.rs",
+      "target": "file:crates/oxiguitar-app/src/editing.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/cursor.rs",
+      "target": "file:crates/oxiguitar-app/src/editing.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/effect_form.rs",
+      "target": "file:crates/oxiguitar-app/src/editing.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/inspector.rs",
+      "target": "file:crates/oxiguitar-app/src/editing.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/canvas.rs",
+      "target": "file:crates/oxiguitar-app/src/document.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/icons.rs",
+      "target": "file:crates/oxiguitar-app/src/canvas.rs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:corpus/README.md",
+      "target": "config:corpus/MANIFEST.toml",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:.gitattributes",
+      "target": "config:corpus/MANIFEST.toml",
+      "type": "related",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

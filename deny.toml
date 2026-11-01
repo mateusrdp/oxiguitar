@@ -39,6 +39,9 @@ ignore = [
     # vulnerable. They go when the Slint pin moves.
     { id = "RUSTSEC-2024-0436", reason = "paste, unmaintained; build time only, via Slint 1.17.1's code generator (ADR 0009)" },
     { id = "RUSTSEC-2026-0206", reason = "rustybuzz, unmaintained; via Slint 1.17.1's resvg 0.47 (ADR 0009)" },
+    # pulldown-cmark wikilink leak: via i-slint-common 1.17.1, not a direct
+    # dependency. Slint 1.18 moves off it; revisit on next Slint upgrade.
+    { id = "RUSTSEC-2026-0414", reason = "wikilink sibling-chain leak via Slint 1.17.1; fixed in Slint 1.18" },
 ]
 
 [licenses]

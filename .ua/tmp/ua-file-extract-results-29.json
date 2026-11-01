@@ -1,0 +1,65 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 1,
+  "filesSkipped": [
+    "fixtures/guitar-pro-check/test-song-from-gp3.gp",
+    "fixtures/guitar-pro-check/test-song-from-gp3.gp5",
+    "fixtures/guitar-pro-check/test-song-from-gp4.gp",
+    "fixtures/guitar-pro-check/test-song-from-gp4.gp5",
+    "fixtures/guitar-pro-check/test-song-from-gp5.gp",
+    "fixtures/guitar-pro-check/test-song-from-gp5.gp5",
+    "fixtures/guitar-pro-check/test-song-from-gpx.gp",
+    "fixtures/guitar-pro-check/test-song-from-gpx.gp5",
+    "fixtures/guitar-pro-check/time-signatures.gp",
+    "fixtures/guitar-pro-check/time-signatures.gp5",
+    "fixtures/guitar-pro-check/tremolo-picking.gp",
+    "fixtures/guitar-pro-check/tremolo-picking.gp5",
+    "fixtures/guitar-pro-check/triplets.gp",
+    "fixtures/guitar-pro-check/triplets.gp5",
+    "fixtures/guitar-pro-check/two-voices.gp",
+    "fixtures/guitar-pro-check/two-voices.gp5",
+    "fixtures/guitar-pro-check/unusual-tuplets.gp",
+    "fixtures/guitar-pro-check/unusual-tuplets.gp5",
+    "fixtures/guitar-pro-check/vibrato-and-trill.gp",
+    "fixtures/guitar-pro-check/vibrato-and-trill.gp5",
+    "fixtures/guitar-pro-check/whammy-and-fade-in.gp",
+    "fixtures/guitar-pro-check/whammy-and-fade-in.gp5",
+    "fixtures/plugin/far-line.answer",
+    "fixtures/plugin/panel.answer"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 1,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 1
+    }
+  },
+  "results": [
+    {
+      "path": "fixtures/reference/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 56,
+      "nonEmptyLines": 54,
+      "sections": [
+        {
+          "heading": "Visual-regression references",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    }
+  ]
+}

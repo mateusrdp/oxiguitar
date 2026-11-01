@@ -1,0 +1,44 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 0,
+  "filesSkipped": [
+    "fixtures/reference/articulations.gp",
+    "fixtures/reference/bass.gp",
+    "fixtures/reference/beams-and-flags.gp",
+    "fixtures/reference/beat-text.gp",
+    "fixtures/reference/bends.gp",
+    "fixtures/reference/chord-names.gp",
+    "fixtures/reference/chords-and-accidentals.gp",
+    "fixtures/reference/dark-page.gp",
+    "fixtures/reference/dead-ghost-palm-mute.gp",
+    "fixtures/reference/dots-and-ties.gp",
+    "fixtures/reference/drop-d-and-capo.gp",
+    "fixtures/reference/drums.gp",
+    "fixtures/reference/dynamics-hidden.gp",
+    "fixtures/reference/dynamics.gp",
+    "fixtures/reference/effects-together.gp",
+    "fixtures/reference/eight-tracks.gp",
+    "fixtures/reference/empty-bars.gp",
+    "fixtures/reference/four-voices.gp",
+    "fixtures/reference/grace-notes.gp",
+    "fixtures/reference/hammer-on-pull-off.gp",
+    "fixtures/reference/harmonics.gp",
+    "fixtures/reference/header-and-credits.gp",
+    "fixtures/reference/key-signatures.gp",
+    "fixtures/reference/layout-horizontal.gp",
+    "fixtures/reference/layout-parchment.gp"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 0,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": []
+}

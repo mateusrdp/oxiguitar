@@ -10,7 +10,9 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::folders::System;
 use crate::plugins::{Plugins, State, file_name};
+use oxiguitar_plugin_api::message::{Advice, Link};
 
 /// A plugin file's extension, without the dot.
 pub const PLUGIN_EXTENSION: &str = "oxp";
@@ -65,6 +67,9 @@ pub struct Inventory {
     pub plugin_writers: Vec<String>,
     /// Output plugins (instruments) for the player.
     pub instruments: Vec<String>,
+    /// The audio devices plugins declare (the `audio-device` service),
+    /// by name: where the player's sound can go.
+    pub outputs: Vec<String>,
 }
 
 impl Inventory {
@@ -86,6 +91,7 @@ impl Inventory {
                 .into_iter()
                 .map(|i| i.spec.name.clone())
                 .collect(),
+            outputs: plugins.declared_services("audio-device"),
         }
     }
 
@@ -106,7 +112,7 @@ impl Inventory {
     pub fn notices(&self, user_plugins: &Path) -> Vec<Notice> {
         let mut out = Vec::new();
         let get = format!(
-            "Download plugins from {PLUGINS_URL} and put them in {}.",
+            "The basic plugins come with every OxiGuitar download ({PLUGINS_URL}): install it again, or put plugins in {}.",
             user_plugins.display()
         );
         let (reads, writes) = (
@@ -129,6 +135,98 @@ impl Inventory {
                 Level::Warning,
                 format!("No output plugin is installed, so the player is off. {get}"),
             ));
+        }
+        out
+    }
+}
+
+/// The manual's pages that the core's advice links to.
+const MANUAL: &str = "https://mateusrdp.github.io/oxiguitar/";
+
+/// The manual's page listing the official plugins and how to install them.
+pub fn plugins_page() -> String {
+    format!("{MANUAL}official-plugins.html")
+}
+
+/// The manual's install page for `system`. `appimage` is whether the
+/// program runs from an AppImage, which gets its own section: the
+/// AppImage holds the core only, and its plugins are files to unpack.
+pub fn install_page(system: System, appimage: bool) -> String {
+    match (system, appimage) {
+        (System::Linux, true) => format!("{MANUAL}install-linux.html#appimage"),
+        (System::Linux, _) => format!("{MANUAL}install-linux.html"),
+        (System::MacOs, _) => format!("{MANUAL}install-macos.html"),
+        (System::Windows, _) => format!("{MANUAL}install-windows.html"),
+    }
+}
+
+/// What the core says it can't do, as advice the window shows once and
+/// the user can silence (plugin interface 1.4; the ids are what
+/// settings.json keeps under `advice.oxiguitar`).
+pub const NO_FORMAT_PLUGIN: &str = "no-format-plugin";
+/// See [`NO_FORMAT_PLUGIN`].
+pub const NO_PLAYER_PLUGIN: &str = "no-player-plugin";
+/// See [`NO_FORMAT_PLUGIN`].
+pub const NO_OUTPUT_PLUGIN: &str = "no-output-plugin";
+
+impl Inventory {
+    /// The core's startup check as advice, most important first: no plugin
+    /// reads files (`no-format-plugin`), no plugin plays a score
+    /// (`no-player-plugin`), and, only when one does, no plugin sends the
+    /// sound to the speakers (`no-output-plugin`: exporting audio works
+    /// without one). Each links to the manual's page of official plugins
+    /// and its install page for `system`. `user_plugins` is the folder the
+    /// text tells the user to put plugins in.
+    pub fn advice(&self, system: System, appimage: bool, user_plugins: &Path) -> Vec<Advice> {
+        let links = || {
+            vec![
+                Link {
+                    text: "The official plugins".to_owned(),
+                    url: plugins_page(),
+                },
+                Link {
+                    text: format!(
+                        "Installing plugins on {}",
+                        match system {
+                            System::Linux => "Linux",
+                            System::MacOs => "macOS",
+                            System::Windows => "Windows",
+                        }
+                    ),
+                    url: install_page(system, appimage),
+                },
+            ]
+        };
+        let folder = user_plugins.display();
+        let mut out = Vec::new();
+        if self.readers().next().is_none() {
+            out.push(Advice {
+                id: NO_FORMAT_PLUGIN.to_owned(),
+                title: "OxiGuitar can't open any file".to_owned(),
+                text: format!(
+                    "OxiGuitar opens and saves files only through plugins, and no plugin that reads files is installed. The Guitar Pro plugins open Guitar Pro files, versions 3 to 8.\nInstall them from the page of official plugins, or put their .oxp files in {folder}."
+                ),
+                links: links(),
+            });
+        }
+        if self.instruments.is_empty() {
+            out.push(Advice {
+                id: NO_PLAYER_PLUGIN.to_owned(),
+                title: "OxiGuitar can't play".to_owned(),
+                text: format!(
+                    "No plugin that plays a score is installed, so the play buttons stay off. The MIDI plugin plays scores through a sound set (SoundFont or SFZ), and your system has one.\nInstall it from the page of official plugins, or put its .oxp file in {folder}."
+                ),
+                links: links(),
+            });
+        } else if self.outputs.is_empty() {
+            out.push(Advice {
+                id: NO_OUTPUT_PLUGIN.to_owned(),
+                title: "OxiGuitar has nowhere to send the sound".to_owned(),
+                text: format!(
+                    "A plugin that plays scores is installed, but no plugin sends sound to your speakers (PipeWire, ALSA, WASAPI or Core Audio, one for each system), so the play buttons stay off. Exporting audio to a file still works.\nInstall the one for your system from the page of official plugins, or put its .oxp file in {folder}."
+                ),
+                links: links(),
+            });
         }
         out
     }
@@ -167,6 +265,10 @@ pub fn plugin_notices(plugins: &Plugins) -> Vec<Notice> {
                     by.display(),
                     f.name()
                 ),
+            )),
+            State::Unmet(why) => out.push(Notice::new(
+                Level::Error,
+                format!("{} can't be used: {why}.", f.name()),
             )),
             State::Unusable(why) => out.push(Notice::new(
                 Level::Warning,
@@ -283,5 +385,64 @@ mod tests {
         let n = writers_only.notices(Path::new("p"));
         assert_eq!(n.len(), 1);
         assert!(n[0].text.starts_with("No plugin that reads files"));
+    }
+
+    fn ids(advice: &[Advice]) -> Vec<&str> {
+        advice.iter().map(|a| a.id.as_str()).collect()
+    }
+
+    fn with(readers: bool, instruments: bool, outputs: bool) -> Inventory {
+        let one = |on: bool, name: &str| if on { vec![name.to_owned()] } else { vec![] };
+        Inventory {
+            plugin_readers: one(readers, "Guitar Pro 5 (.gp5)"),
+            instruments: one(instruments, "MIDI"),
+            outputs: one(outputs, "PipeWire"),
+            ..Inventory::default()
+        }
+    }
+
+    #[test]
+    fn the_startup_check_says_what_the_core_cant_do() {
+        let folder = Path::new("/home/mat/.local/share/oxiguitar/plugins");
+        let advise = |i: &Inventory| i.advice(System::Linux, false, folder);
+        assert_eq!(
+            ids(&advise(&with(false, false, false))),
+            [NO_FORMAT_PLUGIN, NO_PLAYER_PLUGIN]
+        );
+        assert_eq!(ids(&advise(&with(true, false, false))), [NO_PLAYER_PLUGIN]);
+        // No output matters only once something plays.
+        assert_eq!(ids(&advise(&with(true, true, false))), [NO_OUTPUT_PLUGIN]);
+        assert_eq!(
+            ids(&advise(&with(false, true, false))),
+            [NO_FORMAT_PLUGIN, NO_OUTPUT_PLUGIN]
+        );
+        assert!(advise(&with(true, true, true)).is_empty());
+        // An output without a player says nothing about outputs.
+        assert_eq!(ids(&advise(&with(true, false, true))), [NO_PLAYER_PLUGIN]);
+    }
+
+    #[test]
+    fn every_advice_is_valid_and_links_to_the_manual() {
+        let folder = Path::new("/home/mat/.local/share/oxiguitar/plugins");
+        for (system, appimage, install) in [
+            (System::Linux, false, "install-linux.html"),
+            (System::Linux, true, "install-linux.html#appimage"),
+            (System::MacOs, false, "install-macos.html"),
+            (System::Windows, false, "install-windows.html"),
+        ] {
+            let all = [
+                with(false, false, false).advice(system, appimage, folder),
+                with(true, true, false).advice(system, appimage, folder),
+            ]
+            .concat();
+            assert_eq!(all.len(), 3);
+            for a in &all {
+                assert_eq!(a.problem(), None, "{}", a.id);
+                assert_eq!(a.links.len(), 2, "{}", a.id);
+                assert_eq!(a.links[0].url, plugins_page());
+                assert!(a.links[1].url.ends_with(install), "{}", a.links[1].url);
+                assert!(a.text.contains(&folder.display().to_string()), "{}", a.id);
+            }
+        }
     }
 }

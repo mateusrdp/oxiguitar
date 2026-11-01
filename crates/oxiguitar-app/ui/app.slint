@@ -11,11 +11,13 @@
 // by our renderer on the worker thread and shown here as tiles.
 
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
-import { PluginTab, PluginRow, PluginWidget, PluginSection } from "plugin_tab.slint";
-import { AltBox, BarDialog, BarFields, BendDialog, ChordDialog, GridPoint, PasteDialog, TextDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
+import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
+export { PluginLinks } from "plugin_tab.slint";
+import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
+import "../../../assets/fonts/noto-sans/NotoSans-Bold.ttf";
 
 export struct TileItem {
     image: image,
@@ -27,6 +29,11 @@ export struct TileItem {
 // A box over the page, in canvas points (the editor's caret and selection;
 // editing.rs). The window places it with the origin and the zoom, so it
 // follows resizing and zooming by itself.
+// A single row in the shortcut cheatsheet: section header, shortcut, or spacer.
+export struct ShortcutLine {
+    text: string,
+}
+
 export struct BoxItem {
     x: float,
     y: float,
@@ -47,6 +54,8 @@ export struct PlayFrame {
     beat: BoxItem,
     // The visual metronome, 0 (dark) to 1 (the bar's first beat).
     flash: float,
+    // Whether the current beat is an accent (true) or a regular beat (false).
+    strong: bool,
 }
 
 export struct TrackRow {
@@ -114,6 +123,12 @@ export struct AreaState {
     collapsed: bool,
     // The open tab is a plugin's.
     plugin: bool,
+}
+
+// One link of an advice dialog (plugin interface 1.4).
+export struct AdviceLink {
+    text: string,
+    url: string,
 }
 
 export struct FooterRow {
@@ -657,28 +672,180 @@ export struct InspectorVoice {
     current: bool,
 }
 
-// One row of the Inspector's note and beat (effect_form.rs).
+// One row of the Bar and Note tabs (effect_form.rs).
 export struct InspectorField {
     id: string,
     label: string,
-    // 0 heading, 1 tickbox, 2 drop-down, 3 number, 4 button.
+    // 0 heading, 1 tickbox, 2 drop-down, 3 number, 4 button, 5 text,
+    // 6 a row of numbered tickboxes (`value` holds one bit for each),
+    // 7 a line of small text (red when `value` is 1).
     kind: int,
     value: int,
     options: [string],
     min: int,
     max: int,
+    text: string,
 }
 
-// The Inspector: the caret's bar, each voice's beats against the time
-// signature (Mateus, 20 Oct 2026); then the caret's note and beat, whose
-// effects and values it changes (M3 slice 6).
-component Inspector inherits Rectangle {
+// The rows of the Bar and Note tabs, each as its kind says: label on the
+// left (40 %), control filling the rest.
+component FieldRows inherits VerticalLayout {
+    in property <[InspectorField]> fields;
+    callback changed(string, int);
+    callback edited(string, string);
+    spacing: 6px;
+    for f in root.fields : VerticalLayout {
+        if f.kind == 0 : VerticalLayout {
+            padding-top: 6px;
+            Text {
+                text: f.label;
+                font-size: 13px;
+                font-weight: 700;
+            }
+        }
+        if f.kind == 1 : CheckBox {
+            text: f.label;
+            checked: f.value == 1;
+            toggled => { root.changed(f.id, self.checked ? 1 : 0); }
+        }
+        if f.kind == 2 : HorizontalLayout {
+            spacing: 6px;
+            // A row is as tall as its drop-down needs, however few
+            // rows the tab has (issue #105: a rest's one field filled
+            // the pane).
+            max-height: 40px;
+            Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+            ComboBox {
+                vertical-stretch: 0;
+                min-width: 60px;
+                horizontal-stretch: 1;
+                model: f.options;
+                current-index: f.value;
+                selected => { root.changed(f.id, self.current-index); }
+            }
+        }
+        if f.kind == 3 : HorizontalLayout {
+            spacing: 6px;
+            Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+            SpinBox {
+                min-width: 60px;
+                horizontal-stretch: 1;
+                minimum: f.min;
+                maximum: f.max;
+                value: f.value;
+                edited(v) => { root.changed(f.id, v); }
+            }
+        }
+        if f.kind == 4 : HorizontalLayout {
+            spacing: 6px;
+            Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; }
+            Text { text: f.options[0]; font-size: 12px; vertical-alignment: center; horizontal-stretch: 1; }
+            Button { text: "Edit…"; clicked => { root.changed(f.id, 0); } }
+        }
+        if f.kind == 5 : HorizontalLayout {
+            spacing: 6px;
+            Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+            LineEdit {
+                horizontal-stretch: 1;
+                min-width: 60px;
+                text: f.text;
+                accepted(t) => { root.edited(f.id, t); }
+                changed has-focus => {
+                    if (!self.has-focus) {
+                        root.edited(f.id, self.text);
+                    }
+                }
+            }
+        }
+        if f.kind == 7 : Text {
+            text: f.label;
+            font-size: 11px;
+            wrap: word-wrap;
+            color: f.value == 1 ? Look.error : Palette.foreground.transparentize(0.4);
+        }
+        if f.kind == 6 : VerticalLayout {
+            spacing: 2px;
+            Text { text: f.label; font-size: 12px; }
+            // Four to a line, placed by hand (a grid layout can't repeat).
+            ticks := Rectangle {
+                property <length> line: 28px;
+                height: ceil(f.options.length / 4) * self.line;
+                for name[i] in f.options : CheckBox {
+                    x: mod(i, 4) * ticks.width / 4;
+                    y: floor(i / 4) * ticks.line;
+                    width: ticks.width / 4;
+                    text: name;
+                    checked: mod(floor(f.value / pow(2, i)), 2) == 1;
+                    toggled => { root.changed(f.id, self.checked ? f.value + round(pow(2, i)) : f.value - round(pow(2, i))); }
+                }
+            }
+        }
+    }
+}
+
+// The Track tab: the caret's track, as the track dialog had it (name,
+// instrument, strings, capo, frets and tuning), then the plugins' sections
+// for it (interface 1.3). Fields change the track as they are used
+// (issue #177).
+component TrackTab inherits Rectangle {
+    in property <string> heading;
+    in property <[InspectorField]> fields;
+    in property <[PluginSection]> sections;
+    callback changed(string, int);
+    callback edited(string, string);
+    // A widget of the section at the index was used.
+    callback section-clicked(int, string);
+    callback section-toggled(int, string, bool);
+    callback section-slid(int, string, float);
+    callback section-edited(int, string, string);
+    callback section-chosen(int, string, int);
+    scroll := ScrollView {
+        VerticalLayout {
+            width: scroll.visible-width;
+            padding: 12px;
+            spacing: 6px;
+            alignment: start;
+            Text { text: root.heading; font-size: 14px; font-weight: 700; wrap: word-wrap; }
+            FieldRows {
+                fields: root.fields;
+                changed(id, v) => { root.changed(id, v); }
+                edited(id, t) => { root.edited(id, t); }
+            }
+            for section[i] in root.sections : VerticalLayout {
+                spacing: 2px;
+                Rectangle { height: 1px; background: Palette.border; }
+                Text {
+                    text: section.title;
+                    font-size: 13px;
+                    font-weight: 700;
+                }
+                PluginRows {
+                    rows: section.rows;
+                    message: section.message;
+                    clicked(id) => { root.section-clicked(i, id); }
+                    toggled(id, on) => { root.section-toggled(i, id, on); }
+                    slid(id, v) => { root.section-slid(i, id, v); }
+                    edited(id, t) => { root.section-edited(i, id, t); }
+                    chosen(id, n) => { root.section-chosen(i, id, n); }
+                }
+            }
+        }
+    }
+}
+
+// The Bar tab: the caret's bar, each voice's beats against the time
+// signature (Mateus, 20 Oct 2026), then the bar's own fields, which change
+// the bar (or the selection's bars) as they are used (issue #177).
+component BarTab inherits Rectangle {
     in property <string> heading;
     in property <string> unit;
     in property <string> caret;
+    // "Bars 3–6" when the selection holds more than one bar.
+    in property <string> scope;
     in property <[InspectorVoice]> voices;
     in property <[InspectorField]> fields;
-    callback field-changed(string, int);
+    callback changed(string, int);
+    callback edited(string, string);
     scroll := ScrollView {
         VerticalLayout {
             width: scroll.visible-width;
@@ -722,51 +889,35 @@ component Inspector inherits Rectangle {
                 }
             }
             Text { text: root.caret; font-size: 11px; color: Palette.foreground.transparentize(0.4); wrap: word-wrap; }
-            for f in root.fields : VerticalLayout {
-                if f.kind == 0 : Text {
-                    text: f.label;
-                    font-size: 13px;
-                    font-weight: 700;
-                }
-                if f.kind == 1 : CheckBox {
-                    text: f.label;
-                    checked: f.value == 1;
-                    toggled => { root.field-changed(f.id, self.checked ? 1 : 0); }
-                }
-                if f.kind == 2 : HorizontalLayout {
-                    spacing: 6px;
-                    // A row is as tall as its drop-down needs, however few
-                    // rows the Inspector has (issue #105: a rest's one
-                    // field filled the pane).
-                    max-height: 40px;
-                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
-                    ComboBox {
-                        vertical-stretch: 0;
-                        min-width: 60px;
-                        horizontal-stretch: 1;
-                        model: f.options;
-                        current-index: f.value;
-                        selected => { root.field-changed(f.id, self.current-index); }
-                    }
-                }
-                if f.kind == 3 : HorizontalLayout {
-                    spacing: 6px;
-                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
-                    SpinBox {
-                        min-width: 60px;
-                        horizontal-stretch: 1;
-                        minimum: f.min;
-                        maximum: f.max;
-                        value: f.value;
-                        edited(v) => { root.field-changed(f.id, v); }
-                    }
-                }
-                if f.kind == 4 : HorizontalLayout {
-                    spacing: 6px;
-                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; }
-                    Text { text: f.options[0]; font-size: 12px; vertical-alignment: center; horizontal-stretch: 1; }
-                    Button { text: "Edit…"; clicked => { root.field-changed(f.id, 0); } }
-                }
+            if root.scope != "" : Text {
+                text: "The fields below change " + root.scope + ".";
+                font-size: 11px;
+                color: Look.accent;
+                wrap: word-wrap;
+            }
+            FieldRows {
+                fields: root.fields;
+                changed(id, v) => { root.changed(id, v); }
+                edited(id, t) => { root.edited(id, t); }
+            }
+        }
+    }
+}
+
+// The Note tab: the caret's note and beat, whose effects and values it
+// changes (M3 slice 6).
+component NoteTab inherits Rectangle {
+    in property <[InspectorField]> fields;
+    callback changed(string, int);
+    scroll := ScrollView {
+        VerticalLayout {
+            width: scroll.visible-width;
+            padding: 12px;
+            spacing: 6px;
+            alignment: start;
+            FieldRows {
+                fields: root.fields;
+                changed(id, v) => { root.changed(id, v); }
             }
         }
     }
@@ -819,12 +970,44 @@ component SongView inherits Rectangle {
     }
 }
 
+// Renders a single shortcut cheat sheet line — identical for headers,
+// shortcuts, and spacer rows (all use the same `text` field).
+component ShortcutLineItem inherits Rectangle {
+    in property <string> text;
+    in property <length> column-width;
+
+    // Every row is 18px tall with identical structure.
+    height: 18px;
+
+    Text {
+        text: root.text;
+        font-size: 16px;
+        horizontal-alignment: left;
+        width: root.column-width;
+        height: 18px;
+    }
+}
+
 // A small framed note that closes when clicked anywhere.
+// mode 0 = about (single-column lines), mode 1 = shortcuts (three-column).
+//
+// Three columns balance the large shortcut count across ~equal-height
+// columns. Vertical spacing is 2px because shortcut lines are short
+// key-description pairs — no need for generous breathing room.
+// Column separators are 1px lines; horizontal gap between columns is 20px.
 component InfoPopup inherits PopupWindow {
     in property <string> heading;
+    in property <int> mode: 0;
     in property <[string]> lines;
-    width: 420px;
+    in property <[ShortcutLine]> left-column;
+    in property <[ShortcutLine]> center-column;
+    in property <[ShortcutLine]> right-column;
+    in property <length> left-column-width;
+    in property <length> center-column-width;
+    in property <length> right-column-width;
+    in property <length> popup-width: 500px;
     Rectangle {
+        width: root.popup-width;
         background: Palette.background;
         border-color: Palette.border;
         border-width: 1px;
@@ -833,9 +1016,46 @@ component InfoPopup inherits PopupWindow {
         drop-shadow-color: #00000040;
         VerticalLayout {
             padding: 16px;
-            spacing: 6px;
-            Text { text: root.heading; font-size: 14px; font-weight: 700; }
-            for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+            spacing: 8px;
+            Text { text: root.heading; font-size: 16px; font-weight: 700; }
+            Rectangle {
+                height: 1px;
+                background: Palette.border;
+            }
+            VerticalLayout {
+                visible: root.mode == 0;
+                spacing: 4px;
+                for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+            }
+            HorizontalLayout {
+                visible: root.mode == 1;
+                spacing: 16px; // gap between 3 columns
+                alignment: start; // don't stretch shorter columns to tallest
+                VerticalLayout {
+                    width: root.left-column-width;
+                    spacing: 2px; // tight: shortcut lines are short key-desc pairs
+                    for line in root.left-column : ShortcutLineItem {
+                        column-width: root.left-column-width;
+                        text: line.text;
+                    }
+                }
+                VerticalLayout {
+                    width: root.center-column-width;
+                    spacing: 2px; // tight
+                    for line in root.center-column : ShortcutLineItem {
+                        column-width: root.center-column-width;
+                        text: line.text;
+                    }
+                }
+                VerticalLayout {
+                    width: root.right-column-width;
+                    spacing: 2px; // tight
+                    for line in root.right-column : ShortcutLineItem {
+                        column-width: root.right-column-width;
+                        text: line.text;
+                    }
+                }
+            }
             @children
         }
     }
@@ -894,6 +1114,79 @@ component Question inherits Rectangle {
                     primary: i == 0;
                     clicked => { root.answered(i); }
                 }
+            }
+        }
+    }
+}
+
+// Advice a plugin (or the core) asks for (plugin interface 1.4): a
+// heading, a few lines, up to three links that open in the browser only
+// when clicked, and a box that silences it for good.
+component AdviceDialog inherits Rectangle {
+    in property <string> heading;
+    in property <string> source;
+    in property <[string]> lines;
+    in property <[AdviceLink]> links;
+    in-out property <bool> hide-it: false;
+    callback open-link(string);
+    callback done();
+    background: #00000060;
+    TouchArea { }
+    keys := FocusScope {
+        init => { self.focus(); }
+        key-pressed(event) => {
+            if (event.text == Key.Escape || event.text == Key.Return) {
+                root.done();
+                return accept;
+            }
+            accept
+        }
+    }
+    Rectangle {
+        width: min(520px, root.width - 40px);
+        height: min(box.preferred-height, root.height - 40px);
+        background: Palette.background;
+        border-color: Palette.border;
+        border-width: 1px;
+        border-radius: 6px;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000060;
+        box := VerticalLayout {
+            padding: 18px;
+            spacing: 10px;
+            Text { text: root.heading; font-size: 15px; font-weight: 700; wrap: word-wrap; }
+            ScrollView {
+                min-height: min(lines-box.preferred-height, 40px);
+                preferred-height: min(lines-box.preferred-height, 320px);
+                lines-box := VerticalLayout {
+                    spacing: 4px;
+                    for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+                }
+            }
+            if root.links.length > 0 : VerticalLayout {
+                spacing: 4px;
+                for link in root.links : HorizontalLayout {
+                    alignment: start;
+                    FooterLink {
+                        text: link.text;
+                        clicked => { root.open-link(link.url); }
+                    }
+                }
+            }
+            Text {
+                text: root.source;
+                font-size: 11px;
+                color: Palette.foreground.transparentize(0.4);
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                CheckBox {
+                    text: "Don't show this again";
+                    checked: root.hide-it;
+                    toggled => { root.hide-it = self.checked; }
+                }
+                Rectangle { horizontal-stretch: 1; }
+                Button { text: "OK"; primary: true; clicked => { root.done(); } }
             }
         }
     }
@@ -983,11 +1276,18 @@ export component AppWindow inherits Window {
     in-out property <bool> paper-0: true;
     in-out property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
-    // The window's own colours: dark by default with a white page (Mateus,
-    // 18 Oct 2026); main.rs restores the user's choice from settings.json.
-    in-out property <bool> dark-interface: true;
-    init => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
-    changed dark-interface => { Palette.color-scheme = root.dark-interface ? ColorScheme.dark : ColorScheme.light; }
+    // The window's own colours (Mateus, 27 Oct 2026): until the user picks
+    // View → Dark Interface, they follow the desktop's light or dark
+    // setting, and are light when the desktop says nothing; main.rs
+    // restores a choice from settings.json. Following means never setting
+    // Palette.color-scheme, which then follows the system by itself.
+    in-out property <bool> follow-desktop: true;
+    in-out property <bool> chosen-dark: false;
+    out property <bool> dark-interface: root.follow-desktop ? Palette.color-scheme == ColorScheme.dark : root.chosen-dark;
+    changed follow-desktop => { Palette.color-scheme = root.chosen-dark ? ColorScheme.dark : ColorScheme.light; }
+    changed chosen-dark => { if (!root.follow-desktop) { Palette.color-scheme = root.chosen-dark ? ColorScheme.dark : ColorScheme.light; } }
+    // The plugin windows, tabs and the settings follow it.
+    changed dark-interface => { root.settings-changed(); }
     in-out property <bool> dynamics: false;
 
     // The shell (shell.rs): the toolbar and the four areas, numbered
@@ -1024,6 +1324,7 @@ export component AppWindow inherits Window {
     in property <bool> loop-on;
     in property <bool> metronome-on;
     in property <int> player-speed: 100;
+    in property <string> player-speed-text: "100%";
     in property <float> master-level: 0.7;
     in property <bool> has-selection;
     in property <[string]> outputs: ["System default"];
@@ -1033,7 +1334,8 @@ export component AppWindow inherits Window {
     callback player-key(string, bool, bool, bool) -> bool;
     callback overview-clicked(float);
     in property <bool> visual-on;
-    callback speed-edited(int);
+    callback speed-slider-moved(float);
+    callback speed-text-edited(string);
     callback master-moved(float);
     callback output-chosen(int);
     // What shows of playback while the sound doesn't run: where it
@@ -1062,10 +1364,24 @@ export component AppWindow inherits Window {
     in property <string> footer-link-url;
     // A footer message's link was clicked: open it in the browser.
     callback open-link(string);
+    // Advice a plugin or the core asks for (interface 1.4), one at a time.
+    in property <bool> advice-shown: false;
+    in property <string> advice-heading;
+    in property <string> advice-source;
+    in property <[string]> advice-lines;
+    in property <[AdviceLink]> advice-links;
+    in-out property <bool> advice-hide: false;
+    callback advice-done();
     in property <[FooterRow]> footer-rows;
     in-out property <bool> footer-expanded: false;
 
-    in property <[string]> shortcut-lines;
+    in property <[ShortcutLine]> shortcut-left-column;
+    in property <[ShortcutLine]> shortcut-center-column;
+    in property <[ShortcutLine]> shortcut-right-column;
+    in property <length> shortcut-left-column-width;
+    in property <length> shortcut-center-column-width;
+    in property <length> shortcut-right-column-width;
+    in property <length> shortcut-popup-width;
     in property <[string]> about-lines;
     // Help → About's donation button (links.rs opens the page in the browser).
     callback open-donation();
@@ -1082,17 +1398,7 @@ export component AppWindow inherits Window {
     in property <[string]> question-lines;
     in property <[string]> question-buttons;
     callback question-answered(int);
-    // The Bar dialog and Custom N-tuplet (bar_form.rs).
-    in property <bool> bar-dialog-shown: false;
-    in-out property <BarFields> bar-fields;
-    in-out property <[bool]> bar-endings;
-    in-out property <[bool]> bar-directions;
-    in property <[string]> bar-key-names;
-    in property <[string]> bar-clef-names;
-    in property <[string]> bar-feel-names;
-    in property <[string]> bar-direction-names;
-    in property <string> bar-heading: "Bar";
-    callback bar-dialog-done(bool);
+    // Custom N-tuplet (bar_form.rs).
     in property <bool> tuplet-dialog-shown: false;
     in-out property <int> tuplet-notes: 3;
     in-out property <int> tuplet-in-time-of: 2;
@@ -1151,19 +1457,13 @@ export component AppWindow inherits Window {
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
     callback paste-dialog-done(bool);
-    // The track dialog and Transpose… (track_form.rs).
-    in property <bool> track-dialog-shown: false;
+    // The Track tab (track_form.rs): its heading and rows.
     in property <string> track-heading;
-    in-out property <TrackFields> track-fields;
-    in property <[string]> track-instrument-names;
-    in property <[string]> track-string-counts;
-    in property <[string]> track-key-names;
-    in property <[string]> track-pattern-names;
-    in property <string> track-preview;
-    in property <bool> track-invalid;
-    callback track-form-changed();
-    callback track-dialog-done(bool);
-    // The plugins' sections of the track dialog (interface 1.3), and a use
+    in property <[InspectorField]> track-fields;
+    callback track-changed(string, int);
+    callback track-edited(string, string);
+    // Transpose… (track_form.rs).
+    // The plugins' sections of the Track tab (interface 1.3), and a use
     // of one of their widgets: the section, the widget, what was done
     // (0 clicked, 1 toggled, 2 slid, 3 edited, 4 chosen) and its value.
     in property <[PluginSection]> track-sections;
@@ -1174,6 +1474,25 @@ export component AppWindow inherits Window {
     in-out property <bool> transpose-steps;
     in-out property <bool> transpose-keep;
     callback transpose-dialog-done(bool);
+    // File → Export's audio exporters (plugin interface 1.4), by name; the
+    // dialog before one exports, and the export under way.
+    in property <[string]> exporters;
+    callback export-with(int);
+    in property <bool> export-dialog-shown: false;
+    in property <string> export-heading;
+    in property <string> export-plugin;
+    in property <bool> export-has-selection;
+    in-out property <bool> export-selection;
+    in property <int> export-practice-speed: 100;
+    in-out property <bool> export-at-speed;
+    in-out property <bool> export-metronome;
+    callback export-dialog-done(bool);
+    in property <bool> export-running: false;
+    in property <string> export-status;
+    in property <float> export-progress;
+    callback export-cancel();
+    // An export's thread says it is over: the footer's level and sentence.
+    callback export-finished(int, string);
     // A track row's right-click menu: the row and what was chosen.
     callback track-menu(int, string);
     // The page's right-click menu.
@@ -1211,12 +1530,17 @@ export component AppWindow inherits Window {
     callback page-double-clicked(length, length);
     // A right-click on the page, before its menu opens.
     callback page-menu-pressed(length, length);
-    // The Inspector's view of the caret's bar (inspector.rs).
+    // The Bar tab: the caret's bar (inspector.rs) and its fields
+    // (bar_form.rs); the Note tab: the note and beat (effect_form.rs).
     in property <string> inspector-heading;
     in property <string> inspector-unit;
     in property <string> inspector-caret;
+    in property <string> bar-scope;
     in property <[InspectorVoice]> inspector-voices;
-    in property <[InspectorField]> inspector-fields;
+    in property <[InspectorField]> bar-fields;
+    in property <[InspectorField]> note-fields;
+    callback bar-changed(string, int);
+    callback bar-edited(string, string);
     // The Song tab: the score's information (M3 slice 6).
     in property <[SongField]> song-fields;
     callback song-edited(string, string);
@@ -1225,7 +1549,7 @@ export component AppWindow inherits Window {
     in property <int> palette-search-requests;
     in property <[PaletteToolRow]> palette-found;
     callback palette-searched(string);
-    callback inspector-changed(string, int);
+    callback note-changed(string, int);
     callback caret-key(string, bool, bool) -> bool;
     // Note entry: a key typed at the caret, with Shift, Ctrl and Alt,
     // answering whether it was one (editing.rs, `Editing::typed`).
@@ -1233,7 +1557,8 @@ export component AppWindow inherits Window {
     callback undo();
     callback redo();
     callback next-bad-bar();
-    callback track-selected(int);
+    callback track-selected(int, bool);
+    callback track-double-clicked(int);
     // Plugins' tabs (plugin_tab.slint), by area number (0 top, 1 bottom,
     // 2 left, 3 right): their rows, or a message instead; what the user does
     // to their widgets; a canvas's room.
@@ -1289,6 +1614,11 @@ export component AppWindow inherits Window {
             MenuItem { title: "Save"; enabled: root.has-score; shortcut: @keys(Control + S); activated => { root.save(); } }
             MenuItem { title: "Save As…"; enabled: root.has-score; shortcut: @keys(Control + Shift + S); activated => { root.save-as(); } }
             MenuItem { title: "Export PDF…"; enabled: root.has-score; activated => { root.export-pdf(); } }
+            for e[i] in root.exporters : MenuItem {
+                title: "Export " + e + "…";
+                enabled: root.has-score && !root.export-running;
+                activated => { root.export-with(i); }
+            }
             Menu {
                 title: "Paper Size";
                 MenuItem { title: "A4"; checkable: true; checked <=> root.paper-0; activated => { root.pick-paper(0); root.settings-changed(); } }
@@ -1334,13 +1664,11 @@ export component AppWindow inherits Window {
             MenuSeparator { }
             MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
             MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
-            MenuItem { title: "Bar… (Ctrl + K)"; enabled: root.has-score; activated => { root.edit-command("bar-dialog"); } }
             MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
             MenuItem { title: "Chord… (A)"; enabled: root.has-score; activated => { root.edit-command("chord-dialog"); } }
             MenuItem { title: "Text… (Shift + T)"; enabled: root.has-score; activated => { root.edit-command("text-dialog"); } }
             MenuItem { title: "Type Lyrics (Ctrl + T)"; enabled: root.has-score; activated => { root.edit-command("lyrics"); } }
             MenuSeparator { }
-            MenuItem { title: "Track Properties…"; enabled: root.has-score; activated => { root.edit-command("track-properties"); } }
             MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
             MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
             MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
@@ -1356,7 +1684,9 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Parchment"; checkable: true; checked <=> root.layout-3; activated => { root.pick-layout(3); root.settings-changed(); } }
             }
             MenuSeparator { }
-            MenuItem { title: "Dark Interface"; checkable: true; checked <=> root.dark-interface; activated => { root.settings-changed(); } }
+            // The item ticks itself before `activated`: its new state is the
+            // user's choice from then on.
+            MenuItem { title: "Dark Interface"; checkable: true; checked: root.dark-interface; activated => { root.chosen-dark = self.checked; root.follow-desktop = false; } }
             MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
             MenuSeparator { }
@@ -1394,7 +1724,14 @@ export component AppWindow inherits Window {
         x: (root.width - self.width) / 2;
         y: 60px;
         heading: "Keyboard and mouse";
-        lines: root.shortcut-lines;
+        mode: 1;
+        left-column: root.shortcut-left-column;
+        center-column: root.shortcut-center-column;
+        right-column: root.shortcut-right-column;
+        left-column-width: root.shortcut-left-column-width;
+        center-column-width: root.shortcut-center-column-width;
+        right-column-width: root.shortcut-right-column-width;
+        popup-width: root.shortcut-popup-width;
     }
     about-popup := InfoPopup {
         x: (root.width - self.width) / 2;
@@ -1424,11 +1761,22 @@ export component AppWindow inherits Window {
             VerticalLayout {
                 alignment: center;
                 spacing: 6px;
-                Button {
-                    text: "Donate with PayPal";
-                    clicked => {
-                        root.open-donation();
-                        about-popup.close();
+                Rectangle {
+                    width: 150px;
+                    height: 58px;
+                    Image {
+                        source: @image-url("../../../assets/paypal-donate-button.png");
+                        width: 150px;
+                        height: 58px;
+                    }
+                    touch := TouchArea {
+                        clicked => {
+                            root.open-donation();
+                            about-popup.close();
+                        }
+                    }
+                    Tooltip {
+                        text: @markdown("Donate with PayPal");
                     }
                 }
                 Text { text: "or scan the code with your phone"; font-size: 11px; opacity: 0.7; }
@@ -1541,25 +1889,29 @@ export component AppWindow inherits Window {
                     padding-right: 8px;
                     spacing: 2px;
                     alignment: start;
-                    // Transport: rewind, play, play the selection, pause, stop
+                    // Transport: rewind, stop, play/pause toggle, play-selection
                     // (player.rs). Greyed out while nothing can play, and the
-                    // footer says why.
+                    // footer says why. Space = play/pause toggle, Enter = play/stop.
                     VerticalLayout {
                         alignment: center;
                         HorizontalLayout {
                             spacing: 2px;
                             IconButton {
                                 icon: @image-url("../../../assets/icons/ui/rewind.svg");
-                                tip: root.player-available ? "Rewind (Ctrl + Left / Right: a bar back / on while playing)" : "Rewind" + root.player-why;
+                                tip: root.player-available ? "Rewind (Ctrl+Alt+←)" : "Rewind" + root.player-why;
                                 enabled: root.player-available;
                                 clicked => { root.player-action("rewind"); }
                             }
                             IconButton {
-                                icon: @image-url("../../../assets/icons/ui/play.svg");
-                                tip: root.player-available ? "Play from the caret (Space)" : "Play" + root.player-why;
+                                icon: root.player-state == 1 || root.player-state == 2
+                                    ? @image-url("../../../assets/icons/ui/pause.svg")
+                                    : @image-url("../../../assets/icons/ui/play.svg");
+                                tip: root.player-available
+                                    ? (root.player-state == 1 || root.player-state == 2
+                                        ? "Pause (Space)" : "Play from the caret (Space)")
+                                    : (root.player-state == 0 ? "Play" : "Pause") + root.player-why;
                                 enabled: root.player-available;
-                                checked: root.player-state == 1 || root.player-state == 2;
-                                clicked => { root.player-action("play"); }
+                                clicked => { root.player-action("play-pause"); }
                             }
                             IconButton {
                                 icon: @image-url("../../../assets/icons/ui/play-selection.svg");
@@ -1567,19 +1919,6 @@ export component AppWindow inherits Window {
                                     : root.has-selection ? "Play Selection" : "Play Selection (select some beats or bars first)";
                                 enabled: root.player-available && root.has-selection;
                                 clicked => { root.player-action("play-selection"); }
-                            }
-                            IconButton {
-                                icon: @image-url("../../../assets/icons/ui/pause.svg");
-                                tip: "Pause (Space)";
-                                enabled: root.player-available && (root.player-state == 1 || root.player-state == 2);
-                                checked: root.player-state == 3;
-                                clicked => { root.player-action("pause"); }
-                            }
-                            IconButton {
-                                icon: @image-url("../../../assets/icons/ui/stop.svg");
-                                tip: "Stop (back to where playing began)";
-                                enabled: root.player-available && root.player-state != 0;
-                                clicked => { root.player-action("stop"); }
                             }
                         }
                     }
@@ -1603,34 +1942,29 @@ export component AppWindow inherits Window {
                                 checked: root.loop-on;
                                 clicked => { root.player-action("loop"); }
                             }
-                            IconButton {
-                                icon: @image-url("../../../assets/icons/ui/metronome.svg");
-                                tip: "Metronome";
-                                enabled: root.player-available;
-                                checked: root.metronome-on;
-                                clicked => { root.player-action("metronome"); }
-                            }
-                            // The visual metronome: while on, it flashes on
-                            // each beat, brighter on the bar's first.
+                            // The visual metronome: flashes on each beat.
+                            // Green for regular beats, amber for accents.
                             Rectangle {
                                 width: 30px;
                                 height: 28px;
                                 border-radius: 4px;
-                                background: root.visual-on && root.player-running
-                                    ? Look.playback.transparentize(1 - root.play-frame.flash * 0.9)
+                                background: root.player-running
+                                    ? (root.play-frame.strong
+                                        ? Look.warning.transparentize(1 - root.play-frame.flash * 0.9)
+                                        : Look.accent.transparentize(1 - root.play-frame.flash * 0.9))
                                     : transparent;
                                 IconButton {
-                                    icon: @image-url("../../../assets/icons/ui/visual-metronome.svg");
-                                    tip: "Visual Metronome (flashes on each beat)";
+                                    icon: @image-url("../../../assets/icons/ui/metronome.svg");
+                                    tip: "Metronome";
                                     enabled: root.player-available;
-                                    checked: root.visual-on && !root.player-running;
-                                    clicked => { root.player-action("visual-metronome"); }
+                                    checked: root.metronome-on;
+                                    clicked => { root.player-action("metronome"); }
                                 }
                             }
                         }
                     }
                     Rectangle { width: 13px; Rectangle { x: 6px; width: 1px; height: 60%; background: Palette.border; } }
-                    // Speed, 25 to 200 %, and the master level.
+                    // Speed (25–200 %, slider) and the master level.
                     VerticalLayout {
                         alignment: center;
                         HorizontalLayout {
@@ -1641,20 +1975,20 @@ export component AppWindow inherits Window {
                                 vertical-alignment: center;
                                 color: Palette.foreground.transparentize(root.player-available ? 0.2 : 0.6);
                             }
-                            speed-box := SpinBox {
+                            Slider {
                                 width: 96px;
-                                minimum: 25;
-                                maximum: 200;
-                                step-size: 5;
-                                value: root.player-speed;
+                                minimum: 0;
+                                maximum: 1;
+                                value: (root.player-speed - 25) / 175.0;
                                 enabled: root.player-available;
-                                edited(v) => { root.speed-edited(v); }
+                                changed(v) => { root.speed-slider-moved(v); }
                             }
-                            Text {
-                                text: "%";
+                            LineEdit {
+                                width: 72px;
                                 font-size: 12px;
-                                vertical-alignment: center;
-                                color: Palette.foreground.transparentize(root.player-available ? 0.2 : 0.6);
+                                text: root.player-speed-text;
+                                enabled: root.player-available;
+                                edited(v) => { root.speed-text-edited(v); }
                             }
                             Rectangle { width: 8px; }
                             Text {
@@ -1825,7 +2159,7 @@ export component AppWindow inherits Window {
                                     page-menu-area.show({ x: self.mouse-x, y: self.mouse-y });
                                 }
                             }
-                            // On a time signature: the Bar dialog for its bar.
+                            // On a time signature: the Bar tab.
                             double-clicked => { root.page-double-clicked(self.mouse-x, self.mouse-y); }
                         }
                         // Right-click on the page: the selection's commands. The
@@ -1838,8 +2172,6 @@ export component AppWindow inherits Window {
                             height: flick.viewport-height;
                             Menu {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
-                                MenuItem { title: "Bar…"; activated => { root.page-menu("bar"); } }
-                                MenuItem { title: "Track Properties…"; activated => { root.page-menu("track"); } }
                                 MenuSeparator { }
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
                                 MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
@@ -1944,7 +2276,11 @@ export component AppWindow inherits Window {
                                     single-line: true;
                                     init => {
                                         self.focus();
-                                        self.set-selection-offsets(0, 999);
+                                    }
+                                    changed text => {
+                                        if (self.text != "") {
+                                            self.set-selection-offsets(self.text.character-count, 999);
+                                        }
                                     }
                                 }
                             }
@@ -1993,7 +2329,7 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                // Right area: the inspector (M3), then plugins' tabs.
+                // Right area: Song, Bar and Note, then plugins' tabs.
                 if root.right-shown && !root.right-area.collapsed : SideSplitter {
                     dragged(d) => { root.right-width = clamp(root.right-width - d, 120px, 500px); }
                 }
@@ -2008,14 +2344,34 @@ export component AppWindow inherits Window {
                     }
                     Rectangle {
                         background: Palette.alternate-background;
-                        if root.right-area.active-id == "inspector" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats."; }
-                        if root.right-area.active-id == "inspector" && root.has-score : Inspector {
+                        if root.right-area.active-id == "track" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's track shows here, with its instrument, strings and tuning."; }
+                        if root.right-area.active-id == "track" && root.has-score : TrackTab {
+                            heading: root.track-heading;
+                            fields: root.track-fields;
+                            sections: root.track-sections;
+                            changed(id, v) => { root.track-changed(id, v); }
+                            edited(id, t) => { root.track-edited(id, t); }
+                            section-clicked(i, id) => { root.track-section-event(i, id, 0, false, 0, "", 0); }
+                            section-toggled(i, id, on) => { root.track-section-event(i, id, 1, on, 0, "", 0); }
+                            section-slid(i, id, v) => { root.track-section-event(i, id, 2, false, v, "", 0); }
+                            section-edited(i, id, t) => { root.track-section-event(i, id, 3, false, 0, t, 0); }
+                            section-chosen(i, id, n) => { root.track-section-event(i, id, 4, false, 0, "", n); }
+                        }
+                        if root.right-area.active-id == "bar" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats and the bar's own settings."; }
+                        if root.right-area.active-id == "bar" && root.has-score : BarTab {
                             heading: root.inspector-heading;
                             unit: root.inspector-unit;
                             caret: root.inspector-caret;
+                            scope: root.bar-scope;
                             voices: root.inspector-voices;
-                            fields: root.inspector-fields;
-                            field-changed(id, v) => { root.inspector-changed(id, v); }
+                            fields: root.bar-fields;
+                            changed(id, v) => { root.bar-changed(id, v); }
+                            edited(id, t) => { root.bar-edited(id, t); }
+                        }
+                        if root.right-area.active-id == "note" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's note and beat show here."; }
+                        if root.right-area.active-id == "note" && root.has-score : NoteTab {
+                            fields: root.note-fields;
+                            changed(id, v) => { root.note-changed(id, v); }
                         }
                         if root.right-area.active-id == "song" && !root.has-score : Placeholder { text: "Open a file or start a new one: its title, artist and the rest show here."; }
                         if root.right-area.active-id == "song" && root.has-score : SongView {
@@ -2058,9 +2414,8 @@ export component AppWindow inherits Window {
                 background: Palette.alternate-background;
                 if root.bottom-area.active-id == "tracks" && !root.has-score : Placeholder { text: "The tracks of the open score appear here."; }
                 // Track list: each track's notation buttons show it (both
-                // off hides it); a click on a name selects the track for the
-                // editor (Mateus, 19 Oct 2026). No show tick: the buttons do
-                // that (Mateus, 17 Oct 2026).
+                // off hides it); a left-click on a name shows only that
+                // track, Shift-click toggles it (Mateus, 31 Oct 2026).
                 if root.bottom-area.active-id == "tracks" && root.has-score : ScrollView {
                     VerticalLayout {
                         alignment: start;
@@ -2090,13 +2445,17 @@ export component AppWindow inherits Window {
                                 }
                                 TouchArea {
                                     mouse-cursor: pointer;
-                                    clicked => { root.track-selected(i); }
+                                    pointer-event(e) => {
+                                        if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                                            root.track-selected(i, e.modifiers.shift);
+                                        }
+                                    }
+                                    double-clicked => { root.track-double-clicked(i); }
                                 }
                                 // Right-click: the track's own commands
                                 // (docs/design/ui.md, "The track dialog").
                                 ContextMenuArea {
                                     Menu {
-                                        MenuItem { title: "Properties…"; activated => { root.track-menu(i, "properties"); } }
                                         MenuItem { title: "Transpose…"; activated => { root.track-menu(i, "transpose"); } }
                                         MenuSeparator { }
                                         MenuItem { title: "Add Track"; activated => { root.track-menu(i, "add"); } }
@@ -2276,20 +2635,6 @@ export component AppWindow inherits Window {
         }
     }
 
-    if root.bar-dialog-shown : BarDialog {
-        width: root.width;
-        height: root.height;
-        fields <=> root.bar-fields;
-        endings: root.bar-endings;
-        directions: root.bar-directions;
-        key-names: root.bar-key-names;
-        clef-names: root.bar-clef-names;
-        feel-names: root.bar-feel-names;
-        direction-names: root.bar-direction-names;
-        heading: root.bar-heading;
-        done(ok) => { root.bar-dialog-done(ok); }
-    }
-
     if root.tuplet-dialog-shown : TupletDialog {
         width: root.width;
         height: root.height;
@@ -2370,27 +2715,6 @@ export component AppWindow inherits Window {
         done(ok) => { root.paste-dialog-done(ok); }
     }
 
-    if root.track-dialog-shown : TrackDialog {
-        width: root.width;
-        height: root.height;
-        heading: root.track-heading;
-        fields <=> root.track-fields;
-        instrument-names: root.track-instrument-names;
-        string-counts: root.track-string-counts;
-        key-names: root.track-key-names;
-        pattern-names: root.track-pattern-names;
-        preview: root.track-preview;
-        invalid: root.track-invalid;
-        sections: root.track-sections;
-        changed => { root.track-form-changed(); }
-        done(ok) => { root.track-dialog-done(ok); }
-        section-clicked(i, id) => { root.track-section-event(i, id, 0, false, 0, "", 0); }
-        section-toggled(i, id, on) => { root.track-section-event(i, id, 1, on, 0, "", 0); }
-        section-slid(i, id, v) => { root.track-section-event(i, id, 2, false, v, "", 0); }
-        section-edited(i, id, t) => { root.track-section-event(i, id, 3, false, 0, t, 0); }
-        section-chosen(i, id, n) => { root.track-section-event(i, id, 4, false, 0, "", n); }
-    }
-
     if root.transpose-dialog-shown : TransposeDialog {
         width: root.width;
         height: root.height;
@@ -2408,5 +2732,17 @@ export component AppWindow inherits Window {
         lines: root.question-lines;
         buttons: root.question-buttons;
         answered(i) => { root.question-answered(i); }
+    }
+
+    if root.advice-shown : AdviceDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.advice-heading;
+        source: root.advice-source;
+        lines: root.advice-lines;
+        links: root.advice-links;
+        hide-it <=> root.advice-hide;
+        open-link(url) => { root.open-link(url); }
+        done => { root.advice-done(); }
     }
 }

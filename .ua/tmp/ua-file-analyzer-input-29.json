@@ -1,0 +1,32 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "fixtures/guitar-pro-check/test-song-from-gp3.gp", "language": "gp", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gp3.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gp4.gp", "language": "gp", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gp4.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gp5.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gp5.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gpx.gp", "language": "gp", "sizeLines": 12, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/test-song-from-gpx.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/time-signatures.gp", "language": "gp", "sizeLines": 16, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/time-signatures.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/tremolo-picking.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/tremolo-picking.gp5", "language": "gp5", "sizeLines": 6, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/triplets.gp", "language": "gp", "sizeLines": 8, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/triplets.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/two-voices.gp", "language": "gp", "sizeLines": 13, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/two-voices.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/unusual-tuplets.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/unusual-tuplets.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/vibrato-and-trill.gp", "language": "gp", "sizeLines": 14, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/vibrato-and-trill.gp5", "language": "gp5", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/whammy-and-fade-in.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/guitar-pro-check/whammy-and-fade-in.gp5", "language": "gp5", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/plugin/far-line.answer", "language": "answer", "sizeLines": 0, "fileCategory": "code"},
+    {"path": "fixtures/plugin/panel.answer", "language": "answer", "sizeLines": 0, "fileCategory": "code"},
+    {"path": "fixtures/reference/README.md", "language": "markdown", "sizeLines": 56, "fileCategory": "docs"}
+  ],
+  "batchImportData": {},
+  "neighborMap": {}
+}

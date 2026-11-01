@@ -1,0 +1,15 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "docs/plugins/template/Cargo.toml", "language": "toml", "sizeLines": 51, "fileCategory": "config"},
+    {"path": "docs/plugins/template/README.md", "language": "markdown", "sizeLines": 67, "fileCategory": "docs"},
+    {"path": "docs/plugins/template/build-oxp.sh", "language": "shell", "sizeLines": 56, "fileCategory": "script"},
+    {"path": "docs/plugins/template/manifest.json", "language": "json", "sizeLines": 27, "fileCategory": "config"}
+  ],
+  "batchImportData": {
+    "docs/plugins/template/Cargo.toml": [],
+    "docs/plugins/template/README.md": [],
+    "docs/plugins/template/build-oxp.sh": [],
+    "docs/plugins/template/manifest.json": []
+  }
+}

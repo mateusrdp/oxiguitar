@@ -1,0 +1,282 @@
+{
+  "summary": "Batch 5 covers six core design documents for OxiGuitar: editor (editing parity with TuxGuitar, slices, editing rules), engraving (layout pipeline, engraving rules, TODOs), player (audio architecture, NAM plugin support, scheduler, mixer, audio devices), plugins (plugin host contract, plugin types, architecture), tools (tool trait system, Infer Key Signatures algorithm), and UI (window areas, menus, palette, keyboard shortcuts, accessibility). Together they describe the application's editing surface, visual engraving, audio playback, extensibility via plugins, analysis tools, and user interface layout.",
+  "tags": [
+    "design-doc",
+    "architecture",
+    "editor",
+    "player",
+    "plugins",
+    "ui",
+    "engraving",
+    "tools"
+  ],
+  "complexity": "high",
+  "nodes": [
+    {
+      "id": "file:docs/design/editor.md",
+      "type": "design-doc",
+      "title": "Editor Design",
+      "description": "Editor parity checklist with TuxGuitar, editing rules, and slice-based editing model. Covers note input, selection, modification, and editing shortcuts."
+    },
+    {
+      "id": "concept:editor-slices",
+      "type": "concept",
+      "title": "Editor Slices",
+      "description": "Slice-based editing model where music is divided into editable segments, enabling granular note-level editing and selection."
+    },
+    {
+      "id": "concept:editor-parity-tuxguitar",
+      "type": "concept",
+      "title": "TuxGuitar Parity",
+      "description": "Goal of achieving feature parity with TuxGuitar's editing capabilities, including note input, selection, modification, and chord handling."
+    },
+    {
+      "id": "concept:editor-shortcuts",
+      "type": "concept",
+      "title": "Editor Shortcuts",
+      "description": "Keyboard shortcuts and command bindings for common editing operations."
+    },
+    {
+      "id": "concept:editor-selection",
+      "type": "concept",
+      "title": "Editor Selection Model",
+      "description": "How notes, ranges, and elements are selected and manipulated in the editor."
+    },
+    {
+      "id": "file:docs/design/engraving.md",
+      "type": "design-doc",
+      "title": "Engraving Design",
+      "description": "Layout pipeline and engraving rules for musical notation rendering. Covers spacing, beam grouping, staff layout, and engraving TODOs."
+    },
+    {
+      "id": "concept:engraving-pipeline",
+      "type": "concept",
+      "title": "Engraving Pipeline",
+      "description": "The layout pipeline (oxiguitar-layout) that processes musical data into visually engraved notation."
+    },
+    {
+      "id": "concept:engraving-rules",
+      "type": "concept",
+      "title": "Engraving Rules",
+      "description": "Rules governing spacing, beam grouping, staff layout, and visual presentation of musical notation."
+    },
+    {
+      "id": "concept:engraving-todo",
+      "type": "concept",
+      "title": "Engraving TODOs",
+      "description": "Incomplete engraving features and known layout issues to be addressed."
+    },
+    {
+      "id": "file:docs/design/player.md",
+      "type": "design-doc",
+      "title": "Player Design",
+      "description": "Audio playback architecture including NAM (Neural Audio Modeling) plugin support, scheduler, mixer, and audio device abstraction."
+    },
+    {
+      "id": "concept:player-nam",
+      "type": "concept",
+      "title": "NAM Plugin Support",
+      "description": "Support for Neural Audio Modeling (NAM) plugins for realistic guitar and instrument sound synthesis."
+    },
+    {
+      "id": "concept:player-scheduler",
+      "type": "concept",
+      "title": "Audio Scheduler",
+      "description": "Timing and scheduling system for sample-accurate audio playback synchronized with notation position."
+    },
+    {
+      "id": "concept:player-mixer",
+      "type": "concept",
+      "title": "Audio Mixer",
+      "description": "Mixing system that combines audio from multiple sources (instruments, plugins) into a unified output."
+    },
+    {
+      "id": "concept:player-audio-devices",
+      "type": "concept",
+      "title": "Audio Devices",
+      "description": "Abstraction layer for audio output devices and system audio routing."
+    },
+    {
+      "id": "file:docs/design/plugins.md",
+      "type": "design-doc",
+      "title": "Plugin Architecture",
+      "description": "Plugin host contract, plugin types (instrument, effect, tool), and the extensibility model for adding custom plugins to OxiGuitar."
+    },
+    {
+      "id": "concept:plugin-host-contract",
+      "type": "concept",
+      "title": "Host-Plugin Contract",
+      "description": "The interface and protocol between the OxiGuitar host application and loaded plugins."
+    },
+    {
+      "id": "concept:plugin-types",
+      "type": "concept",
+      "title": "Plugin Types",
+      "description": "Categories of plugins: instrument plugins (sound generation), effect plugins (audio processing), and tool plugins (analysis and utility functions)."
+    },
+    {
+      "id": "file:docs/design/tools.md",
+      "type": "design-doc",
+      "title": "Tools Design",
+      "description": "Tool trait system for analysis and utility functions. Includes the Infer Key Signatures algorithm implementation."
+    },
+    {
+      "id": "concept:tool-trait",
+      "type": "concept",
+      "title": "Tool Trait",
+      "description": "Rust trait defining the interface for analysis tools in the oxiguitar-tools crate."
+    },
+    {
+      "id": "concept:infer-key-signatures",
+      "type": "concept",
+      "title": "Infer Key Signatures",
+      "description": "Algorithm for automatically detecting and inferring the key signature of a musical piece from its notes and chords."
+    },
+    {
+      "id": "file:docs/design/ui.md",
+      "type": "design-doc",
+      "title": "UI Design",
+      "description": "User interface layout including window areas, menus, palette, keyboard shortcuts, and accessibility considerations."
+    },
+    {
+      "id": "concept:ui-window-areas",
+      "type": "concept",
+      "title": "Window Areas",
+      "description": "Main window regions: score area, palette, footer, shell — how they are arranged and resized."
+    },
+    {
+      "id": "concept:ui-menus",
+      "type": "concept",
+      "title": "Menus",
+      "description": "Application menus (File, Edit, View, etc.) and their commands."
+    },
+    {
+      "id": "concept:ui-palette",
+      "type": "concept",
+      "title": "Palette",
+      "description": "The notation palette providing symbols, articulations, and musical elements for drag-and-drop into the score."
+    },
+    {
+      "id": "concept:ui-accessibility",
+      "type": "concept",
+      "title": "Accessibility",
+      "description": "Accessibility features including keyboard navigation, screen reader support, and high-contrast themes."
+    }
+  ],
+  "edges": [
+    {
+      "from": "file:docs/design/engraving.md",
+      "to": "file:docs/design/tools.md",
+      "type": "references",
+      "description": "Engraving design references tools for analysis capabilities used during layout processing."
+    },
+    {
+      "from": "file:docs/design/player.md",
+      "to": "file:docs/design/plugins.md",
+      "type": "references",
+      "description": "Player architecture depends on plugin system for NAM and instrument plugin loading."
+    },
+    {
+      "from": "file:docs/design/ui.md",
+      "to": "file:docs/design/plugins.md",
+      "type": "references",
+      "description": "UI references plugins for plugin management in menus and palette."
+    },
+    {
+      "from": "file:docs/design/ui.md",
+      "to": "file:docs/design/editor.md",
+      "type": "references",
+      "description": "UI design incorporates editor shortcuts and editing interaction model."
+    },
+    {
+      "from": "file:docs/design/editor.md",
+      "to": "file:docs/design/engraving.md",
+      "type": "references",
+      "description": "Editor design references engraving rules for how edits are visually rendered."
+    },
+    {
+      "from": "file:docs/design/editor.md",
+      "to": "file:ROADMAP.md",
+      "type": "references",
+      "description": "Editor design cross-references the project roadmap for feature priorities."
+    },
+    {
+      "from": "file:docs/design/plugins.md",
+      "to": "file:docs/adr/0008-plugin-architecture.md",
+      "type": "references",
+      "description": "Plugin design references ADR 0008 for architectural decision context."
+    },
+    {
+      "from": "file:docs/design/plugins.md",
+      "to": "folder:docs/plugins/",
+      "type": "references",
+      "description": "Plugin design references the plugins documentation directory for examples and specs."
+    },
+    {
+      "from": "concept:player-nam",
+      "to": "concept:plugin-host-contract",
+      "type": "depends-on",
+      "description": "NAM plugin support relies on the host-plugin contract for loading and communication."
+    },
+    {
+      "from": "concept:player-scheduler",
+      "to": "concept:player-mixer",
+      "type": "feeds-into",
+      "description": "Audio scheduler drives the mixer by scheduling audio events in time."
+    },
+    {
+      "from": "concept:player-mixer",
+      "to": "concept:player-audio-devices",
+      "type": "feeds-into",
+      "description": "Mixer output routes through audio device abstraction for playback."
+    },
+    {
+      "from": "concept:editor-slices",
+      "to": "concept:editor-selection",
+      "type": "enables",
+      "description": "Slice-based model enables granular selection and editing of musical content."
+    },
+    {
+      "from": "concept:engraving-pipeline",
+      "to": "concept:engraving-rules",
+      "type": "applies",
+      "description": "Layout pipeline applies engraving rules to produce visually correct notation."
+    },
+    {
+      "from": "concept:tool-trait",
+      "to": "concept:infer-key-signatures",
+      "type": "implements",
+      "description": "Infer Key Signatures algorithm implements the tool trait interface."
+    },
+    {
+      "from": "concept:ui-window-areas",
+      "to": "concept:editor-slices",
+      "type": "displays",
+      "description": "Window areas render the slice-based editing view for the user."
+    },
+    {
+      "from": "concept:ui-palette",
+      "to": "concept:editor-slices",
+      "type": "feeds-into",
+      "description": "Palette elements are dragged into slices for note input and modification."
+    },
+    {
+      "from": "concept:ui-menus",
+      "to": "concept:editor-shortcuts",
+      "type": "contains",
+      "description": "Menus expose the same editing commands available as keyboard shortcuts."
+    },
+    {
+      "from": "concept:plugin-types",
+      "to": "concept:player-nam",
+      "type": "includes",
+      "description": "Plugin types include instrument plugins like NAM for sound generation."
+    },
+    {
+      "from": "concept:plugin-types",
+      "to": "concept:infer-key-signatures",
+      "type": "includes",
+      "description": "Plugin types include tool plugins for analysis like key signature inference."
+    }
+  ]
+}

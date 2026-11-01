@@ -1,0 +1,667 @@
+{
+  "11": {
+    "files": [
+      {
+        "path": "scripts/build-plugins.sh",
+        "language": "shell",
+        "sizeLines": 95,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/check-dco.sh",
+        "language": "shell",
+        "sizeLines": 53,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/check-display-crates.sh",
+        "language": "shell",
+        "sizeLines": 58,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/check-plugin-template.sh",
+        "language": "shell",
+        "sizeLines": 114,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/guitar-pro-check.sh",
+        "language": "shell",
+        "sizeLines": 30,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/install-desktop-entry.sh",
+        "language": "shell",
+        "sizeLines": 61,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/no-network.sh",
+        "language": "shell",
+        "sizeLines": 123,
+        "fileCategory": "script"
+      }
+    ],
+    "importData": {
+      "scripts/build-plugins.sh": [],
+      "scripts/check-dco.sh": [],
+      "scripts/check-display-crates.sh": [],
+      "scripts/check-plugin-template.sh": [],
+      "scripts/guitar-pro-check.sh": [],
+      "scripts/install-desktop-entry.sh": [],
+      "scripts/no-network.sh": []
+    },
+    "neighborMap": {}
+  },
+  "12": {
+    "files": [
+      {
+        "path": "scripts/package/in-wayland.sh",
+        "language": "shell",
+        "sizeLines": 32,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/package/licenses.sh",
+        "language": "shell",
+        "sizeLines": 77,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/package/lintian.sh",
+        "language": "shell",
+        "sizeLines": 51,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/package/linux.sh",
+        "language": "shell",
+        "sizeLines": 436,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/package/macos.sh",
+        "language": "shell",
+        "sizeLines": 85,
+        "fileCategory": "script"
+      },
+      {
+        "path": "scripts/package/plugins-README.txt",
+        "language": "txt",
+        "sizeLines": 22,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "scripts/package/release-notes.md",
+        "language": "markdown",
+        "sizeLines": 15,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "scripts/package/version.sh",
+        "language": "shell",
+        "sizeLines": 31,
+        "fileCategory": "script"
+      }
+    ],
+    "importData": {
+      "scripts/package/in-wayland.sh": [],
+      "scripts/package/licenses.sh": [],
+      "scripts/package/lintian.sh": [],
+      "scripts/package/linux.sh": [],
+      "scripts/package/macos.sh": [],
+      "scripts/package/plugins-README.txt": [],
+      "scripts/package/release-notes.md": [],
+      "scripts/package/version.sh": []
+    },
+    "neighborMap": {}
+  },
+  "13": {
+    "files": [
+      {
+        "path": ".gitattributes",
+        "language": "unknown",
+        "sizeLines": 16,
+        "fileCategory": "code"
+      },
+      {
+        "path": ".github/pull_request_template.md",
+        "language": "markdown",
+        "sizeLines": 15,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "assets/fonts/README.md",
+        "language": "markdown",
+        "sizeLines": 11,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "assets/fonts/bravura/Bravura.otf",
+        "language": "otf",
+        "sizeLines": 866,
+        "fileCategory": "code"
+      },
+      {
+        "path": "assets/fonts/noto-sans/OFL.txt",
+        "language": "txt",
+        "sizeLines": 93,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "assets/linux/io.github.mateusrdp.OxiGuitar.desktop",
+        "language": "desktop",
+        "sizeLines": 12,
+        "fileCategory": "code"
+      },
+      {
+        "path": "assets/linux/io.github.mateusrdp.OxiGuitar.xml",
+        "language": "xml",
+        "sizeLines": 36,
+        "fileCategory": "config"
+      },
+      {
+        "path": "assets/linux/man/oxiguitar-cli.1",
+        "language": "1",
+        "sizeLines": 220,
+        "fileCategory": "code"
+      },
+      {
+        "path": "assets/linux/man/oxiguitar.1",
+        "language": "1",
+        "sizeLines": 93,
+        "fileCategory": "code"
+      },
+      {
+        "path": "assets/macos/Info.plist",
+        "language": "xml",
+        "sizeLines": 84,
+        "fileCategory": "config"
+      },
+      {
+        "path": "corpus/MANIFEST.toml",
+        "language": "toml",
+        "sizeLines": 791,
+        "fileCategory": "config"
+      },
+      {
+        "path": "corpus/README.md",
+        "language": "markdown",
+        "sizeLines": 7,
+        "fileCategory": "docs"
+      },
+      {
+        "path": "crates/oxiguitar-app/Cargo.toml",
+        "language": "toml",
+        "sizeLines": 98,
+        "fileCategory": "config"
+      },
+      {
+        "path": "crates/oxiguitar-app/build.rs",
+        "language": "rust",
+        "sizeLines": 65,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/bar_form.rs",
+        "language": "rust",
+        "sizeLines": 351,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/bend_form.rs",
+        "language": "rust",
+        "sizeLines": 438,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/canvas.rs",
+        "language": "rust",
+        "sizeLines": 195,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/chord_form.rs",
+        "language": "rust",
+        "sizeLines": 410,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/cursor.rs",
+        "language": "rust",
+        "sizeLines": 277,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/document.rs",
+        "language": "rust",
+        "sizeLines": 1160,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/editing.rs",
+        "language": "rust",
+        "sizeLines": 1913,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/effect_form.rs",
+        "language": "rust",
+        "sizeLines": 706,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/footer.rs",
+        "language": "rust",
+        "sizeLines": 134,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/icons.rs",
+        "language": "rust",
+        "sizeLines": 623,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/inspector.rs",
+        "language": "rust",
+        "sizeLines": 379,
+        "fileCategory": "code"
+      }
+    ],
+    "importData": {
+      ".gitattributes": [],
+      ".github/pull_request_template.md": [],
+      "assets/fonts/README.md": [],
+      "assets/fonts/bravura/Bravura.otf": [],
+      "assets/fonts/noto-sans/OFL.txt": [],
+      "assets/linux/io.github.mateusrdp.OxiGuitar.desktop": [],
+      "assets/linux/io.github.mateusrdp.OxiGuitar.xml": [],
+      "assets/linux/man/oxiguitar-cli.1": [],
+      "assets/linux/man/oxiguitar.1": [],
+      "assets/macos/Info.plist": [],
+      "corpus/MANIFEST.toml": [],
+      "corpus/README.md": [],
+      "crates/oxiguitar-app/Cargo.toml": [],
+      "crates/oxiguitar-app/build.rs": [],
+      "crates/oxiguitar-app/src/bar_form.rs": [],
+      "crates/oxiguitar-app/src/bend_form.rs": [],
+      "crates/oxiguitar-app/src/canvas.rs": [],
+      "crates/oxiguitar-app/src/chord_form.rs": [],
+      "crates/oxiguitar-app/src/cursor.rs": [],
+      "crates/oxiguitar-app/src/document.rs": [],
+      "crates/oxiguitar-app/src/editing.rs": [],
+      "crates/oxiguitar-app/src/effect_form.rs": [],
+      "crates/oxiguitar-app/src/footer.rs": [],
+      "crates/oxiguitar-app/src/icons.rs": [],
+      "crates/oxiguitar-app/src/inspector.rs": []
+    },
+    "neighborMap": {}
+  },
+  "14": {
+    "files": [
+      {
+        "path": "crates/oxiguitar-app/src/links.rs",
+        "language": "rust",
+        "sizeLines": 74,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/main.rs",
+        "language": "rust",
+        "sizeLines": 4491,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/manager.rs",
+        "language": "rust",
+        "sizeLines": 355,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/palette.rs",
+        "language": "rust",
+        "sizeLines": 1534,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/player.rs",
+        "language": "rust",
+        "sizeLines": 880,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/playing.rs",
+        "language": "rust",
+        "sizeLines": 540,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/plugin_tabs.rs",
+        "language": "rust",
+        "sizeLines": 698,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/prefs.rs",
+        "language": "rust",
+        "sizeLines": 135,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/shell.rs",
+        "language": "rust",
+        "sizeLines": 307,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/song.rs",
+        "language": "rust",
+        "sizeLines": 114,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/sound.rs",
+        "language": "rust",
+        "sizeLines": 366,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/speed.rs",
+        "language": "rust",
+        "sizeLines": 291,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/test_support.rs",
+        "language": "rust",
+        "sizeLines": 137,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/track_form.rs",
+        "language": "rust",
+        "sizeLines": 432,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/track_sections.rs",
+        "language": "rust",
+        "sizeLines": 234,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/tracks.rs",
+        "language": "rust",
+        "sizeLines": 468,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/src/worker.rs",
+        "language": "rust",
+        "sizeLines": 1124,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/ui/app.slint",
+        "language": "slint",
+        "sizeLines": 2412,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/ui/bar_dialog.slint",
+        "language": "slint",
+        "sizeLines": 906,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/ui/plugin_manager.slint",
+        "language": "slint",
+        "sizeLines": 214,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-app/ui/plugin_tab.slint",
+        "language": "slint",
+        "sizeLines": 230,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-audio-cpal/Cargo.toml",
+        "language": "toml",
+        "sizeLines": 20,
+        "fileCategory": "config"
+      },
+      {
+        "path": "crates/oxiguitar-audio-cpal/src/lib.rs",
+        "language": "rust",
+        "sizeLines": 306,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/Cargo.toml",
+        "language": "toml",
+        "sizeLines": 29,
+        "fileCategory": "config"
+      },
+      {
+        "path": "crates/oxiguitar-cli/src/convert.rs",
+        "language": "rust",
+        "sizeLines": 120,
+        "fileCategory": "code"
+      }
+    ],
+    "importData": {
+      "crates/oxiguitar-app/src/links.rs": [],
+      "crates/oxiguitar-app/src/main.rs": [],
+      "crates/oxiguitar-app/src/manager.rs": [],
+      "crates/oxiguitar-app/src/palette.rs": [],
+      "crates/oxiguitar-app/src/player.rs": [],
+      "crates/oxiguitar-app/src/playing.rs": [],
+      "crates/oxiguitar-app/src/plugin_tabs.rs": [],
+      "crates/oxiguitar-app/src/prefs.rs": [],
+      "crates/oxiguitar-app/src/shell.rs": [],
+      "crates/oxiguitar-app/src/song.rs": [],
+      "crates/oxiguitar-app/src/sound.rs": [],
+      "crates/oxiguitar-app/src/speed.rs": [],
+      "crates/oxiguitar-app/src/test_support.rs": [],
+      "crates/oxiguitar-app/src/track_form.rs": [],
+      "crates/oxiguitar-app/src/track_sections.rs": [],
+      "crates/oxiguitar-app/src/tracks.rs": [],
+      "crates/oxiguitar-app/src/worker.rs": [],
+      "crates/oxiguitar-app/ui/app.slint": [],
+      "crates/oxiguitar-app/ui/bar_dialog.slint": [],
+      "crates/oxiguitar-app/ui/plugin_manager.slint": [],
+      "crates/oxiguitar-app/ui/plugin_tab.slint": [],
+      "crates/oxiguitar-audio-cpal/Cargo.toml": [],
+      "crates/oxiguitar-audio-cpal/src/lib.rs": [],
+      "crates/oxiguitar-cli/Cargo.toml": [],
+      "crates/oxiguitar-cli/src/convert.rs": []
+    },
+    "neighborMap": {}
+  },
+  "15": {
+    "files": [
+      {
+        "path": "crates/oxiguitar-cli/src/events.rs",
+        "language": "rust",
+        "sizeLines": 33,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/src/info.rs",
+        "language": "rust",
+        "sizeLines": 344,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/src/main.rs",
+        "language": "rust",
+        "sizeLines": 105,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/src/play.rs",
+        "language": "rust",
+        "sizeLines": 401,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/src/plugins.rs",
+        "language": "rust",
+        "sizeLines": 113,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/src/render.rs",
+        "language": "rust",
+        "sizeLines": 275,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/src/specimen.rs",
+        "language": "rust",
+        "sizeLines": 105,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/src/tools.rs",
+        "language": "rust",
+        "sizeLines": 26,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-cli/tests/cli.rs",
+        "language": "rust",
+        "sizeLines": 432,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-display/Cargo.toml",
+        "language": "toml",
+        "sizeLines": 24,
+        "fileCategory": "config"
+      },
+      {
+        "path": "crates/oxiguitar-display/src/fonts.rs",
+        "language": "rust",
+        "sizeLines": 283,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-display/src/lib.rs",
+        "language": "rust",
+        "sizeLines": 31,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-display/src/list.rs",
+        "language": "rust",
+        "sizeLines": 573,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-display/src/smufl.rs",
+        "language": "rust",
+        "sizeLines": 185,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-display/src/specimen.rs",
+        "language": "rust",
+        "sizeLines": 651,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-display/src/wire.rs",
+        "language": "rust",
+        "sizeLines": 217,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-edit/Cargo.toml",
+        "language": "toml",
+        "sizeLines": 19,
+        "fileCategory": "config"
+      },
+      {
+        "path": "crates/oxiguitar-edit/src/bars.rs",
+        "language": "rust",
+        "sizeLines": 792,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-edit/src/caret.rs",
+        "language": "rust",
+        "sizeLines": 588,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-edit/src/check.rs",
+        "language": "rust",
+        "sizeLines": 250,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-edit/src/clip.rs",
+        "language": "rust",
+        "sizeLines": 664,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-edit/src/effects.rs",
+        "language": "rust",
+        "sizeLines": 1059,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-edit/src/entry.rs",
+        "language": "rust",
+        "sizeLines": 1600,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-edit/src/harmony.rs",
+        "language": "rust",
+        "sizeLines": 744,
+        "fileCategory": "code"
+      },
+      {
+        "path": "crates/oxiguitar-edit/src/history.rs",
+        "language": "rust",
+        "sizeLines": 514,
+        "fileCategory": "code"
+      }
+    ],
+    "importData": {
+      "crates/oxiguitar-cli/src/events.rs": [],
+      "crates/oxiguitar-cli/src/info.rs": [],
+      "crates/oxiguitar-cli/src/main.rs": [],
+      "crates/oxiguitar-cli/src/play.rs": [],
+      "crates/oxiguitar-cli/src/plugins.rs": [],
+      "crates/oxiguitar-cli/src/render.rs": [],
+      "crates/oxiguitar-cli/src/specimen.rs": [],
+      "crates/oxiguitar-cli/src/tools.rs": [],
+      "crates/oxiguitar-cli/tests/cli.rs": [],
+      "crates/oxiguitar-display/Cargo.toml": [],
+      "crates/oxiguitar-display/src/fonts.rs": [],
+      "crates/oxiguitar-display/src/lib.rs": [],
+      "crates/oxiguitar-display/src/list.rs": [],
+      "crates/oxiguitar-display/src/smufl.rs": [],
+      "crates/oxiguitar-display/src/specimen.rs": [],
+      "crates/oxiguitar-display/src/wire.rs": [],
+      "crates/oxiguitar-edit/Cargo.toml": [],
+      "crates/oxiguitar-edit/src/bars.rs": [],
+      "crates/oxiguitar-edit/src/caret.rs": [],
+      "crates/oxiguitar-edit/src/check.rs": [],
+      "crates/oxiguitar-edit/src/clip.rs": [],
+      "crates/oxiguitar-edit/src/effects.rs": [],
+      "crates/oxiguitar-edit/src/entry.rs": [],
+      "crates/oxiguitar-edit/src/harmony.rs": [],
+      "crates/oxiguitar-edit/src/history.rs": []
+    },
+    "neighborMap": {}
+  }
+}

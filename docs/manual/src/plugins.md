@@ -1,6 +1,6 @@
 # Settings and plugins
 
-OxiGuitar is a small program that does more with plugins: one plugin for each file format, plugins that play the score, plugins that export it in other formats than PDF, and plugins that add tabs to the window's panels. Plugins are single files ending in `.oxp`. OxiGuitar opens files only through its format plugins: install ours, the basic plugins, for Guitar Pro files ([Installing](installing.md)). A plugin is loaded only when it is first needed: the Guitar Pro 5 plugin when you open a .gp5 file, a plugin with a tab when you open its tab.
+OxiGuitar is a small program that does more with plugins: one plugin for each file format, plugins that play the score, plugins that export it in other formats than PDF, and plugins that add tabs to the window's panels. Plugins are single files ending in `.oxp`. OxiGuitar opens files only through its format plugins; ours, the basic plugins, come with every download and open Guitar Pro files ([Installing](installing.md)). A plugin is loaded only when it is first needed: the Guitar Pro 5 plugin when you open a .gp5 file, a plugin with a tab when you open its tab.
 
 ## Where OxiGuitar keeps things
 
@@ -8,9 +8,9 @@ When it starts, OxiGuitar makes sure its settings folder, a `settings.json` file
 
 | System | Settings (`settings.json`) | Your plugins | The program's plugin folder |
 | --- | --- | --- | --- |
-| Linux | `~/.config/oxiguitar/` | `~/.local/share/oxiguitar/plugins/` | `/usr/lib/oxiguitar/plugins/` |
-| macOS | `~/Library/Application Support/OxiGuitar/` | its `plugins` folder | inside the app, `Contents/PlugIns/` (empty in our .dmg) |
-| Windows | `%APPDATA%\OxiGuitar\` | its `plugins` folder | a `plugins` folder beside `oxiguitar.exe` (none in our zip) |
+| Linux | `~/.config/oxiguitar/` | `~/.local/share/oxiguitar/plugins/` | `/usr/lib/oxiguitar/plugins/` (inside the AppImage, its own `usr/lib/oxiguitar/plugins/`) |
+| macOS | `~/Library/Application Support/OxiGuitar/` | its `plugins` folder | inside the app, `Contents/PlugIns/` |
+| Windows | `%APPDATA%\OxiGuitar\` | its `plugins` folder | the `plugins` folder beside `oxiguitar.exe` |
 
 To keep everything somewhere else, for example on a USB stick, start OxiGuitar with the environment variable `OXIGUITAR_HOME` set to that folder: settings and plugins then both live there.
 
@@ -33,9 +33,43 @@ This list replaces the usual folders. If the file isn't valid JSON, OxiGuitar sa
 At start, the line at the bottom of the window says what is missing:
 
 - **No output plugin is installed, so the player is off.** The player's buttons stay greyed out until a plugin that makes sound is installed.
-- **No read/write plugins are installed.** OxiGuitar can open and save files only through format plugins, so nothing can be opened. Install the basic plugins ([Installing](installing.md)); if they are installed, this message means they aren't in a folder OxiGuitar searches (Help → About lists those; see `plugin_folders` above).
+- **No read/write plugins are installed.** OxiGuitar can open and save files only through format plugins, so nothing can be opened. The basic plugins come with every download, so this means they aren't in a folder OxiGuitar searches: a `plugin_folders` list in `settings.json` that leaves out the program's folder (see above), the program's files moved apart, or, on Debian, Ubuntu and Fedora, the `oxiguitar-plugins-basic` package removed. **Help → About** lists the folders searched.
 
-Both messages say where to download plugins: [the releases page](https://github.com/mateusrdp/oxiguitar/releases), where each release has one zip of our plugins for each system (`OxiGuitar-plugins-basic-VERSION-SYSTEM-ARCH.zip`; on Debian, Ubuntu and Fedora the `oxiguitar-plugins-basic` package). Unzip it into your plugins folder: the `.oxp` files go directly in the folder, not in a subfolder.
+Both messages link to [the releases page](https://github.com/mateusrdp/oxiguitar/releases), where every download has the basic plugins inside.
+
+The same gaps also open a dialog, once, when the window is up ([Advice dialogs](#advice-dialogs)): it says what is missing and links to [the official plugins](official-plugins.md) and to the install page for your system ([Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md)). There are three, each silenced on its own:
+
+| Dialog | When | Its line in `settings.json` |
+| --- | --- | --- |
+| OxiGuitar can't open any file | No plugin reads files | `no-format-plugin` |
+| OxiGuitar can't play | No plugin plays a score | `no-player-plugin` |
+| OxiGuitar has nowhere to send the sound | A plugin plays scores, but none sends sound to your speakers | `no-output-plugin` |
+
+## Advice dialogs
+
+Sometimes a plugin or OxiGuitar itself needs something from you that it can't do alone: a sound set to install, an amp model to put in a folder. It then shows a small dialog once, when the window is up, saying what to do, with links to the page that explains it. A link opens in your browser only when you click it. Tick **Don't show this again** and press OK, and that dialog never returns.
+
+OxiGuitar keeps what you silenced in `settings.json`, under `advice`, one line for each dialog, under the name of the plugin that asked (`oxiguitar` for OxiGuitar's own):
+
+```json
+{
+  "advice": {
+    "oxiguitar": { "no-player-plugin": "hidden" }
+  }
+}
+```
+
+The official plugins use it for:
+
+| Dialog | Asked by | When | Its line under the plugin's name |
+| --- | --- | --- | --- |
+| Only basic sounds are installed | `oxiguitar.midi` | A score plays and only your system's own sound set is found ([Better sounds](better-sounds.md)) | `no-sound-sets` |
+| No amp model to play | `oxiguitar.nam` | A track's amp is on and the `nam` folder holds no model | `no-model` |
+| No cabinet of your own | `oxiguitar.nam` | A track's amp is on, its model doesn't include a cabinet and the `nam` folder holds no impulse response | `no-cabinet` |
+
+The last two link to [Amp models](amp-models.md).
+
+Delete a line to get its dialog back. No dialog appears in safe mode.
 
 ## The plugin manager
 

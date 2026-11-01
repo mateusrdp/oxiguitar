@@ -1,0 +1,15 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "docs/formats/README.md", "language": "markdown", "sizeLines": 7, "fileCategory": "docs"},
+    {"path": "docs/formats/guitar-pro-3-5.md", "language": "markdown", "sizeLines": 137, "fileCategory": "docs"},
+    {"path": "docs/formats/guitar-pro-6-8.md", "language": "markdown", "sizeLines": 139, "fileCategory": "docs"},
+    {"path": "docs/formats/guitar-pro-sounds.md", "language": "markdown", "sizeLines": 239, "fileCategory": "docs"}
+  ],
+  "batchImportData": {
+    "docs/formats/README.md": [],
+    "docs/formats/guitar-pro-3-5.md": [],
+    "docs/formats/guitar-pro-6-8.md": [],
+    "docs/formats/guitar-pro-sounds.md": []
+  }
+}

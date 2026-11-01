@@ -1,0 +1,630 @@
+{
+  "nodes": [
+    {
+      "id": "document:docs/plugins/src/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "docs/plugins/src/README.md",
+      "summary": "Main guide for writing OxiGuitar plugins in Rust with the oxiguitar-plugin SDK, including prerequisites and a table of contents linking to all plugin documentation pages.",
+      "tags": ["documentation", "plugin-dev", "getting-started", "sdk", "guide"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/plugins/src/SUMMARY.md",
+      "type": "document",
+      "name": "SUMMARY.md",
+      "filePath": "docs/plugins/src/SUMMARY.md",
+      "summary": "Table of contents listing all plugin documentation pages in reading order, from the main README through interface versions.",
+      "tags": ["documentation", "toc", "plugin-dev", "navigation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/plugins/src/building.md",
+      "type": "document",
+      "name": "building.md",
+      "filePath": "docs/plugins/src/building.md",
+      "summary": "Builds plugins for six system targets across Linux, Windows, and macOS using one GitHub Actions workflow, including release checklist and file naming conventions.",
+      "tags": ["documentation", "build", "ci-cd", "cross-platform", "release"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/events.md",
+      "type": "document",
+      "name": "events.md",
+      "filePath": "docs/plugins/src/events.md",
+      "summary": "Plugin event subscription system for score open/change/close, selection changes, and playback events, with interface version requirements and thread-safety guidance.",
+      "tags": ["documentation", "events", "score", "plugin-dev", "interface-1.1"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/plugins/src/formats.md",
+      "type": "document",
+      "name": "formats.md",
+      "filePath": "docs/plugins/src/formats.md",
+      "summary": "Declares and implements file format plugins for reading and writing music scores, including signature-based file detection, the score data model, and error handling for untrusted input.",
+      "tags": ["documentation", "formats", "file-io", "score-model", "plugin-dev"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/installing.md",
+      "type": "document",
+      "name": "installing.md",
+      "filePath": "docs/plugins/src/installing.md",
+      "summary": "Plugin installation on Linux, macOS, and Windows, including folder locations, version resolution, macOS quarantine marks, and distribution guidance.",
+      "tags": ["documentation", "installation", "distribution", "plugin-dev", "platforms"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/instruments.md",
+      "type": "document",
+      "name": "instruments.md",
+      "filePath": "docs/plugins/src/instruments.md",
+      "summary": "Audio instrument plugin interface for the player, covering preparation, audio-thread rendering, effects, instrument classes, and large data handling.",
+      "tags": ["documentation", "instruments", "audio", "plugin-dev", "interface-1.3"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/manifest.md",
+      "type": "document",
+      "name": "manifest.md",
+      "filePath": "docs/plugins/src/manifest.md",
+      "summary": "Plugin .oxp file structure and manifest.json schema with all keys, conditions for OS/arch/display/cpu, and validation rules enforced by export_plugin!.",
+      "tags": ["documentation", "manifest", "plugin-file", "configuration", "validation"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/sdk.md",
+      "type": "document",
+      "name": "sdk.md",
+      "filePath": "docs/plugins/src/sdk.md",
+      "summary": "The oxiguitar-plugin SDK crate: Plugin trait with required and optional methods, thread model, Host API for services and settings, error types, and build configuration.",
+      "tags": ["documentation", "sdk", "api-reference", "plugin-trait", "host"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/services.md",
+      "type": "document",
+      "name": "services.md",
+      "filePath": "docs/plugins/src/services.md",
+      "summary": "Service interface implementation pattern: declaring services, probe and call methods, OxiGuitar's service selection algorithm, calling services, and the audio-device interface.",
+      "tags": ["documentation", "services", "interfaces", "plugin-dev", "audio-device"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/settings.md",
+      "type": "document",
+      "name": "settings.md",
+      "filePath": "docs/plugins/src/settings.md",
+      "summary": "Plugin settings storage in settings.json, read/write via Host, settings window UI (interface 1.3), and plugin folder management for data, cache, and shared resources.",
+      "tags": ["documentation", "settings", "configuration", "persistence", "interface-1.3"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/plugins/src/tabs.md",
+      "type": "document",
+      "name": "tabs.md",
+      "filePath": "docs/plugins/src/tabs.md",
+      "summary": "Tab plugin interface for window areas with widgets (label, button, toggle, slider, field, choice, list) and canvas drawing, including event handling and pointer interaction.",
+      "tags": ["documentation", "tabs", "ui", "widgets", "canvas", "interface-1.1"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/template.md",
+      "type": "document",
+      "name": "template.md",
+      "filePath": "docs/plugins/src/template.md",
+      "summary": "Step-by-step guide to copying, building, testing, and customizing the template plugin, which includes a format, tab, and service as starting points.",
+      "tags": ["documentation", "template", "getting-started", "plugin-dev", "tutorial"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/testing.md",
+      "type": "document",
+      "name": "testing.md",
+      "filePath": "docs/plugins/src/testing.md",
+      "summary": "Testing strategy covering cargo test with unit tests and manifest checks, the contract suite for plugin file validation, oxiguitar-cli utilities, in-app testing, and fuzzing readers.",
+      "tags": ["documentation", "testing", "contract-suite", "fuzzing", "ci"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/plugins/src/tools.md",
+      "type": "document",
+      "name": "tools.md",
+      "filePath": "docs/plugins/src/tools.md",
+      "summary": "Tools menu entries and score modification through the core's undoable command system, including the Selection2 event and score version 2 with extensions.",
+      "tags": ["documentation", "tools", "score-editing", "undo", "interface-1.2"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/plugins/src/track-sections.md",
+      "type": "document",
+      "name": "track-sections.md",
+      "filePath": "docs/plugins/src/track-sections.md",
+      "summary": "Track dialog sections for per-track plugin settings, declared per instrument class, with content and on methods, and persistence in sidecar .oxg files.",
+      "tags": ["documentation", "track-sections", "ui", "per-track-settings", "interface-1.3"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/plugins/src/versions.md",
+      "type": "document",
+      "name": "versions.md",
+      "filePath": "docs/plugins/src/versions.md",
+      "summary": "Plugin interface versioning (1.0 through 1.3), compatibility guarantees, backward loading rules, and the extension-based score version 2 design that avoids future major bumps.",
+      "tags": ["documentation", "versioning", "compatibility", "interface", "api-evolution"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:docs/plugins/src/what.md",
+      "type": "document",
+      "name": "what.md",
+      "filePath": "docs/plugins/src/what.md",
+      "summary": "Plugin lifecycle and architecture overview: what plugins are (native .oxp files), what they can add (formats, tabs, events, services, instruments), what they are not, and their load timeline.",
+      "tags": ["documentation", "architecture", "plugin-lifecycle", "overview", "plugin-dev"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/what.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/template.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/manifest.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/sdk.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/formats.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/tabs.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/events.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/services.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/instruments.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/settings.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/testing.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/building.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/installing.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/README.md",
+      "target": "document:docs/plugins/src/versions.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/SUMMARY.md",
+      "target": "document:docs/plugins/src/README.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/SUMMARY.md",
+      "target": "document:docs/plugins/src/tools.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/SUMMARY.md",
+      "target": "document:docs/plugins/src/track-sections.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/manifest.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/sdk.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/formats.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/tabs.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/events.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/services.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/settings.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/building.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/template.md",
+      "target": "document:docs/plugins/src/versions.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:docs/plugins/src/formats.md",
+      "target": "document:docs/plugins/src/versions.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/formats.md",
+      "target": "document:docs/plugins/src/testing.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/events.md",
+      "target": "document:docs/plugins/src/tools.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/events.md",
+      "target": "document:docs/plugins/src/sdk.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/instruments.md",
+      "target": "document:docs/plugins/src/track-sections.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/instruments.md",
+      "target": "document:docs/plugins/src/services.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/versions.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/services.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/tabs.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/events.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/formats.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/instruments.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/settings.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/tools.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/manifest.md",
+      "target": "document:docs/plugins/src/track-sections.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/sdk.md",
+      "target": "document:docs/plugins/src/events.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/sdk.md",
+      "target": "document:docs/plugins/src/services.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/sdk.md",
+      "target": "document:docs/plugins/src/tabs.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/sdk.md",
+      "target": "document:docs/plugins/src/settings.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/sdk.md",
+      "target": "document:docs/plugins/src/tools.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/sdk.md",
+      "target": "document:docs/plugins/src/versions.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/services.md",
+      "target": "document:docs/plugins/src/manifest.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/settings.md",
+      "target": "document:docs/plugins/src/tabs.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/settings.md",
+      "target": "document:docs/plugins/src/track-sections.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/tabs.md",
+      "target": "document:docs/plugins/src/settings.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/testing.md",
+      "target": "document:docs/plugins/src/building.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/testing.md",
+      "target": "document:docs/plugins/src/installing.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/testing.md",
+      "target": "document:docs/plugins/src/instruments.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/building.md",
+      "target": "document:docs/plugins/src/testing.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/building.md",
+      "target": "document:docs/plugins/src/installing.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/installing.md",
+      "target": "document:docs/plugins/src/what.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/what.md",
+      "target": "document:docs/plugins/src/formats.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/what.md",
+      "target": "document:docs/plugins/src/tabs.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/what.md",
+      "target": "document:docs/plugins/src/events.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/what.md",
+      "target": "document:docs/plugins/src/services.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/what.md",
+      "target": "document:docs/plugins/src/instruments.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/what.md",
+      "target": "document:docs/plugins/src/building.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/what.md",
+      "target": "document:docs/plugins/src/sdk.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:docs/plugins/src/tools.md",
+      "target": "document:docs/plugins/src/formats.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:docs/plugins/src/tools.md",
+      "target": "document:docs/plugins/src/events.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

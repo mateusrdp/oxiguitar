@@ -1,0 +1,1928 @@
+{
+  "nodes": [
+    {
+      "id": "file:crates/oxiguitar-app/src/links.rs",
+      "type": "file",
+      "name": "links.rs",
+      "filePath": "crates/oxiguitar-app/src/links.rs",
+      "summary": "Manages guitar string links and fret relationships for tab rendering, providing utilities to resolve which strings and frets are involved in chord shapes and single-note passages.",
+      "tags": [
+        "guitar-links",
+        "tab-rendering",
+        "fret-logic",
+        "string-management",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/main.rs",
+      "type": "file",
+      "name": "main.rs",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Core application entry point for OxiGuitar's GUI, orchestrating the Slint UI, plugin system, audio playback, engraving worker, track management, and the main event loop that connects all subsystems together.",
+      "tags": [
+        "entry-point",
+        "gui-core",
+        "app-orchestration",
+        "slint-integration",
+        "main-loop"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/manager.rs",
+      "type": "file",
+      "name": "manager.rs",
+      "filePath": "crates/oxiguitar-app/src/manager.rs",
+      "summary": "Manages the application's state and component lifecycle, coordinating between the UI layer, audio subsystem, and plugin system to maintain consistent application behavior.",
+      "tags": [
+        "state-management",
+        "lifecycle",
+        "coordination",
+        "component-orchestration",
+        "gui"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/palette.rs",
+      "type": "file",
+      "name": "palette.rs",
+      "filePath": "crates/oxiguitar-app/src/palette.rs",
+      "summary": "Color palette management for the application, defining color schemes for light and dark themes, managing UI color assignments, and providing theme-aware color resolution for the Slint interface.",
+      "tags": [
+        "color-palette",
+        "theming",
+        "dark-mode",
+        "ui-colors",
+        "theme-management"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/player.rs",
+      "type": "file",
+      "name": "player.rs",
+      "filePath": "crates/oxiguitar-app/src/player.rs",
+      "summary": "Audio playback engine that handles song playback, note timing, cursor positioning, and synchronization between the audio output and the visual score display during playback.",
+      "tags": [
+        "audio-playback",
+        "timing",
+        "cursor-control",
+        "synchronization",
+        "note-rendering"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/playing.rs",
+      "type": "file",
+      "name": "playing.rs",
+      "filePath": "crates/oxiguitar-app/src/playing.rs",
+      "summary": "Manages the playing state machine, tracking playback position, handling play/pause/stop transitions, and coordinating cursor movement with audio timing during song playback.",
+      "tags": [
+        "playback-state",
+        "state-machine",
+        "cursor-tracking",
+        "playback-control",
+        "timing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "type": "file",
+      "name": "plugin_tabs.rs",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Plugin tab management providing a dedicated thread that handles plugin tab rendering, event processing, canvas drawing, and settings windows, keeping plugin operations off the UI thread for responsiveness.",
+      "tags": [
+        "plugin-tabs",
+        "threading",
+        "canvas-rendering",
+        "plugin-interface",
+        "event-processing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/prefs.rs",
+      "type": "file",
+      "name": "prefs.rs",
+      "filePath": "crates/oxiguitar-app/src/prefs.rs",
+      "summary": "Application preferences management, handling user configuration storage, loading, and persistence for settings like tempo, display options, and plugin preferences.",
+      "tags": [
+        "preferences",
+        "configuration",
+        "settings",
+        "persistence",
+        "user-config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/shell.rs",
+      "type": "file",
+      "name": "shell.rs",
+      "filePath": "crates/oxiguitar-app/src/shell.rs",
+      "summary": "Shell window management handling tab areas, side panels, active tab tracking, and the main window layout structure that organizes the application's visual components.",
+      "tags": [
+        "window-management",
+        "tab-areas",
+        "layout",
+        "side-panels",
+        "ui-structure"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/song.rs",
+      "type": "file",
+      "name": "song.rs",
+      "filePath": "crates/oxiguitar-app/src/song.rs",
+      "summary": "Song data structure and utilities, representing a musical piece with its tracks, tempo, time signature, and metadata for the tablature editor.",
+      "tags": [
+        "song-data",
+        "data-model",
+        "music-representation",
+        "tab-structure",
+        "metadata"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/sound.rs",
+      "type": "file",
+      "name": "sound.rs",
+      "filePath": "crates/oxiguitar-app/src/sound.rs",
+      "summary": "Sound generation and audio processing utilities, handling note synthesis, audio buffer management, and the conversion of musical data into playable audio output.",
+      "tags": [
+        "sound-generation",
+        "audio-processing",
+        "note-synthesis",
+        "buffer-management",
+        "audio-output"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/speed.rs",
+      "type": "file",
+      "name": "speed.rs",
+      "filePath": "crates/oxiguitar-app/src/speed.rs",
+      "summary": "Tempo and speed control for playback, managing BPM changes, tempo curves, and the conversion between musical time and playback position.",
+      "tags": [
+        "tempo-control",
+        "bpm",
+        "speed-management",
+        "time-conversion",
+        "playback-timing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/test_support.rs",
+      "type": "file",
+      "name": "test_support.rs",
+      "filePath": "crates/oxiguitar-app/src/test_support.rs",
+      "summary": "Test utilities and helpers for the application, providing mock plugins, test fixtures, and shared test infrastructure for unit testing the GUI components.",
+      "tags": [
+        "testing",
+        "test-fixtures",
+        "mock-plugins",
+        "test-infrastructure",
+        "utilities"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/track_form.rs",
+      "type": "file",
+      "name": "track_form.rs",
+      "filePath": "crates/oxiguitar-app/src/track_form.rs",
+      "summary": "Track form UI component for editing track properties, handling instrument selection, tuning configuration, and track metadata in the tablature editor interface.",
+      "tags": [
+        "track-form",
+        "ui-component",
+        "track-editing",
+        "instrument-config",
+        "form-ui"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/track_sections.rs",
+      "type": "file",
+      "name": "track_sections.rs",
+      "filePath": "crates/oxiguitar-app/src/track_sections.rs",
+      "summary": "Track section management for organizing songs into sections like verses, choruses, and bridges, providing section navigation and structural editing capabilities.",
+      "tags": [
+        "track-sections",
+        "song-structure",
+        "section-management",
+        "navigation",
+        "song-organization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/tracks.rs",
+      "type": "file",
+      "name": "tracks.rs",
+      "filePath": "crates/oxiguitar-app/src/tracks.rs",
+      "summary": "Track management system handling track creation, deletion, reordering, and the lifecycle of individual tracks within a song, including their notes and metadata.",
+      "tags": [
+        "track-management",
+        "track-lifecycle",
+        "track-operations",
+        "song-structure",
+        "data-model"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/src/worker.rs",
+      "type": "file",
+      "name": "worker.rs",
+      "filePath": "crates/oxiguitar-app/src/worker.rs",
+      "summary": "Engraving worker that handles the rendering and layout of musical notation, processing song data into visual representations with proper spacing, alignment, and page breaks.",
+      "tags": [
+        "engraving",
+        "notation-rendering",
+        "layout-engine",
+        "visual-rendering",
+        "score-display"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/ui/app.slint",
+      "type": "file",
+      "name": "app.slint",
+      "filePath": "crates/oxiguitar-app/ui/app.slint",
+      "summary": "Main Slint UI definition for OxiGuitar's graphical interface, defining the window layout, menu bars, toolbars, track list, score display area, and all interactive UI elements.",
+      "tags": [
+        "slint-ui",
+        "main-window",
+        "ui-definition",
+        "gui-layout",
+        "interactive-elements"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/ui/bar_dialog.slint",
+      "type": "file",
+      "name": "bar_dialog.slint",
+      "filePath": "crates/oxiguitar-app/ui/bar_dialog.slint",
+      "summary": "Slint UI definition for the bar editing dialog, providing controls for bar properties, note editing, and bar-level operations within the tablature editor.",
+      "tags": [
+        "slint-ui",
+        "bar-dialog",
+        "note-editing",
+        "ui-dialog",
+        "bar-operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/ui/plugin_manager.slint",
+      "type": "file",
+      "name": "plugin_manager.slint",
+      "filePath": "crates/oxiguitar-app/ui/plugin_manager.slint",
+      "summary": "Slint UI definition for the plugin manager interface, allowing users to browse, enable, disable, and configure installed plugins.",
+      "tags": [
+        "slint-ui",
+        "plugin-manager",
+        "plugin-configuration",
+        "ui-dialog",
+        "plugin-listing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-app/ui/plugin_tab.slint",
+      "type": "file",
+      "name": "plugin_tab.slint",
+      "filePath": "crates/oxiguitar-app/ui/plugin_tab.slint",
+      "summary": "Slint UI definition for individual plugin tabs displayed within the main window, rendering plugin-provided content and handling user interactions.",
+      "tags": [
+        "slint-ui",
+        "plugin-tab",
+        "plugin-rendering",
+        "ui-component",
+        "tab-display"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:crates/oxiguitar-audio-cpal/src/lib.rs",
+      "type": "file",
+      "name": "lib.rs",
+      "filePath": "crates/oxiguitar-audio-cpal/src/lib.rs",
+      "summary": "CPAL-based audio backend library providing audio device enumeration, stream creation, and sample-level audio output for OxiGuitar's playback system.",
+      "tags": [
+        "audio-backend",
+        "cpal",
+        "stream-management",
+        "device-enumeration",
+        "sample-output"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:crates/oxiguitar-cli/src/convert.rs",
+      "type": "file",
+      "name": "convert.rs",
+      "filePath": "crates/oxiguitar-cli/src/convert.rs",
+      "summary": "Command-line utility for converting OxiGuitar song files between formats, handling file I/O, format detection, and batch conversion operations.",
+      "tags": [
+        "cli-utility",
+        "file-conversion",
+        "format-handling",
+        "batch-processing",
+        "file-io"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:crates/oxiguitar-audio-cpal/Cargo.toml",
+      "type": "config",
+      "name": "Cargo.toml",
+      "filePath": "crates/oxiguitar-audio-cpal/Cargo.toml",
+      "summary": "Rust package manifest for the oxiguitar-audio-cpal crate, defining CPAL-based audio backend dependencies, features, and build configuration.",
+      "tags": [
+        "rust-crate",
+        "audio-backend",
+        "cpal",
+        "dependency-config",
+        "build-config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:crates/oxiguitar-cli/Cargo.toml",
+      "type": "config",
+      "name": "Cargo.toml",
+      "filePath": "crates/oxiguitar-cli/Cargo.toml",
+      "summary": "Rust package manifest for the oxiguitar-cli crate, defining CLI tool dependencies, binary targets, and build configuration for the command-line interface.",
+      "tags": [
+        "rust-crate",
+        "cli-tool",
+        "binary-target",
+        "dependency-config",
+        "build-config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:shell_id",
+      "type": "function",
+      "name": "shell_id",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Converts a plugin TabId into a shell-compatible string identifier in the format plugin:{plugin}/{tab}.",
+      "tags": [
+        "plugin-ids",
+        "shell-integration",
+        "string-formatting",
+        "tab-identification"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:tab_of",
+      "type": "function",
+      "name": "tab_of",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Parses a shell string identifier back into a TabId, extracting the plugin name and tab name from the plugin:{plugin}/{tab} format.",
+      "tags": [
+        "plugin-ids",
+        "parsing",
+        "string-parsing",
+        "tab-identification"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:side_of",
+      "type": "function",
+      "name": "side_of",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Maps a plugin's Area enum variant (Top, Bottom, Left, Right) to the corresponding Shell Side enum variant.",
+      "tags": [
+        "area-mapping",
+        "side-conversion",
+        "plugin-interface",
+        "enum-conversion"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:add_to",
+      "type": "function",
+      "name": "add_to",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Registers all plugin tabs declared in manifests to their respective window areas, adding them after core tabs in plugin order without loading plugins.",
+      "tags": [
+        "tab-registration",
+        "plugin-discovery",
+        "shell-management",
+        "area-management"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:remove_from",
+      "type": "function",
+      "name": "remove_from",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Removes all tabs belonging to a withdrawn plugin from every window area, simulating the plugin never having been installed.",
+      "tags": [
+        "tab-removal",
+        "plugin-withdrawal",
+        "shell-management",
+        "area-cleanup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:theme",
+      "type": "function",
+      "name": "theme",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Creates a Theme with appropriate page colors for dark or light interface mode, using predefined theme constants as the base.",
+      "tags": [
+        "theming",
+        "color-management",
+        "dark-mode",
+        "theme-creation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:fitted",
+      "type": "function",
+      "name": "fitted",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Calculates the pixel dimensions for drawing a canvas to fill available room while maintaining proportions, bounded by MAX_CANVAS_PIXELS.",
+      "tags": [
+        "canvas-sizing",
+        "proportional-scaling",
+        "dimension-calculation",
+        "layout"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:draw",
+      "type": "function",
+      "name": "draw",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Renders a canvas widget from tab content into a premultiplied RGBA pixmap using the rasterizer, applying theme colors and font rendering.",
+      "tags": [
+        "canvas-rendering",
+        "rasterization",
+        "pixmap-generation",
+        "theme-colors"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:merge",
+      "type": "function",
+      "name": "merge",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Merges duplicate or superseded requests in a batch: replaces consecutive drags on the same widget with the latest, removes stale size requests, and deduplicates content requests.",
+      "tags": [
+        "request-merging",
+        "batch-processing",
+        "deduplication",
+        "optimization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Main event loop for the plugin tab thread, processing requests from the channel, batching them, merging duplicates, and dispatching to appropriate handlers.",
+      "tags": [
+        "event-loop",
+        "thread-lifecycle",
+        "request-processing",
+        "plugin-thread"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:answered",
+      "type": "function",
+      "name": "answered",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Processes a plugin's tab content response, drawing canvases at their current room sizes and sending the Answer back through the sink callback.",
+      "tags": [
+        "response-handling",
+        "canvas-drawing",
+        "callback-dispatch",
+        "tab-content"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:settings_window",
+      "type": "function",
+      "name": "settings_window",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Retrieves the settings window content for a plugin by ID, optionally processing a widget event, and validates it contains no canvases.",
+      "tags": [
+        "settings-management",
+        "plugin-interface",
+        "content-retrieval",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/plugin_tabs.rs:track_section",
+      "type": "function",
+      "name": "track_section",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Retrieves a plugin's track section for a given track, optionally processing a widget event, and validates it contains no canvases.",
+      "tags": [
+        "track-sections",
+        "plugin-interface",
+        "content-retrieval",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:crates/oxiguitar-app/src/plugin_tabs.rs:Request",
+      "type": "class",
+      "name": "Request",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Enum representing the window's requests to the plugin tab thread: content fetch, pointer events, canvas sizing, theme changes, settings windows, and track sections.",
+      "tags": [
+        "request-enum",
+        "thread-communication",
+        "event-types",
+        "plugin-interface"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:crates/oxiguitar-app/src/plugin_tabs.rs:Answer",
+      "type": "class",
+      "name": "Answer",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Enum representing the tab thread's responses to the window: tab content with canvases, individual canvas redraws, settings window content, and track section content.",
+      "tags": [
+        "response-enum",
+        "thread-communication",
+        "answer-types",
+        "plugin-interface"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:crates/oxiguitar-app/src/plugin_tabs.rs:Drawn",
+      "type": "class",
+      "name": "Drawn",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Data structure holding a rendered canvas's widget name, dimensions, and premultiplied RGBA pixel data.",
+      "tags": [
+        "render-result",
+        "canvas-data",
+        "pixmap-storage",
+        "drawn-content"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:crates/oxiguitar-app/src/plugin_tabs.rs:TabThread",
+      "type": "class",
+      "name": "TabThread",
+      "filePath": "crates/oxiguitar-app/src/plugin_tabs.rs",
+      "summary": "Manages the plugin tab thread lifecycle: starting the thread with plugins and dark mode setting, sending requests via channel, and joining on drop.",
+      "tags": [
+        "thread-management",
+        "lifecycle",
+        "channel-communication",
+        "resource-cleanup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-audio-cpal/src/lib.rs:init",
+      "type": "function",
+      "name": "init",
+      "filePath": "crates/oxiguitar-audio-cpal/src/lib.rs",
+      "summary": "Initializes the CPAL audio backend, enumerating available audio devices and preparing the stream configuration.",
+      "tags": [
+        "audio-init",
+        "device-enumeration",
+        "backend-setup",
+        "stream-config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-audio-cpal/src/lib.rs:play",
+      "type": "function",
+      "name": "play",
+      "filePath": "crates/oxiguitar-audio-cpal/src/lib.rs",
+      "summary": "Starts audio playback by creating and launching a CPAL audio stream with the configured callback.",
+      "tags": [
+        "audio-playback",
+        "stream-start",
+        "callback-setup",
+        "cpal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/convert.rs:convert",
+      "type": "function",
+      "name": "convert",
+      "filePath": "crates/oxiguitar-cli/src/convert.rs",
+      "summary": "Converts an OxiGuitar song file from one format to another, handling format detection and data transformation.",
+      "tags": [
+        "file-conversion",
+        "format-handling",
+        "cli-utility",
+        "data-transform"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-cli/src/convert.rs:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "crates/oxiguitar-cli/src/convert.rs",
+      "summary": "Entry point for the CLI convert command, parsing arguments and delegating to the convert function.",
+      "tags": [
+        "cli-entry",
+        "argument-parsing",
+        "command-dispatch",
+        "cli-utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/main.rs:App",
+      "type": "struct",
+      "name": "App",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Core application state struct holding the Slint AppWindow reference, shared state, plugin system, and all subsystem handles for the main GUI window.",
+      "tags": [
+        "app-state",
+        "gui-core",
+        "main-struct",
+        "slint-integration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "enum:crates/oxiguitar-app/src/main.rs:Asked",
+      "type": "enum",
+      "name": "Asked",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Enum representing the window's questions to the plugin tab thread: content fetch, pointer events, canvas sizing, theme changes, settings windows, and track sections.",
+      "tags": [
+        "asked-enum",
+        "thread-communication",
+        "question-types",
+        "plugin-interface"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "enum:crates/oxiguitar-app/src/main.rs:Then",
+      "type": "enum",
+      "name": "Then",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Enum representing the actions to take after a plugin tab thread response is received: update content, redraw canvas, update settings, update track section.",
+      "tags": [
+        "then-enum",
+        "post-response",
+        "action-types",
+        "plugin-interface"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/main.rs:PluginTabState",
+      "type": "struct",
+      "name": "PluginTabState",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Holds the state for a single plugin tab: its TabId, current content, canvas mappings, and pending operations.",
+      "tags": [
+        "plugin-tab-state",
+        "tab-management",
+        "content-tracking",
+        "plugin-interface"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/main.rs:PluginView",
+      "type": "struct",
+      "name": "PluginView",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Wraps a Slint component for a plugin tab, managing its lifecycle and rendering within the shell area.",
+      "tags": [
+        "plugin-view",
+        "slint-component",
+        "tab-rendering",
+        "plugin-interface"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/main.rs:WindowCore",
+      "type": "struct",
+      "name": "WindowCore",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Core window state shared between the main thread and plugin tab thread, containing the shared application state and plugin tab channel.",
+      "tags": [
+        "window-core",
+        "shared-state",
+        "thread-communication",
+        "plugin-interface"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/worker.rs:State",
+      "type": "struct",
+      "name": "State",
+      "filePath": "crates/oxiguitar-app/src/worker.rs",
+      "summary": "Engraving worker state holding the current score, track shapes, caret position, and all data needed for score rendering and layout.",
+      "tags": [
+        "worker-state",
+        "engraving",
+        "score-data",
+        "rendering-state"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/player.rs:Asked",
+      "type": "struct",
+      "name": "Asked",
+      "filePath": "crates/oxiguitar-app/src/player.rs",
+      "summary": "Request struct sent to the player engine: score data, revision number, and whether the score is fresh (never seen before).",
+      "tags": [
+        "player-request",
+        "score-data",
+        "thread-communication",
+        "audio-engine"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/speed.rs:Times",
+      "type": "struct",
+      "name": "Times",
+      "filePath": "crates/oxiguitar-app/src/speed.rs",
+      "summary": "Tracks timing data for the speed test: receiver for events, start time, and elapsed duration measurements.",
+      "tags": [
+        "timing-data",
+        "speed-test",
+        "benchmark",
+        "duration-tracking"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/sound.rs:Keeper",
+      "type": "struct",
+      "name": "Keeper",
+      "filePath": "crates/oxiguitar-app/src/sound.rs",
+      "summary": "RAII guard that keeps an audio device stream open, implementing Drop to properly close the stream on cleanup.",
+      "tags": [
+        "raii-guard",
+        "audio-stream",
+        "device-keeper",
+        "resource-cleanup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/sound.rs:Thread",
+      "type": "struct",
+      "name": "Thread",
+      "filePath": "crates/oxiguitar-app/src/sound.rs",
+      "summary": "Sound thread state managing the audio output device, score playback, and the receiver channel for sound commands.",
+      "tags": [
+        "sound-thread",
+        "audio-output",
+        "thread-state",
+        "device-management"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "struct:crates/oxiguitar-app/src/test_support.rs:Recorder",
+      "type": "struct",
+      "name": "Recorder",
+      "filePath": "crates/oxiguitar-app/src/test_support.rs",
+      "summary": "Test plugin recorder implementing oxiguitar_host::Core, capturing plugin notifications and redraw events for test verification.",
+      "tags": [
+        "test-recorder",
+        "mock-plugin",
+        "test-infrastructure",
+        "notification-capture"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/main.rs:plugin_withdrawn",
+      "type": "function",
+      "name": "plugin_withdrawn",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Removes a withdrawn plugin's tabs from the window and cleans up its state.",
+      "tags": [
+        "plugin-withdrawal",
+        "tab-cleanup",
+        "state-management"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/main.rs:display_system",
+      "type": "function",
+      "name": "display_system",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Returns the display system string (x11, wayland, or headless) for the current build.",
+      "tags": [
+        "display-system",
+        "build-config",
+        "platform-info"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/main.rs:sync_footer",
+      "type": "function",
+      "name": "sync_footer",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Synchronizes the footer message display with the current application state.",
+      "tags": [
+        "footer-sync",
+        "ui-update",
+        "message-display"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/main.rs:sync_shell",
+      "type": "function",
+      "name": "sync_shell",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Synchronizes the shell window state with the current application data.",
+      "tags": [
+        "shell-sync",
+        "ui-update",
+        "window-state"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/main.rs:sync_toolbar",
+      "type": "function",
+      "name": "sync_toolbar",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Synchronizes the toolbar state with the current application data.",
+      "tags": [
+        "toolbar-sync",
+        "ui-update",
+        "toolbar-state"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/main.rs:sync_areas",
+      "type": "function",
+      "name": "sync_areas",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Synchronizes the window areas (tabs, sections) with the current application data.",
+      "tags": [
+        "area-sync",
+        "ui-update",
+        "tab-management"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/worker.rs:save",
+      "type": "function",
+      "name": "save",
+      "filePath": "crates/oxiguitar-app/src/worker.rs",
+      "summary": "Saves the current score to disk, optionally prompting the user if the file has changed.",
+      "tags": [
+        "save",
+        "file-io",
+        "score-persistence"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/worker.rs:engrave",
+      "type": "function",
+      "name": "engrave",
+      "filePath": "crates/oxiguitar-app/src/worker.rs",
+      "summary": "Runs the engraving process on the current score, producing the visual layout for display.",
+      "tags": [
+        "engraving",
+        "score-rendering",
+        "layout"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/worker.rs:was",
+      "type": "function",
+      "name": "was",
+      "filePath": "crates/oxiguitar-app/src/worker.rs",
+      "summary": "Compares two slices and returns which elements have changed, used to detect track reordering.",
+      "tags": [
+        "comparison",
+        "change-detection",
+        "track-tracking"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/worker.rs:changed_score",
+      "type": "function",
+      "name": "changed_score",
+      "filePath": "crates/oxiguitar-app/src/worker.rs",
+      "summary": "Checks if the score has changed and triggers re-engraving if needed.",
+      "tags": [
+        "change-detection",
+        "score-tracking",
+        "engraving-trigger"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/player.rs:track_mix",
+      "type": "function",
+      "name": "track_mix",
+      "filePath": "crates/oxiguitar-app/src/player.rs",
+      "summary": "Converts a TrackMix to the player's internal mix representation.",
+      "tags": [
+        "mix-conversion",
+        "track-mix",
+        "audio-mixing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/main.rs:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "crates/oxiguitar-app/src/main.rs",
+      "summary": "Entry point for the OxiGuitar application, initializing the Slint UI and starting the event loop.",
+      "tags": [
+        "entry-point",
+        "main-function",
+        "event-loop"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/worker.rs:run_worker",
+      "type": "function",
+      "name": "run_worker",
+      "filePath": "crates/oxiguitar-app/src/worker.rs",
+      "summary": "Main worker loop that processes engraving tasks and manages the rendering pipeline.",
+      "tags": [
+        "worker-loop",
+        "engraving",
+        "task-processing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/player.rs:start",
+      "type": "function",
+      "name": "start",
+      "filePath": "crates/oxiguitar-app/src/player.rs",
+      "summary": "Starts audio playback from the current position.",
+      "tags": [
+        "playback",
+        "start",
+        "audio"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/player.rs:stop",
+      "type": "function",
+      "name": "stop",
+      "filePath": "crates/oxiguitar-app/src/player.rs",
+      "summary": "Stops audio playback and resets the playback position.",
+      "tags": [
+        "playback",
+        "stop",
+        "audio"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/player.rs:seek",
+      "type": "function",
+      "name": "seek",
+      "filePath": "crates/oxiguitar-app/src/player.rs",
+      "summary": "Seeks to a specific position in the song during playback.",
+      "tags": [
+        "playback",
+        "seek",
+        "positioning"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/shell.rs:area",
+      "type": "function",
+      "name": "area",
+      "filePath": "crates/oxiguitar-app/src/shell.rs",
+      "summary": "Returns a reference to a shell area by its identifier.",
+      "tags": [
+        "shell",
+        "area-access",
+        "lookup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/shell.rs:area_mut",
+      "type": "function",
+      "name": "area_mut",
+      "filePath": "crates/oxiguitar-app/src/shell.rs",
+      "summary": "Returns a mutable reference to a shell area by its identifier.",
+      "tags": [
+        "shell",
+        "area-mutation",
+        "lookup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/palette.rs:get",
+      "type": "function",
+      "name": "get",
+      "filePath": "crates/oxiguitar-app/src/palette.rs",
+      "summary": "Retrieves a color from the palette by name.",
+      "tags": [
+        "palette",
+        "color-lookup",
+        "color-retrieval"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/palette.rs:resolve",
+      "type": "function",
+      "name": "resolve",
+      "filePath": "crates/oxiguitar-app/src/palette.rs",
+      "summary": "Resolves a color from the palette, applying theme adjustments.",
+      "tags": [
+        "palette",
+        "color-resolution",
+        "theming"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/tracks.rs:add",
+      "type": "function",
+      "name": "add",
+      "filePath": "crates/oxiguitar-app/src/tracks.rs",
+      "summary": "Adds a new track to the song.",
+      "tags": [
+        "tracks",
+        "track-creation",
+        "addition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/tracks.rs:remove",
+      "type": "function",
+      "name": "remove",
+      "filePath": "crates/oxiguitar-app/src/tracks.rs",
+      "summary": "Removes a track from the song by index.",
+      "tags": [
+        "tracks",
+        "track-removal",
+        "deletion"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/tracks.rs:get",
+      "type": "function",
+      "name": "get",
+      "filePath": "crates/oxiguitar-app/src/tracks.rs",
+      "summary": "Retrieves a track by index.",
+      "tags": [
+        "tracks",
+        "track-access",
+        "lookup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/playing.rs:is_playing",
+      "type": "function",
+      "name": "is_playing",
+      "filePath": "crates/oxiguitar-app/src/playing.rs",
+      "summary": "Returns whether the song is currently playing.",
+      "tags": [
+        "playback-state",
+        "state-check",
+        "is-playing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/playing.rs:position",
+      "type": "function",
+      "name": "position",
+      "filePath": "crates/oxiguitar-app/src/playing.rs",
+      "summary": "Returns the current playback position.",
+      "tags": [
+        "playback-state",
+        "position",
+        "cursor"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/sound.rs:play_note",
+      "type": "function",
+      "name": "play_note",
+      "filePath": "crates/oxiguitar-app/src/sound.rs",
+      "summary": "Plays a single note on the audio output.",
+      "tags": [
+        "sound",
+        "note-playback",
+        "audio"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/sound.rs:stop",
+      "type": "function",
+      "name": "stop",
+      "filePath": "crates/oxiguitar-app/src/sound.rs",
+      "summary": "Stops all sound output.",
+      "tags": [
+        "sound",
+        "stop",
+        "audio"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/speed.rs:get_bpm",
+      "type": "function",
+      "name": "get_bpm",
+      "filePath": "crates/oxiguitar-app/src/speed.rs",
+      "summary": "Returns the current BPM (beats per minute).",
+      "tags": [
+        "tempo",
+        "bpm",
+        "query"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/speed.rs:set_bpm",
+      "type": "function",
+      "name": "set_bpm",
+      "filePath": "crates/oxiguitar-app/src/speed.rs",
+      "summary": "Sets the BPM (beats per minute) for playback.",
+      "tags": [
+        "tempo",
+        "bpm",
+        "mutation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/song.rs:new",
+      "type": "function",
+      "name": "new",
+      "filePath": "crates/oxiguitar-app/src/song.rs",
+      "summary": "Creates a new empty song.",
+      "tags": [
+        "song",
+        "construction",
+        "factory"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/song.rs:tracks",
+      "type": "function",
+      "name": "tracks",
+      "filePath": "crates/oxiguitar-app/src/song.rs",
+      "summary": "Returns a reference to the song's tracks.",
+      "tags": [
+        "song",
+        "track-access",
+        "query"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/prefs.rs:load",
+      "type": "function",
+      "name": "load",
+      "filePath": "crates/oxiguitar-app/src/prefs.rs",
+      "summary": "Loads application preferences from disk.",
+      "tags": [
+        "preferences",
+        "loading",
+        "persistence"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/prefs.rs:save",
+      "type": "function",
+      "name": "save",
+      "filePath": "crates/oxiguitar-app/src/prefs.rs",
+      "summary": "Saves application preferences to disk.",
+      "tags": [
+        "preferences",
+        "saving",
+        "persistence"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/track_form.rs:render",
+      "type": "function",
+      "name": "render",
+      "filePath": "crates/oxiguitar-app/src/track_form.rs",
+      "summary": "Renders the track form UI for editing track properties.",
+      "tags": [
+        "track-form",
+        "rendering",
+        "ui"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/track_form.rs:handle_event",
+      "type": "function",
+      "name": "handle_event",
+      "filePath": "crates/oxiguitar-app/src/track_form.rs",
+      "summary": "Handles user events on the track form.",
+      "tags": [
+        "track-form",
+        "event-handling",
+        "ui"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/track_sections.rs:sections",
+      "type": "function",
+      "name": "sections",
+      "filePath": "crates/oxiguitar-app/src/track_sections.rs",
+      "summary": "Returns the song sections for a track.",
+      "tags": [
+        "track-sections",
+        "section-access",
+        "query"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/track_sections.rs:add_section",
+      "type": "function",
+      "name": "add_section",
+      "filePath": "crates/oxiguitar-app/src/track_sections.rs",
+      "summary": "Adds a new section to a track.",
+      "tags": [
+        "track-sections",
+        "section-creation",
+        "addition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/manager.rs:new",
+      "type": "function",
+      "name": "new",
+      "filePath": "crates/oxiguitar-app/src/manager.rs",
+      "summary": "Creates a new application manager instance.",
+      "tags": [
+        "manager",
+        "construction",
+        "factory"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/manager.rs:update",
+      "type": "function",
+      "name": "update",
+      "filePath": "crates/oxiguitar-app/src/manager.rs",
+      "summary": "Updates the manager state in response to an event.",
+      "tags": [
+        "manager",
+        "state-update",
+        "event-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/links.rs:resolve",
+      "type": "function",
+      "name": "resolve",
+      "filePath": "crates/oxiguitar-app/src/links.rs",
+      "summary": "Resolves which strings and frets are involved in a chord or note passage.",
+      "tags": [
+        "links",
+        "resolution",
+        "fret-logic"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/links.rs:get_frets",
+      "type": "function",
+      "name": "get_frets",
+      "filePath": "crates/oxiguitar-app/src/links.rs",
+      "summary": "Returns the frets for a given string and chord shape.",
+      "tags": [
+        "links",
+        "fret-lookup",
+        "guitar"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:crates/oxiguitar-app/src/test_support.rs:tab_host",
+      "type": "function",
+      "name": "tab_host",
+      "filePath": "crates/oxiguitar-app/src/test_support.rs",
+      "summary": "Creates a test plugin host for use in unit tests.",
+      "tags": [
+        "testing",
+        "test-fixture",
+        "plugin-host"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:shell_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:tab_of",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:side_of",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:add_to",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:remove_from",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:theme",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:fitted",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:draw",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:merge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:answered",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:settings_window",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "function:crates/oxiguitar-app/src/plugin_tabs.rs:track_section",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "class:crates/oxiguitar-app/src/plugin_tabs.rs:Request",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "class:crates/oxiguitar-app/src/plugin_tabs.rs:Answer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "class:crates/oxiguitar-app/src/plugin_tabs.rs:Drawn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/plugin_tabs.rs",
+      "target": "class:crates/oxiguitar-app/src/plugin_tabs.rs:TabThread",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "function:crates/oxiguitar-app/src/main.rs:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/worker.rs",
+      "target": "function:crates/oxiguitar-app/src/worker.rs:run_worker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/player.rs",
+      "target": "function:crates/oxiguitar-app/src/player.rs:start",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/player.rs",
+      "target": "function:crates/oxiguitar-app/src/player.rs:stop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/player.rs",
+      "target": "function:crates/oxiguitar-app/src/player.rs:seek",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/shell.rs",
+      "target": "function:crates/oxiguitar-app/src/shell.rs:area",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/shell.rs",
+      "target": "function:crates/oxiguitar-app/src/shell.rs:area_mut",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/palette.rs",
+      "target": "function:crates/oxiguitar-app/src/palette.rs:get",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/palette.rs",
+      "target": "function:crates/oxiguitar-app/src/palette.rs:resolve",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/tracks.rs",
+      "target": "function:crates/oxiguitar-app/src/tracks.rs:add",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/tracks.rs",
+      "target": "function:crates/oxiguitar-app/src/tracks.rs:remove",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/tracks.rs",
+      "target": "function:crates/oxiguitar-app/src/tracks.rs:get",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/playing.rs",
+      "target": "function:crates/oxiguitar-app/src/playing.rs:is_playing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/playing.rs",
+      "target": "function:crates/oxiguitar-app/src/playing.rs:position",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/sound.rs",
+      "target": "function:crates/oxiguitar-app/src/sound.rs:play_note",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/sound.rs",
+      "target": "function:crates/oxiguitar-app/src/sound.rs:stop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/speed.rs",
+      "target": "function:crates/oxiguitar-app/src/speed.rs:get_bpm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/speed.rs",
+      "target": "function:crates/oxiguitar-app/src/speed.rs:set_bpm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/song.rs",
+      "target": "function:crates/oxiguitar-app/src/song.rs:new",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/song.rs",
+      "target": "function:crates/oxiguitar-app/src/song.rs:tracks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/prefs.rs",
+      "target": "function:crates/oxiguitar-app/src/prefs.rs:load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/prefs.rs",
+      "target": "function:crates/oxiguitar-app/src/prefs.rs:save",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/track_form.rs",
+      "target": "function:crates/oxiguitar-app/src/track_form.rs:render",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/track_form.rs",
+      "target": "function:crates/oxiguitar-app/src/track_form.rs:handle_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/track_sections.rs",
+      "target": "function:crates/oxiguitar-app/src/track_sections.rs:sections",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/track_sections.rs",
+      "target": "function:crates/oxiguitar-app/src/track_sections.rs:add_section",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/manager.rs",
+      "target": "function:crates/oxiguitar-app/src/manager.rs:new",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/manager.rs",
+      "target": "function:crates/oxiguitar-app/src/manager.rs:update",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/links.rs",
+      "target": "function:crates/oxiguitar-app/src/links.rs:resolve",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/links.rs",
+      "target": "function:crates/oxiguitar-app/src/links.rs:get_frets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/test_support.rs",
+      "target": "function:crates/oxiguitar-app/src/test_support.rs:tab_host",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-audio-cpal/src/lib.rs",
+      "target": "function:crates/oxiguitar-audio-cpal/src/lib.rs:init",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-audio-cpal/src/lib.rs",
+      "target": "function:crates/oxiguitar-audio-cpal/src/lib.rs:play",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/convert.rs",
+      "target": "function:crates/oxiguitar-cli/src/convert.rs:convert",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-cli/src/convert.rs",
+      "target": "function:crates/oxiguitar-cli/src/convert.rs:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:crates/oxiguitar-audio-cpal/Cargo.toml",
+      "target": "file:crates/oxiguitar-audio-cpal/src/lib.rs",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:crates/oxiguitar-cli/Cargo.toml",
+      "target": "file:crates/oxiguitar-cli/src/convert.rs",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "struct:crates/oxiguitar-app/src/main.rs:App",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "enum:crates/oxiguitar-app/src/main.rs:Asked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "enum:crates/oxiguitar-app/src/main.rs:Then",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "struct:crates/oxiguitar-app/src/main.rs:PluginTabState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "struct:crates/oxiguitar-app/src/main.rs:PluginView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "struct:crates/oxiguitar-app/src/main.rs:WindowCore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "function:crates/oxiguitar-app/src/main.rs:plugin_withdrawn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "function:crates/oxiguitar-app/src/main.rs:display_system",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "function:crates/oxiguitar-app/src/main.rs:sync_footer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "function:crates/oxiguitar-app/src/main.rs:sync_shell",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "function:crates/oxiguitar-app/src/main.rs:sync_toolbar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/main.rs",
+      "target": "function:crates/oxiguitar-app/src/main.rs:sync_areas",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/worker.rs",
+      "target": "struct:crates/oxiguitar-app/src/worker.rs:State",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/worker.rs",
+      "target": "function:crates/oxiguitar-app/src/worker.rs:save",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/worker.rs",
+      "target": "function:crates/oxiguitar-app/src/worker.rs:engrave",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/worker.rs",
+      "target": "function:crates/oxiguitar-app/src/worker.rs:was",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/worker.rs",
+      "target": "function:crates/oxiguitar-app/src/worker.rs:changed_score",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/player.rs",
+      "target": "struct:crates/oxiguitar-app/src/player.rs:Asked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/player.rs",
+      "target": "function:crates/oxiguitar-app/src/player.rs:track_mix",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/speed.rs",
+      "target": "struct:crates/oxiguitar-app/src/speed.rs:Times",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/sound.rs",
+      "target": "struct:crates/oxiguitar-app/src/sound.rs:Keeper",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/sound.rs",
+      "target": "struct:crates/oxiguitar-app/src/sound.rs:Thread",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:crates/oxiguitar-app/src/test_support.rs",
+      "target": "struct:crates/oxiguitar-app/src/test_support.rs:Recorder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

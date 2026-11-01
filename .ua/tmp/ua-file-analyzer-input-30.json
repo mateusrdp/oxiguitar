@@ -1,0 +1,32 @@
+{
+  "projectRoot": "/home/mat/Documents/src/oxiguitar",
+  "batchFiles": [
+    {"path": "fixtures/reference/articulations.gp", "language": "gp", "sizeLines": 3, "fileCategory": "code"},
+    {"path": "fixtures/reference/bass.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/reference/beams-and-flags.gp", "language": "gp", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/reference/beat-text.gp", "language": "gp", "sizeLines": 5, "fileCategory": "code"},
+    {"path": "fixtures/reference/bends.gp", "language": "gp", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/reference/chord-names.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/reference/chords-and-accidentals.gp", "language": "gp", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/reference/dark-page.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/reference/dead-ghost-palm-mute.gp", "language": "gp", "sizeLines": 3, "fileCategory": "code"},
+    {"path": "fixtures/reference/dots-and-ties.gp", "language": "gp", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/reference/drop-d-and-capo.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/reference/drums.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/reference/dynamics-hidden.gp", "language": "gp", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/reference/dynamics.gp", "language": "gp", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/reference/effects-together.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/reference/eight-tracks.gp", "language": "gp", "sizeLines": 27, "fileCategory": "code"},
+    {"path": "fixtures/reference/empty-bars.gp", "language": "gp", "sizeLines": 4, "fileCategory": "code"},
+    {"path": "fixtures/reference/four-voices.gp", "language": "gp", "sizeLines": 13, "fileCategory": "code"},
+    {"path": "fixtures/reference/grace-notes.gp", "language": "gp", "sizeLines": 11, "fileCategory": "code"},
+    {"path": "fixtures/reference/hammer-on-pull-off.gp", "language": "gp", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/reference/harmonics.gp", "language": "gp", "sizeLines": 7, "fileCategory": "code"},
+    {"path": "fixtures/reference/header-and-credits.gp", "language": "gp", "sizeLines": 8, "fileCategory": "code"},
+    {"path": "fixtures/reference/key-signatures.gp", "language": "gp", "sizeLines": 8, "fileCategory": "code"},
+    {"path": "fixtures/reference/layout-horizontal.gp", "language": "gp", "sizeLines": 9, "fileCategory": "code"},
+    {"path": "fixtures/reference/layout-parchment.gp", "language": "gp", "sizeLines": 30, "fileCategory": "code"}
+  ],
+  "batchImportData": {},
+  "neighborMap": {}
+}

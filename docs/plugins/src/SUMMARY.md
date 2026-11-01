@@ -14,6 +14,8 @@
 - [Instruments](instruments.md)
 - [Settings](settings.md)
 - [Track sections](track-sections.md)
+- [Exporters](exporters.md)
+- [Advice](advice.md)
 - [Testing](testing.md)
 - [Building for every system](building.md)
 - [Installing and sharing](installing.md)

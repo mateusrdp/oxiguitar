@@ -13,7 +13,7 @@ Four things in it matter to OxiGuitar:
 - **The `oxp` feature.** `export_plugin!` exports the entry point and the manifest's section only with it, so the same crate is an ordinary library for `cargo test` and a plugin file when built with `--features oxp --crate-type cdylib`. Without the feature in `Cargo.toml`, that build fails with "does not have the feature `oxp`".
 - **`unsafe_code = "deny"`**, not `"forbid"`: the two attributes `export_plugin!` generates (`#[unsafe(no_mangle)]` and `#[unsafe(link_section)]`) need `unsafe`, and allow it for themselves only. You write no `unsafe` code.
 - **`panic = "unwind"`**, Rust's default. A panic in a call is then caught, and the plugin is withdrawn for the rest of the session while OxiGuitar carries on; with `panic = "abort"` it closes OxiGuitar.
-- **The SDK's tag**: `v0.9.0`, the release of OxiGuitar you build for; it has interface 1.3. A plugin loads in every OxiGuitar that has the interface version its manifest asks for, and in every later one: 0.2 and later for 1.0 and 1.1, 0.5 and later for 1.2, 0.9 and later for 1.3 ([Interface versions](versions.md)).
+- **The SDK's tag**: `v0.11.0`, the release of OxiGuitar you build for; it has interface 1.4, frozen with it (the SDK crates are at version 1.4.0, which follows the interface, not the program). A plugin loads in every OxiGuitar that has the interface version its manifest asks for, and in every later one: 0.2 and later for 1.0 and 1.1, 0.5 and later for 1.2, 0.9 and later for 1.3, 0.11 and later for 1.4 ([Interface versions](versions.md)).
 
 ## The plugin
 
@@ -59,6 +59,7 @@ and takes the lock only to read or change `State`.
 | `score2()`, `apply(revision, name, score)` | The open score version 2 with its revision, and a change to it the user can undo ([Tools](tools.md)) | 1.2 |
 | `notify_with_link(level, text, link_text, url)` | A footer message ending with a link that opens `url` in the browser; only `https:` addresses are shown | 1.3 |
 | `folders()` | The plugin's own data and cache folders and the shared folders its manifest lists ([Settings](settings.md)) | 1.3 |
+| `advise(advice)` | Asks the core to show a dialog with a title, a text and up to three links, once the window is up, with a "Don't show this again" box ([Advice](advice.md)) | 1.4 |
 
 `Host::detached()` answers like a host with no window, no settings and no services: for unit tests.
 

@@ -1,0 +1,649 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 2,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 2,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 2,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": [
+    {
+      "path": "crates/oxiguitar-testgen/src/big.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 302,
+      "nonEmptyLines": 278,
+      "functions": [
+        {
+          "name": "next",
+          "startLine": 16,
+          "endLine": 21,
+          "params": []
+        },
+        {
+          "name": "below",
+          "startLine": 22,
+          "endLine": 24,
+          "params": [
+            "n"
+          ]
+        },
+        {
+          "name": "chance",
+          "startLine": 25,
+          "endLine": 27,
+          "params": [
+            "percent"
+          ]
+        },
+        {
+          "name": "band_song",
+          "startLine": 46,
+          "endLine": 247,
+          "params": [
+            "bars"
+          ]
+        },
+        {
+          "name": "chord_shape",
+          "startLine": 250,
+          "endLine": 261,
+          "params": [
+            "frets"
+          ]
+        },
+        {
+          "name": "arpeggio_fret",
+          "startLine": 264,
+          "endLine": 271,
+          "params": [
+            "frets",
+            "string"
+          ]
+        },
+        {
+          "name": "midi_name",
+          "startLine": 274,
+          "endLine": 283,
+          "params": [
+            "midi"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Rng",
+          "startLine": 13,
+          "endLine": 13,
+          "methods": [
+            "next",
+            "below",
+            "chance"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "band_song",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "midi_name",
+          "line": 274,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "below",
+          "callee": "self.next",
+          "lineNumber": 23
+        },
+        {
+          "caller": "chance",
+          "callee": "self.next",
+          "lineNumber": 26
+        },
+        {
+          "caller": "band_song",
+          "callee": "Song::new",
+          "lineNumber": 47
+        },
+        {
+          "caller": "band_song",
+          "callee": "\"The OxiGuitar contributors\".to_owned",
+          "lineNumber": 48
+        },
+        {
+          "caller": "band_song",
+          "callee": "\"Generated test scores\".to_owned",
+          "lineNumber": 49
+        },
+        {
+          "caller": "band_song",
+          "callee": "\"OxiGuitar\".to_owned",
+          "lineNumber": 50
+        },
+        {
+          "caller": "band_song",
+          "callee": "\"OxiGuitar\".to_owned",
+          "lineNumber": 51
+        },
+        {
+          "caller": "band_song",
+          "callee": "\"oxiguitar-testgen\".to_owned",
+          "lineNumber": 52
+        },
+        {
+          "caller": "band_song",
+          "callee": "\"Moderato\".to_owned",
+          "lineNumber": 54
+        },
+        {
+          "caller": "band_song",
+          "callee": "song.key",
+          "lineNumber": 55
+        },
+        {
+          "caller": "band_song",
+          "callee": "song.bars.iter_mut().enumerate",
+          "lineNumber": 56
+        },
+        {
+          "caller": "band_song",
+          "callee": "song.bars.iter_mut",
+          "lineNumber": 56
+        },
+        {
+          "caller": "band_song",
+          "callee": "char::from(b'A' + (n % 26) as u8).to_string",
+          "lineNumber": 59
+        },
+        {
+          "caller": "band_song",
+          "callee": "char::from",
+          "lineNumber": 59
+        },
+        {
+          "caller": "band_song",
+          "callee": "Some",
+          "lineNumber": 61
+        },
+        {
+          "caller": "band_song",
+          "callee": "text.to_owned",
+          "lineNumber": 61
+        },
+        {
+          "caller": "band_song",
+          "callee": "Some",
+          "lineNumber": 68
+        },
+        {
+          "caller": "band_song",
+          "callee": "mb.clone",
+          "lineNumber": 69
+        },
+        {
+          "caller": "band_song",
+          "callee": "song.tempo_changes.push",
+          "lineNumber": 74
+        },
+        {
+          "caller": "band_song",
+          "callee": "Rng",
+          "lineNumber": 77
+        },
+        {
+          "caller": "band_song",
+          "callee": "CHORDS.len",
+          "lineNumber": 78
+        },
+        {
+          "caller": "band_song",
+          "callee": "Track::new",
+          "lineNumber": 80
+        },
+        {
+          "caller": "band_song",
+          "callee": "Kind::guitar",
+          "lineNumber": 80
+        },
+        {
+          "caller": "band_song",
+          "callee": "Track::new",
+          "lineNumber": 81
+        },
+        {
+          "caller": "band_song",
+          "callee": "Kind::guitar",
+          "lineNumber": 81
+        },
+        {
+          "caller": "band_song",
+          "callee": "rhythm.chord",
+          "lineNumber": 83
+        },
+        {
+          "caller": "band_song",
+          "callee": "Diagram::new",
+          "lineNumber": 83
+        },
+        {
+          "caller": "band_song",
+          "callee": "Track::new",
+          "lineNumber": 85
+        },
+        {
+          "caller": "band_song",
+          "callee": "Kind::acoustic",
+          "lineNumber": 85
+        },
+        {
+          "caller": "band_song",
+          "callee": "acoustic.notation",
+          "lineNumber": 86
+        },
+        {
+          "caller": "band_song",
+          "callee": "Track::new",
+          "lineNumber": 87
+        },
+        {
+          "caller": "band_song",
+          "callee": "Kind::bass",
+          "lineNumber": 87
+        },
+        {
+          "caller": "band_song",
+          "callee": "Track::new",
+          "lineNumber": 88
+        },
+        {
+          "caller": "band_song",
+          "callee": "Kind::piano",
+          "lineNumber": 88
+        },
+        {
+          "caller": "band_song",
+          "callee": "Track::new",
+          "lineNumber": 89
+        },
+        {
+          "caller": "band_song",
+          "callee": "Track::new",
+          "lineNumber": 97
+        },
+        {
+          "caller": "band_song",
+          "callee": "Track::new",
+          "lineNumber": 105
+        },
+        {
+          "caller": "band_song",
+          "callee": "Default::default",
+          "lineNumber": 123
+        },
+        {
+          "caller": "band_song",
+          "callee": "String::new",
+          "lineNumber": 126
+        },
+        {
+          "caller": "band_song",
+          "callee": "chord_of",
+          "lineNumber": 128
+        },
+        {
+          "caller": "band_song",
+          "callee": "CHORDS.iter().position(|c| c.0 == name).unwrap_or",
+          "lineNumber": 129
+        },
+        {
+          "caller": "band_song",
+          "callee": "CHORDS.iter().position",
+          "lineNumber": 129
+        },
+        {
+          "caller": "band_song",
+          "callee": "CHORDS.iter",
+          "lineNumber": 129
+        },
+        {
+          "caller": "band_song",
+          "callee": "t.push_str",
+          "lineNumber": 135
+        },
+        {
+          "caller": "band_song",
+          "callee": "l.push_str",
+          "lineNumber": 142
+        },
+        {
+          "caller": "band_song",
+          "callee": "(step + rng.below(5)).saturating_sub(2).min",
+          "lineNumber": 144
+        },
+        {
+          "caller": "band_song",
+          "callee": "(step + rng.below(5)).saturating_sub",
+          "lineNumber": 144
+        },
+        {
+          "caller": "band_song",
+          "callee": "rng.below",
+          "lineNumber": 144
+        },
+        {
+          "caller": "band_song",
+          "callee": "SCALE.len",
+          "lineNumber": 144
+        },
+        {
+          "caller": "band_song",
+          "callee": "rng.below",
+          "lineNumber": 146
+        },
+        {
+          "caller": "band_song",
+          "callee": "chord_shape",
+          "lineNumber": 160
+        },
+        {
+          "caller": "band_song",
+          "callee": "a.push",
+          "lineNumber": 169
+        },
+        {
+          "caller": "band_song",
+          "callee": "[6u8, 4, 3, 2, 1, 2, 3, 4].iter().enumerate",
+          "lineNumber": 170
+        },
+        {
+          "caller": "band_song",
+          "callee": "[6u8, 4, 3, 2, 1, 2, 3, 4].iter",
+          "lineNumber": 170
+        },
+        {
+          "caller": "band_song",
+          "callee": "arpeggio_fret",
+          "lineNumber": 171
+        },
+        {
+          "caller": "band_song",
+          "callee": "b.push",
+          "lineNumber": 177
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys.iter().map(|k| midi_name(k + 12)).collect",
+          "lineNumber": 188
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys.iter().map",
+          "lineNumber": 188
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys.iter",
+          "lineNumber": 188
+        },
+        {
+          "caller": "band_song",
+          "callee": "midi_name",
+          "lineNumber": 188
+        },
+        {
+          "caller": "band_song",
+          "callee": "midi_name",
+          "lineNumber": 190
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys\n            .iter()\n            .map(|k| format!(\"{tie}{}\", midi_name(*k))).collect",
+          "lineNumber": 195
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys\n            .iter().map",
+          "lineNumber": 195
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys.iter",
+          "lineNumber": 195
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys.iter().map(|k| midi_name(k + 12)).collect",
+          "lineNumber": 202
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys.iter().map",
+          "lineNumber": 202
+        },
+        {
+          "caller": "band_song",
+          "callee": "keys.iter",
+          "lineNumber": 202
+        },
+        {
+          "caller": "band_song",
+          "callee": "midi_name",
+          "lineNumber": 202
+        },
+        {
+          "caller": "band_song",
+          "callee": "lyric.push_str",
+          "lineNumber": 205
+        },
+        {
+          "caller": "band_song",
+          "callee": "lyric.push_str",
+          "lineNumber": 212
+        },
+        {
+          "caller": "band_song",
+          "callee": "d.push",
+          "lineNumber": 216
+        },
+        {
+          "caller": "band_song",
+          "callee": "hit.push",
+          "lineNumber": 223
+        },
+        {
+          "caller": "band_song",
+          "callee": "hit.push",
+          "lineNumber": 226
+        },
+        {
+          "caller": "band_song",
+          "callee": "rng.chance",
+          "lineNumber": 228
+        },
+        {
+          "caller": "band_song",
+          "callee": "hit.push",
+          "lineNumber": 229
+        },
+        {
+          "caller": "band_song",
+          "callee": "hit.dedup",
+          "lineNumber": 230
+        },
+        {
+          "caller": "band_song",
+          "callee": "lead.voice",
+          "lineNumber": 235
+        },
+        {
+          "caller": "band_song",
+          "callee": "rhythm.voice",
+          "lineNumber": 236
+        },
+        {
+          "caller": "band_song",
+          "callee": "acoustic.voice",
+          "lineNumber": 237
+        },
+        {
+          "caller": "band_song",
+          "callee": "bass.voice",
+          "lineNumber": 238
+        },
+        {
+          "caller": "band_song",
+          "callee": "piano.voice(0, p_rh).voice",
+          "lineNumber": 239
+        },
+        {
+          "caller": "band_song",
+          "callee": "piano.voice",
+          "lineNumber": 239
+        },
+        {
+          "caller": "band_song",
+          "callee": "strings.voice",
+          "lineNumber": 240
+        },
+        {
+          "caller": "band_song",
+          "callee": "voice.voice(0, v).lyrics",
+          "lineNumber": 241
+        },
+        {
+          "caller": "band_song",
+          "callee": "voice.voice",
+          "lineNumber": 241
+        },
+        {
+          "caller": "band_song",
+          "callee": "lyric.trim",
+          "lineNumber": 241
+        },
+        {
+          "caller": "band_song",
+          "callee": "drums.voice",
+          "lineNumber": 242
+        },
+        {
+          "caller": "band_song",
+          "callee": "song.track",
+          "lineNumber": 244
+        },
+        {
+          "caller": "chord_shape",
+          "callee": "frets.len",
+          "lineNumber": 251
+        },
+        {
+          "caller": "chord_shape",
+          "callee": "frets\n        .chars()\n        .enumerate()\n        .filter_map(|(i, c)| {\n            let f = c.to_digit(10)?;\n            Some(format!(\"{}:{f}\", n - i as u8))\n        })\n        .collect::<Vec<_>>().join",
+          "lineNumber": 252
+        },
+        {
+          "caller": "chord_shape",
+          "callee": "frets\n        .chars()\n        .enumerate()\n        .filter_map(|(i, c)| {\n            let f = c.to_digit(10)?;\n            Some(format!(\"{}:{f}\", n - i as u8))\n        })\n        .collect::<Vec<_>>",
+          "lineNumber": 252
+        },
+        {
+          "caller": "chord_shape",
+          "callee": "frets\n        .chars()\n        .enumerate().filter_map",
+          "lineNumber": 252
+        },
+        {
+          "caller": "chord_shape",
+          "callee": "frets\n        .chars().enumerate",
+          "lineNumber": 252
+        },
+        {
+          "caller": "chord_shape",
+          "callee": "frets.chars",
+          "lineNumber": 252
+        },
+        {
+          "caller": "chord_shape",
+          "callee": "c.to_digit",
+          "lineNumber": 256
+        },
+        {
+          "caller": "chord_shape",
+          "callee": "Some",
+          "lineNumber": 257
+        },
+        {
+          "caller": "arpeggio_fret",
+          "callee": "frets.len",
+          "lineNumber": 265
+        },
+        {
+          "caller": "arpeggio_fret",
+          "callee": "frets\n        .chars()\n        .nth(n - usize::from(string))\n        .and_then(|c| c.to_digit(10)).unwrap_or",
+          "lineNumber": 266
+        },
+        {
+          "caller": "arpeggio_fret",
+          "callee": "frets\n        .chars()\n        .nth(n - usize::from(string)).and_then",
+          "lineNumber": 266
+        },
+        {
+          "caller": "arpeggio_fret",
+          "callee": "frets\n        .chars().nth",
+          "lineNumber": 266
+        },
+        {
+          "caller": "arpeggio_fret",
+          "callee": "frets.chars",
+          "lineNumber": 266
+        },
+        {
+          "caller": "arpeggio_fret",
+          "callee": "usize::from",
+          "lineNumber": 268
+        },
+        {
+          "caller": "arpeggio_fret",
+          "callee": "c.to_digit",
+          "lineNumber": 269
+        },
+        {
+          "caller": "eight_full_tracks",
+          "callee": "band_song",
+          "lineNumber": 291
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 7,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "crates/oxiguitar-testgen/src/lib.rs",
+      "language": "rust",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 22,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

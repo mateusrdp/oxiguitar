@@ -192,6 +192,11 @@ impl OpenScore {
         s.revision = revision;
     }
 
+    /// The open score as it is now, shared.
+    pub(crate) fn score(&self) -> Option<Arc<Score>> {
+        self.lock().score.clone()
+    }
+
     /// Where the changes plugins hand back go: the worker's requests.
     pub(crate) fn connect(&self, edits: std::sync::mpsc::Sender<crate::worker::Request>) {
         self.lock().edits = Some(edits);
@@ -283,7 +288,8 @@ impl Document {
         })?;
         // What plugins keep per track lives beside the file (FILE.oxg).
         let sidecar_problem = match Sidecar::read_for(path) {
-            Ok(Some(sidecar)) => {
+            Ok(Some(mut sidecar)) => {
+                sidecar.adopt(&plugins.replaced_ids());
                 let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
                 let settled = sidecar.settle(&names);
                 for (track, plugins) in score.tracks.iter_mut().zip(settled) {

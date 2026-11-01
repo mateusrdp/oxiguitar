@@ -79,6 +79,13 @@ impl Settings {
                     .to_owned(),
             ),
         }
+        match self.values.get(crate::advice::KEY) {
+            None | Some(Value::Object(_)) => {}
+            Some(_) => out.push(
+                "settings.json: advice should be an object, such as {\"oxiguitar\": {\"no-format-plugin\": \"hidden\"}}; every dialog is shown again."
+                    .to_owned(),
+            ),
+        }
         out
     }
 
@@ -143,6 +150,24 @@ impl SharedSettings {
     /// save to). The error is one sentence for the footer.
     pub fn set(&self, key: &str, value: Value) -> Result<(), String> {
         let mut settings = self.lock();
+        settings.set(key, value);
+        match &self.path {
+            Some(path) => settings.save(path),
+            None => Ok(()),
+        }
+    }
+
+    /// Changes one key's value in one step, so two writers can't overwrite
+    /// each other's change, and saves settings.json (when there is one to
+    /// save to). `change` gets the key's value, if it has one. The error
+    /// is one sentence for the footer.
+    pub fn update(
+        &self,
+        key: &str,
+        change: impl FnOnce(Option<&Value>) -> Value,
+    ) -> Result<(), String> {
+        let mut settings = self.lock();
+        let value = change(settings.get(key));
         settings.set(key, value);
         match &self.path {
             Some(path) => settings.save(path),

@@ -13,7 +13,10 @@ use std::sync::{Arc, OnceLock};
 use oxiguitar_host::api::Blob;
 use oxiguitar_host::api::message::{Answer, ErrorKind, LogEntry, Request};
 use oxiguitar_host::{Plugins, SharedSettings, Unheard, Unrecognised};
-use oxiguitar_plugin_test::{OUR_DEVICES, OUR_INSTRUMENTS, OURS, build_devices, build_ours, check};
+use oxiguitar_plugin_test::{
+    OUR_DEVICES, OUR_EFFECTS, OUR_EXPORTERS, OUR_INSTRUMENTS, OURS, build_devices, build_ours,
+    check, check_with,
+};
 
 fn workspace() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -70,6 +73,164 @@ fn our_instruments_pass_the_contract() {
     }
 }
 
+/// The NAM plugin with a model in its `nam` folder: a host over a copy of
+/// it (a library loads once per process), and that folder.
+fn nam_plugins(tag: &str) -> (Plugins, PathBuf) {
+    nam_plugins_of(
+        &[
+            (ours().join("nam.oxp"), format!("nam-{tag}.oxp")),
+            (ours().join("midi.oxp"), "midi.oxp".into()),
+        ],
+        tag,
+    )
+}
+
+/// Like [`nam_plugins`], with the plugin files `files` (each copied under
+/// its new name) in the folder.
+fn nam_plugins_of(files: &[(PathBuf, String)], tag: &str) -> (Plugins, PathBuf) {
+    let scratch = std::env::temp_dir().join(format!("oxiguitar-nam-{tag}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&scratch);
+    let folder = scratch.join("plugins");
+    std::fs::create_dir_all(&folder).unwrap();
+    for (file, name) in files {
+        std::fs::copy(file, folder.join(name)).unwrap();
+    }
+    let home = scratch.join("home");
+    std::fs::create_dir_all(home.join("nam/Amps")).unwrap();
+    // The MIDI plugin NAM needs is checked too, and plays from a set.
+    std::fs::create_dir_all(home.join("soundfonts")).unwrap();
+    std::fs::write(
+        home.join("soundfonts/test-sine.sf2"),
+        oxiguitar_plugin_test::TEST_SET,
+    )
+    .unwrap();
+    std::fs::copy(
+        workspace().join("fixtures/nam/wavenet.nam"),
+        home.join("nam/Amps/wavenet.nam"),
+    )
+    .unwrap();
+    let plugins = Plugins::discover(
+        &[folder],
+        SharedSettings::default(),
+        oxiguitar_host::display_system(),
+        Arc::new(Unheard),
+    );
+    let folders = oxiguitar_host::Folders::resolve(
+        oxiguitar_host::System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    plugins.use_folders(folders);
+    (plugins, scratch)
+}
+
+/// The NAM plugin passes the contract, and plays a model and a built-in
+/// cabinet through the suite's real-time checks: nothing allocated and
+/// (on Linux) no system call made while it runs (M4 slice 6).
+#[test]
+fn our_nam_plugin_runs_a_model_in_real_time() {
+    for (_, name) in OUR_EFFECTS {
+        let report = check_with(
+            &ours().join(format!("{name}.oxp")),
+            &[&ours().join("midi.oxp")],
+        );
+        assert!(report.ok(), "{name}.oxp: {:#?}", report.failed);
+    }
+    let (plugins, scratch) = nam_plugins("realtime");
+    let settings =
+        r#"{"on": true, "model": "Amps/wavenet.nam", "cabinet": "built-in:evh-5150-iii"}"#;
+    let report = oxiguitar_plugin_test::check_realtime(&plugins, settings);
+    assert!(report.ok(), "{:#?}", report.failed);
+    for wanted in [
+        "effect nam: it prepares",
+        "effect nam: it allocates nothing",
+    ] {
+        assert!(
+            report.passed.iter().any(|p| p.contains(wanted)),
+            "{wanted}: {:#?}",
+            report.passed
+        );
+    }
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// At a rate other than the model's, the track goes to 48 kHz and back:
+/// it says its latency, makes sound, and allocates nothing while running;
+/// a model that isn't there is refused with its name.
+#[test]
+fn our_nam_plugin_converts_the_rate_for_its_model() {
+    use oxiguitar_host::api::class::InstrumentClass;
+    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
+
+    let (plugins, scratch) = nam_plugins("rate");
+    let effect = plugins.effects_for(InstrumentClass::Fretted)[0];
+    let prepare = |settings: &str| PrepareEffect {
+        effect: "nam".into(),
+        rate: 44_100,
+        frames: 512,
+        track: PreparedTrack {
+            info: TrackInfo {
+                index: 0,
+                name: "Lead".into(),
+                class: InstrumentClass::Fretted,
+            },
+            program: 29,
+            percussion: false,
+            tuning: vec![64, 59, 55, 50, 45, 40],
+            capo: 0,
+            settings: settings.into(),
+        },
+    };
+    let mut amp = plugins
+        .prepare_effect(
+            effect,
+            prepare(r#"{"on": true, "model": "Amps/wavenet.nam"}"#),
+        )
+        .unwrap();
+    assert!(
+        amp.latency() > 16,
+        "the conversion's latency: {}",
+        amp.latency()
+    );
+    let mut peak = 0.0f32;
+    let mut allocated = 0;
+    for k in 0..200 {
+        let mut l: Vec<f32> = (0..300)
+            .map(|n| (((k * 300 + n) as f32) * 0.06).sin() * 0.3)
+            .collect();
+        let mut r = l.clone();
+        let before = amp.allocations();
+        assert!(amp.process(&mut l, &mut r));
+        if k > 0 {
+            allocated += amp.allocations().saturating_sub(before);
+        }
+        peak = l.iter().fold(peak, |p, v| p.max(v.abs()));
+        assert_eq!(l, r, "the same on both sides");
+    }
+    assert!(peak > 0.01, "it makes sound: {peak}");
+    assert_eq!(allocated, 0, "nothing allocated while running");
+    let off = plugins
+        .prepare_effect(
+            effect,
+            prepare(r#"{"on": false, "model": "Amps/wavenet.nam"}"#),
+        )
+        .unwrap();
+    assert_eq!(off.latency(), 0);
+    let missing = plugins
+        .prepare_effect(effect, prepare(r#"{"on": true, "model": "gone.nam"}"#))
+        .unwrap_err();
+    assert!(missing.to_string().contains("gone.nam"), "{missing}");
+    let escaping = plugins
+        .prepare_effect(effect, prepare(r#"{"on": true, "model": "../../x.nam"}"#))
+        .unwrap_err();
+    assert!(
+        escaping.to_string().contains("isn't in the nam folder"),
+        "{escaping}"
+    );
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
 /// A mono 16-bit WAV file of a 440 Hz sine at half scale, `seconds`
 /// long, at 48 kHz.
 fn sine_wav(seconds: f64) -> Vec<u8> {
@@ -104,13 +265,13 @@ fn sine_wav(seconds: f64) -> Vec<u8> {
 /// nothing is allocated and (on Linux) no system call made while it
 /// renders (M4 slice 5).
 #[test]
-fn our_soundfont_plugin_plays_sfz_in_real_time() {
+fn our_midi_plugin_plays_sfz_in_real_time() {
     let scratch =
         std::env::temp_dir().join(format!("oxiguitar-sfz-contract-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&scratch);
     let folder = scratch.join("plugins");
     std::fs::create_dir_all(&folder).unwrap();
-    std::fs::copy(ours().join("soundfont.oxp"), folder.join("soundfont.oxp")).unwrap();
+    std::fs::copy(ours().join("midi.oxp"), folder.join("midi.oxp")).unwrap();
     let home = scratch.join("home");
     let set = home.join("soundfonts").join("Test Sine");
     std::fs::create_dir_all(set.join("Samples")).unwrap();
@@ -131,7 +292,7 @@ fn our_soundfont_plugin_plays_sfz_in_real_time() {
     let settings = SharedSettings::default();
     settings
         .set(
-            "oxiguitar.soundfont",
+            "oxiguitar.midi",
             serde_json::json!({"guitars": pick, "basses": pick, "drums": pick, "other": pick}),
         )
         .unwrap();
@@ -173,12 +334,19 @@ fn the_list_of_our_plugins_is_the_plugins_folder() {
         .iter()
         .map(|(_, n)| *n)
         .chain(OUR_INSTRUMENTS.iter().map(|(_, n)| *n))
+        .chain(OUR_EFFECTS.iter().map(|(_, n)| *n))
+        .chain(OUR_EXPORTERS.iter().map(|(_, n)| *n))
         .chain(OUR_DEVICES.iter().map(|(_, n, _)| *n))
         .map(str::to_owned)
         .collect();
     listed.sort();
     assert_eq!(folders, listed);
-    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS) {
+    for (package, name) in OURS
+        .iter()
+        .chain(OUR_INSTRUMENTS)
+        .chain(OUR_EFFECTS)
+        .chain(OUR_EXPORTERS)
+    {
         assert_eq!(*package, format!("oxiguitar-{name}-plugin"));
     }
     for (package, name, os) in OUR_DEVICES {
@@ -426,4 +594,203 @@ fn format_plugins_add_no_tabs_and_hear_no_events() {
     // Pushed anyway: nobody is told, and nothing waits.
     plugins.push(Event::ScoreClosed);
     plugins.wait_for_events();
+}
+
+/// The NAM plugin's build for x86-64-v3 processors (nam-x86-64-v3.oxp, made
+/// by scripts/build-plugins.sh on Linux x86_64 with Rust 1.99), when
+/// `OXIGUITAR_TEST_NAM_X86_64_V3` names it (CI's "NAM for x86-64-v3" job):
+/// it passes the contract and the real-time checks as nam.oxp does, comes a
+/// cabinet's partition (64 frames) later than it, and the host uses it
+/// rather than nam.oxp, whatever the order of their names (the
+/// processor-features step of the choice: docs/design/plugins.md). Without
+/// the variable there is nothing to test.
+#[test]
+fn the_nam_build_for_x86_64_v3_processors_runs_in_real_time_and_is_chosen() {
+    use oxiguitar_host::State;
+    use oxiguitar_host::api::class::InstrumentClass;
+    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
+
+    let Some(v3) = std::env::var_os("OXIGUITAR_TEST_NAM_X86_64_V3") else {
+        println!("OXIGUITAR_TEST_NAM_X86_64_V3 isn't set: nothing to test");
+        return;
+    };
+    let v3 = PathBuf::from(v3);
+    let report = check_with(&v3, &[&ours().join("midi.oxp")]);
+    assert!(report.ok(), "{}: {:#?}", v3.display(), report.failed);
+
+    // Named to come after nam.oxp: the host must still take it.
+    let (plugins, scratch) = nam_plugins_of(
+        &[
+            (ours().join("nam.oxp"), "a-nam.oxp".into()),
+            (v3.clone(), "b-nam.oxp".into()),
+            (ours().join("midi.oxp"), "midi.oxp".into()),
+        ],
+        "v3",
+    );
+    let states: Vec<(String, &State)> = plugins
+        .found()
+        .iter()
+        .filter(|f| f.path.file_name().is_some_and(|n| n != "midi.oxp"))
+        .map(|f| {
+            (
+                f.path.file_name().unwrap().to_string_lossy().into_owned(),
+                &f.state,
+            )
+        })
+        .collect();
+    assert_eq!(states.len(), 2, "{states:#?}");
+    assert!(
+        matches!(states[0].1, State::Replaced(p) if p.ends_with("b-nam.oxp")),
+        "{states:#?}"
+    );
+    assert_eq!(states[1].1, &State::Ready, "{states:#?}");
+
+    let settings =
+        r#"{"on": true, "model": "Amps/wavenet.nam", "cabinet": "built-in:evh-5150-iii"}"#;
+    let report = oxiguitar_plugin_test::check_realtime(&plugins, settings);
+    assert!(report.ok(), "{:#?}", report.failed);
+    assert!(
+        report
+            .passed
+            .iter()
+            .any(|p| p.contains("effect nam: it allocates nothing")),
+        "{:#?}",
+        report.passed
+    );
+
+    let effect = plugins.effects_for(InstrumentClass::Fretted)[0];
+    let prepare = PrepareEffect {
+        effect: "nam".into(),
+        rate: 48_000,
+        frames: 512,
+        track: PreparedTrack {
+            info: TrackInfo {
+                index: 0,
+                name: "Lead".into(),
+                class: InstrumentClass::Fretted,
+            },
+            program: 29,
+            percussion: false,
+            tuning: vec![64, 59, 55, 50, 45, 40],
+            capo: 0,
+            settings: settings.into(),
+        },
+    };
+    let amp = plugins.prepare_effect(effect, prepare).unwrap();
+    assert_eq!(amp.latency(), 64, "the cabinet's partition");
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// The WAV plugin passes the contract (its exporter through the suite's
+/// exports and its settings window), and the song exported through it is a
+/// WAV file of the default format, 24 bits at 48 kHz, as long as the song
+/// and its tail, that sounds; at 16 bits and 44.1 kHz once its settings
+/// say so (M4 slice 7).
+#[test]
+fn our_wav_plugin_exports_the_song() {
+    use oxiguitar_play::export::{self, Plan};
+
+    for (_, name) in OUR_EXPORTERS {
+        let report = check(&ours().join(format!("{name}.oxp")));
+        assert!(report.ok(), "{name}.oxp: {:#?}", report.failed);
+        assert!(
+            report.passed.iter().any(|p| p.contains("exporter wav")),
+            "{:#?}",
+            report.passed
+        );
+    }
+    let scratch = std::env::temp_dir().join(format!("oxiguitar-wav-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&scratch);
+    let folder = scratch.join("plugins");
+    std::fs::create_dir_all(&folder).unwrap();
+    for name in ["gp5", "midi", "wav"] {
+        let file = format!("{name}.oxp");
+        std::fs::copy(ours().join(&file), folder.join(&file)).unwrap();
+    }
+    let home = scratch.join("home");
+    std::fs::create_dir_all(home.join("soundfonts")).unwrap();
+    std::fs::write(
+        home.join("soundfonts").join("test-sine.sf2"),
+        oxiguitar_plugin_test::TEST_SET,
+    )
+    .unwrap();
+    let settings = SharedSettings::default();
+    let plugins = Plugins::discover(
+        &[folder],
+        settings.clone(),
+        oxiguitar_host::display_system(),
+        Arc::new(Unheard),
+    );
+    let folders = oxiguitar_host::Folders::resolve(
+        oxiguitar_host::System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    plugins.use_folders(folders);
+    let song = workspace().join("fixtures/gp/oxiguitar-test-song.gp5");
+    let score = oxiguitar_formats::read(&std::fs::read(&song).unwrap())
+        .unwrap()
+        .score;
+    let plan = Plan::whole(&score);
+    let length = export::length(&oxiguitar_play::Timeline::new(&score), &plan);
+    let exporter = plugins.exporters()[0];
+    assert_eq!(exporter.spec.extension, "wav");
+
+    let read = |path: &Path| {
+        let wav = std::fs::read(path).unwrap();
+        assert_eq!(&wav[..4], b"RIFF");
+        assert_eq!(
+            u32::from_le_bytes(wav[4..8].try_into().unwrap()) as usize,
+            wav.len() - 8
+        );
+        let rate = u32::from_le_bytes(wav[24..28].try_into().unwrap());
+        let bits = u16::from_le_bytes([wav[34], wav[35]]);
+        let data = u32::from_le_bytes(wav[40..44].try_into().unwrap()) as usize;
+        assert_eq!(data, wav.len() - 44);
+        (rate, bits, wav)
+    };
+
+    let out = scratch.join("song.wav");
+    export::export(&plugins, exporter, &score, &plan, &out, &mut |_| true).unwrap();
+    let (rate, bits, wav) = read(&out);
+    assert_eq!((rate, bits), (48_000, 24));
+    let frames = (wav.len() - 44) / 6;
+    assert!(
+        (frames as f64 / 48_000.0 - length).abs() < 0.1,
+        "{frames} frames for {length} s"
+    );
+    let peak = wav[44..]
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|c| (i32::from_le_bytes([0, c[0], c[1], c[2]]) >> 8).unsigned_abs())
+        .max()
+        .unwrap();
+    assert!(peak > 80_000, "it sounds: {peak}");
+
+    // The settings window's choices: 16 bits, 44.1 kHz.
+    let wav_plugin = plugins
+        .found()
+        .iter()
+        .find(|f| f.path.ends_with("wav.oxp"))
+        .unwrap();
+    for (widget, choice) in [("depth", 0), ("rate", 0)] {
+        plugins
+            .send(
+                wav_plugin,
+                &oxiguitar_host::api::message::Request::SettingsEvent {
+                    widget: widget.into(),
+                    event: oxiguitar_host::api::tab::TabEvent::Chosen(choice),
+                },
+            )
+            .unwrap();
+    }
+    let out = scratch.join("song-cd.wav");
+    export::export(&plugins, exporter, &score, &plan, &out, &mut |_| true).unwrap();
+    let (rate, bits, wav) = read(&out);
+    assert_eq!((rate, bits), (44_100, 16));
+    let frames = (wav.len() - 44) / 4;
+    assert!((frames as f64 / 44_100.0 - length).abs() < 0.1);
+    let _ = std::fs::remove_dir_all(&scratch);
 }

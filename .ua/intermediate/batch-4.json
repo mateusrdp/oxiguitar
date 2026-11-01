@@ -1,0 +1,177 @@
+{
+  "summary": "Ten Architecture Decision Records (ADRs) for OxiGuitar covering project governance, core architecture, and platform-specific decisions. ADR 0000 provides the template; ADR 0001 establishes the ADR recording process. ADR 0002 defines the score model (tree-based, alphaTab-like). ADR 0003 decides on writing custom file readers instead of adopting the guitarpro crate. ADR 0004 selects Slint as the GUI toolkit over iced and egui. ADR 0005 chooses CPU raster rendering via tiny-skia with krilla for PDF export. ADR 0006 accepts no file-drop support on Wayland as a permanent gap. ADR 0007 accepts no macOS open-document events as a permanent gap. ADR 0008 introduces a plugin architecture with native libraries, splitting milestones. ADR 0009 enforces a Wayland-first policy by pinning Slint to 1.17.1 to avoid X11 dependencies in the Wayland build. The ADRs reference several non-ADR project files: ARCHITECTURE.md, ROADMAP.md, docs/design/ui.md, docs/design/plugins.md, CONTRIBUTING.md, and the GUI spike at spikes/gui/.",
+  "tags": [
+    "adr",
+    "architecture-decision-record",
+    "design-decision",
+    "score-model",
+    "file-reader",
+    "gui-toolkit",
+    "slint",
+    "renderer",
+    "wayland",
+    "macos",
+    "plugin-architecture",
+    "platform-gaps",
+    "cross-reference"
+  ],
+  "complexity": "high",
+  "nodes": [
+    {
+      "id": "file:docs/adr/0000-template.md",
+      "label": "ADR 0000 — Template",
+      "file": "docs/adr/0000-template.md",
+      "description": "Template for Architecture Decision Records with sections for Context, Options, Decision, and Consequences.",
+      "tags": ["adr", "template", "documentation-standard"]
+    },
+    {
+      "id": "file:docs/adr/0001-record-decisions.md",
+      "label": "ADR 0001 — Record decisions in the repository",
+      "file": "docs/adr/0001-record-decisions.md",
+      "description": "Establishes the ADR process: every significant decision gets a numbered record in docs/adr/, never rewritten after acceptance, later records supersede earlier ones. References the project brief and ROADMAP.md.",
+      "tags": ["adr", "process", "governance", "documentation-standard"]
+    },
+    {
+      "id": "file:docs/adr/0002-score-model.md",
+      "label": "ADR 0002 — Score model, first version",
+      "file": "docs/adr/0002-score-model.md",
+      "description": "Decides on a tree-based score model (alphaTab-like) with Score > MasterBar > Track > Staff > Bar > Voice > Beat > Note. Defines exact time via Duration with tuplets, grace notes as time-free beats, fretted/pitched notes, bends, and effects. Readers map GP3–5, GPX, GP7/8, MuseScore, and MusicXML onto this model.",
+      "tags": ["score-model", "data-model", "architecture", "tab", "music-xml"]
+    },
+    {
+      "id": "file:docs/adr/0003-file-reader-strategy.md",
+      "label": "ADR 0003 — File readers: write our own, cross-check with guitarpro",
+      "file": "docs/adr/0003-file-reader-strategy.md",
+      "description": "Decides to write custom file readers (oxiguitar-formats) instead of adopting or forking the guitarpro crate. Readers are written for untrusted input with bounds-checked reads. guitarpro is kept as a cross-check tool. Plans GPX and GP7/8 readers next.",
+      "tags": ["file-reader", "format-support", "guitarpro", "security", "untrusted-input"]
+    },
+    {
+      "id": "file:docs/adr/0004-gui-toolkit.md",
+      "label": "ADR 0004 — GUI toolkit: Slint",
+      "file": "docs/adr/0004-gui-toolkit.md",
+      "description": "Selects Slint over iced and egui as the GUI toolkit. Scores include palette/docking, keyboard/screen-reader access, text input, API stability, and mobile path. Slint wins on accessibility, i18n, API stability, and mobile. egui is the fallback. References the renderer ADR and UI design doc.",
+      "tags": ["gui-toolkit", "slint", "accessibility", "internationalization", "mobile", "comparison"]
+    },
+    {
+      "id": "file:docs/adr/0005-renderer.md",
+      "label": "ADR 0005 — Renderer: CPU raster + krilla PDF",
+      "file": "docs/adr/0005-renderer.md",
+      "description": "Chooses CPU raster rendering via tiny-skia for screen, PNG export, and visual regression tests, with krilla for PDF export. Both backends draw from the same oxiguitar-display list. Bravura music font with Noto Sans text font. Plans tiling for smooth scrolling.",
+      "tags": ["renderer", "cpu-raster", "tiny-skia", "krilla", "pdf", "display-list", "smufl"]
+    },
+    {
+      "id": "file:docs/adr/0006-wayland-file-drops.md",
+      "label": "ADR 0006 — No file drops on Wayland",
+      "file": "docs/adr/0006-wayland-file-drops.md",
+      "description": "Accepts no file-drop support on Wayland as a permanent gap. winit 0.30 has no Wayland drag-and-drop; Slint 1.18 doesn't forward OS drops. Rejects unsafe workarounds and polling. Users open files via File → Open, double-click in file manager, or command line.",
+      "tags": ["wayland", "platform-gap", "file-drop", "winit", "permanent-gap"]
+    },
+    {
+      "id": "file:docs/adr/0007-macos-open-document-events.md",
+      "label": "ADR 0007 — No macOS open document events",
+      "file": "docs/adr/0007-macos-open-document-events.md",
+      "description": "Accepts no macOS open-document events (Apple Events) as a permanent gap. winit 0.30 has no event for opened documents; Slint 1.18 forwards none. Rejects unsafe NSApplicationDelegate workaround. Users open files via File → Open, dock drops, or command line.",
+      "tags": ["macos", "platform-gap", "apple-event", "winit", "permanent-gap"]
+    },
+    {
+      "id": "file:docs/adr/0008-plugin-architecture.md",
+      "label": "ADR 0008 — Plugin architecture",
+      "file": "docs/adr/0008-plugin-architecture.md",
+      "description": "Introduces a plugin system with native .oxp libraries, one per format/tool/platform. Core keeps model, editing, engraving, player transport, mixer, settings, and plugin host. Plugins for formats, exports, audio, and platform code. Moves plugin system from M5 to M2. Contains multiple amendments from Mateus. References docs/design/plugins.md.",
+      "tags": ["plugin-architecture", "native-libraries", "modularity", "debian-packaging", "milestone-restructure"]
+    },
+    {
+      "id": "file:docs/adr/0009-wayland-first.md",
+      "label": "ADR 0009 — Wayland first: Slint pinned to 1.17.1",
+      "file": "docs/adr/0009-wayland-first.md",
+      "description": "Enforces Wayland-first policy: pins Slint to 1.17.1 to avoid arboard's X11 dependency in the Wayland build. Slint 1.18 replaced copypasta with arboard which always pulls x11rb. Sets rule that Wayland build gets the clean solution; X11 build gets workarounds. References ADR 0008 for the two-build plan.",
+      "tags": ["wayland", "slint", "pin-version", "x11", "clipboard", "ci-check"]
+    }
+  ],
+  "edges": [
+    {
+      "from": "file:docs/adr/0001-record-decisions.md",
+      "to": "file:docs/adr/0000-template.md",
+      "label": "uses template",
+      "description": "ADR 0001 states all records are written from the 0000-template.md template."
+    },
+    {
+      "from": "file:docs/adr/0002-score-model.md",
+      "to": "file:docs/adr/0003-file-reader-strategy.md",
+      "label": "consumed by",
+      "description": "ADR 0002's score model is the target that ADR 0003's custom readers write into directly."
+    },
+    {
+      "from": "file:docs/adr/0004-gui-toolkit.md",
+      "to": "file:docs/adr/0005-renderer.md",
+      "label": "references",
+      "description": "ADR 0004 references ADR 0005 for the renderer: 'the score canvas is our own renderer (ADR 0005)'. The canvas is an Image fed by oxiguitar-render."
+    },
+    {
+      "from": "file:docs/adr/0004-gui-toolkit.md",
+      "to": "file:docs/adr/0009-wayland-first.md",
+      "label": "updated by",
+      "description": "ADR 0004's header notes: 'since 19 Oct 2026 the app is pinned to Slint 1.17.1 for a Wayland-only clipboard (ADR 0009)'."
+    },
+    {
+      "from": "file:docs/adr/0005-renderer.md",
+      "to": "file:docs/adr/0004-gui-toolkit.md",
+      "label": "referenced by",
+      "description": "ADR 0005 references ADR 0004 for the thin-GUI rule: 'the GUI stays a thin shell (ADR 0004)'."
+    },
+    {
+      "from": "file:docs/adr/0006-wayland-file-drops.md",
+      "to": "file:docs/adr/0004-gui-toolkit.md",
+      "label": "depends on",
+      "description": "ADR 0006 depends on ADR 0004 for the Slint/winit context: 'The window comes from Slint 1.18 on winit 0.30 (ADR 0004)'."
+    },
+    {
+      "from": "file:docs/adr/0006-wayland-file-drops.md",
+      "to": "file:docs/adr/0009-wayland-first.md",
+      "label": "updated by",
+      "description": "ADR 0006's note: 'the app is now pinned to Slint 1.17.1 (ADR 0009)'."
+    },
+    {
+      "from": "file:docs/adr/0007-macos-open-document-events.md",
+      "to": "file:docs/adr/0006-wayland-file-drops.md",
+      "label": "same-decision-as",
+      "description": "ADR 0007: 'Option 1, the same as ADR 0006 (Mateus, 18 Oct 2026): clean code only, no unsafe, the gap documented.'"
+    },
+    {
+      "from": "file:docs/adr/0007-macos-open-document-events.md",
+      "to": "file:docs/adr/0009-wayland-first.md",
+      "label": "updated by",
+      "description": "ADR 0007's note: 'the app is now pinned to Slint 1.17.1 (ADR 0009)'."
+    },
+    {
+      "from": "file:docs/adr/0007-macos-open-document-events.md",
+      "to": "file:docs/adr/0008-plugin-architecture.md",
+      "label": "referenced by",
+      "description": "ADR 0007 notes: 'A macOS-only plugin (ADR 0008) wouldn't change this: it would still need the unsafe delegate.'"
+    },
+    {
+      "from": "file:docs/adr/0008-plugin-architecture.md",
+      "to": "file:docs/adr/0009-wayland-first.md",
+      "label": "informed-by",
+      "description": "ADR 0008 (answer 9) planned two Linux builds; ADR 0009 implements this by pinning Slint to achieve a clean Wayland build."
+    },
+    {
+      "from": "file:docs/adr/0009-wayland-first.md",
+      "to": "file:docs/adr/0008-plugin-architecture.md",
+      "label": "implements",
+      "description": "ADR 0009 implements ADR 0008's answer 9 (two Linux builds) by pinning Slint 1.17.1 to get a Wayland-native clipboard."
+    },
+    {
+      "from": "file:docs/adr/0009-wayland-first.md",
+      "to": "file:docs/adr/0006-wayland-file-drops.md",
+      "label": "references-context-of",
+      "description": "ADR 0009 notes: 'ADRs 0006 and 0007 were written against Slint 1.18. Their facts about winit 0.30 hold, since 1.17.1 uses the same winit.'"
+    },
+    {
+      "from": "file:docs/adr/0009-wayland-first.md",
+      "to": "file:docs/adr/0007-macos-open-document-events.md",
+      "label": "references-context-of",
+      "description": "ADR 0009 notes: 'ADRs 0006 and 0007 were written against Slint 1.18. Their facts about winit 0.30 hold, since 1.17.1 uses the same winit.'"
+    }
+  ]
+}

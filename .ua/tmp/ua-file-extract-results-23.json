@@ -1,0 +1,44 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 0,
+  "filesSkipped": [
+    "fixtures/events/dynamics.gp.events",
+    "fixtures/events/effects-together.gp.events",
+    "fixtures/events/eight-tracks.gp.events",
+    "fixtures/events/empty-bars.gp.events",
+    "fixtures/events/four-voices.gp.events",
+    "fixtures/events/grace-notes.gp.events",
+    "fixtures/events/hammer-on-pull-off.gp.events",
+    "fixtures/events/harmonics.gp.events",
+    "fixtures/events/header-and-credits.gp.events",
+    "fixtures/events/key-signatures.gp.events",
+    "fixtures/events/layout-horizontal.gp.events",
+    "fixtures/events/layout-parchment.gp.events",
+    "fixtures/events/layout-vertical.gp.events",
+    "fixtures/events/let-ring.gp.events",
+    "fixtures/events/lyrics.gp.events",
+    "fixtures/events/notation-choice.gp.events",
+    "fixtures/events/notes-and-rests.gp.events",
+    "fixtures/events/oxiguitar-test-song.gp.events",
+    "fixtures/events/oxiguitar-test-song.gp3.events",
+    "fixtures/events/oxiguitar-test-song.gp4.events",
+    "fixtures/events/oxiguitar-test-song.gp5.events",
+    "fixtures/events/oxiguitar-test-song.gpx.events",
+    "fixtures/events/page-breaks.gp.events",
+    "fixtures/events/paper-letter.gp.events",
+    "fixtures/events/piano-grand-staff.gp.events"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 0,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": []
+}

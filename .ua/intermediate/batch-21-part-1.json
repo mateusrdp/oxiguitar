@@ -1,0 +1,324 @@
+{
+  "nodes": [
+    {
+      "id": "file:crates/oxiguitar-testgen/src/big.rs",
+      "type": "file",
+      "properties": {
+        "path": "crates/oxiguitar-testgen/src/big.rs",
+        "language": "rust",
+        "totalLines": 302,
+        "nonEmptyLines": 278,
+        "fileCategory": "code",
+        "exportCount": 2,
+        "exportNames": [
+          "band_song",
+          "midi_name"
+        ]
+      }
+    },
+    {
+      "id": "file:crates/oxiguitar-testgen/src/lib.rs",
+      "type": "file",
+      "properties": {
+        "path": "crates/oxiguitar-testgen/src/lib.rs",
+        "language": "rust",
+        "totalLines": 25,
+        "nonEmptyLines": 22,
+        "fileCategory": "code",
+        "exportCount": 0,
+        "functionCount": 0
+      }
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/big.rs:band_song",
+      "type": "function",
+      "properties": {
+        "name": "band_song",
+        "startLine": 46,
+        "endLine": 247,
+        "lineCount": 202,
+        "params": [
+          "bars"
+        ],
+        "isExport": true,
+        "description": "Main test-song generator: builds a 6-track song (guitar, acoustic, bass, piano, drums, strings) with chord progressions, arpeggios, and MIDI notation"
+      }
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/big.rs:chord_shape",
+      "type": "function",
+      "properties": {
+        "name": "chord_shape",
+        "startLine": 250,
+        "endLine": 261,
+        "lineCount": 12,
+        "params": [
+          "frets"
+        ],
+        "isExport": false,
+        "description": "Formats fret digits into guitar chord diagram notation (string:fret pairs)"
+      }
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/big.rs:midi_name",
+      "type": "function",
+      "properties": {
+        "name": "midi_name",
+        "startLine": 274,
+        "endLine": 283,
+        "lineCount": 10,
+        "params": [
+          "midi"
+        ],
+        "isExport": true,
+        "description": "Converts a MIDI note number to its musical name (e.g., 60 -> \"C4\")"
+      }
+    },
+    {
+      "id": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "type": "file",
+      "language": "rust",
+      "path": "crates/oxiguitar-testgen/src/gpif.rs",
+      "totalLines": 628,
+      "description": "Writes a Song as Guitar Pro 7 GPIF XML and packs it as a .gp file"
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/gpif.rs:to_gp",
+      "type": "function",
+      "path": "crates/oxiguitar-testgen/src/gpif.rs",
+      "name": "to_gp",
+      "startLine": 16,
+      "endLine": 18,
+      "lineCount": 3,
+      "exported": true,
+      "params": [
+        "song"
+      ],
+      "description": "Entry point: converts a Song into a Guitar Pro 7 .gp file (ZIP bytes)"
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/gpif.rs:pack",
+      "type": "function",
+      "path": "crates/oxiguitar-testgen/src/gpif.rs",
+      "name": "pack",
+      "startLine": 21,
+      "endLine": 35,
+      "lineCount": 15,
+      "exported": true,
+      "params": [
+        "gpif",
+        "part_configuration"
+      ],
+      "description": "Packs GPIF XML and PartConfiguration into a ZIP archive (.gp file)"
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/gpif.rs:part_configuration",
+      "type": "function",
+      "path": "crates/oxiguitar-testgen/src/gpif.rs",
+      "name": "part_configuration",
+      "startLine": 38,
+      "endLine": 45,
+      "lineCount": 8,
+      "exported": true,
+      "params": [
+        "song"
+      ],
+      "description": "Serializes part configuration (views, notation flags) per track as binary"
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/gpif.rs:to_gpif",
+      "type": "function",
+      "path": "crates/oxiguitar-testgen/src/gpif.rs",
+      "name": "to_gpif",
+      "startLine": 62,
+      "endLine": 249,
+      "lineCount": 188,
+      "exported": true,
+      "params": [
+        "song"
+      ],
+      "description": "Generates the full score.gpif XML: metadata, tempo, tracks, bars, voices, beats, notes, rhythms"
+    },
+    {
+      "id": "file:crates/oxiguitar-testgen/src/references.rs",
+      "type": "file",
+      "path": "crates/oxiguitar-testgen/src/references.rs",
+      "language": "rust",
+      "totalLines": 801,
+      "nonEmptyLines": 783,
+      "description": "Test reference song generation for OxiGuitar \u2014 provides reference songs with solo, guitar, and band configurations, plus bar-count validation helpers."
+    },
+    {
+      "id": "file:crates/oxiguitar-testgen/src/song.rs",
+      "type": "file",
+      "path": "crates/oxiguitar-testgen/src/song.rs",
+      "language": "rust",
+      "totalLines": 774,
+      "nonEmptyLines": 729,
+      "description": "Song model and music DSL parser \u2014 defines Song, Track, Kind, Beat, Dur, Note, Fx types and parses a guitar-tab-like text format into structured bar/beat/note data."
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/references.rs:references",
+      "type": "function",
+      "path": "crates/oxiguitar-testgen/src/references.rs",
+      "name": "references",
+      "startLine": 94,
+      "endLine": 675,
+      "lineCount": 582,
+      "params": [],
+      "description": "Generates 50 reference songs (25 solo + 25 guitar). Each song has a unique name, artist 'OxiGuitar references', and tracks for solo/guitar instruments with voice content parsed from tab strings."
+    },
+    {
+      "id": "function:crates/oxiguitar-testgen/src/song.rs:new",
+      "type": "function",
+      "path": "crates/oxiguitar-testgen/src/song.rs",
+      "name": "new",
+      "startLine": 78,
+      "endLine": 95,
+      "lineCount": 18,
+      "params": [
+        "title",
+        "bars"
+      ],
+      "description": "Song constructor \u2014 creates a new Song with the given title and initial bars, initializing all string fields (subtitle, artist, album, words, music, copyright, tabber, instructions) and vector fields (tempo_changes, tracks)."
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:file:crates/oxiguitar-testgen/src/big.rs -> function:crates/oxiguitar-testgen/src/big.rs:band_song",
+      "source": "file:crates/oxiguitar-testgen/src/big.rs",
+      "target": "function:crates/oxiguitar-testgen/src/big.rs:band_song",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "id": "edge:file:crates/oxiguitar-testgen/src/big.rs -> function:crates/oxiguitar-testgen/src/big.rs:chord_shape",
+      "source": "file:crates/oxiguitar-testgen/src/big.rs",
+      "target": "function:crates/oxiguitar-testgen/src/big.rs:chord_shape",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "id": "edge:file:crates/oxiguitar-testgen/src/big.rs -> function:crates/oxiguitar-testgen/src/big.rs:midi_name",
+      "source": "file:crates/oxiguitar-testgen/src/big.rs",
+      "target": "function:crates/oxiguitar-testgen/src/big.rs:midi_name",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "target": "function:crates/oxiguitar-testgen/src/gpif.rs:to_gp",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "target": "function:crates/oxiguitar-testgen/src/gpif.rs:pack",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "target": "function:crates/oxiguitar-testgen/src/gpif.rs:part_configuration",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "target": "function:crates/oxiguitar-testgen/src/gpif.rs:to_gpif",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "target": "file:crates/oxiguitar-testgen/src/lib.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "target": "file:crates/oxiguitar-model/src/lib.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "target": "file:crates/oxiguitar-model/src/gpif/mod.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/gpif.rs",
+      "target": "file:crates/oxiguitar-model/src/gpif/song.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/references.rs",
+      "target": "function:crates/oxiguitar-testgen/src/references.rs:references",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/song.rs",
+      "target": "function:crates/oxiguitar-testgen/src/song.rs:new",
+      "type": "contains",
+      "weight": 1.0,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/references.rs",
+      "target": "file:crates/oxiguitar-model/src/lib.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/references.rs",
+      "target": "file:crates/oxiguitar-model/src/guitar_pro.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/song.rs",
+      "target": "file:crates/oxiguitar-model/src/lib.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/song.rs",
+      "target": "file:crates/oxiguitar-model/src/gpif/mod.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/song.rs",
+      "target": "file:crates/oxiguitar-model/src/gpif/song.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    },
+    {
+      "source": "file:crates/oxiguitar-testgen/src/song.rs",
+      "target": "file:crates/oxiguitar-model/src/guitar_pro.rs",
+      "type": "imports",
+      "weight": 0.7,
+      "direction": "forward"
+    }
+  ]
+}

@@ -61,7 +61,7 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::manifest::SharedFolder;
 pub use oxiguitar_plugin_api::message::{
-    Availability, Error, ErrorKind, Level, LogEntry, TrackInfo,
+    Advice, Availability, Error, ErrorKind, Level, LogEntry, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -77,13 +77,15 @@ use std::sync::Arc;
 
 use oxiguitar_plugin_api::Blob;
 use oxiguitar_plugin_api::manifest::Manifest;
-use oxiguitar_plugin_api::message::{Answer, HostAnswer, HostRequest, Link, Request};
+pub use oxiguitar_plugin_api::message::Link;
+use oxiguitar_plugin_api::message::{Answer, HostAnswer, HostRequest, Request};
 
 #[doc(hidden)]
 pub mod audio;
 pub mod glue;
 
 pub use audio::{Effect, Instrument, Piece, Processor, Renderer};
+pub use oxiguitar_plugin_api::manifest::{ExportKind, ExporterSpec};
 
 /// A plugin: the one value an `.oxp` file holds. Built once when the host
 /// first needs one of its contributions, and kept until the program ends.
@@ -175,6 +177,56 @@ pub trait Plugin: Send + Sync + 'static {
         let _ = id;
         None
     }
+
+    /// The audio exporter `id` (an id from the manifest's `exporters`, of
+    /// kind `audio`; interface 1.4).
+    fn audio_exporter(&self, id: &str) -> Option<&dyn AudioExporter> {
+        let _ = id;
+        None
+    }
+}
+
+/// An entry of File → Export that writes the score's sound to a file
+/// (interface 1.4, `exporters` of kind `audio`). The core renders the score
+/// through the player, faster than real time, and hands the sound over in
+/// pieces; the exporter turns it into the file's bytes, which the core
+/// writes. One export runs at a time, so an exporter keeps the one under
+/// way itself (behind a `Mutex`); the calls come from one thread, never
+/// the audio thread, so it may allocate.
+pub trait AudioExporter: Send + Sync {
+    /// A new export starts (dropping one left unfinished): the rate to
+    /// render at, and the file's first bytes.
+    fn start(&self) -> Result<ExportStart, Error>;
+
+    /// The next stereo frames, left and right interleaved, at the rate
+    /// asked for, as the mixer leaves them (full scale is ±1, and louder
+    /// is possible): the bytes that follow in the file.
+    fn samples(&self, interleaved: &[f32]) -> Result<Vec<u8>, Error>;
+
+    /// The sound is over: the file's last bytes, and bytes to write over
+    /// its start (a header naming the length). With `cancelled`, the user
+    /// stopped the export and the file is thrown away; the answer is
+    /// ignored.
+    fn finish(&self, cancelled: bool) -> Result<ExportEnd, Error>;
+}
+
+/// How an audio export starts ([`AudioExporter::start`]).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ExportStart {
+    /// The rate to render at, in frames a second (8000 to 384000).
+    pub rate: u32,
+    /// The file's first bytes, perhaps none.
+    pub data: Vec<u8>,
+}
+
+/// How an audio export ends ([`AudioExporter::finish`]).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ExportEnd {
+    /// The file's last bytes, perhaps none.
+    pub data: Vec<u8>,
+    /// Bytes to write over the file's start once all is written, or none:
+    /// at most as long as the whole file.
+    pub start: Option<Vec<u8>>,
 }
 
 /// A section of the track dialog (interface 1.3): rows of widgets for one
@@ -483,7 +535,39 @@ pub fn dispatch_kept(
                 Err(Error::not_found(format!("no instance {instance}")))
             }
         }
+        Request::ExportStart { exporter } => {
+            let ExportStart { rate, data } = find_exporter(plugin, &exporter)?.start()?;
+            if !(8_000..=384_000).contains(&rate) {
+                return Err(Error::new(
+                    ErrorKind::Failed,
+                    format!("the exporter asked for the rate {rate}, outside 8000 to 384000"),
+                ));
+            }
+            Ok(Answer::ExportStarted {
+                rate,
+                data: Blob::owned(data),
+            })
+        }
+        Request::ExportSamples { exporter, samples } => Ok(Answer::Exported(Blob::owned(
+            find_exporter(plugin, &exporter)?.samples(&samples)?,
+        ))),
+        Request::ExportFinish {
+            exporter,
+            cancelled,
+        } => {
+            let ExportEnd { data, start } = find_exporter(plugin, &exporter)?.finish(cancelled)?;
+            Ok(Answer::ExportFinished {
+                data: Blob::owned(data),
+                start: start.map(Blob::owned),
+            })
+        }
     }
+}
+
+fn find_exporter<'a>(plugin: &'a dyn Plugin, id: &str) -> Result<&'a dyn AudioExporter, Error> {
+    plugin
+        .audio_exporter(id)
+        .ok_or_else(|| Error::not_found(format!("this plugin has no audio exporter {id:?}")))
 }
 
 fn prepared(
@@ -662,6 +746,22 @@ impl Host {
         });
     }
 
+    /// Asks the core to show the user advice (interface 1.4): a dialog
+    /// with `advice`'s title, text and links, shown once the window is up
+    /// and one dialog at a time, with a "Don't show this again" box. What
+    /// the user ticks is kept by the core, under the plugin's id and the
+    /// advice's id; the call returns `Ok` whether the dialog is shown or
+    /// not, so call it whenever the reason holds (the core shows each
+    /// advice at most once a session). The error says what is wrong with
+    /// the advice ([`api::message::Advice::problem`]); never with a link,
+    /// which only opens when the user clicks it.
+    pub fn advise(&self, advice: api::message::Advice) -> Result<(), Error> {
+        match self.0.request(HostRequest::Advise(advice))? {
+            HostAnswer::Done => Ok(()),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// The plugin's folders (interface 1.3): its own data and cache
     /// folders, created on first ask, and the shared folders its manifest
     /// lists.
@@ -742,7 +842,8 @@ impl HostServices for Detached {
             HostRequest::Notify { .. }
             | HostRequest::Notify2 { .. }
             | HostRequest::SetSettings { .. }
-            | HostRequest::Redraw { .. } => Ok(HostAnswer::Done),
+            | HostRequest::Redraw { .. }
+            | HostRequest::Advise(_) => Ok(HostAnswer::Done),
             HostRequest::Settings => Ok(HostAnswer::Settings("{}".into())),
             HostRequest::Score => Ok(HostAnswer::Score(None)),
             HostRequest::Score2 => Ok(HostAnswer::Score2 {
@@ -846,6 +947,14 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
             out.push(format!("tool {:?} is declared, but not implemented", t.id));
         }
     }
+    for e in &manifest.exporters {
+        if plugin.audio_exporter(&e.id).is_none() {
+            out.push(format!(
+                "exporter {:?} is declared, but not implemented",
+                e.id
+            ));
+        }
+    }
     match (manifest.settings_window, plugin.settings_window()) {
         (true, None) => out.push("a settings window is declared, but not implemented".into()),
         (false, Some(_)) => out.push(
@@ -943,13 +1052,18 @@ fn compare(
 ///
 /// Call it once, in the crate's `lib.rs`, with the type implementing
 /// [`Plugin`]. The manifest is the file `manifest.json` beside the crate's
-/// `Cargo.toml`.
+/// `Cargo.toml`, or the file named after the type: a crate built in two
+/// ways for different processors names each build's manifest (the NAM
+/// plugin's `manifest-x86-64-v3.json`), under a `cfg` of its own.
 #[macro_export]
 macro_rules! export_plugin {
     ($plugin:ty) => {
-        /// The plugin's manifest, `manifest.json`.
+        $crate::export_plugin!($plugin, "manifest.json");
+    };
+    ($plugin:ty, $manifest:literal) => {
+        /// The plugin's manifest.
         pub const MANIFEST_JSON: &str =
-            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/manifest.json"));
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/", $manifest));
 
         // The section and the entry symbol need `unsafe` attributes, which
         // the plugin crate's `unsafe_code = "deny"` allows here only.
@@ -966,7 +1080,7 @@ macro_rules! export_plugin {
             )]
             #[used]
             static MANIFEST: [u8; MANIFEST_JSON.len()] =
-                *include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/manifest.json"));
+                *include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", $manifest));
 
             static TABLE: $crate::glue::Table = $crate::glue::table::<$plugin>(&MANIFEST);
 
@@ -994,7 +1108,8 @@ macro_rules! export_plugin {
                     $crate::check::<$plugin>(super::MANIFEST_JSON, env!("CARGO_PKG_VERSION"));
                 assert!(
                     problems.is_empty(),
-                    "manifest.json: {}",
+                    "{}: {}",
+                    $manifest,
                     problems.join("; ")
                 );
             }
@@ -1087,7 +1202,10 @@ mod tests {
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
         let later = ECHO.replace("\"1.0\"", "\"1.9\"");
-        assert!(check::<Echo>(&later, "0.1.0")[0].contains("this SDK is 1.3"));
+        let (major, minor) = oxiguitar_plugin_api::INTERFACE;
+        assert!(
+            check::<Echo>(&later, "0.1.0")[0].contains(&format!("this SDK is {major}.{minor}"))
+        );
     }
 
     /// A plugin of interface 1.2: a reader into the score version 2, a

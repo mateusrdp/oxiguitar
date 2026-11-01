@@ -1,0 +1,387 @@
+{
+  "batchIndex": 25,
+  "nodes": [
+    {
+      "id": "file:fixtures/guitar-pro-7.6/drop-d-and-capo.gpif",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/drop-d-and-capo.gpif",
+      "summary": "Guitar Pro 7.6 reference file: Drop D tuning with a capo, showing tuning and capo info in the score header. Extracted from a Guitar Pro 7.6 save; contains only the score.xml content.",
+      "tags": ["guitar-pro-7.6", "drop-d-tuning", "capo", "header", "reference"],
+      "complexity": 2
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/effects-together.gpif",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/effects-together.gpif",
+      "summary": "Guitar Pro 7.6 reference file: A dense lick with several musical effects on neighbouring notes displayed in lanes above the tablature, testing how Guitar Pro 7.6 writes combined effects.",
+      "tags": ["guitar-pro-7.6", "effects", "tab-lanes", "reference"],
+      "complexity": 3
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/four-voices.gpif",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/four-voices.gpif",
+      "summary": "Guitar Pro 7.6 reference file: Four voices on one staff - voices 1 and 3 with stems up, voices 2 and 4 with stems down, with whole-bar rests hidden. Tests multi-voice notation rendering.",
+      "tags": ["guitar-pro-7.6", "voices", "multi-voice", "reference"],
+      "complexity": 3
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/header-and-credits.gpif",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/header-and-credits.gpif",
+      "summary": "Guitar Pro 7.6 reference file: A full header with title, subtitle, artist, album, words, music, copyright, tabber, and tuning fields. Tests header and metadata serialization.",
+      "tags": ["guitar-pro-7.6", "header", "metadata", "credits", "reference"],
+      "complexity": 2
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/nylon-guitar-default.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/nylon-guitar-default.gp",
+      "summary": "Guitar Pro file created by Mateus in Guitar Pro 7.6: nylon guitar with both high E strings played open. Used to verify Guitar Pro's octave numbering (MIDI note ÷ 12) and how default tunings are written.",
+      "tags": ["guitar-pro-7.6", "nylon-guitar", "octave", "tuning", "own-gp-file"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/pianos-high-low.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/pianos-high-low.gp",
+      "summary": "Guitar Pro file created by Mateus in Guitar Pro 7.6: six piano tracks with notes spanning MIDI 0 to 127. Used to verify Guitar Pro's handling of out-of-range frets and default tuning assignment.",
+      "tags": ["guitar-pro-7.6", "piano", "midi-range", "tuning", "own-gp-file"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/repeats-and-endings.gpif",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/repeats-and-endings.gpif",
+      "summary": "Guitar Pro 7.6 reference file: Repeat signs, a repeat played three times, first and second endings, and a double bar. Tests repeat and ending notation serialization.",
+      "tags": ["guitar-pro-7.6", "repeats", "endings", "reference"],
+      "complexity": 2
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/sections-and-directions.gpif",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/sections-and-directions.gpif",
+      "summary": "Guitar Pro 7.6 reference file: Rehearsal letters with section names; segno and coda signs at bar starts, with To Coda, Fine and D.S. al Coda directions. Tests section markers and navigation directions.",
+      "tags": ["guitar-pro-7.6", "sections", "segno", "coda", "directions", "reference"],
+      "complexity": 2
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/tempo-changes.gpif",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/tempo-changes.gpif",
+      "summary": "Guitar Pro 7.6 reference file: A labelled starting tempo followed by tempo changes at bar boundaries and mid-bar. Tests tempo marking serialization at different granularities.",
+      "tags": ["guitar-pro-7.6", "tempo", "reference"],
+      "complexity": 2
+    },
+    {
+      "id": "file:fixtures/guitar-pro-7.6/unusual-tuplets.gpif",
+      "type": "document",
+      "path": "fixtures/guitar-pro-7.6/unusual-tuplets.gpif",
+      "summary": "Guitar Pro 7.6 reference file: Quintuplets, sextuplets, septuplets, duplets, and a 5:3 ratio marked with n:m notation. Tests non-standard tuplet serialization.",
+      "tags": ["guitar-pro-7.6", "tuplets", "rhythm", "reference"],
+      "complexity": 3
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/README.md",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/README.md",
+      "summary": "Documentation explaining the guitar-pro-check fixture directory: files for checking the .gp and .gp5 writers, including test results from Guitar Pro 7.6.0 on Wine/Debian. Documents known interop issues and how to regenerate files.",
+      "tags": ["markdown", "documentation", "guitar-pro-check", "interop", "testing"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/articulations.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/articulations.gp",
+      "summary": "Guitar Pro 5 .gp file: Tests accents, heavy accents and staccato markings on both standard notation and tablature staves. Used to verify OxiGuitar's .gp writer handles articulation symbols.",
+      "tags": ["gp", "gp5-format", "articulations", "accents", "staccato", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/articulations.gp5",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/articulations.gp5",
+      "summary": "Guitar Pro 5 .gp5 file: Same articulations test as articulations.gp but in .gp5 binary format. Used to compare .gp vs .gp5 writer output for articulation symbols.",
+      "tags": ["gp5", "articulations", "accents", "staccato", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/bass.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/bass.gp",
+      "summary": "Guitar Pro 5 .gp file: Tests a four-string bass with bass clef an octave down over a four-line tablature. Used to verify OxiGuitar's bass guitar track writing.",
+      "tags": ["gp", "gp5-format", "bass", "four-string", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/bass.gp5",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/bass.gp5",
+      "summary": "Guitar Pro 5 .gp5 file: Same bass test as bass.gp in .gp5 binary format. Used to compare .gp vs .gp5 writer output for bass guitar tracks.",
+      "tags": ["gp5", "bass", "four-string", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/beams-and-flags.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/beams-and-flags.gp",
+      "summary": "Guitar Pro 5 .gp file: Tests beaming over groups of eighth and sixteenth notes, single-note flags, and mixed beam groups. Used to verify OxiGuitar's beam and flag serialization.",
+      "tags": ["gp", "gp5-format", "beams", "flags", "rhythm", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/beams-and-flags.gp5",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/beams-and-flags.gp5",
+      "summary": "Guitar Pro 5 .gp5 file: Same beams-and-flags test as beams-and-flags.gp in .gp5 format. Used to compare .gp vs .gp5 writer output for beam and flag notation.",
+      "tags": ["gp5", "beams", "flags", "rhythm", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/beat-text.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/beat-text.gp",
+      "summary": "Guitar Pro 5 .gp file: Tests text annotations placed above beats, next to chord names and tempo markings. Used to verify OxiGuitar's beat-level text serialization.",
+      "tags": ["gp", "gp5-format", "beat-text", "annotations", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/beat-text.gp5",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/beat-text.gp5",
+      "summary": "Guitar Pro 5 .gp5 file: Same beat-text test as beat-text.gp in .gp5 format. Used to compare .gp vs .gp5 writer output for beat-level text annotations.",
+      "tags": ["gp5", "beat-text", "annotations", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/bends.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/bends.gp",
+      "summary": "Guitar Pro 5 .gp file: Tests full, half and released bends with their arrow indicators and labels. Used to verify OxiGuitar's bend effect serialization.",
+      "tags": ["gp", "gp5-format", "bends", "guitar-techniques", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/bends.gp5",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/bends.gp5",
+      "summary": "Guitar Pro 5 .gp5 file: Same bends test as bends.gp in .gp5 format. Used to compare .gp vs .gp5 writer output for bend effects.",
+      "tags": ["gp5", "bends", "guitar-techniques", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/chord-names.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/chord-names.gp",
+      "summary": "Guitar Pro 5 .gp file: Tests chord names placed over their beats without being pushed sideways, along with chord diagrams in the score header. Used to verify OxiGuitar's chord name serialization.",
+      "tags": ["gp", "gp5-format", "chords", "chord-names", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/chord-names.gp5",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/chord-names.gp5",
+      "summary": "Guitar Pro 5 .gp5 file: Same chord-names test as chord-names.gp in .gp5 format. Used to compare .gp vs .gp5 writer output for chord name placement.",
+      "tags": ["gp5", "chords", "chord-names", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/chords-and-accidentals.gp",
+      "summary": "Guitar Pro 5 .gp file: Tests chords with sharps, flats and naturals in C key, with accidentals carried through the bar. Used to verify OxiGuitar's chord and accidental serialization.",
+      "tags": ["gp", "gp5-format", "chords", "accidentals", "key-signature", "check"],
+      "complexity": 1
+    },
+    {
+      "id": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp5",
+      "type": "document",
+      "path": "fixtures/guitar-pro-check/chords-and-accidentals.gp5",
+      "summary": "Guitar Pro 5 .gp5 file: Same chords-and-accidentals test as chords-and-accidentals.gp in .gp5 format. Used to compare .gp vs .gp5 writer output for chord and accidental notation.",
+      "tags": ["gp5", "chords", "accidentals", "key-signature", "check"],
+      "complexity": 1
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/articulations.gp",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/articulations.gp5",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/bass.gp",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/bass.gp5",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/beams-and-flags.gp",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/beams-and-flags.gp5",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/beat-text.gp",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/beat-text.gp5",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/bends.gp",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/bends.gp5",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/chord-names.gp",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/chord-names.gp5",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp5",
+      "type": "related",
+      "description": "README documents the guitar-pro-check directory and these fixture files"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/articulations.gp",
+      "target": "file:fixtures/guitar-pro-check/articulations.gp5",
+      "type": "related",
+      "description": "Same test in .gp (text) and .gp5 (binary) formats for writer comparison"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/bass.gp",
+      "target": "file:fixtures/guitar-pro-check/bass.gp5",
+      "type": "related",
+      "description": "Same test in .gp (text) and .gp5 (binary) formats for writer comparison"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/beams-and-flags.gp",
+      "target": "file:fixtures/guitar-pro-check/beams-and-flags.gp5",
+      "type": "related",
+      "description": "Same test in .gp (text) and .gp5 (binary) formats for writer comparison"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/beat-text.gp",
+      "target": "file:fixtures/guitar-pro-check/beat-text.gp5",
+      "type": "related",
+      "description": "Same test in .gp (text) and .gp5 (binary) formats for writer comparison"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/bends.gp",
+      "target": "file:fixtures/guitar-pro-check/bends.gp5",
+      "type": "related",
+      "description": "Same test in .gp (text) and .gp5 (binary) formats for writer comparison"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/chord-names.gp",
+      "target": "file:fixtures/guitar-pro-check/chord-names.gp5",
+      "type": "related",
+      "description": "Same test in .gp (text) and .gp5 (binary) formats for writer comparison"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp",
+      "target": "file:fixtures/guitar-pro-check/chords-and-accidentals.gp5",
+      "type": "related",
+      "description": "Same test in .gp (text) and .gp5 (binary) formats for writer comparison"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-7.6/drop-d-and-capo.gpif",
+      "target": "file:fixtures/guitar-pro-check/drop-d-and-capo.gp",
+      "type": "related",
+      "description": "Same reference song tested in Guitar Pro 7.6 (.gpif) and .gp/.gp5 check formats"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-7.6/effects-together.gpif",
+      "target": "file:fixtures/guitar-pro-check/effects-together.gp",
+      "type": "related",
+      "description": "Same reference song tested in Guitar Pro 7.6 (.gpif) and .gp/.gp5 check formats"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-7.6/four-voices.gpif",
+      "target": "file:fixtures/guitar-pro-check/four-voices.gp",
+      "type": "related",
+      "description": "Same reference song tested in Guitar Pro 7.6 (.gpif) and .gp/.gp5 check formats"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-7.6/header-and-credits.gpif",
+      "target": "file:fixtures/guitar-pro-check/header-and-credits.gp",
+      "type": "related",
+      "description": "Same reference song tested in Guitar Pro 7.6 (.gpif) and .gp/.gp5 check formats"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-7.6/repeats-and-endings.gpif",
+      "target": "file:fixtures/guitar-pro-check/repeats-and-endings.gp",
+      "type": "related",
+      "description": "Same reference song tested in Guitar Pro 7.6 (.gpif) and .gp/.gp5 check formats"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-7.6/sections-and-directions.gpif",
+      "target": "file:fixtures/guitar-pro-check/sections-and-directions.gp",
+      "type": "related",
+      "description": "Same reference song tested in Guitar Pro 7.6 (.gpif) and .gp/.gp5 check formats"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-7.6/tempo-changes.gpif",
+      "target": "file:fixtures/guitar-pro-check/tempo-changes.gp",
+      "type": "related",
+      "description": "Same reference song tested in Guitar Pro 7.6 (.gpif) and .gp/.gp5 check formats"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-7.6/unusual-tuplets.gpif",
+      "target": "file:fixtures/guitar-pro-check/unusual-tuplets.gp",
+      "type": "related",
+      "description": "Same reference song tested in Guitar Pro 7.6 (.gpif) and .gp/.gp5 check formats"
+    },
+    {
+      "source": "file:fixtures/guitar-pro-check/README.md",
+      "target": "file:fixtures/guitar-pro-7.6/README.md",
+      "type": "related",
+      "description": "README files in both fixture directories document related but distinct fixture sets"
+    }
+  ]
+}

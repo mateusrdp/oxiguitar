@@ -359,7 +359,7 @@ impl Thread {
 /// Why nothing plays a score: no instrument for any of its tracks.
 fn nothing_plays(plugins: &Plugins) -> String {
     if plugins.instruments().is_empty() {
-        "No instrument plugin is installed, so nothing can play. The basic plugins include the SoundFont plugin.".to_owned()
+        "No instrument plugin is installed, so nothing can play. The basic plugins include the MIDI plugin.".to_owned()
     } else {
         "No installed instrument plays this score's tracks.".to_owned()
     }

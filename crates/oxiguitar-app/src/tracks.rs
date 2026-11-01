@@ -10,9 +10,10 @@
 //! separate show tick: the buttons do that job, so the two can't disagree
 //! (Mateus, 17 Oct 2026). A button on another track adds it, so several
 //! tracks can be shown at once without a separate "Multitrack" switch
-//! (Mateus, 17 Oct 2026). A click on a track's name selects it for the
-//! editor and changes nothing here (Mateus, 19 Oct 2026). The last shown
-//! track cannot be hidden.
+//! (Mateus, 17 Oct 2026). A left-click on a track's name shows only that
+//! track; Shift-click toggles it (add if hidden, hide if shown and others
+//! remain). A click on a track's name also selects it for the editor
+//! (Mateus, 19 Oct 2026). The last shown track cannot be hidden.
 
 use std::collections::BTreeMap;
 
@@ -171,6 +172,45 @@ impl Tracks {
     pub(crate) fn switch_to(&mut self, i: usize) {
         if i < self.len() && self.shown.len() == 1 {
             self.shown = vec![i];
+        }
+    }
+
+    /// Left-click on a track name: show only that track. Shift-click: if the
+    /// track is shown and others remain, hide it; if hidden, add it (respecting
+    /// the "last shown" guard). Ctrl-click: no-op. Returns whether the shown
+    /// tracks changed.
+    pub(crate) fn select_track(&mut self, i: usize, shift: bool) -> bool {
+        if i >= self.len() {
+            return false;
+        }
+        let before = self.shown.clone();
+        if shift {
+            // Shift-click: toggle the track when multitrack.
+            if self.shown.contains(&i) && self.shown.len() > 1 {
+                self.shown.retain(|&t| t != i);
+            } else if !self.shown.contains(&i) {
+                // Add hidden track; toggle_track guards the last-shown rule.
+                self.toggle_track(i);
+            }
+        } else {
+            // Left-click: always switch to single-track view.
+            if !self.shown.contains(&i) || self.shown.len() > 1 {
+                self.shown = vec![i];
+            }
+        }
+        self.shown != before
+    }
+
+    /// Toggle whether track `i` is shown: add if hidden, hide if shown and
+    /// at least one other track remains (Mateus, 17 Oct 2026).
+    fn toggle_track(&mut self, i: usize) {
+        if self.shown.contains(&i) {
+            if self.shown.len() > 1 {
+                self.shown.retain(|&t| t != i);
+            }
+        } else {
+            self.shown.push(i);
+            self.shown.sort_unstable();
         }
     }
 

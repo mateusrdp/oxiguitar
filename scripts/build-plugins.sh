@@ -20,11 +20,25 @@
 # plugin carries only its own code). They are built in target/oxp/, the
 # folder oxiguitar-plugin-test also uses, so tests reuse the builds.
 #
-# Usage: scripts/build-plugins.sh [--debug] [--target TRIPLE] [--out FOLDER]
+# Usage: scripts/build-plugins.sh [--debug] [--target TRIPLE] [--out FOLDER] [--skip NAME]... [--only NAME]
 #   --debug   debug builds (default: release builds, as shipped)
 #   --target  build for another target (packages; macOS builds both
 #             architectures and joins them with lipo)
 #   --out     put the files there instead
+#   --skip    leave out the plugin in plugins/NAME (the AppImage's build on
+#             Ubuntu 22.04 leaves out audio-pipewire: scripts/package/build-linux.sh),
+#             or NAME-x86-64-v3 for its second build only
+#   --only    build the plugin in plugins/NAME alone (CI's "NAM for
+#             x86-64-v3" job)
+#
+# A plugin with a second manifest, manifest-x86-64-v3.json (the NAM plugin),
+# is built twice on Linux x86_64: as NAME.oxp, and with its feature
+# x86-64-v3 and RUSTFLAGS="-C target-cpu=x86-64-v3" as NAME-x86-64-v3.oxp,
+# in target/oxp-x86-64-v3/ (other flags would rebuild everything in
+# target/oxp/). That manifest names the processor features the build
+# needs, so a processor without them uses NAME.oxp, and one with them the
+# faster build (docs/design/plugins.md, "One file per plugin id"). It needs
+# Rust 1.99 (NeuralAmpModeler-rs's).
 
 set -euo pipefail
 
@@ -32,11 +46,15 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 profile=release
 target=""
 out=""
+skip=()
+only=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --debug) profile=debug ;;
         --target) target="$2"; shift ;;
         --out) out="$2"; shift ;;
+        --skip) skip+=("$2"); shift ;;
+        --only) only="$2"; shift ;;
         *) echo "build-plugins: unknown option $1" >&2; exit 2 ;;
     esac
     shift
@@ -72,9 +90,25 @@ case "$system" in
     *) os=linux ;;
 esac
 
+# Copies the library $1 into every folder as the plugin file $2.
+put() {
+    for folder in "${folders[@]}"; do
+        mkdir -p "$folder"
+        # A new file, not the old one overwritten: a running program that
+        # loaded the old one keeps it.
+        rm -f "$folder/$2"
+        cp "$1" "$folder/$2"
+        echo "build-plugins: $folder/$2"
+    done
+}
+
 for dir in "$root"/plugins/*/; do
     name="$(basename "$dir")"
     [[ "$name" == test || "$name" == test-* ]] && continue
+    [[ -n "$only" && "$name" != "$only" ]] && continue
+    if [[ ${#skip[@]} -gt 0 && " ${skip[*]} " == *" $name "* ]]; then
+        continue
+    fi
     # A plugin for other systems only (an audio device's) isn't built: its
     # manifest's "os" list doesn't name this one.
     systems="$(tr -d '\n' < "$dir/manifest.json" | grep -o '"os"[[:space:]]*:[[:space:]]*\[[^]]*\]' || true)"
@@ -83,13 +117,21 @@ for dir in "$root"/plugins/*/; do
     fi
     package="oxiguitar-$name-plugin"
     CARGO_TARGET_DIR="$root/target/oxp" cargo rustc --quiet -p "$package" "${args[@]}"
-    library="$build_dir/$prefix${package//-/_}$suffix"
-    for folder in "${folders[@]}"; do
-        mkdir -p "$folder"
-        # A new file, not the old one overwritten: a running program that
-        # loaded the old one keeps it.
-        rm -f "$folder/$name.oxp"
-        cp "$library" "$folder/$name.oxp"
-        echo "build-plugins: $folder/$name.oxp"
-    done
+    put "$build_dir/$prefix${package//-/_}$suffix" "$name.oxp"
+
+    if [[ -f "$dir/manifest-x86-64-v3.json" && "$system" == x86_64-*-linux-gnu ]] \
+        && ! [[ ${#skip[@]} -gt 0 && " ${skip[*]} " == *" $name-x86-64-v3 "* ]]; then
+        v3="$root/target/oxp-x86-64-v3"
+        RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C target-cpu=x86-64-v3" CARGO_TARGET_DIR="$v3" \
+            cargo rustc --quiet -p "$package" "${args[@]}" --features x86-64-v3
+        library="$v3${target:+/$target}/$profile/$prefix${package//-/_}$suffix"
+        # The build must carry its own manifest: without the processor
+        # features enabled, build.rs leaves the feature off, and the file
+        # would be the plain build under another name.
+        if ! grep -q '"movbe"' "$library"; then
+            echo "build-plugins: $name-x86-64-v3.oxp lacks manifest-x86-64-v3.json's conditions" >&2
+            exit 1
+        fi
+        put "$library" "$name-x86-64-v3.oxp"
+    fi
 done

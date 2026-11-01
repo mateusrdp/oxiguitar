@@ -20,15 +20,20 @@ OxiGuitar values your privacy first. It never uploads anything. No telemetry, no
 
 ## Status
 
-**v0.10.0, a pre-release for testers of the player (milestone M4), 26 October 2026**: v0.9's player, now with recorded guitars, basses and drums (SFZ). v1.0 follows it, with NAM.
+**v0.11.0, a pre-release for testers of the player (milestone M4), 1 November 2026**: v0.10's player with recorded guitars, basses and drums (SFZ), now with amp models (NAM), WAV export and a dialog that says what is missing, instead of a line at the bottom. The plugins are about to move to repositories of their own (the plugin interface is frozen at 1.4 with this release). v1.0 follows it.
 
-OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). And it plays them: from the caret or the selection, looping, with a count-in and a metronome (heard, seen, or both), at 25 to 200 % speed, with each track's volume, pan, mute and solo, and a cursor on the very beat you're hearing. It uses the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). `oxiguitar-cli play` plays a score from the terminal too. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
+OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). And it plays them: from the caret or the selection, looping, with a count-in and a metronome (heard, seen, or both), at 25 to 200 % speed, with each track's volume, pan, mute and solo, and a cursor on the very beat you're hearing. It uses the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). `oxiguitar-cli play` plays a score from the terminal too. Coming with v1.0, and built: guitars and basses through **amp models** (Neural Amp Modeler captures) and cabinets, picked per track in its Properties ([Amp models](https://mateusrdp.github.io/oxiguitar/amp-models.html)), and **File → Export WAV Audio…**, the whole song or some bars, as written or at your practice speed ([Exporting audio](https://mateusrdp.github.io/oxiguitar/audio-export.html)). See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 <p align="center"><img src="docs/readme/playing.png" alt="OxiGuitar paused while playing an eight-track song: the blue cursor on the beat being heard, the Player controls above, each track's mixer and its overview below" width="800"></p>
 
 <p align="center">
-<img src="docs/readme/editing.png" alt="Editing: a bend selected on the tablature, the palette of tools on the left, the Inspector showing the note on the right" width="395">
+<img src="docs/readme/editing.png" alt="Editing: a bend selected on the tablature, the palette of tools on the left, the Note tab showing the note on the right" width="395">
 <img src="docs/readme/light.png" alt="The light interface, with lyrics under a melody" width="395">
+</p>
+
+<p align="center">
+<img src="docs/readme/amp.png" alt="A bass track's Properties: its Amp (NAM) section plays it through a Darkglass Microtubes 900 capture, with the cabinet, input and output levels" width="395">
+<img src="docs/readme/export.png" alt="File, Export WAV Audio: the whole song or the selected bars, as written or at the practice speed, with or without the metronome" width="395">
 </p>
 
 **Hear it:** a band with recorded guitars, bass and drums, the bass and the drum kit alone, guitar techniques, bends and strums, played by OxiGuitar with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
@@ -56,19 +61,16 @@ How can you help, you ask?
 | System | Versions | CPUs |
 | --- | --- | --- |
 | Windows | 10 and later | x86\_64, ARM64 |
-| Linux | current distributions with glibc 2.39 or newer: Debian trixie and sid, Ubuntu 24.04+, Fedora 40+ | x86\_64, ARM64 |
+| Linux | the AppImage: distributions with glibc 2.35 or newer (Debian 12 and later, Ubuntu 22.04+, Fedora 36+); the .deb and .rpm: glibc 2.39 or newer (Debian trixie and sid, Ubuntu 24.04+, Fedora 40+) | x86\_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
-Each [release](https://github.com/mateusrdp/oxiguitar/releases) has two kinds of download, and you need one of each:
-
-1. **The program**, for your system: a portable .exe for Windows (in a zip); an AppImage, a .deb and an .rpm for Linux; one .dmg for macOS.
-2. **The plugins** it opens files with: `OxiGuitar-plugins-basic-VERSION-SYSTEM-ARCH.zip` for your system, unzipped into your plugin folder ([how](https://mateusrdp.github.io/oxiguitar/plugins.html)). On Debian, Ubuntu and Fedora, install the `oxiguitar-plugins-basic` package instead. Without them, OxiGuitar opens nothing. (Releases up to 0.5.0 also list every plugin as a file of its own; you don't need those, as the zip holds them all.)
+Each [release](https://github.com/mateusrdp/oxiguitar/releases) has one download for your system, and it comes with the basic plugins, which open Guitar Pro files and play them: a portable .exe for Windows (in a zip, its plugins in a `plugins` folder beside it); one AppImage for any Linux, which holds both the Wayland and the X11 build, starts the right one and plays through ALSA (which PipeWire desktops pass on to PipeWire); a .deb and an .rpm for Debian, Ubuntu and Fedora, installed together with the `oxiguitar-plugins-basic` package beside them; one .dmg for macOS, the plugins inside the app.
 
 Every release carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Guitar Pro file types (.gp, .gpx, .gp5, .gp4, .gp3), so double-clicking a file opens OxiGuitar; the portable .exe and the AppImage register nothing, and the [user manual](https://mateusrdp.github.io/oxiguitar/installing.html) shows how to do it by hand. The [manual](https://mateusrdp.github.io/oxiguitar/) explains the whole program in a few short pages.
 
 - **Debian, Ubuntu:** `sudo apt install ./oxiguitar_VERSION_amd64.deb ./oxiguitar-plugins-basic_VERSION_amd64.deb` (or `_arm64.deb`).
 - **Fedora:** `sudo dnf install ./oxiguitar-VERSION-1.x86_64.rpm ./oxiguitar-plugins-basic-VERSION-1.x86_64.rpm` (or `.aarch64.rpm`).
-- **Linux on X11:** the packages above are the Wayland build, for today's desktops. A desktop without Wayland needs the X11 build: `oxiguitar-x11_….deb`, `oxiguitar-x11-….rpm` or `OxiGuitar-x11-….AppImage`. It is deprecated and will be dropped. Each build carries only its own display system's code, and installing one package replaces the other.
+- **Linux on X11:** the AppImage works on X11 as it is. The .deb and .rpm above are the Wayland build, for today's desktops; a desktop without Wayland needs the X11 build's package instead, `oxiguitar-x11_….deb` or `oxiguitar-x11-….rpm`, with the same plugins' package. The X11 build is deprecated and will be dropped. Each build carries only its own display system's code, and installing one package replaces the other.
 
 None of the packages is code-signed yet, so the first launch shows a warning:
 
@@ -94,7 +96,7 @@ cargo test
 
 Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The `lib…-dev` packages are the system libraries OxiGuitar needs: fontconfig, xkbcommon and Wayland for fonts, keyboard and windows, and ALSA and PipeWire (with libclang, which builds PipeWire's bindings) for the audio-device plugins.
 
-The program opens files only through format plugins (one per format, `.oxp` files). `scripts/build-plugins.sh` builds ours (Guitar Pro 3, 4, 5, 6 and 7–8, the SoundFont player and the audio outputs) and puts them where a build from source looks for them (`target/lib/oxiguitar/plugins/` on Linux); run it again after changing a plugin or a reader. The release packages hold the program alone; ours come as `oxiguitar-plugins-basic` (.deb, .rpm) and as a zip for each system.
+The program opens files only through format plugins (one per format, `.oxp` files). `scripts/build-plugins.sh` builds ours (Guitar Pro 3, 4, 5, 6 and 7–8, the MIDI player (SoundFont and SFZ) and the audio outputs) and puts them where a build from source looks for them (`target/lib/oxiguitar/plugins/` on Linux); run it again after changing a plugin or a reader. The release packages hold the program alone; ours come as `oxiguitar-plugins-basic` (.deb, .rpm) and as a zip for each system.
 
 Run the desktop app, optionally with a file to open:
 

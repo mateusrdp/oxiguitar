@@ -56,7 +56,7 @@ use oxiguitar_host::api::realtime::{RtEvent, RtEventKind, RtNote};
 use oxiguitar_host::api::score::Score;
 use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
 use oxiguitar_host::realtime::Instance;
-use oxiguitar_host::{Core, Folders, Level, Plugins, SharedSettings, State, System};
+use oxiguitar_host::{Core, ExporterRef, Folders, Level, Plugins, SharedSettings, State, System};
 
 /// Builds the plugin crate `package` of the workspace at `workspace` as
 /// `NAME.oxp` (with its `oxp` feature, as a `cdylib`), in the workspace's
@@ -108,16 +108,24 @@ pub fn build(
             std::env::consts::DLL_SUFFIX
         ));
     let oxp = target.join(format!("{name}.oxp"));
-    // A new file, not the old one overwritten: hard links to the old one
-    // (tests make them) and a copy a running program has loaded keep theirs.
-    let _ = std::fs::remove_file(&oxp);
-    std::fs::copy(&library, &oxp).map_err(|e| {
-        format!(
-            "cannot copy {} to {}: {e}",
-            library.display(),
-            oxp.display()
-        )
-    })?;
+    // A new file renamed into place, not the old one overwritten: hard
+    // links to the old one (tests make them) and a copy a running program
+    // has loaded keep theirs, and tests building at once never see it
+    // missing.
+    let part = target.join(format!(
+        ".{name}.{}.{}",
+        std::process::id(),
+        COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
+    std::fs::copy(&library, &part)
+        .and_then(|_| std::fs::rename(&part, &oxp))
+        .map_err(|e| {
+            format!(
+                "cannot copy {} to {}: {e}",
+                library.display(),
+                oxp.display()
+            )
+        })?;
     Ok(oxp)
 }
 
@@ -126,9 +134,9 @@ pub fn build(
 /// 480 Hz sine with no envelope delay or attack, as a melodic preset (bank 0,
 /// program 0) and a drum kit (bank 128, program 0). Every note of it is
 /// heard from its first frame, so an instrument that plays from a sound set
-/// can show it keeps time. The SoundFont plugin's tests make it again and
+/// can show it keeps time. The MIDI plugin's tests make it again and
 /// check this copy (`OXIGUITAR_BLESS=1 cargo test -p
-/// oxiguitar-soundfont-plugin` rewrites it).
+/// oxiguitar-midi-plugin` rewrites it).
 pub const TEST_SET: &[u8] = include_bytes!("test-sine.sf2");
 
 /// Our own plugins, shipped with OxiGuitar: each crate's package name and
@@ -145,7 +153,17 @@ pub const OURS: &[(&str, &str)] = &[
 /// Our instrument plugins (interface 1.3), shipped with the format plugins:
 /// each crate's package name and its file's name. [`build_ours`] builds
 /// them too.
-pub const OUR_INSTRUMENTS: &[(&str, &str)] = &[("oxiguitar-soundfont-plugin", "soundfont")];
+pub const OUR_INSTRUMENTS: &[(&str, &str)] = &[("oxiguitar-midi-plugin", "midi")];
+
+/// Our effect plugins (interface 1.3), shipped with the others: each
+/// crate's package name and its file's name. [`build_ours`] builds them
+/// too.
+pub const OUR_EFFECTS: &[(&str, &str)] = &[("oxiguitar-nam-plugin", "nam")];
+
+/// Our exporter plugins (interface 1.4), shipped with the others: each
+/// crate's package name and its file's name. [`build_ours`] builds them
+/// too.
+pub const OUR_EXPORTERS: &[(&str, &str)] = &[("oxiguitar-wav-plugin", "wav")];
 
 /// Our audio-device plugins (interface 1.3), shipped with the format
 /// plugins: each crate's package name, its file's name and the system it
@@ -187,7 +205,8 @@ pub fn build_devices(workspace: &Path, release: bool) -> Result<(PathBuf, Vec<St
     Ok((folder, names))
 }
 
-/// Builds every plugin of [`OURS`] and [`OUR_INSTRUMENTS`], each on its own so it carries only its
+/// Builds every plugin of [`OURS`], [`OUR_INSTRUMENTS`], [`OUR_EFFECTS`]
+/// and [`OUR_EXPORTERS`], each on its own so it carries only its
 /// own code (built together, Cargo would give each the features of all),
 /// and puts the files in the workspace's `target/oxp/ours-debug/` or
 /// `ours-release/`, replacing what was there. Returns that folder, a plugin
@@ -199,12 +218,24 @@ pub fn build_ours(workspace: &Path, release: bool) -> Result<PathBuf, String> {
         "ours-debug"
     });
     std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
-    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS) {
+    for (package, name) in OURS
+        .iter()
+        .chain(OUR_INSTRUMENTS)
+        .chain(OUR_EFFECTS)
+        .chain(OUR_EXPORTERS)
+    {
         let built = build(workspace, package, name, release)?;
         let to = folder.join(format!("{name}.oxp"));
-        // A new file: a program that loaded the old one keeps its own.
-        let _ = std::fs::remove_file(&to);
-        std::fs::copy(&built, &to).map_err(|e| format!("{}: {e}", to.display()))?;
+        // A new file, renamed into place: a program that loaded the old one
+        // keeps its own, and tests building at once never see it missing.
+        let part = folder.join(format!(
+            ".{name}.{}.{}",
+            std::process::id(),
+            COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        std::fs::copy(&built, &part)
+            .and_then(|_| std::fs::rename(&part, &to))
+            .map_err(|e| format!("{}: {e}", to.display()))?;
     }
     Ok(folder)
 }
@@ -255,6 +286,13 @@ impl Core for Kept {
 /// no other plugin is found beside it; the copy stays loaded until the
 /// program ends.
 pub fn check(oxp: &Path) -> Report {
+    check_with(oxp, &[])
+}
+
+/// [`check`] for a plugin that `needs` others: the plugin files in
+/// `needed` are copied beside it, so the need is met. Only `oxp` is
+/// checked.
+pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
     let mut report = Report::default();
     let folder = std::env::temp_dir().join(format!(
         "oxiguitar-plugin-test-{}-{}",
@@ -268,6 +306,13 @@ pub fn check(oxp: &Path) -> Report {
     {
         report.check("the plugin file can be read", Err(e.to_string()));
         return report;
+    }
+    for other in needed {
+        let name = other.file_name().unwrap_or("needed.oxp".as_ref());
+        if let Err(e) = std::fs::copy(other, folder.join(name)) {
+            report.check("a needed plugin file can be read", Err(e.to_string()));
+            return report;
+        }
     }
     let kept = Arc::new(Kept::default());
     let started = Instant::now();
@@ -299,7 +344,7 @@ pub fn check(oxp: &Path) -> Report {
         }
         plugins.use_folders(folders);
     }
-    let Some(found) = plugins.found().first() else {
+    let Some(found) = plugins.found().iter().find(|f| f.path == copy) else {
         report.check(
             "the manifest reads without loading the plugin",
             Err("the file wasn't found".into()),
@@ -420,6 +465,9 @@ pub fn check(oxp: &Path) -> Report {
                 Err(e) => Err(e.message),
             },
         );
+    }
+    for exporter in plugins.exporters() {
+        check_audio_export(&plugins, exporter, &mut report);
     }
     for tab in plugins.tabs() {
         let id = tab.id();
@@ -901,4 +949,73 @@ fn not_a_crash(e: &Error) -> Result<(), String> {
     } else {
         Ok(())
     }
+}
+
+/// An audio exporter (interface 1.4) through a short export: it starts at
+/// a rate the player can render at, takes a second of sound in pieces of
+/// uneven sizes and finishes with what to write over the start no longer
+/// than the file; a cancelled export finishes too; and a finish with no
+/// export started answers (an error is fine), without crashing.
+fn check_audio_export(plugins: &Plugins, exporter: ExporterRef<'_>, report: &mut Report) {
+    let id = exporter.spec.id.clone();
+    let run = |cancel: bool| -> Result<(), String> {
+        let mut export = plugins
+            .start_audio_export(exporter)
+            .map_err(|e| e.message)?;
+        let rate = export.rate;
+        let mut size = export.first.len();
+        let frames = rate as usize;
+        let mut at = 0;
+        for piece in [1usize, 64, 999, 4096].iter().cycle() {
+            if at >= frames {
+                break;
+            }
+            let n = (*piece).min(frames - at);
+            let samples: Vec<f32> = (at..at + n)
+                .flat_map(|i| {
+                    let v = (i as f32 * 440.0 * std::f32::consts::TAU / rate as f32).sin() * 0.5;
+                    [v, -v]
+                })
+                .collect();
+            size += export.samples(&samples).map_err(|e| e.message)?.len();
+            at += n;
+            if cancel && at > frames / 2 {
+                export.cancel();
+                return Ok(());
+            }
+        }
+        let end = export.finish().map_err(|e| e.message)?;
+        size += end.last.len();
+        match end.start {
+            Some(start) if start.len() > size => Err(format!(
+                "it asked to write {} bytes over a {size}-byte file",
+                start.len()
+            )),
+            _ => Ok(()),
+        }
+    };
+    report.check(
+        format!("exporter {id}: a second of sound in pieces of uneven sizes exports"),
+        run(false),
+    );
+    report.check(
+        format!("exporter {id}: an export cancelled halfway finishes"),
+        run(true),
+    );
+    let found = exporter.plugin;
+    let stray = plugins.send(
+        found,
+        &Request::ExportFinish {
+            exporter: id.clone(),
+            cancelled: false,
+        },
+    );
+    report.check(
+        format!("exporter {id}: a finish with no export started answers"),
+        match stray {
+            Err(e) => not_a_crash(&e),
+            Ok(Answer::ExportFinished { .. }) => Ok(()),
+            Ok(other) => Err(format!("answered {other:?}")),
+        },
+    );
 }
