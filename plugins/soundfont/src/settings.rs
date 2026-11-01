@@ -227,6 +227,43 @@ impl Window {
     }
 }
 
+/// The advice on better sounds at the top of the window (Mateus, 27 Oct
+/// 2026: in the settings window and the footer both, with the link, towards
+/// SFZ). OxiGuitar downloads nothing, so the link opens the manual's page,
+/// which says what to get, where, and what to pick here. Labels don't wrap:
+/// one short sentence a row.
+fn better_sounds(found: &[Found]) -> Vec<Row> {
+    let line = |text: &str| Row {
+        widgets: vec![Widget::Label {
+            text: text.into(),
+            muted: false,
+        }],
+    };
+    let link = |text: &str| Widget::Link {
+        text: text.into(),
+        url: crate::BETTER_SOUNDS.into(),
+    };
+    if found.iter().all(|f| f.origin == Origin::System) {
+        vec![
+            line("Only your system's basic General MIDI set plays now."),
+            line("Free recorded SFZ sets sound far better."),
+            Row {
+                widgets: vec![link("Better sounds: which to get, and how to pick them")],
+            },
+        ]
+    } else {
+        vec![Row {
+            widgets: vec![
+                Widget::Label {
+                    text: "The recommended free sets, and how to pick them:".into(),
+                    muted: true,
+                },
+                link("Better sounds"),
+            ],
+        }]
+    }
+}
+
 impl Tab for Window {
     fn content(&self) -> TabContent {
         let settings = self.host.settings().unwrap_or_default();
@@ -236,7 +273,7 @@ impl Tab for Window {
             .find(|f| f.kind != Kind::Sfz)
             .map_or_else(|| "none found".to_owned(), label);
         let labels: Vec<String> = found.iter().map(|f| self.label(f)).collect();
-        let mut rows = Vec::new();
+        let mut rows = better_sounds(&found);
         for role in Role::ALL {
             let mut options = vec![format!("The best found: {best}")];
             options.extend(labels.iter().cloned());
@@ -267,11 +304,16 @@ impl Tab for Window {
             || "the soundfonts folder".to_owned(),
             |p| p.display().to_string(),
         );
+        // Two rows: labels don't wrap, and the folder's path can be long.
         rows.push(Row {
             widgets: vec![Widget::Label {
-                text: format!(
-                    "Put .sf2, .sf3 or .dls files, or SFZ instruments' folders, in {folder}."
-                ),
+                text: "Put .sf2, .sf3 or .dls files, or SFZ instruments' folders, in:".into(),
+                muted: true,
+            }],
+        });
+        rows.push(Row {
+            widgets: vec![Widget::Label {
+                text: folder,
                 muted: true,
             }],
         });
@@ -458,5 +500,29 @@ mod tests {
         assert!(only_basic(&[&theirs]));
         assert!(!only_basic(&[&theirs, &mine]));
         assert!(!only_basic(&[]));
+    }
+
+    #[test]
+    fn better_sounds_are_advised_with_the_link() {
+        let links = |rows: &[Row]| -> Vec<String> {
+            rows.iter()
+                .flat_map(|r| &r.widgets)
+                .filter_map(|w| match w {
+                    Widget::Link { url, .. } => Some(url.clone()),
+                    _ => None,
+                })
+                .collect()
+        };
+        let basic = better_sounds(&[found("gm.dls", Origin::System)]);
+        assert_eq!(basic.len(), 3);
+        assert_eq!(links(&basic), [crate::BETTER_SOUNDS]);
+        assert_eq!(links(&better_sounds(&[])), [crate::BETTER_SOUNDS]);
+        let yours = better_sounds(&[
+            found("gm.dls", Origin::System),
+            found("FluidR3_GM.sf2", Origin::User),
+        ]);
+        assert_eq!(yours.len(), 1);
+        assert_eq!(links(&yours), [crate::BETTER_SOUNDS]);
+        assert!(crate::BETTER_SOUNDS.starts_with("https://"));
     }
 }

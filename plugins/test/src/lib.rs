@@ -589,6 +589,11 @@ impl Tab for Panel {
                             muted: true,
                         },
                         label(format!("Events: {}", s.events.len())),
+                        // Interface 1.4: a link, which the core opens.
+                        Widget::Link {
+                            text: "OxiGuitar".into(),
+                            url: "https://github.com/mateusrdp/oxiguitar".into(),
+                        },
                     ],
                 },
             ],
