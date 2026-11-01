@@ -54,6 +54,8 @@ export struct PlayFrame {
     beat: BoxItem,
     // The visual metronome, 0 (dark) to 1 (the bar's first beat).
     flash: float,
+    // Whether the current beat is an accent (true) or a regular beat (false).
+    strong: bool,
 }
 
 export struct TrackRow {
@@ -1186,6 +1188,7 @@ export component AppWindow inherits Window {
     in property <bool> loop-on;
     in property <bool> metronome-on;
     in property <int> player-speed: 100;
+    in property <string> player-speed-text: "100%";
     in property <float> master-level: 0.7;
     in property <bool> has-selection;
     in property <[string]> outputs: ["System default"];
@@ -1195,7 +1198,8 @@ export component AppWindow inherits Window {
     callback player-key(string, bool, bool, bool) -> bool;
     callback overview-clicked(float);
     in property <bool> visual-on;
-    callback speed-edited(int);
+    callback speed-slider-moved(float);
+    callback speed-text-edited(string);
     callback master-moved(float);
     callback output-chosen(int);
     // What shows of playback while the sound doesn't run: where it
@@ -1748,25 +1752,29 @@ export component AppWindow inherits Window {
                     padding-right: 8px;
                     spacing: 2px;
                     alignment: start;
-                    // Transport: rewind, play, play the selection, pause, stop
+                    // Transport: rewind, stop, play/pause toggle, play-selection
                     // (player.rs). Greyed out while nothing can play, and the
-                    // footer says why.
+                    // footer says why. Space = play/pause toggle, Enter = play/stop.
                     VerticalLayout {
                         alignment: center;
                         HorizontalLayout {
                             spacing: 2px;
                             IconButton {
                                 icon: @image-url("../../../assets/icons/ui/rewind.svg");
-                                tip: root.player-available ? "Rewind (Ctrl + Left / Right: a bar back / on while playing)" : "Rewind" + root.player-why;
+                                tip: root.player-available ? "Rewind (Ctrl+Alt+←)" : "Rewind" + root.player-why;
                                 enabled: root.player-available;
                                 clicked => { root.player-action("rewind"); }
                             }
                             IconButton {
-                                icon: @image-url("../../../assets/icons/ui/play.svg");
-                                tip: root.player-available ? "Play from the caret (Space)" : "Play" + root.player-why;
+                                icon: root.player-state == 1 || root.player-state == 2
+                                    ? @image-url("../../../assets/icons/ui/pause.svg")
+                                    : @image-url("../../../assets/icons/ui/play.svg");
+                                tip: root.player-available
+                                    ? (root.player-state == 1 || root.player-state == 2
+                                        ? "Pause (Space)" : "Play from the caret (Space)")
+                                    : (root.player-state == 0 ? "Play" : "Pause") + root.player-why;
                                 enabled: root.player-available;
-                                checked: root.player-state == 1 || root.player-state == 2;
-                                clicked => { root.player-action("play"); }
+                                clicked => { root.player-action("play-pause"); }
                             }
                             IconButton {
                                 icon: @image-url("../../../assets/icons/ui/play-selection.svg");
@@ -1774,19 +1782,6 @@ export component AppWindow inherits Window {
                                     : root.has-selection ? "Play Selection" : "Play Selection (select some beats or bars first)";
                                 enabled: root.player-available && root.has-selection;
                                 clicked => { root.player-action("play-selection"); }
-                            }
-                            IconButton {
-                                icon: @image-url("../../../assets/icons/ui/pause.svg");
-                                tip: "Pause (Space)";
-                                enabled: root.player-available && (root.player-state == 1 || root.player-state == 2);
-                                checked: root.player-state == 3;
-                                clicked => { root.player-action("pause"); }
-                            }
-                            IconButton {
-                                icon: @image-url("../../../assets/icons/ui/stop.svg");
-                                tip: "Stop (back to where playing began)";
-                                enabled: root.player-available && root.player-state != 0;
-                                clicked => { root.player-action("stop"); }
                             }
                         }
                     }
@@ -1810,34 +1805,29 @@ export component AppWindow inherits Window {
                                 checked: root.loop-on;
                                 clicked => { root.player-action("loop"); }
                             }
-                            IconButton {
-                                icon: @image-url("../../../assets/icons/ui/metronome.svg");
-                                tip: "Metronome";
-                                enabled: root.player-available;
-                                checked: root.metronome-on;
-                                clicked => { root.player-action("metronome"); }
-                            }
-                            // The visual metronome: while on, it flashes on
-                            // each beat, brighter on the bar's first.
+                            // The visual metronome: flashes on each beat.
+                            // Green for regular beats, amber for accents.
                             Rectangle {
                                 width: 30px;
                                 height: 28px;
                                 border-radius: 4px;
-                                background: root.visual-on && root.player-running
-                                    ? Look.playback.transparentize(1 - root.play-frame.flash * 0.9)
+                                background: root.player-running
+                                    ? (root.play-frame.strong
+                                        ? Look.warning.transparentize(1 - root.play-frame.flash * 0.9)
+                                        : Look.accent.transparentize(1 - root.play-frame.flash * 0.9))
                                     : transparent;
                                 IconButton {
-                                    icon: @image-url("../../../assets/icons/ui/visual-metronome.svg");
-                                    tip: "Visual Metronome (flashes on each beat)";
+                                    icon: @image-url("../../../assets/icons/ui/metronome.svg");
+                                    tip: "Metronome";
                                     enabled: root.player-available;
-                                    checked: root.visual-on && !root.player-running;
-                                    clicked => { root.player-action("visual-metronome"); }
+                                    checked: root.metronome-on;
+                                    clicked => { root.player-action("metronome"); }
                                 }
                             }
                         }
                     }
                     Rectangle { width: 13px; Rectangle { x: 6px; width: 1px; height: 60%; background: Palette.border; } }
-                    // Speed, 25 to 200 %, and the master level.
+                    // Speed (25–200 %, slider) and the master level.
                     VerticalLayout {
                         alignment: center;
                         HorizontalLayout {
@@ -1848,20 +1838,20 @@ export component AppWindow inherits Window {
                                 vertical-alignment: center;
                                 color: Palette.foreground.transparentize(root.player-available ? 0.2 : 0.6);
                             }
-                            speed-box := SpinBox {
+                            Slider {
                                 width: 96px;
-                                minimum: 25;
-                                maximum: 200;
-                                step-size: 5;
-                                value: root.player-speed;
+                                minimum: 0;
+                                maximum: 1;
+                                value: (root.player-speed - 25) / 175.0;
                                 enabled: root.player-available;
-                                edited(v) => { root.speed-edited(v); }
+                                changed(v) => { root.speed-slider-moved(v); }
                             }
-                            Text {
-                                text: "%";
+                            LineEdit {
+                                width: 72px;
                                 font-size: 12px;
-                                vertical-alignment: center;
-                                color: Palette.foreground.transparentize(root.player-available ? 0.2 : 0.6);
+                                text: root.player-speed-text;
+                                enabled: root.player-available;
+                                edited(v) => { root.speed-text-edited(v); }
                             }
                             Rectangle { width: 8px; }
                             Text {

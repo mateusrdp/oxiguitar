@@ -563,10 +563,6 @@ impl Player {
     /// plays (true); otherwise the caret should (false). Always sends the
     /// seek so the engine's position updates regardless of state.
     pub(crate) fn seek(&mut self, time: f64) -> bool {
-        eprintln!(
-            "[Player::seek] time={:.3} state={:?} sending to control",
-            time, self.state
-        );
         self.control.seek(time);
         self.state == State::Playing
     }

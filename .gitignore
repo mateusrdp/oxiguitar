@@ -22,3 +22,6 @@ Thumbs.db
 
 # Made when the plugin template is built in place; authors commit their own.
 docs/plugins/template/Cargo.lock
+
+# Git worktrees
+.worktrees/

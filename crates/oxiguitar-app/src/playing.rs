@@ -168,6 +168,7 @@ pub(crate) fn sync(app: &Shared) {
     ui.set_loop_on(p.looping());
     ui.set_metronome_on(p.metronome());
     ui.set_player_speed(p.speed() as i32);
+    ui.set_player_speed_text(format!("{}%", p.speed()).into());
     ui.set_master_level(p.master());
     ui.set_player_running(p.state() == State::Playing);
     ui.set_visual_on(s.visual);
@@ -220,6 +221,15 @@ pub(crate) fn action(app: &Shared, name: &str) {
     let dos = match name {
         "play" => play(app, false),
         "play-selection" => play(app, true),
+        "play-pause" => {
+            let state = app.borrow().player.state();
+            if matches!(state, State::Playing | State::Starting) {
+                pause(app);
+            } else if app.borrow().player.can_play() {
+                play(app, false);
+            }
+            Vec::new()
+        }
         "pause" => {
             pause(app);
             Vec::new()
@@ -242,11 +252,6 @@ pub(crate) fn action(app: &Shared, name: &str) {
             let mut s = app.borrow_mut();
             let on = !s.player.metronome();
             s.player.set_metronome(on);
-            Vec::new()
-        }
-        "visual-metronome" => {
-            let mut s = app.borrow_mut();
-            s.visual = !s.visual;
             Vec::new()
         }
         "loop" => {
@@ -346,8 +351,8 @@ fn put_caret_at(app: &Shared, p: Place) {
     }
 }
 
-/// The player's keys, before the editor's: Space plays and pauses, as in
-/// Guitar Pro 8; Ctrl + Left and Right move a bar back and on (the sound
+/// The player's keys, before the editor's: Space plays and pauses (as in
+/// Guitar Pro 8). Ctrl + Left and Right move a bar back and on (the sound
 /// while it runs, else the caret). Returns whether the key was taken.
 pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) -> bool {
     if name == " " && !shift && !ctrl && !alt {
@@ -357,6 +362,11 @@ pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) 
         } else if app.borrow().player.can_play() {
             action(app, "play");
         }
+        return true;
+    }
+    if ctrl && alt && !shift && name == "left" {
+        // Ctrl + Alt + Left: rewind to the first bar (the toolbar button's action).
+        action(app, "rewind");
         return true;
     }
     if ctrl && !shift && !alt && (name == "left" || name == "right") {
@@ -462,13 +472,14 @@ fn shown_at(s: &crate::App, t: f64, running: bool) -> PlayFrame {
             };
         }
     }
-    if running && s.visual {
+    if running {
         // The latest click: bright for a moment, then dark.
         let i = tl.clicks.partition_point(|c| c.time <= t);
         if let Some(c) = i.checked_sub(1).and_then(|i| tl.clicks.get(i)) {
             let age = (t - c.time).max(0.0);
             let strength = if c.strong { 1.0 } else { 0.55 };
             out.flash = (strength * (1.0 - age / FLASH).max(0.0)) as f32;
+            out.strong = c.strong;
         }
     }
     out
@@ -584,19 +595,6 @@ pub(crate) fn notation_clicked(app: &Shared, sheet: usize, x: f32, y: f32) {
         let Some((_, t)) = crate::player::time_of(&tl, place, 0) else {
             return;
         };
-        eprintln!(
-            "[notation_clicked] sheet={} x={:.1} y={:.1} spot=(t={},s={},b={},beat={:?}) place=(bar={},offset={:.4}) time={:.3}",
-            sheet,
-            x,
-            y,
-            spot.track,
-            spot.staff,
-            spot.bar,
-            spot.beat,
-            spot.bar,
-            offset.to_f64(),
-            t
-        );
         s.player.seek(t);
         crate::player::place_at(&tl, t.min(tl.length() - 1e-6).max(0.0))
     };
