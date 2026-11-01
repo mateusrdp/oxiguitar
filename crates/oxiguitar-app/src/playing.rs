@@ -252,6 +252,8 @@ pub(crate) fn action(app: &Shared, name: &str) {
             let mut s = app.borrow_mut();
             let on = !s.player.metronome();
             s.player.set_metronome(on);
+            // The merged button controls both audio and visual flash.
+            s.visual = on;
             Vec::new()
         }
         "visual-metronome" => {
@@ -482,7 +484,7 @@ fn shown_at(s: &crate::App, t: f64, running: bool) -> PlayFrame {
             };
         }
     }
-    if running && s.player.metronome() {
+    if running && s.visual {
         // The latest click: bright for a moment, then dark.
         let i = tl.clicks.partition_point(|c| c.time <= t);
         if let Some(c) = i.checked_sub(1).and_then(|i| tl.clicks.get(i)) {
