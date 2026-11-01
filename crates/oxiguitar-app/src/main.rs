@@ -4444,6 +4444,7 @@ fn export_audio_dialog(app: &Shared, i: usize) {
     }
     s.export_with = Some(i);
     ui.set_export_heading(format!("Export {}", target.name).into());
+    ui.set_export_plugin(target.plugin_name.clone().into());
     ui.set_export_has_selection(s.editing.selection().is_some());
     ui.set_export_selection(false);
     ui.set_export_practice_speed(s.player.speed() as i32);

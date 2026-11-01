@@ -911,6 +911,8 @@ export component ChordDialog inherits Rectangle {
 // written tempo or the practice speed, with or without the metronome.
 export component ExportDialog inherits Rectangle {
     in property <string> heading: "Export Audio";
+    // Where the file's format is set: the exporter's plugin's settings.
+    in property <string> plugin-name;
     in property <bool> has-selection: false;
     in-out property <bool> selection: false;
     in property <int> practice-speed: 100;
@@ -954,7 +956,7 @@ export component ExportDialog inherits Rectangle {
                 toggled => { root.metronome = self.checked; }
             }
             Text {
-                text: "Each track plays with its sound, amp and mixer settings as they are now. The file's format (bit depth, rate) is set in the exporter's plugin settings: Tools → Plugins.";
+                text: "Each track plays with its sound, amp and mixer settings as they are now. The file's format (bit depth, rate) is set in the settings of the plugin “" + root.plugin-name + "” (Tools → Plugins…, its Settings… button).";
                 font-size: 11px;
                 wrap: word-wrap;
                 color: Palette.foreground.transparentize(0.4);

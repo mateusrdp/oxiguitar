@@ -1269,6 +1269,7 @@ export component AppWindow inherits Window {
     callback export-with(int);
     in property <bool> export-dialog-shown: false;
     in property <string> export-heading;
+    in property <string> export-plugin;
     in property <bool> export-has-selection;
     in-out property <bool> export-selection;
     in property <int> export-practice-speed: 100;
@@ -2536,6 +2537,7 @@ export component AppWindow inherits Window {
         width: root.width;
         height: root.height;
         heading: root.export-heading;
+        plugin-name: root.export-plugin;
         has-selection: root.export-has-selection;
         selection <=> root.export-selection;
         practice-speed: root.export-practice-speed;
