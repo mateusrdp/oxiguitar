@@ -402,7 +402,7 @@ fn tempo(
     Some(Edited { touched, caret: c })
 }
 
-/// The Bar dialog's settings as one change: each part that differs from
+/// The Bar tab's settings as one change: each part that differs from
 /// the bar's, run as its own command on a copy, then recorded at once.
 fn properties(
     score: &mut Score,

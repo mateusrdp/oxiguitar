@@ -1,29 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-// The Bar dialog and Custom N-tuplet (M3 slice 4), over the window like
-// the Question: nothing behind them takes clicks or keys. Their fields come
-// from and go back to `bar_form.rs`.
+// The dialogs over the window (Custom N-tuplet, the track dialog, Transpose,
+// the bend editor, the chord dialog and the rest), like the Question:
+// nothing behind them takes clicks or keys. The Bar dialog is gone: its
+// fields are the Bar tab's (issue #177, `bar_form.rs`).
 
 import { Button, CheckBox, ComboBox, LineEdit, SpinBox, ScrollView, Palette } from "std-widgets.slint";
 import { PluginRows, PluginSection } from "plugin_tab.slint";
-
-// The Bar dialog's single fields (`bar_form::BarForm`).
-export struct BarFields {
-    numerator: int,
-    denominator: int,
-    key: int,
-    minor: bool,
-    clef: int,
-    tempo: int,
-    feel: int,
-    repeat-start: bool,
-    repeat-count: int,
-    letter: string,
-    section: string,
-    double-bar: bool,
-    free-time: bool,
-}
 
 // A dimmed backdrop and a card, with Enter for OK and Escape for Cancel.
 component Card inherits Rectangle {
@@ -89,164 +73,6 @@ component Label inherits Text {
     font-size: 12px;
     vertical-alignment: center;
     min-width: 120px;
-}
-
-export component BarDialog inherits Rectangle {
-    in-out property <BarFields> fields;
-    in-out property <[bool]> endings;
-    in-out property <[bool]> directions;
-    in property <[string]> key-names;
-    in property <[string]> clef-names;
-    in property <[string]> feel-names;
-    in property <[string]> direction-names;
-    // From the second bar on: the tempo is a change at the bar's start.
-    in property <string> heading: "Bar";
-    callback done(bool);
-    Card {
-        width: root.width;
-        height: root.height;
-        heading: root.heading;
-        card-width: 600px;
-        done(ok) => { root.done(ok); }
-        VerticalLayout {
-            spacing: 8px;
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Time signature"; }
-                SpinBox {
-                    minimum: 1;
-                    maximum: 32;
-                    value: root.fields.numerator;
-                    edited(v) => { root.fields.numerator = v; }
-                }
-                Text { text: "/"; vertical-alignment: center; }
-                ComboBox {
-                    model: ["1", "2", "4", "8", "16", "32"];
-                    current-index: root.fields.denominator;
-                    selected => { root.fields.denominator = self.current-index; }
-                }
-                CheckBox {
-                    text: "Free time";
-                    checked: root.fields.free-time;
-                    toggled => { root.fields.free-time = self.checked; }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Key"; }
-                ComboBox {
-                    horizontal-stretch: 1;
-                    model: root.key-names;
-                    current-index: root.fields.key;
-                    selected => { root.fields.key = self.current-index; }
-                }
-                ComboBox {
-                    model: ["Major", "Minor"];
-                    current-index: root.fields.minor ? 1 : 0;
-                    selected => { root.fields.minor = self.current-index == 1; }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Clef"; }
-                ComboBox {
-                    horizontal-stretch: 1;
-                    model: root.clef-names;
-                    current-index: root.fields.clef;
-                    selected => { root.fields.clef = self.current-index; }
-                }
-                Label { text: "Tempo"; min-width: 0; }
-                SpinBox {
-                    minimum: 1;
-                    maximum: 2000;
-                    value: root.fields.tempo;
-                    edited(v) => { root.fields.tempo = v; }
-                }
-                Text { text: "♩ a minute"; vertical-alignment: center; font-size: 12px; }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Feel"; }
-                ComboBox {
-                    horizontal-stretch: 1;
-                    model: root.feel-names;
-                    current-index: root.fields.feel;
-                    selected => { root.fields.feel = self.current-index; }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Repeat"; }
-                CheckBox {
-                    text: "Opens";
-                    checked: root.fields.repeat-start;
-                    toggled => { root.fields.repeat-start = self.checked; }
-                }
-                CheckBox {
-                    text: "Closes, played";
-                    checked: root.fields.repeat-count >= 2;
-                    toggled => { root.fields.repeat-count = self.checked ? 2 : 0; }
-                }
-                SpinBox {
-                    enabled: root.fields.repeat-count >= 2;
-                    minimum: 2;
-                    maximum: 99;
-                    value: max(2, root.fields.repeat-count);
-                    edited(v) => { root.fields.repeat-count = v; }
-                }
-                Text { text: "times"; vertical-alignment: center; font-size: 12px; }
-            }
-            HorizontalLayout {
-                spacing: 4px;
-                Label { text: "Alternate endings"; }
-                for on[i] in root.endings : CheckBox {
-                    text: i + 1;
-                    checked: on;
-                    toggled => { root.endings[i] = self.checked; }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Section"; }
-                LineEdit {
-                    width: 56px;
-                    placeholder-text: "A";
-                    text: root.fields.letter;
-                    edited(t) => { root.fields.letter = t; }
-                }
-                LineEdit {
-                    horizontal-stretch: 1;
-                    placeholder-text: "Verse";
-                    text: root.fields.section;
-                    edited(t) => { root.fields.section = t; }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                alignment: start;
-                Label { text: "Bar line"; }
-                CheckBox {
-                    text: "Double bar line";
-                    checked: root.fields.double-bar;
-                    toggled => { root.fields.double-bar = self.checked; }
-                }
-            }
-            Label { text: "Directions"; }
-            // Three columns, placed by hand (a grid layout can't repeat).
-            directions-box := Rectangle {
-                property <length> line: 28px;
-                height: ceil(root.direction-names.length / 3) * self.line;
-                for name[i] in root.direction-names : CheckBox {
-                    x: mod(i, 3) * directions-box.width / 3;
-                    y: floor(i / 3) * directions-box.line;
-                    width: directions-box.width / 3;
-                    text: name;
-                    checked: root.directions[i];
-                    toggled => { root.directions[i] = self.checked; }
-                }
-            }
-        }
-    }
 }
 
 export component TupletDialog inherits Rectangle {

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The Inspector's note and beat (M3 slice 6), without window code: the
+//! The Note tab (M3 slice 6), without window code: the
 //! caret's note and beat as rows of fields, and what a change to a field
-//! does (Mateus, 20 Oct 2026: the Inspector edits them, and it is where
+//! does (Mateus, 20 Oct 2026: the right area edits them, and it is where
 //! the effects' values change).
 //!
 //! A switch (a tickbox) sends the effect's own command, so it acts as its
@@ -30,9 +30,14 @@ pub(crate) enum Kind {
     Number,
     /// A button that opens an editor, with a summary beside it.
     Button,
+    /// A line of text, set on Enter or when the keyboard leaves it.
+    Text,
+    /// A row of numbered tickboxes (the options are their numbers), the
+    /// value one bit per box, the first box the lowest bit.
+    Ticks,
 }
 
-/// One row of the Inspector's note or beat.
+/// One row of the Note or Bar tab.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Field {
     /// What a change names.
@@ -46,9 +51,11 @@ pub(crate) struct Field {
     /// A number's range.
     pub(crate) min: i32,
     pub(crate) max: i32,
+    /// A text's text.
+    pub(crate) text: String,
 }
 
-fn heading(label: String) -> Field {
+pub(crate) fn heading(label: String) -> Field {
     Field {
         id: "",
         label,
@@ -57,10 +64,11 @@ fn heading(label: String) -> Field {
         options: Vec::new(),
         min: 0,
         max: 0,
+        text: String::new(),
     }
 }
 
-fn switch(id: &'static str, label: &str, on: bool) -> Field {
+pub(crate) fn switch(id: &'static str, label: &str, on: bool) -> Field {
     Field {
         id,
         label: label.to_owned(),
@@ -69,10 +77,11 @@ fn switch(id: &'static str, label: &str, on: bool) -> Field {
         options: Vec::new(),
         min: 0,
         max: 1,
+        text: String::new(),
     }
 }
 
-fn choice(id: &'static str, label: &str, options: &[&str], picked: usize) -> Field {
+pub(crate) fn choice(id: &'static str, label: &str, options: &[&str], picked: usize) -> Field {
     Field {
         id,
         label: label.to_owned(),
@@ -81,22 +90,57 @@ fn choice(id: &'static str, label: &str, options: &[&str], picked: usize) -> Fie
         options: options.iter().map(|o| (*o).to_owned()).collect(),
         min: 0,
         max: 0,
+        text: String::new(),
     }
 }
 
-fn number(id: &'static str, label: &str, value: u8, max: u8) -> Field {
+pub(crate) fn number(id: &'static str, label: &str, value: u8, max: u8) -> Field {
+    number_in(id, label, i32::from(value), 0, i32::from(max))
+}
+
+/// A number in any range.
+pub(crate) fn number_in(id: &'static str, label: &str, value: i32, min: i32, max: i32) -> Field {
     Field {
         id,
         label: label.to_owned(),
         kind: Kind::Number,
-        value: i32::from(value),
+        value,
         options: Vec::new(),
-        min: 0,
-        max: i32::from(max),
+        min,
+        max,
+        text: String::new(),
     }
 }
 
-fn button(id: &'static str, label: &str, summary: String) -> Field {
+/// A line of text.
+pub(crate) fn text(id: &'static str, label: &str, text: &str) -> Field {
+    Field {
+        id,
+        label: label.to_owned(),
+        kind: Kind::Text,
+        value: 0,
+        options: Vec::new(),
+        min: 0,
+        max: 0,
+        text: text.to_owned(),
+    }
+}
+
+/// A row of tickboxes labelled `names`, `bits` telling which are on.
+pub(crate) fn ticks(id: &'static str, label: &str, names: Vec<String>, bits: i32) -> Field {
+    Field {
+        id,
+        label: label.to_owned(),
+        kind: Kind::Ticks,
+        value: bits,
+        options: names,
+        min: 0,
+        max: 0,
+        text: String::new(),
+    }
+}
+
+pub(crate) fn button(id: &'static str, label: &str, summary: String) -> Field {
     Field {
         id,
         label: label.to_owned(),
@@ -105,6 +149,7 @@ fn button(id: &'static str, label: &str, summary: String) -> Field {
         options: vec![summary],
         min: 0,
         max: 0,
+        text: String::new(),
     }
 }
 

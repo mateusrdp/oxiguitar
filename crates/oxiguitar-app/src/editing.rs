@@ -306,7 +306,7 @@ fn effects_at(beat: &oxiguitar_model::Beat, string: Option<u8>) -> u64 {
 /// A dialog the keys or the palette open at the caret.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Dialog {
-    /// The Bar dialog: signatures, clef, tempo, feel, repeats, endings,
+    /// The Bar tab: signatures, clef, tempo, feel, repeats, endings,
     /// directions, section.
     Bar,
     /// Custom N-tuplet.
@@ -325,7 +325,7 @@ pub(crate) enum Dialog {
 
 /// The dialog a key opens, as Guitar Pro 8's keys open its own: Ctrl + K
 /// (key signature), Ctrl + / (feel), D (directions) and Shift + Insert
-/// (section) open the Bar dialog; B the bend editor, Ctrl + Alt + V the
+/// (section) show the Bar tab; B the bend editor, Ctrl + Alt + V the
 /// whammy bar's; A the chord dialog; Shift + T the beat's text; Ctrl + T
 /// (Guitar Pro's time signature key) starts typing lyrics on the page, as
 /// in MuseScore (Mateus, 20 and 21 Oct 2026).
@@ -590,7 +590,7 @@ impl Editing {
         pitch_at_step(step, clef, key, transposition)
     }
 
-    /// What the Bar dialog opens on: the caret's bar (the selection's
+    /// What the Bar tab shows: the caret's bar (the selection's
     /// first), and its heading ("Bar 3", or "Bars 3–6" for a selection).
     pub(crate) fn bar_state(&self) -> Option<(oxiguitar_edit::BarState, String)> {
         let c = self.caret?;
@@ -605,12 +605,38 @@ impl Editing {
         Some((state, heading))
     }
 
+    /// The Bar tab's rows for the caret's bar (the selection's first).
+    pub(crate) fn bar_fields(&self) -> Vec<crate::effect_form::Field> {
+        self.bar_state()
+            .map(|(state, _)| crate::bar_form::fields(&state))
+            .unwrap_or_default()
+    }
+
+    /// Which bars the Bar tab's changes apply to when the selection holds
+    /// more than the caret's one ("Bars 3–6"); empty otherwise.
+    pub(crate) fn bar_scope(&self) -> String {
+        match (self.caret, self.selection) {
+            (Some(_), Some(s)) if s.bars().0 != s.bars().1 => self
+                .bar_state()
+                .map(|(_, heading)| heading)
+                .unwrap_or_default(),
+            _ => String::new(),
+        }
+    }
+
+    /// A row of the Bar tab changed: the command that makes the bar so, on
+    /// the selection's bars as the Bar dialog did.
+    pub(crate) fn bar_changed(&self, id: &str, value: i32, text: &str) -> Option<Command> {
+        let (was, _) = self.bar_state()?;
+        crate::bar_form::changed(&was, id, value, text).map(|b| Command::Bar(Box::new(b)))
+    }
+
     /// The score the caret is in.
     pub(crate) fn score(&self) -> Option<Arc<Score>> {
         self.score.clone()
     }
 
-    /// The Inspector's view of the caret's bar.
+    /// The Bar tab's view of the caret's bar.
     pub(crate) fn bar_view(&self) -> Option<crate::inspector::BarView> {
         crate::inspector::bar_view(self.score.as_ref()?, self.caret?)
     }
@@ -656,7 +682,7 @@ impl Editing {
         }
     }
 
-    /// The Inspector's rows for the caret's note and beat.
+    /// The Note tab's rows for the caret's note and beat.
     pub(crate) fn effect_fields(&self) -> Vec<crate::effect_form::Field> {
         match (self.score.as_ref(), self.caret) {
             (Some(s), Some(c)) => crate::effect_form::fields(s, c),
@@ -664,7 +690,7 @@ impl Editing {
         }
     }
 
-    /// A field of the Inspector's note or beat changed.
+    /// A field of the Note tab changed.
     pub(crate) fn field_changed(&self, id: &str, value: i32) -> Option<crate::effect_form::Action> {
         crate::effect_form::changed(self.score.as_ref()?, self.caret?, id, value)
     }
