@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The Bar dialog's fields (M3 slice 4), without window code: what the
-//! caret's bar carries as the dialog shows it, and back.
+//! The Bar tab's fields (M3 slice 4, moved from the Bar dialog into the
+//! Inspector for issue #177), without window code: what the caret's bar
+//! carries as the tab shows it, as rows of fields, and what a change to a
+//! row makes of the bar.
 
+use crate::effect_form::{self, Field};
 use oxiguitar_edit::BarState;
 use oxiguitar_model::{
     Clef, Direction, KeyMode, KeySignature, Marker, TimeSignature, TripletFeel, Tuplet,
@@ -63,7 +66,8 @@ pub(crate) const DIRECTIONS: [(&str, Direction); 19] = [
 pub(crate) const ENDINGS: usize = 8;
 
 /// The keys offered, from seven flats to seven sharps: the major key and
-/// its relative minor.
+/// its relative minor, as "C / Am" and "G / Em (1♯)", short enough for the
+/// Inspector's narrow tab.
 pub(crate) fn key_names() -> Vec<String> {
     const MAJOR: [&str; 15] = [
         "C♭", "G♭", "D♭", "A♭", "E♭", "B♭", "F", "C", "G", "D", "A", "E", "B", "F♯", "C♯",
@@ -81,12 +85,148 @@ pub(crate) fn key_names() -> Vec<String> {
                 f if f > 0 => format!(" ({f}♯)"),
                 f => format!(" ({}♭)", -f),
             };
-            format!("{major} major / {minor} minor{sign}")
+            format!("{major} / {minor}m{sign}")
         })
         .collect()
 }
 
-/// The dialog's fields.
+/// What a change to a direction's tickbox names: `direction-N` for the
+/// N-th of [`DIRECTIONS`].
+const DIRECTION_IDS: [&str; 19] = [
+    "direction-0",
+    "direction-1",
+    "direction-2",
+    "direction-3",
+    "direction-4",
+    "direction-5",
+    "direction-6",
+    "direction-7",
+    "direction-8",
+    "direction-9",
+    "direction-10",
+    "direction-11",
+    "direction-12",
+    "direction-13",
+    "direction-14",
+    "direction-15",
+    "direction-16",
+    "direction-17",
+    "direction-18",
+];
+
+/// The beat units a time signature's bottom number offers, as the tab
+/// words them.
+const UNITS: [&str; 6] = [
+    "1 (whole)",
+    "2 (half)",
+    "4 (quarter)",
+    "8 (eighth)",
+    "16 (sixteenth)",
+    "32 (thirty-second)",
+];
+
+/// The Bar tab's rows for a bar: signatures, clef, tempo and feel, repeats
+/// and endings, section, double bar line and directions, each as one row
+/// the window draws.
+pub(crate) fn fields(b: &BarState) -> Vec<Field> {
+    let f = BarForm::of(b);
+    let pick = |i: i32| usize::try_from(i).unwrap_or(0);
+    let mut rows = vec![
+        effect_form::heading("Time".to_owned()),
+        effect_form::number_in("numerator", "Beats a bar", f.numerator, 1, 32),
+        effect_form::choice("denominator", "Beat unit", &UNITS, pick(f.denominator)),
+        effect_form::switch("free-time", "Free time", f.free_time),
+        effect_form::heading("Key and clef".to_owned()),
+        Field {
+            options: key_names(),
+            ..effect_form::choice("key", "Key", &[], pick(f.key))
+        },
+        effect_form::choice("minor", "Mode", &["Major", "Minor"], usize::from(f.minor)),
+        Field {
+            options: CLEFS.iter().map(|(n, _)| (*n).to_owned()).collect(),
+            ..effect_form::choice("clef", "Clef", &[], pick(f.clef))
+        },
+        effect_form::heading("Tempo".to_owned()),
+        effect_form::number_in("tempo", "Tempo (\u{2669} a minute)", f.tempo, 1, 2000),
+        Field {
+            options: FEELS.iter().map(|(n, _)| (*n).to_owned()).collect(),
+            ..effect_form::choice("feel", "Feel", &[], pick(f.feel))
+        },
+        effect_form::heading("Repeats".to_owned()),
+        effect_form::switch("repeat-start", "Repeat opens", f.repeat_start),
+        effect_form::switch("repeat-end", "Repeat closes", f.repeat_count >= 2),
+    ];
+    if f.repeat_count >= 2 {
+        rows.push(effect_form::number_in(
+            "repeat-count",
+            "Times played",
+            f.repeat_count,
+            2,
+            99,
+        ));
+    }
+    let bits = f
+        .endings
+        .iter()
+        .enumerate()
+        .filter(|(_, on)| **on)
+        .fold(0, |bits, (i, _)| bits | 1 << i);
+    rows.push(effect_form::ticks(
+        "endings",
+        "Alternate endings",
+        (1..=ENDINGS).map(|n| n.to_string()).collect(),
+        bits,
+    ));
+    rows.push(effect_form::heading("Section".to_owned()));
+    rows.push(effect_form::text("letter", "Letter", &f.letter));
+    rows.push(effect_form::text("section", "Name", &f.section));
+    rows.push(effect_form::heading("Bar line".to_owned()));
+    rows.push(effect_form::switch(
+        "double-bar",
+        "Double bar line",
+        f.double_bar,
+    ));
+    rows.push(effect_form::heading("Directions".to_owned()));
+    for (i, (name, _)) in DIRECTIONS.iter().enumerate() {
+        rows.push(effect_form::switch(DIRECTION_IDS[i], name, f.directions[i]));
+    }
+    rows
+}
+
+/// What a change to the row `id` makes of the bar `was`: `value` for a
+/// tickbox (0 or 1), a drop-down's index, a number, or the endings' bits;
+/// `text` for a line of text. `None` when nothing changes (or the row is
+/// unknown).
+pub(crate) fn changed(was: &BarState, id: &str, value: i32, text: &str) -> Option<BarState> {
+    let mut f = BarForm::of(was);
+    let on = value == 1;
+    match id {
+        "numerator" => f.numerator = value,
+        "denominator" => f.denominator = value,
+        "free-time" => f.free_time = on,
+        "key" => f.key = value,
+        "minor" => f.minor = on,
+        "clef" => f.clef = value,
+        "tempo" => f.tempo = value,
+        "feel" => f.feel = value,
+        "repeat-start" => f.repeat_start = on,
+        // Closing starts at twice; the count row then sets it.
+        "repeat-end" => f.repeat_count = if on { f.repeat_count.max(2) } else { 0 },
+        "repeat-count" => f.repeat_count = value,
+        "endings" => f.endings = (0..ENDINGS).map(|i| value & (1 << i) != 0).collect(),
+        "letter" => f.letter = text.to_owned(),
+        "section" => f.section = text.to_owned(),
+        "double-bar" => f.double_bar = on,
+        _ => {
+            let i = DIRECTION_IDS.iter().position(|d| *d == id)?;
+            f.directions[i] = on;
+        }
+    }
+    let now = f.to_state(was);
+    (now != *was).then_some(now)
+}
+
+/// The tab's fields.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct BarForm {
     pub(crate) numerator: i32,
@@ -334,8 +474,121 @@ mod tests {
         // The ninth ending, which the dialog doesn't show, stays.
         assert_eq!(t.alternate_endings, 0b1_0000_0000);
         assert_eq!(t.directions, [Direction::Coda]);
-        assert_eq!(key_names()[7], "C major / A minor");
-        assert_eq!(key_names()[0], "C♭ major / A♭ minor (7♭)");
+        assert_eq!(key_names()[7], "C / Am");
+        assert_eq!(key_names()[0], "C♭ / A♭m (7♭)");
+    }
+
+    fn row<'a>(rows: &'a [Field], id: &str) -> &'a Field {
+        rows.iter().find(|r| r.id == id).unwrap()
+    }
+
+    #[test]
+    fn the_tab_shows_the_bar() {
+        let rows = fields(&state());
+        assert_eq!(
+            (
+                row(&rows, "numerator").value,
+                row(&rows, "denominator").value
+            ),
+            (6, 3)
+        );
+        assert_eq!(row(&rows, "key").value, 4);
+        assert_eq!(row(&rows, "key").options.len(), 15);
+        assert_eq!(row(&rows, "minor").value, 1);
+        assert_eq!(row(&rows, "tempo").value, 93);
+        assert_eq!(row(&rows, "repeat-start").value, 1);
+        assert_eq!(row(&rows, "repeat-end").value, 1);
+        assert_eq!(row(&rows, "repeat-count").value, 3);
+        assert_eq!(row(&rows, "endings").value, 0b101);
+        assert_eq!(row(&rows, "letter").text, "A");
+        assert_eq!(row(&rows, "section").text, "Verse");
+        // Fine is the fifth and Segno the first of the directions.
+        assert_eq!(row(&rows, "direction-4").value, 1);
+        assert_eq!(row(&rows, "direction-0").value, 1);
+        assert_eq!(row(&rows, "direction-1").value, 0);
+        assert_eq!(
+            rows.iter()
+                .filter(|r| r.id.starts_with("direction-"))
+                .count(),
+            19
+        );
+        // Ids are unique, or a change would find the wrong row.
+        let mut ids: Vec<_> = rows
+            .iter()
+            .map(|r| r.id)
+            .filter(|i| !i.is_empty())
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), rows.iter().filter(|r| !r.id.is_empty()).count());
+        // The times played show only while a repeat closes here.
+        let mut open = state();
+        open.repeat_end = None;
+        assert!(fields(&open).iter().all(|r| r.id != "repeat-count"));
+    }
+
+    #[test]
+    fn a_change_to_a_row_is_one_change_to_the_bar() {
+        let s = state();
+        let t = changed(&s, "tempo", 140, "").unwrap();
+        assert_eq!(t.tempo, 140.0);
+        assert_eq!(
+            BarState {
+                tempo: s.tempo,
+                ..t
+            },
+            s
+        );
+        assert_eq!(
+            changed(&s, "numerator", 3, "")
+                .unwrap()
+                .time_signature
+                .numerator,
+            3
+        );
+        assert_eq!(
+            changed(&s, "denominator", 2, "")
+                .unwrap()
+                .time_signature
+                .denominator,
+            4
+        );
+        assert_eq!(changed(&s, "clef", 1, "").unwrap().clef, Clef::Bass);
+        assert_eq!(
+            changed(&s, "minor", 0, "").unwrap().key_signature.mode,
+            KeyMode::Major
+        );
+        assert_eq!(changed(&s, "repeat-end", 0, "").unwrap().repeat_end, None);
+        assert_eq!(
+            changed(&s, "repeat-count", 5, "").unwrap().repeat_end,
+            Some(5)
+        );
+        assert_eq!(
+            changed(&s, "endings", 0b11, "").unwrap().alternate_endings,
+            0b1_0000_0011
+        );
+        assert_eq!(
+            changed(&s, "section", 0, " Chorus ")
+                .unwrap()
+                .marker
+                .unwrap()
+                .text,
+            "Chorus"
+        );
+        assert!(changed(&s, "double-bar", 0, "").is_some_and(|b| !b.double_bar));
+        let coda = changed(&s, "direction-2", 1, "").unwrap().directions;
+        assert!(coda.contains(&Direction::Coda) && coda.contains(&Direction::Fine));
+        // Closing a repeat that wasn't closed plays it twice.
+        let mut open = state();
+        open.repeat_end = None;
+        assert_eq!(
+            changed(&open, "repeat-end", 1, "").unwrap().repeat_end,
+            Some(2)
+        );
+        // Setting a row to what it already is, or an unknown row, is nothing.
+        assert!(changed(&s, "numerator", 6, "").is_none());
+        assert!(changed(&s, "letter", 0, "A").is_none());
+        assert!(changed(&s, "nonsense", 1, "").is_none());
     }
 
     #[test]

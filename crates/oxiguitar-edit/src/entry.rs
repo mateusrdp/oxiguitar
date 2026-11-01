@@ -138,7 +138,7 @@ pub enum Command {
     DoubleBar,
     /// The bars are in free time, or no longer are (`|`).
     FreeTime,
-    /// Everything the Bar dialog sets, as one change: each part that
+    /// Everything the Bar tab sets, as one change: each part that
     /// differs from the caret's bar, as its own command would set it.
     Bar(Box<crate::BarState>),
     /// The selection (or the caret's beat) taken out: beats deleted from

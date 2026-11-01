@@ -74,10 +74,10 @@ The bar commands work on the caret's bar or, with a selection, on its bars.
 | Ctrl + Delete | Deletes the caret's bar, or the selected bars, from every track (never the last bar left). A tempo change in them moves to the bar after them, so the music after them keeps its tempo |
 | [ and ] | A repeat opens at the bar, or closes at it (played twice); press again to take it away |
 | \| or Alt + Shift + L | Free time: the bar has no time signature to add up to |
-| Ctrl + K, Ctrl + /, D, Shift + Insert | Opens the **Bar** dialog |
-| Double-click on a time signature | Opens the **Bar** dialog for that bar |
+| Ctrl + K, Ctrl + /, D, Shift + Insert | Shows the **Bar** tab on the right |
+| Double-click on a time signature | Shows the **Bar** tab for that bar |
 
-The **Bar** dialog (also **Edit → Bar…** and the palette's Clef, Key Signature, Time Signature, Rhythmic Interpretation, Alternate Endings and Directions) shows what the bar carries and changes any of it at once, as one change to undo:
+The **Bar** tab on the right (the palette's Clef, Key Signature, Time Signature, Rhythmic Interpretation, Alternate Endings and Directions show it too) shows what the bar carries, and changes any of it as you use it, each change a step to undo. With several bars selected it changes all of them, and says so. The section's letter and name are set when you press Enter or move to another field:
 
 - **Time signature**, **key** and **feel** change from this bar until the next bar that had another, as Guitar Pro changes them. A tempo change inside a bar stays at the same point of the bar when its time signature changes.
 - **Clef** changes the caret's track from this bar until its next clef. A guitar's staff sounds an octave below the written notes, and it keeps doing so in any clef (its bass clef has the small 8 too). Drum tracks keep the drums' clef.
@@ -154,9 +154,9 @@ The palette's **dynamics**, ppp to fff, set the dynamic of the caret's beat, or 
 
 **B** (or the palette's **Bend**) opens the **bend editor** for the note on the caret's string; **Ctrl + Alt + V** (or **Whammy Bar**) opens it for the beat's whammy bar. Pick a type (Bend, Bend and release, Release, Prebend, Prebend and bend, Prebend and release; for the whammy bar Dive, Dip, Return, Predive, Predive and dive) and a pitch from ¼ tone to 3 tones, or drag the curve's points on the grid: time across the note in twelfths, pitch up the side in quarter tones. A press on an empty grid starts a bend at that pitch. The curve has an origin, a middle held at one pitch between two places, and a destination, which is the shape a .gp file holds. **Enter** applies it, **Escape** cancels, and "No bend" takes the bend away. With a selection, the curve goes on every selected note (or beat).
 
-### The Inspector's note and beat
+### The Note tab
 
-Under the caret's bar, the **Inspector** shows the note on the caret's string and its beat, and changes them. The tickboxes switch effects as their keys do (on a selection, on every selected note or beat). The drop-downs and numbers set what the keys only start at a default: the accent, how the note slides in and out, the harmonic and how far up an artificial or tapped harmonic sounds, the trill's speed (sixteenths, thirty-seconds or sixty-fourths) and the fret it trills with, the fingers of the left and right hands, the dynamic, the speed of tremolo picking, grace notes, the brush and how long it takes, the pick stroke, and tapping, slapping or popping. **Edit…** beside the bend and the whammy bar opens their editor. On a rest only its dynamic shows. Each change is one step to undo.
+The **Note** tab on the right shows the note on the caret's string and its beat, and changes them. The tickboxes switch effects as their keys do (on a selection, on every selected note or beat). The drop-downs and numbers set what the keys only start at a default: the accent, how the note slides in and out, the harmonic and how far up an artificial or tapped harmonic sounds, the trill's speed (sixteenths, thirty-seconds or sixty-fourths) and the fret it trills with, the fingers of the left and right hands, the dynamic, the speed of tremolo picking, grace notes, the brush and how long it takes, the pick stroke, and tapping, slapping or popping. **Edit…** beside the bend and the whammy bar opens their editor. On a rest only its dynamic shows. Each change is one step to undo.
 
 A .gp file keeps trills in sixteenths only: saving a faster trill as .gp names it among what the file can't hold. A .gp5 file keeps them at any of its speeds.
 
@@ -180,11 +180,11 @@ A syllable already there shows in the field, to change; an empty field leaves th
 
 Lyrics are kept as Guitar Pro keeps them, and a file's lyrics follow its rules on the page: a space or a hyphen starts the next syllable, each further space or hyphen leaves a note empty, a plus joins two words on one note ("got+to"), and text in square brackets ("[Verse 2]") is a note to yourself, not shown.
 
-The Inspector shows the beat's chord and text, with **Edit…** to change them.
+The Note tab shows the beat's chord and text, with **Edit…** to change them.
 
 ## The song's information
 
-The **Song** tab, beside the Inspector on the right, holds the score's information, in Guitar Pro's order: title, artist, subtitle, album, words, music, copyright, transcriber, notices and instructions. Type in a field; it is set when you press Enter or leave the field, as one step to undo. The title, subtitle and artist show at the top of the page and of a PDF.
+The **Song** tab, the first of the tabs on the right, holds the score's information, in Guitar Pro's order: title, artist, subtitle, album, words, music, copyright, transcriber, notices and instructions. Type in a field; it is set when you press Enter or leave the field, as one step to undo. The title, subtitle and artist show at the top of the page and of a PDF.
 
 ## Undo and redo
 
@@ -192,6 +192,6 @@ The **Song** tab, beside the Inspector on the right, holds the score's informati
 
 ## Bars that don't add up
 
-The **Inspector**, on the right, shows the caret's bar: its time signature, and for each voice how much it holds against it, as Guitar Pro 8 shows a bar, counted in the time signature's own unit (quarter notes in 4/4, eighth notes in 6/8): "2/4" for two quarters in 2/4 (green), "1.5/4" for a dotted quarter (red), then *Full*, *½ beat short* or *1 beat too long*, and how many notes and rests were entered. The caret's voice is highlighted, and the last line says on which beat the caret's beat starts. It follows every move and every change, so it is the quickest way to see what a bar still needs while composing.
+The **Bar** tab, on the right, shows the caret's bar: its time signature, and for each voice how much it holds against it, as Guitar Pro 8 shows a bar, counted in the time signature's own unit (quarter notes in 4/4, eighth notes in 6/8): "2/4" for two quarters in 2/4 (green), "1.5/4" for a dotted quarter (red), then *Full*, *½ beat short* or *1 beat too long*, and how many notes and rests were entered. The caret's voice is highlighted, and the last line says on which beat the caret's beat starts. It follows every move and every change, so it is the quickest way to see what a bar still needs while composing.
 
 A bar whose beats are longer or shorter than its time signature is laid in translucent red on the page. Such bars are allowed (many files have a few), and the PDF export shows the music without the red. When a file has any, the line at the bottom of the window says how many and where the first is. **Tools → Next Bar That Doesn't Add Up** (F4, as Guitar Pro's "Check bar duration") moves the caret to the next one in the tracks shown, going round to the start. A voice that holds nothing (Guitar Pro fills unused voices with empty beats) doesn't count.

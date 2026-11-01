@@ -208,13 +208,23 @@ impl Default for Shell {
                 Area::new(vec![Tab::new("player", "Player")], false),
                 Area::new(vec![Tab::new("tracks", "Tracks")], false),
                 Area::new(vec![Tab::new("palette", "Palette")], false),
-                // Open: it shows the caret's bar (Mateus, 20 Oct 2026).
-                // The song's information beside it, as Guitar Pro 8's Song
-                // Inspector (Mateus, 20 Oct 2026).
-                Area::new(
-                    vec![Tab::new("inspector", "Inspector"), Tab::new("song", "Song")],
-                    false,
-                ),
+                // The song's information, as Guitar Pro 8's Song Inspector
+                // (Mateus, 20 Oct 2026), then the caret's bar and its note
+                // (issue #177: the Inspector became the Bar and Note tabs,
+                // and the Bar dialog's fields moved into the Bar tab). The
+                // Bar tab is the one that shows at the start, as the
+                // Inspector's bar did (Mateus, 20 Oct 2026).
+                Area {
+                    active: 1,
+                    ..Area::new(
+                        vec![
+                            Tab::new("song", "Song"),
+                            Tab::new("bar", "Bar"),
+                            Tab::new("note", "Note"),
+                        ],
+                        false,
+                    )
+                },
             ],
         }
     }
@@ -254,7 +264,8 @@ mod tests {
         assert_eq!(shell.area(Side::Top).active_id(), "player");
         assert_eq!(shell.area(Side::Bottom).active_id(), "tracks");
         assert_eq!(shell.area(Side::Left).active_id(), "palette");
-        // The Inspector starts open: it shows the caret's bar.
+        // The right area starts open, on the Bar tab.
+        assert_eq!(shell.area(Side::Right).active_id(), "bar");
         assert!(!shell.area(Side::Left).collapsed && !shell.area(Side::Right).collapsed);
         assert!(!shell.area(Side::Top).collapsed);
         // No Mixer tab: the mixer's controls sit in each track's row.
@@ -264,7 +275,7 @@ mod tests {
             .flat_map(|a| &a.tabs)
             .map(|t| t.id.as_str())
             .collect();
-        assert_eq!(ids, ["player", "tracks", "palette", "inspector", "song"]);
+        assert_eq!(ids, ["player", "tracks", "palette", "song", "bar", "note"]);
         let ids: Vec<&str> = shell.toolbar.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(ids, ["file", "edit"]);
         assert_eq!(Side::from_index(3), Some(Side::Right));

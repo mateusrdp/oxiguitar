@@ -4,7 +4,7 @@
 //! The Song tab's fields (M3 slice 6), without window code: the score's
 //! information in Guitar Pro 8's order (its Song Inspector, "Song
 //! Information", checked 20 Oct 2026; Mateus, 20 Oct 2026: a Song tab
-//! beside the Inspector).
+//! beside the Bar and Note tabs).
 
 use oxiguitar_model::ScoreInfo;
 
