@@ -37,6 +37,14 @@ At start, the line at the bottom of the window says what is missing:
 
 Both messages link to [the releases page](https://github.com/mateusrdp/oxiguitar/releases), where every download has the basic plugins inside.
 
+The same gaps also open a dialog, once, when the window is up ([Advice dialogs](#advice-dialogs)): it says what is missing and links to [the official plugins](official-plugins.md) and to the install page for your system ([Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md)). There are three, each silenced on its own:
+
+| Dialog | When | Its line in `settings.json` |
+| --- | --- | --- |
+| OxiGuitar can't open any file | No plugin reads files | `no-format-plugin` |
+| OxiGuitar can't play | No plugin plays a score | `no-player-plugin` |
+| OxiGuitar has nowhere to send the sound | A plugin plays scores, but none sends sound to your speakers | `no-output-plugin` |
+
 ## Advice dialogs
 
 Sometimes a plugin or OxiGuitar itself needs something from you that it can't do alone: a sound set to install, an amp model to put in a folder. It then shows a small dialog once, when the window is up, saying what to do, with links to the page that explains it. A link opens in your browser only when you click it. Tick **Don't show this again** and press OK, and that dialog never returns.

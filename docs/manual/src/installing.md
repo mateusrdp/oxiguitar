@@ -23,6 +23,8 @@ If you start the wrong package's build, it says which one you need. **The X11 bu
 
 ## The plugins
 
+Each system's page says where plugins go and how they are kept up to date: [Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md). [The official plugins](official-plugins.md) says what each one does.
+
 OxiGuitar opens and plays files only through plugins, and the basic ones come with every download: in the AppImage, inside the Windows zip (its `plugins` folder) and inside the macOS app, and as the `oxiguitar-plugins-basic` package beside the .deb and .rpm. You don't need to install them yourself.
 
 To add other plugins, put their `.oxp` files in your own plugin folder ([Settings and plugins](plugins.md)); when the same plugin is in both places, OxiGuitar uses the higher version, and yours when the versions are equal. **Help → About** lists every folder OxiGuitar searches, and **Tools → Plugins** the plugins it found. To leave out a plugin you don't want, untick it in **Tools → Plugins**. (Releases up to 0.10 came without plugins, which were a separate zip. If you unzipped one into your plugin folder, you can delete those files: the newer copies that come with OxiGuitar are used anyway.)

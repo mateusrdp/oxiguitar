@@ -32,7 +32,8 @@ use std::sync::Arc;
 
 pub use folders::{Folders, HOME_VARIABLE, SETTINGS_FILE, System};
 pub use inventory::{
-    ISSUES_URL, Inventory, Level, Notice, PLUGIN_EXTENSION, PLUGINS_URL, plugin_notices,
+    ISSUES_URL, Inventory, Level, NO_FORMAT_PLUGIN, NO_OUTPUT_PLUGIN, NO_PLAYER_PLUGIN, Notice,
+    PLUGIN_EXTENSION, PLUGINS_URL, install_page, plugin_notices, plugins_page,
 };
 pub use oxiguitar_plugin_api as api;
 pub use plugins::{
@@ -56,6 +57,11 @@ pub struct Startup {
     pub inventory: Inventory,
     /// Messages for the footer, least important first.
     pub notices: Vec<Notice>,
+    /// What the core itself says it can't do (no plugin reads files, plays
+    /// or sends sound out) as advice for the window to show, most important
+    /// first, without what the user silenced. Empty in safe mode and for
+    /// programs without a window.
+    pub advice: Vec<advice::Asked>,
 }
 
 /// The display system this program draws with, as plugins' conditions name
@@ -130,6 +136,7 @@ fn begin(
             plugins,
             inventory,
             notices,
+            advice: Vec::new(),
         };
     };
     match if app {
@@ -225,12 +232,27 @@ fn begin(
             notices.extend(inventory.notices(&folders.user_plugins));
         }
     }
+    // The core's own check, asked of the window as advice (plugin
+    // interface 1.4): never in safe mode, where nothing is installed to
+    // speak of, and never without a window.
+    let advice = if app && !safe {
+        let appimage = std::env::var_os("APPIMAGE").is_some_and(|v| !v.is_empty());
+        inventory
+            .advice(System::this(), appimage, &folders.user_plugins)
+            .into_iter()
+            .filter(|a| !advice::is_hidden(&settings, advice::CORE, &a.id))
+            .map(advice::Asked::core)
+            .collect()
+    } else {
+        Vec::new()
+    };
     Startup {
         folders: Some(folders),
         settings,
         plugins,
         inventory,
         notices,
+        advice,
     }
 }
 
@@ -336,6 +358,69 @@ mod tests {
             !s.notices
                 .iter()
                 .any(|n| n.text.starts_with("No read/write"))
+        );
+        // Nothing is advised in safe mode, where no plugin is used.
+        assert!(s.advice.is_empty());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn the_startup_check_is_advice_the_user_can_silence() {
+        let root =
+            std::env::temp_dir().join(format!("oxiguitar-host-advice-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let home = root.join("og");
+        let none = root.join("no-plugins-here");
+        std::fs::create_dir_all(&home).unwrap();
+        std::fs::create_dir_all(&none).unwrap();
+        let resolve = || {
+            Folders::resolve(
+                System::Linux,
+                |n| (n == HOME_VARIABLE).then(|| OsString::from(&home)),
+                None,
+            )
+        };
+        let settings = |extra: &str| {
+            std::fs::write(
+                home.join(SETTINGS_FILE),
+                format!(
+                    r#"{{"plugin_folders": [{:?}]{extra}}}"#,
+                    none.to_str().unwrap()
+                ),
+            )
+            .unwrap();
+        };
+        let ids = |s: &Startup| {
+            s.advice
+                .iter()
+                .map(|a| (a.plugin.clone(), a.advice.id.clone()))
+                .collect::<Vec<_>>()
+        };
+        let core = |id: &str| (advice::CORE.to_owned(), id.to_owned());
+
+        settings("");
+        let s = start(resolve(), "x11", Arc::new(Unheard));
+        assert_eq!(ids(&s), [core(NO_FORMAT_PLUGIN), core(NO_PLAYER_PLUGIN)]);
+        assert!(s.advice.iter().all(|a| a.plugin_name == "OxiGuitar"));
+
+        // Silenced one by one, under advice.oxiguitar.
+        settings(r#", "advice": {"oxiguitar": {"no-format-plugin": "hidden"}}"#);
+        let s = start(resolve(), "x11", Arc::new(Unheard));
+        assert_eq!(ids(&s), [core(NO_PLAYER_PLUGIN)]);
+        settings(
+            r#", "advice": {"oxiguitar": {"no-format-plugin": "hidden", "no-player-plugin": "hidden"}}"#,
+        );
+        assert!(start(resolve(), "x11", Arc::new(Unheard)).advice.is_empty());
+        // Another plugin's silenced advice of the same id doesn't count.
+        settings(r#", "advice": {"oxiguitar.midi": {"no-format-plugin": "hidden"}}"#);
+        assert_eq!(start(resolve(), "x11", Arc::new(Unheard)).advice.len(), 2);
+
+        // A program without a window, and safe mode, are told nothing.
+        assert!(find(resolve(), "x11", Arc::new(Unheard)).advice.is_empty());
+        assert!(
+            start_in_safe_mode(resolve(), "x11", Arc::new(Unheard))
+                .advice
+                .is_empty()
         );
         let _ = std::fs::remove_dir_all(&root);
     }

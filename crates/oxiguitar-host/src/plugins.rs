@@ -1154,6 +1154,23 @@ impl Plugins {
             .collect()
     }
 
+    /// The names of the services declared for `interface` by usable
+    /// plugins whose conditions hold here, in plugin order. Nothing is
+    /// loaded or probed: a declared service may still turn out to be
+    /// unavailable, which [`Plugins::service`] finds out on first use.
+    pub fn declared_services(&self, interface: &str) -> Vec<String> {
+        self.ready()
+            .flat_map(|(_, _, m)| {
+                m.services
+                    .iter()
+                    .filter(|s| {
+                        s.interface == interface && s.conditions.unmet(&self.0.env).is_none()
+                    })
+                    .map(|s| service_name(s).to_owned())
+            })
+            .collect()
+    }
+
     /// The service for `interface`: chosen on first use (see the module's
     /// documentation), then kept. The error says why there is none.
     pub fn service(&self, interface: &str) -> Result<ServiceRef<'_>, String> {
