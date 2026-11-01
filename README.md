@@ -22,13 +22,18 @@ OxiGuitar values your privacy first. It never uploads anything. No telemetry, no
 
 **v0.10.0, a pre-release for testers of the player (milestone M4), 26 October 2026**: v0.9's player, now with recorded guitars, basses and drums (SFZ). v1.0 follows it, with NAM.
 
-OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). And it plays them: from the caret or the selection, looping, with a count-in and a metronome (heard, seen, or both), at 25 to 200 % speed, with each track's volume, pan, mute and solo, and a cursor on the very beat you're hearing. It uses the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). `oxiguitar-cli play` plays a score from the terminal too. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
+OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). And it plays them: from the caret or the selection, looping, with a count-in and a metronome (heard, seen, or both), at 25 to 200 % speed, with each track's volume, pan, mute and solo, and a cursor on the very beat you're hearing. It uses the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). `oxiguitar-cli play` plays a score from the terminal too. Coming with v1.0, and built: guitars and basses through **amp models** (Neural Amp Modeler captures) and cabinets, picked per track in its Properties ([Amp models](https://mateusrdp.github.io/oxiguitar/amp-models.html)), and **File → Export WAV Audio…**, the whole song or some bars, as written or at your practice speed ([Exporting audio](https://mateusrdp.github.io/oxiguitar/audio-export.html)). See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 <p align="center"><img src="docs/readme/playing.png" alt="OxiGuitar paused while playing an eight-track song: the blue cursor on the beat being heard, the Player controls above, each track's mixer and its overview below" width="800"></p>
 
 <p align="center">
 <img src="docs/readme/editing.png" alt="Editing: a bend selected on the tablature, the palette of tools on the left, the Inspector showing the note on the right" width="395">
 <img src="docs/readme/light.png" alt="The light interface, with lyrics under a melody" width="395">
+</p>
+
+<p align="center">
+<img src="docs/readme/amp.png" alt="A bass track's Properties: its Amp (NAM) section plays it through a Darkglass Microtubes 900 capture, with the cabinet, input and output levels" width="395">
+<img src="docs/readme/export.png" alt="File, Export WAV Audio: the whole song or the selected bars, as written or at the practice speed, with or without the metronome" width="395">
 </p>
 
 **Hear it:** a band with recorded guitars, bass and drums, the bass and the drum kit alone, guitar techniques, bends and strums, played by OxiGuitar with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.

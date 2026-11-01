@@ -23,6 +23,8 @@ pub(crate) struct Target {
     /// What it makes ("WAV Audio") and its files' extension.
     pub(crate) name: String,
     pub(crate) extension: String,
+    /// Its plugin's name ("WAV export"), where its settings are.
+    pub(crate) plugin_name: String,
 }
 
 /// The audio exporters the ready plugins add, in plugin order.
@@ -36,6 +38,7 @@ pub(crate) fn targets(plugins: &Plugins) -> Vec<Target> {
             id: e.spec.id.clone(),
             name: e.spec.name.clone(),
             extension: e.spec.extension.clone(),
+            plugin_name: e.plugin.name(),
         })
         .collect()
 }
@@ -161,6 +164,7 @@ mod tests {
             id: "wav".into(),
             name: "WAV Audio".into(),
             extension: "wav".into(),
+            plugin_name: "WAV export".into(),
         }
     }
 
