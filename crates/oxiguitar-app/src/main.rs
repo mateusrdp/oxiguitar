@@ -101,10 +101,10 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AltBox, AppWindow, AreaState, BarFields, BoxItem, FooterRow, GridPoint, InspectorField,
-    InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow,
-    PluginRow, PluginSection, PluginSettingsWindow, PluginWidget, ShortcutLine, SongField,
-    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
+    AltBox, AppWindow, AreaState, BoxItem, FooterRow, GridPoint, InspectorField, InspectorVoice,
+    ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow, PluginRow,
+    PluginSection, PluginSettingsWindow, PluginWidget, ShortcutLine, SongField, TileItem, ToolRow,
+    ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -206,6 +206,8 @@ struct App {
     dialogs_opened: u64,
     /// The editor: the caret and the selection over the page.
     editing: editing::Editing,
+    /// The rows the Note and Bar tabs show, as last sent to the window.
+    shown_rows: [Vec<effect_form::Field>; 2],
     /// The bars that don't add up, every track's.
     bad: Vec<oxiguitar_edit::StaffBar>,
     /// The open file's name, and whether the score differs from it.
@@ -217,8 +219,6 @@ struct App {
     save_formats: Vec<SaveFormat>,
     /// The question over the window, if one shows.
     question: Option<Asked>,
-    /// The bar the open Bar dialog was opened on, as it was.
-    bar_dialog: Option<oxiguitar_edit::BarState>,
     /// The bend or whammy-bar editor, while it is open.
     bend_dialog: Option<bend_form::BendForm>,
     /// The chord dialog, while it is open.
@@ -554,13 +554,13 @@ fn main() -> Result<(), slint::PlatformError> {
         sections: None,
         dialogs_opened: 0,
         editing: editing::Editing::default(),
+        shown_rows: Default::default(),
         bad: Vec::new(),
         doc_name: None,
         modified: false,
         untitled: false,
         save_formats,
         question: None,
-        bar_dialog: None,
         bend_dialog: None,
         chord_dialog: None,
         transpose_scope: None,
@@ -716,7 +716,6 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_edit_command(move |name| {
         match name.as_str() {
-            "bar-dialog" => return open_edit_dialog(&a, editing::Dialog::Bar),
             "tuplet-dialog" => return open_edit_dialog(&a, editing::Dialog::Tuplet),
             "chord-dialog" => return open_edit_dialog(&a, editing::Dialog::Chord),
             "text-dialog" => return open_edit_dialog(&a, editing::Dialog::Text),
@@ -746,8 +745,6 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_save_as(move || save_as_dialog(&a));
     let a = app.clone();
     ui.on_question_answered(move |i| question_answered(&a, i));
-    let a = app.clone();
-    ui.on_bar_dialog_done(move |ok| bar_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
     let a = app.clone();
@@ -810,7 +807,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_lyric_key(move |key, text| lyric_key(&a, key.as_str(), text.as_str()));
     let a = app.clone();
-    ui.on_inspector_changed(move |id, value| {
+    ui.on_note_changed(move |id, value| {
         let action = a.borrow().editing.field_changed(id.as_str(), value);
         match action {
             Some(effect_form::Action::Edit(command)) => {
@@ -826,6 +823,10 @@ fn main() -> Result<(), slint::PlatformError> {
             None => {}
         }
     });
+    let a = app.clone();
+    ui.on_bar_changed(move |id, value| bar_changed(&a, id.as_str(), value, ""));
+    let a = app.clone();
+    ui.on_bar_edited(move |id, text| bar_changed(&a, id.as_str(), 0, text.as_str()));
     ui.set_track_instrument_names(strings(
         track_form::INSTRUMENTS
             .iter()
@@ -883,7 +884,6 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_page_menu(move |action| match action.as_str() {
         "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
-        "bar" => open_edit_dialog(&a, editing::Dialog::Bar),
         "track" => open_track_dialog(&a),
         "cut" => clipboard(&a, editing::ClipKey::Cut),
         "copy" => clipboard(&a, editing::ClipKey::Copy),
@@ -905,25 +905,6 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
     ui.on_tuplet_usual(|n| i32::from(bar_form::usual_in_time_of(u8::try_from(n).unwrap_or(3))));
-    ui.set_bar_key_names(strings(bar_form::key_names()));
-    ui.set_bar_clef_names(strings(
-        bar_form::CLEFS
-            .iter()
-            .map(|(n, _)| (*n).to_owned())
-            .collect(),
-    ));
-    ui.set_bar_feel_names(strings(
-        bar_form::FEELS
-            .iter()
-            .map(|(n, _)| (*n).to_owned())
-            .collect(),
-    ));
-    ui.set_bar_direction_names(strings(
-        bar_form::DIRECTIONS
-            .iter()
-            .map(|(n, _)| (*n).to_owned())
-            .collect(),
-    ));
     let a = app.clone();
     ui.on_export_pdf(move || export_dialog(&a));
     ui.set_exporters(strings(
@@ -2499,13 +2480,14 @@ fn page_menu_pressed(app: &Shared, x: f32, y: f32) {
 }
 
 /// A double-click on the page: on a time signature, the caret goes to its
-/// bar and the Bar dialog opens there (Mateus, 20 Oct 2026).
+/// bar and the Bar tab shows (Mateus, 20 Oct 2026; the dialog became the
+/// tab in issue #177).
 fn page_double_clicked(app: &Shared, x: f32, y: f32) {
     let on_time = on_sheet(app, x, y)
         .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.time_signature_at(i, sx, sy));
     if on_time {
         caret_moved(app);
-        open_edit_dialog(app, editing::Dialog::Bar);
+        show_tab(app, "bar");
     }
 }
 
@@ -3136,7 +3118,8 @@ fn strings(list: Vec<String>) -> ModelRc<SharedString> {
     ))
 }
 
-/// Opens the Bar dialog or Custom N-tuplet at the caret.
+/// Opens the dialog the keys or the palette ask for at the caret; the
+/// Bar's is the Bar tab.
 fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -3145,32 +3128,8 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
         return;
     }
     match dialog {
-        editing::Dialog::Bar => {
-            let Some((state, heading)) = app.borrow().editing.bar_state() else {
-                return;
-            };
-            let f = bar_form::BarForm::of(&state);
-            ui.set_bar_fields(BarFields {
-                numerator: f.numerator,
-                denominator: f.denominator,
-                key: f.key,
-                minor: f.minor,
-                clef: f.clef,
-                tempo: f.tempo,
-                feel: f.feel,
-                repeat_start: f.repeat_start,
-                repeat_count: f.repeat_count,
-                letter: f.letter.into(),
-                section: f.section.into(),
-                double_bar: f.double_bar,
-                free_time: f.free_time,
-            });
-            ui.set_bar_endings(ModelRc::new(VecModel::from(f.endings)));
-            ui.set_bar_directions(ModelRc::new(VecModel::from(f.directions)));
-            ui.set_bar_heading(heading.into());
-            app.borrow_mut().bar_dialog = Some(state);
-            ui.set_bar_dialog_shown(true);
-        }
+        // The Bar dialog's fields are the Bar tab's.
+        editing::Dialog::Bar => show_tab(app, "bar"),
         editing::Dialog::Tuplet => {
             if app.borrow().editing.bar_state().is_none() {
                 return;
@@ -3487,48 +3446,30 @@ fn bend_dialog_done(app: &Shared, ok: bool) {
     }
 }
 
-/// The Bar dialog closed: on OK, what it sets is one change at the caret.
-fn bar_dialog_done(app: &Shared, ok: bool) {
-    let Some(ui) = app.borrow().ui.upgrade() else {
+/// A row of the Bar tab was used: what it sets is one change at the caret
+/// (or the selection's bars), one step to undo. `value` is the row's number,
+/// index or bits; `text` a line of text.
+fn bar_changed(app: &Shared, id: &str, value: i32, text: &str) {
+    let command = app.borrow().editing.bar_changed(id, value, text);
+    let Some(command) = command else {
         return;
     };
-    ui.set_bar_dialog_shown(false);
-    ui.invoke_focus_page();
-    let Some(was) = app.borrow_mut().bar_dialog.take() else {
-        return;
-    };
-    if !ok {
-        return;
-    }
-    let f = ui.get_bar_fields();
-    let form = bar_form::BarForm {
-        numerator: f.numerator,
-        denominator: f.denominator,
-        key: f.key,
-        minor: f.minor,
-        clef: f.clef,
-        tempo: f.tempo,
-        feel: f.feel,
-        repeat_start: f.repeat_start,
-        repeat_count: f.repeat_count,
-        letter: f.letter.to_string(),
-        section: f.section.to_string(),
-        double_bar: f.double_bar,
-        free_time: f.free_time,
-        endings: ui.get_bar_endings().iter().collect(),
-        directions: ui.get_bar_directions().iter().collect(),
-    };
-    let state = form.to_state(&was);
-    if state == was {
-        return;
-    }
-    let typed = app
-        .borrow_mut()
-        .editing
-        .tool(oxiguitar_edit::Command::Bar(Box::new(state)));
+    let typed = app.borrow_mut().editing.tool(command);
     if let Some(t) = typed {
         send_typed(app, t);
     }
+}
+
+/// Shows the right area's tab `id` ("bar", "note"), expanding the area and
+/// showing it if it was collapsed or hidden. The keys, the palette and a
+/// double-click on a time signature come here.
+fn show_tab(app: &Shared, id: &str) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    app.borrow_mut().shell.area_mut(Side::Right).open(id);
+    sync_areas(app);
+    ui.set_right_shown(true);
 }
 
 /// The track list's rows.
@@ -3590,7 +3531,7 @@ fn track_list_changed(app: &Shared, tracks: &[TrackInfo], was: &[Option<usize>])
     sync_tracks(app);
 }
 
-/// The Inspector shows the caret's bar: each voice's beats against the
+/// The Bar tab shows the caret's bar: each voice's beats against the
 /// time signature.
 /// The Song tab: each field changed in place, so one being typed in keeps
 /// its place and cursor.
@@ -3649,27 +3590,19 @@ fn sync_found(ui: &AppWindow) {
 
 fn sync_inspector(app: &Shared, ui: &AppWindow) {
     sync_song(app, ui);
-    let fields = app.borrow().editing.effect_fields();
-    ui.set_inspector_fields(ModelRc::new(VecModel::from(
-        fields
-            .into_iter()
-            .map(|f| InspectorField {
-                id: f.id.into(),
-                label: f.label.into(),
-                kind: match f.kind {
-                    effect_form::Kind::Heading => 0,
-                    effect_form::Kind::Switch => 1,
-                    effect_form::Kind::Choice => 2,
-                    effect_form::Kind::Number => 3,
-                    effect_form::Kind::Button => 4,
-                },
-                value: f.value,
-                options: strings(f.options),
-                min: f.min,
-                max: f.max,
-            })
-            .collect::<Vec<_>>(),
-    )));
+    let (note, bar, scope) = {
+        let s = app.borrow();
+        (
+            s.editing.effect_fields(),
+            s.editing.bar_fields(),
+            s.editing.bar_scope(),
+        )
+    };
+    ui.set_bar_scope(scope.into());
+    show_rows(app, 0, note, ui.get_note_fields(), |m| {
+        ui.set_note_fields(m)
+    });
+    show_rows(app, 1, bar, ui.get_bar_fields(), |m| ui.set_bar_fields(m));
     let view = app.borrow().editing.bar_view();
     let Some(v) = view else {
         ui.set_inspector_heading(SharedString::new());
@@ -3697,6 +3630,60 @@ fn sync_inspector(app: &Shared, ui: &AppWindow) {
         })
         .collect();
     ui.set_inspector_voices(ModelRc::new(VecModel::from(rows)));
+}
+
+/// Shows `rows` in a tab's list (`which` 0 the Note tab, 1 the Bar tab).
+/// Nothing is sent when they are what the window has. When only values
+/// differ the rows change where they are, so a field being typed in keeps
+/// its cursor and its focus; otherwise the list is replaced.
+fn show_rows(
+    app: &Shared,
+    which: usize,
+    rows: Vec<effect_form::Field>,
+    model: ModelRc<InspectorField>,
+    replace: impl FnOnce(ModelRc<InspectorField>),
+) {
+    let shown = std::mem::take(&mut app.borrow_mut().shown_rows[which]);
+    if shown == rows {
+        app.borrow_mut().shown_rows[which] = shown;
+        return;
+    }
+    let row = |f: &effect_form::Field| InspectorField {
+        id: f.id.into(),
+        label: f.label.as_str().into(),
+        kind: match f.kind {
+            effect_form::Kind::Heading => 0,
+            effect_form::Kind::Switch => 1,
+            effect_form::Kind::Choice => 2,
+            effect_form::Kind::Number => 3,
+            effect_form::Kind::Button => 4,
+            effect_form::Kind::Text => 5,
+            effect_form::Kind::Ticks => 6,
+        },
+        value: f.value,
+        options: strings(f.options.clone()),
+        min: f.min,
+        max: f.max,
+        text: f.text.as_str().into(),
+    };
+    let same_shape = shown.len() == rows.len()
+        && model.row_count() == rows.len()
+        && shown
+            .iter()
+            .zip(&rows)
+            .all(|(a, b)| a.id == b.id && a.kind == b.kind && a.label == b.label);
+    if same_shape {
+        for (i, (old, new)) in shown.iter().zip(&rows).enumerate() {
+            if old != new {
+                model.set_row_data(i, row(new));
+            }
+        }
+    } else {
+        replace(ModelRc::new(VecModel::from(
+            rows.iter().map(row).collect::<Vec<_>>(),
+        )));
+    }
+    app.borrow_mut().shown_rows[which] = rows;
 }
 
 /// Edit → Go to Section lists the score's sections.

@@ -27,7 +27,7 @@ OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF
 <p align="center"><img src="docs/readme/playing.png" alt="OxiGuitar paused while playing an eight-track song: the blue cursor on the beat being heard, the Player controls above, each track's mixer and its overview below" width="800"></p>
 
 <p align="center">
-<img src="docs/readme/editing.png" alt="Editing: a bend selected on the tablature, the palette of tools on the left, the Inspector showing the note on the right" width="395">
+<img src="docs/readme/editing.png" alt="Editing: a bend selected on the tablature, the palette of tools on the left, the Note tab showing the note on the right" width="395">
 <img src="docs/readme/light.png" alt="The light interface, with lyrics under a melody" width="395">
 </p>
 

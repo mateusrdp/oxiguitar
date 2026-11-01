@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BarDialog, BarFields, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
+import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -666,28 +666,123 @@ export struct InspectorVoice {
     current: bool,
 }
 
-// One row of the Inspector's note and beat (effect_form.rs).
+// One row of the Bar and Note tabs (effect_form.rs).
 export struct InspectorField {
     id: string,
     label: string,
-    // 0 heading, 1 tickbox, 2 drop-down, 3 number, 4 button.
+    // 0 heading, 1 tickbox, 2 drop-down, 3 number, 4 button, 5 text,
+    // 6 a row of numbered tickboxes (`value` holds one bit for each).
     kind: int,
     value: int,
     options: [string],
     min: int,
     max: int,
+    text: string,
 }
 
-// The Inspector: the caret's bar, each voice's beats against the time
-// signature (Mateus, 20 Oct 2026); then the caret's note and beat, whose
-// effects and values it changes (M3 slice 6).
-component Inspector inherits Rectangle {
+// The rows of the Bar and Note tabs, each as its kind says: label on the
+// left (40 %), control filling the rest.
+component FieldRows inherits VerticalLayout {
+    in property <[InspectorField]> fields;
+    callback changed(string, int);
+    callback edited(string, string);
+    spacing: 6px;
+    for f in root.fields : VerticalLayout {
+        if f.kind == 0 : VerticalLayout {
+            padding-top: 6px;
+            Text {
+                text: f.label;
+                font-size: 13px;
+                font-weight: 700;
+            }
+        }
+        if f.kind == 1 : CheckBox {
+            text: f.label;
+            checked: f.value == 1;
+            toggled => { root.changed(f.id, self.checked ? 1 : 0); }
+        }
+        if f.kind == 2 : HorizontalLayout {
+            spacing: 6px;
+            // A row is as tall as its drop-down needs, however few
+            // rows the tab has (issue #105: a rest's one field filled
+            // the pane).
+            max-height: 40px;
+            Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+            ComboBox {
+                vertical-stretch: 0;
+                min-width: 60px;
+                horizontal-stretch: 1;
+                model: f.options;
+                current-index: f.value;
+                selected => { root.changed(f.id, self.current-index); }
+            }
+        }
+        if f.kind == 3 : HorizontalLayout {
+            spacing: 6px;
+            Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+            SpinBox {
+                min-width: 60px;
+                horizontal-stretch: 1;
+                minimum: f.min;
+                maximum: f.max;
+                value: f.value;
+                edited(v) => { root.changed(f.id, v); }
+            }
+        }
+        if f.kind == 4 : HorizontalLayout {
+            spacing: 6px;
+            Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; }
+            Text { text: f.options[0]; font-size: 12px; vertical-alignment: center; horizontal-stretch: 1; }
+            Button { text: "Edit…"; clicked => { root.changed(f.id, 0); } }
+        }
+        if f.kind == 5 : HorizontalLayout {
+            spacing: 6px;
+            Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
+            LineEdit {
+                horizontal-stretch: 1;
+                min-width: 60px;
+                text: f.text;
+                accepted(t) => { root.edited(f.id, t); }
+                changed has-focus => {
+                    if (!self.has-focus) {
+                        root.edited(f.id, self.text);
+                    }
+                }
+            }
+        }
+        if f.kind == 6 : VerticalLayout {
+            spacing: 2px;
+            Text { text: f.label; font-size: 12px; }
+            // Four to a line, placed by hand (a grid layout can't repeat).
+            ticks := Rectangle {
+                property <length> line: 28px;
+                height: ceil(f.options.length / 4) * self.line;
+                for name[i] in f.options : CheckBox {
+                    x: mod(i, 4) * ticks.width / 4;
+                    y: floor(i / 4) * ticks.line;
+                    width: ticks.width / 4;
+                    text: name;
+                    checked: mod(floor(f.value / pow(2, i)), 2) == 1;
+                    toggled => { root.changed(f.id, self.checked ? f.value + round(pow(2, i)) : f.value - round(pow(2, i))); }
+                }
+            }
+        }
+    }
+}
+
+// The Bar tab: the caret's bar, each voice's beats against the time
+// signature (Mateus, 20 Oct 2026), then the bar's own fields, which change
+// the bar (or the selection's bars) as they are used (issue #177).
+component BarTab inherits Rectangle {
     in property <string> heading;
     in property <string> unit;
     in property <string> caret;
+    // "Bars 3–6" when the selection holds more than one bar.
+    in property <string> scope;
     in property <[InspectorVoice]> voices;
     in property <[InspectorField]> fields;
-    callback field-changed(string, int);
+    callback changed(string, int);
+    callback edited(string, string);
     scroll := ScrollView {
         VerticalLayout {
             width: scroll.visible-width;
@@ -731,51 +826,35 @@ component Inspector inherits Rectangle {
                 }
             }
             Text { text: root.caret; font-size: 11px; color: Palette.foreground.transparentize(0.4); wrap: word-wrap; }
-            for f in root.fields : VerticalLayout {
-                if f.kind == 0 : Text {
-                    text: f.label;
-                    font-size: 13px;
-                    font-weight: 700;
-                }
-                if f.kind == 1 : CheckBox {
-                    text: f.label;
-                    checked: f.value == 1;
-                    toggled => { root.field-changed(f.id, self.checked ? 1 : 0); }
-                }
-                if f.kind == 2 : HorizontalLayout {
-                    spacing: 6px;
-                    // A row is as tall as its drop-down needs, however few
-                    // rows the Inspector has (issue #105: a rest's one
-                    // field filled the pane).
-                    max-height: 40px;
-                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
-                    ComboBox {
-                        vertical-stretch: 0;
-                        min-width: 60px;
-                        horizontal-stretch: 1;
-                        model: f.options;
-                        current-index: f.value;
-                        selected => { root.field-changed(f.id, self.current-index); }
-                    }
-                }
-                if f.kind == 3 : HorizontalLayout {
-                    spacing: 6px;
-                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
-                    SpinBox {
-                        min-width: 60px;
-                        horizontal-stretch: 1;
-                        minimum: f.min;
-                        maximum: f.max;
-                        value: f.value;
-                        edited(v) => { root.field-changed(f.id, v); }
-                    }
-                }
-                if f.kind == 4 : HorizontalLayout {
-                    spacing: 6px;
-                    Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; }
-                    Text { text: f.options[0]; font-size: 12px; vertical-alignment: center; horizontal-stretch: 1; }
-                    Button { text: "Edit…"; clicked => { root.field-changed(f.id, 0); } }
-                }
+            if root.scope != "" : Text {
+                text: "The fields below change " + root.scope + ".";
+                font-size: 11px;
+                color: Look.accent;
+                wrap: word-wrap;
+            }
+            FieldRows {
+                fields: root.fields;
+                changed(id, v) => { root.changed(id, v); }
+                edited(id, t) => { root.edited(id, t); }
+            }
+        }
+    }
+}
+
+// The Note tab: the caret's note and beat, whose effects and values it
+// changes (M3 slice 6).
+component NoteTab inherits Rectangle {
+    in property <[InspectorField]> fields;
+    callback changed(string, int);
+    scroll := ScrollView {
+        VerticalLayout {
+            width: scroll.visible-width;
+            padding: 12px;
+            spacing: 6px;
+            alignment: start;
+            FieldRows {
+                fields: root.fields;
+                changed(id, v) => { root.changed(id, v); }
             }
         }
     }
@@ -1175,17 +1254,7 @@ export component AppWindow inherits Window {
     in property <[string]> question-lines;
     in property <[string]> question-buttons;
     callback question-answered(int);
-    // The Bar dialog and Custom N-tuplet (bar_form.rs).
-    in property <bool> bar-dialog-shown: false;
-    in-out property <BarFields> bar-fields;
-    in-out property <[bool]> bar-endings;
-    in-out property <[bool]> bar-directions;
-    in property <[string]> bar-key-names;
-    in property <[string]> bar-clef-names;
-    in property <[string]> bar-feel-names;
-    in property <[string]> bar-direction-names;
-    in property <string> bar-heading: "Bar";
-    callback bar-dialog-done(bool);
+    // Custom N-tuplet (bar_form.rs).
     in property <bool> tuplet-dialog-shown: false;
     in-out property <int> tuplet-notes: 3;
     in-out property <int> tuplet-in-time-of: 2;
@@ -1323,12 +1392,17 @@ export component AppWindow inherits Window {
     callback page-double-clicked(length, length);
     // A right-click on the page, before its menu opens.
     callback page-menu-pressed(length, length);
-    // The Inspector's view of the caret's bar (inspector.rs).
+    // The Bar tab: the caret's bar (inspector.rs) and its fields
+    // (bar_form.rs); the Note tab: the note and beat (effect_form.rs).
     in property <string> inspector-heading;
     in property <string> inspector-unit;
     in property <string> inspector-caret;
+    in property <string> bar-scope;
     in property <[InspectorVoice]> inspector-voices;
-    in property <[InspectorField]> inspector-fields;
+    in property <[InspectorField]> bar-fields;
+    in property <[InspectorField]> note-fields;
+    callback bar-changed(string, int);
+    callback bar-edited(string, string);
     // The Song tab: the score's information (M3 slice 6).
     in property <[SongField]> song-fields;
     callback song-edited(string, string);
@@ -1337,7 +1411,7 @@ export component AppWindow inherits Window {
     in property <int> palette-search-requests;
     in property <[PaletteToolRow]> palette-found;
     callback palette-searched(string);
-    callback inspector-changed(string, int);
+    callback note-changed(string, int);
     callback caret-key(string, bool, bool) -> bool;
     // Note entry: a key typed at the caret, with Shift, Ctrl and Alt,
     // answering whether it was one (editing.rs, `Editing::typed`).
@@ -1452,7 +1526,6 @@ export component AppWindow inherits Window {
             MenuSeparator { }
             MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
             MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
-            MenuItem { title: "Bar… (Ctrl + K)"; enabled: root.has-score; activated => { root.edit-command("bar-dialog"); } }
             MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
             MenuItem { title: "Chord… (A)"; enabled: root.has-score; activated => { root.edit-command("chord-dialog"); } }
             MenuItem { title: "Text… (Shift + T)"; enabled: root.has-score; activated => { root.edit-command("text-dialog"); } }
@@ -1949,7 +2022,7 @@ export component AppWindow inherits Window {
                                     page-menu-area.show({ x: self.mouse-x, y: self.mouse-y });
                                 }
                             }
-                            // On a time signature: the Bar dialog for its bar.
+                            // On a time signature: the Bar tab.
                             double-clicked => { root.page-double-clicked(self.mouse-x, self.mouse-y); }
                         }
                         // Right-click on the page: the selection's commands. The
@@ -1962,7 +2035,6 @@ export component AppWindow inherits Window {
                             height: flick.viewport-height;
                             Menu {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
-                                MenuItem { title: "Bar…"; activated => { root.page-menu("bar"); } }
                                 MenuItem { title: "Track Properties…"; activated => { root.page-menu("track"); } }
                                 MenuSeparator { }
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
@@ -2121,7 +2193,7 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                // Right area: the inspector (M3), then plugins' tabs.
+                // Right area: Song, Bar and Note, then plugins' tabs.
                 if root.right-shown && !root.right-area.collapsed : SideSplitter {
                     dragged(d) => { root.right-width = clamp(root.right-width - d, 120px, 500px); }
                 }
@@ -2136,14 +2208,21 @@ export component AppWindow inherits Window {
                     }
                     Rectangle {
                         background: Palette.alternate-background;
-                        if root.right-area.active-id == "inspector" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats."; }
-                        if root.right-area.active-id == "inspector" && root.has-score : Inspector {
+                        if root.right-area.active-id == "bar" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats and the bar's own settings."; }
+                        if root.right-area.active-id == "bar" && root.has-score : BarTab {
                             heading: root.inspector-heading;
                             unit: root.inspector-unit;
                             caret: root.inspector-caret;
+                            scope: root.bar-scope;
                             voices: root.inspector-voices;
-                            fields: root.inspector-fields;
-                            field-changed(id, v) => { root.inspector-changed(id, v); }
+                            fields: root.bar-fields;
+                            changed(id, v) => { root.bar-changed(id, v); }
+                            edited(id, t) => { root.bar-edited(id, t); }
+                        }
+                        if root.right-area.active-id == "note" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's note and beat show here."; }
+                        if root.right-area.active-id == "note" && root.has-score : NoteTab {
+                            fields: root.note-fields;
+                            changed(id, v) => { root.note-changed(id, v); }
                         }
                         if root.right-area.active-id == "song" && !root.has-score : Placeholder { text: "Open a file or start a new one: its title, artist and the rest show here."; }
                         if root.right-area.active-id == "song" && root.has-score : SongView {
@@ -2406,20 +2485,6 @@ export component AppWindow inherits Window {
                 }
             }
         }
-    }
-
-    if root.bar-dialog-shown : BarDialog {
-        width: root.width;
-        height: root.height;
-        fields <=> root.bar-fields;
-        endings: root.bar-endings;
-        directions: root.bar-directions;
-        key-names: root.bar-key-names;
-        clef-names: root.bar-clef-names;
-        feel-names: root.bar-feel-names;
-        direction-names: root.bar-direction-names;
-        heading: root.bar-heading;
-        done(ok) => { root.bar-dialog-done(ok); }
     }
 
     if root.tuplet-dialog-shown : TupletDialog {
