@@ -11,9 +11,9 @@
 // by our renderer on the worker thread and shown here as tiles.
 
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
-import { PluginTab, PluginRow, PluginWidget, PluginSection } from "plugin_tab.slint";
+import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TrackDialog, TrackFields, TransposeDialog } from "bar_dialog.slint";
+import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -671,7 +671,8 @@ export struct InspectorField {
     id: string,
     label: string,
     // 0 heading, 1 tickbox, 2 drop-down, 3 number, 4 button, 5 text,
-    // 6 a row of numbered tickboxes (`value` holds one bit for each).
+    // 6 a row of numbered tickboxes (`value` holds one bit for each),
+    // 7 a line of small text (red when `value` is 1).
     kind: int,
     value: int,
     options: [string],
@@ -750,6 +751,12 @@ component FieldRows inherits VerticalLayout {
                 }
             }
         }
+        if f.kind == 7 : Text {
+            text: f.label;
+            font-size: 11px;
+            wrap: word-wrap;
+            color: f.value == 1 ? Look.error : Palette.foreground.transparentize(0.4);
+        }
         if f.kind == 6 : VerticalLayout {
             spacing: 2px;
             Text { text: f.label; font-size: 12px; }
@@ -764,6 +771,56 @@ component FieldRows inherits VerticalLayout {
                     text: name;
                     checked: mod(floor(f.value / pow(2, i)), 2) == 1;
                     toggled => { root.changed(f.id, self.checked ? f.value + round(pow(2, i)) : f.value - round(pow(2, i))); }
+                }
+            }
+        }
+    }
+}
+
+// The Track tab: the caret's track, as the track dialog had it (name,
+// instrument, strings, capo, frets and tuning), then the plugins' sections
+// for it (interface 1.3). Fields change the track as they are used
+// (issue #177).
+component TrackTab inherits Rectangle {
+    in property <string> heading;
+    in property <[InspectorField]> fields;
+    in property <[PluginSection]> sections;
+    callback changed(string, int);
+    callback edited(string, string);
+    // A widget of the section at the index was used.
+    callback section-clicked(int, string);
+    callback section-toggled(int, string, bool);
+    callback section-slid(int, string, float);
+    callback section-edited(int, string, string);
+    callback section-chosen(int, string, int);
+    scroll := ScrollView {
+        VerticalLayout {
+            width: scroll.visible-width;
+            padding: 12px;
+            spacing: 6px;
+            alignment: start;
+            Text { text: root.heading; font-size: 14px; font-weight: 700; wrap: word-wrap; }
+            FieldRows {
+                fields: root.fields;
+                changed(id, v) => { root.changed(id, v); }
+                edited(id, t) => { root.edited(id, t); }
+            }
+            for section[i] in root.sections : VerticalLayout {
+                spacing: 2px;
+                Rectangle { height: 1px; background: Palette.border; }
+                Text {
+                    text: section.title;
+                    font-size: 13px;
+                    font-weight: 700;
+                }
+                PluginRows {
+                    rows: section.rows;
+                    message: section.message;
+                    clicked(id) => { root.section-clicked(i, id); }
+                    toggled(id, on) => { root.section-toggled(i, id, on); }
+                    slid(id, v) => { root.section-slid(i, id, v); }
+                    edited(id, t) => { root.section-edited(i, id, t); }
+                    chosen(id, n) => { root.section-chosen(i, id, n); }
                 }
             }
         }
@@ -1313,19 +1370,13 @@ export component AppWindow inherits Window {
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
     callback paste-dialog-done(bool);
-    // The track dialog and Transpose… (track_form.rs).
-    in property <bool> track-dialog-shown: false;
+    // The Track tab (track_form.rs): its heading and rows.
     in property <string> track-heading;
-    in-out property <TrackFields> track-fields;
-    in property <[string]> track-instrument-names;
-    in property <[string]> track-string-counts;
-    in property <[string]> track-key-names;
-    in property <[string]> track-pattern-names;
-    in property <string> track-preview;
-    in property <bool> track-invalid;
-    callback track-form-changed();
-    callback track-dialog-done(bool);
-    // The plugins' sections of the track dialog (interface 1.3), and a use
+    in property <[InspectorField]> track-fields;
+    callback track-changed(string, int);
+    callback track-edited(string, string);
+    // Transpose… (track_form.rs).
+    // The plugins' sections of the Track tab (interface 1.3), and a use
     // of one of their widgets: the section, the widget, what was done
     // (0 clicked, 1 toggled, 2 slid, 3 edited, 4 chosen) and its value.
     in property <[PluginSection]> track-sections;
@@ -1531,7 +1582,6 @@ export component AppWindow inherits Window {
             MenuItem { title: "Text… (Shift + T)"; enabled: root.has-score; activated => { root.edit-command("text-dialog"); } }
             MenuItem { title: "Type Lyrics (Ctrl + T)"; enabled: root.has-score; activated => { root.edit-command("lyrics"); } }
             MenuSeparator { }
-            MenuItem { title: "Track Properties…"; enabled: root.has-score; activated => { root.edit-command("track-properties"); } }
             MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
             MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
             MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
@@ -2035,7 +2085,6 @@ export component AppWindow inherits Window {
                             height: flick.viewport-height;
                             Menu {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
-                                MenuItem { title: "Track Properties…"; activated => { root.page-menu("track"); } }
                                 MenuSeparator { }
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
                                 MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
@@ -2208,6 +2257,19 @@ export component AppWindow inherits Window {
                     }
                     Rectangle {
                         background: Palette.alternate-background;
+                        if root.right-area.active-id == "track" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's track shows here, with its instrument, strings and tuning."; }
+                        if root.right-area.active-id == "track" && root.has-score : TrackTab {
+                            heading: root.track-heading;
+                            fields: root.track-fields;
+                            sections: root.track-sections;
+                            changed(id, v) => { root.track-changed(id, v); }
+                            edited(id, t) => { root.track-edited(id, t); }
+                            section-clicked(i, id) => { root.track-section-event(i, id, 0, false, 0, "", 0); }
+                            section-toggled(i, id, on) => { root.track-section-event(i, id, 1, on, 0, "", 0); }
+                            section-slid(i, id, v) => { root.track-section-event(i, id, 2, false, v, "", 0); }
+                            section-edited(i, id, t) => { root.track-section-event(i, id, 3, false, 0, t, 0); }
+                            section-chosen(i, id, n) => { root.track-section-event(i, id, 4, false, 0, "", n); }
+                        }
                         if root.right-area.active-id == "bar" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats and the bar's own settings."; }
                         if root.right-area.active-id == "bar" && root.has-score : BarTab {
                             heading: root.inspector-heading;
@@ -2307,7 +2369,6 @@ export component AppWindow inherits Window {
                                 // (docs/design/ui.md, "The track dialog").
                                 ContextMenuArea {
                                     Menu {
-                                        MenuItem { title: "Properties…"; activated => { root.track-menu(i, "properties"); } }
                                         MenuItem { title: "Transpose…"; activated => { root.track-menu(i, "transpose"); } }
                                         MenuSeparator { }
                                         MenuItem { title: "Add Track"; activated => { root.track-menu(i, "add"); } }
@@ -2565,48 +2626,6 @@ export component AppWindow inherits Window {
         times <=> root.paste-times;
         replace <=> root.paste-replace;
         done(ok) => { root.paste-dialog-done(ok); }
-    }
-
-    if root.track-dialog-shown : TrackDialog {
-        width: root.width;
-        height: root.height;
-        heading: root.track-heading;
-        fields <=> root.track-fields;
-        instrument-names: root.track-instrument-names;
-        string-counts: root.track-string-counts;
-        key-names: root.track-key-names;
-        pattern-names: root.track-pattern-names;
-        preview: root.track-preview;
-        invalid: root.track-invalid;
-        sections: root.track-sections;
-        changed => { root.track-form-changed(); }
-        done(ok) => { root.track-dialog-done(ok); }
-        section-clicked(i, id) => { root.track-section-event(i, id, 0, false, 0, "", 0); }
-        section-toggled(i, id, on) => { root.track-section-event(i, id, 1, on, 0, "", 0); }
-        section-slid(i, id, v) => { root.track-section-event(i, id, 2, false, v, "", 0); }
-        section-edited(i, id, t) => { root.track-section-event(i, id, 3, false, 0, t, 0); }
-        section-chosen(i, id, n) => { root.track-section-event(i, id, 4, false, 0, "", n); }
-    }
-
-    if root.export-dialog-shown : ExportDialog {
-        width: root.width;
-        height: root.height;
-        heading: root.export-heading;
-        plugin-name: root.export-plugin;
-        has-selection: root.export-has-selection;
-        selection <=> root.export-selection;
-        practice-speed: root.export-practice-speed;
-        at-speed <=> root.export-at-speed;
-        metronome <=> root.export-metronome;
-        done(ok) => { root.export-dialog-done(ok); }
-    }
-
-    if root.export-running : ExportProgress {
-        width: root.width;
-        height: root.height;
-        status: root.export-status;
-        progress: root.export-progress;
-        cancel => { root.export-cancel(); }
     }
 
     if root.transpose-dialog-shown : TransposeDialog {

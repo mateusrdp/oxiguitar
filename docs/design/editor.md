@@ -41,7 +41,7 @@ Built in slice 4: inserting and deleting bars; time and key signatures, clefs, t
 
 ### Tracks and the score (slices 1, 5 and 6)
 
-Built in slice 5: adding, duplicating, removing and moving tracks; the track dialog; restringing keeping the pitches or the frets; transposition, all three ways. Built in slice 6: the score's information (the Song tab) and lyrics typed on the page.
+Built in slice 5: adding, duplicating, removing and moving tracks; the track dialog (the Track tab since issue #177); restringing keeping the pitches or the frets; transposition, all three ways. Built in slice 6: the score's information (the Song tab) and lyrics typed on the page.
 
 - [x] Adding, duplicating, removing (after a question) and reordering tracks
 - [x] Track properties: name, instrument, capo; strings (3 to 10) and tuning, as a key and a pattern (Standard, Drop, Open with the root low, Open with the fifth low, Other) (EDIT-4)
@@ -86,8 +86,8 @@ Decided by Mateus on 19 Oct 2026 unless said otherwise.
 - **Bars that don't add up** are allowed, shown and played (M4 adjusts what playback needs), only marked: on screen in red, never in a PDF. Every bar is checked when a file opens; after that only the bars an edit touches are checked again, nothing more ("I want this app to be FAST"). A voice holding only empty placeholder beats (Guitar Pro 3–5 fill an unused voice with one) doesn't count. The footer says how many bars and where the first is; Tools → Next Bar That Doesn't Add Up walks the caret through them.
 - **Stems** go by voice only: odd voices up, even voices down. The palette has no stem-direction tools.
 - **Transposition** has three ways in (Mateus, 19 Oct 2026), so no task needs a selection made first: right-click on a track's row → Transpose… (that track), right-click on a selection → Transpose… (the selection, on its track), Tools → Transpose… (every track).
-- **Tracks:** a click on a row selects the track; a track is shown when its TAB or standard-notation button is on. Right-click on a row: Properties (also Edit → Track Properties…), Transpose…, Delete (which asks first).
-- **Tunings** are named compactly wherever they show (E Standard, Drop D, Open G, or the notes, low to high: `D A D G A D`). In the track dialog the tuning is a key and a pattern: Standard, Drop, Open with the root on the lowest string (Open D, Open E, Open C), Open with the fifth on the lowest string (Open G, Open A), or Other. Other keeps the key and takes any note for each string, checked only as a note and against the number of strings, never against the key.
+- **Tracks:** a click on a row selects the track; a track is shown when its TAB or standard-notation button is on. Right-click on a row: Transpose…, Delete (which asks first); the track's properties are the Track tab's (issue #177).
+- **Tunings** are named compactly wherever they show (E Standard, Drop D, Open G, or the notes, low to high: `D A D G A D`). In the Track tab the tuning is a key and a pattern: Standard, Drop, Open with the root on the lowest string (Open D, Open E, Open C), Open with the fifth on the lowest string (Open G, Open A), or Other. Other keeps the key and takes any note for each string, checked only as a note and against the number of strings, never against the key.
 - **The caret's voice** shows on the palette's voice buttons, highlighted (Mateus, 19 Oct 2026).
 - **Ctrl + Up / Ctrl + Down** move among the shown tracks; with a single track shown, the previous or next track of the song takes its place, as in Guitar Pro's single-track view (Mateus, 19 Oct 2026).
 - **The clipboard** is OxiGuitar's own: copying and pasting work inside OxiGuitar, not with other programs.

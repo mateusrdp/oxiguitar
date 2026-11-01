@@ -22,7 +22,7 @@ With `OXIGUITAR_HOME` set, it is the `nam` folder in that folder.
 
 ## Using them on a track
 
-Open a guitar or bass track's dialog (right-click its name, **Properties…**, or **Edit → Track Properties…**; [Tracks and notation](tracks.md)). Its **Amp (NAM)** section has:
+Select a guitar or bass track (click its name) and open the **Track** tab on the right ([Tracks and notation](tracks.md)). Its **Amp (NAM)** section has:
 
 - **Play this track through an amp model**: on or off. Picking a model turns it on.
 - **Model**: every `.nam` file in the `nam` folder, by its path inside the folder.

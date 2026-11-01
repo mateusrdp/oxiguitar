@@ -34,7 +34,7 @@ The template's:
 | `events` | no | The kinds of event it wants: `"score"`, `"selection"`, `"playback"`; interface 1.1 ([Events](events.md)) |
 | `tools` | no | Its entries in the Tools menu; interface 1.2 ([Tools](tools.md)) |
 | `settings_window` | no | `true` for a settings window, opened from the plugin manager; interface 1.3 ([Settings](settings.md)) |
-| `track_sections` | no | Its sections of the track dialog; interface 1.3 ([Track sections](track-sections.md)) |
+| `track_sections` | no | Its sections of the Track tab; interface 1.3 ([Track sections](track-sections.md)) |
 | `folders` | no | The shared folders it reads, `"soundfonts"` and `"nam"`, which OxiGuitar creates at start; interface 1.3 ([Settings](settings.md)) |
 | `exporters` | no | Its entries in File → Export; interface 1.4 ([Exporters](exporters.md)) |
 | `needs` | no | The plugins it can't work without, each `{"id": …, "version": …}` with the lowest version that will do; interface 1.4 (below) |

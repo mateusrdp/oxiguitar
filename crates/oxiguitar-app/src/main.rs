@@ -104,7 +104,7 @@ use ui::{
     AltBox, AppWindow, AreaState, BoxItem, FooterRow, GridPoint, InspectorField, InspectorVoice,
     ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow, PluginRow,
     PluginSection, PluginSettingsWindow, PluginWidget, ShortcutLine, SongField, TileItem, ToolRow,
-    ToolbarItemRow, ToolbarSectionRow, TrackFields, TrackRow,
+    ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -199,7 +199,7 @@ struct App {
     /// A plugin's settings window (interface 1.3): the window, once made,
     /// and the plugin it shows.
     settings_window: Option<(PluginSettingsWindow, String)>,
-    /// The plugins' sections of the open track dialog, and how many times
+    /// The plugins' sections of the Track tab, and how many times
     /// the dialog has opened (so late answers for an earlier opening are
     /// dropped).
     sections: Option<track_sections::TrackSections>,
@@ -207,7 +207,17 @@ struct App {
     /// The editor: the caret and the selection over the page.
     editing: editing::Editing,
     /// The rows the Note and Bar tabs show, as last sent to the window.
-    shown_rows: [Vec<effect_form::Field>; 2],
+    shown_rows: [Vec<effect_form::Field>; 3],
+    /// Keep the notes' pitches (else their frets) when the Track tab
+    /// changes the strings.
+    track_keep_pitches: bool,
+    /// Why the Track tab's last change couldn't be applied.
+    track_error: Option<String>,
+    /// The track's plugin settings as the Track tab last saw them.
+    sections_seen: std::collections::BTreeMap<String, String>,
+    /// A widget of a plugin's section was used since the sections were
+    /// asked: only then do their settings go into the track.
+    sections_touched: bool,
     /// The bars that don't add up, every track's.
     bad: Vec<oxiguitar_edit::StaffBar>,
     /// The open file's name, and whether the score differs from it.
@@ -555,6 +565,10 @@ fn main() -> Result<(), slint::PlatformError> {
         dialogs_opened: 0,
         editing: editing::Editing::default(),
         shown_rows: Default::default(),
+        track_keep_pitches: true,
+        track_error: None,
+        sections_seen: Default::default(),
+        sections_touched: false,
         bad: Vec::new(),
         doc_name: None,
         modified: false,
@@ -724,7 +738,6 @@ fn main() -> Result<(), slint::PlatformError> {
             "copy" => return clipboard(&a, editing::ClipKey::Copy),
             "paste" => return clipboard(&a, editing::ClipKey::Paste),
             "special-paste" => return clipboard(&a, editing::ClipKey::Special),
-            "track-properties" => return open_track_dialog(&a),
             "add-track" => return track_action(&a, "add"),
             "delete-track" => return track_action(&a, "delete"),
             "transpose-selection" => return open_transpose(&a, oxiguitar_edit::Scope::Selection),
@@ -827,39 +840,10 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_bar_changed(move |id, value| bar_changed(&a, id.as_str(), value, ""));
     let a = app.clone();
     ui.on_bar_edited(move |id, text| bar_changed(&a, id.as_str(), 0, text.as_str()));
-    ui.set_track_instrument_names(strings(
-        track_form::INSTRUMENTS
-            .iter()
-            .map(|n| (*n).to_owned())
-            .collect(),
-    ));
-    ui.set_track_string_counts(strings(
-        track_form::STRING_COUNTS
-            .iter()
-            .map(|n| {
-                if *n == 0 {
-                    "None".to_owned()
-                } else {
-                    n.to_string()
-                }
-            })
-            .collect(),
-    ));
-    ui.set_track_key_names(strings(
-        (0..12u8)
-            .map(|k| oxiguitar_model::tuning::key_name(k).to_owned())
-            .collect(),
-    ));
-    ui.set_track_pattern_names(strings(
-        oxiguitar_model::tuning::Pattern::ALL
-            .iter()
-            .map(|p| p.label().to_owned())
-            .collect(),
-    ));
     let a = app.clone();
-    ui.on_track_form_changed(move || track_form_changed(&a));
+    ui.on_track_changed(move |id, value| track_changed(&a, id.as_str(), value, ""));
     let a = app.clone();
-    ui.on_track_dialog_done(move |ok| track_dialog_done(&a, ok));
+    ui.on_track_edited(move |id, text| track_changed(&a, id.as_str(), 0, text.as_str()));
     let a = app.clone();
     ui.on_track_section_event(move |i, widget, kind, on, value, text, chosen| {
         track_section_event(&a, i, &widget, widget_event(kind, on, value, &text, chosen));
@@ -884,7 +868,6 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_page_menu(move |action| match action.as_str() {
         "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
-        "track" => open_track_dialog(&a),
         "cut" => clipboard(&a, editing::ClipKey::Cut),
         "copy" => clipboard(&a, editing::ClipKey::Copy),
         "paste" => clipboard(&a, editing::ClipKey::Paste),
@@ -979,12 +962,12 @@ fn main() -> Result<(), slint::PlatformError> {
         let Ok(track) = usize::try_from(i) else {
             return;
         };
-        // Select the track and open its properties dialog.
+        // Select the track and show its tab.
         let moved = a.borrow_mut().editing.select_track(track);
         if moved {
             caret_moved(&a);
         }
-        open_track_dialog(&a);
+        show_tab(&a, "track");
     });
     let a = app.clone();
     ui.on_page_pressed(move |x, y, shift| page_pressed(&a, x, y, shift));
@@ -1659,6 +1642,7 @@ fn plugin_answer(app: &Shared, answer: plugin_tabs::Answer) {
                 .is_some_and(|s| s.answered(dialog, &plugin, &section, answer));
             if changed {
                 sync_track_sections(app);
+                apply_section_settings(app);
             }
             return;
         }
@@ -3599,6 +3583,7 @@ fn sync_inspector(app: &Shared, ui: &AppWindow) {
         )
     };
     ui.set_bar_scope(scope.into());
+    sync_track(app, ui);
     show_rows(app, 0, note, ui.get_note_fields(), |m| {
         ui.set_note_fields(m)
     });
@@ -3659,6 +3644,7 @@ fn show_rows(
             effect_form::Kind::Button => 4,
             effect_form::Kind::Text => 5,
             effect_form::Kind::Ticks => 6,
+            effect_form::Kind::Info => 7,
         },
         value: f.value,
         options: strings(f.options.clone()),
@@ -3686,6 +3672,180 @@ fn show_rows(
     app.borrow_mut().shown_rows[which] = rows;
 }
 
+/// The Track tab: the caret's track as rows, and the plugins' sections for
+/// it. The sections are asked again when the caret goes to another track or
+/// the track's plugin settings changed by anything but the tab itself
+/// (Undo, Redo).
+fn sync_track(app: &Shared, ui: &AppWindow) {
+    let (score, index) = {
+        let s = app.borrow();
+        (s.editing.score(), s.editing.track())
+    };
+    let track = match (&score, index) {
+        (Some(sc), Some(t)) => sc.tracks.get(t).map(|tr| (t, tr)),
+        _ => None,
+    };
+    let Some((t, track)) = track else {
+        ui.set_track_heading(SharedString::new());
+        ui.set_track_sections(ModelRc::default());
+        let mut s = app.borrow_mut();
+        s.sections = None;
+        s.shown_rows[2].clear();
+        ui.set_track_fields(ModelRc::default());
+        return;
+    };
+    let (reopen, rows) = {
+        let mut s = app.borrow_mut();
+        let moved = s
+            .sections
+            .as_ref()
+            .is_none_or(|x| x.track.index as usize != t);
+        if moved {
+            s.track_error = None;
+        }
+        let mut f = track_form::TrackForm::of(track);
+        f.keep_pitches = s.track_keep_pitches;
+        let (message, error) = match &s.track_error {
+            Some(e) => (e.clone(), true),
+            None => (f.preview(), false),
+        };
+        // The sections: asked again for another track, or when the
+        // settings moved without the tab's doing.
+        let reopen = moved
+            || s.sections
+                .as_ref()
+                .is_some_and(|x| track.plugins != s.sections_seen && track.plugins != x.settings);
+        s.sections_seen = track.plugins.clone();
+        if reopen {
+            s.dialogs_opened += 1;
+            let sections =
+                track_sections::TrackSections::open(&s.plugins, s.dialogs_opened, t, track);
+            if let Some(thread) = &s.tab_thread {
+                for ask in sections.asks() {
+                    thread.send(ask);
+                }
+            }
+            s.sections = Some(sections);
+            s.sections_touched = false;
+        }
+        (reopen, track_form::fields(&f, &message, error))
+    };
+    ui.set_track_heading(format!("Track {}: {}", t + 1, track.name).into());
+    if reopen {
+        sync_track_sections(app);
+    }
+    show_rows(app, 2, rows, ui.get_track_fields(), |m| {
+        ui.set_track_fields(m);
+    });
+}
+
+/// A row of the Track tab was used: the track's settings as one change,
+/// after a question when notes can't be kept. A tuning that can't be says
+/// why in the tab and changes nothing.
+fn track_changed(app: &Shared, id: &str, value: i32, text: &str) {
+    let (score, index, keep) = {
+        let s = app.borrow();
+        (s.editing.score(), s.editing.track(), s.track_keep_pitches)
+    };
+    let (Some(score), Some(t)) = (score, index) else {
+        return;
+    };
+    let Some(track) = score.tracks.get(t) else {
+        return;
+    };
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if id == "keep" {
+        app.borrow_mut().track_keep_pitches = value == 0;
+        sync_inspector(app, &ui);
+        return;
+    }
+    let mut form = track_form::TrackForm::of(track);
+    form.keep_pitches = keep;
+    track_form::changed(&mut form, id, value, text);
+    let settings = match form.to_settings() {
+        Ok(s) => s,
+        Err(e) => {
+            app.borrow_mut().track_error = Some(e);
+            sync_inspector(app, &ui);
+            return;
+        }
+    };
+    let was = oxiguitar_edit::TrackSettings {
+        keep_pitches: keep,
+        ..oxiguitar_edit::TrackSettings::of(track)
+    };
+    app.borrow_mut().track_error = None;
+    if settings == was {
+        sync_inspector(app, &ui);
+        return;
+    }
+    let lost = oxiguitar_edit::notes_lost(&score, t, &settings);
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::TrackProperties(Box::new(settings)));
+    let Some(typed) = typed else {
+        return;
+    };
+    if lost > 0 {
+        // Until it is answered the tab shows the track as it is.
+        app.borrow_mut().shown_rows[2].clear();
+        sync_inspector(app, &ui);
+        ask(
+            app,
+            Asked::Apply(typed),
+            &format!(
+                "{lost} {} can't be kept",
+                if lost == 1 { "note" } else { "notes" }
+            ),
+            &["No string can play them with these strings and capo, so they are left out. Undo brings them back.".to_owned()],
+            &["Apply", "Cancel"],
+        );
+    } else {
+        send_typed(app, typed);
+    }
+}
+
+/// A plugin's section changed the track's settings for it: they go into the
+/// track as one change.
+fn apply_section_settings(app: &Shared) {
+    let (score, index, plugins, section_track) = {
+        let s = app.borrow();
+        let Some(sections) = s.sections.as_ref().filter(|_| s.sections_touched) else {
+            return;
+        };
+        (
+            s.editing.score(),
+            s.editing.track(),
+            sections.settings.clone(),
+            sections.track.index as usize,
+        )
+    };
+    let (Some(score), Some(t)) = (score, index) else {
+        return;
+    };
+    let Some(track) = score.tracks.get(t) else {
+        return;
+    };
+    if t != section_track || track.plugins == plugins {
+        return;
+    }
+    let mut form = track_form::TrackForm::of(track);
+    form.plugins = plugins;
+    let Ok(settings) = form.to_settings() else {
+        return;
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::TrackProperties(Box::new(settings)));
+    if let Some(typed) = typed {
+        send_typed(app, typed);
+    }
+}
+
 /// Edit → Go to Section lists the score's sections.
 fn sync_sections(app: &Shared) {
     let Some(ui) = app.borrow().ui.upgrade() else {
@@ -3706,7 +3866,6 @@ fn sync_sections(app: &Shared) {
 fn track_action(app: &Shared, action: &str) {
     use oxiguitar_edit::Command;
     let command = match action {
-        "properties" => return open_track_dialog(app),
         "transpose" => return open_transpose(app, oxiguitar_edit::Scope::Track),
         "add" => Command::AddTrack,
         "duplicate" => Command::DuplicateTrack,
@@ -3741,45 +3900,7 @@ fn track_action(app: &Shared, action: &str) {
     }
 }
 
-/// Opens the track dialog on the caret's track.
-fn open_track_dialog(app: &Shared) {
-    let Some(ui) = app.borrow().ui.upgrade() else {
-        return;
-    };
-    if app.borrow().question.is_some() {
-        return;
-    }
-    let (score, track) = {
-        let s = app.borrow();
-        (s.editing.score(), s.editing.track())
-    };
-    let (Some(score), Some(t)) = (score, track) else {
-        return;
-    };
-    let Some(track) = score.tracks.get(t) else {
-        return;
-    };
-    let f = track_form::TrackForm::of(track);
-    ui.set_track_heading(format!("Track {}: {}", t + 1, track.name).into());
-    ui.set_track_fields(track_fields(&f));
-    ui.set_track_preview(f.preview().into());
-    ui.set_track_invalid(false);
-    {
-        let mut s = app.borrow_mut();
-        s.dialogs_opened += 1;
-        let sections = track_sections::TrackSections::open(&s.plugins, s.dialogs_opened, t, track);
-        if let Some(thread) = &s.tab_thread {
-            for ask in sections.asks() {
-                thread.send(ask);
-            }
-        }
-        s.sections = Some(sections);
-    }
-    sync_track_sections(app);
-    ui.set_track_dialog_shown(true);
-}
-
-/// The track dialog's plugin sections, as they stand.
+/// The Track tab's plugin sections, as they stand.
 fn sync_track_sections(app: &Shared) {
     let s = app.borrow();
     let Some(ui) = s.ui.upgrade() else {
@@ -3839,8 +3960,9 @@ fn widget_event(kind: i32, on: bool, value: f32, text: &str, chosen: i32) -> Tab
     }
 }
 
-/// A widget of the track dialog's section `index` was used.
+/// A widget of the Track tab's section `index` was used.
 fn track_section_event(app: &Shared, index: i32, widget: &str, event: TabEvent) {
+    app.borrow_mut().sections_touched = true;
     let s = app.borrow();
     let (Some(sections), Some(thread)) = (&s.sections, &s.tab_thread) else {
         return;
@@ -3965,123 +4087,6 @@ fn settings_window_answer(app: &Shared, plugin: &str, content: Result<TabContent
             window.set_rows(ModelRc::default());
             window.set_message(why.into());
         }
-    }
-}
-
-fn track_fields(f: &track_form::TrackForm) -> TrackFields {
-    TrackFields {
-        name: f.name.as_str().into(),
-        short_name: f.short_name.as_str().into(),
-        instrument: f.instrument,
-        strings: f.strings,
-        key: f.key,
-        pattern: f.pattern,
-        notes: f.notes.as_str().into(),
-        capo: f.capo,
-        frets: f.frets,
-        keep_pitches: f.keep_pitches,
-    }
-}
-
-fn track_form(f: &TrackFields) -> track_form::TrackForm {
-    track_form::TrackForm {
-        plugins: std::collections::BTreeMap::new(),
-        name: f.name.to_string(),
-        short_name: f.short_name.to_string(),
-        instrument: f.instrument,
-        strings: f.strings,
-        key: f.key,
-        pattern: f.pattern,
-        notes: f.notes.to_string(),
-        capo: f.capo,
-        frets: f.frets,
-        keep_pitches: f.keep_pitches,
-    }
-}
-
-/// A field of the track dialog changed: what the tuning comes to.
-fn track_form_changed(app: &Shared) {
-    let Some(ui) = app.borrow().ui.upgrade() else {
-        return;
-    };
-    let f = track_form(&ui.get_track_fields());
-    ui.set_track_invalid(f.to_settings().is_err());
-    ui.set_track_preview(
-        f.to_settings()
-            .err()
-            .filter(|e| e.starts_with("A track"))
-            .unwrap_or_else(|| f.preview())
-            .into(),
-    );
-}
-
-/// The track dialog closed: on OK, its settings as one change, after a
-/// question when notes can't be kept.
-fn track_dialog_done(app: &Shared, ok: bool) {
-    let Some(ui) = app.borrow().ui.upgrade() else {
-        return;
-    };
-    if !ok {
-        app.borrow_mut().sections = None;
-        ui.set_track_dialog_shown(false);
-        ui.invoke_focus_page();
-        return;
-    }
-    let mut form = track_form(&ui.get_track_fields());
-    // The plugins' sections as the dialog holds them; without any, the
-    // track's own stay.
-    form.plugins = {
-        let s = app.borrow();
-        match (&s.sections, s.editing.score(), s.editing.track()) {
-            (Some(sections), _, _) => sections.settings.clone(),
-            (None, Some(score), Some(t)) => score
-                .tracks
-                .get(t)
-                .map(|tr| tr.plugins.clone())
-                .unwrap_or_default(),
-            _ => Default::default(),
-        }
-    };
-    let settings = match form.to_settings() {
-        Ok(s) => s,
-        Err(e) => {
-            // The dialog stays open, saying why.
-            ui.set_track_preview(e.into());
-            ui.set_track_invalid(true);
-            return;
-        }
-    };
-    ui.set_track_dialog_shown(false);
-    ui.invoke_focus_page();
-    app.borrow_mut().sections = None;
-    let (score, track) = {
-        let s = app.borrow();
-        (s.editing.score(), s.editing.track())
-    };
-    let lost = match (&score, track) {
-        (Some(sc), Some(t)) => oxiguitar_edit::notes_lost(sc, t, &settings),
-        _ => 0,
-    };
-    let typed = app
-        .borrow_mut()
-        .editing
-        .tool(oxiguitar_edit::Command::TrackProperties(Box::new(settings)));
-    let Some(t) = typed else {
-        return;
-    };
-    if lost > 0 {
-        ask(
-            app,
-            Asked::Apply(t),
-            &format!(
-                "{lost} {} can't be kept",
-                if lost == 1 { "note" } else { "notes" }
-            ),
-            &["No string can play them with these strings and capo, so they are left out. Undo brings them back.".to_owned()],
-            &["Apply", "Cancel"],
-        );
-    } else {
-        send_typed(app, t);
     }
 }
 

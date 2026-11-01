@@ -35,6 +35,8 @@ pub(crate) enum Kind {
     /// A row of numbered tickboxes (the options are their numbers), the
     /// value one bit per box, the first box the lowest bit.
     Ticks,
+    /// A line of small text; the value is 1 when it says what is wrong.
+    Info,
 }
 
 /// One row of the Note or Bar tab.
@@ -123,6 +125,20 @@ pub(crate) fn text(id: &'static str, label: &str, text: &str) -> Field {
         min: 0,
         max: 0,
         text: text.to_owned(),
+    }
+}
+
+/// A line of small text under the rows above it, red when `error`.
+pub(crate) fn info(text: &str, error: bool) -> Field {
+    Field {
+        id: "",
+        label: text.to_owned(),
+        kind: Kind::Info,
+        value: i32::from(error),
+        options: Vec::new(),
+        min: 0,
+        max: 0,
+        text: String::new(),
     }
 }
 

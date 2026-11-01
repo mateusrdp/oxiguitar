@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The plugins' sections of the track dialog (plugin interface 1.3): which
+//! The plugins' sections of the Track tab (plugin interface 1.3): which
 //! sections the dialog shows for a track, what each shows, and what the
 //! track's settings for each plugin become while the dialog is open. On
 //! OK they go into the track as part of the dialog's one change; on Cancel
@@ -35,7 +35,8 @@ pub(crate) struct Shown {
     pub(crate) content: Option<Result<TabContent, String>>,
 }
 
-/// The sections of one opening of the track dialog.
+/// The sections for one track, asked once (until the caret moves to
+/// another track or the settings change by Undo or Redo).
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct TrackSections {
     /// Which opening of the dialog this is: answers for an earlier one are
