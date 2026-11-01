@@ -17,11 +17,16 @@
 #
 # Usage:
 #   scripts/new-repo.sh NAME [--description TEXT] [--license ID]
-#                            [--app SLUG] [--dry-run]
+#                            [--history [--ref REF]] [--app SLUG] [--dry-run]
 #
 #   --description TEXT  the repository's description (kept if not given)
 #   --license ID        GPL-3.0-or-later (default), MIT, Apache-2.0 or
 #                       "MIT OR Apache-2.0" (LICENSE-MIT and LICENSE-APACHE)
+#   --history           start from oxiguitar's history of what moves to NAME
+#                       (scripts/split-history.sh; needs git-filter-repo),
+#                       the starting files committed on top; only into a
+#                       repository that has no main yet
+#   --ref REF           with --history: oxiguitar's branch to take (default main)
 #   --app SLUG          the GitHub App to give access (default: claude)
 #   --dry-run           read everything, change nothing: print each call
 #                       that would change something, and leave the files the
@@ -42,6 +47,9 @@ description=""
 license="GPL-3.0-or-later"
 app="claude"
 dry=0
+history=0
+ref="main"
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() { sed -n '/^# Usage:/,/^# Run it again/p' "$0" | sed 's/^# \{0,1\}//' | sed '$d'; }
 
@@ -50,6 +58,8 @@ while (($#)); do
         --description) description="${2:?--description needs a text}"; shift 2 ;;
         --license) license="${2:?--license needs an id}"; shift 2 ;;
         --app) app="${2:?--app needs a slug}"; shift 2 ;;
+        --history) history=1; shift ;;
+        --ref) ref="${2:?--ref needs a branch}"; shift 2 ;;
         --dry-run) dry=1; shift ;;
         -h | --help) usage; exit 0 ;;
         -*) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -68,6 +78,11 @@ esac
 for tool in gh jq git; do
     command -v "$tool" > /dev/null || { echo "needs $tool" >&2; exit 1; }
 done
+if ((history)); then
+    "$here/split-history.sh" "$name" --list > /dev/null || exit 2
+    git filter-repo --version > /dev/null 2>&1 \
+        || { echo "--history needs git-filter-repo (apt install git-filter-repo, or pip install git-filter-repo)" >&2; exit 1; }
+fi
 
 src="repos/$OWNER/$SOURCE"
 dst="repos/$OWNER/$name"
@@ -382,7 +397,11 @@ raw clippy.toml "$default_branch" > "$files/clippy.toml"
 raw deny.toml "$default_branch" | awk '
     /^ignore = \[/ { print "ignore = []"; skip = 1; next }
     skip && /^\]/ { skip = 0; next }
-    !skip' > "$files/deny.toml"
+    !skip
+    /^allow-registry = / {
+        print "# OxiGuitar'"'"'s SDK, by git tag (nothing of ours is on crates.io)."
+        print "allow-git = [\"https://github.com/'"$OWNER/$SOURCE"'\"]"
+    }' > "$files/deny.toml"
 
 cat > "$files/.gitignore" << 'EOF'
 /target
@@ -617,21 +636,42 @@ gitgh() { git -c credential.helper= -c 'credential.helper=!gh auth git-credentia
 has_branch() { get "$dst/branches/$1" > /dev/null; }
 
 if ((created)) || ! has_branch main; then
-    echo "  no main yet: the first commit, on main, and develop from it"
-    if ((dry)); then
-        echo "  would: commit ${#starting_files[@]} files (signed off) and push main and develop to $remote"
-        printf '    %s\n' "${starting_files[@]}"
+    repo="$work/repo"
+    if ((history)); then
+        # oxiguitar's history of what moves here; the starting files on top,
+        # each only where the history has no file of that name. Made in a
+        # dry run too (it changes nothing on GitHub), to show what it holds.
+        echo "  no main yet: $SOURCE's history of what moves here, the starting files on top"
+        "$here/split-history.sh" "$name" "$repo" --ref "$ref" | sed 's/^/  /'
+        for f in "${starting_files[@]}"; do
+            if [[ ! -e "$repo/$f" ]]; then
+                mkdir -p "$repo/$(dirname "$f")"
+                cp -p "$files/$f" "$repo/$f"
+            fi
+        done
     else
-        repo="$work/repo"
+        echo "  no main yet: the first commit, on main, and develop from it"
         cp -R "$files" "$repo"
         git -C "$repo" init -q -b main
+    fi
+    if ((dry)); then
+        echo "  would: commit the starting files (signed off) and push main and develop to $remote"
+        printf '    %s\n' "${starting_files[@]}"
+    else
         git_identity "$repo"
         git -C "$repo" add -A
         git -C "$repo" commit -q -s -m "Start $name, set up like $SOURCE"
         gitgh -C "$repo" push -q "$remote" main main:develop
     fi
-    note "first commit on main, develop from it"
+    if ((history)); then
+        note "$SOURCE's history, the starting files on top, on main; develop from it"
+    else
+        note "first commit on main, develop from it"
+    fi
 else
+    if ((history)); then
+        echo "  $OWNER/$name already has main: --history is only for a new repository, so it is left out"
+    fi
     if ! has_branch develop; then
         sha="$(get "$dst/git/ref/heads/main" | jq -r .object.sha)"
         call POST "$dst/git/refs" "$(jq -n --arg s "$sha" '{ref: "refs/heads/develop", sha: $s}')"
