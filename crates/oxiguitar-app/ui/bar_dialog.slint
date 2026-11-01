@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-// The dialogs over the window (Custom N-tuplet, the track dialog, Transpose,
+// The dialogs over the window (Custom N-tuplet, Transpose,
 // the bend editor, the chord dialog and the rest), like the Question:
 // nothing behind them takes clicks or keys. The Bar dialog is gone: its
 // fields are the Bar tab's (issue #177, `bar_form.rs`).
 
 import { Button, CheckBox, ComboBox, LineEdit, SpinBox, ScrollView, Palette } from "std-widgets.slint";
-import { PluginRows, PluginSection } from "plugin_tab.slint";
 
 // A dimmed backdrop and a card, with Enter for OK and Escape for Cancel.
 component Card inherits Rectangle {
@@ -136,168 +135,6 @@ export component PasteDialog inherits Rectangle {
                 text: "Replace what is there, instead of inserting";
                 checked: root.replace;
                 toggled => { root.replace = self.checked; }
-            }
-        }
-    }
-}
-
-// The track dialog's fields (`track_form::TrackForm`).
-export struct TrackFields {
-    name: string,
-    short-name: string,
-    instrument: int,
-    strings: int,
-    key: int,
-    pattern: int,
-    notes: string,
-    capo: int,
-    frets: int,
-    keep-pitches: bool,
-}
-
-// The track dialog (slice 5): name, instrument, strings and tuning as a
-// key and a pattern, capo and frets. `changed` asks for the preview again.
-export component TrackDialog inherits Rectangle {
-    in property <string> heading: "Track";
-    in-out property <TrackFields> fields;
-    in property <[string]> instrument-names;
-    in property <[string]> string-counts;
-    in property <[string]> key-names;
-    in property <[string]> pattern-names;
-    // What the tuning comes to, or why it is wrong.
-    in property <string> preview;
-    // A note or a tuning that can't be: OK does nothing.
-    in property <bool> invalid;
-    // The plugins' sections (interface 1.3), after the core's fields.
-    in property <[PluginSection]> sections;
-    callback changed();
-    callback done(bool);
-    // A widget of the section at the index was used.
-    callback section-clicked(int, string);
-    callback section-toggled(int, string, bool);
-    callback section-slid(int, string, float);
-    callback section-edited(int, string, string);
-    callback section-chosen(int, string, int);
-    Card {
-        width: root.width;
-        height: root.height;
-        heading: root.heading;
-        card-width: 680px;
-        done(ok) => { root.done(ok); }
-        VerticalLayout {
-            spacing: 8px;
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Name"; }
-                LineEdit {
-                    horizontal-stretch: 1;
-                    text: root.fields.name;
-                    edited(t) => { root.fields.name = t; root.changed(); }
-                }
-                LineEdit {
-                    width: 90px;
-                    placeholder-text: "Short";
-                    text: root.fields.short-name;
-                    edited(t) => { root.fields.short-name = t; }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Instrument"; }
-                ComboBox {
-                    horizontal-stretch: 1;
-                    model: root.instrument-names;
-                    current-index: root.fields.instrument;
-                    selected => { root.fields.instrument = self.current-index; root.changed(); }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Strings"; }
-                ComboBox {
-                    width: 100px;
-                    model: root.string-counts;
-                    current-index: root.fields.strings;
-                    selected => { root.fields.strings = self.current-index; root.changed(); }
-                }
-                Text { text: "Capo"; vertical-alignment: center; font-size: 12px; }
-                SpinBox {
-                    width: 110px;
-                    minimum: 0;
-                    maximum: 24;
-                    value: root.fields.capo;
-                    edited(v) => { root.fields.capo = v; root.changed(); }
-                }
-                Text { text: "Frets"; vertical-alignment: center; font-size: 12px; }
-                SpinBox {
-                    width: 110px;
-                    minimum: 12;
-                    maximum: 36;
-                    value: root.fields.frets;
-                    edited(v) => { root.fields.frets = v; }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Tuning"; }
-                ComboBox {
-                    width: 90px;
-                    model: root.key-names;
-                    current-index: root.fields.key;
-                    selected => { root.fields.key = self.current-index; root.changed(); }
-                }
-                ComboBox {
-                    horizontal-stretch: 1;
-                    model: root.pattern-names;
-                    current-index: root.fields.pattern;
-                    selected => { root.fields.pattern = self.current-index; root.changed(); }
-                }
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "Notes, lowest first"; }
-                LineEdit {
-                    horizontal-stretch: 1;
-                    enabled: root.fields.pattern == 4;
-                    placeholder-text: "D2 A2 D3 G3 A3 D4";
-                    text: root.fields.notes;
-                    edited(t) => { root.fields.notes = t; root.changed(); }
-                }
-            }
-            Text {
-                text: root.preview;
-                font-size: 12px;
-                wrap: word-wrap;
-                color: root.invalid ? #d9534f : Palette.foreground.transparentize(0.4);
-            }
-            HorizontalLayout {
-                spacing: 8px;
-                Label { text: "If the strings change"; }
-                ComboBox {
-                    horizontal-stretch: 1;
-                    model: ["Keep the notes' pitches (new frets)", "Keep the frets (the notes change)"];
-                    current-index: root.fields.keep-pitches ? 0 : 1;
-                    selected => { root.fields.keep-pitches = self.current-index == 0; }
-                }
-            }
-            for section[i] in root.sections : VerticalLayout {
-                spacing: 2px;
-                Rectangle { height: 1px; background: Palette.border; }
-                Text {
-                    text: section.title;
-                    font-size: 12px;
-                    font-weight: 600;
-                    color: Palette.foreground;
-                }
-                PluginRows {
-                    rows: section.rows;
-                    message: section.message;
-                    clicked(id) => { root.section-clicked(i, id); }
-                    toggled(id, on) => { root.section-toggled(i, id, on); }
-                    slid(id, v) => { root.section-slid(i, id, v); }
-                    edited(id, t) => { root.section-edited(i, id, t); }
-                    chosen(id, n) => { root.section-chosen(i, id, n); }
-                }
             }
         }
     }

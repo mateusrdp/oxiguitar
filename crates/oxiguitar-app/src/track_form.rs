@@ -6,6 +6,7 @@
 //! (instrument, strings, tuning as a key and a pattern, capo, frets) and
 //! back, and a transposition from its fields.
 
+use crate::effect_form::{self, Field};
 use oxiguitar_edit::{Scope, TrackSettings, Transposition};
 use oxiguitar_model::tuning::{self, Pattern};
 use oxiguitar_model::{Instrument, Pitch, Track};
@@ -276,6 +277,89 @@ impl TrackForm {
     }
 }
 
+/// The Track tab's rows for a track (issue #177, moved from the track
+/// dialog): `message` is what the tuning comes to, or, when `error`, why
+/// the fields can't be applied.
+pub(crate) fn fields(f: &TrackForm, message: &str, error: bool) -> Vec<Field> {
+    let pick = |i: i32| usize::try_from(i).unwrap_or(0);
+    let list = |id, label, options: Vec<String>, at| Field {
+        options,
+        ..effect_form::choice(id, label, &[], pick(at))
+    };
+    let mut rows = vec![
+        effect_form::text("name", "Name", &f.name),
+        effect_form::text("short-name", "Short name", &f.short_name),
+        list(
+            "instrument",
+            "Instrument",
+            INSTRUMENTS.iter().map(|n| (*n).to_owned()).collect(),
+            f.instrument,
+        ),
+        list(
+            "strings",
+            "Strings",
+            STRING_COUNTS
+                .iter()
+                .map(|n| {
+                    if *n == 0 {
+                        "None".to_owned()
+                    } else {
+                        n.to_string()
+                    }
+                })
+                .collect(),
+            f.strings,
+        ),
+        effect_form::number_in("capo", "Capo", f.capo, 0, 24),
+        effect_form::number_in("frets", "Frets", f.frets, 12, 36),
+        effect_form::heading("Tuning".to_owned()),
+        list(
+            "key",
+            "Key",
+            (0..12u8).map(|k| tuning::key_name(k).to_owned()).collect(),
+            f.key,
+        ),
+        list(
+            "pattern",
+            "Pattern",
+            Pattern::ALL.iter().map(|p| p.label().to_owned()).collect(),
+            f.pattern,
+        ),
+    ];
+    if f.pattern == 4 {
+        rows.push(effect_form::text("notes", "Notes, lowest first", &f.notes));
+    }
+    rows.push(effect_form::info(message, error));
+    rows.push(effect_form::choice(
+        "keep",
+        "If the strings change",
+        &[
+            "Keep the notes' pitches (new frets)",
+            "Keep the frets (the notes change)",
+        ],
+        usize::from(!f.keep_pitches),
+    ));
+    rows
+}
+
+/// A row of the Track tab was used: the fields as they become. `value` is
+/// a drop-down's index or a number, `text` a line of text.
+pub(crate) fn changed(f: &mut TrackForm, id: &str, value: i32, text: &str) {
+    match id {
+        "name" => f.name = text.to_owned(),
+        "short-name" => f.short_name = text.to_owned(),
+        "instrument" => f.instrument = value,
+        "strings" => f.strings = value,
+        "capo" => f.capo = value,
+        "frets" => f.frets = value,
+        "key" => f.key = value,
+        "pattern" => f.pattern = value,
+        "notes" => f.notes = text.to_owned(),
+        "keep" => f.keep_pitches = value == 0,
+        _ => {}
+    }
+}
+
 /// A tuning's notes from the lowest string, with octaves: "E2 A2 D3 G3
 /// B3 E4".
 pub(crate) fn notes_text(tuning_high_first: &[Pitch]) -> String {
@@ -377,6 +461,45 @@ mod tests {
             }],
             ..Track::default()
         }
+    }
+
+    #[test]
+    fn the_tab_shows_the_track_and_a_change_is_a_field() {
+        let t = guitar();
+        let mut f = TrackForm::of(&t);
+        let rows = fields(&f, &f.preview(), false);
+        let row = |id: &str| rows.iter().find(|r| r.id == id).unwrap();
+        assert_eq!(row("name").text, "Lead");
+        assert_eq!((row("instrument").value, row("strings").value), (25, 4));
+        assert_eq!((row("capo").value, row("frets").value), (0, 24));
+        assert_eq!(row("key").options.len(), 12);
+        // Notes show only for the Other pattern.
+        assert!(rows.iter().all(|r| r.id != "notes"));
+        let info = rows
+            .iter()
+            .find(|r| r.kind == effect_form::Kind::Info)
+            .unwrap();
+        assert_eq!(info.label, "E2 A2 D3 G3 B3 E4 \u{b7} E Standard");
+        assert_eq!(info.value, 0);
+        assert_eq!(row("keep").value, 0);
+
+        changed(&mut f, "pattern", 4, "");
+        assert!(fields(&f, "", false).iter().any(|r| r.id == "notes"));
+        changed(&mut f, "notes", 0, "D2 A D G A D");
+        changed(&mut f, "capo", 2, "");
+        changed(&mut f, "name", 0, "Rhythm");
+        changed(&mut f, "keep", 1, "");
+        assert!(!f.keep_pitches);
+        let s = f.to_settings().unwrap();
+        assert_eq!((s.name.as_str(), s.capo), ("Rhythm", 2));
+        assert_eq!(s.tuning.len(), 6);
+        // A wrong tuning says why and applies nothing.
+        changed(&mut f, "notes", 0, "D2 A");
+        assert_eq!(f.to_settings().unwrap_err(), "2 notes for 6 strings");
+        // An unchanged form is the track's own settings.
+        let same = TrackForm::of(&t);
+        assert_eq!(same.to_settings().unwrap(), TrackSettings::of(&t));
+        changed(&mut f, "nonsense", 1, "");
     }
 
     #[test]

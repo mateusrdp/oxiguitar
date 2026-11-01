@@ -13,7 +13,7 @@ The **Tracks** tab of the bottom panel shows every track of the song: its name, 
 
 ## Track properties
 
-**Properties…** (also Edit → Track Properties…, or right-click on the page → Track Properties…) opens the track dialog:
+The **Track** tab on the right shows the caret's track (click a track's row to select it; a double-click on its row shows the tab too) and changes it as you use it, each change a step to undo:
 
 - **Name**, and a short name for the systems after the first.
 - **Instrument**: the General MIDI sound, or Drum Kit.
@@ -21,7 +21,7 @@ The **Tracks** tab of the bottom panel shows every track of the song: its name, 
 - **Tuning**: a key and a pattern. The patterns are Standard, Drop (the lowest string a tone down, as Drop D), Open with the root on the lowest string (Open D, Open E), Open with the fifth on the lowest string (Open G, Open A), and Other, where you type the notes, lowest first (`D2 A2 D3 G3 A3 D4`; a note without an octave goes above the one before it). Tunings are named the same way at the top of the page: "Standard tuning", "Tuning: Drop D", or the notes.
 - **If the strings change**: keep the notes' pitches, finding new frets near the old ones, or keep the frets and let the notes change.
 
-The dialog is one change you can undo. If the new strings or capo can't play some notes, a question says how many before they are left out.
+A tuning that can't be (a wrong note, or notes that don't match the strings) says why in red under the tuning and changes nothing. If the new strings or capo can't play some notes, a question says how many before they are left out. Plugins add their own sections under these, such as the amp model of [Amp models](amp-models.md).
 
 ## Notation buttons
 

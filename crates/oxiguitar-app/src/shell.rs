@@ -210,15 +210,17 @@ impl Default for Shell {
                 Area::new(vec![Tab::new("palette", "Palette")], false),
                 // The song's information, as Guitar Pro 8's Song Inspector
                 // (Mateus, 20 Oct 2026), then the caret's bar and its note
-                // (issue #177: the Inspector became the Bar and Note tabs,
-                // and the Bar dialog's fields moved into the Bar tab). The
+                // (issue #177: the Inspector became the Bar and Note tabs, and the
+                // Bar and track dialogs' fields moved into the Bar and Track
+                // tabs). The
                 // Bar tab is the one that shows at the start, as the
                 // Inspector's bar did (Mateus, 20 Oct 2026).
                 Area {
-                    active: 1,
+                    active: 2,
                     ..Area::new(
                         vec![
                             Tab::new("song", "Song"),
+                            Tab::new("track", "Track"),
                             Tab::new("bar", "Bar"),
                             Tab::new("note", "Note"),
                         ],
@@ -275,7 +277,12 @@ mod tests {
             .flat_map(|a| &a.tabs)
             .map(|t| t.id.as_str())
             .collect();
-        assert_eq!(ids, ["player", "tracks", "palette", "song", "bar", "note"]);
+        assert_eq!(
+            ids,
+            [
+                "player", "tracks", "palette", "song", "track", "bar", "note"
+            ]
+        );
         let ids: Vec<&str> = shell.toolbar.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(ids, ["file", "edit"]);
         assert_eq!(Side::from_index(3), Some(Side::Right));
