@@ -220,6 +220,15 @@ pub(crate) fn action(app: &Shared, name: &str) {
     let dos = match name {
         "play" => play(app, false),
         "play-selection" => play(app, true),
+        "play-pause" => {
+            let state = app.borrow().player.state();
+            if matches!(state, State::Playing | State::Starting) {
+                pause(app);
+            } else if app.borrow().player.can_play() {
+                play(app, false);
+            }
+            Vec::new()
+        }
         "pause" => {
             pause(app);
             Vec::new()
@@ -346,9 +355,10 @@ fn put_caret_at(app: &Shared, p: Place) {
     }
 }
 
-/// The player's keys, before the editor's: Space plays and pauses, as in
-/// Guitar Pro 8; Ctrl + Left and Right move a bar back and on (the sound
-/// while it runs, else the caret). Returns whether the key was taken.
+/// The player's keys, before the editor's: Space plays and pauses (as in
+/// Guitar Pro 8); Enter plays and stops; Ctrl + Left and Right move a bar
+/// back and on (the sound while it runs, else the caret). Returns whether
+/// the key was taken.
 pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) -> bool {
     if name == " " && !shift && !ctrl && !alt {
         let state = app.borrow().player.state();
@@ -356,6 +366,15 @@ pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) 
             action(app, "pause");
         } else if app.borrow().player.can_play() {
             action(app, "play");
+        }
+        return true;
+    }
+    if name == "Enter" && !shift && !ctrl && !alt {
+        let state = app.borrow().player.state();
+        if matches!(state, State::Playing | State::Starting) {
+            let _ = stop(app);
+        } else if app.borrow().player.can_play() {
+            let _ = play(app, false);
         }
         return true;
     }
@@ -469,6 +488,7 @@ fn shown_at(s: &crate::App, t: f64, running: bool) -> PlayFrame {
             let age = (t - c.time).max(0.0);
             let strength = if c.strong { 1.0 } else { 0.55 };
             out.flash = (strength * (1.0 - age / FLASH).max(0.0)) as f32;
+            out.strong = c.strong;
         }
     }
     out

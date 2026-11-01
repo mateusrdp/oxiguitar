@@ -1129,10 +1129,9 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_overview_clicked(move |f| playing::overview_clicked(&a, f));
     let a = app.clone();
-    ui.on_speed_edited(move |v| {
-        a.borrow_mut()
-            .player
-            .set_speed(u32::try_from(v).unwrap_or(100));
+    ui.on_speed_slider_moved(move |v| {
+        let speed = (v * 175.0 + 25.0).round() as u32;
+        a.borrow_mut().player.set_speed(speed.clamp(25, 200));
         playing::sync(&a);
     });
     let a = app.clone();
