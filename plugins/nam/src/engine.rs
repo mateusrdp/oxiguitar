@@ -9,9 +9,9 @@
 //!   `nam-x86-64-v3.oxp`, build.rs): NeuralAmpModeler-rs 1.0.1 for both,
 //!   about ten times faster. Its model plays what nam-rs plays (both match
 //!   NAM's reference and each other to under 1e-5), and its cabinet what
-//!   ours plays, [`Cabinet::latency`] frames later (one partition of its
-//!   convolution), which the effect reports so the player lines the track
-//!   up with the others.
+//!   ours plays, `Cabinet::latency` frames later (one partition of its
+//!   convolution, which it is given whole), which the effect reports so the
+//!   player lines the track up with the others.
 //!
 //! The rest of the plugin (the model file's level and rate, the response's
 //! rate and level, the conversion to the model's rate) is the same code in
@@ -104,10 +104,20 @@ pub(crate) struct Cabinet {
     convolver: crate::convolve::Convolver,
     #[cfg(x86_64_v3)]
     adapter: neural_amp_modeler_rs::prelude::CabSimAdapter,
+    /// The partition being filled with the track's sound.
+    #[cfg(x86_64_v3)]
+    input: [f32; PARTITION],
+    /// The cabinet's sound of the partition before, handed out while the
+    /// next one fills: what makes the latency exactly one partition.
+    #[cfg(x86_64_v3)]
+    output: [f32; PARTITION],
+    /// How much of `input` is filled (and of `output` handed out).
+    #[cfg(x86_64_v3)]
+    at: usize,
 }
 
-/// NeuralAmpModeler-rs's partition, in frames: its convolution's latency
-/// (1.3 ms at 48 kHz), and the size of the pieces it works in.
+/// NeuralAmpModeler-rs's partition, in frames: the cabinet's latency
+/// (1.3 ms at 48 kHz).
 #[cfg(x86_64_v3)]
 pub(crate) const PARTITION: usize = 64;
 
@@ -125,7 +135,12 @@ impl Cabinet {
             use neural_amp_modeler_rs::prelude::{CabSimAdapter, ConvEngine};
             let engine = ConvEngine::new(taps, PARTITION).map_err(|e| e.to_string())?;
             let adapter = CabSimAdapter::new(Box::new(engine)).map_err(|e| e.to_string())?;
-            Ok(Cabinet { adapter })
+            Ok(Cabinet {
+                adapter,
+                input: [0.0; PARTITION],
+                output: [0.0; PARTITION],
+                at: 0,
+            })
         }
     }
 
@@ -133,8 +148,22 @@ impl Cabinet {
     pub(crate) fn process(&mut self, io: &mut [f32]) {
         #[cfg(not(x86_64_v3))]
         self.convolver.process(io);
+        // NeuralAmpModeler-rs's convolution is given whole partitions only:
+        // given a piece shorter than one, it hands back silence for what it
+        // hasn't computed yet, so pieces of uneven sizes would leave gaps.
+        // Each frame goes in and the frame a partition earlier comes out.
         #[cfg(x86_64_v3)]
-        self.adapter.process_block(io, None);
+        for frame in io.iter_mut() {
+            let heard = self.output[self.at];
+            self.input[self.at] = *frame;
+            *frame = heard;
+            self.at += 1;
+            if self.at == PARTITION {
+                self.adapter.process_block(&mut self.input, None);
+                self.output = self.input;
+                self.at = 0;
+            }
+        }
     }
 
     /// How many frames late the cabinet's sound comes.
@@ -142,7 +171,7 @@ impl Cabinet {
         #[cfg(not(x86_64_v3))]
         return 0;
         #[cfg(x86_64_v3)]
-        return self.adapter.latency_samples();
+        return PARTITION;
     }
 }
 
@@ -249,16 +278,30 @@ mod tests {
             assert_eq!(late, PARTITION);
             let a = in_pieces(&x, |p| ours.process(p));
             let b = in_pieces(&x, |p| theirs.process(p));
-            assert!(
-                b[..late].iter().all(|v| *v == 0.0),
-                "{name}: sound before its latency"
-            );
             let peak = a.iter().fold(0.0f32, |p, v| p.max(v.abs()));
-            let diff = a[..a.len() - late]
-                .iter()
-                .zip(&b[late..])
-                .fold(0.0f32, |p, (u, v)| p.max((u - v).abs()));
-            println!("{name}: largest difference {diff:.2e}, peak {peak:.3}");
+            // Their output against ours at each lag up to two partitions:
+            // the best one must be the latency it declares. (Their
+            // denormal guard adds a dither near 1e-11, so silence isn't
+            // exactly zero.)
+            let differ = |lag: usize| {
+                a[..a.len() - lag]
+                    .iter()
+                    .zip(&b[lag..])
+                    .fold(0.0f32, |p, (u, v)| p.max((u - v).abs()))
+            };
+            let (best, diff) = (0..=2 * PARTITION)
+                .map(|lag| (lag, differ(lag)))
+                .fold((0, f32::MAX), |m, d| if d.1 < m.1 { d } else { m });
+            let before = b[..late].iter().fold(0.0f32, |p, v| p.max(v.abs()));
+            println!(
+                "{name}: best lag {best} (declared {late}), largest difference {diff:.2e}, \
+                 before the latency {before:.2e}, peak {peak:.3}"
+            );
+            assert_eq!(
+                best, late,
+                "{name}: the sound comes {best} frames late, not {late}"
+            );
+            assert!(before < 1e-6, "{name}: sound before its latency: {before}");
             assert!(
                 diff < 1e-4 * peak.max(1.0),
                 "{name}: the cabinets differ by {diff}"
