@@ -14,7 +14,8 @@ use oxiguitar_host::api::Blob;
 use oxiguitar_host::api::message::{Answer, ErrorKind, LogEntry, Request};
 use oxiguitar_host::{Plugins, SharedSettings, Unheard, Unrecognised};
 use oxiguitar_plugin_test::{
-    OUR_DEVICES, OUR_EFFECTS, OUR_INSTRUMENTS, OURS, build_devices, build_ours, check,
+    OUR_DEVICES, OUR_EFFECTS, OUR_EXPORTERS, OUR_INSTRUMENTS, OURS, build_devices, build_ours,
+    check,
 };
 
 fn workspace() -> PathBuf {
@@ -318,12 +319,18 @@ fn the_list_of_our_plugins_is_the_plugins_folder() {
         .map(|(_, n)| *n)
         .chain(OUR_INSTRUMENTS.iter().map(|(_, n)| *n))
         .chain(OUR_EFFECTS.iter().map(|(_, n)| *n))
+        .chain(OUR_EXPORTERS.iter().map(|(_, n)| *n))
         .chain(OUR_DEVICES.iter().map(|(_, n, _)| *n))
         .map(str::to_owned)
         .collect();
     listed.sort();
     assert_eq!(folders, listed);
-    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS).chain(OUR_EFFECTS) {
+    for (package, name) in OURS
+        .iter()
+        .chain(OUR_INSTRUMENTS)
+        .chain(OUR_EFFECTS)
+        .chain(OUR_EXPORTERS)
+    {
         assert_eq!(*package, format!("oxiguitar-{name}-plugin"));
     }
     for (package, name, os) in OUR_DEVICES {
@@ -653,5 +660,117 @@ fn the_nam_build_for_x86_64_v3_processors_runs_in_real_time_and_is_chosen() {
     };
     let amp = plugins.prepare_effect(effect, prepare).unwrap();
     assert_eq!(amp.latency(), 64, "the cabinet's partition");
+    let _ = std::fs::remove_dir_all(&scratch);
+}
+
+/// The WAV plugin passes the contract (its exporter through the suite's
+/// exports and its settings window), and the song exported through it is a
+/// WAV file of the default format, 24 bits at 48 kHz, as long as the song
+/// and its tail, that sounds; at 16 bits and 44.1 kHz once its settings
+/// say so (M4 slice 7).
+#[test]
+fn our_wav_plugin_exports_the_song() {
+    use oxiguitar_play::export::{self, Plan};
+
+    for (_, name) in OUR_EXPORTERS {
+        let report = check(&ours().join(format!("{name}.oxp")));
+        assert!(report.ok(), "{name}.oxp: {:#?}", report.failed);
+        assert!(
+            report.passed.iter().any(|p| p.contains("exporter wav")),
+            "{:#?}",
+            report.passed
+        );
+    }
+    let scratch = std::env::temp_dir().join(format!("oxiguitar-wav-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&scratch);
+    let folder = scratch.join("plugins");
+    std::fs::create_dir_all(&folder).unwrap();
+    for name in ["gp5", "soundfont", "wav"] {
+        let file = format!("{name}.oxp");
+        std::fs::copy(ours().join(&file), folder.join(&file)).unwrap();
+    }
+    let home = scratch.join("home");
+    std::fs::create_dir_all(home.join("soundfonts")).unwrap();
+    std::fs::write(
+        home.join("soundfonts").join("test-sine.sf2"),
+        oxiguitar_plugin_test::TEST_SET,
+    )
+    .unwrap();
+    let settings = SharedSettings::default();
+    let plugins = Plugins::discover(
+        &[folder],
+        settings.clone(),
+        oxiguitar_host::display_system(),
+        Arc::new(Unheard),
+    );
+    let folders = oxiguitar_host::Folders::resolve(
+        oxiguitar_host::System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    plugins.use_folders(folders);
+    let song = workspace().join("fixtures/gp/oxiguitar-test-song.gp5");
+    let score = oxiguitar_formats::read(&std::fs::read(&song).unwrap())
+        .unwrap()
+        .score;
+    let plan = Plan::whole(&score);
+    let length = export::length(&oxiguitar_play::Timeline::new(&score), &plan);
+    let exporter = plugins.exporters()[0];
+    assert_eq!(exporter.spec.extension, "wav");
+
+    let read = |path: &Path| {
+        let wav = std::fs::read(path).unwrap();
+        assert_eq!(&wav[..4], b"RIFF");
+        assert_eq!(
+            u32::from_le_bytes(wav[4..8].try_into().unwrap()) as usize,
+            wav.len() - 8
+        );
+        let rate = u32::from_le_bytes(wav[24..28].try_into().unwrap());
+        let bits = u16::from_le_bytes([wav[34], wav[35]]);
+        let data = u32::from_le_bytes(wav[40..44].try_into().unwrap()) as usize;
+        assert_eq!(data, wav.len() - 44);
+        (rate, bits, wav)
+    };
+
+    let out = scratch.join("song.wav");
+    export::export(&plugins, exporter, &score, &plan, &out, &mut |_| true).unwrap();
+    let (rate, bits, wav) = read(&out);
+    assert_eq!((rate, bits), (48_000, 24));
+    let frames = (wav.len() - 44) / 6;
+    assert!(
+        (frames as f64 / 48_000.0 - length).abs() < 0.1,
+        "{frames} frames for {length} s"
+    );
+    let peak = wav[44..]
+        .chunks_exact(3)
+        .map(|c| (i32::from_le_bytes([0, c[0], c[1], c[2]]) >> 8).unsigned_abs())
+        .max()
+        .unwrap();
+    assert!(peak > 80_000, "it sounds: {peak}");
+
+    // The settings window's choices: 16 bits, 44.1 kHz.
+    let wav_plugin = plugins
+        .found()
+        .iter()
+        .find(|f| f.path.ends_with("wav.oxp"))
+        .unwrap();
+    for (widget, choice) in [("depth", 0), ("rate", 0)] {
+        plugins
+            .send(
+                wav_plugin,
+                &oxiguitar_host::api::message::Request::SettingsEvent {
+                    widget: widget.into(),
+                    event: oxiguitar_host::api::tab::TabEvent::Chosen(choice),
+                },
+            )
+            .unwrap();
+    }
+    let out = scratch.join("song-cd.wav");
+    export::export(&plugins, exporter, &score, &plan, &out, &mut |_| true).unwrap();
+    let (rate, bits, wav) = read(&out);
+    assert_eq!((rate, bits), (44_100, 16));
+    let frames = (wav.len() - 44) / 4;
+    assert!((frames as f64 / 44_100.0 - length).abs() < 0.1);
     let _ = std::fs::remove_dir_all(&scratch);
 }

@@ -90,10 +90,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Our nine plugins, and on x86_64 the NAM plugin's second build,
+          # Our ten plugins, and on x86_64 the NAM plugin's second build,
           # for x86-64-v3 processors (scripts/build-plugins.sh).
-          - { arch: x86_64, os: ubuntu-24.04, plugins: 10 }
-          - { arch: aarch64, os: ubuntu-24.04-arm, plugins: 9 }
+          - { arch: x86_64, os: ubuntu-24.04, plugins: 11 }
+          - { arch: aarch64, os: ubuntu-24.04-arm, plugins: 10 }
     env:
       VERSION: ${{ needs.meta.outputs.version }}
       PLUGINS: ${{ matrix.plugins }}
@@ -311,11 +311,11 @@ jobs:
           test -x "$root/AppRun"
           test -x "$root/usr/bin/oxiguitar"
           test -x "$root/usr/bin/oxiguitar-x11"
-          # Our plugins but PipeWire's (see the job's comment): eight, and
+          # Our plugins but PipeWire's (see the job's comment): nine, and
           # on x86_64 the NAM plugin's build for x86-64-v3 processors.
-          expected=8
+          expected=9
           if [ "${{ matrix.arch }}" = x86_64 ]; then
-            expected=9
+            expected=10
             test -f "$root/usr/lib/oxiguitar/plugins/nam-x86-64-v3.oxp"
           fi
           test "$(ls "$root"/usr/lib/oxiguitar/plugins/*.oxp | wc -l)" -eq "$expected"
@@ -430,7 +430,7 @@ jobs:
           Copy-Item assets/fonts/bravura/OFL.txt "$dir/licenses/Bravura-OFL.txt"
           Copy-Item assets/fonts/noto-sans/OFL.txt "$dir/licenses/NotoSans-OFL.txt"
           $plugins = Get-ChildItem target/release/plugins/*.oxp
-          if ($plugins.Count -ne 8) { throw 'expected our eight plugins' }
+          if ($plugins.Count -ne 9) { throw 'expected our nine plugins' }
           Copy-Item $plugins "$dir/plugins"
           Compress-Archive -Path $dir -DestinationPath "dist/$name.zip"
           Get-Item "dist/$name.zip"
@@ -441,7 +441,7 @@ jobs:
           $t = "$env:RUNNER_TEMP/zip-test"
           Expand-Archive "dist/OxiGuitar-$env:VERSION-windows-${{ matrix.arch }}.zip" $t
           $core = Get-ChildItem $t -Directory | Select-Object -First 1
-          if ((Get-ChildItem "$($core.FullName)/plugins/*.oxp").Count -ne 8) { throw 'the zip lacks our eight plugins' }
+          if ((Get-ChildItem "$($core.FullName)/plugins/*.oxp").Count -ne 9) { throw 'the zip lacks our nine plugins' }
           $env:OXIGUITAR_HOME = "$env:RUNNER_TEMP/empty-home"
           & "$($core.FullName)/oxiguitar-cli.exe" info $env:SAMPLE | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'the zip opened nothing' }
@@ -501,11 +501,11 @@ jobs:
           lipo -info "$app/Contents/MacOS/oxiguitar" | grep -q "x86_64 arm64"
           test -f "$app/Contents/Resources/OxiGuitar.icns"
           codesign --verify --verbose "$app"
-          # The app holds our eight plugins, universal and signed, where it
+          # The app holds our nine plugins, universal and signed, where it
           # searches (Contents/PlugIns). The command-line tool, copied into
           # a bundle of the same shape, opens the sample through them with
           # an empty user folder.
-          test "$(ls "$app"/Contents/PlugIns/*.oxp | wc -l)" -eq 8
+          test "$(ls "$app"/Contents/PlugIns/*.oxp | wc -l)" -eq 9
           for plugin in "$app"/Contents/PlugIns/*.oxp; do
             lipo -info "$plugin" | grep -q "x86_64 arm64"
             codesign --verify "$plugin"
@@ -586,7 +586,7 @@ jobs:
             unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
             unzip -l "$f" | grep -q 'oxiguitar.exe' || { echo "::error::$f has no oxiguitar.exe" >&2; exit 1; }
             # Five format plugins, the SoundFont instrument, NAM and WASAPI.
-            [ "$(unzip -l "$f" | grep -cE 'plugins[/\\][^/\\]*\.oxp$')" -eq 8 ] || { echo "::error::$f lacks our eight plugins in plugins/" >&2; exit 1; }
+            [ "$(unzip -l "$f" | grep -cE 'plugins[/\\][^/\\]*\.oxp$')" -eq 9 ] || { echo "::error::$f lacks our nine plugins in plugins/" >&2; exit 1; }
           done
       - name: Checksums
         run: (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)

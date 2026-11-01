@@ -4088,6 +4088,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxiguitar-wav-plugin"
+version = "0.10.0"
+dependencies = [
+ "oxiguitar-plugin",
+]
+
+[[package]]
 name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

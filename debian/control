@@ -62,5 +62,5 @@ Description: Guitar Pro format, sound and audio plugins for OxiGuitar
  Guitar Pro format (3, 4, 5, 6 and 7-8), so OxiGuitar can open those
  files; the SoundFont player, which plays the tracks with a General MIDI
  or SFZ sound set; NAM, which plays guitars and basses through amp models
- and cabinet impulse responses; and the ones that play its sound through
- PipeWire or ALSA. OxiGuitar finds these in /usr/lib/oxiguitar/plugins.
+ and cabinet impulse responses; WAV, which exports the sound as a WAV
+ file; and the ones that play its sound through PipeWire or ALSA. OxiGuitar finds these in /usr/lib/oxiguitar/plugins.

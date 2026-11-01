@@ -14,6 +14,7 @@
 - [Dark page and dynamics](view.md)
 - [Tools](tools.md)
 - [Exporting a PDF](pdf.md)
+- [Exporting audio](audio-export.md)
 - [Keyboard and mouse](keys.md)
 - [Settings and plugins](plugins.md)
 - [Better sounds](better-sounds.md)
