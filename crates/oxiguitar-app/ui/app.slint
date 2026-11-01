@@ -1774,17 +1774,11 @@ export component AppWindow inherits Window {
                                 changed(v) => { root.speed-slider-moved(v); }
                             }
                             LineEdit {
-                                width: 56px;
+                                width: 72px;
                                 font-size: 12px;
                                 text: root.player-speed-text;
                                 enabled: root.player-available;
                                 edited(v) => { root.speed-text-edited(v); }
-                            }
-                            Text {
-                                text: "%";
-                                font-size: 12px;
-                                vertical-alignment: center;
-                                color: Palette.foreground.transparentize(root.player-available ? 0.2 : 0.6);
                             }
                             Rectangle { width: 8px; }
                             Text {
