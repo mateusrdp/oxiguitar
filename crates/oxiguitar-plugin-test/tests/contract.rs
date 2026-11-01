@@ -301,11 +301,12 @@ fn one_file_per_plugin_disabled_ones_are_never_loaded() {
     let b = linked("copies-b", &["test.oxp"]);
     let (plugins, _) = discover(&[a.clone(), b.clone()], SharedSettings::default());
     let states: Vec<&State> = plugins.found().iter().map(|f| &f.state).collect();
-    // Same version everywhere: the earliest folder, then the earliest name.
-    assert_eq!(states[0], &State::Ready);
-    assert!(plugins.found()[0].path.ends_with("test-again.oxp"));
-    assert!(matches!(states[1], State::Replaced(p) if p.ends_with("test-again.oxp")));
-    assert!(matches!(states[2], State::Replaced(_)));
+    // Same version and build everywhere: the latest folder (the user's
+    // over the system's), then in one folder the earliest name.
+    assert!(plugins.found()[2].path.starts_with(&b));
+    assert_eq!(states[2], &State::Ready);
+    assert!(matches!(states[0], State::Replaced(p) if p.starts_with(&b)));
+    assert!(matches!(states[1], State::Replaced(p) if p.starts_with(&b)));
     assert_eq!(plugins.readers().len(), 1);
 
     let disabled = SharedSettings::new(

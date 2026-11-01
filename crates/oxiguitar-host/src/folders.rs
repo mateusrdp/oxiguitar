@@ -440,8 +440,8 @@ pub(crate) mod tests {
         );
         assert_eq!(folders[2], PathBuf::from("/tmp/og-test-var/plugins"));
         // The user folder overrides the system folder for the same plugin ID
-        // because deduplication prefers the earlier folder, and the system
-        // folder comes first.
+        // because, on a tie, the choice prefers the later folder
+        // (Plugins::find), and the system folder comes first.
         assert!(
             folders
                 .iter()

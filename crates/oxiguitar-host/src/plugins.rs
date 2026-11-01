@@ -14,9 +14,10 @@
 //! Which plugin file is used when several hold the same plugin id: the
 //! highest version; on a version tie, the build needing more processor
 //! features (a faster build this processor can run: the NAM plugin's for
-//! x86-64-v3 processors); then the earlier file (in folder order, then file
-//! name), the one whose folder comes first in the search list (system
-//! folders first, user folders after). Plugins listed under `disabled` in
+//! x86-64-v3 processors); then the file in the later folder of the search
+//! list, so the user's copy wins over the system's (system folders first,
+//! user folders after; Mateus, 1 Nov 2026); in one folder, the earlier file
+//! name. Plugins listed under `disabled` in
 //! settings.json are never loaded; neither are plugins whose conditions
 //! (system, processor, display system) don't hold here.
 //!
@@ -218,7 +219,8 @@ pub enum State {
     Disabled,
     /// Another file holds the same plugin at a higher version, or the same
     /// version built for more of this processor's features, or the same
-    /// version and build in an earlier folder; that file is used.
+    /// version and build in a later folder (or earlier in this one); that
+    /// file is used.
     Replaced(PathBuf),
 }
 
@@ -538,19 +540,22 @@ impl Plugins {
                 .collect(),
             _ => Vec::new(),
         };
-        let mut found: Vec<Found> = folders
+        // Each file with the place of its folder in the search list.
+        let (folder_of, mut found): (Vec<usize>, Vec<Found>) = folders
             .iter()
-            .flat_map(|folder| plugin_files(folder))
-            .map(|path| {
+            .enumerate()
+            .flat_map(|(n, folder)| plugin_files(folder).into_iter().map(move |p| (n, p)))
+            .map(|(n, path)| {
                 // dlopen and LoadLibrary search the system's folders for a
                 // bare file name; a full path never is.
                 let path = std::path::absolute(&path).unwrap_or(path);
-                examine(path, &env, &disabled)
+                (n, examine(path, &env, &disabled))
             })
-            .collect();
+            .unzip();
         // One file per plugin id: the highest version wins; on a version
-        // tie, the build needing more processor features; then the earlier
-        // file (earlier folder, then earlier file name).
+        // tie, the build needing more processor features; then the file in
+        // the later folder (the user's over the system's); in one folder,
+        // the earlier file name.
         for i in 0..found.len() {
             let Some(id) = found[i].ready().map(|m| m.id.clone()) else {
                 continue;
@@ -560,7 +565,12 @@ impl Plugins {
                 .reduce(|best, j| {
                     let (b, c) = (found[best].ready(), found[j].ready());
                     match (b, c) {
-                        (Some(b), Some(c)) if better(c, b) => j,
+                        (Some(b), Some(c))
+                            if better(c, b)
+                                || (!better(b, c) && folder_of[j] > folder_of[best]) =>
+                        {
+                            j
+                        }
                         _ => best,
                     }
                 });
@@ -1865,9 +1875,8 @@ fn missing_library(error: &str) -> Option<String> {
 /// Whether `c` is to be used rather than `b`, two usable files of one
 /// plugin: a higher version, or the same version needing more processor
 /// features (both are usable here, so this processor has them all: the
-/// build made for it is the faster one). On a full tie `better` returns
-/// false, so the `reduce` keeps the earlier file (the one whose folder
-/// comes first in the search list).
+/// build made for it is the faster one). On a full tie neither is better,
+/// and the folders decide (`Plugins::find`).
 fn better(c: &Manifest, b: &Manifest) -> bool {
     (&c.version, c.conditions.cpu.len()) > (&b.version, b.conditions.cpu.len())
 }
@@ -2003,7 +2012,7 @@ mod tests {
         // folders and names.
         assert!(better(&m("1.0.0", &["avx2", "fma"]), &m("1.0.0", &[])));
         assert!(!better(&m("1.0.0", &[]), &m("1.0.0", &["avx2", "fma"])));
-        // A full tie: neither is better, so the earlier file wins.
+        // A full tie: neither is better; the folders decide.
         assert!(!better(&m("1.0.0", &[]), &m("1.0.0", &[])));
         assert!(!better(&m("1.0.0", &["avx2"]), &m("1.0.0", &["avx2"])));
     }
