@@ -512,6 +512,14 @@ impl Service for TestPlugin {
                     .notify_with_link(Level::Warning, "A link.", "Open it", url);
                 Ok(Vec::new())
             }
+            // The input is an `Advice` as JSON; the host's answer (an error
+            // for advice it won't show) comes back as this call's.
+            "advise" => {
+                let advice: oxiguitar_plugin::Advice = serde_json::from_slice(input)
+                    .map_err(|e| Error::new(ErrorKind::Invalid, e.to_string()))?;
+                self.host.advise(advice)?;
+                Ok(Vec::new())
+            }
             "folders" => {
                 let folders = self.host.folders()?;
                 std::fs::write(folders.data.join("hello.txt"), "hello\n")
