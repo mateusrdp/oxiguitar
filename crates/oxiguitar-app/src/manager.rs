@@ -116,6 +116,7 @@ fn row(f: &Found, safe: bool, disabled: &[String]) -> Row {
             by.display()
         ),
         State::Unusable(why) => format!("Can't be used: {why}."),
+        State::Unmet(why) => format!("Can't be used: {why}."),
     };
     // A change made in this session waits for the next start: plugins are
     // never unloaded.

@@ -77,7 +77,7 @@ use serde_json::Value;
 use crate::events::Queue;
 use crate::folders::Folders;
 
-use crate::inventory::{ISSUES_URL, Level, PLUGINS_URL, plugin_files};
+use crate::inventory::{ISSUES_URL, Level, Notice, PLUGINS_URL, plugin_files};
 use crate::loader::{self, Loaded};
 use crate::oxp;
 use crate::settings::SharedSettings;
@@ -219,9 +219,15 @@ pub enum State {
     Disabled,
     /// Another file holds the same plugin at a higher version, or the same
     /// version built for more of this processor's features, or the same
-    /// version and build in a later folder (or earlier in this one); that
-    /// file is used.
+    /// version and build in a later folder (or earlier in this one), or a
+    /// plugin that replaces this one's id (interface 1.4); that file is
+    /// used.
     Replaced(PathBuf),
+    /// A plugin it needs (interface 1.4) is missing, too old, or can't be
+    /// used itself; the text says which. Unlike [`State::Unusable`], this is
+    /// something the user can put right, so the footer shows it as an
+    /// error.
+    Unmet(String),
 }
 
 impl Found {
@@ -687,6 +693,7 @@ impl Plugins {
                 found[i].state = State::Replaced(found[w].path.clone());
             }
         }
+        settle(&mut found);
         Plugins(Arc::new(Inner {
             found,
             safe,
@@ -699,6 +706,59 @@ impl Plugins {
             folders: OnceLock::new(),
             read_only: std::sync::atomic::AtomicBool::new(false),
         }))
+    }
+
+    /// The ids that ready plugins replace (interface 1.4), each with the id
+    /// of the plugin that replaces it: `(old, new)`.
+    pub fn replaced_ids(&self) -> Vec<(String, String)> {
+        self.0
+            .found
+            .iter()
+            .filter_map(Found::ready)
+            .flat_map(|m| m.replaces.iter().map(|old| (old.clone(), m.id.clone())))
+            .collect()
+    }
+
+    /// Carries what OxiGuitar keeps under a replaced plugin's id over to
+    /// the plugin that replaces it (interface 1.4), once: its object in
+    /// settings.json and its data folder, each only where the new id has
+    /// nothing yet. Nothing old is changed or deleted, so an older OxiGuitar
+    /// still finds it. The caches aren't carried: they are made again. The
+    /// answer is a line for the footer per thing carried or failed.
+    pub fn carry_over(&self, folders: &Folders) -> Vec<Notice> {
+        let mut out = Vec::new();
+        for (old, new) in self.replaced_ids() {
+            let settings = &self.0.settings;
+            if settings.get(&new).is_none()
+                && let Some(value) = settings.get(&old)
+            {
+                out.push(match settings.set(&new, value) {
+                    Ok(()) => Notice::new(
+                        Level::Info,
+                        format!("The settings of {old} now belong to {new}, which replaces it."),
+                    ),
+                    Err(e) => Notice::new(Level::Warning, e),
+                });
+            }
+            let (from, to) = (folders.plugin_data(&old), folders.plugin_data(&new));
+            if from.is_dir() && !to.exists() {
+                out.push(match copy_folder(&from, &to) {
+                    Ok(()) => Notice::new(
+                        Level::Info,
+                        format!("Copied {} to {}.", from.display(), to.display()),
+                    ),
+                    Err(e) => {
+                        // Half a copy would stop the next start from trying.
+                        let _ = std::fs::remove_dir_all(&to);
+                        Notice::new(
+                            Level::Warning,
+                            format!("Cannot copy {} to {}: {e}.", from.display(), to.display()),
+                        )
+                    }
+                });
+            }
+        }
+        out
     }
 
     /// Gives the plugins OxiGuitar's folders, for their own data and cache
@@ -2077,6 +2137,97 @@ fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
     }
 }
 
+/// What `replaces` and `needs` (interface 1.4) make of the plugins left
+/// ready once each id has its file: a plugin whose id another one replaces
+/// is that plugin's older self, whatever its version; then a plugin whose
+/// needs aren't met is set aside.
+fn settle(found: &mut [Found]) {
+    // A plugin whose id another one replaces (interface 1.4) is that
+    // plugin's older self, whatever its version.
+    for i in 0..found.len() {
+        let Some(id) = found[i].ready().map(|m| m.id.clone()) else {
+            continue;
+        };
+        let successor = (0..found.len()).find(|&j| {
+            j != i
+                && found[j]
+                    .ready()
+                    .is_some_and(|m| m.replaces.contains(&id) && m.id != id)
+        });
+        if let Some(j) = successor {
+            found[i].state = State::Replaced(found[j].path.clone());
+        }
+    }
+    // Then the plugins whose needs aren't met (interface 1.4), again
+    // and again, since a plugin set aside can leave another one's need
+    // unmet.
+    loop {
+        let unmet: Vec<(usize, String)> = (0..found.len())
+            .filter_map(|i| Some((i, unmet_need(found[i].ready()?, found)?)))
+            .collect();
+        if unmet.is_empty() {
+            break;
+        }
+        for (i, why) in unmet {
+            found[i].state = State::Unmet(why);
+        }
+    }
+}
+
+/// Copies the folder `from`, with everything in it, to `to`, which mustn't
+/// exist. Links are copied as what they point to.
+fn copy_folder(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let (src, dst) = (entry.path(), to.join(entry.file_name()));
+        if std::fs::metadata(&src)?.is_dir() {
+            copy_folder(&src, &dst)?;
+        } else {
+            std::fs::copy(&src, &dst)?;
+        }
+    }
+    Ok(())
+}
+
+/// Why `manifest`'s needs (interface 1.4) aren't met by the plugins in
+/// `found`, or `None` when they are. A plugin meets a need for an id if it
+/// has that id or replaces it, at the lowest version or later.
+fn unmet_need(manifest: &Manifest, found: &[Found]) -> Option<String> {
+    let answers = |m: &Manifest, id: &str| m.id == id || m.replaces.iter().any(|r| r == id);
+    manifest.needs.iter().find_map(|need| {
+        if found
+            .iter()
+            .filter_map(Found::ready)
+            .any(|m| answers(m, &need.id) && m.version >= need.version)
+        {
+            return None;
+        }
+        // The best account of what is there instead.
+        let there = found
+            .iter()
+            .filter(|f| f.manifest.as_ref().is_some_and(|m| answers(m, &need.id)))
+            .max_by_key(|f| matches!(f.state, State::Ready));
+        let wanted = format!("{} {} or later", need.id, need.version);
+        Some(match there {
+            None => format!("it needs the plugin {wanted}, which isn't installed"),
+            Some(f) => {
+                let m = f.manifest.as_ref().expect("filtered on its manifest");
+                match &f.state {
+                    State::Ready => format!(
+                        "it needs the plugin {wanted}, and {} {} is installed",
+                        m.name, m.version
+                    ),
+                    State::Disabled => {
+                        format!("it needs the plugin {wanted}, which is disabled")
+                    }
+                    _ => format!("it needs the plugin {wanted}, which can't be used"),
+                }
+            }
+        })
+    })
+}
+
 fn service_name(spec: &ServiceSpec) -> &str {
     if spec.name.is_empty() {
         &spec.id
@@ -2174,6 +2325,200 @@ mod tests {
         // A full tie: neither is better; the folders decide.
         assert!(!better(&m("1.0.0", &[]), &m("1.0.0", &[])));
         assert!(!better(&m("1.0.0", &["avx2"]), &m("1.0.0", &["avx2"])));
+    }
+
+    /// A ready plugin file `file` with the manifest `json` (interface 1.4).
+    fn ready(file: &str, json: &str) -> Found {
+        let manifest: Manifest = serde_json::from_str(json).unwrap();
+        assert!(manifest.problems().is_empty(), "{:?}", manifest.problems());
+        Found {
+            path: PathBuf::from(file),
+            manifest: Some(manifest),
+            state: State::Ready,
+            manifest_bytes: Vec::new(),
+            loaded: OnceLock::new(),
+            failed: OnceLock::new(),
+        }
+    }
+
+    const MIDI: &str = r#"{"interface": "1.4", "id": "oxiguitar.midi", "name": "MIDI",
+        "version": "1.0.0", "replaces": ["oxiguitar.soundfont"]}"#;
+    const SOUNDFONT: &str = r#"{"interface": "1.4", "id": "oxiguitar.soundfont",
+        "name": "SoundFont", "version": "0.11.0"}"#;
+
+    fn nam(needs: &str) -> String {
+        format!(
+            r#"{{"interface": "1.4", "id": "oxiguitar.nam", "name": "NAM", "version": "1.0.0",
+            "needs": [{needs}]}}"#
+        )
+    }
+
+    fn states(found: &[Found]) -> Vec<&State> {
+        found.iter().map(|f| &f.state).collect()
+    }
+
+    #[test]
+    fn a_replaced_id_is_the_older_self_of_the_plugin_replacing_it() {
+        // Whatever the versions: the old plugin's is higher here.
+        let mut found = vec![
+            ready("soundfont.oxp", SOUNDFONT),
+            ready("midi.oxp", MIDI),
+            ready(
+                "nam.oxp",
+                &nam(r#"{"id": "oxiguitar.midi", "version": "1.0.0"}"#),
+            ),
+        ];
+        settle(&mut found);
+        assert_eq!(
+            states(&found),
+            [
+                &State::Replaced("midi.oxp".into()),
+                &State::Ready,
+                &State::Ready
+            ]
+        );
+    }
+
+    #[test]
+    fn a_need_is_met_by_the_plugin_or_its_successor_at_the_version() {
+        // NAM built against the old id still finds MIDI.
+        let mut found = vec![
+            ready("midi.oxp", MIDI),
+            ready(
+                "nam.oxp",
+                &nam(r#"{"id": "oxiguitar.soundfont", "version": "0.11.0"}"#),
+            ),
+        ];
+        settle(&mut found);
+        assert_eq!(states(&found), [&State::Ready, &State::Ready]);
+
+        let mut found = vec![
+            ready("midi.oxp", MIDI),
+            ready(
+                "nam.oxp",
+                &nam(r#"{"id": "oxiguitar.midi", "version": "1.2.0"}"#),
+            ),
+        ];
+        settle(&mut found);
+        assert_eq!(
+            found[1].state,
+            State::Unmet(
+                "it needs the plugin oxiguitar.midi 1.2.0 or later, and MIDI 1.0.0 is installed"
+                    .into()
+            )
+        );
+    }
+
+    #[test]
+    fn a_missing_or_unusable_need_sets_the_plugin_aside_and_those_needing_it() {
+        let mut found = vec![ready(
+            "nam.oxp",
+            &nam(r#"{"id": "oxiguitar.midi", "version": "1.0.0"}"#),
+        )];
+        settle(&mut found);
+        assert_eq!(
+            found[0].state,
+            State::Unmet(
+                "it needs the plugin oxiguitar.midi 1.0.0 or later, which isn't installed".into()
+            )
+        );
+
+        // MIDI disabled: NAM can't be used, and a plugin needing NAM
+        // neither, though NAM itself is installed.
+        let mut found = vec![
+            ready("midi.oxp", MIDI),
+            ready(
+                "nam.oxp",
+                &nam(r#"{"id": "oxiguitar.midi", "version": "1.0.0"}"#),
+            ),
+            ready(
+                "pedals.oxp",
+                r#"{"interface": "1.4", "id": "me.pedals", "name": "Pedals", "version": "0.1.0",
+                "needs": [{"id": "oxiguitar.nam", "version": "1.0.0"}]}"#,
+            ),
+        ];
+        found[0].state = State::Disabled;
+        settle(&mut found);
+        assert_eq!(
+            found[1].state,
+            State::Unmet(
+                "it needs the plugin oxiguitar.midi 1.0.0 or later, which is disabled".into()
+            )
+        );
+        assert_eq!(
+            found[2].state,
+            State::Unmet(
+                "it needs the plugin oxiguitar.nam 1.0.0 or later, which can't be used".into()
+            )
+        );
+    }
+
+    #[test]
+    fn a_replaced_plugin_s_settings_and_data_are_carried_over_once() {
+        let home = scratch("carry-over");
+        let folders = Folders::resolve(
+            crate::System::Linux,
+            |name| (name == crate::HOME_VARIABLE).then(|| home.clone().into_os_string()),
+            None,
+        )
+        .unwrap();
+        let old = folders.plugin_data("oxiguitar.soundfont");
+        std::fs::create_dir_all(old.join("sets")).unwrap();
+        std::fs::write(old.join("sets").join("list.json"), b"[]").unwrap();
+        let settings = SharedSettings::new(
+            crate::Settings::parse(r#"{"oxiguitar.soundfont": {"basses": "/b.sf2"}}"#).unwrap(),
+            Some(folders.settings()),
+        );
+        let plugins = Plugins(Arc::new(Inner {
+            found: vec![ready("midi.oxp", MIDI)],
+            safe: false,
+            env: Environment::current("x11"),
+            settings: settings.clone(),
+            core: Arc::new(Unheard),
+            chosen: Mutex::new(HashMap::new()),
+            events: Arc::new(Queue::default()),
+            failed_events: Mutex::new(Vec::new()),
+            folders: OnceLock::new(),
+            read_only: std::sync::atomic::AtomicBool::new(false),
+        }));
+        assert_eq!(
+            plugins.replaced_ids(),
+            [(
+                "oxiguitar.soundfont".to_owned(),
+                "oxiguitar.midi".to_owned()
+            )]
+        );
+        let told = plugins.carry_over(&folders);
+        assert_eq!(told.len(), 2, "{told:?}");
+        assert_eq!(
+            settings.get("oxiguitar.midi"),
+            Some(serde_json::json!({"basses": "/b.sf2"}))
+        );
+        // Saved, and the old object kept for an older OxiGuitar.
+        let saved = crate::Settings::load(&folders.settings()).unwrap();
+        assert!(saved.get("oxiguitar.midi").is_some());
+        assert!(saved.get("oxiguitar.soundfont").is_some());
+        let new = folders.plugin_data("oxiguitar.midi");
+        assert_eq!(
+            std::fs::read(new.join("sets").join("list.json")).unwrap(),
+            b"[]"
+        );
+        assert!(old.join("sets").join("list.json").is_file());
+
+        // Once: the new id's own settings and data are never overwritten.
+        settings
+            .set("oxiguitar.midi", serde_json::json!({"basses": "/new.sfz"}))
+            .unwrap();
+        std::fs::write(new.join("sets").join("list.json"), b"[1]").unwrap();
+        assert!(plugins.carry_over(&folders).is_empty());
+        assert_eq!(
+            settings.get("oxiguitar.midi"),
+            Some(serde_json::json!({"basses": "/new.sfz"}))
+        );
+        assert_eq!(
+            std::fs::read(new.join("sets").join("list.json")).unwrap(),
+            b"[1]"
+        );
     }
 
     fn plain(folders: &[PathBuf]) -> Plugins {

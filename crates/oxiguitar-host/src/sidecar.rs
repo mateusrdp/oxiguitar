@@ -84,6 +84,23 @@ impl Sidecar {
         })
     }
 
+    /// Gives each track's settings kept under a replaced plugin's id to the
+    /// plugin that replaces it (interface 1.4; `replaced` as
+    /// [`crate::Plugins::replaced_ids`] lists them), where the new id has
+    /// none yet. The old entries stay, for an older OxiGuitar; the next save
+    /// writes both.
+    pub fn adopt(&mut self, replaced: &[(String, String)]) {
+        for track in &mut self.tracks {
+            for (old, new) in replaced {
+                if !track.plugins.contains_key(new)
+                    && let Some(value) = track.plugins.get(old).cloned()
+                {
+                    track.plugins.insert(new.clone(), value);
+                }
+            }
+        }
+    }
+
     /// Reads a sidecar's text.
     pub fn parse(text: &str) -> Result<Sidecar, String> {
         let value: Value = serde_json::from_str(text).map_err(|e| format!("not JSON: {e}"))?;
@@ -294,5 +311,25 @@ mod tests {
                 .contains("song.gp.oxg can't be used")
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_replaced_plugin_s_track_settings_are_adopted_by_its_successor() {
+        let mut sidecar = Sidecar::parse(
+            r#"{"oxiguitar": 1, "tracks": [
+                {"name": "Lead", "plugins": {"oxiguitar.soundfont": {"set": "a"}}},
+                {"name": "Bass", "plugins": {"oxiguitar.soundfont": {"set": "b"},
+                                             "oxiguitar.midi": {"set": "c"}}}]}"#,
+        )
+        .unwrap();
+        sidecar.adopt(&[("oxiguitar.soundfont".into(), "oxiguitar.midi".into())]);
+        let get = |t: usize, id: &str| sidecar.tracks[t].plugins.get(id).cloned();
+        assert_eq!(get(0, "oxiguitar.midi").as_deref(), Some(r#"{"set":"a"}"#));
+        assert_eq!(
+            get(0, "oxiguitar.soundfont").as_deref(),
+            Some(r#"{"set":"a"}"#)
+        );
+        // The successor's own settings win.
+        assert_eq!(get(1, "oxiguitar.midi").as_deref(), Some(r#"{"set":"c"}"#));
     }
 }

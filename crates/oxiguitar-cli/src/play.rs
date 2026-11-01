@@ -153,7 +153,8 @@ fn play(asked: &Asked) -> Result<(), String> {
     // The tracks' plugin settings (the track dialog's sections: NAM's amp,
     // say) live beside the file, FILE.oxg, as the window reads them.
     let sidecar = oxiguitar_host::sidecar::Sidecar::read_for(std::path::Path::new(&asked.path))?;
-    if let Some(sidecar) = sidecar {
+    if let Some(mut sidecar) = sidecar {
+        sidecar.adopt(&plugins().replaced_ids());
         let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
         let settled = sidecar.settle(&names);
         for (track, plugins) in score.tracks.iter_mut().zip(settled) {

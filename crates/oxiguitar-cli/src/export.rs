@@ -115,7 +115,8 @@ fn export_file(asked: &Asked) -> Result<(), String> {
     let data = std::fs::read(&asked.path).map_err(|e| format!("cannot open: {e}"))?;
     let mut score = open(&asked.path, &data)?.score;
     // The tracks' plugin settings (NAM's amp, say) live beside the file.
-    if let Some(sidecar) = oxiguitar_host::sidecar::Sidecar::read_for(Path::new(&asked.path))? {
+    if let Some(mut sidecar) = oxiguitar_host::sidecar::Sidecar::read_for(Path::new(&asked.path))? {
+        sidecar.adopt(&plugins.replaced_ids());
         let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
         let settled = sidecar.settle(&names);
         for (track, plugins) in score.tracks.iter_mut().zip(settled) {
