@@ -51,6 +51,11 @@ impl Role {
         }
     }
 
+    /// The role a key names (as `oxiguitar-set.json` writes it).
+    pub(crate) fn from_key(key: &str) -> Option<Role> {
+        Role::ALL.into_iter().find(|r| r.key() == key)
+    }
+
     fn title(self) -> &'static str {
         match self {
             Role::ElectricGuitars => "Electric guitars",
@@ -131,17 +136,31 @@ fn sfz_label(f: &Found, user: Option<&Path>) -> String {
     }
 }
 
-/// How the window names a set.
+/// How the window names a set: by the file's name, or by the name its
+/// `oxiguitar-set.json` gives, with the licence and the credit it names.
 fn label(f: &Found) -> String {
-    let name = f.path.file_name().map_or_else(
+    let file = f.path.file_name().map_or_else(
         || f.path.display().to_string(),
         |n| n.to_string_lossy().into_owned(),
     );
     let whose = match f.origin {
         Origin::User => "yours",
+        Origin::Installed => "installed",
         Origin::System => "the system's",
     };
-    format!("{name} ({whose}, {} MB)", f.size.div_ceil(1_000_000))
+    let size = f.size.div_ceil(1_000_000);
+    let Some(info) = f.info.as_ref() else {
+        return format!("{file} ({whose}, {size} MB)");
+    };
+    let mut label = match &info.name {
+        Some(name) => format!("{name}: {file}"),
+        None => file,
+    };
+    let mut notes = vec![whose.to_string(), format!("{size} MB")];
+    notes.extend(info.licence.clone());
+    notes.extend(info.credit.as_ref().map(|c| format!("by {c}")));
+    label.push_str(&format!(" ({})", notes.join(", ")));
+    label
 }
 
 /// Whether an SFZ file plays as an instrument, as it was when checked.
@@ -350,9 +369,6 @@ impl Tab for Window {
     }
 }
 
-/// The settings key that remembers the warning about basic sets was shown.
-pub(crate) const WARNED: &str = "warned_basic_sets";
-
 /// Whether every set in `used` is the system's (all basic, Mateus, 25 Oct
 /// 2026: every system set counts as basic, any set of the user's doesn't).
 pub(crate) fn only_basic(used: &[&Found]) -> bool {
@@ -425,6 +441,7 @@ mod tests {
             size: 1,
             origin,
             kind: Kind::Sf2,
+            info: None,
         }
     }
 
@@ -524,5 +541,18 @@ mod tests {
         assert_eq!(yours.len(), 1);
         assert_eq!(links(&yours), [crate::BETTER_SOUNDS]);
         assert!(crate::BETTER_SOUNDS.starts_with("https://"));
+    }
+
+    #[test]
+    fn a_sets_info_names_it() {
+        let mut set = found("guitars/a.sf2", Origin::Installed);
+        assert_eq!(label(&set), "a.sf2 (installed, 1 MB)");
+        set.info = crate::info::Info::parse(
+            r#"{"name": "Black and Green Guitars", "licence": "CC0", "credit": "Karoryfer"}"#,
+        );
+        assert_eq!(
+            label(&set),
+            "Black and Green Guitars: a.sf2 (installed, 1 MB, CC0, by Karoryfer)"
+        );
     }
 }

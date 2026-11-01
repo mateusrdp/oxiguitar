@@ -59,6 +59,16 @@ OxiGuitar keeps what you silenced in `settings.json`, under `advice`, one line f
 }
 ```
 
+The official plugins use it for:
+
+| Dialog | Asked by | When | Its line under the plugin's name |
+| --- | --- | --- | --- |
+| Only basic sounds are installed | `oxiguitar.midi` | A score plays and only your system's own sound set is found ([Better sounds](better-sounds.md)) | `no-sound-sets` |
+| No amp model to play | `oxiguitar.nam` | A track's amp is on and the `nam` folder holds no model | `no-model` |
+| No cabinet of your own | `oxiguitar.nam` | A track's amp is on, its model doesn't include a cabinet and the `nam` folder holds no impulse response | `no-cabinet` |
+
+The last two link to [Amp models](amp-models.md).
+
 Delete a line to get its dialog back. No dialog appears in safe mode.
 
 ## The plugin manager

@@ -1,5 +1,5 @@
 [package]
-name = "oxiguitar-soundfont-plugin"
+name = "oxiguitar-midi-plugin"
 description = "The OxiGuitar SoundFont plugin: plays every track with a sound set, the user's or the system's, through rustysynth."
 version.workspace = true
 edition.workspace = true

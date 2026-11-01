@@ -1,6 +1,6 @@
 # SFZ fixtures
 
-Our own files for the SFZ sampler's tests (`plugins/soundfont`), made with
+Our own files for the SFZ sampler's tests (`plugins/midi`), made with
 ffmpeg: a 440 Hz sine at half scale, 0.1 s at 44.1 kHz.
 
 ```sh

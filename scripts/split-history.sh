@@ -37,7 +37,7 @@ paths_of() {
                 scripts/guitar-pro-check.sh scripts/interop \
                 .github/workflows/interop.yml .github/workflows/fuzz.yml ;;
         oxiguitar-midi)
-            echo plugins/soundfont fixtures/sfz .github/workflows/listening.yml ;;
+            echo plugins/midi plugins/soundfont fixtures/sfz .github/workflows/listening.yml ;;
         oxiguitar-nam)
             echo plugins/nam fixtures/nam ;;
         oxiguitar-wav)

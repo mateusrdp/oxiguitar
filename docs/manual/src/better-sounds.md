@@ -24,7 +24,7 @@ All three together take about 2 GB of disk. OxiGuitar holds the samples of the s
    | Windows | `%APPDATA%\OxiGuitar\soundfonts\` |
 
    With `OXIGUITAR_HOME` set, it is the `soundfonts` folder in that folder.
-3. **Pick them**: **Tools → Plugins…**, select **SoundFont**, press **Settings…**, and choose:
+3. **Pick them**: **Tools → Plugins…**, select **MIDI (SoundFont, SFZ)**, press **Settings…**, and choose:
    - **Electric guitars**: `01-green_keyswitch` (the Gretsch) or `02-black_keyswitch` (the Hofner);
    - **Basses**: `01-darkblack_keysw`;
    - **Drums**: `DrumGizmo MuldjordKit` (in its `Stereo` folder).
@@ -37,9 +37,9 @@ The MuldjordKit is under CC BY 4.0: if you publish music made with it, credit La
 ## What plays without them
 
 - **Windows** has a General MIDI set, `gm.dls`, and **macOS** one in Core Audio. These are the smallest and plainest.
-- **Linux** has one when a package installs it: on Debian and Ubuntu the `oxiguitar-plugins-basic` package recommends `fluid-soundfont-gm` (FluidR3, 148 MB) or `musescore-general-soundfont-small` (MuseScore General, 40 MB), which your package manager installs with it unless told not to; on Fedora it recommends `fluid-soundfont-gm`. OxiGuitar looks in `/usr/share/sounds/sf2`, `/usr/share/sounds/sf3` and `/usr/share/soundfonts`.
+- **Linux** has one when a package installs it: on Debian and Ubuntu the `oxiguitar-plugins-basic` package recommends `fluid-soundfont-gm` (FluidR3, 148 MB) or `musescore-general-soundfont-small` (MuseScore General, 40 MB), which your package manager installs with it unless told not to; on Fedora it recommends `fluid-soundfont-gm`. OxiGuitar looks in `/usr/share/sounds/sf2`, `/usr/share/sounds/sf3` and `/usr/share/soundfonts`, and, for the recorded sets the sound-set installer puts there, in `/usr/share/oxiguitar/soundfonts`.
 
-A General MIDI set has one sound for each of the 128 standard instruments and a drum kit. While only your system's sets play, the SoundFont plugin's settings window says so, with a link to this page, and the first time it happens the bottom of the window says it too.
+A General MIDI set has one sound for each of the 128 standard instruments and a drum kit. While only your system's sets play, the MIDI plugin's settings window says so, with a link to this page, and the first time it happens a dialog says it too ([Advice dialogs](plugins.md#advice-dialogs); tick **Don't show this again** to silence it, `no-sound-sets` in `settings.json`).
 
 ## A better set for everything else
 
@@ -64,7 +64,13 @@ Pick one for **Electric guitars**. **Direct** sounds thin on its own: it is the 
 
 ## How the settings window chooses
 
-The SoundFont plugin's settings window (**Tools → Plugins…**, **SoundFont**, **Settings…**) has a row for each of **Electric guitars** (General MIDI's six electric sounds), **Acoustic guitars** (nylon and steel strings), **Basses** (its eight bass sounds), **Drums** and **Everything else** (banjos and the other fretted instruments among them). Each row lists every set found, with its folder.
+The MIDI plugin's settings window (**Tools → Plugins…**, **MIDI (SoundFont, SFZ)**, **Settings…**) has a row for each of **Electric guitars** (General MIDI's six electric sounds), **Acoustic guitars** (nylon and steel strings), **Basses** (its eight bass sounds), **Drums** and **Everything else** (banjos and the other fretted instruments among them). Each row lists every set found, with its folder. A set whose folder holds an `oxiguitar-set.json` file is listed by the name in it, with its licence and credit; the installer writes one beside each set it installs, and you can write one for a set of your own:
+
+   ```json
+   { "name": "Black and Green Guitars", "role": "electric-guitars", "licence": "CC0", "credit": "Karoryfer Samples" }
+   ```
+
+   Every key is optional. The file is only read; nothing is sent anywhere.
 
 - **The best found** plays a General MIDI set: one in your `soundfonts` folder before your system's, the larger of several. It is never an SFZ instrument.
 - **An SFZ instrument** is listed as its set's folder and its own name ("… (SFZ)"). It is one instrument, not a set of 128, so it plays only in a row you pick it for. Many SFZ sets have several instruments (programs) for the same recording, with different microphones or articulations. For the recommended sets, the keyswitched programs (`…_keyswitch`, `…_keysw`) are the ones with every articulation.

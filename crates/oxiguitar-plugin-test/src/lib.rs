@@ -134,9 +134,9 @@ pub fn build(
 /// 480 Hz sine with no envelope delay or attack, as a melodic preset (bank 0,
 /// program 0) and a drum kit (bank 128, program 0). Every note of it is
 /// heard from its first frame, so an instrument that plays from a sound set
-/// can show it keeps time. The SoundFont plugin's tests make it again and
+/// can show it keeps time. The MIDI plugin's tests make it again and
 /// check this copy (`OXIGUITAR_BLESS=1 cargo test -p
-/// oxiguitar-soundfont-plugin` rewrites it).
+/// oxiguitar-midi-plugin` rewrites it).
 pub const TEST_SET: &[u8] = include_bytes!("test-sine.sf2");
 
 /// Our own plugins, shipped with OxiGuitar: each crate's package name and
@@ -153,7 +153,7 @@ pub const OURS: &[(&str, &str)] = &[
 /// Our instrument plugins (interface 1.3), shipped with the format plugins:
 /// each crate's package name and its file's name. [`build_ours`] builds
 /// them too.
-pub const OUR_INSTRUMENTS: &[(&str, &str)] = &[("oxiguitar-soundfont-plugin", "soundfont")];
+pub const OUR_INSTRUMENTS: &[(&str, &str)] = &[("oxiguitar-midi-plugin", "midi")];
 
 /// Our effect plugins (interface 1.3), shipped with the others: each
 /// crate's package name and its file's name. [`build_ours`] builds them
@@ -286,6 +286,13 @@ impl Core for Kept {
 /// no other plugin is found beside it; the copy stays loaded until the
 /// program ends.
 pub fn check(oxp: &Path) -> Report {
+    check_with(oxp, &[])
+}
+
+/// [`check`] for a plugin that `needs` others: the plugin files in
+/// `needed` are copied beside it, so the need is met. Only `oxp` is
+/// checked.
+pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
     let mut report = Report::default();
     let folder = std::env::temp_dir().join(format!(
         "oxiguitar-plugin-test-{}-{}",
@@ -299,6 +306,13 @@ pub fn check(oxp: &Path) -> Report {
     {
         report.check("the plugin file can be read", Err(e.to_string()));
         return report;
+    }
+    for other in needed {
+        let name = other.file_name().unwrap_or("needed.oxp".as_ref());
+        if let Err(e) = std::fs::copy(other, folder.join(name)) {
+            report.check("a needed plugin file can be read", Err(e.to_string()));
+            return report;
+        }
     }
     let kept = Arc::new(Kept::default());
     let started = Instant::now();
@@ -330,7 +344,7 @@ pub fn check(oxp: &Path) -> Report {
         }
         plugins.use_folders(folders);
     }
-    let Some(found) = plugins.found().first() else {
+    let Some(found) = plugins.found().iter().find(|f| f.path == copy) else {
         report.check(
             "the manifest reads without loading the plugin",
             Err("the file wasn't found".into()),

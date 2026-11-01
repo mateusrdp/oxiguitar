@@ -15,7 +15,7 @@ use oxiguitar_host::api::message::{Answer, ErrorKind, LogEntry, Request};
 use oxiguitar_host::{Plugins, SharedSettings, Unheard, Unrecognised};
 use oxiguitar_plugin_test::{
     OUR_DEVICES, OUR_EFFECTS, OUR_EXPORTERS, OUR_INSTRUMENTS, OURS, build_devices, build_ours,
-    check,
+    check, check_with,
 };
 
 fn workspace() -> PathBuf {
@@ -76,7 +76,13 @@ fn our_instruments_pass_the_contract() {
 /// The NAM plugin with a model in its `nam` folder: a host over a copy of
 /// it (a library loads once per process), and that folder.
 fn nam_plugins(tag: &str) -> (Plugins, PathBuf) {
-    nam_plugins_of(&[(ours().join("nam.oxp"), format!("nam-{tag}.oxp"))], tag)
+    nam_plugins_of(
+        &[
+            (ours().join("nam.oxp"), format!("nam-{tag}.oxp")),
+            (ours().join("midi.oxp"), "midi.oxp".into()),
+        ],
+        tag,
+    )
 }
 
 /// Like [`nam_plugins`], with the plugin files `files` (each copied under
@@ -91,6 +97,13 @@ fn nam_plugins_of(files: &[(PathBuf, String)], tag: &str) -> (Plugins, PathBuf) 
     }
     let home = scratch.join("home");
     std::fs::create_dir_all(home.join("nam/Amps")).unwrap();
+    // The MIDI plugin NAM needs is checked too, and plays from a set.
+    std::fs::create_dir_all(home.join("soundfonts")).unwrap();
+    std::fs::write(
+        home.join("soundfonts/test-sine.sf2"),
+        oxiguitar_plugin_test::TEST_SET,
+    )
+    .unwrap();
     std::fs::copy(
         workspace().join("fixtures/nam/wavenet.nam"),
         home.join("nam/Amps/wavenet.nam"),
@@ -118,7 +131,10 @@ fn nam_plugins_of(files: &[(PathBuf, String)], tag: &str) -> (Plugins, PathBuf) 
 #[test]
 fn our_nam_plugin_runs_a_model_in_real_time() {
     for (_, name) in OUR_EFFECTS {
-        let report = check(&ours().join(format!("{name}.oxp")));
+        let report = check_with(
+            &ours().join(format!("{name}.oxp")),
+            &[&ours().join("midi.oxp")],
+        );
         assert!(report.ok(), "{name}.oxp: {:#?}", report.failed);
     }
     let (plugins, scratch) = nam_plugins("realtime");
@@ -249,13 +265,13 @@ fn sine_wav(seconds: f64) -> Vec<u8> {
 /// nothing is allocated and (on Linux) no system call made while it
 /// renders (M4 slice 5).
 #[test]
-fn our_soundfont_plugin_plays_sfz_in_real_time() {
+fn our_midi_plugin_plays_sfz_in_real_time() {
     let scratch =
         std::env::temp_dir().join(format!("oxiguitar-sfz-contract-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&scratch);
     let folder = scratch.join("plugins");
     std::fs::create_dir_all(&folder).unwrap();
-    std::fs::copy(ours().join("soundfont.oxp"), folder.join("soundfont.oxp")).unwrap();
+    std::fs::copy(ours().join("midi.oxp"), folder.join("midi.oxp")).unwrap();
     let home = scratch.join("home");
     let set = home.join("soundfonts").join("Test Sine");
     std::fs::create_dir_all(set.join("Samples")).unwrap();
@@ -276,7 +292,7 @@ fn our_soundfont_plugin_plays_sfz_in_real_time() {
     let settings = SharedSettings::default();
     settings
         .set(
-            "oxiguitar.soundfont",
+            "oxiguitar.midi",
             serde_json::json!({"guitars": pick, "basses": pick, "drums": pick, "other": pick}),
         )
         .unwrap();
@@ -599,7 +615,7 @@ fn the_nam_build_for_x86_64_v3_processors_runs_in_real_time_and_is_chosen() {
         return;
     };
     let v3 = PathBuf::from(v3);
-    let report = check(&v3);
+    let report = check_with(&v3, &[&ours().join("midi.oxp")]);
     assert!(report.ok(), "{}: {:#?}", v3.display(), report.failed);
 
     // Named to come after nam.oxp: the host must still take it.
@@ -607,12 +623,14 @@ fn the_nam_build_for_x86_64_v3_processors_runs_in_real_time_and_is_chosen() {
         &[
             (ours().join("nam.oxp"), "a-nam.oxp".into()),
             (v3.clone(), "b-nam.oxp".into()),
+            (ours().join("midi.oxp"), "midi.oxp".into()),
         ],
         "v3",
     );
     let states: Vec<(String, &State)> = plugins
         .found()
         .iter()
+        .filter(|f| f.path.file_name().is_some_and(|n| n != "midi.oxp"))
         .map(|f| {
             (
                 f.path.file_name().unwrap().to_string_lossy().into_owned(),
@@ -685,7 +703,7 @@ fn our_wav_plugin_exports_the_song() {
     let _ = std::fs::remove_dir_all(&scratch);
     let folder = scratch.join("plugins");
     std::fs::create_dir_all(&folder).unwrap();
-    for name in ["gp5", "soundfont", "wav"] {
+    for name in ["gp5", "midi", "wav"] {
         let file = format!("{name}.oxp");
         std::fs::copy(ours().join(&file), folder.join(&file)).unwrap();
     }

@@ -18,7 +18,7 @@ The three test songs hold the same music: a repeat, a marker, a time-signature c
 
 ## SFZ samples
 
-`sfz/` holds three tiny samples for the SFZ sampler's tests (`plugins/soundfont`): a 440 Hz sine as 16- and 24-bit FLAC and as Ogg Vorbis, made with ffmpeg (the commands are in its README). Made by us; GPL-3.0-or-later.
+`sfz/` holds three tiny samples for the SFZ sampler's tests (`plugins/midi`): a 440 Hz sine as 16- and 24-bit FLAC and as Ogg Vorbis, made with ffmpeg (the commands are in its README). Made by us; GPL-3.0-or-later.
 
 ## Guitar Pro 7.6's own files
 

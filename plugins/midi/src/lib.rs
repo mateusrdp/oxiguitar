@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! OxiGuitar's SoundFont plugin (plugin interface 1.3; M4 slice 3,
-//! docs/design/player.md): the instrument `soundfont`, which plays every
+//! OxiGuitar's MIDI plugin, `oxiguitar.midi` (plugin interface 1.4; it
+//! replaces `oxiguitar.soundfont`, docs/design/player.md): the instrument
+//! `soundfont`, shown as "MIDI (SoundFont, SFZ)", which plays every
 //! class of track through rustysynth 1.3.8, used exactly as published.
 //!
 //! - `sets` finds the sound sets: the user's `soundfonts` folder (beside
-//!   `plugins`) and the system's own, read only; nothing is ever fetched.
+//!   `plugins`), the sets the sound-set installer put in
+//!   `/usr/share/oxiguitar/soundfonts` and the system's own, read only;
+//!   nothing is ever fetched. `info` reads the `oxiguitar-set.json` beside
+//!   a set (name, role, licence, credit).
 //! - `settings` is the settings window: a set for guitars, basses, drums
 //!   and everything else; until the user picks, the best set found (the
 //!   user's before the system's, the larger before the smaller).
@@ -27,11 +31,12 @@ use std::time::SystemTime;
 
 use oxiguitar_plugin::audio::Prepare;
 use oxiguitar_plugin::{
-    Error, ErrorKind, Host, Instrument, Level, Plugin, Renderer, SharedFolder, Tab,
+    Advice, Error, ErrorKind, Host, Instrument, Level, Link, Plugin, Renderer, SharedFolder, Tab,
 };
 use rustysynth::SoundFont;
 
 pub(crate) mod dls;
+pub(crate) mod info;
 pub(crate) mod play;
 pub(crate) mod riff;
 pub(crate) mod sets;
@@ -43,8 +48,11 @@ pub(crate) mod sfz;
 /// The instrument's id in the manifest.
 pub const INSTRUMENT: &str = "soundfont";
 
-/// The manual's page on getting better sets, which the footer's warning
-/// links to.
+/// The advice's id when only the system's sets play.
+pub const ADVICE_NO_SOUND_SETS: &str = "no-sound-sets";
+
+/// The manual's page on getting better sets, which the `no-sound-sets`
+/// advice links to.
 pub const BETTER_SOUNDS: &str = "https://mateusrdp.github.io/oxiguitar/better-sounds.html";
 
 /// A set loaded once and kept while it is in use, so opening another file
@@ -65,7 +73,7 @@ struct LoadedSfz {
 }
 
 /// The plugin.
-pub struct SoundFontPlugin {
+pub struct MidiPlugin {
     host: Host,
     /// The sets loaded for the last preparation.
     loaded: Mutex<Vec<Loaded>>,
@@ -75,9 +83,9 @@ pub struct SoundFontPlugin {
     window: settings::Window,
 }
 
-impl std::fmt::Debug for SoundFontPlugin {
+impl std::fmt::Debug for MidiPlugin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SoundFontPlugin").finish_non_exhaustive()
+        f.debug_struct("MidiPlugin").finish_non_exhaustive()
     }
 }
 
@@ -91,7 +99,11 @@ pub(crate) fn user_folder(host: &Host) -> Option<PathBuf> {
 
 /// The sets this plugin can play, the best first.
 pub(crate) fn playable(host: &Host) -> Vec<sets::Found> {
-    sets::find(user_folder(host).as_deref(), &sets::system_places())
+    sets::find(
+        user_folder(host).as_deref(),
+        &sets::installed_places(),
+        &sets::system_places(),
+    )
 }
 
 /// A short, stable name for a file's contents: its path, size and time
@@ -130,7 +142,7 @@ fn unplayable(path: &Path, e: impl std::fmt::Display) -> Error {
     )
 }
 
-impl SoundFontPlugin {
+impl MidiPlugin {
     /// The SFZ instrument `found` with its samples, loaded, or taken from
     /// those already loaded. Samples it can't read are said in the footer.
     fn load_sfz(&self, found: &sets::Found) -> Result<Arc<sfz::Loaded>, Error> {
@@ -246,29 +258,39 @@ impl SoundFontPlugin {
         Ok(font)
     }
 
-    /// Says once, ever, that only the system's sets play, with a link to
-    /// the manual's page on better ones.
-    fn warn_once(&self) {
-        let Ok(mut s) = self.host.settings() else {
-            return;
+    /// Advises, once (the host keeps what the user silenced), that only the
+    /// system's sets play, with a link to the manual's page on better ones.
+    fn advise_sets(&self) {
+        let advice = Advice {
+            id: ADVICE_NO_SOUND_SETS.into(),
+            title: "Only basic sounds are installed".into(),
+            text: "OxiGuitar is playing with your system's basic sound set. \
+                   Free recorded sets for guitars, basses and drums sound far \
+                   better: install one, and pick it in Tools, Plugins, MIDI \
+                   settings. OxiGuitar downloads nothing itself; the page \
+                   below says which sets to get and where to put them."
+                .into(),
+            links: vec![Link {
+                text: "Better sounds".into(),
+                url: BETTER_SOUNDS.into(),
+            }],
         };
-        if s.get(settings::WARNED).and_then(|v| v.as_bool()) == Some(true) {
-            return;
+        if self.host.advise(advice).is_err() {
+            // A host that doesn't know advice (before interface 1.4): the
+            // footer says it, with the link, as it used to.
+            self.host.notify_with_link(
+                Level::Warning,
+                "Playing with your system's basic sound set. Free recorded SFZ sets sound far better.",
+                "Better sounds",
+                BETTER_SOUNDS,
+            );
         }
-        self.host.notify_with_link(
-            Level::Warning,
-            "Playing with your system's basic sound set. Free recorded SFZ sets for guitars, basses and drums sound far better.",
-            "Better sounds",
-            BETTER_SOUNDS,
-        );
-        s.insert(settings::WARNED.into(), true.into());
-        let _ = self.host.set_settings(&s);
     }
 }
 
-impl Plugin for SoundFontPlugin {
-    fn start(host: Host) -> Result<SoundFontPlugin, Error> {
-        Ok(SoundFontPlugin {
+impl Plugin for MidiPlugin {
+    fn start(host: Host) -> Result<MidiPlugin, Error> {
+        Ok(MidiPlugin {
             window: settings::Window::new(host.clone()),
             host,
             loaded: Mutex::default(),
@@ -286,7 +308,7 @@ impl Plugin for SoundFontPlugin {
     }
 }
 
-impl Instrument for SoundFontPlugin {
+impl Instrument for MidiPlugin {
     fn prepare(&self, prepare: &Prepare) -> Result<Box<dyn Renderer>, Error> {
         let found = playable(&self.host);
         if found.is_empty() {
@@ -355,10 +377,10 @@ impl Instrument for SoundFontPlugin {
         }
         self.samples.trim();
         if settings::only_basic(&used) {
-            self.warn_once();
+            self.advise_sets();
         }
         Ok(Box::new(play::Player::new(prepare, &sounds)?))
     }
 }
 
-oxiguitar_plugin::export_plugin!(SoundFontPlugin);
+oxiguitar_plugin::export_plugin!(MidiPlugin);

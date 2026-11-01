@@ -4,9 +4,11 @@ OxiGuitar can play a guitar or bass track through an **amp model**: a capture of
 
 ## What you need
 
-1. **A guitar sound to feed the amp.** An amp model expects what a guitar's cable carries, a clean, plain signal, called DI (direct input). Any guitar sound plays through it, but a DI set sounds the most real. FreePats' **Direct** set is one ([Better sounds](better-sounds.md), "Electric guitars as SoundFonts"): put its `.sf2` file in your `soundfonts` folder and pick it for **Electric guitars** in the SoundFont plugin's settings window.
+1. **A guitar sound to feed the amp.** An amp model expects what a guitar's cable carries, a clean, plain signal, called DI (direct input). Any guitar sound plays through it, but a DI set sounds the most real. FreePats' **Direct** set is one ([Better sounds](better-sounds.md), "Electric guitars as SoundFonts"): put its `.sf2` file in your `soundfonts` folder and pick it for **Electric guitars** in the MIDI plugin's settings window.
 2. **Amp models.** Thousands are shared for free, most of them at [TONE3000](https://www.tone3000.com/). Each capture's page says its licence; most allow using it and publishing what you play through it, but not passing the file on. A capture marked as an amp head (amp only) needs a cabinet after it; a full rig already has one.
 3. **Cabinets, if you want others.** Four come with OxiGuitar (below). Any `.wav` impulse response works, mono or the first channel of a stereo file, at any sample rate.
+
+If a track's amp is on and a folder is empty, a dialog says what is missing, once: **No amp model to play** when the `nam` folder holds no model, **No cabinet of your own** when it holds no impulse response (the four built-in cabinets still work). Tick **Don't show this again** to silence either; see [Advice dialogs](plugins.md#advice-dialogs). The NAM plugin works through the MIDI plugin's sound, so it needs the MIDI plugin installed (both come with every download).
 
 ## Where to put them
 

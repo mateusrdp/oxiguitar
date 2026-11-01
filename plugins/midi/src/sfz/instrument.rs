@@ -496,7 +496,7 @@ mod tests {
         let Some(dir) = std::env::var_os("OXIGUITAR_SFZ_DIR") else {
             return;
         };
-        let found = crate::sets::find(Some(Path::new(&dir)), &[]);
+        let found = crate::sets::find(Some(Path::new(&dir)), &[], &[]);
         let mut unknown: BTreeMap<String, (usize, usize)> = BTreeMap::new();
         let (mut regions, mut instruments) = (0, 0);
         for f in found.iter().filter(|f| f.kind == crate::sets::Kind::Sfz) {

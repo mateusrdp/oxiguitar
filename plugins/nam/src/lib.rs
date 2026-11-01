@@ -26,7 +26,7 @@ use std::time::SystemTime;
 
 use oxiguitar_plugin::audio::PrepareEffect;
 use oxiguitar_plugin::{
-    Effect, Error, ErrorKind, Host, Plugin, Processor, SharedFolder, TrackSection,
+    Advice, Effect, Error, ErrorKind, Host, Link, Plugin, Processor, SharedFolder, TrackSection,
 };
 
 #[cfg_attr(all(x86_64_v3, not(test)), allow(dead_code))]
@@ -48,6 +48,12 @@ pub const SECTION: &str = "nam";
 
 /// The manual's page on amp models, which the section links to.
 pub const MANUAL: &str = "https://mateusrdp.github.io/oxiguitar/amp-models.html";
+
+/// The advice that no amp model is in the nam folder.
+pub const ADVICE_NO_MODEL: &str = "no-model";
+
+/// The advice that no cabinet response is in the nam folder.
+pub const ADVICE_NO_CABINET: &str = "no-cabinet";
 
 /// The level a model's sound is brought to, where its file says how loud
 /// it plays, in dBFS (as NAM's own plugin does).
@@ -142,6 +148,41 @@ impl NamPlugin {
         Ok(file)
     }
 
+    /// Advises, once (the host keeps what the user silenced), what the nam
+    /// folder lacks: models, cabinet responses, each on its own. The footer
+    /// has no word for it; a host before interface 1.4 says nothing.
+    fn advise_files(&self, found: &files::Found, includes_cab: Option<bool>) {
+        let link = || {
+            vec![Link {
+                text: "Amp models".into(),
+                url: MANUAL.into(),
+            }]
+        };
+        if found.models.is_empty() {
+            let _ = self.host.advise(Advice {
+                id: ADVICE_NO_MODEL.into(),
+                title: "No amp model to play".into(),
+                text: "NAM is on for a track, but the nam folder holds no amp model (a .nam \
+                       file), so the track keeps its plain sound. Capture files are shared \
+                       freely by their makers; put the ones you like in the nam folder. \
+                       OxiGuitar downloads nothing itself."
+                    .into(),
+                links: link(),
+            });
+        }
+        if found.responses.is_empty() && includes_cab != Some(true) {
+            let _ = self.host.advise(Advice {
+                id: ADVICE_NO_CABINET.into(),
+                title: "No cabinet of your own".into(),
+                text: "The nam folder holds no cabinet impulse response (a .wav file), so \
+                       only the four built-in cabinets can be picked. Put impulse responses \
+                       you like in the nam folder to pick them in the track's Amp section."
+                    .into(),
+                links: link(),
+            });
+        }
+    }
+
     /// The taps of the cabinet `track` picked, at `rate`, or none.
     fn cabinet(
         &self,
@@ -204,6 +245,7 @@ impl Effect for NamPlugin {
             return Ok(Box::new(Through));
         }
         let nam = folder(&self.host);
+        let present = nam.as_deref().map(files::find).unwrap_or_default();
         let frames = (prepare.frames as usize).max(1);
         let mut model = None;
         let mut includes_cab = None;
@@ -225,6 +267,7 @@ impl Effect for NamPlugin {
                 .then(|| resample::Converted::new(prepare.rate, theirs, frames));
             model = Some((runtime, converted));
         }
+        self.advise_files(&present, includes_cab);
         let cabinet = self
             .cabinet(&track, includes_cab, nam.as_deref(), prepare.rate)?
             .map(|taps| engine::Cabinet::new(&taps))
