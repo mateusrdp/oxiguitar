@@ -1087,7 +1087,10 @@ mod tests {
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
         let later = ECHO.replace("\"1.0\"", "\"1.9\"");
-        assert!(check::<Echo>(&later, "0.1.0")[0].contains("this SDK is 1.3"));
+        let (major, minor) = oxiguitar_plugin_api::INTERFACE;
+        assert!(
+            check::<Echo>(&later, "0.1.0")[0].contains(&format!("this SDK is {major}.{minor}"))
+        );
     }
 
     /// A plugin of interface 1.2: a reader into the score version 2, a
