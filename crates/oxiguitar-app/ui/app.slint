@@ -125,6 +125,12 @@ export struct AreaState {
     plugin: bool,
 }
 
+// One link of an advice dialog (plugin interface 1.4).
+export struct AdviceLink {
+    text: string,
+    url: string,
+}
+
 export struct FooterRow {
     // 0 info, 1 warning, 2 error.
     level: int,
@@ -1113,6 +1119,79 @@ component Question inherits Rectangle {
     }
 }
 
+// Advice a plugin (or the core) asks for (plugin interface 1.4): a
+// heading, a few lines, up to three links that open in the browser only
+// when clicked, and a box that silences it for good.
+component AdviceDialog inherits Rectangle {
+    in property <string> heading;
+    in property <string> source;
+    in property <[string]> lines;
+    in property <[AdviceLink]> links;
+    in-out property <bool> hide-it: false;
+    callback open-link(string);
+    callback done();
+    background: #00000060;
+    TouchArea { }
+    keys := FocusScope {
+        init => { self.focus(); }
+        key-pressed(event) => {
+            if (event.text == Key.Escape || event.text == Key.Return) {
+                root.done();
+                return accept;
+            }
+            accept
+        }
+    }
+    Rectangle {
+        width: min(520px, root.width - 40px);
+        height: min(box.preferred-height, root.height - 40px);
+        background: Palette.background;
+        border-color: Palette.border;
+        border-width: 1px;
+        border-radius: 6px;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000060;
+        box := VerticalLayout {
+            padding: 18px;
+            spacing: 10px;
+            Text { text: root.heading; font-size: 15px; font-weight: 700; wrap: word-wrap; }
+            ScrollView {
+                min-height: min(lines-box.preferred-height, 40px);
+                preferred-height: min(lines-box.preferred-height, 320px);
+                lines-box := VerticalLayout {
+                    spacing: 4px;
+                    for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
+                }
+            }
+            if root.links.length > 0 : VerticalLayout {
+                spacing: 4px;
+                for link in root.links : HorizontalLayout {
+                    alignment: start;
+                    FooterLink {
+                        text: link.text;
+                        clicked => { root.open-link(link.url); }
+                    }
+                }
+            }
+            Text {
+                text: root.source;
+                font-size: 11px;
+                color: Palette.foreground.transparentize(0.4);
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                CheckBox {
+                    text: "Don't show this again";
+                    checked: root.hide-it;
+                    toggled => { root.hide-it = self.checked; }
+                }
+                Rectangle { horizontal-stretch: 1; }
+                Button { text: "OK"; primary: true; clicked => { root.done(); } }
+            }
+        }
+    }
+}
+
 // A rounded pill floating over the canvas.
 component Pill inherits Rectangle {
     height: 26px;
@@ -1285,6 +1364,14 @@ export component AppWindow inherits Window {
     in property <string> footer-link-url;
     // A footer message's link was clicked: open it in the browser.
     callback open-link(string);
+    // Advice a plugin or the core asks for (interface 1.4), one at a time.
+    in property <bool> advice-shown: false;
+    in property <string> advice-heading;
+    in property <string> advice-source;
+    in property <[string]> advice-lines;
+    in property <[AdviceLink]> advice-links;
+    in-out property <bool> advice-hide: false;
+    callback advice-done();
     in property <[FooterRow]> footer-rows;
     in-out property <bool> footer-expanded: false;
 
@@ -2645,5 +2732,17 @@ export component AppWindow inherits Window {
         lines: root.question-lines;
         buttons: root.question-buttons;
         answered(i) => { root.question-answered(i); }
+    }
+
+    if root.advice-shown : AdviceDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.advice-heading;
+        source: root.advice-source;
+        lines: root.advice-lines;
+        links: root.advice-links;
+        hide-it <=> root.advice-hide;
+        open-link(url) => { root.open-link(url); }
+        done => { root.advice-done(); }
     }
 }

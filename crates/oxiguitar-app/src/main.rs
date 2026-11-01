@@ -31,6 +31,7 @@
 #[cfg(not(any(feature = "wayland", feature = "x11")))]
 compile_error!("build oxiguitar-app with the `wayland` feature (the default) or `x11`");
 
+mod advice;
 mod audio_export;
 mod bar_form;
 mod bend_form;
@@ -101,10 +102,10 @@ mod ui {
     slint::include_modules!();
 }
 use ui::{
-    AltBox, AppWindow, AreaState, BoxItem, FooterRow, GridPoint, InspectorField, InspectorVoice,
-    ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow, PluginRow,
-    PluginSection, PluginSettingsWindow, PluginWidget, ShortcutLine, SongField, TileItem, ToolRow,
-    ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    AdviceLink, AltBox, AppWindow, AreaState, BoxItem, FooterRow, GridPoint, InspectorField,
+    InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow,
+    PluginRow, PluginSection, PluginSettingsWindow, PluginWidget, ShortcutLine, SongField,
+    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -229,6 +230,8 @@ struct App {
     save_formats: Vec<SaveFormat>,
     /// The question over the window, if one shows.
     question: Option<Asked>,
+    /// The advice dialog over the window, if one shows (interface 1.4).
+    advice: Option<oxiguitar_host::advice::Asked>,
     /// The bend or whammy-bar editor, while it is open.
     bend_dialog: Option<bend_form::BendForm>,
     /// The chord dialog, while it is open.
@@ -359,6 +362,17 @@ impl oxiguitar_host::Core for WindowCore {
                     .footer
                     .push_with_link(level, text, link.text, link.url);
                 sync_footer(&app);
+            }
+        });
+    }
+
+    fn advise(&self, asked: oxiguitar_host::advice::Asked) {
+        // Plugins ask from any thread, even before the window exists: the
+        // request waits in a line, and the window takes it when it is up.
+        advice::ask(asked);
+        let _ = slint::invoke_from_event_loop(|| {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                show_advice(&app);
             }
         });
     }
@@ -575,6 +589,7 @@ fn main() -> Result<(), slint::PlatformError> {
         untitled: false,
         save_formats,
         question: None,
+        advice: None,
         bend_dialog: None,
         chord_dialog: None,
         transpose_scope: None,
@@ -758,6 +773,8 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_save_as(move || save_as_dialog(&a));
     let a = app.clone();
     ui.on_question_answered(move |i| question_answered(&a, i));
+    let a = app.clone();
+    ui.on_advice_done(move || advice_done(&a));
     let a = app.clone();
     ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
     let a = app.clone();
@@ -1250,6 +1267,10 @@ fn main() -> Result<(), slint::PlatformError> {
             canvas_changed(&a);
         }
     });
+
+    // Advice plugins asked for while the window was still being made.
+    let a = app.clone();
+    slint::Timer::single_shot(Duration::ZERO, move || show_advice(&a));
 
     ui.run()?;
     APP.with(|a| a.borrow_mut().take());
@@ -4238,6 +4259,58 @@ fn tuplet_dialog_done(app: &Shared, ok: bool) {
     if let Some(t) = typed {
         send_typed(app, t);
     }
+}
+
+/// Shows the next advice that waits, unless one shows already: one dialog
+/// at a time.
+fn show_advice(app: &Shared) {
+    if app.borrow().advice.is_some() {
+        return;
+    }
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let Some(asked) = advice::next() else {
+        return;
+    };
+    ui.set_advice_heading(asked.advice.title.as_str().into());
+    ui.set_advice_source(advice::source(&asked).into());
+    ui.set_advice_lines(strings(advice::lines(&asked.advice.text)));
+    ui.set_advice_links(ModelRc::new(VecModel::from(
+        asked
+            .advice
+            .links
+            .iter()
+            .map(|l| AdviceLink {
+                text: l.text.as_str().into(),
+                url: l.url.as_str().into(),
+            })
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_advice_hide(false);
+    ui.set_advice_shown(true);
+    app.borrow_mut().advice = Some(asked);
+}
+
+/// The user closed the advice dialog: keep what the box says (silenced for
+/// good, in settings.json), then show the next advice that waits.
+fn advice_done(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let hide = ui.get_advice_hide();
+    ui.set_advice_shown(false);
+    ui.invoke_focus_page();
+    let asked = app.borrow_mut().advice.take();
+    if let (true, Some(asked)) = (hide, asked) {
+        let saved =
+            oxiguitar_host::advice::hide(&app.borrow().stored, &asked.plugin, &asked.advice.id);
+        if let Err(why) = saved {
+            app.borrow_mut().footer.push(Level::Warning, why);
+            sync_footer(app);
+        }
+    }
+    show_advice(app);
 }
 
 /// The user answered the question: button `i`, the last being Cancel.

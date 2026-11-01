@@ -51,7 +51,7 @@
 //! asked for.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError, Weak};
@@ -74,6 +74,7 @@ use oxiguitar_plugin_api::signature::Sniff;
 use oxiguitar_plugin_api::tab::{TabContent, TabEvent, TabSpec};
 use serde_json::Value;
 
+use crate::advice;
 use crate::events::Queue;
 use crate::folders::Folders;
 
@@ -138,6 +139,16 @@ pub trait Core: Send + Sync {
         Err("no score is open".to_owned())
     }
 
+    /// A plugin asks to show advice (interface 1.4): a dialog once the
+    /// window is up, one at a time, with a "Don't show this again" box that
+    /// the window answers with [`advice::hide`]. The host has checked the
+    /// advice, left out what the user already silenced, and passes each
+    /// advice on once per session. The default, for programs without a
+    /// window, shows nothing.
+    fn advise(&self, asked: advice::Asked) {
+        let _ = asked;
+    }
+
     /// The plugin `id` failed and is withdrawn for the rest of the session:
     /// its tabs should go. The footer has already been told. The default
     /// does nothing.
@@ -174,6 +185,10 @@ struct Inner {
     /// The plugins that answered an event with an error: told once in the
     /// footer.
     failed_events: Mutex<Vec<usize>>,
+    /// The advice already passed on to the window this session, by plugin
+    /// and advice id: a plugin may ask again whenever its reason holds,
+    /// and the user sees each once.
+    advised: Mutex<HashSet<(String, String)>>,
     /// OxiGuitar's folders, for the plugins' own folders and the shared
     /// ones (interface 1.3); unset for programs that keep none.
     folders: OnceLock<Folders>,
@@ -703,6 +718,7 @@ impl Plugins {
             chosen: Mutex::new(HashMap::new()),
             events: Arc::new(Queue::default()),
             failed_events: Mutex::new(Vec::new()),
+            advised: Mutex::new(HashSet::new()),
             folders: OnceLock::new(),
             read_only: std::sync::atomic::AtomicBool::new(false),
         }))
@@ -1901,6 +1917,27 @@ impl Plugins {
         })
     }
 
+    /// Passes advice on to the window, unless the user silenced it or it
+    /// was passed on already this session. Never in safe mode.
+    fn advise(&self, manifest: &Manifest, given: oxiguitar_plugin_api::message::Advice) {
+        if self.0.safe || advice::is_hidden(&self.0.settings, &manifest.id, &given.id) {
+            return;
+        }
+        let first = self
+            .0
+            .advised
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .insert((manifest.id.clone(), given.id.clone()));
+        if first {
+            self.0.core.advise(advice::Asked {
+                plugin: manifest.id.clone(),
+                plugin_name: manifest.name.clone(),
+                advice: given,
+            });
+        }
+    }
+
     /// Answers one request from the plugin at `index`.
     fn answer(&self, index: usize, request: &[u8]) -> (Status, Vec<u8>) {
         let found = &self.0.found[index];
@@ -1991,6 +2028,22 @@ impl Plugins {
                 }
             }
             HostRequest::Folders => self.plugin_folders(manifest).map(HostAnswer::Folders),
+            HostRequest::Advise(given) => {
+                if !manifest.knows_minor(4) {
+                    Err(Error::new(
+                        ErrorKind::Invalid,
+                        format!(
+                            "{} asks for interface 1.{}, and advice came with 1.4",
+                            manifest.name, manifest.interface.minor
+                        ),
+                    ))
+                } else if let Some(problem) = given.problem() {
+                    Err(Error::new(ErrorKind::Invalid, problem))
+                } else {
+                    self.advise(manifest, given);
+                    Ok(HostAnswer::Done)
+                }
+            }
             HostRequest::Service {
                 interface,
                 method,
@@ -2066,11 +2119,7 @@ impl Plugins {
 /// Whether `url` is an `https:` address with a host: the only links the
 /// footer opens.
 pub fn is_https(url: &str) -> bool {
-    url.get(..8)
-        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https://"))
-        && url.len() > 8
-        && !url[8..].starts_with('/')
-        && !url.chars().any(char::is_whitespace)
+    oxiguitar_plugin_api::message::is_https(url)
 }
 
 /// The system library a plugin couldn't be loaded without, from the
@@ -2478,6 +2527,7 @@ mod tests {
             chosen: Mutex::new(HashMap::new()),
             events: Arc::new(Queue::default()),
             failed_events: Mutex::new(Vec::new()),
+            advised: Mutex::new(HashSet::new()),
             folders: OnceLock::new(),
             read_only: std::sync::atomic::AtomicBool::new(false),
         }));

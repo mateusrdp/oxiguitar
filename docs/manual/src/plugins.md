@@ -37,6 +37,22 @@ At start, the line at the bottom of the window says what is missing:
 
 Both messages link to [the releases page](https://github.com/mateusrdp/oxiguitar/releases), where every download has the basic plugins inside.
 
+## Advice dialogs
+
+Sometimes a plugin or OxiGuitar itself needs something from you that it can't do alone: a sound set to install, an amp model to put in a folder. It then shows a small dialog once, when the window is up, saying what to do, with links to the page that explains it. A link opens in your browser only when you click it. Tick **Don't show this again** and press OK, and that dialog never returns.
+
+OxiGuitar keeps what you silenced in `settings.json`, under `advice`, one line for each dialog, under the name of the plugin that asked (`oxiguitar` for OxiGuitar's own):
+
+```json
+{
+  "advice": {
+    "oxiguitar": { "no-player-plugin": "hidden" }
+  }
+}
+```
+
+Delete a line to get its dialog back. No dialog appears in safe mode.
+
 ## The plugin manager
 
 **Tools → Plugins…** opens the plugin manager in a window of its own, which you can leave open beside the score. It lists every plugin file in the plugin folders, yours and the program's, with its name, its version, the folder and file it is in, and what became of it:

@@ -1475,3 +1475,122 @@ fn an_audio_export_writes_the_song_through_the_exporter() {
         made.seconds
     );
 }
+
+/// The rest of the core for interface 1.4's advice: what was asked of the
+/// window.
+#[derive(Default)]
+struct Advised(Mutex<Vec<oxiguitar_host::advice::Asked>>);
+
+impl Core for Advised {
+    fn notify(&self, _level: Level, _text: String) {}
+
+    fn advise(&self, asked: oxiguitar_host::advice::Asked) {
+        self.0.lock().unwrap().push(asked);
+    }
+}
+
+fn advice_json(id: &str, links: &[&str]) -> Vec<u8> {
+    serde_json::to_vec(&serde_json::json!({
+        "id": id,
+        "title": "Better sounds",
+        "text": "Only the system's sound set is installed.\nMore are free.",
+        "links": links
+            .iter()
+            .map(|u| serde_json::json!({"text": "Where to get them", "url": u}))
+            .collect::<Vec<_>>(),
+    }))
+    .unwrap()
+}
+
+#[test]
+fn interface_1_4_advice_is_shown_once_and_can_be_silenced() {
+    use oxiguitar_host::advice;
+
+    let dir = folder("advice", &["test.oxp"]);
+    let core = Arc::new(Advised::default());
+    let settings = SharedSettings::default();
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        settings.clone(),
+        "x11",
+        core.clone(),
+    );
+    let asked = || core.0.lock().unwrap().clone();
+    let link = "https://example.org/sounds";
+
+    // Asked: the window hears who, and what.
+    plugins
+        .call_service(
+            "test-echo",
+            "advise",
+            &advice_json("no-sound-sets", &[link]),
+        )
+        .unwrap();
+    let first = asked();
+    assert_eq!(first.len(), 1);
+    assert_eq!(first[0].plugin, "oxiguitar.test");
+    assert_eq!(first[0].plugin_name, "Test plugin");
+    assert_eq!(first[0].advice.id, "no-sound-sets");
+    assert_eq!(first[0].advice.title, "Better sounds");
+    assert_eq!(first[0].advice.links[0].url, link);
+
+    // Asked again, as a plugin does whenever its reason holds: said once
+    // a session, and the plugin is told nothing.
+    plugins
+        .call_service(
+            "test-echo",
+            "advise",
+            &advice_json("no-sound-sets", &[link]),
+        )
+        .unwrap();
+    assert_eq!(asked().len(), 1);
+    // Another advice of the same plugin is its own.
+    plugins
+        .call_service("test-echo", "advise", &advice_json("no-model", &[]))
+        .unwrap();
+    assert_eq!(asked().len(), 2);
+
+    // What the user silenced is never asked again, and nothing else is.
+    advice::hide(&settings, "oxiguitar.test", "other").unwrap();
+    plugins
+        .call_service("test-echo", "advise", &advice_json("other", &[link]))
+        .unwrap();
+    assert_eq!(asked().len(), 2);
+    assert_eq!(
+        settings.get("advice"),
+        Some(serde_json::json!({"oxiguitar.test": {"other": "hidden"}}))
+    );
+    let three = ["https://a.org/", "https://b.org/", "https://c.org/"];
+    plugins
+        .call_service("test-echo", "advise", &advice_json("three-links", &three))
+        .unwrap();
+    assert_eq!(asked().len(), 3);
+
+    // Advice the host can't show is an error for the plugin, and the
+    // window hears nothing.
+    let four = [
+        "https://a.org/",
+        "https://b.org/",
+        "https://c.org/",
+        "https://d.org/",
+    ];
+    for (id, links, why) in [
+        ("four-links", &four[..], "4 links"),
+        ("http", &["http://example.org"][..], "https:"),
+        ("file", &["file:///etc/passwd"][..], "https:"),
+        ("Bad Id", &[][..], "advice id"),
+        ("", &[][..], "advice id"),
+    ] {
+        let e = plugins
+            .call_service("test-echo", "advise", &advice_json(id, links))
+            .unwrap_err();
+        assert_eq!(e.kind, ErrorKind::Invalid, "{id}");
+        assert!(e.message.contains(why), "{id}: {e}");
+    }
+    let blank = serde_json::to_vec(&serde_json::json!(
+        {"id": "blank", "title": " ", "text": "x", "links": []}
+    ))
+    .unwrap();
+    assert!(plugins.call_service("test-echo", "advise", &blank).is_err());
+    assert_eq!(asked().len(), 3);
+}

@@ -17,6 +17,7 @@
 //! export glue is its counterpart in plugins. Nothing here touches the
 //! network, and nothing runs on a timer.
 
+pub mod advice;
 mod events;
 mod folders;
 mod inventory;

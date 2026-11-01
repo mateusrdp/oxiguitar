@@ -61,7 +61,7 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::manifest::SharedFolder;
 pub use oxiguitar_plugin_api::message::{
-    Availability, Error, ErrorKind, Level, LogEntry, TrackInfo,
+    Advice, Availability, Error, ErrorKind, Level, LogEntry, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -745,6 +745,22 @@ impl Host {
         });
     }
 
+    /// Asks the core to show the user advice (interface 1.4): a dialog
+    /// with `advice`'s title, text and links, shown once the window is up
+    /// and one dialog at a time, with a "Don't show this again" box. What
+    /// the user ticks is kept by the core, under the plugin's id and the
+    /// advice's id; the call returns `Ok` whether the dialog is shown or
+    /// not, so call it whenever the reason holds (the core shows each
+    /// advice at most once a session). The error says what is wrong with
+    /// the advice ([`api::message::Advice::problem`]); never with a link,
+    /// which only opens when the user clicks it.
+    pub fn advise(&self, advice: api::message::Advice) -> Result<(), Error> {
+        match self.0.request(HostRequest::Advise(advice))? {
+            HostAnswer::Done => Ok(()),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// The plugin's folders (interface 1.3): its own data and cache
     /// folders, created on first ask, and the shared folders its manifest
     /// lists.
@@ -825,7 +841,8 @@ impl HostServices for Detached {
             HostRequest::Notify { .. }
             | HostRequest::Notify2 { .. }
             | HostRequest::SetSettings { .. }
-            | HostRequest::Redraw { .. } => Ok(HostAnswer::Done),
+            | HostRequest::Redraw { .. }
+            | HostRequest::Advise(_) => Ok(HostAnswer::Done),
             HostRequest::Settings => Ok(HostAnswer::Settings("{}".into())),
             HostRequest::Score => Ok(HostAnswer::Score(None)),
             HostRequest::Score2 => Ok(HostAnswer::Score2 {
