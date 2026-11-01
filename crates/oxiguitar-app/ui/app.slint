@@ -1688,7 +1688,7 @@ export component AppWindow inherits Window {
                             spacing: 2px;
                             IconButton {
                                 icon: @image-url("../../../assets/icons/ui/rewind.svg");
-                                tip: root.player-available ? "Rewind (Ctrl + Left / Right: a bar back / on while playing)" : "Rewind" + root.player-why;
+                                tip: root.player-available ? "Rewind (Ctrl+Alt+←)" : "Rewind" + root.player-why;
                                 enabled: root.player-available;
                                 clicked => { root.player-action("rewind"); }
                             }
@@ -1774,8 +1774,8 @@ export component AppWindow inherits Window {
                                 changed(v) => { root.speed-slider-moved(v); }
                             }
                             LineEdit {
-                                width: 36px;
-                                font-size: 10px;
+                                width: 56px;
+                                font-size: 12px;
                                 text: root.player-speed-text;
                                 enabled: root.player-available;
                                 edited(v) => { root.speed-text-edited(v); }
