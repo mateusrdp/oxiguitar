@@ -2,7 +2,7 @@
   "interface": "1.4",
   "id": "oxiguitar.wav",
   "name": "WAV export",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Exports the score's sound as a WAV file (File → Export → WAV Audio): 16- or 24-bit or 32-bit float, at 44.1 or 48 kHz, set in its settings.",
   "authors": ["The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",

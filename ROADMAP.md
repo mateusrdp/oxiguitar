@@ -12,7 +12,7 @@ On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so tha
 | M1 Viewer | v0.1 | **Done** (17 Oct 2026; v0.1.0 published as a pre-release, 18 Oct 2026) |
 | M2 Plugin system and window shell | v0.2 | **Done** (19 Oct 2026; v0.2.0 published as a pre-release, 19 Oct 2026) |
 | M3 Editor | v0.5 | **Done** (21 Oct 2026; v0.5.0 published as a pre-release, 21 Oct 2026) |
-| M4 Player (with the NAM plugin) | **v1.0** (v0.9 and v0.10 for testers) | Slices 1–7 built (21 Oct – 1 Nov 2026): it plays in the window, SoundFonts, SFZ, NAM and WAV export; **v0.9.0 and v0.10.0 for testers** (pre-releases, 26 Oct 2026; 0.10 adds SFZ); the gates by ear and v1.0 next |
+| M4 Player (with the NAM plugin) | **v1.0** (v0.9, v0.10 and v0.11 for testers) | Slices 1–7 built (21 Oct – 1 Nov 2026): it plays in the window, SoundFonts, SFZ, NAM and WAV export; **v0.9.0, v0.10.0 and v0.11.0 for testers** (pre-releases; 0.10 adds SFZ, 0.11 freezes plugin interface 1.4); the gates by ear and v1.0 next |
 | M5 Guitar Pro 8 notation and editing parity | | Not started |
 | M6 Format plugins: MusicXML, ABC, MuseScore, MIDI files | | Not started |
 | M7 A generated guitar for NAM (plugin) | | Not started |

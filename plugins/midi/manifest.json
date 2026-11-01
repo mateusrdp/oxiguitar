@@ -2,7 +2,7 @@
   "interface": "1.4",
   "id": "oxiguitar.midi",
   "name": "MIDI (SoundFont, SFZ)",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Plays every track with a SoundFont or SFZ sound set: yours, from the soundfonts folder, the ones installed for you, or the one your system has.",
   "authors": ["Mateus Rocha de Paula", "The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",
