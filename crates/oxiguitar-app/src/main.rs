@@ -586,6 +586,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
     let shortcuts = ShortcutData {
         navigation: vec![
+            ("Ctrl + Alt + ←".into(), "rewind to start".into()),
             ("Ctrl + ← / →".into(), "bar back / on".into()),
             ("Ctrl + Home / End".into(), "first / last bar".into()),
             ("Tab / Shift + Tab".into(), "next / prev staff".into()),

@@ -364,6 +364,11 @@ pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) 
         }
         return true;
     }
+    if ctrl && alt && !shift && name == "left" {
+        // Ctrl + Alt + Left: rewind to the first bar (the toolbar button's action).
+        action(app, "rewind");
+        return true;
+    }
     if ctrl && !shift && !alt && (name == "left" || name == "right") {
         let by = if name == "left" { -1 } else { 1 };
         if app.borrow_mut().player.skip_bars(by) {
