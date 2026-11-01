@@ -54,6 +54,34 @@ When you push a tag starting with `v` (`git tag v0.1.0 && git push --tags`), a l
 
 The Linux files are built on Ubuntu 22.04, the oldest Ubuntu LTS still in standard support, so they need glibc 2.35 or newer, like OxiGuitar's AppImage, and load with every OxiGuitar package: a library built on a newer system needs that system's glibc and doesn't load on older ones.
 
+## Packages and installers (the official plugins' workflow)
+
+The official plugins live in repositories of their own and are released with two reusable workflows from the `oxiguitar` repository, which any plugin repository may call. `plugin-release.yml` runs the same five builds as above (it expects the template's `build-oxp.sh`, which writes `dist/NAME-VERSION-SYSTEM-ARCH.oxp`) and then makes, from those files:
+
+- a zip per target, and `SHA256SUMS`;
+- a `.deb` and an `.rpm` per Linux processor, named `oxiguitar-NAME`, that install the file in `/usr/lib/oxiguitar/plugins/`;
+- a Windows installer per processor (Inno Setup), which installs for the user alone, without administrator rights, in `%APPDATA%\OxiGuitar\plugins`, and registers an uninstaller;
+- a macOS `.pkg` (`pkgbuild` and `productbuild` with `enable_currentUserHome`), which installs into the user's own `~/Library/Application Support/OxiGuitar/plugins` without a password.
+
+Each package is installed and removed in its own kind of system (Debian, Fedora, Windows, macOS) before the release is made. For a pushed `v*` tag the workflow makes a draft release holding all of it; the maintainer publishes it. On a branch or a pull request nothing is released, and the files stay under the run for 14 days, with a `~dev` version.
+
+```yaml
+jobs:
+  release:
+    uses: mateusrdp/oxiguitar/.github/workflows/plugin-release.yml@v0.11.0
+    with:
+      name: example
+      title: Example
+      description: "What it does, in one line."
+      tools-ref: v0.11.0
+    permissions:
+      contents: write
+```
+
+`plugin-publish.yml` is called on `release: published`. It checks that the release holds every file and sum, then sends a `plugin-published` event to the package repositories (when the secret `PACKAGES_TOKEN` is set) and, when you give it a `winget-id`, opens the pull request on winget-pkgs (`WINGET_TOKEN`). The signing of the package repositories and the Homebrew tap live in their own repositories. Nothing is signed with an Apple or Microsoft certificate: macOS asks for "Open Anyway" once for the app, and a plugin installed by the `.pkg` is not quarantined.
+
+You can use the scripts without the workflows: `scripts/plugin-package/` holds `deb.sh`, `rpm.sh`, `windows.sh` (with `windows.iss`) and `macos-pkg.sh`, each documented at its top.
+
 ## Before you release
 
 - Raise the version in both `Cargo.toml` and `manifest.json`.
