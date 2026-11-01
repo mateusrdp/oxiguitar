@@ -4,8 +4,9 @@ OxiGuitar basic plugins
 These are the plugins the OxiGuitar project writes and recommends: one for
 each Guitar Pro format (Guitar Pro 3, 4, 5, 6 and 7-8), the SoundFont
 player, which plays the tracks with a sound set (SoundFont or SFZ), NAM,
-which plays guitars and basses through amp models and cabinets, and the
-ones that play sound through your system (PipeWire and ALSA on Linux).
+which plays guitars and basses through amp models and cabinets, WAV,
+which exports the sound as a WAV file (File -> Export), and the ones that
+play sound through your system (PipeWire and ALSA on Linux).
 OxiGuitar alone opens and plays nothing; it finds these in
 /usr/lib/oxiguitar/plugins.
 

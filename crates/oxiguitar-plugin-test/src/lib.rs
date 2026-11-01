@@ -108,16 +108,24 @@ pub fn build(
             std::env::consts::DLL_SUFFIX
         ));
     let oxp = target.join(format!("{name}.oxp"));
-    // A new file, not the old one overwritten: hard links to the old one
-    // (tests make them) and a copy a running program has loaded keep theirs.
-    let _ = std::fs::remove_file(&oxp);
-    std::fs::copy(&library, &oxp).map_err(|e| {
-        format!(
-            "cannot copy {} to {}: {e}",
-            library.display(),
-            oxp.display()
-        )
-    })?;
+    // A new file renamed into place, not the old one overwritten: hard
+    // links to the old one (tests make them) and a copy a running program
+    // has loaded keep theirs, and tests building at once never see it
+    // missing.
+    let part = target.join(format!(
+        ".{name}.{}.{}",
+        std::process::id(),
+        COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
+    std::fs::copy(&library, &part)
+        .and_then(|_| std::fs::rename(&part, &oxp))
+        .map_err(|e| {
+            format!(
+                "cannot copy {} to {}: {e}",
+                library.display(),
+                oxp.display()
+            )
+        })?;
     Ok(oxp)
 }
 
@@ -151,6 +159,11 @@ pub const OUR_INSTRUMENTS: &[(&str, &str)] = &[("oxiguitar-soundfont-plugin", "s
 /// crate's package name and its file's name. [`build_ours`] builds them
 /// too.
 pub const OUR_EFFECTS: &[(&str, &str)] = &[("oxiguitar-nam-plugin", "nam")];
+
+/// Our exporter plugins (interface 1.4), shipped with the others: each
+/// crate's package name and its file's name. [`build_ours`] builds them
+/// too.
+pub const OUR_EXPORTERS: &[(&str, &str)] = &[("oxiguitar-wav-plugin", "wav")];
 
 /// Our audio-device plugins (interface 1.3), shipped with the format
 /// plugins: each crate's package name, its file's name and the system it
@@ -192,7 +205,8 @@ pub fn build_devices(workspace: &Path, release: bool) -> Result<(PathBuf, Vec<St
     Ok((folder, names))
 }
 
-/// Builds every plugin of [`OURS`], [`OUR_INSTRUMENTS`] and [`OUR_EFFECTS`], each on its own so it carries only its
+/// Builds every plugin of [`OURS`], [`OUR_INSTRUMENTS`], [`OUR_EFFECTS`]
+/// and [`OUR_EXPORTERS`], each on its own so it carries only its
 /// own code (built together, Cargo would give each the features of all),
 /// and puts the files in the workspace's `target/oxp/ours-debug/` or
 /// `ours-release/`, replacing what was there. Returns that folder, a plugin
@@ -204,12 +218,24 @@ pub fn build_ours(workspace: &Path, release: bool) -> Result<PathBuf, String> {
         "ours-debug"
     });
     std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
-    for (package, name) in OURS.iter().chain(OUR_INSTRUMENTS).chain(OUR_EFFECTS) {
+    for (package, name) in OURS
+        .iter()
+        .chain(OUR_INSTRUMENTS)
+        .chain(OUR_EFFECTS)
+        .chain(OUR_EXPORTERS)
+    {
         let built = build(workspace, package, name, release)?;
         let to = folder.join(format!("{name}.oxp"));
-        // A new file: a program that loaded the old one keeps its own.
-        let _ = std::fs::remove_file(&to);
-        std::fs::copy(&built, &to).map_err(|e| format!("{}: {e}", to.display()))?;
+        // A new file, renamed into place: a program that loaded the old one
+        // keeps its own, and tests building at once never see it missing.
+        let part = folder.join(format!(
+            ".{name}.{}.{}",
+            std::process::id(),
+            COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        std::fs::copy(&built, &part)
+            .and_then(|_| std::fs::rename(&part, &to))
+            .map_err(|e| format!("{}: {e}", to.display()))?;
     }
     Ok(folder)
 }

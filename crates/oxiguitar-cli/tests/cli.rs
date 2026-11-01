@@ -432,7 +432,8 @@ fn events_prints_the_score_as_it_plays() {
     );
 }
 
-/// A home whose plugin folder holds our format and instrument plugins and
+/// A home whose plugin folder holds our format, instrument and exporter
+/// plugins and
 /// whose `soundfonts` folder holds the contract suite's test set, which
 /// the SoundFont plugin plays before any set of the system's.
 fn sound_home() -> &'static Path {
@@ -448,6 +449,7 @@ fn sound_home() -> &'static Path {
         for (_, name) in oxiguitar_plugin_test::OURS
             .iter()
             .chain(oxiguitar_plugin_test::OUR_INSTRUMENTS)
+            .chain(oxiguitar_plugin_test::OUR_EXPORTERS)
         {
             let file = format!("{name}.oxp");
             std::fs::copy(built.join(&file), home.join("plugins").join(&file)).unwrap();
@@ -525,4 +527,29 @@ fn export_names_what_no_plugin_exports() {
     let said = String::from_utf8_lossy(&o.stderr);
     assert!(said.contains("exports .xyz files"), "{said}");
     assert!(!out.exists());
+}
+
+#[test]
+fn export_writes_a_wav_file_through_the_wav_plugin() {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("exported.wav");
+    let _ = std::fs::remove_file(&out);
+    let o = Command::new(env!("CARGO_BIN_EXE_oxiguitar-cli"))
+        .env("OXIGUITAR_HOME", sound_home())
+        .arg("export")
+        .arg(fixture("oxiguitar-test-song.gp5"))
+        .arg(&out)
+        .args(["--bars", "1-2", "--speed", "50"])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let said = String::from_utf8_lossy(&o.stdout);
+    assert!(said.contains("through WAV Audio"), "{said}");
+    let wav = std::fs::read(&out).unwrap();
+    assert_eq!(&wav[..4], b"RIFF");
+    // The defaults: 24 bits at 48 kHz.
+    assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 48_000);
+    assert_eq!(u16::from_le_bytes([wav[34], wav[35]]), 24);
+    // Bars 1 and 2 (4/4 at 96 bpm: 5 s) at half speed, and the tail.
+    let seconds = (wav.len() - 44) as f64 / 6.0 / 48_000.0;
+    assert!((seconds - 12.0).abs() < 0.1, "{seconds} s");
 }
