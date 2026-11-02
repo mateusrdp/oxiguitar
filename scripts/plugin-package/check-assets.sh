@@ -6,7 +6,8 @@
 # SHA256SUMS agrees with them: for each of Linux x86_64 and aarch64, Windows
 # x86_64 and arm64 and macOS universal a zip, and a .deb and .rpm for each
 # Linux processor, a setup .exe for each Windows one, one macOS .pkg
-# (#165). Used by plugin-release.yml before the draft is made and by
+# (#165). A plugin for some systems only (an audio output's) says which in
+# PLUGIN_SYSTEMS, such as "linux" (default: "linux windows macos"). Used by plugin-release.yml before the draft is made and by
 # plugin-publish.yml before the package repositories are told.
 #
 # Usage: scripts/plugin-package/check-assets.sh NAME VERSION DIR
@@ -18,21 +19,32 @@ version="${2:?}"
 dir="${3:?}"
 rpm_version="${version//-/~}"
 
-want=(
-    "oxiguitar-$name-$version-linux-x86_64.zip"
-    "oxiguitar-$name-$version-linux-aarch64.zip"
-    "oxiguitar-$name-$version-windows-x86_64.zip"
-    "oxiguitar-$name-$version-windows-arm64.zip"
-    "oxiguitar-$name-$version-macos-universal.zip"
-    "oxiguitar-${name}_${version}_amd64.deb"
-    "oxiguitar-${name}_${version}_arm64.deb"
-    "oxiguitar-$name-$rpm_version-1.x86_64.rpm"
-    "oxiguitar-$name-$rpm_version-1.aarch64.rpm"
-    "oxiguitar-$name-$version-windows-x86_64-setup.exe"
-    "oxiguitar-$name-$version-windows-arm64-setup.exe"
-    "oxiguitar-$name-$version-macos-universal.pkg"
-    SHA256SUMS
-)
+systems=" ${PLUGIN_SYSTEMS:-linux windows macos} "
+want=(SHA256SUMS)
+if [[ "$systems" == *" linux "* ]]; then
+    want+=(
+        "oxiguitar-$name-$version-linux-x86_64.zip"
+        "oxiguitar-$name-$version-linux-aarch64.zip"
+        "oxiguitar-${name}_${version}_amd64.deb"
+        "oxiguitar-${name}_${version}_arm64.deb"
+        "oxiguitar-$name-$rpm_version-1.x86_64.rpm"
+        "oxiguitar-$name-$rpm_version-1.aarch64.rpm"
+    )
+fi
+if [[ "$systems" == *" windows "* ]]; then
+    want+=(
+        "oxiguitar-$name-$version-windows-x86_64.zip"
+        "oxiguitar-$name-$version-windows-arm64.zip"
+        "oxiguitar-$name-$version-windows-x86_64-setup.exe"
+        "oxiguitar-$name-$version-windows-arm64-setup.exe"
+    )
+fi
+if [[ "$systems" == *" macos "* ]]; then
+    want+=(
+        "oxiguitar-$name-$version-macos-universal.zip"
+        "oxiguitar-$name-$version-macos-universal.pkg"
+    )
+fi
 
 missing=0
 for f in "${want[@]}"; do

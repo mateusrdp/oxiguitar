@@ -43,6 +43,10 @@ on:
         description: "The release's tag (default: the release that started the run)"
         type: string
         default: ""
+      systems:
+        description: "The systems the plugin is built for, as in plugin-release.yml"
+        type: string
+        default: "linux windows macos"
       tools-ref:
         description: "The tag (or commit) of mateusrdp/oxiguitar the scripts come from"
         type: string
@@ -85,6 +89,8 @@ jobs:
           test -n "$TAG"
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir release
       - name: Check every file and sum is there
+        env:
+          PLUGIN_SYSTEMS: ${{ inputs.systems }}
         run: tools/scripts/plugin-package/check-assets.sh '${{ inputs.name }}' "${TAG#v}" release
       - name: Tell the package repositories
         env:

@@ -63,6 +63,8 @@ The official plugins live in repositories of their own and are released with two
 - a Windows installer per processor (Inno Setup), which installs for the user alone, without administrator rights, in `%APPDATA%\OxiGuitar\plugins`, and registers an uninstaller;
 - a macOS `.pkg` (`pkgbuild` and `productbuild` with `enable_currentUserHome`), which installs into the user's own `~/Library/Application Support/OxiGuitar/plugins` without a password.
 
+A repository may hold several plugins, as oxiguitar-guitarpro holds five: its `build-oxp.sh` writes one `dist/FILE-VERSION-SYSTEM-ARCH.oxp` for each, `name` is then the package's name (`guitarpro`, for `oxiguitar-guitarpro`), and the zip, the packages and the installers hold every file, each installed as `FILE.oxp`. Give `package` the crate whose version is the release's when the workspace has several crates.
+
 Each package is installed and removed in its own kind of system (Debian, Fedora, Windows, macOS) before the release is made. For a pushed `v*` tag the workflow makes a draft release holding all of it; the maintainer publishes it. On a branch or a pull request nothing is released, and the files stay under the run for 14 days, with a `~dev` version.
 
 ```yaml
@@ -80,7 +82,7 @@ jobs:
 
 `plugin-publish.yml` is called on `release: published`. It checks that the release holds every file and sum, then sends a `plugin-published` event to the package repositories (when the secret `PACKAGES_TOKEN` is set) and, when you give it a `winget-id`, opens the pull request on winget-pkgs (`WINGET_TOKEN`). The signing of the package repositories and the Homebrew tap live in their own repositories. Nothing is signed with an Apple or Microsoft certificate: macOS asks for "Open Anyway" once for the app, and a plugin installed by the `.pkg` is not quarantined.
 
-You can use the scripts without the workflows: `scripts/plugin-package/` holds `deb.sh`, `rpm.sh`, `windows.sh` (with `windows.iss`) and `macos-pkg.sh`, each documented at its top.
+You can use the scripts without the workflows: `scripts/plugin-package/` holds `deb.sh`, `rpm.sh`, `windows.sh` (with `windows.iss`) and `macos-pkg.sh`, each documented at its top, and `specs.sh`, which turns a folder of built files into their arguments.
 
 ## Before you release
 

@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- `plugin-release.yml` and the packaging scripts take several plugin files for one package, as the Guitar Pro plugins need (#165): the build script writes a `FILE-VERSION-SYSTEM-ARCH.oxp` for each, and the zip, the `.deb`, the `.rpm`, the Windows installer and the macOS `.pkg` hold all of them. A new `package` input names the crate whose version is the release's. The trial run builds two test plugins to try it.
+
 ## [0.11.0] - 2026-11-01
 
 A pre-release, with every plugin still inside, that releases what milestone M4 built (MIDI with SFZ, NAM, WAV export, the audio outputs) and **freezes plugin interface 1.4**: the plugins move to repositories of their own from here (#165), and depend on this tag. The SDK crates are at version 1.4.0; from now on they change only by interface 1.5. The MIDI plugin has a new id, `oxiguitar.midi`, and takes over the settings of `oxiguitar.soundfont`.
