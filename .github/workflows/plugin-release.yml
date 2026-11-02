@@ -83,6 +83,18 @@ on:
         description: "Build packages to install on Linux, space separated"
         type: string
         default: ""
+      systems:
+        description: "The systems it is built for, space separated: linux, windows, macos"
+        type: string
+        default: "linux windows macos"
+      linux-ubuntu:
+        description: "The Ubuntu version Linux files are built on (the oldest LTS in standard support, so they load on every newer system)"
+        type: string
+        default: "22.04"
+      glibc:
+        description: "The newest glibc a Linux file may need"
+        type: string
+        default: "2.35"
       depends-deb:
         description: "Depends of the .deb, such as oxiguitar-midi (>= 1.0.0)"
         type: string
@@ -108,9 +120,31 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
+      - id: matrix
+        env:
+          SYSTEMS: ${{ inputs.systems }}
+          UBUNTU: ${{ inputs.linux-ubuntu }}
+        run: |
+          include=()
+          for system in $SYSTEMS; do
+            case "$system" in
+              linux)
+                include+=("{\"system\":\"linux\",\"arch\":\"x86_64\",\"os\":\"ubuntu-$UBUNTU\"}")
+                include+=("{\"system\":\"linux\",\"arch\":\"aarch64\",\"os\":\"ubuntu-$UBUNTU-arm\"}") ;;
+              windows)
+                include+=('{"system":"windows","arch":"x86_64","os":"windows-2025"}')
+                include+=('{"system":"windows","arch":"arm64","os":"windows-11-arm"}') ;;
+              macos)
+                include+=('{"system":"macos","arch":"universal","os":"macos-15"}') ;;
+              *) echo "::error::unknown system $system (linux, windows or macos)"; exit 1 ;;
+            esac
+          done
+          [[ ${#include[@]} -gt 0 ]] || { echo "::error::no system to build for"; exit 1; }
+          echo "matrix={\"include\":[$(IFS=,; echo "${include[*]}")]}" >> "$GITHUB_OUTPUT"
       - id: version
         working-directory: ${{ inputs.working-directory }}
         env:
@@ -137,15 +171,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # The oldest Ubuntu LTS in standard support: a plugin built there
-          # loads on every newer system.
-          - { system: linux, arch: x86_64, os: ubuntu-22.04 }
-          - { system: linux, arch: aarch64, os: ubuntu-22.04-arm }
-          - { system: windows, arch: x86_64, os: windows-2025 }
-          - { system: windows, arch: arm64, os: windows-11-arm }
-          - { system: macos, arch: universal, os: macos-15 }
+      matrix: ${{ fromJSON(needs.meta.outputs.matrix) }}
     defaults:
       run:
         shell: bash
@@ -172,7 +198,7 @@ jobs:
       - run: rm -rf dist && ${{ inputs.build }}
       - name: The glibc the Linux files need
         if: matrix.system == 'linux'
-        run: ${{ github.workspace }}/.oxiguitar-tools/scripts/package/check-glibc.sh 2.35 dist
+        run: ${{ github.workspace }}/.oxiguitar-tools/scripts/package/check-glibc.sh ${{ inputs.glibc }} dist
       - name: Only .oxp files are in dist
         run: |
           ls -l dist
@@ -188,6 +214,7 @@ jobs:
   linux-packages:
     name: .deb and .rpm (${{ matrix.arch }})
     needs: [meta, build]
+    if: contains(inputs.systems, 'linux')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -255,6 +282,7 @@ jobs:
   windows-installers:
     name: Installer (${{ matrix.arch }})
     needs: [meta, build]
+    if: contains(inputs.systems, 'windows')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -308,6 +336,7 @@ jobs:
   macos-package:
     name: .pkg (macOS)
     needs: [meta, build]
+    if: contains(inputs.systems, 'macos')
     runs-on: macos-15
     env:
       VERSION: ${{ needs.meta.outputs.version }}
@@ -346,6 +375,8 @@ jobs:
   stage:
     name: Zips and SHA256SUMS
     needs: [meta, build, linux-packages, windows-installers, macos-package]
+    # The packages of a system left out are skipped, which is fine.
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -376,6 +407,7 @@ jobs:
       - name: Check every file is there
         env:
           VERSION: ${{ needs.meta.outputs.version }}
+          PLUGIN_SYSTEMS: ${{ inputs.systems }}
         run: tools/scripts/plugin-package/check-assets.sh '${{ inputs.name }}' "$VERSION" release
       - uses: actions/upload-artifact@v7
         with:
