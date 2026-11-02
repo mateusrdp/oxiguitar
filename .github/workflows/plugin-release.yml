@@ -30,11 +30,15 @@
 # ~dev version, and those are the test builds.
 #
 # The repository provides what docs/plugins/template has: a build script
-# (default ./build-oxp.sh) that writes dist/NAME-VERSION-SYSTEM-ARCH.oxp
-# in the working directory, universal on macOS. A Linux x86_64 build may
-# also write dist/NAME-VERSION-linux-x86_64-v3.oxp (NAM's second build for
-# x86-64-v3 processors); it is packaged as NAME-x86-64-v3.oxp beside the
-# first. The tag must be v plus the crate's version.
+# (default ./build-oxp.sh) that writes dist/FILE-VERSION-SYSTEM-ARCH.oxp
+# in the working directory, universal on macOS. A repository may hold
+# several plugins (oxiguitar-guitarpro has five): the script writes one
+# file for each, and the package, the zip and the installer hold them all,
+# each installed as FILE.oxp. A Linux x86_64 build may also write
+# dist/FILE-VERSION-linux-x86_64-v3.oxp (NAM's second build for x86-64-v3
+# processors); it is packaged as FILE-x86-64-v3.oxp beside the first. The
+# tag must be v plus the crate's version (`package`, when the repository's
+# workspace has several crates).
 #
 # The packaging scripts come from the oxiguitar repository at `tools-ref`,
 # which a plugin repository pins to a tag.
@@ -44,7 +48,7 @@ on:
   workflow_call:
     inputs:
       name:
-        description: "The plugin's file name without .oxp, such as midi"
+        description: "The package's name, oxiguitar- before it, such as midi (for a plugin) or guitarpro (for five)"
         type: string
         required: true
       title:
@@ -59,6 +63,10 @@ on:
         description: "The plugin's SPDX licence expression"
         type: string
         default: GPL-3.0-or-later
+      package:
+        description: "The crate whose version is the release's, when the workspace has several (cargo pkgid -p)"
+        type: string
+        default: ""
       working-directory:
         description: "Where the build script and dist/ are"
         type: string
@@ -105,8 +113,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - id: version
         working-directory: ${{ inputs.working-directory }}
+        env:
+          PACKAGE: ${{ inputs.package }}
         run: |
-          crate="$(cargo pkgid)"
+          crate="$(cargo pkgid ${PACKAGE:+-p "$PACKAGE"})"
           crate="${crate##*[#@]}"
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
             if [[ "$GITHUB_REF_NAME" != "v$crate" ]]; then
@@ -208,32 +218,32 @@ jobs:
       - name: Build the packages
         run: |
           name='${{ inputs.name }}'
-          main="$(ls oxp/*-linux-${{ matrix.arch }}.oxp)"
-          files=("$main")
-          # NAM's second build, for x86-64-v3 processors.
-          v3="$(ls oxp/*-linux-x86_64-v3.oxp 2> /dev/null || true)"
-          [[ -n "$v3" ]] && files+=("$v3:$name-x86-64-v3.oxp")
+          # What the packages install, for the tests below.
+          files=(); dests=""
+          while IFS= read -r spec; do files+=("$spec"); dests+=" ${spec#*:}"; done \
+            < <(tools/scripts/plugin-package/specs.sh oxp)
+          echo "DESTS=${dests# }" >> "$GITHUB_ENV"
           tools/scripts/plugin-package/deb.sh "$name" "$VERSION" ${{ matrix.arch }} packages "${files[@]}"
           tools/scripts/plugin-package/rpm.sh "$name" "$VERSION" ${{ matrix.arch }} packages "${files[@]}"
       # The .deb installs in Debian (the core isn't needed to install it)
-      # and puts the file where OxiGuitar looks; the .rpm in Fedora.
+      # and puts the files where OxiGuitar looks; the .rpm in Fedora.
       - name: Test the .deb in Debian sid
         run: |
-          docker run --rm -v "$PWD/packages:/p" debian:sid bash -euxc '
+          docker run --rm -v "$PWD/packages:/p" -e DESTS debian:sid bash -euxc '
             dpkg --force-depends -i /p/*.deb
-            test -s /usr/lib/oxiguitar/plugins/${{ inputs.name }}.oxp
+            for f in $DESTS; do test -s /usr/lib/oxiguitar/plugins/$f; done
             dpkg -L oxiguitar-${{ inputs.name }}
             dpkg --remove --force-depends oxiguitar-${{ inputs.name }}
-            ! test -e /usr/lib/oxiguitar/plugins/${{ inputs.name }}.oxp
+            for f in $DESTS; do ! test -e /usr/lib/oxiguitar/plugins/$f; done
           '
       - name: Test the .rpm in Fedora
         run: |
-          docker run --rm -v "$PWD/packages:/p" fedora:latest bash -euxc '
+          docker run --rm -v "$PWD/packages:/p" -e DESTS fedora:latest bash -euxc '
             rpm -i --nodeps /p/*.rpm
-            test -s /usr/lib/oxiguitar/plugins/${{ inputs.name }}.oxp
+            for f in $DESTS; do test -s /usr/lib/oxiguitar/plugins/$f; done
             rpm -ql oxiguitar-${{ inputs.name }}
             rpm -e --nodeps oxiguitar-${{ inputs.name }}
-            ! test -e /usr/lib/oxiguitar/plugins/${{ inputs.name }}.oxp
+            for f in $DESTS; do ! test -e /usr/lib/oxiguitar/plugins/$f; done
           '
       - uses: actions/upload-artifact@v7
         with:
@@ -271,19 +281,23 @@ jobs:
           name: oxp-windows-${{ matrix.arch }}
           path: oxp
       - name: Build the installer
-        run: tools/scripts/plugin-package/windows.sh '${{ inputs.name }}' "$VERSION" ${{ matrix.arch }} packages "$(ls oxp/*.oxp | head -n 1)"
+        run: |
+          files=(); dests=""
+          while IFS= read -r spec; do files+=("$spec"); dests+=" ${spec#*:}"; done \
+            < <(tools/scripts/plugin-package/specs.sh oxp)
+          echo "DESTS=${dests# }" >> "$GITHUB_ENV"
+          tools/scripts/plugin-package/windows.sh '${{ inputs.name }}' "$VERSION" ${{ matrix.arch }} packages "${files[@]}"
       # Installed for the user it is run by, silently, as winget does:
       # the file is where OxiGuitar looks, and the uninstaller removes it.
       - name: Test the installer
         run: |
           setup="$(ls packages/*-setup.exe)"
           "$setup" //VERYSILENT //SUPPRESSMSGBOXES //NORESTART //SP-
-          plugin="$APPDATA/OxiGuitar/plugins/${{ inputs.name }}.oxp"
-          test -s "$plugin"
+          for f in $DESTS; do test -s "$APPDATA/OxiGuitar/plugins/$f"; done
           uninstaller="$(ls "$LOCALAPPDATA"/OxiGuitar/uninstall/${{ inputs.name }}/unins*.exe | head -n 1)"
           "$uninstaller" //VERYSILENT //SUPPRESSMSGBOXES //NORESTART
           sleep 5
-          ! test -e "$plugin"
+          for f in $DESTS; do ! test -e "$APPDATA/OxiGuitar/plugins/$f"; done
       - uses: actions/upload-artifact@v7
         with:
           name: packages-windows-${{ matrix.arch }}
@@ -310,13 +324,18 @@ jobs:
           name: oxp-macos-universal
           path: oxp
       - name: Build the package
-        run: tools/scripts/plugin-package/macos-pkg.sh '${{ inputs.name }}' "$VERSION" packages "$(ls oxp/*.oxp | head -n 1)"
+        run: |
+          files=(); dests=""
+          while IFS= read -r spec; do files+=("$spec"); dests+=" ${spec#*:}"; done \
+            < <(tools/scripts/plugin-package/specs.sh oxp)
+          echo "DESTS=${dests# }" >> "$GITHUB_ENV"
+          tools/scripts/plugin-package/macos-pkg.sh '${{ inputs.name }}' "$VERSION" packages "${files[@]}"
       - name: Test the package
         run: |
           pkg="$(ls packages/*.pkg)"
           pkgutil --expand "$pkg" expanded
           grep -q 'enable_currentUserHome="true"' expanded/Distribution
-          pkgutil --payload-files "$pkg" | grep -q '${{ inputs.name }}.oxp'
+          for f in $DESTS; do pkgutil --payload-files "$pkg" | grep -q "$f\$"; done
       - uses: actions/upload-artifact@v7
         with:
           name: packages-macos-universal
