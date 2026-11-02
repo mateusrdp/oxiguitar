@@ -11,8 +11,15 @@ authors.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[features]
+# `released` (src/released.rs): the plugins of the latest releases for the
+# tests of OxiGuitar's own crates, which read Guitar Pro files and play through
+# the plugins in their repositories (#165). Off for plugin authors.
+released = ["dep:oxiguitar-model"]
+
 [dependencies]
 oxiguitar-host.workspace = true
+oxiguitar-model = { workspace = true, features = ["wire"], optional = true }
 
 # Catching system calls while a plugin renders (src/syscalls.rs): fork,
 # seccomp and a signal handler.

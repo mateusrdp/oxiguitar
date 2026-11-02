@@ -14,7 +14,7 @@ oxiguitar-model.workspace = true
 oxiguitar-display.workspace = true
 
 [dev-dependencies]
-oxiguitar-formats.workspace = true
+oxiguitar-plugin-test = { workspace = true, features = ["released"] }
 
 [lints]
 workspace = true

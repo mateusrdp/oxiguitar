@@ -37,6 +37,8 @@
 //! The `oxiguitar-plugin-test` program runs the same checks from the
 //! command line, for plugin authors.
 
+#[cfg(feature = "released")]
+pub mod released;
 #[cfg(target_os = "linux")]
 pub mod syscalls;
 

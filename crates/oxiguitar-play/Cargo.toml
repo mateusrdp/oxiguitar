@@ -22,7 +22,7 @@ oxiguitar-host = { workspace = true, optional = true }
 host = ["dep:oxiguitar-host"]
 
 [dev-dependencies]
-oxiguitar-formats.workspace = true
+oxiguitar-plugin-test = { workspace = true, features = ["released"] }
 oxiguitar-testgen.workspace = true
 # Counts allocations in tests/engine_allocations.rs (MIT).
 stats_alloc = "0.1"

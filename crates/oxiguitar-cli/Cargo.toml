@@ -23,7 +23,7 @@ oxiguitar-play = { workspace = true, features = ["host"] }
 
 [dev-dependencies]
 # tests/cli.rs runs the program with our format plugins, built as .oxp files.
-oxiguitar-plugin-test.workspace = true
+oxiguitar-plugin-test = { workspace = true, features = ["released"] }
 
 [lints]
 workspace = true

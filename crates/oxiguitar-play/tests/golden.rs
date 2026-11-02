@@ -43,7 +43,9 @@ fn timelines_match_their_golden_files() {
     assert!(all.len() > 40, "the reference songs are missing");
     for path in all {
         let data = std::fs::read(&path).unwrap();
-        let score = oxiguitar_formats::read(&data).unwrap().score;
+        let score = oxiguitar_plugin_test::released::guitar_pro::read(&data)
+            .unwrap()
+            .score;
         let text = oxiguitar_play::text::timeline(&oxiguitar_play::Timeline::new(&score));
         let name = format!("{}.events", path.file_name().unwrap().to_string_lossy());
         let golden = dir.join(&name);

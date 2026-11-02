@@ -1171,7 +1171,7 @@ fn engine_on_the_test_song(
 
     let song =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
-    let score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
+    let score = oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
         .unwrap()
         .score;
     let timeline = Timeline::new(&score);
@@ -1306,9 +1306,10 @@ fn the_player_puts_each_track_s_effects_after_its_instrument() {
     let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
     let song =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
-    let mut score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
-        .unwrap()
-        .score;
+    let mut score =
+        oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
+            .unwrap()
+            .score;
     // Every track gets the test plugin's gain, which plays every class.
     let with = plan(&plugins, &score);
     assert!(!with.is_empty());
@@ -1408,7 +1409,7 @@ fn an_audio_export_writes_the_song_through_the_exporter() {
     let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
     let song =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
-    let score = oxiguitar_formats::read(&std::fs::read(song).unwrap())
+    let score = oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
         .unwrap()
         .score;
     let exporters = plugins.exporters();

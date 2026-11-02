@@ -3890,8 +3890,8 @@ dependencies = [
 name = "oxiguitar-edit"
 version = "0.11.0"
 dependencies = [
- "oxiguitar-formats",
  "oxiguitar-model",
+ "oxiguitar-plugin-test",
 ]
 
 [[package]]
@@ -3965,8 +3965,8 @@ name = "oxiguitar-layout"
 version = "0.11.0"
 dependencies = [
  "oxiguitar-display",
- "oxiguitar-formats",
  "oxiguitar-model",
+ "oxiguitar-plugin-test",
 ]
 
 [[package]]
@@ -4000,10 +4000,10 @@ dependencies = [
 name = "oxiguitar-play"
 version = "0.11.0"
 dependencies = [
- "oxiguitar-formats",
  "oxiguitar-host",
  "oxiguitar-model",
  "oxiguitar-plugin-api",
+ "oxiguitar-plugin-test",
  "oxiguitar-testgen",
  "rtrb",
  "stats_alloc",
@@ -4067,7 +4067,6 @@ name = "oxiguitar-testgen"
 version = "0.11.0"
 dependencies = [
  "oxiguitar-display",
- "oxiguitar-formats",
  "oxiguitar-host",
  "oxiguitar-layout",
  "oxiguitar-model",
@@ -4083,8 +4082,8 @@ dependencies = [
 name = "oxiguitar-tools"
 version = "0.11.0"
 dependencies = [
- "oxiguitar-formats",
  "oxiguitar-model",
+ "oxiguitar-plugin-test",
 ]
 
 [[package]]

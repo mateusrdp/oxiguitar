@@ -99,7 +99,9 @@ pub(crate) fn timeline() -> Timeline {
     let path =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
     let data = std::fs::read(path).unwrap();
-    let score = oxiguitar_formats::read(&data).unwrap().score;
+    let score = oxiguitar_plugin_test::released::guitar_pro::read(&data)
+        .unwrap()
+        .score;
     Timeline::new(&score)
 }
 

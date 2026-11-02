@@ -19,7 +19,7 @@ fn every_note_is_where_the_map_says() {
     let meta = Metadata::bravura().expect("Bravura metadata");
     let (mut checked, mut on_tab) = (0usize, 0usize);
     for r in references() {
-        let score = oxiguitar_formats::read(&to_gp(&r.song))
+        let score = oxiguitar_plugin_test::released::guitar_pro::read(&to_gp(&r.song))
             .expect("the reader opens it")
             .score;
         let engraved = engrave(&score, &fonts, &meta, &r.options);
