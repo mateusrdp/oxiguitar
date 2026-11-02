@@ -431,7 +431,11 @@ jobs:
 
   draft:
     name: Draft release
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Not just `startsWith(...)`: that carries an implicit success(), which
+    # skips this job when any job before stage was skipped (a plugin for
+    # Linux only has no Windows installer or macOS package), stage having
+    # succeeded all the same.
+    if: ${{ !failure() && !cancelled() && startsWith(github.ref, 'refs/tags/v') }}
     needs: stage
     runs-on: ubuntu-24.04
     permissions:
