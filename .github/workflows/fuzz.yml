@@ -18,13 +18,11 @@ name: Fuzz
 on:
   pull_request:
     paths:
-      - crates/oxiguitar-formats/**
       - crates/oxiguitar-model/**
       - crates/oxiguitar-display/**
       - crates/oxiguitar-render/**
       - crates/oxiguitar-plugin/**
       - crates/oxiguitar-plugin-api/**
-      - plugins/**
       - fuzz/**
       - fixtures/**
       - .github/workflows/fuzz.yml
@@ -55,10 +53,9 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        # The four readers, the .gp writer and the plugins' dispatch; the any-file target
-        # (format detection, then any reader) and plugin tabs' answers run
-        # on pull requests only.
-        target: ${{ fromJSON(github.event_name == 'pull_request' && '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","gp_writer","any_file","plugin_dispatch","plugin_tab"]' || '["guitar_pro_3_5","guitar_pro_6","guitar_pro_7","gpif","gp_writer","plugin_dispatch"]') }}
+        # Plugin tabs' answers: the file readers and the .gp writer are
+        # fuzzed in github.com/mateusrdp/oxiguitar-guitarpro (#165).
+        target: [plugin_tab]
     steps:
       - uses: actions/checkout@v5
       - name: Seconds per job
@@ -108,7 +105,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        target: [guitar_pro_3_5, guitar_pro_6, guitar_pro_7, gpif, gp_writer, plugin_dispatch]
+        target: [plugin_tab]
     steps:
       - uses: actions/checkout@v5
       - name: Seconds per job

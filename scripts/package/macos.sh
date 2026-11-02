@@ -2,15 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# Builds OxiGuitar.app, with the basic plugins in Contents/PlugIns (the
-# folder the app searches beside itself; Mateus, 27 Oct 2026: every download
-# carries the plugins that work on its system; docs/design/plugins.md,
-# "Distribution"), and its disk image, from a universal binary. Runs on
+# Builds OxiGuitar.app and its disk image, from a universal binary. The app
+# holds no plugin: they have repositories of their own (#165) and come
+# through the Homebrew tap (casks) or their own .pkg and zip files. Runs on
 # macOS (iconutil, codesign, hdiutil). Used by .github/workflows/release.yml.
 #
 # Usage: scripts/package/macos.sh VERSION
 # Reads:  dist/macos/oxiguitar (universal, from lipo),
-#         dist/macos/PlugIns/*.oxp (our plugins, universal, from lipo),
 #         dist/THIRD-PARTY-LICENSES.html
 # Writes: dist/OxiGuitar-VERSION-macos-universal.dmg
 #
@@ -56,15 +54,6 @@ cp "$root/LICENSE" "$res/LICENSE.txt"
 cp "$root/CHANGELOG.md" "$root/CREDITS.md" "$dist/THIRD-PARTY-LICENSES.html" "$res/"
 cp "$root/assets/fonts/bravura/OFL.txt" "$res/Bravura-OFL.txt"
 cp "$root/assets/fonts/noto-sans/OFL.txt" "$res/NotoSans-OFL.txt"
-
-# The plugins, each signed ad hoc on its own first, like the app (Apple
-# Silicon loads no unsigned code; codesign signs from the inside out, and
-# --deep doesn't reach plain libraries in PlugIns).
-mkdir -p "$app/Contents/PlugIns"
-for plugin in "$dist"/macos/PlugIns/*.oxp; do
-    install -m644 "$plugin" "$app/Contents/PlugIns/"
-    codesign --force --sign - "$app/Contents/PlugIns/$(basename "$plugin")"
-done
 
 codesign --force --deep --sign - "$app"
 codesign --verify --verbose "$app"

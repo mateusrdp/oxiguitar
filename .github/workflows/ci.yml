@@ -50,19 +50,12 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
         timeout-minutes: 15
-      # Each problem also becomes an annotation on the pull request. The NAM
-      # plugin apart: its feature x86-64-v3 builds only with
-      # RUSTFLAGS="-C target-cpu=x86-64-v3" (the "NAM for x86-64-v3" job
-      # lints that build), so here it is linted as nam.oxp is built.
+      # Each problem also becomes an annotation on the pull request.
       - name: Clippy
         run: |
           set -o pipefail
-          {
-            cargo clippy --workspace --exclude oxiguitar-nam-plugin --all-targets --all-features --locked \
-              --message-format=short -- -D warnings &&
-            cargo clippy -p oxiguitar-nam-plugin --features oxp --all-targets --locked \
-              --message-format=short -- -D warnings
-          } 2>&1 \
+          cargo clippy --workspace --all-targets --all-features --locked \
+            --message-format=short -- -D warnings 2>&1 \
             | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
       # The X11 build of the app (the Wayland one is the default above), and
       # the two builds keeping apart: no X11 crate in the Wayland build, no
@@ -75,16 +68,6 @@ jobs:
             | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
       - name: The two Linux builds keep apart
         run: scripts/check-display-crates.sh
-      # Each format plugin is built with one reader of oxiguitar-formats, so
-      # each reader alone must build cleanly too.
-      - name: Clippy, each reader alone
-        run: |
-          set -o pipefail
-          for reader in gp3 gp4 gp5 gpx gp; do
-            cargo clippy -p oxiguitar-formats --no-default-features --features "$reader,plugin" --locked \
-              --message-format=short -- -D warnings 2>&1 \
-              | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
-          done
       - name: Docs
         run: |
           set -o pipefail
@@ -112,10 +95,8 @@ jobs:
           CARGO_TERM_COLOR: never
         run: |
           rustc --version
-          if ! { cargo clippy --workspace --exclude oxiguitar-nam-plugin --all-targets --all-features --locked \
-                --message-format=short -- -D warnings &&
-              cargo clippy -p oxiguitar-nam-plugin --features oxp --all-targets --locked \
-                --message-format=short -- -D warnings; } > clippy.log 2>&1; then
+          if ! cargo clippy --workspace --all-targets --all-features --locked \
+                --message-format=short -- -D warnings > clippy.log 2>&1; then
             sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::warning file=\1,line=\2,col=\3::\5/;t;d' clippy.log
             # Anything without a file position (a crash, a lockfile problem):
             # show the end of the output as one annotation.
@@ -151,14 +132,15 @@ jobs:
         timeout-minutes: 15
       # Failing tests also become an annotation, so they can be read without
       # downloading the job log. Bash on every runner, Windows included.
-      # Default features only: with --all-features, every plugin crate would
-      # export the plugin entry symbol, and a binary linking two of them
-      # would not link. Tests that need our plugins build each one as its
-      # .oxp file (oxiguitar-plugin-test).
+      # Tests that need real plugins (Guitar Pro files, a sound set, a WAV
+      # export) take the latest releases of oxiguitar-guitarpro, -midi and
+      # -wav (scripts/released-plugins.sh through oxiguitar-plugin-test; each
+      # run prints the versions used).
       - name: cargo test
         shell: bash
         env:
           CARGO_TERM_COLOR: never
+          GH_TOKEN: ${{ github.token }}
         run: |
           set +e
           cargo test --workspace --locked 2>&1 | tee test.log
@@ -294,64 +276,23 @@ jobs:
         timeout-minutes: 15
       # Both Linux builds of the app: the X11 one in a target folder of its
       # own, then copied beside the Wayland one so both find the plugins in
-      # target/lib/oxiguitar/plugins/.
+      # target/lib/oxiguitar/plugins/ (released ones, below).
       - run: cargo build -p oxiguitar-app --no-default-features --features x11 --locked --target-dir target/x11
       - run: cargo test -p oxiguitar-app --no-default-features --features x11 --locked --target-dir target/x11 display_system
       - run: cargo build --workspace --locked
       - run: cp target/x11/debug/oxiguitar target/debug/oxiguitar-x11
-      # Our plugins, where the programs look for them (target/lib/oxiguitar/
-      # plugins/), so the session reads every fixture through them.
-      - run: scripts/build-plugins.sh --debug
+      # The released Guitar Pro plugins, where the programs look for them
+      # (target/lib/oxiguitar/plugins/), so the session reads every fixture
+      # through them. Fetched before the session, which then runs without
+      # network under strace.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/released-plugins.sh "$RUNNER_TEMP/released" guitarpro
+          mkdir -p target/lib/oxiguitar/plugins
+          cp "$RUNNER_TEMP/released/files/"*.oxp target/lib/oxiguitar/plugins/
       # The Wayland build in a headless Weston, the X11 build under Xvfb.
       - run: scripts/no-network.sh target/debug/oxiguitar-cli --wayland target/debug/oxiguitar --x11 target/debug/oxiguitar-x11
-
-  # The NAM plugin's build for Linux on x86-64-v3 processors
-  # (nam-x86-64-v3.oxp: NeuralAmpModeler-rs, built with
-  # RUSTFLAGS="-C target-cpu=x86-64-v3"), which the other jobs never build
-  # with its library: clippy on that code; the agreement tests (its model
-  # and cabinet play what nam-rs and our convolution play, the cabinet a
-  # 64-frame partition later); and the file scripts/build-plugins.sh makes,
-  # through the contract suite and the real-time checks, chosen by the host
-  # over nam.oxp. GitHub's x86_64 runners have AVX2 and FMA.
-  nam-x86-64-v3:
-    name: NAM for x86-64-v3
-    runs-on: ubuntu-24.04
-    env:
-      CARGO_TERM_COLOR: never
-    steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.MSRV }}
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: x86-64-v3
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
-        timeout-minutes: 15
-      - name: The processor has the features
-        run: |
-          for f in avx avx2 bmi1 bmi2 f16c fma abm movbe; do
-            grep -qw "$f" /proc/cpuinfo || { echo "::error::this runner's processor lacks $f"; exit 1; }
-          done
-      - name: Clippy, the x86-64-v3 build
-        env:
-          RUSTFLAGS: -C target-cpu=x86-64-v3
-        run: >-
-          cargo clippy -p oxiguitar-nam-plugin --features x86-64-v3 --all-targets --locked
-          --target-dir target/oxp-x86-64-v3 -- -D warnings
-      - name: The two builds sound the same
-        env:
-          RUSTFLAGS: -C target-cpu=x86-64-v3
-        run: >-
-          cargo test -p oxiguitar-nam-plugin --features x86-64-v3 --locked
-          --target-dir target/oxp-x86-64-v3 -- --nocapture
-      - run: scripts/build-plugins.sh --debug --only nam --out "$RUNNER_TEMP/nam"
-      - name: The file through the contract suite
-        run: >-
-          OXIGUITAR_TEST_NAM_X86_64_V3="$RUNNER_TEMP/nam/nam-x86-64-v3.oxp"
-          cargo test -p oxiguitar-plugin-test --test ours --locked
-          the_nam_build_for_x86_64_v3 -- --nocapture
 
   dco:
     name: Sign-off (DCO)
@@ -369,7 +310,7 @@ jobs:
   ci-success:
     name: ci-success
     if: always()
-    needs: [fmt, lint, test, template, speed, deny, no-network, nam-x86-64-v3, dco]
+    needs: [fmt, lint, test, template, speed, deny, no-network, dco]
     runs-on: ubuntu-24.04
     steps:
       - name: Every job passed

@@ -15,9 +15,6 @@ target=$1
 seconds=$2
 cd "$(dirname "$0")"
 extra=()
-if [ "$target" = gpif ]; then
-    extra+=(-dict=gpif.dict)
-fi
 limits=(-timeout=30 -rss_limit_mb=2048)
 
 cargo fuzz build "$target" || exit 1

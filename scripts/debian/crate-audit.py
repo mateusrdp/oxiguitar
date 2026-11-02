@@ -10,7 +10,7 @@ whether Debian has it and at which version.
 
     crate-audit.py list > crates.tsv
         On a machine with Cargo: the crates (name, version, builds) of
-        oxiguitar (both Linux builds), oxiguitar-cli and the basic plugins,
+        oxiguitar (both Linux builds) and oxiguitar-cli,
         for x86_64 and aarch64 Linux, normal and build dependencies (not
         dev-dependencies: Debian's tests may skip those).
 
@@ -42,14 +42,9 @@ import sys
 
 PACKAGES = [
     "oxiguitar-cli",
-    "oxiguitar-gp-plugin",
-    "oxiguitar-gp3-plugin",
-    "oxiguitar-gp4-plugin",
-    "oxiguitar-gp5-plugin",
-    "oxiguitar-gpx-plugin",
 ]
 TARGETS = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
-# The Wayland build is the default: the app, the CLI and the plugins. The
+# The Wayland build is the default: the app and the CLI. The
 # X11 build is the app alone with other features.
 BUILDS = {
     "wayland": ["-p", "oxiguitar-app"] + [a for p in PACKAGES for a in ("-p", p)],
@@ -155,7 +150,7 @@ def check(path):
                 release = line.split("=", 1)[1].strip().strip('"')
     print("# Crates against Debian\n")
     print(f"Archive: {release}, {len(archive)} librust packages. "
-          f"Crates: {len(rows)} (the Linux programs and the basic plugins, "
+          f"Crates: {len(rows)} (the Linux programs, "
           "both builds, x86_64 and aarch64).\n")
     print("| Status | Crates |")
     print("| --- | --- |")

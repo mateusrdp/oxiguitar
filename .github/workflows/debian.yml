@@ -2,12 +2,12 @@
 # Weekly, since Debian moves on its own, and on every change to Cargo.lock
 # or the packaging.
 #
-# crates: every crate the Linux programs and the basic plugins are built
+# crates: every crate the Linux programs are built
 # from, against the librust-*-dev packages Debian unstable has
 # (scripts/debian/crate-audit.py). The report is the run's summary, notices
 # on the check run and an artifact; it informs, it fails nothing.
 #
-# packages: debian/ builds both packages in sid with no network.
+# packages: debian/ builds the package in sid with no network.
 name: Debian
 
 on:
@@ -126,12 +126,11 @@ jobs:
             apt-get update
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
               shared-mime-info desktop-file-utils weston libgl1-mesa-dri man-db
-            # The core depends on the plugins, so the two go in together.
-            ! DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar_*.deb
-            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar_*.deb ./build/oxiguitar-plugins-basic_*.deb
-            for f in fixtures/gp/*; do oxiguitar-cli info "$f" > /dev/null; done
+            # The core installs without plugins (it only recommends them).
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./build/oxiguitar_*.deb
+            oxiguitar-cli --version
             man -w oxiguitar oxiguitar-cli
-            OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar fixtures/gp/oxiguitar-test-song.gp
+            OXIGUITAR_EXIT_AFTER_MS=3000 scripts/package/in-wayland.sh oxiguitar
           '
       - if: steps.rustc.outputs.ok == 'true'
         uses: actions/upload-artifact@v7

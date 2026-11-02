@@ -6,7 +6,7 @@
 //! (`score2`, interface 1.2), which is version 1 with lists of extensions.
 //!
 //! Version 2 has room for the whole model, so nothing is lost either way
-//! (`tests/wire.rs` in `oxiguitar-formats` checks this on every fixture);
+//! (`tests/wire.rs` in oxiguitar-guitarpro checks this on every fixture);
 //! version 1 lacks what the model gained since (free time).
 //! Every model struct is taken apart field by field (and every wire struct
 //! built field by field), so a field added to either doesn't compile here until someone decides how it crosses the

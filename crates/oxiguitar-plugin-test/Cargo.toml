@@ -30,7 +30,6 @@ libc = "0.2"
 serde_json.workspace = true
 # tests/ours.rs: our plugins read every file exactly as the readers do
 # in-process.
-oxiguitar-formats.workspace = true
 oxiguitar-model = { workspace = true, features = ["wire"] }
 # The engine playing the test plugin's instrument (tests/contract.rs).
 oxiguitar-play = { workspace = true, features = ["host"] }

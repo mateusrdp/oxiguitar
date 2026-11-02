@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
 # Builds everything the AppImages hold, on the oldest Ubuntu LTS still in
-# standard support (22.04, glibc 2.35), so the programs and plugins run on
+# standard support (22.04, glibc 2.35), so the programs run on
 # it and on everything newer. A binary links against the glibc of the system
 # it is built on: built on 24.04, Rust's standard library takes three weak
 # symbols from glibc 2.39 (pidfd_spawnp, pidfd_getpid), and the AppImage
@@ -17,8 +17,7 @@
 #
 # Writes: target/release/oxiguitar (the Wayland build), oxiguitar-cli,
 #         target/x11/release/oxiguitar (the X11 build) and
-#         target/lib/oxiguitar/plugins/*.oxp (scripts/build-plugins.sh,
-#         without the PipeWire plugin), and target/appimage-libs/: the
+#         target/appimage-libs/: the
 #         libraries the programs load that an AppImage must bring, with
 #         their copyright files (see below),
 #         then gives them back to the user who owns the working directory.
@@ -69,12 +68,6 @@ for pair in libxkbcommon.so.0:libxkbcommon0 libxkbcommon-x11.so.0:libxkbcommon-x
     cp -L "/usr/lib/$triplet/${pair%%:*}" "$libs/"
     cp "/usr/share/doc/${pair##*:}/copyright" "$libs/licenses/${pair##*:}.copyright"
 done
-# The PipeWire plugin doesn't build here: cpal 0.18's libspa 0.10 needs
-# newer PipeWire headers than 22.04's 0.3.48. The AppImages play through
-# ALSA, which PipeWire desktops route to PipeWire (Mateus, 27 Oct 2026);
-# the .deb and .rpm, built on 24.04, keep the PipeWire plugin.
-scripts/build-plugins.sh --skip audio-pipewire
-
 # Files made in the container belong to root; the runner's user packages,
 # tests and caches them.
 owner="$(stat -c '%u:%g' .)"

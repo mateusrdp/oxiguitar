@@ -2,19 +2,23 @@
 
 OxiGuitar for macOS is a .dmg: open it and drag OxiGuitar to Applications. It runs on Intel and Apple silicon. [Installing](installing.md) lists the files and the first-launch steps. This page is about plugins.
 
-Plugins are files ending in `.oxp`. OxiGuitar looks for them in your own folder, `~/Library/Application Support/OxiGuitar/plugins`, and inside the app, in `Contents/PlugIns`. **Help → About** lists every folder it searches, and **Tools → Plugins…** every plugin it found. [The official plugins](official-plugins.md) says what each does.
+Plugins are files ending in `.oxp`. OxiGuitar looks for them in your own folder, `~/Library/Application Support/OxiGuitar/plugins`, and inside the app, in `Contents/PlugIns` (empty: the app holds no plugin). **Help → About** lists every folder it searches, and **Tools → Plugins…** every plugin it found. [The official plugins](official-plugins.md) says what each does.
 
-## Today
+## Plugins
 
-**The app carries the basic plugins** inside itself, so Guitar Pro files open and play at once.
+The app holds the program only. Install the plugins either way:
 
-## Coming with OxiGuitar 1.0
+- **Homebrew, through our own tap:**
 
-OxiGuitar 1.0 splits the plugins from the program. Nothing below is published yet; the exact commands will be here when it is.
+  ```sh
+  brew tap mateusrdp/oxiguitar
+  brew install --cask oxiguitar-guitarpro oxiguitar-midi
+  ```
 
-- **Homebrew, through our own tap.** `brew install` of OxiGuitar and of each plugin by name, and `brew upgrade` keeps them all current. Each plugin's package installs its file into the folder above, and the optional ones can be added any time.
-- **An installer (.pkg) for each plugin,** for those without Homebrew. It installs for you alone, in your own Library, without asking for a password.
-- The app then holds the program only. You need at least the Guitar Pro plugin, the MIDI plugin and the Core Audio plugin (the one that sends sound to your speakers).
+  Add `oxiguitar-wav`, `oxiguitar-nam` (which needs `oxiguitar-midi`, and installs it) and `oxiguitar-coreaudio` the same way, and `brew upgrade` keeps them current. Each plugin's cask puts its file in the folder above and clears macOS's quarantine mark.
+- **An installer (.pkg) for each plugin,** from its releases page, for those without Homebrew. It installs for you alone, in your own Library, without asking for a password.
+
+You need at least the Guitar Pro plugin, the MIDI plugin and the Core Audio plugin (the one that sends sound to your speakers).
 
 ### Why macOS asks about OxiGuitar
 
@@ -24,6 +28,6 @@ OxiGuitar is signed without an Apple developer account (the project doesn't pay 
 xattr -d com.apple.quarantine ~/Library/Application\ Support/OxiGuitar/plugins/*.oxp
 ```
 
-A plugin installed by a .pkg isn't marked this way, so it needs no clearing. Whether a plugin installed by Homebrew needs it will be tested before the tap is published, and this page will say.
+A plugin installed by a .pkg isn't marked this way, so it needs no clearing. A plugin installed by Homebrew is cleared by its cask.
 
 If a plugin is missing, OxiGuitar says so once when it starts and links here.

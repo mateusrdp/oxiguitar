@@ -683,7 +683,7 @@ fn every_edit_is_saved_as_gp5_and_read_back_equal() {
             continue;
         };
         // Start from the score as a .gp5 file holds it, which comes back
-        // exactly (crates/oxiguitar-formats/tests/gp5_round_trip.rs).
+        // exactly (tests/gp5_round_trip.rs in oxiguitar-guitarpro).
         let Ok(first) = oxiguitar_plugin_test::released::guitar_pro::write_gp5(&score) else {
             continue;
         };

@@ -1,6 +1,6 @@
 # Fuzzing
 
-Every file reader, and the .gp writer, is fuzzed with [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz) (libFuzzer): a malformed file may fail to open, but must never crash, hang or run out of memory (FMT-1). M1's gate is six hours per reader without a crash.
+The part of the core that takes what a plugin sends is fuzzed with [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz) (libFuzzer): a malformed answer may be refused, but must never crash, hang or run out of memory. The file readers and the writer are fuzzed in their own repository, oxiguitar-guitarpro (#165).
 
 This folder is its own Cargo workspace, outside the main one, and needs nightly Rust.
 
@@ -8,36 +8,27 @@ This folder is its own Cargo workspace, outside the main one, and needs nightly 
 
 | Target | What it reads | Seeds |
 | --- | --- | --- |
-| `guitar_pro_3_5` | Guitar Pro 3, 4 and 5 (.gp3, .gp4, .gp5) | the three test songs in `fixtures/gp/` |
-| `guitar_pro_6` | Guitar Pro 6 (.gpx): BCFZ, BCFS and the GPIF inside | the .gpx test song |
-| `guitar_pro_7` | Guitar Pro 7 and 8 (.gp): the ZIP archive and the GPIF inside | every .gp in `fixtures/` |
-| `gpif` | the GPIF XML itself (and the XML tree under it), packed into a .gp archive by the target, with a dictionary of GPIF names (`gpif.dict`) | the score.gpif of every .gp in `fixtures/` |
-| `gp_writer` | the .gp writer: any file a reader takes, written as .gp; what we write must read back, and a second round trip must lose nothing and read back the same (FMT-4) | every file in `fixtures/` |
-| `any_file` | format detection (FMT-6), then whichever reader it picks | every file in `fixtures/` |
-| `plugin_dispatch` | the file as each of our five format plugins answers the host's request to read it: the SDK's `dispatch`, the answer encoded and decoded as it crosses the plugin interface, and the score converted back into the model | every file in `fixtures/` |
 | `plugin_tab` | a plugin's answer with a tab's contents (interface 1.1), as the core takes it: decoded, checked, and each canvas turned into a display list and drawn | `fixtures/plugin/*.answer`: the test plugin's tab, and the canvas line this target found |
 
-The first three skip inputs that are not recognised as their format, so their time goes to their reader. Seeds come from the public fixtures only (`seeds.sh`), never from the private corpus.
+Seeds come from the public fixtures only (`seeds.sh`), never from the private corpus.
 
 ## Running
 
 ```sh
 cargo install cargo-fuzz
 fuzz/seeds.sh                        # fills fuzz/corpus/<target>/
-fuzz/run.sh gpif 600                 # ten minutes on every core
+fuzz/run.sh plugin_tab 600                # ten minutes on every core
 # or by hand:
-cd fuzz && cargo +nightly fuzz run guitar_pro_7 corpus/guitar_pro_7
+cd fuzz && cargo +nightly fuzz run plugin_tab corpus/plugin_tab
 ```
 
 `run.sh` uses libFuzzer's fork mode on every core, stops at the first crash, an input that takes over 30 s, or one that needs over 2 GB, and then shrinks the corpus (`cargo fuzz cmin`). An input that failed is in `fuzz/artifacts/<target>/`; `cargo fuzz run <target> <file>` replays it. Fix the reader and add the input to that reader's tests, so it stays fixed.
-
-`gpif.dict` is made from the names the reader looks for (the quoted names in `crates/oxiguitar-formats/src/gpif/`); add new ones when the reader learns them.
 
 ## In CI
 
 `.github/workflows/fuzz.yml`:
 
-- **Pull requests** that touch `oxiguitar-formats`, `oxiguitar-model`, `oxiguitar-display`, `oxiguitar-render`, the plugin interface or SDK, `plugins/`, `fixtures/` or this folder: four minutes of every target.
-- **By hand** (Actions → Fuzz → Run workflow, "minutes" per reader, 360 by default): the four readers and `plugin_dispatch`, each in two jobs of half the time, the second continuing from the first one's corpus (a job on a standard runner may take at most six hours). At most four fuzz jobs run at a time. The final corpora are kept as artifacts for 30 days.
+- **Pull requests** that touch `oxiguitar-model`, `oxiguitar-display`, `oxiguitar-render`, the plugin interface or SDK, `fixtures/` or this folder: four minutes of every target.
+- **By hand** (Actions → Fuzz → Run workflow, "minutes" per reader, 360 by default): the target `plugin_tab`, in two jobs of half the time, the second continuing from the first one's corpus (a job on a standard runner may take at most six hours). At most four fuzz jobs run at a time. The final corpora are kept as artifacts for 30 days.
 
 A crash fails the job, its message becomes an error on the run, and the input is kept as the artifact "fuzz-crash \<target\>".

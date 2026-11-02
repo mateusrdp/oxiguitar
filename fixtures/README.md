@@ -6,10 +6,10 @@ Files of unclear ownership never go here; see `corpus/README.md`.
 
 | File | Format | Origin | License |
 | --- | --- | --- | --- |
-| `gp/oxiguitar-test-song.gp3` | Guitar Pro 3.00 | Written byte by byte by `crates/oxiguitar-formats/tests/support/gp_writer.rs` | GPL-3.0-or-later |
+| `gp/oxiguitar-test-song.gp3` | Guitar Pro 3.00 | Written byte by byte by `tests/support/gp_writer.rs` in oxiguitar-guitarpro | GPL-3.0-or-later |
 | `gp/oxiguitar-test-song.gp4` | Guitar Pro 4.06 | Same writer | GPL-3.0-or-later |
 | `gp/oxiguitar-test-song.gp5` | Guitar Pro 5.10 | Same writer | GPL-3.0-or-later |
-| `gp/oxiguitar-test-song.gpx` | Guitar Pro 6 (BCFZ) | Written by `crates/oxiguitar-formats/tests/support/gpif_writer.rs` | GPL-3.0-or-later |
+| `gp/oxiguitar-test-song.gpx` | Guitar Pro 6 (BCFZ) | Written by `tests/support/gpif_writer.rs` in oxiguitar-guitarpro | GPL-3.0-or-later |
 | `gp/oxiguitar-test-song.gp` | Guitar Pro 7 | Same writer | GPL-3.0-or-later |
 | `plugin/panel.answer` | A plugin's answer with a tab's contents (interface 1.1, postcard) | The test plugin's `panel` tab after a pointer went down, written by `plugins/test` (`OXIGUITAR_BLESS=1 cargo test -p oxiguitar-test-plugin`); the seed of the fuzz target `plugin_tab` | GPL-3.0-or-later |
 | `plugin/far-line.answer` | The same kind of answer | Found by the fuzz target `plugin_tab` (18 Oct 2026): a canvas line running 10²⁰ units off the canvas, which made the renderer fail; such items are now refused (`oxiguitar_plugin_api::display::Item::problem`). Kept as a seed | GPL-3.0-or-later |

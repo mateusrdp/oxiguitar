@@ -6,7 +6,7 @@ Choose **File → Open…** (Ctrl + O), drag a file from your file manager onto 
 oxiguitar song.gp
 ```
 
-OxiGuitar opens files through its format plugins, one for each format. Ours, the basic plugins ([Installing](installing.md)), open Guitar Pro files of every version from 3 to 8:
+OxiGuitar opens files through its format plugins, one for each format. Ours, the Guitar Pro plugins ([Installing](installing.md)), open Guitar Pro files of every version from 3 to 8:
 
 | Extension | Guitar Pro version |
 | --- | --- |

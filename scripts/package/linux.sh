@@ -4,15 +4,16 @@
 #
 # Builds OxiGuitar's Linux packages from release binaries already built for
 # this machine's architecture: a .deb and an .rpm of each build of the core,
-# which depend on the basic plugins' own .deb and .rpm (`plugins`), and one
-# AppImage that holds both builds and the basic plugins (Mateus, 27 Oct 2026:
-# every download carries the plugins that work on its system;
-# docs/design/plugins.md, "Distribution"). Used by
+# and one AppImage that holds both builds. None carries a plugin: the plugins
+# live in repositories of their own (#165) with packages of their own. The
+# .deb and the .rpm recommend the Guitar Pro and MIDI plugins and suggest the
+# NAM one, so that apt and dnf install them with the core; the AppImage is
+# the core alone (plugins from their zips, by hand). Used by
 # .github/workflows/release.yml; runs on Ubuntu 24.04 (dpkg-deb and
 # dpkg-shlibdeps are there; rpmbuild comes from the "rpm" package, the
 # AppImage needs squashfs-tools and the AppImage runtime, see below).
 #
-# Usage: scripts/package/linux.sh deb|rpm|all|plugins|appimage VERSION [wayland|x11]
+# Usage: scripts/package/linux.sh deb|rpm|all|appimage VERSION [wayland|x11]
 #   all      the .deb and the .rpm of one build
 #   VERSION  the package version, from scripts/package/version.sh
 #   wayland  the Wayland build (the default): packages `oxiguitar`
@@ -20,22 +21,18 @@
 #            Provide, Conflict with and Replace `oxiguitar`
 #            (docs/design/plugins.md, the two Linux builds)
 #   appimage takes no build: it holds both (see build_appimage), from
-#            programs and plugins built on Ubuntu 22.04
+#            programs built on Ubuntu 22.04
 #            (scripts/package/build-linux.sh)
 # Reads:  target/release/oxiguitar (the Wayland build) and
 #         target/x11/release/oxiguitar (the X11 build, built with
 #         `--no-default-features --features x11 --target-dir target/x11`),
 #         target/release/oxiguitar-cli,
-#         target/lib/oxiguitar/plugins/*.oxp (scripts/build-plugins.sh;
-#         `plugins` and `appimage`),
 #         dist/THIRD-PARTY-LICENSES.html (scripts/package/licenses.sh)
 #         and, for the AppImage, $APPIMAGE_RUNTIME (the type 2 runtime for
 #         this architecture, from github.com/AppImage/type2-runtime).
 # Writes: dist/oxiguitar_VERSION_ARCH.deb, dist/oxiguitar-VERSION-1.ARCH.rpm;
 #         for the X11 build dist/oxiguitar-x11_…deb and
-#         dist/oxiguitar-x11-…rpm; for `plugins`
-#         dist/oxiguitar-plugins-basic_VERSION_ARCH.deb and
-#         dist/oxiguitar-plugins-basic-VERSION-1.ARCH.rpm; for `appimage`
+#         dist/oxiguitar-x11-…rpm; for `appimage`
 #         dist/OxiGuitar-VERSION-ARCH.AppImage
 #
 # Only the .deb and the .rpm register the Guitar Pro file types (UI-4); the
@@ -43,8 +40,8 @@
 
 set -euo pipefail
 
-what="${1:?usage: linux.sh deb|rpm|appimage|all|plugins VERSION [wayland|x11]}"
-version="${2:?usage: linux.sh deb|rpm|appimage|all|plugins VERSION [wayland|x11]}"
+what="${1:?usage: linux.sh deb|rpm|appimage|all VERSION [wayland|x11]}"
+version="${2:?usage: linux.sh deb|rpm|appimage|all VERSION [wayland|x11]}"
 build="${3:-wayland}"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 id="io.github.mateusrdp.OxiGuitar"
@@ -71,9 +68,10 @@ description="OxiGuitar opens Guitar Pro files (.gp, .gpx, .gp5, .gp4, .gp3) and
 shows them as standard notation and tablature in four layouts, with any
 set of tracks together. It edits and saves them, exports them to PDF, and
 plays them with the system's sound set or better ones the user adds
-(SoundFont and SFZ). It opens and plays files through plugins; the
-basic ones come with it (oxiguitar-plugins-basic). No telemetry: it
-never uploads anything."
+(SoundFont and SFZ). It opens and plays files through plugins, which are
+packages of their own: oxiguitar-guitarpro and oxiguitar-midi (installed
+with it by default), and oxiguitar-nam for amplifier models. No telemetry:
+it never uploads anything."
 if [[ "$build" == x11 ]]; then
     summary="$summary (X11 build, deprecated)"
     description="$description
@@ -110,25 +108,15 @@ else
     rpm_recommends=("libGL.so.1()(64bit)" "libdbus-1.so.3()(64bit)" "xdg-desktop-portal")
 fi
 
-# Our basic plugins (scripts/build-plugins.sh): their own packages, and
-# inside the AppImage.
-plugins="$root/target/lib/oxiguitar/plugins"
 x11_app="$root/target/x11/release/oxiguitar"
 need=()
 case "$what" in
-    plugins) ;;
     appimage) need=("$root/target/release/oxiguitar" "$x11_app" "$bin/oxiguitar-cli") ;;
     *) need=("$app" "$bin/oxiguitar-cli") ;;
 esac
 for f in "${need[@]}"; do
     [[ -x "$f" ]] || { echo "missing $f: build it first" >&2; exit 1; }
 done
-if [[ "$what" == plugins || "$what" == appimage ]]; then
-    compgen -G "$plugins/*.oxp" > /dev/null || {
-        echo "missing $plugins/*.oxp: run scripts/build-plugins.sh" >&2
-        exit 1
-    }
-fi
 [[ -f "$dist/THIRD-PARTY-LICENSES.html" ]] || {
     echo "missing dist/THIRD-PARTY-LICENSES.html: run scripts/package/licenses.sh" >&2
     exit 1
@@ -225,10 +213,12 @@ build_deb() {
         echo "Architecture: $deb_arch"
         echo "Maintainer: $maintainer"
         echo "Installed-Size: $size"
-        # The core opens and plays nothing without plugins, so the basic
-        # ones come with it, of the same build (Mateus, 27 Oct 2026).
-        echo "Depends: ${linked:+$linked, }$deb_runtime, oxiguitar-plugins-basic (= $version)"
-        echo "Recommends: $deb_recommends"
+        echo "Depends: ${linked:+$linked, }$deb_runtime"
+        # The core opens and plays nothing without plugins: the essential
+        # ones are recommended (apt installs them, and keeps them updated
+        # from the same repository), the NAM one suggested (#165).
+        echo "Recommends: oxiguitar-guitarpro, oxiguitar-midi, $deb_recommends"
+        echo "Suggests: oxiguitar-nam"
         if [[ "$build" == x11 ]]; then
             # The same program for another display system: one or the other.
             echo "Provides: oxiguitar"
@@ -264,7 +254,9 @@ build_rpm() {
         echo "License: GPL-3.0-or-later AND GPL-3.0-only"
         echo "URL: https://github.com/mateusrdp/oxiguitar"
         for r in "${rpm_runtime[@]}"; do echo "Requires: $r"; done
-        echo "Requires: oxiguitar-plugins-basic = ${version//-/.}-1"
+        echo "Recommends: oxiguitar-guitarpro"
+        echo "Recommends: oxiguitar-midi"
+        echo "Suggests: oxiguitar-nam"
         for r in "${rpm_recommends[@]}"; do echo "Recommends: $r"; done
         if [[ "$build" == x11 ]]; then
             echo "Provides: oxiguitar = ${version//-/.}"
@@ -312,19 +304,14 @@ build_rpm() {
 
 # One AppImage for every Linux desktop (Mateus, 27 Oct 2026): both builds,
 # each as pure as in its own package (ADR 0009), and scripts/package/AppRun
-# starting the Wayland one in a Wayland session and the X11 one otherwise;
-# and the basic plugins in usr/lib/oxiguitar/plugins, the folder the
-# programs search beside themselves (crates/oxiguitar-host/src/folders.rs),
-# so the one file opens and plays scores. Plugins in the user's own folder
-# still come first on a tie. Built on Ubuntu 22.04, it has no PipeWire
-# plugin and plays through ALSA (scripts/package/build-linux.sh).
+# starting the Wayland one in a Wayland session and the X11 one otherwise.
+# It holds no plugin: they come from their own releases (zips with the
+# plugin file alone) into the user's plugin folder (#165).
 build_appimage() {
     local runtime="${APPIMAGE_RUNTIME:?set APPIMAGE_RUNTIME to the type 2 runtime for $arch}"
     local dir="$work/OxiGuitar.AppDir"
     stage "$dir"
     install -Dm755 "$x11_app" "$dir/usr/bin/oxiguitar-x11"
-    install -d "$dir/usr/lib/oxiguitar/plugins"
-    install -m644 "$plugins"/*.oxp "$dir/usr/lib/oxiguitar/plugins/"
     # The libraries the programs load that not every system has
     # (scripts/package/build-linux.sh), found through the programs' RPATH,
     # and their copyright files.
@@ -349,115 +336,10 @@ build_appimage() {
     echo "Built $out"
 }
 
-# oxiguitar-plugins-basic: the plugins we write and recommend, in the
-# program's own plugin folder, as a .deb and an .rpm the core packages
-# depend on.
-build_plugins() {
-    local name=oxiguitar-plugins-basic
-    local summary="Guitar Pro format, sound and audio plugins for OxiGuitar"
-    local description="The plugins the OxiGuitar project writes and recommends: one for each
-Guitar Pro format (3, 4, 5, 6 and 7-8), so OxiGuitar can open those
-files; the SoundFont player, which plays the tracks with a General MIDI
-sound set (the recommended package) or better SoundFont and SFZ sets of
-your own; NAM, which plays guitars and basses through amp models and
-cabinet impulse responses; WAV, which exports the sound as a WAV file;
-and the ones that play its sound through PipeWire or ALSA.
-OxiGuitar depends on them and finds them in /usr/lib/oxiguitar/plugins."
-    local tree="$work/plugins-deb"
-    install -d "$tree/usr/lib/oxiguitar/plugins"
-    install -m644 "$plugins"/*.oxp "$tree/usr/lib/oxiguitar/plugins/"
-    local doc="$tree/usr/share/doc/$name"
-    install -Dm644 "$root/scripts/package/plugins-README.txt" "$doc/README.txt"
-    install -Dm644 "$dist/THIRD-PARTY-LICENSES.html" "$doc/THIRD-PARTY-LICENSES.html"
-    {
-        echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/"
-        echo "Upstream-Name: OxiGuitar"
-        echo "Source: https://github.com/mateusrdp/oxiguitar"
-        echo
-        echo "Files: *"
-        echo "Copyright: 2026 Mateus Rocha de Paula and the OxiGuitar contributors"
-        echo "License: GPL-3.0-or-later"
-        echo " On Debian systems the full licence is in /usr/share/common-licenses/GPL-3."
-        echo " Third-party licences: /usr/share/doc/$name/THIRD-PARTY-LICENSES.html"
-    } > "$doc/copyright"
-    deb_extras "$tree" "$name" "CHANGELOG.md, in the package oxiguitar"
-    mkdir -p "$work/plugin-shlibs/debian"
-    touch "$work/plugin-shlibs/debian/control"
-    local args=()
-    for f in "$tree"/usr/lib/oxiguitar/plugins/*.oxp; do args+=("-e$f"); done
-    local linked
-    linked="$(cd "$work/plugin-shlibs" && dpkg-shlibdeps -O "${args[@]}" 2> /dev/null \
-        | sed -n 's/^shlibs:Depends=//p')"
-    local size
-    size="$(du -sk --exclude=DEBIAN "$tree" | cut -f1)"
-    {
-        echo "Package: $name"
-        echo "Version: $version"
-        echo "Architecture: $deb_arch"
-        echo "Maintainer: $maintainer"
-        echo "Installed-Size: $size"
-        if [[ -n "$linked" ]]; then echo "Depends: $linked"; fi
-        # A General MIDI sound set for the SoundFont plugin to play with.
-        echo "Recommends: fluid-soundfont-gm | musescore-general-soundfont-small"
-        echo "Enhances: oxiguitar, oxiguitar-x11"
-        echo "Section: sound"
-        echo "Priority: optional"
-        echo "Homepage: https://github.com/mateusrdp/oxiguitar"
-        echo "Description: $summary"
-        sed 's/^/ /; s/^ $/ ./' <<< "$description"
-    } > "$tree/DEBIAN/control"
-    local deb="$dist/${name}_${version}_${deb_arch}.deb"
-    dpkg-deb --root-owner-group -Zxz --build "$tree" "$deb"
-    dpkg-deb --info "$deb"
-    dpkg-deb -f "$deb" Recommends | grep fluid-soundfont-gm > /dev/null \
-        || { echo "$deb recommends no sound set" >&2; exit 1; }
-    echo "Built $deb"
-
-    local rtree="$work/plugins-rpm"
-    install -d "$rtree/usr/lib/oxiguitar/plugins"
-    install -m644 "$plugins"/*.oxp "$rtree/usr/lib/oxiguitar/plugins/"
-    install -Dm644 "$root/LICENSE" "$rtree/usr/share/licenses/$name/LICENSE"
-    local spec="$work/$name.spec"
-    {
-        echo "Name: $name"
-        echo "Version: ${version//-/.}"
-        echo "Release: 1"
-        echo "Summary: $summary"
-        echo "License: GPL-3.0-or-later"
-        echo "URL: https://github.com/mateusrdp/oxiguitar"
-        echo "Recommends: fluid-soundfont-gm"
-        echo "Enhances: oxiguitar"
-        echo "%global debug_package %{nil}"
-        echo "%global __os_install_post %{nil}"
-        echo "%global _build_id_links none"
-        echo
-        echo "%description"
-        echo "$description"
-        echo
-        echo "%install"
-        echo "cp -a '$rtree/.' %{buildroot}/"
-        echo
-        echo "%files"
-        echo "%license /usr/share/licenses/$name/LICENSE"
-        echo "/usr/lib/oxiguitar"
-    } > "$spec"
-    rpmbuild -bb --target "$arch" \
-        --define "_topdir $work/rpmbuild-plugins" \
-        --define "_rpmdir $work/rpms-plugins" \
-        "$spec"
-    local built
-    built="$(find "$work/rpms-plugins" -name '*.rpm' | head -n1)"
-    rpm -qp --recommends "$built" | grep fluid-soundfont-gm > /dev/null \
-        || { echo "$built recommends no sound set" >&2; exit 1; }
-    mv "$built" "$dist/$(basename "$built")"
-    echo "Built $dist/$(basename "$built")"
-}
-
 case "$what" in
     deb) build_deb ;;
     rpm) build_rpm ;;
     appimage) build_appimage ;;
     all) build_deb; build_rpm ;;
-    plugins) build_plugins ;;
     *) echo "unknown package type $what" >&2; exit 1 ;;
 esac

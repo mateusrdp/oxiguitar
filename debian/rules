@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# oxiguitar (the Wayland build) and oxiguitar-plugins-basic, built offline.
+# oxiguitar (the Wayland build), built offline. The plugins have repositories
+# and packages of their own (#165).
 # The crates come from vendor/, the orig-vendor component
 # (scripts/debian/source.sh), until Debian packages them all
 # (docs/debian.md); then prepare-debian takes --link-from-system instead,
@@ -25,11 +26,6 @@ export CARGO_PROFILE_RELEASE_STRIP = false
 CARGO = /usr/share/cargo/bin/cargo
 
 release = target/$(DEB_HOST_RUST_TYPE)/release
-# The programs look for the system plugin folder beside themselves
-# (crates/oxiguitar-host/src/folders.rs): <bin>/../lib/oxiguitar/plugins.
-plugin_folder = target/$(DEB_HOST_RUST_TYPE)/lib/oxiguitar/plugins
-# Not the test plugins, nor the audio devices of other systems.
-plugins = $(filter-out test test-second audio-wasapi audio-coreaudio,$(notdir $(wildcard plugins/*)))
 noto = /usr/share/fonts/truetype/noto/NotoSans-Regular.ttf
 app_id = io.github.mateusrdp.OxiGuitar
 
@@ -48,34 +44,17 @@ override_dh_auto_configure:
 
 override_dh_auto_build:
 	$(CARGO) build --release -p oxiguitar-app -p oxiguitar-cli
-	# Each plugin on its own, as scripts/build-plugins.sh does: built
-	# together, every plugin would carry every reader.
-	set -e; for p in $(plugins); do \
-		CARGO_TARGET_DIR=target/oxp $(CARGO) rustc --release \
-			-p oxiguitar-$$p-plugin --features oxp --crate-type cdylib; \
-		install -Dm644 target/oxp/$(DEB_HOST_RUST_TYPE)/release/liboxiguitar_$$(echo $$p | tr - _)_plugin.so \
-			$(plugin_folder)/$$p.oxp; \
-	done
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS) $(DEB_BUILD_PROFILES)))
-	# Every format through its plugin, then a PDF with Debian's font.
-	set -e; home=$$(mktemp -d); \
-	for f in fixtures/gp/*; do \
-		OXIGUITAR_HOME=$$home $(release)/oxiguitar-cli info $$f > /dev/null; \
-		OXIGUITAR_HOME=$$home $(release)/oxiguitar-cli detect $$f; \
-	done; \
-	OXIGUITAR_HOME=$$home $(release)/oxiguitar-cli render fixtures/gp/oxiguitar-test-song.gp \
-		--tracks all --pdf $$home/song.pdf --png $$home/song --quiet; \
-	test -s $$home/song.pdf; test -s $$home/song-1.png; \
-	rm -rf $$home
+	# The programs start. Opening a file takes a plugin, which this source
+	# package does not build.
+	$(release)/oxiguitar-cli --version
 endif
 
 override_dh_auto_install:
 	install -Dm755 $(release)/oxiguitar debian/oxiguitar/usr/bin/oxiguitar
 	install -Dm755 $(release)/oxiguitar-cli debian/oxiguitar/usr/bin/oxiguitar-cli
-	install -d debian/oxiguitar-plugins-basic/usr/lib/oxiguitar/plugins
-	install -m644 $(plugin_folder)/*.oxp debian/oxiguitar-plugins-basic/usr/lib/oxiguitar/plugins/
 	set -e; for s in 16 24 32 48 64 128 256 512; do \
 		install -Dm644 assets/icon/png/oxiguitar-$$s.png \
 			debian/oxiguitar/usr/share/icons/hicolor/$${s}x$${s}/apps/$(app_id).png; \

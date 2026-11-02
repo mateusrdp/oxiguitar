@@ -3,23 +3,6 @@
 version = 4
 
 [[package]]
-name = "NeuralAmpModeler-rs"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1d3308e96a587b728a4e213ed2e4f5408094c1bd4e58430d285b0b41b40b78c"
-dependencies = [
- "anyhow",
- "libc",
- "log",
- "loom",
- "rtrb",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "ab_glyph"
 version = "0.2.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -249,16 +232,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae221649c9976a6f6c56ae1facf410f3ddb33cc661c4b7b61020a912d4237fbc"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "annotate-snippets"
-version = "0.11.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "710e8eae58854cdc1790fcb56cca04d712a17be849eeb81da2a724bf4bae2bc4"
-dependencies = [
- "anstyle",
- "unicode-width",
 ]
 
 [[package]]
@@ -585,7 +558,6 @@ version = "0.72.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895"
 dependencies = [
- "annotate-snippets 0.11.5",
  "bitflags 2.13.2",
  "cexpr",
  "clang-sys",
@@ -628,15 +600,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7eff00be299a18769011411c9def0d827e8f2d7bf0c3dbf53633147a8867fd1f"
 dependencies = [
  "no_std_io2",
-]
-
-[[package]]
-name = "block-buffer"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa"
-dependencies = [
- "hybrid-array",
 ]
 
 [[package]]
@@ -717,12 +680,6 @@ dependencies = [
  "quote",
  "syn 3.0.9",
 ]
-
-[[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "byteorder-lite"
@@ -808,16 +765,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cfg-expr"
-version = "0.20.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ba9e9ec16c447027685b1f897b720e18e9a8afd00bd7332c483537e38086c9f"
-dependencies = [
- "smallvec",
- "target-lexicon",
-]
-
-[[package]]
 name = "cfg-if"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -861,12 +808,6 @@ dependencies = [
  "libc",
  "libloading",
 ]
-
-[[package]]
-name = "claxon"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bfbf56724aa9eca8afa4fcfadeb479e722935bb2a0900c2d37e0cc477af0688"
 
 [[package]]
 name = "clipboard-win"
@@ -942,12 +883,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "const-oid"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
-
-[[package]]
 name = "convert_case"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -955,12 +890,6 @@ checksum = "633458d4ef8c78b72454de2d54fd6ab2e60f9e02be22f3c6104cdc8a4e0fceb9"
 dependencies = [
  "unicode-segmentation",
 ]
-
-[[package]]
-name = "cookie-factory"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9885fa71e26b8ab7855e2ec7cae6e9b380edff76cd052e07c683a0319d51b3a2"
 
 [[package]]
 name = "copypasta"
@@ -1070,19 +999,9 @@ dependencies = [
  "objc2-core-audio-types",
  "objc2-core-foundation",
  "objc2-foundation 0.3.2",
- "pipewire",
  "web-sys",
  "windows",
  "windows-core",
-]
-
-[[package]]
-name = "cpufeatures"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -1139,15 +1058,6 @@ name = "crunchy"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
-
-[[package]]
-name = "crypto-common"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
-dependencies = [
- "hybrid-array",
-]
 
 [[package]]
 name = "ctor"
@@ -1208,17 +1118,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.9",
-]
-
-[[package]]
-name = "digest"
-version = "0.11.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
-dependencies = [
- "block-buffer",
- "const-oid",
- "crypto-common",
 ]
 
 [[package]]
@@ -1772,21 +1671,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "generator"
-version = "0.8.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1be81b31c9ce4caf7f3178eeb90662bb1864d3ad363ec6bdada3201adff19c37"
-dependencies = [
- "cc",
- "cfg-if",
- "libc",
- "log",
- "rustversion",
- "windows-link",
- "windows-result",
-]
-
-[[package]]
 name = "gethostname"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2021,15 +1905,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48ce8546b993eaf241d69ded33b1be6d205dd9857ec879d9d18bd05d3676e144"
 
 [[package]]
-name = "hybrid-array"
-version = "0.4.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27f864f10dfb56725ce5ce5472bc52252c8f93a4ab86327122cebf62c5f59a17"
-dependencies = [
- "typenum",
-]
-
-[[package]]
 name = "i-slint-backend-linuxkms"
 version = "1.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2152,7 +2027,7 @@ version = "1.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "45ea275b15a425c7f2f77481151e1f5f8f1ea83feae580273090ef6b9e192218"
 dependencies = [
- "annotate-snippets 0.12.16",
+ "annotate-snippets",
  "by_address",
  "data-url",
  "derive_more",
@@ -2808,17 +2683,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 
 [[package]]
-name = "lewton"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "777b48df9aaab155475a83a7df3070395ea1ac6902f5cd062b8f2b028075c030"
-dependencies = [
- "byteorder",
- "ogg",
- "tinyvec",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.191"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2860,33 +2724,6 @@ dependencies = [
  "libc",
  "plain",
  "redox_syscall 0.9.4",
-]
-
-[[package]]
-name = "libspa"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "882f7427e7989dcc9d388b7f05c4630390a1d7696f9ffa469cd4a7a48f0b4c40"
-dependencies = [
- "bitflags 2.13.2",
- "cc",
- "cookie-factory",
- "libc",
- "libspa-sys",
- "nom 8.0.0",
- "rustix 1.1.5",
- "system-deps",
-]
-
-[[package]]
-name = "libspa-sys"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b6e17bdaf63ed0d5e4144022624032b41fd9733112e8c74ac26fc9bf1291924"
-dependencies = [
- "bindgen",
- "cc",
- "system-deps",
 ]
 
 [[package]]
@@ -2951,19 +2788,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
-name = "loom"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "419e0dc8046cb947daa77eb95ae174acfbddb7673b4151f56d1eed8e93fbfaca"
-dependencies = [
- "cfg-if",
- "generator",
- "scoped-tls",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "loop9"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3018,15 +2842,6 @@ name = "mach2"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dae608c151f68243f2b000364e1f7b186d9c29845f7d2d85bd31b9ad77ad552b"
-
-[[package]]
-name = "matchers"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
-dependencies = [
- "regex-automata",
-]
 
 [[package]]
 name = "maybe-rayon"
@@ -3118,17 +2933,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nam-rs"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cedc1ae256d0510dd48463bbd6df12a743bba06aa5a27270496c3d1d5b3bf886"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "natord"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3215,15 +3019,6 @@ name = "noop_proc_macro"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0676bb32a98c1a483ce53e500a81ad9c3d5b3f7c920c28c24e9cb0980d0b5bc8"
-
-[[package]]
-name = "nu-ansi-term"
-version = "0.50.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
-dependencies = [
- "windows-sys 0.61.2",
-]
 
 [[package]]
 name = "num-bigint"
@@ -3745,15 +3540,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ogg"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6951b4e8bf21c8193da321bcce9c9dd2e13c858fe078bf9054a288b419ae5d6e"
-dependencies = [
- "byteorder",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3794,7 +3580,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-app"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "i-slint-backend-winit",
  "oxiguitar-display",
@@ -3815,56 +3601,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "oxiguitar-audio-alsa-plugin"
-version = "0.11.0"
-dependencies = [
- "cpal",
- "oxiguitar-audio-cpal",
- "oxiguitar-plugin",
- "serde_json",
-]
-
-[[package]]
-name = "oxiguitar-audio-coreaudio-plugin"
-version = "0.11.0"
-dependencies = [
- "cpal",
- "oxiguitar-audio-cpal",
- "oxiguitar-plugin",
- "serde_json",
-]
-
-[[package]]
 name = "oxiguitar-audio-cpal"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "cpal",
  "oxiguitar-plugin",
-]
-
-[[package]]
-name = "oxiguitar-audio-pipewire-plugin"
-version = "0.11.0"
-dependencies = [
- "cpal",
- "oxiguitar-audio-cpal",
- "oxiguitar-plugin",
- "serde_json",
-]
-
-[[package]]
-name = "oxiguitar-audio-wasapi-plugin"
-version = "0.11.0"
-dependencies = [
- "cpal",
- "oxiguitar-audio-cpal",
- "oxiguitar-plugin",
- "serde_json",
 ]
 
 [[package]]
 name = "oxiguitar-cli"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-host",
@@ -3878,7 +3624,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-display"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde",
@@ -3888,71 +3634,15 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-edit"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-model",
  "oxiguitar-plugin-test",
 ]
 
 [[package]]
-name = "oxiguitar-formats"
-version = "0.11.0"
-dependencies = [
- "oxiguitar-model",
- "oxiguitar-plugin",
- "oxiguitar-plugin-api",
- "quick-xml 0.42.0",
- "zip",
-]
-
-[[package]]
-name = "oxiguitar-gp-plugin"
-version = "0.11.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
- "serde_json",
-]
-
-[[package]]
-name = "oxiguitar-gp3-plugin"
-version = "0.11.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
- "serde_json",
-]
-
-[[package]]
-name = "oxiguitar-gp4-plugin"
-version = "0.11.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
- "serde_json",
-]
-
-[[package]]
-name = "oxiguitar-gp5-plugin"
-version = "0.11.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
- "serde_json",
-]
-
-[[package]]
-name = "oxiguitar-gpx-plugin"
-version = "0.11.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
- "serde_json",
-]
-
-[[package]]
 name = "oxiguitar-host"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "libloading",
  "object",
@@ -3962,7 +3652,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-layout"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-model",
@@ -3970,35 +3660,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "oxiguitar-midi-plugin"
-version = "0.11.0"
-dependencies = [
- "claxon",
- "lewton",
- "oxiguitar-plugin",
- "rustysynth",
-]
-
-[[package]]
 name = "oxiguitar-model"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-plugin-api",
 ]
 
 [[package]]
-name = "oxiguitar-nam-plugin"
-version = "0.11.0"
-dependencies = [
- "NeuralAmpModeler-rs",
- "nam-rs",
- "oxiguitar-plugin",
- "rustfft",
-]
-
-[[package]]
 name = "oxiguitar-play"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-host",
  "oxiguitar-model",
@@ -4031,7 +3701,6 @@ name = "oxiguitar-plugin-test"
 version = "1.4.0"
 dependencies = [
  "libc",
- "oxiguitar-formats",
  "oxiguitar-host",
  "oxiguitar-model",
  "oxiguitar-play",
@@ -4040,7 +3709,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-render"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "krilla",
  "oxiguitar-display",
@@ -4050,21 +3719,21 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-test-plugin"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-test-second-plugin"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-testgen"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-host",
@@ -4080,17 +3749,10 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-tools"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "oxiguitar-model",
  "oxiguitar-plugin-test",
-]
-
-[[package]]
-name = "oxiguitar-wav-plugin"
-version = "0.11.0"
-dependencies = [
- "oxiguitar-plugin",
 ]
 
 [[package]]
@@ -4261,31 +3923,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pipewire"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bde71084c4e25959d68f1ea54daa75e5ecdb338e5caf0b5510143b79baa32d5c"
-dependencies = [
- "bitflags 2.13.2",
- "libc",
- "libspa",
- "libspa-sys",
- "pipewire-sys",
- "rustix 1.1.5",
-]
-
-[[package]]
-name = "pipewire-sys"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ce653f53e63e5b93853218092ee9a8906a5d082c92f3f1db26316955dd63ce0"
-dependencies = [
- "bindgen",
- "libspa-sys",
- "system-deps",
-]
-
-[[package]]
 name = "pkg-config"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4388,15 +4025,6 @@ checksum = "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b"
 dependencies = [
  "proc-macro2",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "primal-check"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc0d895b311e3af9902528fbb8f928688abbd95872819320517cc24ca6b2bd08"
-dependencies = [
- "num-integer",
 ]
 
 [[package]]
@@ -4862,20 +4490,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustfft"
-version = "6.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21db5f9893e91f41798c88680037dba611ca6674703c1a18601b01a72c8adb89"
-dependencies = [
- "num-complex",
- "num-integer",
- "num-traits",
- "primal-check",
- "strength_reduce",
- "transpose",
-]
-
-[[package]]
 name = "rustix"
 version = "0.38.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4924,12 +4538,6 @@ dependencies = [
  "unicode-properties",
  "unicode-script",
 ]
-
-[[package]]
-name = "rustysynth"
-version = "1.3.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa4bcfea87b1b7f7a4c3eecc18934a88943b0cd3c16b69965aed94ffa4868954"
 
 [[package]]
 name = "ryu"
@@ -5044,26 +4652,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7523beb55eece201a2356bee0bbca0d1ab466c14c07703b2e0ee6d42cb0c2c"
 dependencies = [
  "serde_core",
-]
-
-[[package]]
-name = "sha2"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
-dependencies = [
- "cfg-if",
- "cpufeatures",
- "digest",
-]
-
-[[package]]
-name = "sharded-slab"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
-dependencies = [
- "lazy_static",
 ]
 
 [[package]]
@@ -5411,12 +4999,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c0e04424e733e69714ca1bbb9204c1a57f09f5493439520f9f68c132ad25eec"
 
 [[package]]
-name = "strength_reduce"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
-
-[[package]]
 name = "strict-num"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5525,19 +5107,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "system-deps"
-version = "7.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "396a35feb67335377e0251fcbc1092fc85c484bd4e3a7a54319399da127796e7"
-dependencies = [
- "cfg-expr",
- "heck",
- "pkg-config",
- "toml",
- "version-compare",
-]
-
-[[package]]
 name = "taffy"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5559,12 +5128,6 @@ dependencies = [
  "libc",
  "xattr",
 ]
-
-[[package]]
-name = "target-lexicon"
-version = "0.13.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
 
 [[package]]
 name = "tempfile"
@@ -5623,15 +5186,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.9",
-]
-
-[[package]]
-name = "thread_local"
-version = "1.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ad99c4c6d32803332c548b1af0540b357b3f5fc0be8f6c6bfe8b2e6ae784070"
-dependencies = [
- "cfg-if",
 ]
 
 [[package]]
@@ -5820,46 +5374,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
- "valuable",
-]
-
-[[package]]
-name = "tracing-log"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
-dependencies = [
- "log",
- "once_cell",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-subscriber"
-version = "0.3.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
-dependencies = [
- "matchers",
- "nu-ansi-term",
- "once_cell",
- "regex-automata",
- "sharded-slab",
- "smallvec",
- "thread_local",
- "tracing",
- "tracing-core",
- "tracing-log",
-]
-
-[[package]]
-name = "transpose"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ad61aed86bc3faea4300c7aee358b4c6d0c8d6ccc36524c96e4c92ccf26e77e"
-dependencies = [
- "num-integer",
- "strength_reduce",
 ]
 
 [[package]]
@@ -5886,12 +5400,6 @@ name = "typed-path"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ce898823d8cd0f028662d2f349694b1af0a5cc9be83f1d213a00d3147445e1e"
-
-[[package]]
-name = "typenum"
-version = "1.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "udev"
@@ -6061,18 +5569,6 @@ dependencies = [
  "num-traits",
  "wasm-bindgen",
 ]
-
-[[package]]
-name = "valuable"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
-
-[[package]]
-name = "version-compare"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03c2856837ef78f57382f06b2b8563a2f512f7185d732608fd9176cb3b8edf0e"
 
 [[package]]
 name = "version_check"
