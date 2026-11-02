@@ -881,9 +881,21 @@ end_section
 
 echo
 echo "8. The $app GitHub App"
-installation="$(get_all "user/installations?per_page=100" installations \
-    | jq --arg a "$app" 'map(select(.app_slug == $a)) | first // empty')"
-if [[ -z "$installation" ]]; then
+# gh's own login (an OAuth token) is not allowed to list GitHub App
+# installations (HTTP 403): the app is then added by hand, which is no
+# failure of the run.
+installation=""
+hidden=0
+if listed_all="$(gh api --paginate "user/installations?per_page=100" --jq '.installations[]' 2> "$work/err")"; then
+    installation="$(jq -s --arg a "$app" 'map(select(.app_slug == $a)) | first // empty' <<< "$listed_all")"
+elif grep -q 'HTTP 403' "$work/err"; then
+    hidden=1
+else
+    fail "GET user/installations" "$work/err"
+fi
+if ((hidden)); then
+    todo "add $OWNER/$name to the $app GitHub App by hand (this login may not list installations): github.com/settings/installations, Configure beside $app, Repository access, select $name, Save"
+elif [[ -z "$installation" ]]; then
     todo "install the $app GitHub App on $OWNER/$name (github.com/apps/$app), or check its slug with: gh api user/installations --jq '.installations[].app_slug'"
 else
     inst_id="$(jq -r .id <<< "$installation")"
