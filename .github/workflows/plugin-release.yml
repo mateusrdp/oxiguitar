@@ -398,8 +398,21 @@ jobs:
         env:
           VERSION: ${{ needs.meta.outputs.version }}
         run: |
-          for dir in oxp/oxp-*; do
-            target="${dir#oxp/oxp-}"
+          if compgen -G 'oxp/oxp-*' > /dev/null; then
+            dirs=(oxp/oxp-*)
+          else
+            # A single artifact (a plugin for one system with one file
+            # set, macOS) is extracted into oxp itself.
+            dirs=(oxp)
+          fi
+          for dir in "${dirs[@]}"; do
+            if [[ "$dir" == oxp ]]; then
+              first="$(ls oxp/*.oxp | head -n 1)"
+              [[ "$first" =~ -(linux|windows|macos)-([a-z0-9_]+)\.oxp$ ]] || { echo "::error::can't tell the target of $first"; exit 1; }
+              target="${BASH_REMATCH[1]}-${BASH_REMATCH[2]}"
+            else
+              target="${dir#oxp/oxp-}"
+            fi
             (cd "$dir" && zip -9 -j "$GITHUB_WORKSPACE/release/oxiguitar-${{ inputs.name }}-$VERSION-$target.zip" ./*.oxp)
           done
           (cd release && sha256sum -- * | grep -v ' SHA256SUMS$' > SHA256SUMS)
