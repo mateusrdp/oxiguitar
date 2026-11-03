@@ -20,6 +20,8 @@ The app holds the program only. Install the plugins either way:
 
 You need at least the Guitar Pro plugin, the MIDI plugin and the Core Audio plugin (the one that sends sound to your speakers).
 
+For the free recorded sound sets we recommend, the sound-set installer's releases page has `install.sh`: run it in Terminal (`bash install.sh`); it lists what it would download, from where and under which licence, and asks before it fetches anything, into your `soundfonts` folder ([Better sounds](better-sounds.md#the-sound-set-installer)).
+
 ### Why macOS asks about OxiGuitar
 
 OxiGuitar is signed without an Apple developer account (the project doesn't pay Apple for one), so macOS shows its warning the first time. See [Installing](installing.md) for **Open Anyway** in System Settings. A plugin that came in a download and is refused is cleared the same way: in Terminal,
