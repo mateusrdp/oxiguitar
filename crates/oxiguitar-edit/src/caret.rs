@@ -203,6 +203,50 @@ impl Caret {
             .unwrap_or(Ratio::ZERO)
     }
 
+    /// The beat whose free text shows at the caret's beat (#153): the
+    /// caret's own beat if it has text; otherwise the first beat of another
+    /// voice of the same bar that has text and starts while the caret's
+    /// beat lasts; otherwise the caret's own beat. Text is drawn above the
+    /// staff whichever voice holds it, so this is the text the reader sees
+    /// there. `None` where the caret is on no beat, or on an empty
+    /// placeholder with no text nearby.
+    pub fn text_beat(self, score: &Score) -> Option<Caret> {
+        use oxiguitar_model::BeatKind;
+        let voice = self.voice_in(score)?;
+        let own = voice.beats.get(self.beat)?;
+        let usable = |b: &oxiguitar_model::Beat| b.kind != BeatKind::Empty;
+        if usable(own) && !own.text.is_empty() {
+            return Some(self);
+        }
+        let start = onsets(voice).get(self.beat).copied()?;
+        let end = start
+            .checked_add(own.duration.length().unwrap_or(Ratio::ZERO))
+            .unwrap_or(start);
+        let bar = score
+            .tracks
+            .get(self.track)?
+            .staves
+            .get(self.staff)?
+            .bars
+            .get(self.bar)?;
+        for (v, other) in bar.voices.iter().enumerate() {
+            if v == self.voice {
+                continue;
+            }
+            for (i, (b, at)) in other.beats.iter().zip(onsets(other)).enumerate() {
+                let inside = at == start || (at > start && at < end);
+                if inside && usable(b) && !b.text.is_empty() {
+                    return Some(Caret {
+                        voice: v,
+                        beat: i,
+                        ..self
+                    });
+                }
+            }
+        }
+        usable(own).then_some(self)
+    }
+
     /// Right arrow: the next beat, or the next bar's first beat. Stays put
     /// at the end of the score.
     pub fn next_beat(self, score: &Score) -> Caret {
@@ -426,6 +470,52 @@ pub(crate) mod tests {
                 .collect(),
             ..Score::new()
         }
+    }
+
+    /// One bar: voice 1 four quarters; voice 2 a quarter, a half with
+    /// `text` and a quarter (#153: "Intro / Solo" in voice 2).
+    pub(crate) fn text_in_voice_2(text: &str) -> Score {
+        let (q, h) = (NoteValue::Quarter, NoteValue::Half);
+        let mut s = score(1, 1);
+        let mut second = bar(&[q, h, q]).voices.remove(0);
+        second.beats[1].text = text.into();
+        s.tracks[0].staves[0].bars[0].voices.push(second);
+        s
+    }
+
+    #[test]
+    fn the_text_shown_at_a_beat_may_be_another_voices() {
+        let s = text_in_voice_2("Intro / Solo");
+        let c = Caret::at_start(&s, 0).unwrap();
+        let on = |beat: usize| Caret { beat, ..c }.text_beat(&s).unwrap();
+        assert_eq!(on(0), c, "no text near the first beat: its own");
+        assert_eq!((on(1).voice, on(1).beat), (1, 1), "voice 2's text");
+        assert_eq!(on(2), Caret { beat: 2, ..c }, "voice 2's half began before");
+        // From voice 2 the text is its own.
+        let d = c.with_voice(&s, 1);
+        assert_eq!(
+            Caret { beat: 1, ..d }.text_beat(&s),
+            Some(Caret { beat: 1, ..d })
+        );
+        // A beat with text of its own keeps it.
+        let mut t = s.clone();
+        t.tracks[0].staves[0].bars[0].voices[0].beats[1].text = "Own".into();
+        assert_eq!(
+            Caret { beat: 1, ..c }.text_beat(&t),
+            Some(Caret { beat: 1, ..c })
+        );
+        // An empty placeholder with no text nearby has none; with text
+        // nearby, it reaches it.
+        let mut e = s.clone();
+        e.tracks[0].staves[0].bars[0].voices[0].beats[0].kind = BeatKind::Empty;
+        assert_eq!(c.text_beat(&e), None);
+        e.tracks[0].staves[0].bars[0].voices[0].beats[1].kind = BeatKind::Empty;
+        assert_eq!(
+            Caret { beat: 1, ..c }.text_beat(&e).map(|x| x.voice),
+            Some(1)
+        );
+        // The place after the last beat is on no beat.
+        assert_eq!(Caret { beat: 4, ..c }.text_beat(&s), None);
     }
 
     #[test]

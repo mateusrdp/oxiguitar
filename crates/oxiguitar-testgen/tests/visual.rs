@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Visual regression (M1): the fifty reference scores engrave to the
+//! Visual regression (M1): the fifty-one reference scores engrave to the
 //! pictures stored beside them in `fixtures/reference/`.
 //!
 //! Each reference is a Guitar Pro 7 file made by `oxiguitar-testgen`,

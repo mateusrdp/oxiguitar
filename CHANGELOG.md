@@ -8,6 +8,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 - The reusable plugin release workflow takes `suggests-deb` and `suggests-rpm`, so a plugin's `.deb` and `.rpm` can suggest other packages (the MIDI plugin suggests `oxiguitar-bettersounds-soundfonts`).
 
+### Fixed
+
+- Text that another voice holds (as Guitar Pro can save it on voice 2) can be changed and removed: Shift + T, Edit → Text… and the Beat tab's Text show and edit the text drawn at the caret's beat, whichever voice holds it (#153). New reference `beat-text-in-voice-2`.
+
 ## [0.12.1] - 2026-11-03
 
 ### Changed

@@ -402,10 +402,15 @@ pub(crate) fn fields(score: &Score, c: Caret) -> Vec<Field> {
         .and_then(|i| score.tracks.get(c.track)?.chords.get(i))
         .map_or_else(|| "None".to_owned(), |d| d.name.clone());
     out.push(button("chord", "Chord", chord));
-    let text = if beat.text.is_empty() {
+    // The text shown at this beat, whichever voice holds it (#153).
+    let shown = c
+        .text_beat(score)
+        .and_then(|t| t.voice_in(score)?.beats.get(t.beat))
+        .map_or("", |b| b.text.as_str());
+    let text = if shown.is_empty() {
         "None".to_owned()
     } else {
-        beat.text.clone()
+        shown.to_owned()
     };
     out.push(button("text", "Text", text));
     if rest {
