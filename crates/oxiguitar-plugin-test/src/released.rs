@@ -27,6 +27,23 @@ fn workspace() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
+/// The bash that runs the script. On Windows, `bash` on the PATH may be the
+/// launcher of the Windows Subsystem for Linux (`C:\Windows\System32\bash.exe`),
+/// not Git's, so Git for Windows' is taken first.
+fn bash() -> PathBuf {
+    if cfg!(windows) {
+        for var in ["ProgramFiles", "ProgramW6432"] {
+            if let Some(dir) = std::env::var_os(var) {
+                let git = Path::new(&dir).join("Git/bin/bash.exe");
+                if git.is_file() {
+                    return git;
+                }
+            }
+        }
+    }
+    PathBuf::from("bash")
+}
+
 /// A folder holding the `.oxp` files of the latest release of each plugin
 /// repository in `names` (`"guitarpro"`, `"midi"`, `"wav"`, ...), or
 /// `$OXIGUITAR_PLUGINS_DIR`. Panics, saying why, when the release can't be
@@ -39,7 +56,7 @@ pub fn folder(names: &[&str]) -> PathBuf {
     let mut key = names.to_vec();
     key.sort_unstable();
     let out = workspace().join("target/released").join(key.join("+"));
-    let output = Command::new("bash")
+    let output = Command::new(bash())
         .arg(&script)
         .arg(&out)
         .args(names)

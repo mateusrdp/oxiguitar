@@ -18,7 +18,7 @@
 #                              limit without one is 60 requests an hour)
 #   OXIGUITAR_RELEASES_FRESH   seconds an earlier download of the same names
 #                              counts as current (default 600; 0 always asks)
-# Needs curl and python3.
+# Needs curl and python.
 set -euo pipefail
 trap 'echo "released-plugins.sh line $LINENO: $BASH_COMMAND" >&2' ERR
 
@@ -28,11 +28,14 @@ shift
 fresh="${OXIGUITAR_RELEASES_FRESH:-600}"
 token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
 
+# Python is python3 on Linux and macOS, and often only python on Windows.
+if command -v python3 >/dev/null 2>&1; then py=python3; else py=python; fi
+
 mkdir -p "$out"
 stamp="$out/.stamp"
 want="$*"
 if [[ "$fresh" -gt 0 && -f "$stamp" && "$(head -n 1 "$stamp")" == "$want" ]]; then
-    age=$(($(date +%s) - $(python3 -c 'import os,sys; print(int(os.path.getmtime(sys.argv[1])))' "$stamp")))
+    age=$(($(date +%s) - $("$py" -c 'import os,sys; print(int(os.path.getmtime(sys.argv[1])))' "$stamp")))
     if [[ $age -lt $fresh ]]; then
         tail -n +2 "$stamp" >&2
         echo "$out/files"
@@ -62,7 +65,7 @@ api() {
     curl -fsSL --retry 5 "${headers[@]}" "$1"
 }
 sha256() {
-    python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
+    "$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
 }
 
 work="$(mktemp -d)"
@@ -75,7 +78,7 @@ for name in "$@"; do
     # The latest release that is not a draft (a pre-release counts while the
     # plugins are 0.x).
     tag="$(api "https://api.github.com/repos/$repo/releases?per_page=10" \
-        | python3 -c 'import json,sys
+        | "$py" -c 'import json,sys
 for r in json.load(sys.stdin):
     if not r["draft"]:
         print(r["tag_name"]); break')"
@@ -88,7 +91,7 @@ for r in json.load(sys.stdin):
     wanted="$(awk -v n="$zip" '$2 == n || $2 == "*" n { print $1 }' "$work/SHA256SUMS")"
     [[ -n "$wanted" && "$wanted" == "$(sha256 "$work/$zip")" ]] \
         || { echo "released-plugins.sh: $zip does not match SHA256SUMS" >&2; exit 1; }
-    python3 - "$work/$zip" "$out/files" <<'PY'
+    "$py" - "$work/$zip" "$out/files" <<'PY'
 import sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as z:
     for n in z.namelist():
