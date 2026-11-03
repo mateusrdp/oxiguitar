@@ -4,6 +4,12 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-11-03
+
+### Changed
+
+- The `.deb` and `.rpm` packages of `oxiguitar` and `oxiguitar-x11` also recommend `oxiguitar-alsa` and `oxiguitar-pipewire`, the audio output plugins: without one OxiGuitar has no way to play sound.
+
 ## [0.12.0] - 2026-11-02
 
 **The plugins now live in repositories of their own** (#165), each with releases, packages and updates of its own: [oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi), [oxiguitar-nam](https://github.com/mateusrdp/oxiguitar-nam), [oxiguitar-wav](https://github.com/mateusrdp/oxiguitar-wav) and the audio outputs [oxiguitar-alsa](https://github.com/mateusrdp/oxiguitar-alsa), [oxiguitar-pipewire](https://github.com/mateusrdp/oxiguitar-pipewire), [oxiguitar-wasapi](https://github.com/mateusrdp/oxiguitar-wasapi) and [oxiguitar-coreaudio](https://github.com/mateusrdp/oxiguitar-coreaudio). Plugin interface 1.4, frozen in 0.11.0, is unchanged: the plugins of 0.1.0 work with this release as they are.

@@ -307,10 +307,29 @@ jobs:
           "${{ github.event.pull_request.base.sha }}"
           "${{ github.event.pull_request.head.sha }}"
 
+  release-script:
+    name: Release script
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      # scripts/release/bump.sh is what the Release workflow (oxiguitar-packages)
+      # runs; here it prepares a made-up release on a throwaway change, so a
+      # new place that names the version fails this check, not a release.
+      - run: |
+          python3 - <<'PY'
+          p = "CHANGELOG.md"
+          s = open(p, encoding="utf-8").read()
+          open(p, "w", encoding="utf-8").write(s.replace("## [Unreleased]\n", "## [Unreleased]\n\n- A change.\n", 1))
+          PY
+          scripts/release/bump.sh 99.0.0 2030-01-01
+          git diff --stat
+          git diff --quiet -- Cargo.toml && { echo "Cargo.toml was not changed"; exit 1; } || true
+          cargo metadata --locked --offline --format-version 1 > /dev/null 2>&1 || cargo metadata --locked --format-version 1 > /dev/null
+
   ci-success:
     name: ci-success
     if: always()
-    needs: [fmt, lint, test, template, speed, deny, no-network, dco]
+    needs: [fmt, lint, test, template, speed, deny, no-network, release-script, dco]
     runs-on: ubuntu-24.04
     steps:
       - name: Every job passed

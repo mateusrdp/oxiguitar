@@ -219,7 +219,7 @@ mod tests {
         assert_eq!(
             names,
             [
-                ("Test plugin", "0.12.0", "a-test.oxp"),
+                ("Test plugin", env!("CARGO_PKG_VERSION"), "a-test.oxp"),
                 ("junk.oxp", "", "junk.oxp"),
             ]
         );
