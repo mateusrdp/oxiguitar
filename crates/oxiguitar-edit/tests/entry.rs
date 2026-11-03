@@ -292,6 +292,7 @@ fn commands() -> Vec<Command> {
             keep_pitches: true,
             plugins: Default::default(),
             effects: Vec::new(),
+            play_chords: false,
         })),
         Command::TrackProperties(Box::new(oxiguitar_edit::TrackSettings {
             name: "Seven".into(),
@@ -312,6 +313,7 @@ fn commands() -> Vec<Command> {
             keep_pitches: false,
             plugins: Default::default(),
             effects: Vec::new(),
+            play_chords: false,
         })),
         Command::Transpose(oxiguitar_edit::Transposition {
             amount: 3,

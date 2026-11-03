@@ -295,6 +295,7 @@ impl Document {
                 for (track, entry) in score.tracks.iter_mut().zip(settled) {
                     track.plugins = entry.plugins;
                     track.effects = entry.effects;
+                    track.play_chords = entry.chords;
                 }
                 None
             }
@@ -705,6 +706,7 @@ impl Document {
                     name: t.name.clone(),
                     plugins: t.plugins.clone(),
                     effects: t.effects.clone(),
+                    chords: t.play_chords,
                 })
                 .collect(),
         };

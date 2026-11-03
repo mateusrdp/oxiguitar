@@ -13,7 +13,7 @@
 //!   "oxiguitar": 1,
 //!   "tracks": [
 //!     { "name": "Lead Guitar", "plugins": { "oxiguitar.nam": { "model": "5150.nam" } },
-//!       "effects": ["oxiguitar.eq", "oxiguitar.nam"] }
+//!       "effects": ["oxiguitar.eq", "oxiguitar.nam"], "chords": true }
 //!   ]
 //! }
 //! ```
@@ -22,7 +22,8 @@
 //! the settings of every plugin that keeps some, by plugin id, and, when
 //! the user ordered them in the track dialog, the order its effects run in
 //! by plugin id (#152; absent for the default order, and ignored by an
-//! older OxiGuitar). When the
+//! older OxiGuitar), and `"chords": true` when its chord diagrams are
+//! played (#151). When the
 //! score was changed elsewhere (tracks added, removed or moved in another
 //! program), a track takes the entry at its own place if the names agree,
 //! else the first unused entry of its name, else none.
@@ -57,6 +58,8 @@ pub struct TrackEntry {
     /// The order of the track's effects, by plugin id: empty for the
     /// default order.
     pub effects: Vec<String>,
+    /// Whether the track's chord diagrams are played.
+    pub chords: bool,
 }
 
 /// What a sidecar holds.
@@ -71,7 +74,7 @@ impl Sidecar {
     pub fn is_empty(&self) -> bool {
         self.tracks
             .iter()
-            .all(|t| t.plugins.is_empty() && t.effects.is_empty())
+            .all(|t| t.plugins.is_empty() && t.effects.is_empty() && !t.chords)
     }
 
     /// Reads the sidecar of the score at `score`: `Ok(None)` when it has
@@ -155,6 +158,7 @@ impl Sidecar {
                     name: name.to_owned(),
                     plugins,
                     effects,
+                    chords: t.get("chords").and_then(Value::as_bool) == Some(true),
                 }
             })
             .collect();
@@ -180,6 +184,9 @@ impl Sidecar {
                 let mut entry = serde_json::json!({ "name": t.name, "plugins": plugins });
                 if !t.effects.is_empty() {
                     entry["effects"] = serde_json::json!(t.effects);
+                }
+                if t.chords {
+                    entry["chords"] = serde_json::json!(true);
                 }
                 entry
             })
@@ -254,6 +261,7 @@ mod tests {
                 .map(|(a, b)| ((*a).to_owned(), (*b).to_owned()))
                 .collect(),
             effects: Vec::new(),
+            chords: false,
         }
     }
 
@@ -396,5 +404,21 @@ mod tests {
         sidecar.adopt(&[("old.amp".into(), "new.amp".into())]);
         assert_eq!(sidecar.tracks[0].effects, ["x.eq", "new.amp", "old.amp"]);
         assert_eq!(sidecar.tracks[1].effects, ["new.amp", "old.amp"]);
+    }
+
+    #[test]
+    fn played_chords_are_kept_only_when_on() {
+        let mut on = entry("Rhythm", &[]);
+        on.chords = true;
+        let s = Sidecar {
+            tracks: vec![on.clone(), entry("Lead", &[])],
+        };
+        let text = s.to_text();
+        assert_eq!(text.matches("\"chords\": true").count(), 1, "{text}");
+        assert_eq!(Sidecar::parse(&text).unwrap(), s);
+        assert!(!s.is_empty());
+        assert_eq!(s.settle(&["Rhythm"])[0], on);
+        let odd = r#"{"oxiguitar": 1, "tracks": [{"name": "A", "chords": "yes"}]}"#;
+        assert!(!Sidecar::parse(odd).unwrap().tracks[0].chords);
     }
 }

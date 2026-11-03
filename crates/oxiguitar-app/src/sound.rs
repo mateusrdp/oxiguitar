@@ -253,7 +253,8 @@ impl Thread {
                 }
             }
         }
-        let routes: Vec<Option<Route>> = (0..score.tracks.len())
+        // Each track's route, then each one's chord voice's (#151).
+        let routes: Vec<Option<Route>> = (0..score.tracks.len() * 2)
             .map(|t| self.routes.get(t).copied().flatten())
             .collect();
         let schedule = Schedule::new(&timeline, &routes, self.sources);
