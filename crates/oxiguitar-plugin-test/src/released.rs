@@ -60,6 +60,7 @@ pub fn folder(names: &[&str]) -> PathBuf {
         .arg(&script)
         .arg(&out)
         .args(names)
+        .env("OXIGUITAR_RELEASES_ARCH", std::env::consts::ARCH)
         .output()
         .unwrap_or_else(|e| panic!("can't run {}: {e}", script.display()));
     // The versions used go to the test's output.

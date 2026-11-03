@@ -16,6 +16,8 @@
 # Environment:
 #   GH_TOKEN or GITHUB_TOKEN   used for the GitHub API when set (the rate
 #                              limit without one is 60 requests an hour)
+#   OXIGUITAR_RELEASES_ARCH    x86_64 or aarch64: the architecture of the
+#                              plugins to take (default: this machine's)
 #   OXIGUITAR_RELEASES_FRESH   seconds an earlier download of the same names
 #                              counts as current (default 600; 0 always asks)
 # Needs curl and python.
@@ -48,7 +50,10 @@ case "$(uname -s)" in
     Darwin) system=macos ;;
     *) system=windows ;;
 esac
-case "$(uname -m)" in
+# OXIGUITAR_RELEASES_ARCH (x86_64 or aarch64) is set by the tests: Git for
+# Windows' bash runs emulated on ARM64 and reports x86_64 there, while the
+# tests, and so the plugins they load, are native.
+case "${OXIGUITAR_RELEASES_ARCH:-$(uname -m)}" in
     x86_64 | AMD64) arch=x86_64 ;;
     aarch64 | arm64) arch=aarch64 ;;
     *) arch="$(uname -m)" ;;
