@@ -103,6 +103,14 @@ on:
         description: "Requires of the .rpm, such as oxiguitar-midi >= 1.0.0"
         type: string
         default: ""
+      suggests-deb:
+        description: "Suggests of the .deb, such as oxiguitar-bettersounds-soundfonts"
+        type: string
+        default: ""
+      suggests-rpm:
+        description: "Suggests of the .rpm, such as oxiguitar-bettersounds-soundfonts"
+        type: string
+        default: ""
       tools-ref:
         description: "The tag (or commit) of mateusrdp/oxiguitar the scripts come from"
         type: string
@@ -230,6 +238,8 @@ jobs:
       PLUGIN_LICENSE: ${{ inputs.license }}
       PLUGIN_DEPENDS_DEB: ${{ inputs.depends-deb }}
       PLUGIN_DEPENDS_RPM: ${{ inputs.depends-rpm }}
+      PLUGIN_SUGGESTS_DEB: ${{ inputs.suggests-deb }}
+      PLUGIN_SUGGESTS_RPM: ${{ inputs.suggests-rpm }}
     steps:
       - uses: actions/checkout@v5
         with:
