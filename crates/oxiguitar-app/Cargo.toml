@@ -75,8 +75,8 @@ rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
 [dev-dependencies]
 # The speed budget's 300-bar, 8-track score (src/speed.rs).
 oxiguitar-testgen.workspace = true
-# Our format plugins, built as .oxp files for the tests (src/test_support.rs).
-oxiguitar-plugin-test.workspace = true
+# The released format plugins and the test plugin, for the tests (src/test_support.rs).
+oxiguitar-plugin-test = { workspace = true, features = ["released"] }
 
 [build-dependencies]
 # With Slint (see above).

@@ -27,7 +27,7 @@ fn setup() -> (FontSet, Metadata) {
 
 fn read(path: &Path) -> Score {
     let data = std::fs::read(path).unwrap();
-    oxiguitar_formats::read(&data)
+    oxiguitar_plugin_test::released::guitar_pro::read(&data)
         .unwrap_or_else(|e| panic!("{}: {e}", path.display()))
         .score
 }
@@ -312,7 +312,7 @@ fn corpus_engraves() {
         let Ok(data) = std::fs::read(&path) else {
             continue;
         };
-        let Ok(imported) = oxiguitar_formats::read(&data) else {
+        let Ok(imported) = oxiguitar_plugin_test::released::guitar_pro::read(&data) else {
             continue;
         };
         let name = path

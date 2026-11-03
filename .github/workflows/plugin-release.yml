@@ -266,7 +266,7 @@ jobs:
       - name: Test the .rpm in Fedora
         run: |
           docker run --rm -v "$PWD/packages:/p" -e DESTS fedora:latest bash -euxc '
-            rpm -i --nodeps /p/*.rpm
+            rpm -i --nodeps --nosignature /p/*.rpm
             for f in $DESTS; do test -s /usr/lib/oxiguitar/plugins/$f; done
             rpm -ql oxiguitar-${{ inputs.name }}
             rpm -e --nodeps oxiguitar-${{ inputs.name }}

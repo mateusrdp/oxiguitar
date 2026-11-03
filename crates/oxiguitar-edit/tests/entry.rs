@@ -377,7 +377,7 @@ fn fixtures() -> Vec<PathBuf> {
 }
 
 fn read(path: &Path) -> Option<Score> {
-    oxiguitar_formats::read(&std::fs::read(path).unwrap())
+    oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(path).unwrap())
         .ok()
         .map(|r| r.score)
 }
@@ -490,8 +490,10 @@ fn random_edits(
         let shown = format!("{command:?} at {caret:?} sel {selection:?}");
         if let Some(e) = apply(score, history, caret, selection, command) {
             if std::env::var("TRACE").is_ok() {
-                let w = oxiguitar_formats::write_gp(score).unwrap();
-                let back = oxiguitar_formats::read(&w.data).unwrap().score;
+                let w = oxiguitar_plugin_test::released::guitar_pro::write_gp(score).unwrap();
+                let back = oxiguitar_plugin_test::released::guitar_pro::read(&w.data)
+                    .unwrap()
+                    .score;
                 if back != *score || w.losses.warning_count() > 0 {
                     panic!("after {shown}: {:?}", w.losses.entries());
                 }
@@ -540,16 +542,22 @@ fn every_edit_is_saved_and_read_back_equal() {
         };
         // Start from the score as a .gp file holds it, which comes back
         // exactly; edits must keep it so.
-        let before = oxiguitar_formats::write_gp(&score).unwrap();
+        let before = oxiguitar_plugin_test::released::guitar_pro::write_gp(&score).unwrap();
         if before.losses.warning_count() > 0 {
-            score = oxiguitar_formats::read(&before.data).unwrap().score;
+            score = oxiguitar_plugin_test::released::guitar_pro::read(&before.data)
+                .unwrap()
+                .score;
         }
-        score = oxiguitar_formats::read(&oxiguitar_formats::write_gp(&score).unwrap().data)
-            .unwrap()
-            .score;
+        score = oxiguitar_plugin_test::released::guitar_pro::read(
+            &oxiguitar_plugin_test::released::guitar_pro::write_gp(&score)
+                .unwrap()
+                .data,
+        )
+        .unwrap()
+        .score;
         let mut history = History::new();
         random_edits(&mut score, &mut history, 0x51ed_270b + i as u64, 600);
-        let written = oxiguitar_formats::write_gp(&score).unwrap();
+        let written = oxiguitar_plugin_test::released::guitar_pro::write_gp(&score).unwrap();
         assert_eq!(
             written.losses.warning_count(),
             0,
@@ -557,7 +565,9 @@ fn every_edit_is_saved_and_read_back_equal() {
             path.display(),
             written.losses.entries()
         );
-        let back = oxiguitar_formats::read(&written.data).unwrap().score;
+        let back = oxiguitar_plugin_test::released::guitar_pro::read(&written.data)
+            .unwrap()
+            .score;
         if back != score {
             for (t, (a, b)) in score.tracks.iter().zip(&back.tracks).enumerate() {
                 for (s, (x, y)) in a.staves.iter().zip(&b.staves).enumerate() {
@@ -673,16 +683,20 @@ fn every_edit_is_saved_as_gp5_and_read_back_equal() {
             continue;
         };
         // Start from the score as a .gp5 file holds it, which comes back
-        // exactly (crates/oxiguitar-formats/tests/gp5_round_trip.rs).
-        let Ok(first) = oxiguitar_formats::write_gp5(&score) else {
+        // exactly (tests/gp5_round_trip.rs in oxiguitar-guitarpro).
+        let Ok(first) = oxiguitar_plugin_test::released::guitar_pro::write_gp5(&score) else {
             continue;
         };
-        let mut score = oxiguitar_formats::read(&first.data).unwrap().score;
+        let mut score = oxiguitar_plugin_test::released::guitar_pro::read(&first.data)
+            .unwrap()
+            .score;
         let mut history = History::new();
         random_edits(&mut score, &mut history, 0x3b9a_ca07 + i as u64, steps);
 
-        let written = oxiguitar_formats::write_gp5(&score).unwrap();
-        let back = oxiguitar_formats::read(&written.data).unwrap().score;
+        let written = oxiguitar_plugin_test::released::guitar_pro::write_gp5(&score).unwrap();
+        let back = oxiguitar_plugin_test::released::guitar_pro::read(&written.data)
+            .unwrap()
+            .score;
         if std::env::var("GP5_TRACE").is_ok() {
             for e in written.losses.entries() {
                 eprintln!("{}: {:?}", path.display(), e.message);
@@ -700,7 +714,7 @@ fn every_edit_is_saved_as_gp5_and_read_back_equal() {
             exact += 1;
         }
         // Whatever it lost, what was read back is held as it is.
-        let again = oxiguitar_formats::write_gp5(&back).unwrap();
+        let again = oxiguitar_plugin_test::released::guitar_pro::write_gp5(&back).unwrap();
         assert_eq!(
             again.losses.warning_count(),
             0,
@@ -708,7 +722,9 @@ fn every_edit_is_saved_as_gp5_and_read_back_equal() {
             path.display(),
             again.losses.entries()
         );
-        let third = oxiguitar_formats::read(&again.data).unwrap().score;
+        let third = oxiguitar_plugin_test::released::guitar_pro::read(&again.data)
+            .unwrap()
+            .score;
         let (x, y) = (notes_of(&back), notes_of(&third));
         assert!(
             x == y,

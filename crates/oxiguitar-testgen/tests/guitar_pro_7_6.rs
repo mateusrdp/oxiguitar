@@ -37,17 +37,16 @@ fn guitar_pro_7_6_keeps_our_songs() {
         let Ok(gpif) = std::fs::read_to_string(dir.join(format!("{}.gpif", r.name))) else {
             continue;
         };
-        let mut ours = oxiguitar_formats::read(&oxiguitar_testgen::to_gp(&r.song))
-            .expect("our file reads")
-            .score;
-        let theirs = oxiguitar_formats::read(&pack(&gpif, &part_configuration(&r.song)))
-            .unwrap_or_else(|e| panic!("{}: {e}", r.name));
-        assert!(
-            theirs.log.is_empty(),
-            "{}: {:?}",
-            r.name,
-            theirs.log.entries()
-        );
+        let mut ours =
+            oxiguitar_plugin_test::released::guitar_pro::read(&oxiguitar_testgen::to_gp(&r.song))
+                .expect("our file reads")
+                .score;
+        let theirs = oxiguitar_plugin_test::released::guitar_pro::read(&pack(
+            &gpif,
+            &part_configuration(&r.song),
+        ))
+        .unwrap_or_else(|e| panic!("{}: {e}", r.name));
+        assert!(theirs.log.is_empty(), "{}: {:?}", r.name, theirs.log);
         // What Guitar Pro 7.6 changes (above).
         ours.tempo_label.clear();
         // The re-saves are older than the instructions saying what each
@@ -128,10 +127,11 @@ fn our_writer_writes_what_guitar_pro_7_6_does() {
         let Ok(gpif) = std::fs::read_to_string(dir.join(format!("{}.gpif", r.name))) else {
             continue;
         };
-        let song = oxiguitar_formats::read(&oxiguitar_testgen::to_gp(&r.song))
-            .unwrap()
-            .score;
-        let written = oxiguitar_formats::write_gp(&song).unwrap();
+        let song =
+            oxiguitar_plugin_test::released::guitar_pro::read(&oxiguitar_testgen::to_gp(&r.song))
+                .unwrap()
+                .score;
+        let written = oxiguitar_plugin_test::released::guitar_pro::write_gp(&song).unwrap();
         assert_eq!(written.losses.warning_count(), 0, "{}", r.name);
         let mut ours_xml = String::new();
         zip::ZipArchive::new(std::io::Cursor::new(&written.data))
@@ -153,10 +153,15 @@ fn our_writer_writes_what_guitar_pro_7_6_does() {
             r.name
         );
 
-        let mut ours = oxiguitar_formats::read(&written.data).unwrap().score;
-        let theirs = oxiguitar_formats::read(&pack(&gpif, &part_configuration(&r.song)))
+        let mut ours = oxiguitar_plugin_test::released::guitar_pro::read(&written.data)
             .unwrap()
             .score;
+        let theirs = oxiguitar_plugin_test::released::guitar_pro::read(&pack(
+            &gpif,
+            &part_configuration(&r.song),
+        ))
+        .unwrap()
+        .score;
         ours.tempo_label.clear();
         ours.info.instructions.clear();
         for (o, t) in ours.tracks.iter_mut().zip(&theirs.tracks) {

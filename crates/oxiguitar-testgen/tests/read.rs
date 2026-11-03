@@ -10,11 +10,12 @@ use oxiguitar_testgen::{band_song, to_gp};
 #[test]
 fn the_band_song_reads_back_whole() {
     let song = band_song(48);
-    let imported = oxiguitar_formats::read(&to_gp(&song)).expect("the reader opens it");
+    let imported = oxiguitar_plugin_test::released::guitar_pro::read(&to_gp(&song))
+        .expect("the reader opens it");
     assert!(
         imported.log.is_empty(),
         "the reader had something to say: {:?}",
-        imported.log.entries()
+        imported.log
     );
     let score = &imported.score;
     assert_eq!(score.master_bars.len(), 48);

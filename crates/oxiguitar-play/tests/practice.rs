@@ -170,7 +170,9 @@ fn the_practice_tools_work_on_every_reference_song() {
     for path in all {
         let name = path.file_name().unwrap().to_string_lossy().into_owned();
         let data = std::fs::read(&path).unwrap();
-        let score = oxiguitar_formats::read(&data).unwrap().score;
+        let score = oxiguitar_plugin_test::released::guitar_pro::read(&data)
+            .unwrap()
+            .score;
         let timeline = Timeline::new(&score);
         let bars = bars_with_notes(&timeline);
         if bars.is_empty() {

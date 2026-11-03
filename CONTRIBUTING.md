@@ -99,16 +99,16 @@ When you check them:
 - A file that tests how OxiGuitar shows a score (its layouts, paper size, dark page, the tracks shown) looks ordinary elsewhere. Its instructions say so.
 - Known differences that are other programs' bugs, not ours, are listed in `fixtures/guitar-pro-check/README.md`.
 
-After changing the writer or the reference songs, run `scripts/guitar-pro-check.sh` to write the files again; a test (`cargo test -p oxiguitar-testgen --test guitar_pro_check`) fails until they match the writer. Every test build also attaches them as "guitar-pro-check".
+After changing the writer or the reference songs, run `scripts/guitar-pro-check.sh` in [oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro) (the Guitar Pro plugins live there since #165) to write the files again; a test here (`cargo test -p oxiguitar-testgen --test guitar_pro_check`, which reads and writes through the latest released plugin) fails until they match the writer.
 
 ## Adding a file format
 
-Every format is its own plugin; the core recognises no format itself (docs/design/plugins.md). The Guitar Pro plugins in `plugins/gp3` … `plugins/gp` show the shape.
+Every format is its own plugin, and every plugin has a repository of its own (#165); the core recognises no format itself (docs/design/plugins.md). `github.com/mateusrdp/oxiguitar-guitarpro` shows the shape, and `docs/plugins/template/` is a starting point.
 
 1. Write down what you learn about the format in `docs/formats/<format>.md`.
-2. Add a reader to `oxiguitar-formats` behind a Cargo feature of its own, so its plugin carries only its code. It recognises the format from its contents (FMT-6), never from the extension, fills the score model, and records anything it cannot represent in the import log (FMT-2).
-3. Add the plugin: `plugins/NAME/`, a crate `oxiguitar-NAME-plugin` with the feature `oxp = []`, depending on `oxiguitar-formats` with only that reader's feature and `plugin`, and a `manifest.json` whose signatures recognise the format without loading the plugin (the host picks a plugin by them; the extensions only decide which report a refused file asks for). Add it to `OURS` in `crates/oxiguitar-plugin-test/src/lib.rs`; `scripts/build-plugins.sh` finds it by its folder.
-4. Add small public fixtures and tests; `cargo test -p oxiguitar-plugin-test --test ours` checks the plugin against the contract and the in-process reader. Run the private corpus locally if you have it.
+2. Write the reader in the plugin's repository. It recognises the format from its contents (FMT-6), never from the extension, fills the score model, and records anything it cannot represent in the import log (FMT-2).
+3. Make the plugin from the template: a crate with the feature `oxp = []`, depending on the SDK (a git dependency on a tag of this repository), and a `manifest.json` whose signatures recognise the format without loading the plugin (the host picks a plugin by them; the extensions only decide which report a refused file asks for).
+4. Add small public fixtures and tests; `oxiguitar_plugin_test` checks the plugin against the contract. Run the private corpus locally if you have it.
 5. Writers come with round-trip tests (FMT-4) and loss warnings for lossy formats (FMT-3).
 6. A new fuzz target for the reader, and the plugin in `fuzz/fuzz_targets/plugin_dispatch.rs`.
 7. If the plugin joins the basic set we publish, it goes into every download by itself (the Windows zip, the .dmg's app, the AppImage, and the `oxiguitar-plugins-basic` .deb and .rpm); raise the plugin counts the release workflow checks (`.github/workflows/release.yml`) and add it to the list in `scripts/package/plugins-README.txt`. Releases attach no plugin on its own (docs/design/plugins.md, "Distribution").

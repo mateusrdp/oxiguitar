@@ -89,12 +89,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 
 [[package]]
-name = "cfg_aliases"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
-
-[[package]]
 name = "cobs"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -309,18 +303,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nix"
-version = "0.31.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
-dependencies = [
- "bitflags",
- "cfg-if",
- "cfg_aliases",
- "libc",
-]
-
-[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -331,7 +313,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-display"
-version = "0.2.0"
+version = "0.11.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde",
@@ -340,83 +322,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "oxiguitar-formats"
-version = "0.2.0"
-dependencies = [
- "oxiguitar-model",
- "oxiguitar-plugin",
- "quick-xml",
- "zip",
-]
-
-[[package]]
 name = "oxiguitar-fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
  "oxiguitar-display",
- "oxiguitar-formats",
- "oxiguitar-gp-plugin",
- "oxiguitar-gp3-plugin",
- "oxiguitar-gp4-plugin",
- "oxiguitar-gp5-plugin",
- "oxiguitar-gpx-plugin",
  "oxiguitar-model",
  "oxiguitar-plugin",
  "oxiguitar-render",
- "zip",
-]
-
-[[package]]
-name = "oxiguitar-gp-plugin"
-version = "0.2.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
-]
-
-[[package]]
-name = "oxiguitar-gp3-plugin"
-version = "0.2.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
-]
-
-[[package]]
-name = "oxiguitar-gp4-plugin"
-version = "0.2.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
-]
-
-[[package]]
-name = "oxiguitar-gp5-plugin"
-version = "0.2.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
-]
-
-[[package]]
-name = "oxiguitar-gpx-plugin"
-version = "0.2.0"
-dependencies = [
- "oxiguitar-formats",
- "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-model"
-version = "0.2.0"
+version = "0.11.0"
 dependencies = [
  "oxiguitar-plugin-api",
 ]
 
 [[package]]
 name = "oxiguitar-plugin"
-version = "0.2.0"
+version = "1.4.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde_json",
@@ -424,7 +349,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-api"
-version = "0.2.0"
+version = "1.4.0"
 dependencies = [
  "postcard",
  "serde",
@@ -433,7 +358,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-render"
-version = "0.2.0"
+version = "0.11.0"
 dependencies = [
  "krilla",
  "oxiguitar-display",
@@ -494,15 +419,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.42.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41b1177fdf999d2321d3fb46ff47159d9c1fb9ad66a4879f8c50a0b504615e9b"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
@@ -712,12 +628,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typed-path"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e28f89b80c87b8fb0cf04ab448d5dd0dd0ade2f8891bae878de66a75a28600e"
-
-[[package]]
 name = "unicode-ident"
 version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -784,20 +694,6 @@ dependencies = [
  "quote",
  "syn",
  "synstructure",
-]
-
-[[package]]
-name = "zip"
-version = "9.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a954114b47a54df49f83d2722814e86b23d4bb1b54a1b90fb7d92b41619ddc22"
-dependencies = [
- "crc32fast",
- "flate2",
- "indexmap",
- "memchr",
- "nix",
- "typed-path",
 ]
 
 [[package]]

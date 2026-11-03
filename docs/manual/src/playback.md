@@ -42,7 +42,7 @@ However loud a song is, OxiGuitar never lets the sound go past just under full s
 The controls are greyed out when nothing can play the score, and the line at the bottom of the window says why and what to get:
 
 - **No sound set**: put one in your `soundfonts` folder, or install one with your package manager ([Better sounds](better-sounds.md)).
-- **No instrument or no audio output**: the basic plugins hold both (the MIDI plugin, and an audio output for your system). See [Settings and plugins](plugins.md).
+- **No instrument or no audio output**: the MIDI plugin and an audio output for your system are plugins to install. See [Settings and plugins](plugins.md).
 
 Sounds are made ready when a file opens, so Play starts at once. A SoundFont 3 set is decoded the first time it is used, which can take a few seconds.
 

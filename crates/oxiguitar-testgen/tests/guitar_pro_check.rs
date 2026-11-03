@@ -19,7 +19,7 @@ fn root() -> PathBuf {
 
 fn read(path: &Path) -> oxiguitar_model::Score {
     let data = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
-    oxiguitar_formats::read(&data)
+    oxiguitar_plugin_test::released::guitar_pro::read(&data)
         .unwrap_or_else(|e| panic!("{}: {e}", path.display()))
         .score
 }
@@ -55,14 +55,19 @@ fn the_files_for_guitar_pro_are_current() {
     assert_eq!(kept("gp5"), sources.len(), "one .gp5 per source, no others");
     let mut stale = Vec::new();
     for (source, name) in &sources {
-        let written = oxiguitar_formats::write_gp(&read(source)).unwrap();
-        let now = oxiguitar_formats::read(&written.data).unwrap().score;
+        let written = oxiguitar_plugin_test::released::guitar_pro::write_gp(&read(source)).unwrap();
+        let now = oxiguitar_plugin_test::released::guitar_pro::read(&written.data)
+            .unwrap()
+            .score;
         if read(&check.join(name)) != now {
             stale.push(name.clone());
         }
         let name5 = format!("{}5", name);
-        let written = oxiguitar_formats::write_gp5(&read(source)).unwrap();
-        let now = oxiguitar_formats::read(&written.data).unwrap().score;
+        let written =
+            oxiguitar_plugin_test::released::guitar_pro::write_gp5(&read(source)).unwrap();
+        let now = oxiguitar_plugin_test::released::guitar_pro::read(&written.data)
+            .unwrap()
+            .score;
         if read(&check.join(&name5)) != now {
             stale.push(name5);
         }

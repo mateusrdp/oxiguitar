@@ -4,9 +4,20 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-02
+
+**The plugins now live in repositories of their own** (#165), each with releases, packages and updates of its own: [oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi), [oxiguitar-nam](https://github.com/mateusrdp/oxiguitar-nam), [oxiguitar-wav](https://github.com/mateusrdp/oxiguitar-wav) and the audio outputs [oxiguitar-alsa](https://github.com/mateusrdp/oxiguitar-alsa), [oxiguitar-pipewire](https://github.com/mateusrdp/oxiguitar-pipewire), [oxiguitar-wasapi](https://github.com/mateusrdp/oxiguitar-wasapi) and [oxiguitar-coreaudio](https://github.com/mateusrdp/oxiguitar-coreaudio). Plugin interface 1.4, frozen in 0.11.0, is unchanged: the plugins of 0.1.0 work with this release as they are.
+
 ### Changed
 
 - `plugin-release.yml` and the packaging scripts take several plugin files for one package, as the Guitar Pro plugins need (#165): the build script writes a `FILE-VERSION-SYSTEM-ARCH.oxp` for each, and the zip, the `.deb`, the `.rpm`, the Windows installer and the macOS `.pkg` hold all of them. A new `package` input names the crate whose version is the release's. The trial run builds two test plugins to try it.
+- The core's tests read Guitar Pro files, play and export through the latest releases of the plugins (`scripts/released-plugins.sh`; `OXIGUITAR_PLUGINS_DIR` points them at a local build instead). The tests may download our own releases; the program never downloads anything.
+- The `.deb` and `.rpm` recommend `oxiguitar-guitarpro` and `oxiguitar-midi` and suggest `oxiguitar-nam`, instead of depending on `oxiguitar-plugins-basic`.
+
+### Removed
+
+- **The plugins are no longer part of OxiGuitar's downloads.** The Windows zip, the macOS app, the AppImage and the `.deb` and `.rpm` hold the program alone, and `oxiguitar-plugins-basic` is gone. Without a Guitar Pro plugin and a MIDI plugin, OxiGuitar can open and play nothing (the startup check says so). Install them from the [apt and dnf repositories](https://github.com/mateusrdp/oxiguitar-packages) (`apt install oxiguitar` brings `oxiguitar-guitarpro` and `oxiguitar-midi`, and suggests `oxiguitar-nam`), from the Homebrew tap, or from the plugins' releases (a zip with the plugin file alone, or an installer), as the manual's install page says.
+- The `oxiguitar-formats` crate and the plugins' source (`plugins/`) moved with them; only the test plugins stay, for the contract suite and the app's tests.
 
 ## [0.11.0] - 2026-11-01
 

@@ -64,13 +64,15 @@ How can you help, you ask?
 | Linux | the AppImage: distributions with glibc 2.35 or newer (Debian 12 and later, Ubuntu 22.04+, Fedora 36+); the .deb and .rpm: glibc 2.39 or newer (Debian trixie and sid, Ubuntu 24.04+, Fedora 40+) | x86\_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
-Each [release](https://github.com/mateusrdp/oxiguitar/releases) has one download for your system, and it comes with the basic plugins, which open Guitar Pro files and play them: a portable .exe for Windows (in a zip, its plugins in a `plugins` folder beside it); one AppImage for any Linux, which holds both the Wayland and the X11 build, starts the right one and plays through ALSA (which PipeWire desktops pass on to PipeWire); a .deb and an .rpm for Debian, Ubuntu and Fedora, installed together with the `oxiguitar-plugins-basic` package beside them; one .dmg for macOS, the plugins inside the app.
+Each [release](https://github.com/mateusrdp/oxiguitar/releases) has one download for your system: a portable .exe for Windows (in a zip); one AppImage for any Linux, which holds both the Wayland and the X11 build, starts the right one and plays through ALSA (which PipeWire desktops pass on to PipeWire); a .deb and an .rpm for Debian, Ubuntu and Fedora; one .dmg for macOS. **None carries the plugins** that open Guitar Pro files and play them: those live in repositories of their own ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi), [oxiguitar-nam](https://github.com/mateusrdp/oxiguitar-nam), [oxiguitar-wav](https://github.com/mateusrdp/oxiguitar-wav) and the audio outputs), with releases, packages and updates of their own. The package repositories and the Homebrew tap below install OxiGuitar and its plugins together and keep them up to date.
 
 Every release carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Guitar Pro file types (.gp, .gpx, .gp5, .gp4, .gp3), so double-clicking a file opens OxiGuitar; the portable .exe and the AppImage register nothing, and the [user manual](https://mateusrdp.github.io/oxiguitar/installing.html) shows how to do it by hand. The [manual](https://mateusrdp.github.io/oxiguitar/) explains the whole program in a few short pages.
 
-- **Debian, Ubuntu:** `sudo apt install ./oxiguitar_VERSION_amd64.deb ./oxiguitar-plugins-basic_VERSION_amd64.deb` (or `_arm64.deb`).
-- **Fedora:** `sudo dnf install ./oxiguitar-VERSION-1.x86_64.rpm ./oxiguitar-plugins-basic-VERSION-1.x86_64.rpm` (or `.aarch64.rpm`).
-- **Linux on X11:** the AppImage works on X11 as it is. The .deb and .rpm above are the Wayland build, for today's desktops; a desktop without Wayland needs the X11 build's package instead, `oxiguitar-x11_….deb` or `oxiguitar-x11-….rpm`, with the same plugins' package. The X11 build is deprecated and will be dropped. Each build carries only its own display system's code, and installing one package replaces the other.
+- **Debian, Ubuntu (recommended):** add the [apt repository](https://github.com/mateusrdp/oxiguitar-packages) once, then `sudo apt install oxiguitar`. apt installs the recommended `oxiguitar-guitarpro` and `oxiguitar-midi` plugins with it, suggests `oxiguitar-nam` (amp models), and keeps all of them up to date. The repository's page has the three commands that add it.
+- **Fedora:** the same repository serves dnf: add its `.repo` file once (the [repository's page](https://github.com/mateusrdp/oxiguitar-packages) has the command), then `sudo dnf install oxiguitar`; the plugins come along as recommended packages.
+- **macOS:** the .dmg for the app, or the Homebrew tap: `brew tap mateusrdp/oxiguitar`, then `brew install --cask oxiguitar oxiguitar-guitarpro oxiguitar-midi`.
+- **Windows and the AppImage:** download the plugins' zips (the plugin file alone, to put in OxiGuitar's plugin folder) or their per-user installers from each plugin's releases page; the [manual](https://mateusrdp.github.io/oxiguitar/installing.html) says where.
+- **Linux on X11:** the AppImage works on X11 as it is. The .deb and .rpm above are the Wayland build, for today's desktops; a desktop without Wayland needs the X11 build's package instead, `oxiguitar-x11_….deb` or `oxiguitar-x11-….rpm`. The X11 build is deprecated and will be dropped. Each build carries only its own display system's code, and installing one package replaces the other.
 
 None of the packages is code-signed yet, so the first launch shows a warning:
 
@@ -90,13 +92,12 @@ rustup default stable
 git clone https://github.com/mateusrdp/oxiguitar.git
 cd oxiguitar
 cargo build --release
-scripts/build-plugins.sh
 cargo test
 ```
 
 Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The `lib…-dev` packages are the system libraries OxiGuitar needs: fontconfig, xkbcommon and Wayland for fonts, keyboard and windows, and ALSA and PipeWire (with libclang, which builds PipeWire's bindings) for the audio-device plugins.
 
-The program opens files only through format plugins (one per format, `.oxp` files). `scripts/build-plugins.sh` builds ours (Guitar Pro 3, 4, 5, 6 and 7–8, the MIDI player (SoundFont and SFZ) and the audio outputs) and puts them where a build from source looks for them (`target/lib/oxiguitar/plugins/` on Linux); run it again after changing a plugin or a reader. The release packages hold the program alone; ours come as `oxiguitar-plugins-basic` (.deb, .rpm) and as a zip for each system.
+The program opens files only through format plugins (one per format, `.oxp` files), which are built from the plugin repositories ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro) and the others; each has a `build-oxp.sh`). A build from source looks for them in `target/lib/oxiguitar/plugins/` beside the program on Linux, in `plugins\` beside the .exe on Windows, and in your own plugin folder everywhere; `cargo test` takes the latest releases of the plugins it needs by itself (`OXIGUITAR_PLUGINS_DIR` points it at a folder of your own builds instead).
 
 Run the desktop app, optionally with a file to open:
 

@@ -31,10 +31,13 @@ Depends:
  libwayland-egl1,
  libxkbcommon0,
  libegl1,
- oxiguitar-plugins-basic (= ${binary:Version}),
 Recommends:
+ oxiguitar-guitarpro,
+ oxiguitar-midi,
  libdbus-1-3,
  xdg-desktop-portal,
+Suggests:
+ oxiguitar-nam,
 Built-Using:
  ${oxiguitar:Built-Using},
 Description: guitar tablature and score viewer
@@ -44,23 +47,7 @@ Description: guitar tablature and score viewer
  and plays them with the system's sound set or better ones the user adds
  (SoundFont and SFZ). No telemetry: it never uploads anything.
  .
- OxiGuitar opens and plays files only through plugins; the package
- oxiguitar-plugins-basic, which it depends on, holds those for Guitar Pro
- files and sound.
-
-Package: oxiguitar-plugins-basic
-Architecture: any
-Depends:
- ${misc:Depends},
- ${shlibs:Depends},
-Recommends:
- fluid-soundfont-gm | musescore-general-soundfont-small,
-Enhances:
- oxiguitar,
-Description: Guitar Pro format, sound and audio plugins for OxiGuitar
- The plugins the OxiGuitar project writes and recommends: one for each
- Guitar Pro format (3, 4, 5, 6 and 7-8), so OxiGuitar can open those
- files; the SoundFont player, which plays the tracks with a General MIDI
- or SFZ sound set; NAM, which plays guitars and basses through amp models
- and cabinet impulse responses; WAV, which exports the sound as a WAV
- file; and the ones that play its sound through PipeWire or ALSA. OxiGuitar finds these in /usr/lib/oxiguitar/plugins.
+ OxiGuitar opens and plays files only through plugins, which are packages
+ of their own: oxiguitar-guitarpro (Guitar Pro files) and oxiguitar-midi
+ (sound), both recommended, and oxiguitar-nam (amplifier models),
+ suggested.
