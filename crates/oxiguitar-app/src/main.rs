@@ -1652,8 +1652,15 @@ fn plugin_answer(app: &Shared, answer: plugin_tabs::Answer) {
                 .insert(drawn.widget.clone(), drawn_image(&drawn));
             tab
         }
-        plugin_tabs::Answer::Settings { plugin, content } => {
+        plugin_tabs::Answer::Settings {
+            plugin,
+            content,
+            changed,
+        } => {
             settings_window_answer(app, &plugin, content);
+            if changed {
+                playing::settings_changed(app, &plugin);
+            }
             return;
         }
         plugin_tabs::Answer::Section {

@@ -30,7 +30,14 @@ pub(crate) const CAPACITY: usize = 512;
 /// What the window asks.
 pub(crate) enum ToSound {
     /// The score as it now is (opened or changed), counted by `revision`.
-    Score { score: Arc<Score>, revision: u64 },
+    /// `fresh`: prepare its instruments again even if its tracks' sounds
+    /// look the same, as after a plugin's settings changed (#143: another
+    /// sound set picked).
+    Score {
+        score: Arc<Score>,
+        revision: u64,
+        fresh: bool,
+    },
     /// Open the output named `device` (empty: the system's default).
     Open { device: String },
     /// Close the output.
@@ -167,7 +174,21 @@ impl Thread {
                         let mut newest = m;
                         loop {
                             match from.try_recv() {
-                                Ok(s @ ToSound::Score { .. }) => newest = s,
+                                // A fresh preparation asked for is kept
+                                // when a newer score replaces it.
+                                Ok(ToSound::Score {
+                                    score,
+                                    revision,
+                                    fresh,
+                                }) => {
+                                    let before =
+                                        matches!(newest, ToSound::Score { fresh: true, .. });
+                                    newest = ToSound::Score {
+                                        score,
+                                        revision,
+                                        fresh: fresh || before,
+                                    };
+                                }
                                 Ok(other) => {
                                     next = Some(other);
                                     break;
@@ -180,7 +201,11 @@ impl Thread {
                     other => other,
                 };
                 match m {
-                    ToSound::Score { score, revision } => self.score(score, revision, false),
+                    ToSound::Score {
+                        score,
+                        revision,
+                        fresh,
+                    } => self.score(score, revision, fresh),
                     ToSound::Open { device } => self.open(&device),
                     ToSound::Close => self.close(),
                     ToSound::Devices => (self.tell)(FromSound::Devices(self.devices())),
@@ -196,7 +221,7 @@ impl Thread {
 
     /// The timeline and schedule for `score`, and its instruments when its
     /// tracks' sounds differ from what they were prepared for (or `fresh`:
-    /// at a new rate).
+    /// at a new rate, or after a plugin's settings changed).
     fn score(&mut self, score: Arc<Score>, revision: u64, fresh: bool) {
         self.score = Some((score.clone(), revision));
         let timeline = Arc::new(Timeline::new(&score));
@@ -362,5 +387,41 @@ fn nothing_plays(plugins: &Plugins) -> String {
         "No instrument plugin is installed, so nothing can play. The basic plugins include the MIDI plugin.".to_owned()
     } else {
         "No installed instrument plays this score's tracks.".to_owned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    /// #143: the same score again keeps its instruments; sent `fresh`
+    /// (a plugin's settings changed), they are prepared again.
+    #[test]
+    fn fresh_prepares_the_instruments_again() {
+        let plugins = crate::test_support::tab_host().plugins.clone();
+        let (tx, rx) = channel();
+        let (sound, _control) = Sound::start(plugins, move |m| {
+            let _ = tx.send(m);
+        });
+        let score = crate::player::tests::score();
+        let ready = |revision: u64, fresh: bool| {
+            sound.send(ToSound::Score {
+                score: score.clone(),
+                revision,
+                fresh,
+            });
+            loop {
+                match rx.recv_timeout(Duration::from_secs(60)).unwrap() {
+                    FromSound::Ready(r) if r.revision == revision => return r.sources.is_some(),
+                    FromSound::Unplayable(why) => panic!("unplayable: {why}"),
+                    _ => {}
+                }
+            }
+        };
+        assert!(ready(1, false), "the first time, instruments");
+        assert!(!ready(2, false), "the same tracks: the same instruments");
+        assert!(ready(3, true), "fresh: prepared again");
+        assert!(!ready(4, false));
     }
 }

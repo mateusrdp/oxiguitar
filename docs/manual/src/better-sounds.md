@@ -30,7 +30,7 @@ All three together take about 2 GB of disk. OxiGuitar holds the samples of the s
    - **Drums**: `DrumGizmo MuldjordKit` (in its `Stereo` folder).
 
    Leave **Acoustic guitars** and **Everything else** on a General MIDI set (below). The choice holds for every file.
-4. **Open your score again.** It loads the new sets, which takes a few seconds for a big kit, and plays with them.
+4. **Play.** A change in the settings window takes effect at once: if the song was playing it stops, the new sets load (a few seconds for a big kit) and the ones no longer picked are let go, and the next Play uses them.
 
 The MuldjordKit is under CC BY 4.0: if you publish music made with it, credit Lars Muldjord and the DrumGizmo team. Karoryfer's sets are CC0 and need no credit.
 

@@ -198,22 +198,62 @@ pub(crate) fn score_changed(app: &Shared, opened: bool) {
         let Some(score) = s.editing.score() else {
             return;
         };
-        s.score_revision += 1;
-        let revision = s.score_revision;
         let mut dos = Vec::new();
         if opened {
             // Another song: the last one stops.
             dos = s.player.stop().1;
             s.began = None;
         }
-        s.player.score_changed(revision);
-        let mixes: Vec<_> = (0..s.track_count).map(|i| s.mixer.get(i)).collect();
-        s.player.set_mixes(&mixes);
-        s.sound.send(ToSound::Score { score, revision });
+        send_score(&mut s, score, false);
         dos
     };
     act(app, dos);
     sync(app);
+}
+
+/// The settings of the plugin `plugin` (its id) changed (#143). When it
+/// makes sound (instruments or effects), the song stops, as the Stop
+/// button stops it, and its instruments are prepared again, so the next
+/// Play sounds as the settings now say: a sound set picked in the MIDI
+/// plugin's settings window is loaded, and the one it replaces let go.
+/// The plugin reads its settings each time it prepares, so no plugin
+/// needs telling.
+pub(crate) fn settings_changed(app: &Shared, plugin: &str) {
+    let sounds = {
+        let s = app.borrow();
+        s.plugins
+            .found()
+            .iter()
+            .filter_map(|f| f.manifest.as_ref())
+            .any(|m| m.id == plugin && (!m.instruments.is_empty() || !m.effects.is_empty()))
+    };
+    if !sounds || app.borrow().editing.score().is_none() {
+        return;
+    }
+    let dos = stop(app);
+    {
+        let mut s = app.borrow_mut();
+        if let Some(score) = s.editing.score() {
+            send_score(&mut s, score, true);
+        }
+    }
+    act(app, dos);
+    sync(app);
+}
+
+/// Tells the player's thread the score as it now is, under a new revision
+/// (`fresh`: its instruments prepared again).
+fn send_score(s: &mut crate::App, score: std::sync::Arc<oxiguitar_model::Score>, fresh: bool) {
+    s.score_revision += 1;
+    let revision = s.score_revision;
+    s.player.score_changed(revision);
+    let mixes: Vec<_> = (0..s.track_count).map(|i| s.mixer.get(i)).collect();
+    s.player.set_mixes(&mixes);
+    s.sound.send(ToSound::Score {
+        score,
+        revision,
+        fresh,
+    });
 }
 
 /// A Player tab control was used.
