@@ -10,6 +10,7 @@
 # Arguments and environment as deb.sh, except:
 #   PLUGIN_DEPENDS_RPM     extra Requires, such as "oxiguitar-midi >= 1.0.0"
 #   PLUGIN_RECOMMENDS_RPM  Recommends (default: oxiguitar)
+#   PLUGIN_SUGGESTS_RPM    Suggests, such as "oxiguitar-bettersounds-soundfonts"
 # Writes: OUT-DIR/oxiguitar-NAME-VERSION-1.ARCH.rpm
 
 set -euo pipefail
@@ -63,6 +64,7 @@ done
     echo "BuildArch: $arch"
     [[ -n "${PLUGIN_DEPENDS_RPM:-}" ]] && echo "Requires: $PLUGIN_DEPENDS_RPM"
     [[ -n "$recommends" ]] && echo "Recommends: $recommends"
+    [[ -n "${PLUGIN_SUGGESTS_RPM:-}" ]] && echo "Suggests: $PLUGIN_SUGGESTS_RPM"
     echo
     echo "%description"
     echo "$description"

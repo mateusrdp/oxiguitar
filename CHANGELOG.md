@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- The reusable plugin release workflow takes `suggests-deb` and `suggests-rpm`, so a plugin's `.deb` and `.rpm` can suggest other packages (the MIDI plugin suggests `oxiguitar-bettersounds-soundfonts`).
+
 ## [0.12.1] - 2026-11-03
 
 ### Changed

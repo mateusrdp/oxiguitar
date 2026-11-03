@@ -19,6 +19,7 @@
 #   PLUGIN_LICENSE      an SPDX expression
 #   PLUGIN_DEPENDS_DEB  extra Depends, such as "oxiguitar-midi (>= 1.0.0)"
 #   PLUGIN_RECOMMENDS_DEB  Recommends (default: oxiguitar)
+#   PLUGIN_SUGGESTS_DEB    Suggests, such as "oxiguitar-bettersounds-soundfonts"
 #   PLUGIN_MAINTAINER   default "Mateus Rocha de Paula <mateusrdp@users.noreply.github.com>"
 # Writes: OUT-DIR/oxiguitar-NAME_VERSION_DEBARCH.deb
 
@@ -89,6 +90,7 @@ chmod 644 "$doc/copyright"
     echo "Homepage: $homepage"
     [[ -n "${PLUGIN_DEPENDS_DEB:-}" ]] && echo "Depends: $PLUGIN_DEPENDS_DEB"
     [[ -n "$recommends" ]] && echo "Recommends: $recommends"
+    [[ -n "${PLUGIN_SUGGESTS_DEB:-}" ]] && echo "Suggests: $PLUGIN_SUGGESTS_DEB"
     echo "Description: $title plugin for OxiGuitar"
     echo " $description"
 } > "$tree/DEBIAN/control"
