@@ -31,6 +31,10 @@ pub struct Track {
     /// plugin id. No score format holds it: it is saved beside the score,
     /// in `FILE.oxg` (`song.gp3.oxg`).
     pub plugins: BTreeMap<String, String>,
+    /// The order the track's effects run in, by plugin id, as the user set
+    /// it in the track dialog (#152); empty for the default order. Saved
+    /// beside the score with [`Track::plugins`].
+    pub effects: Vec<String>,
 }
 
 /// What a track sounds like through General MIDI.

@@ -12,13 +12,17 @@
 //! {
 //!   "oxiguitar": 1,
 //!   "tracks": [
-//!     { "name": "Lead Guitar", "plugins": { "oxiguitar.nam": { "model": "5150.nam" } } }
+//!     { "name": "Lead Guitar", "plugins": { "oxiguitar.nam": { "model": "5150.nam" } },
+//!       "effects": ["oxiguitar.eq", "oxiguitar.nam"] }
 //!   ]
 //! }
 //! ```
 //!
-//! one entry per track in the score's order, each with the track's name and
-//! the settings of every plugin that keeps some, by plugin id. When the
+//! one entry per track in the score's order, each with the track's name,
+//! the settings of every plugin that keeps some, by plugin id, and, when
+//! the user ordered them in the track dialog, the order its effects run in
+//! by plugin id (#152; absent for the default order, and ignored by an
+//! older OxiGuitar). When the
 //! score was changed elsewhere (tracks added, removed or moved in another
 //! program), a track takes the entry at its own place if the names agree,
 //! else the first unused entry of its name, else none.
@@ -50,6 +54,9 @@ pub struct TrackEntry {
     /// Each plugin's settings for the track: a JSON object as text, by
     /// plugin id.
     pub plugins: BTreeMap<String, String>,
+    /// The order of the track's effects, by plugin id: empty for the
+    /// default order.
+    pub effects: Vec<String>,
 }
 
 /// What a sidecar holds.
@@ -62,7 +69,9 @@ pub struct Sidecar {
 impl Sidecar {
     /// Whether no track keeps anything.
     pub fn is_empty(&self) -> bool {
-        self.tracks.iter().all(|t| t.plugins.is_empty())
+        self.tracks
+            .iter()
+            .all(|t| t.plugins.is_empty() && t.effects.is_empty())
     }
 
     /// Reads the sidecar of the score at `score`: `Ok(None)` when it has
@@ -87,11 +96,16 @@ impl Sidecar {
     /// Gives each track's settings kept under a replaced plugin's id to the
     /// plugin that replaces it (interface 1.4; `replaced` as
     /// [`crate::Plugins::replaced_ids`] lists them), where the new id has
-    /// none yet. The old entries stay, for an older OxiGuitar; the next save
-    /// writes both.
+    /// none yet, and its place in the order of the track's effects. The old
+    /// entries stay, for an older OxiGuitar; the next save writes both.
     pub fn adopt(&mut self, replaced: &[(String, String)]) {
         for track in &mut self.tracks {
             for (old, new) in replaced {
+                if !track.effects.contains(new)
+                    && let Some(at) = track.effects.iter().position(|id| id == old)
+                {
+                    track.effects.insert(at, new.clone());
+                }
                 if !track.plugins.contains_key(new)
                     && let Some(value) = track.plugins.get(old).cloned()
                 {
@@ -129,9 +143,18 @@ impl Sidecar {
                         .collect(),
                     _ => BTreeMap::new(),
                 };
+                let mut effects: Vec<String> = Vec::new();
+                if let Some(Value::Array(ids)) = t.get("effects") {
+                    for id in ids.iter().filter_map(Value::as_str) {
+                        if !effects.iter().any(|e| e == id) {
+                            effects.push(id.to_owned());
+                        }
+                    }
+                }
                 TrackEntry {
                     name: name.to_owned(),
                     plugins,
+                    effects,
                 }
             })
             .collect();
@@ -154,7 +177,11 @@ impl Sidecar {
                             .map(|v| (id.clone(), v))
                     })
                     .collect();
-                serde_json::json!({ "name": t.name, "plugins": plugins })
+                let mut entry = serde_json::json!({ "name": t.name, "plugins": plugins });
+                if !t.effects.is_empty() {
+                    entry["effects"] = serde_json::json!(t.effects);
+                }
+                entry
             })
             .collect();
         let doc = serde_json::json!({ "oxiguitar": VERSION, "tracks": tracks });
@@ -187,9 +214,9 @@ impl Sidecar {
     }
 
     /// Each of the tracks named `names` (in the score's order) and its
-    /// entry: at its own place if the names agree, else the first unused
-    /// entry with its name.
-    pub fn settle(&self, names: &[&str]) -> Vec<BTreeMap<String, String>> {
+    /// entry (empty when it has none): at its own place if the names agree,
+    /// else the first unused entry with its name.
+    pub fn settle(&self, names: &[&str]) -> Vec<TrackEntry> {
         let mut used = vec![false; self.tracks.len()];
         let mut out = vec![None; names.len()];
         for (i, name) in names.iter().enumerate() {
@@ -197,7 +224,7 @@ impl Sidecar {
                 && entry.name == *name
             {
                 used[i] = true;
-                out[i] = Some(entry.plugins.clone());
+                out[i] = Some(entry.clone());
             }
         }
         for (i, name) in names.iter().enumerate() {
@@ -208,7 +235,7 @@ impl Sidecar {
                 (0..self.tracks.len()).find(|&j| !used[j] && self.tracks[j].name == *name)
             {
                 used[j] = true;
-                out[i] = Some(self.tracks[j].plugins.clone());
+                out[i] = Some(self.tracks[j].clone());
             }
         }
         out.into_iter().map(Option::unwrap_or_default).collect()
@@ -226,6 +253,7 @@ mod tests {
                 .iter()
                 .map(|(a, b)| ((*a).to_owned(), (*b).to_owned()))
                 .collect(),
+            effects: Vec::new(),
         }
     }
 
@@ -277,7 +305,7 @@ mod tests {
             ],
         };
         let got = s.settle(&["Rhythm", "Lead", "Rhythm", "Rhythm", "Keys"]);
-        let a = |i: usize| got[i].get("p").cloned().unwrap_or_default();
+        let a = |i: usize| got[i].plugins.get("p").cloned().unwrap_or_default();
         // Track 2 sits where its name was; the others are found by name.
         assert_eq!(a(0), "{\"a\":2}");
         assert_eq!(a(1), "{\"a\":1}");
@@ -331,5 +359,42 @@ mod tests {
         );
         // The successor's own settings win.
         assert_eq!(get(1, "oxiguitar.midi").as_deref(), Some(r#"{"set":"c"}"#));
+    }
+
+    #[test]
+    fn the_order_of_a_track_s_effects_is_kept_when_set() {
+        let mut ordered = entry("Lead", &[("oxiguitar.nam", "{}")]);
+        ordered.effects = vec!["oxiguitar.eq".into(), "oxiguitar.nam".into()];
+        let s = Sidecar {
+            tracks: vec![ordered.clone(), entry("Bass", &[])],
+        };
+        let text = s.to_text();
+        assert_eq!(text.matches("\"effects\"").count(), 1, "{text}");
+        assert_eq!(Sidecar::parse(&text).unwrap(), s);
+        assert_eq!(s.settle(&["Lead"])[0], ordered);
+        // An order alone is worth keeping.
+        let only = Sidecar {
+            tracks: vec![TrackEntry {
+                plugins: BTreeMap::new(),
+                ..ordered
+            }],
+        };
+        assert!(!only.is_empty());
+        // What isn't a plugin id is left out, and so is a second mention.
+        let odd = r#"{"oxiguitar": 1, "tracks": [{"name": "A", "effects": ["b", 3, "a", "b"]}]}"#;
+        assert_eq!(Sidecar::parse(odd).unwrap().tracks[0].effects, ["b", "a"]);
+    }
+
+    #[test]
+    fn a_replaced_plugin_keeps_its_place_in_the_order_of_effects() {
+        let mut sidecar = Sidecar::parse(
+            r#"{"oxiguitar": 1, "tracks": [
+                {"name": "Lead", "effects": ["x.eq", "old.amp"]},
+                {"name": "Bass", "effects": ["new.amp", "old.amp"]}]}"#,
+        )
+        .unwrap();
+        sidecar.adopt(&[("old.amp".into(), "new.amp".into())]);
+        assert_eq!(sidecar.tracks[0].effects, ["x.eq", "new.amp", "old.amp"]);
+        assert_eq!(sidecar.tracks[1].effects, ["new.amp", "old.amp"]);
     }
 }

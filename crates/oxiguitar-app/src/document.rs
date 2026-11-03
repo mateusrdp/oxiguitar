@@ -292,8 +292,9 @@ impl Document {
                 sidecar.adopt(&plugins.replaced_ids());
                 let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
                 let settled = sidecar.settle(&names);
-                for (track, plugins) in score.tracks.iter_mut().zip(settled) {
-                    track.plugins = plugins;
+                for (track, entry) in score.tracks.iter_mut().zip(settled) {
+                    track.plugins = entry.plugins;
+                    track.effects = entry.effects;
                 }
                 None
             }
@@ -703,6 +704,7 @@ impl Document {
                 .map(|t| TrackEntry {
                     name: t.name.clone(),
                     plugins: t.plugins.clone(),
+                    effects: t.effects.clone(),
                 })
                 .collect(),
         };
@@ -987,6 +989,7 @@ mod tests {
         settings
             .plugins
             .insert("oxiguitar.test".into(), r#"{"level":0.25}"#.into());
+        settings.effects = vec!["oxiguitar.eq".into(), "oxiguitar.test".into()];
         doc.edit(
             Command::TrackProperties(Box::new(settings)),
             Caret::at_start(&doc.score, 0).unwrap(),
@@ -1011,11 +1014,16 @@ mod tests {
                 .map(String::as_str),
             Some(r#"{"level":0.25}"#)
         );
+        assert_eq!(
+            again.score.tracks[0].effects,
+            ["oxiguitar.eq", "oxiguitar.test"]
+        );
         assert_eq!(again.score, doc.score);
         assert_eq!(again.sidecar_problem, None);
         // Undo takes the settings back.
         doc.undo();
         assert!(doc.score.tracks[0].plugins.is_empty());
+        assert!(doc.score.tracks[0].effects.is_empty());
         // A sidecar that can't be read: said, and the settings start empty.
         std::fs::write(&sidecar, "{").unwrap();
         let broken = open(&path).unwrap();

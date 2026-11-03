@@ -799,6 +799,9 @@ component TrackTab inherits Rectangle {
     callback section-slid(int, string, float);
     callback section-edited(int, string, string);
     callback section-chosen(int, string, int);
+    // The section at the index moves up (true) or down: its effects run
+    // earlier or later.
+    callback section-moved(int, bool);
     scroll := ScrollView {
         VerticalLayout {
             width: scroll.visible-width;
@@ -814,10 +817,31 @@ component TrackTab inherits Rectangle {
             for section[i] in root.sections : VerticalLayout {
                 spacing: 2px;
                 Rectangle { height: 1px; background: Palette.border; }
-                Text {
-                    text: section.title;
-                    font-size: 13px;
-                    font-weight: 700;
+                HorizontalLayout {
+                    spacing: 2px;
+                    Text {
+                        text: section.title;
+                        font-size: 13px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    if section.up || section.down : IconButton {
+                        width: 24px;
+                        height: 24px;
+                        icon: @image-url("../../../assets/icons/ui/chevron-up.svg");
+                        tip: "Move up: this effect runs earlier";
+                        enabled: section.up;
+                        clicked => { root.section-moved(i, true); }
+                    }
+                    if section.up || section.down : IconButton {
+                        width: 24px;
+                        height: 24px;
+                        icon: @image-url("../../../assets/icons/ui/chevron-down.svg");
+                        tip: "Move down: this effect runs later";
+                        enabled: section.down;
+                        clicked => { root.section-moved(i, false); }
+                    }
                 }
                 PluginRows {
                     rows: section.rows;
@@ -1468,6 +1492,7 @@ export component AppWindow inherits Window {
     // (0 clicked, 1 toggled, 2 slid, 3 edited, 4 chosen) and its value.
     in property <[PluginSection]> track-sections;
     callback track-section-event(int, string, int, bool, float, string, int);
+    callback track-section-moved(int, bool);
     in property <bool> transpose-dialog-shown: false;
     in property <string> transpose-heading;
     in-out property <int> transpose-amount;
@@ -2356,6 +2381,7 @@ export component AppWindow inherits Window {
                             section-slid(i, id, v) => { root.track-section-event(i, id, 2, false, v, "", 0); }
                             section-edited(i, id, t) => { root.track-section-event(i, id, 3, false, 0, t, 0); }
                             section-chosen(i, id, n) => { root.track-section-event(i, id, 4, false, 0, "", n); }
+                            section-moved(i, up) => { root.track-section-moved(i, up); }
                         }
                         if root.right-area.active-id == "bar" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats and the bar's own settings."; }
                         if root.right-area.active-id == "bar" && root.has-score : BarTab {

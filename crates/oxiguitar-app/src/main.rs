@@ -214,8 +214,9 @@ struct App {
     track_keep_pitches: bool,
     /// Why the Track tab's last change couldn't be applied.
     track_error: Option<String>,
-    /// The track's plugin settings as the Track tab last saw them.
-    sections_seen: std::collections::BTreeMap<String, String>,
+    /// The track's plugin settings and order of effects as the Track tab
+    /// last saw them.
+    sections_seen: (std::collections::BTreeMap<String, String>, Vec<String>),
     /// A widget of a plugin's section was used since the sections were
     /// asked: only then do their settings go into the track.
     sections_touched: bool,
@@ -871,6 +872,8 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_track_section_event(move |i, widget, kind, on, value, text, chosen| {
         track_section_event(&a, i, &widget, widget_event(kind, on, value, &text, chosen));
     });
+    let a = app.clone();
+    ui.on_track_section_moved(move |i, up| track_section_moved(&a, i, up));
     let a = app.clone();
     ui.on_transpose_dialog_done(move |ok| transpose_dialog_done(&a, ok));
     let a = app.clone();
@@ -3745,11 +3748,13 @@ fn sync_track(app: &Shared, ui: &AppWindow) {
         };
         // The sections: asked again for another track, or when the
         // settings moved without the tab's doing.
+        let seen = (track.plugins.clone(), track.effects.clone());
         let reopen = moved
-            || s.sections
-                .as_ref()
-                .is_some_and(|x| track.plugins != s.sections_seen && track.plugins != x.settings);
-        s.sections_seen = track.plugins.clone();
+            || s.sections.as_ref().is_some_and(|x| {
+                seen != s.sections_seen
+                    && (&track.plugins, &track.effects) != (&x.settings, &x.order)
+            });
+        s.sections_seen = seen;
         if reopen {
             s.dialogs_opened += 1;
             let sections =
@@ -3842,10 +3847,10 @@ fn track_changed(app: &Shared, id: &str, value: i32, text: &str) {
     }
 }
 
-/// A plugin's section changed the track's settings for it: they go into the
-/// track as one change.
+/// A plugin's section changed the track's settings for it, or a section
+/// was moved: they go into the track as one change.
 fn apply_section_settings(app: &Shared) {
-    let (score, index, plugins, section_track) = {
+    let (score, index, plugins, effects, section_track) = {
         let s = app.borrow();
         let Some(sections) = s.sections.as_ref().filter(|_| s.sections_touched) else {
             return;
@@ -3854,6 +3859,7 @@ fn apply_section_settings(app: &Shared) {
             s.editing.score(),
             s.editing.track(),
             sections.settings.clone(),
+            sections.order.clone(),
             sections.track.index as usize,
         )
     };
@@ -3863,11 +3869,12 @@ fn apply_section_settings(app: &Shared) {
     let Some(track) = score.tracks.get(t) else {
         return;
     };
-    if t != section_track || track.plugins == plugins {
+    if t != section_track || (track.plugins == plugins && track.effects == effects) {
         return;
     }
     let mut form = track_form::TrackForm::of(track);
     form.plugins = plugins;
+    form.effects = effects;
     let Ok(settings) = form.to_settings() else {
         return;
     };
@@ -3943,8 +3950,13 @@ fn sync_track_sections(app: &Shared) {
     let sections: Vec<PluginSection> = s
         .sections
         .iter()
-        .flat_map(|t| &t.sections)
-        .map(|shown| {
+        .flat_map(|t| {
+            t.sections
+                .iter()
+                .enumerate()
+                .map(move |(i, x)| (t.moves(i), x))
+        })
+        .map(|((up, down), shown)| {
             let (rows, message) = match &shown.content {
                 None => (ModelRc::default(), "…".to_owned()),
                 Some(Ok(content)) => (plain_rows(content), String::new()),
@@ -3954,6 +3966,8 @@ fn sync_track_sections(app: &Shared) {
                 title: shown.title.as_str().into(),
                 rows,
                 message: message.into(),
+                up,
+                down,
             }
         })
         .collect();
@@ -3991,6 +4005,26 @@ fn widget_event(kind: i32, on: bool, value: f32, text: &str, chosen: i32) -> Tab
         3 => TabEvent::Edited(text.to_owned()),
         4 => TabEvent::Chosen(u32::try_from(chosen).unwrap_or(0)),
         _ => TabEvent::Clicked,
+    }
+}
+
+/// The Track tab's section `index` was moved up or down: the order of the
+/// track's effects changes, as one change of the track (#152).
+fn track_section_moved(app: &Shared, index: i32, up: bool) {
+    let moved = {
+        let mut s = app.borrow_mut();
+        let moved = usize::try_from(index)
+            .ok()
+            .zip(s.sections.as_mut())
+            .is_some_and(|(i, x)| x.move_section(i, up));
+        if moved {
+            s.sections_touched = true;
+        }
+        moved
+    };
+    if moved {
+        sync_track_sections(app);
+        apply_section_settings(app);
     }
 }
 
