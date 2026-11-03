@@ -20,6 +20,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Fixed
 
+- On a file with several guitars, picking an instrument for one in the Track tab no longer makes every other guitar show that instrument (#204). Only the shown value was wrong (the sound followed each track's own instrument): a drop-down, tickbox, number or text field the user had changed kept its own value when the tab showed another track or bar with the same rows. The Song tab's fields likewise.
 - Text that another voice holds (as Guitar Pro can save it on voice 2) can be changed and removed: Shift + T, Edit → Text… and the Beat tab's Text show and edit the text drawn at the caret's beat, whichever voice holds it (#153). New reference `beat-text-in-voice-2`.
 - A sound set picked in the MIDI plugin's settings window (or any change to the settings of a plugin that plays) takes effect at once: playback stops, the instruments are prepared again with the new sets, and the next Play uses them; no restart (#143).
 
