@@ -40,6 +40,7 @@ Recommends:
  xdg-desktop-portal,
 Suggests:
  oxiguitar-nam,
+ oxiguitar-eq,
 Built-Using:
  ${oxiguitar:Built-Using},
 Description: guitar tablature and score viewer
@@ -52,4 +53,5 @@ Description: guitar tablature and score viewer
  OxiGuitar opens and plays files only through plugins, which are packages
  of their own: oxiguitar-guitarpro (Guitar Pro files), oxiguitar-midi
  (sound) and oxiguitar-alsa and oxiguitar-pipewire (audio output), all
- recommended, and oxiguitar-nam (amplifier models), suggested.
+ recommended, and oxiguitar-nam (amplifier models) and oxiguitar-eq
+ (an equalizer), suggested.

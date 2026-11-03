@@ -1,6 +1,6 @@
 # Clean and distorted sounds, per track (#152)
 
-Status: decided by Mateus, 3 Nov 2026 (his answers follow each question, **Q**); not built yet.
+Status: decided by Mateus, 3 Nov 2026 (his answers follow each question, **Q**); **built** (3 Nov 2026): the pull requests are listed at the end, each with where it landed.
 
 ## Where things stand
 
@@ -76,10 +76,10 @@ A track's effects run in the order the host finds their plugins, which nothing f
 
 Small and stacked, roles and per-track choice first:
 
-1. oxiguitar-midi: the three electric guitar rows, the old key read for all of them, `oxiguitar-set.json`'s new keys; tests.
-2. oxiguitar-bettersounds-soundfonts: the three electric sets' role keys (the repository must be attached to that session).
-3. oxiguitar-midi: the track section "Sound" (Automatic, roles, sets); tests with the contract suite's test set.
-4. oxiguitar: the order of a track's effects in the track dialog, saved in the sidecar, and the default order.
-5. Mateus creates `oxiguitar-eq` with `scripts/new-repo.sh`; then oxiguitar-eq: the filters and settings with unit tests against the cookbook's responses, then the section, release and publish workflows.
-6. oxiguitar-nam: the hint under the model picker (Q4).
-7. oxiguitar: the manual (better-sounds.md, amp-models.md, playback.md, official-plugins.md) and this note marked as built.
+1. oxiguitar-midi: the three electric guitar rows, the old key read for all of them, `oxiguitar-set.json`'s new keys; tests (oxiguitar-midi#7).
+2. oxiguitar-bettersounds-soundfonts: the three electric sets' role keys (oxiguitar-bettersounds-soundfonts#6).
+3. oxiguitar-midi: the track section "Sound" (Automatic, roles, sets); tests with the contract suite's test set (oxiguitar-midi#8).
+4. oxiguitar: the order of a track's effects in the track dialog, saved in the sidecar, and the default order (as built: `Track::effects` in the model, `"effects"` per track in `FILE.oxg`, `Plugins::effects_in_order` and `DEFAULT_EFFECT_ORDER` in the host, `TrackSections::move_section` and the arrows in the Track tab).
+5. Mateus creates `oxiguitar-eq` with `scripts/new-repo.sh`; then oxiguitar-eq: the filters and settings with unit tests against the cookbook's responses, release and publish workflows (oxiguitar-eq#2), then the section (oxiguitar-eq#3). The graphic bands stand at the octaves of 1 kHz (31.25 Hz to 16 kHz); a band at or above 0.45 of the sample rate is left out.
+6. oxiguitar-nam: the hint under the model picker (Q4), two muted lines while the amp is on, and its workflows on oxiguitar's v0.12.1 (oxiguitar-nam#6).
+7. oxiguitar: the manual (better-sounds.md, amp-models.md, playback.md, official-plugins.md, tracks.md and the install pages) and this note marked as built; the `.deb` and `.rpm` (and `debian/`) suggest `oxiguitar-eq` beside `oxiguitar-nam`, the Homebrew tap's `oxiguitar` cask suggests both in its caveats (homebrew-oxiguitar#19), and oxiguitar-packages publishes oxiguitar-eq (oxiguitar-packages#12).
