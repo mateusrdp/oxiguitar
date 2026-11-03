@@ -388,6 +388,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          OXIGUITAR_RELEASES_ARCH: ${{ matrix.arch }}
         run: |
           scripts/released-plugins.sh "$RUNNER_TEMP/released" guitarpro
           mkdir -p "$RUNNER_TEMP/smoke-home/plugins"
