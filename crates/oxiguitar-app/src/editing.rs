@@ -862,10 +862,12 @@ impl Editing {
         crate::chord_form::ChordForm::open(self.score.as_ref()?, self.caret?)
     }
 
-    /// The text above the caret's beat; `None` where there is no beat.
+    /// The text above the caret's beat, whichever voice holds it (#153);
+    /// `None` where there is no beat.
     pub(crate) fn beat_text(&self) -> Option<String> {
-        let c = self.caret?;
-        let beat = c.voice_in(self.score.as_ref()?)?.beats.get(c.beat)?;
+        let score = self.score.as_ref()?;
+        let c = self.caret?.text_beat(score)?;
+        let beat = c.voice_in(score)?.beats.get(c.beat)?;
         (beat.kind != BeatKind::Empty).then(|| beat.text.clone())
     }
 

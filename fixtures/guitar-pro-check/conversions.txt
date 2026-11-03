@@ -10,6 +10,8 @@ fixtures/reference/beams-and-flags.gp (Guitar Pro 7–8) → fixtures/guitar-pro
 fixtures/reference/beams-and-flags.gp (Guitar Pro 7–8) → fixtures/guitar-pro-check/beams-and-flags.gp5 (Guitar Pro 5)
   note: volume and pan are kept to sixteen steps (score)
   note: dynamic markings are written as the notes' dynamics (bar 1, track 1, 37 times)
+fixtures/reference/beat-text-in-voice-2.gp (Guitar Pro 7–8) → fixtures/guitar-pro-check/beat-text-in-voice-2.gp (Guitar Pro 7–8)
+fixtures/reference/beat-text-in-voice-2.gp (Guitar Pro 7–8) → fixtures/guitar-pro-check/beat-text-in-voice-2.gp5 (Guitar Pro 5)
 fixtures/reference/beat-text.gp (Guitar Pro 7–8) → fixtures/guitar-pro-check/beat-text.gp (Guitar Pro 7–8)
 fixtures/reference/beat-text.gp (Guitar Pro 7–8) → fixtures/guitar-pro-check/beat-text.gp5 (Guitar Pro 5)
   note: volume and pan are kept to sixteen steps (score)
