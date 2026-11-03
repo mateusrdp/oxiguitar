@@ -37,6 +37,8 @@
 //! The `oxiguitar-plugin-test` program runs the same checks from the
 //! command line, for plugin authors.
 
+#[cfg(feature = "released")]
+pub mod released;
 #[cfg(target_os = "linux")]
 pub mod syscalls;
 
@@ -138,107 +140,6 @@ pub fn build(
 /// check this copy (`OXIGUITAR_BLESS=1 cargo test -p
 /// oxiguitar-midi-plugin` rewrites it).
 pub const TEST_SET: &[u8] = include_bytes!("test-sine.sf2");
-
-/// Our own plugins, shipped with OxiGuitar: each crate's package name and
-/// its file's name (`NAME.oxp`). Each lives in `plugins/NAME/` as
-/// `oxiguitar-NAME-plugin`; `plugins/test` is never shipped.
-pub const OURS: &[(&str, &str)] = &[
-    ("oxiguitar-gp3-plugin", "gp3"),
-    ("oxiguitar-gp4-plugin", "gp4"),
-    ("oxiguitar-gp5-plugin", "gp5"),
-    ("oxiguitar-gpx-plugin", "gpx"),
-    ("oxiguitar-gp-plugin", "gp"),
-];
-
-/// Our instrument plugins (interface 1.3), shipped with the format plugins:
-/// each crate's package name and its file's name. [`build_ours`] builds
-/// them too.
-pub const OUR_INSTRUMENTS: &[(&str, &str)] = &[("oxiguitar-midi-plugin", "midi")];
-
-/// Our effect plugins (interface 1.3), shipped with the others: each
-/// crate's package name and its file's name. [`build_ours`] builds them
-/// too.
-pub const OUR_EFFECTS: &[(&str, &str)] = &[("oxiguitar-nam-plugin", "nam")];
-
-/// Our exporter plugins (interface 1.4), shipped with the others: each
-/// crate's package name and its file's name. [`build_ours`] builds them
-/// too.
-pub const OUR_EXPORTERS: &[(&str, &str)] = &[("oxiguitar-wav-plugin", "wav")];
-
-/// Our audio-device plugins (interface 1.3), shipped with the format
-/// plugins: each crate's package name, its file's name and the system it
-/// runs on (its manifest's `os`). Elsewhere each builds as a plugin whose
-/// service is never available, and isn't shipped.
-pub const OUR_DEVICES: &[(&str, &str, &str)] = &[
-    ("oxiguitar-audio-pipewire-plugin", "audio-pipewire", "linux"),
-    ("oxiguitar-audio-alsa-plugin", "audio-alsa", "linux"),
-    ("oxiguitar-audio-wasapi-plugin", "audio-wasapi", "windows"),
-    (
-        "oxiguitar-audio-coreaudio-plugin",
-        "audio-coreaudio",
-        "macos",
-    ),
-];
-
-/// Builds the plugins of [`OUR_DEVICES`] that run on this system into the
-/// workspace's `target/oxp/devices-debug/` or `devices-release/`, as
-/// [`build_ours`] does. Returns that folder and the files' names.
-pub fn build_devices(workspace: &Path, release: bool) -> Result<(PathBuf, Vec<String>), String> {
-    let folder = workspace.join("target").join("oxp").join(if release {
-        "devices-release"
-    } else {
-        "devices-debug"
-    });
-    std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
-    let mut names = Vec::new();
-    for (package, name, os) in OUR_DEVICES {
-        if *os != std::env::consts::OS {
-            continue;
-        }
-        let built = build(workspace, package, name, release)?;
-        let file = format!("{name}.oxp");
-        let to = folder.join(&file);
-        let _ = std::fs::remove_file(&to);
-        std::fs::copy(&built, &to).map_err(|e| format!("{}: {e}", to.display()))?;
-        names.push(file);
-    }
-    Ok((folder, names))
-}
-
-/// Builds every plugin of [`OURS`], [`OUR_INSTRUMENTS`], [`OUR_EFFECTS`]
-/// and [`OUR_EXPORTERS`], each on its own so it carries only its
-/// own code (built together, Cargo would give each the features of all),
-/// and puts the files in the workspace's `target/oxp/ours-debug/` or
-/// `ours-release/`, replacing what was there. Returns that folder, a plugin
-/// folder for tests.
-pub fn build_ours(workspace: &Path, release: bool) -> Result<PathBuf, String> {
-    let folder = workspace.join("target").join("oxp").join(if release {
-        "ours-release"
-    } else {
-        "ours-debug"
-    });
-    std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
-    for (package, name) in OURS
-        .iter()
-        .chain(OUR_INSTRUMENTS)
-        .chain(OUR_EFFECTS)
-        .chain(OUR_EXPORTERS)
-    {
-        let built = build(workspace, package, name, release)?;
-        let to = folder.join(format!("{name}.oxp"));
-        // A new file, renamed into place: a program that loaded the old one
-        // keeps its own, and tests building at once never see it missing.
-        let part = folder.join(format!(
-            ".{name}.{}.{}",
-            std::process::id(),
-            COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        ));
-        std::fs::copy(&built, &part)
-            .and_then(|_| std::fs::rename(&part, &to))
-            .map_err(|e| format!("{}: {e}", to.display()))?;
-    }
-    Ok(folder)
-}
 
 /// The outcome of [`check`]: each check's description, passed or with
 /// what went wrong.

@@ -35,7 +35,9 @@ fn scores(dir: &str) -> Vec<(PathBuf, oxiguitar_model::Score)> {
     all.into_iter()
         .filter_map(|p| {
             let data = std::fs::read(&p).ok()?;
-            let score = oxiguitar_formats::read(&data).ok()?.score;
+            let score = oxiguitar_plugin_test::released::guitar_pro::read(&data)
+                .ok()?
+                .score;
             Some((p, score))
         })
         .collect()

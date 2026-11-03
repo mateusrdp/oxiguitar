@@ -12,18 +12,23 @@ use std::sync::OnceLock;
 fn home() -> &'static Path {
     static HOME: OnceLock<PathBuf> = OnceLock::new();
     HOME.get_or_init(|| {
-        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let built =
-            oxiguitar_plugin_test::build_ours(&workspace, false).expect("our plugins build");
+        let built = oxiguitar_plugin_test::released::folder(&["guitarpro"]);
         let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-home");
         let _ = std::fs::remove_dir_all(&home);
         std::fs::create_dir_all(home.join("plugins")).unwrap();
-        for (_, name) in oxiguitar_plugin_test::OURS {
-            let file = format!("{name}.oxp");
-            std::fs::copy(built.join(&file), home.join("plugins").join(&file)).unwrap();
-        }
+        copy_oxp(&built, &home.join("plugins"));
         home
     })
+}
+
+/// Every `.oxp` file of `from`, copied into `to`.
+fn copy_oxp(from: &Path, to: &Path) {
+    for entry in std::fs::read_dir(from).expect("the plugin folder reads") {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|e| e == "oxp") {
+            std::fs::copy(&path, to.join(path.file_name().unwrap())).unwrap();
+        }
+    }
 }
 
 fn cli() -> Command {
@@ -439,21 +444,12 @@ fn events_prints_the_score_as_it_plays() {
 fn sound_home() -> &'static Path {
     static HOME: OnceLock<PathBuf> = OnceLock::new();
     HOME.get_or_init(|| {
-        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let built =
-            oxiguitar_plugin_test::build_ours(&workspace, false).expect("our plugins build");
+        let built = oxiguitar_plugin_test::released::folder(&["guitarpro", "midi", "wav"]);
         let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-sound-home");
         let _ = std::fs::remove_dir_all(&home);
         std::fs::create_dir_all(home.join("plugins")).unwrap();
         std::fs::create_dir_all(home.join("soundfonts")).unwrap();
-        for (_, name) in oxiguitar_plugin_test::OURS
-            .iter()
-            .chain(oxiguitar_plugin_test::OUR_INSTRUMENTS)
-            .chain(oxiguitar_plugin_test::OUR_EXPORTERS)
-        {
-            let file = format!("{name}.oxp");
-            std::fs::copy(built.join(&file), home.join("plugins").join(&file)).unwrap();
-        }
+        copy_oxp(&built, &home.join("plugins"));
         std::fs::write(
             home.join("soundfonts").join("test-sine.sf2"),
             oxiguitar_plugin_test::TEST_SET,

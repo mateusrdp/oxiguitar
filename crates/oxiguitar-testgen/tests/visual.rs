@@ -6,7 +6,7 @@
 //!
 //! Each reference is a Guitar Pro 7 file made by `oxiguitar-testgen`,
 //! read back as the app reads it, through the Guitar Pro 7–8 format plugin
-//! built as the `gp.oxp` file we ship, engraved with its options and drawn
+//! the released Guitar Pro 7-8 plugin, engraved with its options and drawn
 //! at 1.5 pixels per point (108 dpi). The pictures are compared with a
 //! tolerance, not byte for byte, because anti-aliasing and floating point
 //! may differ a little between machines: a pixel counts as changed when
@@ -54,14 +54,12 @@ fn reference_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/reference")
 }
 
-/// Our format plugins, built once (a system loads a library file once per
+/// The released Guitar Pro plugins, loaded once (a system loads a library file once per
 /// process, so every reference goes through this one host).
 fn plugins() -> &'static Plugins {
     static PLUGINS: OnceLock<Plugins> = OnceLock::new();
     PLUGINS.get_or_init(|| {
-        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let folder = oxiguitar_plugin_test::build_ours(&workspace, !cfg!(debug_assertions))
-            .expect("our plugins build");
+        let folder = oxiguitar_plugin_test::released::folder(&["guitarpro"]);
         Plugins::discover(
             &[folder],
             SharedSettings::default(),

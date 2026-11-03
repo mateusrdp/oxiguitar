@@ -1,13 +1,14 @@
 ; SPDX-License-Identifier: GPL-3.0-or-later
 ; Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 ;
-; The installer of one plugin, for one user and without administrator
+; The installer of one plugin repository, for one user and without administrator
 ; rights: it puts the plugin file in %APPDATA%\OxiGuitar\plugins, the folder
 ; OxiGuitar searches, and registers an uninstaller, so Settings, Apps lists
 ; and removes it and winget can install and upgrade it (#165). Built by
 ; scripts/plugin-package/windows.sh, which passes the values below with /D.
 ;
-; The installer downloads nothing and runs nothing: it copies one file.
+; The installer downloads nothing and runs nothing: it copies the plugin
+; files (one for most plugins, five for oxiguitar-guitarpro).
 
 #ifndef Name
   #error Name is not defined
@@ -20,12 +21,6 @@
 #endif
 #ifndef Arch
   #define Arch "x64"
-#endif
-#ifndef Source
-  #error Source is not defined
-#endif
-#ifndef Dest
-  #define Dest Name + ".oxp"
 #endif
 #ifndef OutDir
   #define OutDir "."
@@ -73,8 +68,4 @@ ArchitecturesInstallIn64BitMode=x64compatible
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-[Files]
-Source: "{#Source}"; DestDir: "{app}"; DestName: "{#Dest}"; Flags: ignoreversion
-#ifdef Source2
-Source: "{#Source2}"; DestDir: "{app}"; DestName: "{#Dest2}"; Flags: ignoreversion
-#endif
+; The [Files] section, a line for each plugin file, is added by windows.sh.

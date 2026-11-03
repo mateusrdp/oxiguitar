@@ -118,10 +118,10 @@ Done when: the core with no plugins opens nothing and says so, and a file no ins
 Each slice is one or more pull requests into develop, with the same gates as M1. Mateus set the order.
 
 1. **The five Guitar Pro readers as format plugins.** Done (PR #51), every gate met: the six-hour fuzzing run per reader found nothing (run 39105892287, `docs/testing.md`).
-   - `plugins/gp3`, `gp4`, `gp5`, `gpx` and `gp` (ids `oxiguitar.gp3` …, files `gp3.oxp` …). Each is a thin crate over `oxiguitar-formats`, which keeps the shared reader code and gains one Cargo feature per reader, so each plugin carries only its own. Manifests carry today's detection as signatures: `FICHIER GUITAR PRO v3/v4/v5` at offset 1, `BCFZ`/`BCFS` at 0, the ZIP member `Content/score.gpif`.
+   - `plugins/gp3`, `gp4`, `gp5`, `gpx` and `gp` (ids `oxiguitar.gp3` …, files `gp3.oxp` …). Each is a thin crate over `oxiguitar-formats`, which keeps the shared reader code and gains one Cargo feature per reader, so each plugin carries only its own. Manifests carry today's detection as signatures: `FICHIER GUITAR PRO v3/v4/v5` at offset 1, `BCFZ`/`BCFS` at 0, the ZIP member `Content/score.gpif`. (Moved to its own repository in #165; the core no longer builds these.)
    - No catalogue and no detection in the core (Mateus, 18 Oct 2026): the formats the installed plugins recognise are what the app opens. With no plugin installed it opens nothing. A file no plugin recognises is refused: a bug report is asked for when an installed plugin declares the file's extension, a feature request otherwise (both at the issue tracker). Guitar Pro 1–2 files are refused that way too.
    - The app and `oxiguitar-cli` open files through `Plugins` (wire score → model); `BUILT_IN_READERS` goes away.
-   - Development builds find the plugins in `target/lib/oxiguitar/plugins/`, the program's system plugin folder, via `scripts/build-plugins.sh`.
+   - Development builds find the plugins in `target/lib/oxiguitar/plugins/`, the program's system plugin folder; since #165 the tests use the released plugins (`scripts/released-plugins.sh`).
    - Until slice 5 split the packages, every package installed the five plugins in its system plugin folder.
    - Gates, all through the `.oxp` files:
      - the corpus (42 of 42), and the reader-change `cmp` check: `{:#?}` of score and log from develop's in-process reader against the plugin path, byte for byte, for every GP file;

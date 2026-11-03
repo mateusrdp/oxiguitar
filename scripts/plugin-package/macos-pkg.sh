@@ -9,18 +9,20 @@
 # (no Apple fees, Mateus, 1 Nov 2026); a file installed by a .pkg is not
 # quarantined, so the plugin loads as it is.
 #
-# Usage: scripts/plugin-package/macos-pkg.sh NAME VERSION OUT-DIR SRC [SRC2:DEST2]
+# Usage: scripts/plugin-package/macos-pkg.sh NAME VERSION OUT-DIR SRC[:DEST]...
+#   SRC   a built .oxp file; DEST the name it is installed under (default
+#         NAME.oxp); one SRC:DEST for each plugin of a repository with several.
 # Reads PLUGIN_TITLE from the environment.
 # Writes: OUT-DIR/oxiguitar-NAME-VERSION-macos-universal.pkg
 
 set -euo pipefail
 trap 'echo "::error::macos-pkg.sh line $LINENO: $BASH_COMMAND"' ERR
 
-name="${1:?usage: macos-pkg.sh NAME VERSION OUT-DIR SRC [SRC2:DEST2]}"
+name="${1:?usage: macos-pkg.sh NAME VERSION OUT-DIR SRC[:DEST]...}"
 version="${2:?}"
 out_dir="${3:?}"
-src="${4:?}"
-extra="${5:-}"
+shift 3
+[[ $# -gt 0 ]] || { echo "macos-pkg.sh: no plugin file given" >&2; exit 2; }
 title="${PLUGIN_TITLE:-$name}"
 # A package version is numbers and dots.
 plain="${version%%[-~+]*}"
@@ -29,10 +31,13 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 root="$work/root"
 mkdir -p "$root" "$out_dir"
-install -m644 "$src" "$root/$name.oxp"
-if [[ -n "$extra" ]]; then
-    install -m644 "${extra%%:*}" "$root/${extra#*:}"
-fi
+for spec in "$@"; do
+    src="${spec%%:*}"
+    dest="$name.oxp"
+    [[ "$spec" == *:* ]] && dest="${spec#*:}"
+    [[ -f "$src" ]] || { echo "macos-pkg.sh: $src isn't a file" >&2; exit 2; }
+    install -m644 "$src" "$root/$dest"
+done
 
 identifier="io.github.mateusrdp.oxiguitar.$name"
 # The install location is relative to the chosen home folder, which

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! What the app's tests share: our format plugins, built as `.oxp` files
-//! (debug builds for `cargo test`, release builds for `cargo test
-//! --release`, so the speed budget includes the real plugin) and found by
-//! one host. A system loads a library file once per process, so every test
+//! What the app's tests share: the released Guitar Pro plugins (#165: the
+//! plugins live in repositories of their own), found by one host. A system loads a library file once per process, so every test
 //! uses this one.
 
 use std::path::Path;
@@ -12,16 +10,11 @@ use std::sync::{Arc, OnceLock};
 
 use oxiguitar_host::{Plugins, SharedSettings, Unheard};
 
-/// The folder holding our plugins' `.oxp` files, built once for the whole
-/// test program: building replaces the files, which Windows refuses while
-/// a host has them loaded.
+/// The folder holding the released Guitar Pro plugins' `.oxp` files, had
+/// once for the whole test program.
 fn ours() -> &'static Path {
-    static BUILT: OnceLock<std::path::PathBuf> = OnceLock::new();
-    BUILT.get_or_init(|| {
-        let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        oxiguitar_plugin_test::build_ours(&workspace, !cfg!(debug_assertions))
-            .expect("our plugins build")
-    })
+    static FOLDER: OnceLock<std::path::PathBuf> = OnceLock::new();
+    FOLDER.get_or_init(|| oxiguitar_plugin_test::released::folder(&["guitarpro"]))
 }
 
 /// The host over our plugins, built on first use.
@@ -107,7 +100,18 @@ pub(crate) fn tab_host() -> &'static TabHost {
         let folder = workspace.join("target").join("oxp").join("app-tabs");
         let _ = std::fs::remove_dir_all(&folder);
         std::fs::create_dir_all(&folder).expect("a folder for the copies");
-        std::fs::copy(ours.join("gp.oxp"), folder.join("gp.oxp")).expect("gp.oxp copied");
+        // One Guitar Pro plugin is enough for the tab tests: the 7-8 one
+        // (released as gp-VERSION-SYSTEM-ARCH.oxp).
+        let gp = std::fs::read_dir(ours)
+            .expect("the plugin folder reads")
+            .map(|e| e.expect("an entry").path())
+            .find(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.starts_with("gp-") && n.ends_with(".oxp"))
+            })
+            .expect("the released Guitar Pro 7-8 plugin");
+        std::fs::copy(&gp, folder.join("gp.oxp")).expect("gp.oxp copied");
         std::fs::copy(test, folder.join("test.oxp")).expect("test.oxp copied");
         let open = crate::document::OpenScore::default();
         let redraws = Arc::default();

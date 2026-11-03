@@ -1,23 +1,23 @@
 # Installing
 
-Download the one file for your system from the [releases page](https://github.com/mateusrdp/oxiguitar/releases). Each exists for x86_64 (Intel, AMD) and ARM64 machines; the macOS app runs on both. Every download comes with the basic plugins, which open Guitar Pro files of every version from 3 to 8 and play them through your system's sound.
+Download the one file for your system from the [releases page](https://github.com/mateusrdp/oxiguitar/releases). Each exists for x86_64 (Intel, AMD) and ARM64 machines; the macOS app runs on both. The downloads hold the program only; the plugins, which open Guitar Pro files of every version from 3 to 8 and play them through your system's sound, are separate and come with the package repositories and the Homebrew tap, or from each plugin's releases page (below, and the system pages).
 
 | System | Download | Install |
 | --- | --- | --- |
 | Any Linux | `OxiGuitar-VERSION-x86_64.AppImage` or `-aarch64` | `chmod +x OxiGuitar-*.AppImage`, then run it |
-| Debian, Ubuntu | `oxiguitar_VERSION_amd64.deb` and `oxiguitar-plugins-basic_VERSION_amd64.deb` (or `_arm64`) | `sudo apt install ./oxiguitar_*.deb ./oxiguitar-plugins-basic_*.deb` |
-| Fedora | `oxiguitar-VERSION-1.x86_64.rpm` and `oxiguitar-plugins-basic-VERSION-1.x86_64.rpm` (or `.aarch64`) | `sudo dnf install ./oxiguitar-*.rpm` |
+| Debian, Ubuntu | our apt repository ([Linux](install-linux.md)), or `oxiguitar_VERSION_amd64.deb` (or `_arm64`) | `sudo apt install oxiguitar`, or `sudo apt install ./oxiguitar_*.deb` |
+| Fedora | our dnf repository ([Linux](install-linux.md)), or `oxiguitar-VERSION-1.x86_64.rpm` (or `.aarch64`) | `sudo dnf install oxiguitar`, or `sudo dnf install ./oxiguitar-*.rpm` |
 | Windows 10 and 11 | `OxiGuitar-VERSION-windows-x86_64.zip` or `-arm64` | Unzip anywhere and run `oxiguitar.exe` |
 | macOS | `OxiGuitar-VERSION-macos-universal.dmg` | Open it and drag OxiGuitar to Applications |
 
-The AppImage needs glibc 2.35 or newer (Debian 12 or later, Ubuntu 22.04 or later, Fedora 36 or later); the .deb and .rpm need glibc 2.39 or newer (Debian trixie or sid, Ubuntu 24.04, Fedora 40 or later). The .deb and .rpm of the program depend on the plugins' package, so install the two together as shown. They also install `oxiguitar-cli`, a command-line tool that prints a file's contents, converts it to Guitar Pro 7's .gp, and engraves it to PNG and PDF (`oxiguitar-cli --help`), and both programs' manual pages (`man oxiguitar`, `man oxiguitar-cli`).
+The AppImage needs glibc 2.35 or newer (Debian 12 or later, Ubuntu 22.04 or later, Fedora 36 or later); the .deb and .rpm need glibc 2.39 or newer (Debian trixie or sid, Ubuntu 24.04, Fedora 40 or later). The .deb and .rpm recommend the Guitar Pro and MIDI plugins' packages: from our repositories they come with it; from a downloaded file, install the plugins' packages too. They also install `oxiguitar-cli`, a command-line tool that prints a file's contents, converts it to Guitar Pro 7's .gp, and engraves it to PNG and PDF (`oxiguitar-cli --help`), and both programs' manual pages (`man oxiguitar`, `man oxiguitar-cli`).
 
 ### Wayland and X11
 
 OxiGuitar comes in two Linux builds: the **Wayland build**, for today's desktops (GNOME, KDE Plasma and most others run Wayland), and the **X11 build**, for desktops that still run only an X server. Each carries only its own display system's code.
 
 - **The AppImage holds both** and starts the right one by itself: the Wayland build in a Wayland session, the X11 build otherwise. It plays through ALSA, which desktops with PipeWire pass on to PipeWire; the .deb and .rpm also have a PipeWire plugin, used first.
-- **The .deb and .rpm above are the Wayland build.** For an X11 desktop, install the X11 build's package instead, with the same plugins' package: `oxiguitar-x11_VERSION_amd64.deb` (`sudo apt install ./oxiguitar-x11_*.deb ./oxiguitar-plugins-basic_*.deb`) or `oxiguitar-x11-VERSION-1.x86_64.rpm`. Installing one build's package replaces the other's.
+- **The .deb and .rpm above are the Wayland build.** For an X11 desktop, install the X11 build's package instead: `oxiguitar-x11_VERSION_amd64.deb` (`sudo apt install oxiguitar-x11`) or `oxiguitar-x11-VERSION-1.x86_64.rpm`. Installing one build's package replaces the other's.
 
 If you start the wrong package's build, it says which one you need. **The X11 build is deprecated** and will be dropped once desktops have left X11.
 
@@ -25,7 +25,7 @@ If you start the wrong package's build, it says which one you need. **The X11 bu
 
 Each system's page says where plugins go and how they are kept up to date: [Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md). [The official plugins](official-plugins.md) says what each one does.
 
-OxiGuitar opens and plays files only through plugins, and the basic ones come with every download: in the AppImage, inside the Windows zip (its `plugins` folder) and inside the macOS app, and as the `oxiguitar-plugins-basic` package beside the .deb and .rpm. You don't need to install them yourself.
+OxiGuitar opens and plays files only through plugins, and none comes in the downloads: install at least the Guitar Pro and MIDI plugins (and an audio output on the AppImage, Windows and macOS). Each plugin has a repository and releases of its own, listed in [the official plugins](official-plugins.md); the system pages ([Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md)) say how to install and update them. OxiGuitar says so, once, when it starts without them.
 
 To add other plugins, put their `.oxp` files in your own plugin folder ([Settings and plugins](plugins.md)); when the same plugin is in both places, OxiGuitar uses the higher version, and yours when the versions are equal. **Help → About** lists every folder OxiGuitar searches, and **Tools → Plugins** the plugins it found. To leave out a plugin you don't want, untick it in **Tools → Plugins**. (Releases up to 0.10 came without plugins, which were a separate zip. If you unzipped one into your plugin folder, you can delete those files: the newer copies that come with OxiGuitar are used anyway.)
 

@@ -83,7 +83,7 @@ fn every_corpus_file_has_a_sound_timeline() {
         let Ok(data) = std::fs::read(&path) else {
             continue;
         };
-        let Ok(imported) = oxiguitar_formats::read(&data) else {
+        let Ok(imported) = oxiguitar_plugin_test::released::guitar_pro::read(&data) else {
             continue;
         };
         let started = Instant::now();
@@ -120,7 +120,9 @@ fn the_reference_songs_have_sound_timelines() {
     files(&root.join("reference"), &mut all);
     files(&root.join("gp"), &mut all);
     for path in all {
-        let Ok(imported) = oxiguitar_formats::read(&std::fs::read(&path).unwrap()) else {
+        let Ok(imported) =
+            oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(&path).unwrap())
+        else {
             continue;
         };
         let t = Timeline::new(&imported.score);
@@ -136,7 +138,7 @@ fn the_reference_songs_have_sound_timelines() {
 #[test]
 fn the_band_song_timeline_is_quick() {
     let song = oxiguitar_testgen::band_song(300);
-    let score = oxiguitar_formats::read(&oxiguitar_testgen::to_gp(&song))
+    let score = oxiguitar_plugin_test::released::guitar_pro::read(&oxiguitar_testgen::to_gp(&song))
         .unwrap()
         .score;
     let started = Instant::now();

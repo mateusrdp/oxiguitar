@@ -1,6 +1,7 @@
 # Test builds for every target on each push to develop, kept 14 days under the
 # Actions tab so testers can try them: the desktop app (oxiguitar) and the
-# command-line tool (oxiguitar-cli). The packages (AppImage, .deb, .rpm,
+# command-line tool (oxiguitar-cli). The plugins have test builds of their own
+# in their repositories (#165). The packages (AppImage, .deb, .rpm,
 # .dmg, .exe in a zip) are made by release.yml.
 name: Test builds
 
@@ -44,10 +45,6 @@ jobs:
         run: |
           cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
           cp target/x11/release/oxiguitar target/release/oxiguitar-x11
-      # Our plugins where the programs look for them: lib/oxiguitar/plugins/
-      # beside bin's parent on Linux, plugins\ beside the .exe on Windows.
-      - run: scripts/build-plugins.sh
-        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: oxiguitar-${{ matrix.name }}
@@ -55,8 +52,6 @@ jobs:
             target/release/oxiguitar${{ matrix.exe }}
             target/release/oxiguitar-x11
             target/release/oxiguitar-cli${{ matrix.exe }}
-            target/lib/oxiguitar/plugins/*.oxp
-            target/release/plugins/*.oxp
           retention-days: 14
           if-no-files-found: error
       # The test plugin (plugins/test, never shipped), apart, for trying
@@ -85,21 +80,6 @@ jobs:
           path: test-plugin/
           retention-days: 14
           if-no-files-found: error
-      # Files for checking the .gp writer in Guitar Pro (Mateus, with Guitar
-      # Pro 7.6): every reference song and the test song in every format,
-      # written as .gp by this build's plugin, with what each lost.
-      - name: Files for Guitar Pro
-        if: matrix.name == 'linux-x86_64'
-        run: |
-          scripts/guitar-pro-check.sh guitar-pro-check
-          cp fixtures/guitar-pro-check/README.md guitar-pro-check/
-      - if: matrix.name == 'linux-x86_64'
-        uses: actions/upload-artifact@v4
-        with:
-          name: guitar-pro-check
-          path: guitar-pro-check/
-          retention-days: 14
-          if-no-files-found: error
 
   macos:
     name: Build (macos-universal)
@@ -111,10 +91,9 @@ jobs:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
       - run: |
-          mkdir -p dist/bin dist/PlugIns
+          mkdir -p dist/bin
           for target in aarch64-apple-darwin x86_64-apple-darwin; do
             cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli --target "$target"
-            scripts/build-plugins.sh --target "$target"
           done
           for bin in oxiguitar oxiguitar-cli; do
             lipo -create -output "dist/bin/$bin" \
@@ -122,19 +101,11 @@ jobs:
               "target/x86_64-apple-darwin/release/$bin"
             lipo -info "dist/bin/$bin"
           done
-          # Our plugins in PlugIns/ beside bin/, where the programs look
-          # (<bin>/../PlugIns), each one universal file.
-          for plugin in target/aarch64-apple-darwin/PlugIns/*.oxp; do
-            name="$(basename "$plugin")"
-            lipo -create -output "dist/PlugIns/$name" \
-              "$plugin" "target/x86_64-apple-darwin/PlugIns/$name"
-          done
       - uses: actions/upload-artifact@v4
         with:
           name: oxiguitar-macos-universal
           path: |
             dist/bin/oxiguitar
             dist/bin/oxiguitar-cli
-            dist/PlugIns/*.oxp
           retention-days: 14
           if-no-files-found: error

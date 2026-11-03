@@ -32,7 +32,7 @@ fn tools_run_on_the_corpus() {
         let Ok(data) = std::fs::read(&path) else {
             continue;
         };
-        let Ok(imported) = oxiguitar_formats::read(&data) else {
+        let Ok(imported) = oxiguitar_plugin_test::released::guitar_pro::read(&data) else {
             continue;
         };
         let score = imported.score;

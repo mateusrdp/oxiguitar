@@ -1,6 +1,7 @@
 # Tries plugin-release.yml (and the packaging scripts it uses) on the test
-# plugin (#165): the same build, packages, tests and checks a plugin
-# repository gets, without a release. The files stay under the run for 14
+# plugins (#165; two plugin files, as a repository with several plugins
+# has): the same build, packages, tests and checks a plugin repository
+# gets, without a release. The files stay under the run for 14
 # days; they are the test builds a pull request's description links to.
 name: Plugin release (trial)
 
@@ -13,6 +14,7 @@ on:
       - scripts/plugin-package/**
       - scripts/package/check-glibc.sh
       - plugins/test/**
+      - plugins/test-second/**
   workflow_dispatch:
 
 permissions:
@@ -28,7 +30,7 @@ jobs:
     with:
       name: test
       title: Test plugin
-      description: A plugin for trying OxiGuitar's plugin release workflow. Never shipped.
+      description: Two plugins for trying OxiGuitar's plugin release workflow. Never shipped.
       working-directory: plugins/test
       # The workspace's tests run in ci.yml.
       test: false

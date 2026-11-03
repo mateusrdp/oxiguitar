@@ -37,7 +37,7 @@ The MuldjordKit is under CC BY 4.0: if you publish music made with it, credit La
 ## What plays without them
 
 - **Windows** has a General MIDI set, `gm.dls`, and **macOS** one in Core Audio. These are the smallest and plainest.
-- **Linux** has one when a package installs it: on Debian and Ubuntu the `oxiguitar-plugins-basic` package recommends `fluid-soundfont-gm` (FluidR3, 148 MB) or `musescore-general-soundfont-small` (MuseScore General, 40 MB), which your package manager installs with it unless told not to; on Fedora it recommends `fluid-soundfont-gm`. OxiGuitar looks in `/usr/share/sounds/sf2`, `/usr/share/sounds/sf3` and `/usr/share/soundfonts`, and, for the recorded sets the sound-set installer puts there, in `/usr/share/oxiguitar/soundfonts`.
+- **Linux** has one when a package installs it: on Debian and Ubuntu the `oxiguitar-midi` package recommends `fluid-soundfont-gm` (FluidR3, 148 MB) or `musescore-general-soundfont-small` (MuseScore General, 40 MB), which your package manager installs with it unless told not to; on Fedora it recommends `fluid-soundfont-gm`. OxiGuitar looks in `/usr/share/sounds/sf2`, `/usr/share/sounds/sf3` and `/usr/share/soundfonts`, and, for the recorded sets the sound-set installer puts there, in `/usr/share/oxiguitar/soundfonts`.
 
 A General MIDI set has one sound for each of the 128 standard instruments and a drum kit. While only your system's sets play, the MIDI plugin's settings window says so, with a link to this page, and the first time it happens a dialog says it too ([Advice dialogs](plugins.md#advice-dialogs); tick **Don't show this again** to silence it, `no-sound-sets` in `settings.json`).
 
