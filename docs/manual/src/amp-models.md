@@ -4,7 +4,7 @@ OxiGuitar can play a guitar or bass track through an **amp model**: a capture of
 
 ## What you need
 
-1. **A guitar sound to feed the amp.** An amp model expects what a guitar's cable carries, a clean, plain signal, called DI (direct input). Any guitar sound plays through it, but a DI set sounds the most real. FreePats' **Direct** set is one ([Better sounds](better-sounds.md), "Electric guitars as SoundFonts"): put its `.sf2` file in your `soundfonts` folder and pick it for **Electric guitars** in the MIDI plugin's settings window.
+1. **A clean guitar sound to feed the amp.** An amp model expects what a guitar's cable carries, a clean, plain signal, called DI (direct input). Any guitar sound plays through it, but a DI set sounds the most real. FreePats' **Direct** set is one ([Better sounds](better-sounds.md), "Electric guitars as SoundFonts"): put its `.sf2` file in your `soundfonts` folder and pick it for **Clean guitars** in the MIDI plugin's settings window, or for the track alone (below). A track whose instrument is an overdriven or distortion guitar plays the **Overdriven guitars** or **Distorted guitars** set, already distorted: for the amp, set that track's **Sound** to **Like clean guitars** (below).
 2. **Amp models.** Thousands are shared for free, most of them at [TONE3000](https://www.tone3000.com/). Each capture's page says its licence; most allow using it and publishing what you play through it, but not passing the file on. A capture marked as an amp head (amp only) needs a cabinet after it; a full rig already has one.
 3. **Cabinets, if you want others.** Four come with OxiGuitar (below). Any `.wav` impulse response works, mono or the first channel of a stereo file, at any sample rate.
 
@@ -27,11 +27,15 @@ With `OXIGUITAR_HOME` set, it is the `nam` folder in that folder.
 Select a guitar or bass track (click its name) and open the **Track** tab on the right ([Tracks and notation](tracks.md)). Its **Amp (NAM)** section has:
 
 - **Play this track through an amp model**: on or off. Picking a model turns it on.
-- **Model**: every `.nam` file in the `nam` folder, by its path inside the folder.
+- **Model**: every `.nam` file in the `nam` folder, by its path inside the folder. While the amp is on, a line under it reminds you to feed it a clean guitar: in the same tab, set the track's **Sound** (the MIDI plugin's section, above) to **Like clean guitars**, or to a clean or DI set ([Better sounds](better-sounds.md#one-tracks-own-sound)). The amp's section can't see the Sound section, so the line shows whatever the Sound is.
 - **Cabinet**: **From the model** (none for a model that says it includes its cabinet, the first built-in one otherwise), **None**, one of the four built-in cabinets, or a `.wav` file from the `nam` folder.
 - **Input** and **Output**, from −24 to +24 dB. Input drives the amp harder or softer, as a guitar's volume knob does; output sets the track's level after it. A model whose file says how loud it plays is first brought to −18 dBFS, so models sound about as loud as each other.
 
 The settings are saved per track beside the score, in `FILE.oxg`, like every plugin's track settings; the score itself doesn't change. A track whose model is missing (the file was moved or deleted) plays without it, and the bottom of the window says so.
+
+## With the equalizer
+
+The amp has no tone controls of its own. The **Equalizer** plugin ([Playing a score](playback.md#each-tracks-sound)) shapes the sound after it: **Basic** is Bass, Middle and Treble, like an amp's tone stack, and **Graphic** is ten bands. A track's effects run in the order their sections stand in the Track tab, the amp first and then the equalizer unless you move them: the arrows by the **Amp (NAM)** and **Equalizer** headings move one before the other.
 
 ## How heavy it is
 

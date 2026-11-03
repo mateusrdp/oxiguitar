@@ -33,6 +33,16 @@ Each track's row at the bottom has a **mute** button (the loudspeaker crossed ou
 
 However loud a song is, OxiGuitar never lets the sound go past just under full scale, so it doesn't distort when many tracks play at once.
 
+## Each track's sound
+
+Select a track (click its name) and open the **Track** tab on the right: under the track's name, instrument and strings, the plugins add sections that change how that one track sounds. They are kept beside the score, in `FILE.oxg`, so the song sounds the same the next time; the score itself doesn't change.
+
+- **Sound** (the MIDI plugin): **Automatic** plays the set the settings window picks for the track's kind of instrument (clean, overdriven or distorted guitars, basses and so on); or the track plays like another kind, or with a set of its own ([Better sounds](better-sounds.md#one-tracks-own-sound)).
+- **Amp (NAM)**, for guitars and basses: an amp model and a cabinet ([Amp models (NAM)](amp-models.md)).
+- **Equalizer**, for every track: **Off** (the default), **Basic** (three bands: Bass, a shelf at 120 Hz; Middle, at 700 Hz; Treble, a shelf at 3.2 kHz) or **Graphic** (ten bands, one octave apart, from 31 Hz to 16 kHz). Each band goes from −12 to +12 dB in half-decibel steps; **Flat** sets them all back to 0. Basic and Graphic each keep their bands, so switching between them loses nothing. It works with or without an amp, adds no delay, and comes as a plugin of its own, `oxiguitar-eq` ([The official plugins](official-plugins.md)).
+
+Sections that change the sound after the instrument (the amp, the equalizer) come last, in the order they work: the sound goes through the first, then the next. The up and down arrows by such a section's heading move it, and so change that order for the track: an equalizer before the amp shapes what drives the amp, after it what you hear. Without a change, the amp comes first and the equalizer after it. Each change, like any edit, is one step for **Undo**.
+
 ## Output
 
 **Output** chooses where the sound goes: the system's default, or one of the outputs your system lists. OxiGuitar remembers the choice. It opens the output when you press Play and lets go of it a couple of seconds after the sound stops, so other programs can use it in between.

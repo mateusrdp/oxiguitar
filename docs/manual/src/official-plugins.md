@@ -30,6 +30,7 @@ One sends the sound to your speakers. OxiGuitar uses the one that fits your syst
 | --- | --- | --- |
 | **WAV** | File → Export WAV Audio…: the whole song or some bars as a WAV file ([Exporting audio](audio-export.md)) | `oxiguitar-wav` |
 | **NAM** | Amp models (Neural Amp Modeler captures) and cabinets for guitar and bass tracks ([Amp models](amp-models.md)). Needs the MIDI plugin, which makes the sound it shapes | `oxiguitar-nam` |
+| **Equalizer** | A three-band or ten-band equalizer on any track, with or without an amp model ([Playing a score](playback.md#each-tracks-sound)). Suggested by OxiGuitar's packages, as NAM is | `oxiguitar-eq` |
 | **Better sounds** | Not a plugin but an installer: downloads the free recorded sound sets we recommend, after you say yes, into your `soundfonts` folder ([Better sounds](better-sounds.md)). Coming with 1.0 | `oxiguitar-bettersounds-soundfonts` |
 
 On GitHub each repository is `github.com/mateusrdp/` followed by its name. They appear when the plugin's first release does; until then the plugin is inside OxiGuitar's own download.

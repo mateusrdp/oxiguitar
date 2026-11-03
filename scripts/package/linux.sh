@@ -7,7 +7,7 @@
 # and one AppImage that holds both builds. None carries a plugin: the plugins
 # live in repositories of their own (#165) with packages of their own. The
 # .deb and the .rpm recommend the Guitar Pro and MIDI plugins and suggest the
-# NAM one, so that apt and dnf install them with the core; the AppImage is
+# NAM and equalizer ones, so that apt and dnf install them with the core; the AppImage is
 # the core alone (plugins from their zips, by hand). Used by
 # .github/workflows/release.yml; runs on Ubuntu 24.04 (dpkg-deb and
 # dpkg-shlibdeps are there; rpmbuild comes from the "rpm" package, the
@@ -70,8 +70,9 @@ set of tracks together. It edits and saves them, exports them to PDF, and
 plays them with the system's sound set or better ones the user adds
 (SoundFont and SFZ). It opens and plays files through plugins, which are
 packages of their own: oxiguitar-guitarpro, oxiguitar-midi, oxiguitar-alsa
-and oxiguitar-pipewire (installed with it by default), and oxiguitar-nam
-for amplifier models. No telemetry: it never uploads anything."
+and oxiguitar-pipewire (installed with it by default), oxiguitar-nam for
+amplifier models and oxiguitar-eq for an equalizer. No telemetry: it never
+uploads anything."
 if [[ "$build" == x11 ]]; then
     summary="$summary (X11 build, deprecated)"
     description="$description
@@ -216,9 +217,10 @@ build_deb() {
         echo "Depends: ${linked:+$linked, }$deb_runtime"
         # The core opens and plays nothing without plugins: the essential
         # ones are recommended (apt installs them, and keeps them updated
-        # from the same repository), the NAM one suggested (#165).
+        # from the same repository), the NAM (#165) and equalizer (#152)
+        # ones suggested.
         echo "Recommends: oxiguitar-guitarpro, oxiguitar-midi, oxiguitar-alsa, oxiguitar-pipewire, $deb_recommends"
-        echo "Suggests: oxiguitar-nam"
+        echo "Suggests: oxiguitar-nam, oxiguitar-eq"
         if [[ "$build" == x11 ]]; then
             # The same program for another display system: one or the other.
             echo "Provides: oxiguitar"
@@ -259,6 +261,7 @@ build_rpm() {
         echo "Recommends: oxiguitar-alsa"
         echo "Recommends: oxiguitar-pipewire"
         echo "Suggests: oxiguitar-nam"
+        echo "Suggests: oxiguitar-eq"
         for r in "${rpm_recommends[@]}"; do echo "Recommends: $r"; done
         if [[ "$build" == x11 ]]; then
             echo "Provides: oxiguitar = ${version//-/.}"
