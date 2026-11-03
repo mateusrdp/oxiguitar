@@ -42,4 +42,4 @@ Played by OxiGuitar 0.9: the guitars use FreePats' Clean electric guitar (CC0) a
 
 <audio controls preload="none" src="sounds/drums.mp3"></audio>
 
-These songs are short pieces written to test OxiGuitar, not music. Amp modelling (NAM), which turns a plain guitar into a real amp's sound, comes with OxiGuitar 1.0, and so will examples of it here.
+These songs are short pieces written to test OxiGuitar, not music. Amp modelling (NAM), which turns a plain guitar into a real amp's sound, has its own page ([Amp models](amp-models.md)); examples of it will come here once we have a capture we may publish.
