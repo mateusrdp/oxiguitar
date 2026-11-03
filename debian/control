@@ -34,6 +34,8 @@ Depends:
 Recommends:
  oxiguitar-guitarpro,
  oxiguitar-midi,
+ oxiguitar-alsa,
+ oxiguitar-pipewire,
  libdbus-1-3,
  xdg-desktop-portal,
 Suggests:
@@ -48,6 +50,6 @@ Description: guitar tablature and score viewer
  (SoundFont and SFZ). No telemetry: it never uploads anything.
  .
  OxiGuitar opens and plays files only through plugins, which are packages
- of their own: oxiguitar-guitarpro (Guitar Pro files) and oxiguitar-midi
- (sound), both recommended, and oxiguitar-nam (amplifier models),
- suggested.
+ of their own: oxiguitar-guitarpro (Guitar Pro files), oxiguitar-midi
+ (sound) and oxiguitar-alsa and oxiguitar-pipewire (audio output), all
+ recommended, and oxiguitar-nam (amplifier models), suggested.

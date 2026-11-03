@@ -69,9 +69,9 @@ shows them as standard notation and tablature in four layouts, with any
 set of tracks together. It edits and saves them, exports them to PDF, and
 plays them with the system's sound set or better ones the user adds
 (SoundFont and SFZ). It opens and plays files through plugins, which are
-packages of their own: oxiguitar-guitarpro and oxiguitar-midi (installed
-with it by default), and oxiguitar-nam for amplifier models. No telemetry:
-it never uploads anything."
+packages of their own: oxiguitar-guitarpro, oxiguitar-midi, oxiguitar-alsa
+and oxiguitar-pipewire (installed with it by default), and oxiguitar-nam
+for amplifier models. No telemetry: it never uploads anything."
 if [[ "$build" == x11 ]]; then
     summary="$summary (X11 build, deprecated)"
     description="$description
@@ -217,7 +217,7 @@ build_deb() {
         # The core opens and plays nothing without plugins: the essential
         # ones are recommended (apt installs them, and keeps them updated
         # from the same repository), the NAM one suggested (#165).
-        echo "Recommends: oxiguitar-guitarpro, oxiguitar-midi, $deb_recommends"
+        echo "Recommends: oxiguitar-guitarpro, oxiguitar-midi, oxiguitar-alsa, oxiguitar-pipewire, $deb_recommends"
         echo "Suggests: oxiguitar-nam"
         if [[ "$build" == x11 ]]; then
             # The same program for another display system: one or the other.
@@ -256,6 +256,8 @@ build_rpm() {
         for r in "${rpm_runtime[@]}"; do echo "Requires: $r"; done
         echo "Recommends: oxiguitar-guitarpro"
         echo "Recommends: oxiguitar-midi"
+        echo "Recommends: oxiguitar-alsa"
+        echo "Recommends: oxiguitar-pipewire"
         echo "Suggests: oxiguitar-nam"
         for r in "${rpm_recommends[@]}"; do echo "Recommends: $r"; done
         if [[ "$build" == x11 ]]; then
