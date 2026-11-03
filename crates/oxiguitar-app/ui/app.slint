@@ -802,9 +802,12 @@ component TrackTab inherits Rectangle {
     // The section at the index moves up (true) or down: its effects run
     // earlier or later.
     callback section-moved(int, bool);
+    // As wide as the panel, or wider when something in it can't be
+    // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        VerticalLayout {
-            width: scroll.visible-width;
+        viewport-width: max(self.visible-width, content.min-width);
+        content := VerticalLayout {
+            width: scroll.viewport-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -870,9 +873,12 @@ component BarTab inherits Rectangle {
     in property <[InspectorField]> fields;
     callback changed(string, int);
     callback edited(string, string);
+    // As wide as the panel, or wider when something in it can't be
+    // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        VerticalLayout {
-            width: scroll.visible-width;
+        viewport-width: max(self.visible-width, content.min-width);
+        content := VerticalLayout {
+            width: scroll.viewport-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -933,9 +939,12 @@ component BarTab inherits Rectangle {
 component NoteTab inherits Rectangle {
     in property <[InspectorField]> fields;
     callback changed(string, int);
+    // As wide as the panel, or wider when something in it can't be
+    // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        VerticalLayout {
-            width: scroll.visible-width;
+        viewport-width: max(self.visible-width, content.min-width);
+        content := VerticalLayout {
+            width: scroll.viewport-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -961,9 +970,12 @@ export struct SongField {
 component SongView inherits Rectangle {
     in property <[SongField]> fields;
     callback edited(string, string);
+    // As wide as the panel, or wider when something in it can't be
+    // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        VerticalLayout {
-            width: scroll.visible-width;
+        viewport-width: max(self.visible-width, content.min-width);
+        content := VerticalLayout {
+            width: scroll.viewport-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -1331,6 +1343,9 @@ export component AppWindow inherits Window {
     in-out property <length> bottom-height: 120px;
     in-out property <length> left-width: 220px;
     in-out property <length> right-width: 240px;
+    // The most the right panel may take: the window less the left panel and
+    // 160 px of score.
+    property <length> right-room: root.width - (root.left-shown && !root.left-area.collapsed ? root.left-width : 0px) - 160px - 12px;
 
     in property <[TrackRow]> tracks;
     in property <[ToolRow]> tools;
@@ -2356,7 +2371,9 @@ export component AppWindow inherits Window {
 
                 // Right area: Song, Bar and Note, then plugins' tabs.
                 if root.right-shown && !root.right-area.collapsed : SideSplitter {
-                    dragged(d) => { root.right-width = clamp(root.right-width - d, 120px, 500px); }
+                    // As wide as the window allows, leaving the score
+                    // 160 px (Mateus, 3 Nov 2026: as wide as possible).
+                    dragged(d) => { root.right-width = clamp(root.right-width - d, 120px, max(120px, root.right-room)); }
                 }
                 if root.right-shown && !root.right-area.collapsed : VerticalLayout {
                     width: root.right-width;

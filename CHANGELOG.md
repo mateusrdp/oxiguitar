@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- The right panel widens as far as the window allows (it stopped at 500 px), and its Song, Track, Bar and Note tabs scroll sideways when their contents can't be narrower than the panel, instead of pushing them off to the right.
+
 ### Added
 
 - The order of a track's effects is the user's (#152): in the Track tab, the section of each plugin with an effect for the track (the NAM amp, the equalizer) has up and down arrows, and the track's effects run in the order the sections stand. The order is saved per track in the song's `.oxg` file (`"effects"`, by plugin id; one step to undo); without one, the amp runs first, then the equalizer, then any other effect as found. Effect sections come after the others (such as the MIDI plugin's Sound).
