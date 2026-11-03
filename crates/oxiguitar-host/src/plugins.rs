@@ -1066,6 +1066,19 @@ impl Plugins {
             .collect()
     }
 
+    /// The effects for a track of `class` whose effects the user ordered
+    /// as `order` (plugin ids, the track's own; empty for the default), in
+    /// the order they run: see [`in_effect_order`].
+    pub fn effects_in_order(
+        &self,
+        class: InstrumentClass,
+        order: &[String],
+    ) -> Vec<InstrumentRef<'_>> {
+        in_effect_order(self.effects_for(class), order, |e| {
+            e.plugin.manifest.as_ref().map_or("", |m| m.id.as_str())
+        })
+    }
+
     /// Prepares `instrument` (one of [`Plugins::playable`]) for
     /// `prepare.tracks`, loading its plugin if needed: off the audio
     /// thread, since the plugin loads its sounds now.
@@ -2207,6 +2220,35 @@ fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
 /// ready once each id has its file: a plugin whose id another one replaces
 /// is that plugin's older self, whatever its version; then a plugin whose
 /// needs aren't met is set aside.
+/// The plugins whose effects run first on a track that has no order of its
+/// own, in this order: the amp, then the equalizer (#152).
+pub const DEFAULT_EFFECT_ORDER: &[&str] = &["oxiguitar.nam", "oxiguitar.eq"];
+
+/// `items` (a track's effects, or their plugins, in plugin order) in the
+/// order they run on a track whose effects the user ordered as `order`, by
+/// plugin id (`plugin` gives an item's): first the plugins `order` names,
+/// as it names them; then those of [`DEFAULT_EFFECT_ORDER`]; then the rest
+/// as found. A plugin's own effects keep their order.
+pub fn in_effect_order<T>(
+    mut items: Vec<T>,
+    order: &[String],
+    plugin: impl Fn(&T) -> &str,
+) -> Vec<T> {
+    let rank = |item: &T| {
+        let id = plugin(item);
+        if let Some(at) = order.iter().position(|o| o == id) {
+            (0, at)
+        } else if let Some(at) = DEFAULT_EFFECT_ORDER.iter().position(|o| *o == id) {
+            (1, at)
+        } else {
+            (2, 0)
+        }
+    };
+    // Stable: the rest keep the order found.
+    items.sort_by_key(|item| rank(item));
+    items
+}
+
 fn settle(found: &mut [Found]) {
     // A plugin whose id another one replaces (interface 1.4) is that
     // plugin's older self, whatever its version.
@@ -2343,6 +2385,38 @@ mod missing {
 mod tests {
     use super::*;
     use crate::folders::tests::scratch;
+
+    #[test]
+    fn a_track_s_effects_run_in_its_own_order_then_the_default_then_as_found() {
+        fn order(found: &[&'static str], saved: &[&str]) -> Vec<&'static str> {
+            let saved: Vec<String> = saved.iter().map(|s| (*s).to_owned()).collect();
+            in_effect_order(found.to_vec(), &saved, |id: &&'static str| {
+                id.split(':').next().unwrap_or("")
+            })
+        }
+        // Without an order of the track's own: the amp, the equalizer,
+        // then the rest as found.
+        assert_eq!(
+            order(
+                &["me.echo", "oxiguitar.eq", "you.verb", "oxiguitar.nam"],
+                &[]
+            ),
+            ["oxiguitar.nam", "oxiguitar.eq", "me.echo", "you.verb"]
+        );
+        // The track's order first; what it doesn't name after, as above.
+        assert_eq!(
+            order(
+                &["me.echo", "oxiguitar.eq", "you.verb", "oxiguitar.nam"],
+                &["you.verb", "oxiguitar.eq", "gone.plugin"]
+            ),
+            ["you.verb", "oxiguitar.eq", "oxiguitar.nam", "me.echo"]
+        );
+        // A plugin's own effects stay together, in their order.
+        assert_eq!(
+            order(&["a:1", "oxiguitar.eq", "a:2"], &["a"]),
+            ["a:1", "a:2", "oxiguitar.eq"]
+        );
+    }
 
     #[test]
     fn system_plugins_are_discovered() {

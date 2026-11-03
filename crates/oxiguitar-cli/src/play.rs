@@ -157,8 +157,9 @@ fn play(asked: &Asked) -> Result<(), String> {
         sidecar.adopt(&plugins().replaced_ids());
         let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
         let settled = sidecar.settle(&names);
-        for (track, plugins) in score.tracks.iter_mut().zip(settled) {
-            track.plugins = plugins;
+        for (track, entry) in score.tracks.iter_mut().zip(settled) {
+            track.plugins = entry.plugins;
+            track.effects = entry.effects;
         }
     }
     let timeline = Timeline::new(&score);

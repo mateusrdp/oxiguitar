@@ -6,6 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- The order of a track's effects is the user's (#152): in the Track tab, the section of each plugin with an effect for the track (the NAM amp, the equalizer) has up and down arrows, and the track's effects run in the order the sections stand. The order is saved per track in the song's `.oxg` file (`"effects"`, by plugin id; one step to undo); without one, the amp runs first, then the equalizer, then any other effect as found. Effect sections come after the others (such as the MIDI plugin's Sound).
 - The reusable plugin release workflow takes `suggests-deb` and `suggests-rpm`, so a plugin's `.deb` and `.rpm` can suggest other packages (the MIDI plugin suggests `oxiguitar-bettersounds-soundfonts`).
 
 ### Fixed

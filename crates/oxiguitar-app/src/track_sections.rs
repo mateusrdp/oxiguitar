@@ -6,7 +6,9 @@
 //! track's settings for each plugin become while the dialog is open. On
 //! OK they go into the track as part of the dialog's one change; on Cancel
 //! they are dropped. The plugins keep nothing: the settings travel with
-//! every request. No window code here.
+//! every request. The sections of plugins with effects for the track come
+//! last, in the order the effects run, and can be moved up and down, which
+//! changes that order (#152). No window code here.
 
 use std::collections::BTreeMap;
 
@@ -48,6 +50,12 @@ pub(crate) struct TrackSections {
     pub(crate) sections: Vec<Shown>,
     /// The track's settings for each plugin, as they stand in the dialog.
     pub(crate) settings: BTreeMap<String, String>,
+    /// The plugins with effects for the track, in the order they run.
+    pub(crate) effects: Vec<String>,
+    /// The order of the track's effects as it goes into the track: the
+    /// track's own (empty for the default) until a section is moved, then
+    /// [`TrackSections::effects`].
+    pub(crate) order: Vec<String>,
 }
 
 impl TrackSections {
@@ -55,6 +63,13 @@ impl TrackSections {
     /// numbered `dialog`; none are asked for yet ([`TrackSections::asks`]).
     pub(crate) fn open(plugins: &Plugins, dialog: u64, index: usize, track: &Track) -> Self {
         let class = InstrumentClass::of(track.instrument.midi_program, track.instrument.percussion);
+        let mut effects: Vec<String> = Vec::new();
+        for e in plugins.effects_in_order(class, &track.effects) {
+            let id = e.plugin.manifest.as_ref().map_or("", |m| m.id.as_str());
+            if !effects.iter().any(|x| x == id) {
+                effects.push(id.to_owned());
+            }
+        }
         let sections = plugins
             .track_sections(class)
             .into_iter()
@@ -65,7 +80,7 @@ impl TrackSections {
                 content: None,
             })
             .collect();
-        TrackSections {
+        let mut out = TrackSections {
             dialog,
             track: TrackInfo {
                 index: u32::try_from(index).unwrap_or(u32::MAX),
@@ -74,7 +89,80 @@ impl TrackSections {
             },
             sections,
             settings: track.plugins.clone(),
+            effects,
+            order: track.effects.clone(),
+        };
+        out.arrange();
+        out
+    }
+
+    /// Puts the sections of plugins with effects last, in the order the
+    /// effects run; the others keep the plugins' order.
+    fn arrange(&mut self) {
+        let effects = &self.effects;
+        self.sections.sort_by_key(|s| {
+            effects
+                .iter()
+                .position(|e| *e == s.plugin)
+                .map_or((0, 0), |at| (1, at))
+        });
+    }
+
+    /// The plugins with effects that have sections here, in order.
+    fn movable(&self) -> Vec<&str> {
+        let mut out: Vec<&str> = Vec::new();
+        for s in &self.sections {
+            if self.effects.contains(&s.plugin) && !out.contains(&s.plugin.as_str()) {
+                out.push(&s.plugin);
+            }
         }
+        out
+    }
+
+    /// Whether the section at `index` can move up and down: the first
+    /// section of a plugin with effects, with another such plugin's
+    /// section before or after it.
+    pub(crate) fn moves(&self, index: usize) -> (bool, bool) {
+        let Some(s) = self.sections.get(index) else {
+            return (false, false);
+        };
+        let first = self.sections.iter().position(|x| x.plugin == s.plugin) == Some(index);
+        let movable = self.movable();
+        match movable.iter().position(|p| *p == s.plugin) {
+            Some(at) if first => (at > 0, at + 1 < movable.len()),
+            _ => (false, false),
+        }
+    }
+
+    /// Moves the section at `index`, with its plugin's other sections and
+    /// effects, before the plugin shown above it (`up`) or after the one
+    /// shown below it. Returns whether it moved.
+    pub(crate) fn move_section(&mut self, index: usize, up: bool) -> bool {
+        let (can_up, can_down) = self.moves(index);
+        if !(if up { can_up } else { can_down }) {
+            return false;
+        }
+        let plugin = self.sections[index].plugin.clone();
+        let movable: Vec<String> = self.movable().into_iter().map(str::to_owned).collect();
+        let Some(at) = movable.iter().position(|p| *p == plugin) else {
+            return false;
+        };
+        // Moving down is moving the one below up.
+        let (moved, before) = if up {
+            (plugin, movable[at - 1].clone())
+        } else {
+            (movable[at + 1].clone(), plugin)
+        };
+        self.effects.retain(|e| *e != moved);
+        let to = self
+            .effects
+            .iter()
+            .position(|e| *e == before)
+            .unwrap_or(self.effects.len());
+        self.effects.insert(to, moved);
+        self.order.clone_from(&self.effects);
+        self.arrange();
+        true
     }
 
     /// The track's settings for `plugin` as they stand.
@@ -231,5 +319,63 @@ mod tests {
             Request::Section { settings, event: Some(_), .. } if settings == r#"{"gain":3}"#
         ));
         assert!(s.ask(5, None).is_none());
+    }
+
+    #[test]
+    fn effect_sections_come_last_in_their_order_and_move_up_and_down() {
+        let mut s = sections();
+        let shown = |plugin: &str, section: &str| Shown {
+            plugin: plugin.into(),
+            section: section.into(),
+            title: section.into(),
+            content: None,
+        };
+        s.sections = vec![
+            shown("me.amp", "amp"),
+            shown("me.sound", "sound"),
+            shown("me.amp", "amp2"),
+            shown("me.cab", "cab"),
+            shown("me.eq", "eq"),
+        ];
+        // `me.hidden` has an effect and no section.
+        s.effects = ["me.cab", "me.hidden", "me.amp", "me.eq"]
+            .map(String::from)
+            .to_vec();
+        s.arrange();
+        let order = |s: &TrackSections| {
+            s.sections
+                .iter()
+                .map(|x| x.section.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(order(&s), ["sound", "cab", "amp", "amp2", "eq"]);
+        let moves: Vec<_> = (0..6).map(|i| s.moves(i)).collect();
+        assert_eq!(
+            moves,
+            [
+                (false, false),
+                (false, true),
+                (true, true),
+                (false, false),
+                (true, false),
+                (false, false)
+            ]
+        );
+        // Nothing moved: the track keeps its own order (here the default).
+        assert!(s.order.is_empty());
+        assert!(!s.move_section(0, true));
+        assert!(!s.move_section(1, true));
+        assert!(!s.move_section(4, false));
+        assert!(s.order.is_empty());
+
+        // The amp up: before the cabinet, with its second section.
+        assert!(s.move_section(2, true));
+        assert_eq!(order(&s), ["sound", "amp", "amp2", "cab", "eq"]);
+        assert_eq!(s.effects, ["me.amp", "me.cab", "me.hidden", "me.eq"]);
+        assert_eq!(s.order, s.effects);
+        // The cabinet down: after the equalizer.
+        assert!(s.move_section(3, false));
+        assert_eq!(order(&s), ["sound", "amp", "amp2", "eq", "cab"]);
+        assert_eq!(s.order, ["me.amp", "me.eq", "me.cab", "me.hidden"]);
     }
 }

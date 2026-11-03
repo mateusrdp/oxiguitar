@@ -170,6 +170,8 @@ pub(crate) struct TrackForm {
     /// What the plugins' sections of the dialog hold, by plugin id
     /// (interface 1.3).
     pub(crate) plugins: std::collections::BTreeMap<String, String>,
+    /// The order of the track's effects, by plugin id (#152).
+    pub(crate) effects: Vec<String>,
 }
 
 impl TrackForm {
@@ -200,6 +202,7 @@ impl TrackForm {
             frets: i32::from(s.fret_count),
             keep_pitches: true,
             plugins: s.plugins,
+            effects: s.effects,
         }
     }
 
@@ -273,6 +276,7 @@ impl TrackForm {
             tuning: self.tuning()?,
             keep_pitches: self.keep_pitches,
             plugins: self.plugins.clone(),
+            effects: self.effects.clone(),
         })
     }
 }

@@ -132,6 +132,7 @@ fn settings_of(track: &Track) -> Track {
         chords,
         lyrics,
         plugins,
+        effects,
     } = track;
     Track {
         name: name.clone(),
@@ -145,6 +146,8 @@ fn settings_of(track: &Track) -> Track {
         // Plugins' settings are the track's own: undone with the track
         // dialog's change.
         plugins: plugins.clone(),
+        // So is the order of its effects.
+        effects: effects.clone(),
     }
 }
 

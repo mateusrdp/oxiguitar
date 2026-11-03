@@ -29,7 +29,8 @@ pub struct Group {
     /// Each of them as the instrument is told about it.
     pub prepared: Vec<PreparedTrack>,
     /// The effects after each of them, in order: every installed effect
-    /// offered for the track's class (interface 1.3), each with the track's
+    /// offered for the track's class (interface 1.3), in the order the
+    /// track sets ([`Plugins::effects_in_order`], #152), each with the track's
     /// settings for its own plugin, so a change in the track dialog's
     /// section makes a new plan. An effect its settings leave off passes
     /// the sound through.
@@ -108,7 +109,7 @@ pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
                 .unwrap_or_else(|| "{}".into()),
         };
         let effects: Vec<EffectPick> = plugins
-            .effects_for(class_of(score, t))
+            .effects_in_order(class_of(score, t), &track.effects)
             .into_iter()
             .filter_map(|e| {
                 let plugin = e.plugin.manifest.as_ref()?.id.clone();
