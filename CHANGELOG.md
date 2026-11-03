@@ -11,6 +11,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 ### Fixed
 
 - Text that another voice holds (as Guitar Pro can save it on voice 2) can be changed and removed: Shift + T, Edit → Text… and the Beat tab's Text show and edit the text drawn at the caret's beat, whichever voice holds it (#153). New reference `beat-text-in-voice-2`.
+- A sound set picked in the MIDI plugin's settings window (or any change to the settings of a plugin that plays) takes effect at once: playback stops, the instruments are prepared again with the new sets, and the next Play uses them; no restart (#143).
 
 ## [0.12.1] - 2026-11-03
 
