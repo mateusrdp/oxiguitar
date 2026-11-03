@@ -12,6 +12,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- **Play a track's chords** (#151): the Track tab's "Play its chords" plays the track's chord diagrams, each until the next one, as a downstroke of the strings it shows, with the track's instrument and effects but as a part of its own, so a distorted guitar's chords go through their own amp instead of piling into the track's. Saved beside the score.
 - The order of a track's effects is the user's (#152): in the Track tab, the section of each plugin with an effect for the track (the NAM amp, the equalizer) has up and down arrows, and the track's effects run in the order the sections stand. The order is saved per track in the song's `.oxg` file (`"effects"`, by plugin id; one step to undo); without one, the amp runs first, then the equalizer, then any other effect as found. Effect sections come after the others (such as the MIDI plugin's Sound).
 - The `.deb` and `.rpm` of `oxiguitar` and `oxiguitar-x11` (and `debian/`) suggest `oxiguitar-eq`, the new equalizer plugin, beside `oxiguitar-nam` (#152).
 - The manual covers clean and distorted guitars (#152): the MIDI plugin's three electric rows and a track's own Sound (Better sounds), feeding an amp model a clean guitar and the equalizer after it (Amp models), each track's sound and the order of its effects (Playing a score), and the Equalizer plugin (The official plugins).
