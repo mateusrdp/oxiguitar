@@ -31,7 +31,7 @@ One sends the sound to your speakers. OxiGuitar uses the one that fits your syst
 | **WAV** | File → Export WAV Audio…: the whole song or some bars as a WAV file ([Exporting audio](audio-export.md)) | `oxiguitar-wav` |
 | **NAM** | Amp models (Neural Amp Modeler captures) and cabinets for guitar and bass tracks ([Amp models](amp-models.md)). Needs the MIDI plugin, which makes the sound it shapes | `oxiguitar-nam` |
 | **Equalizer** | A three-band or ten-band equalizer on any track, with or without an amp model ([Playing a score](playback.md#each-tracks-sound)). Suggested by OxiGuitar's packages, as NAM is | `oxiguitar-eq` |
-| **Better sounds** | Not a plugin but an installer: downloads the free recorded sound sets we recommend (clean, overdriven and distorted electric guitars, nylon and steel-string guitars, ukulele, bass, drums; about 1.2 GB), after you say yes, into your `soundfonts` folder ([Better sounds](better-sounds.md#the-sound-set-installer)). Suggested by the MIDI plugin's packages | `oxiguitar-bettersounds-soundfonts` |
+| **Better sounds** | Not a plugin but an installer: downloads the free recorded sound sets we recommend (clean, overdriven and distorted electric guitars, nylon and steel-string guitars, ukulele, bass, drums; about 1.2 GB), into your `soundfonts` folder (by hand, after you say yes) or for every user (the Linux packages do it as they install) ([Better sounds](better-sounds.md#the-sound-set-installer)). Suggested by the MIDI plugin's packages | `oxiguitar-bettersounds-soundfonts` |
 
 ## Planned
 

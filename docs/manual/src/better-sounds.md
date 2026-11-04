@@ -1,6 +1,6 @@
 # Better sounds
 
-OxiGuitar plays your scores with **sound sets**: files of recorded instruments. Out of the box it uses the small General MIDI set your system has, which sounds plain. Free recorded sets sound far better, and the best for guitars, basses and drums are **SFZ** sets. OxiGuitar itself never downloads anything: the sound-set installer below fetches the sets we recommend after asking you, or you download sets yourself; either way you put them in a folder and pick them once.
+OxiGuitar plays your scores with **sound sets**: files of recorded instruments. Out of the box it uses the small General MIDI set your system has, which sounds plain. Free recorded sets sound far better, and the best for guitars, basses and drums are **SFZ** sets. OxiGuitar itself never downloads anything: the sound-set installer below fetches the sets we recommend after asking you, or you download sets yourself. The installer's sets play by themselves; sets you download yourself you put in a folder and pick once.
 
 ## The sound-set installer
 
@@ -19,10 +19,10 @@ The easiest way: **oxiguitar-bettersounds-soundfonts** installs one good, free r
 
 About 1.2 GB in all; you can take any of them. Before it downloads anything it shows each set's size, licence, author and the hosts its files come from, and waits for your yes; every file is checked against the checksum it was pinned with.
 
-- **Debian, Ubuntu, Fedora:** the package `oxiguitar-bettersounds-soundfonts` from our repositories ([Installing on Linux](install-linux.md)), which the MIDI plugin's package suggests. Installing it with apt asks whether to download the sets now; any time later, `oxiguitar-install-sounds` chooses and downloads them into `/usr/share/oxiguitar/soundfonts`, for every user.
+- **Debian, Ubuntu, Fedora:** the package `oxiguitar-bettersounds-soundfonts` from our repositories ([Installing on Linux](install-linux.md)), which the MIDI plugin's package suggests. Installing it downloads the sets into `/usr/share/oxiguitar/soundfonts`, for every user: apt asks first, with yes as the answer it takes when it isn't asked (an unattended install downloads them all), and dnf downloads them as it installs (`OXIGUITAR_SKIP_SOUNDS=1` in its environment skips that). Say no, or let a download fail, and `sudo oxiguitar-install-sounds --system` chooses and downloads them any time later. Removing the package removes the sets it installed.
 - **Any system:** from the installer's [releases page](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases), `install.sh` (Linux, macOS: `bash install.sh` in a terminal) or `install.ps1` (Windows: in PowerShell, `powershell -ExecutionPolicy Bypass -File .\install.ps1`). They install into your own `soundfonts` folder (below). `--list` (`-List`) shows what is on offer, `--sets bass,drums` (`-Sets bass,drums`) takes only some, and `--uninstall` (`-Uninstall`) removes what it installed.
 
-Then **pick them** in the MIDI plugin's settings window (**Tools → Plugins…**, **MIDI (SoundFont, SFZ)**, **Settings…**): each set is listed by its name, with its licence and credit; pick **Clean Guitar** for **Clean guitars**, **Overdriven Guitar** for **Overdriven guitars**, and so on. The installer writes a `CREDITS.txt` beside the sets; the drum kit's licence asks that music you publish with it credit "Drum samples provided by DrumGizmo.org".
+**There is nothing to pick.** Each set says which kind of track it is made for, so OxiGuitar plays clean guitars with Clean Guitar, overdriven ones with Overdriven Guitar, distorted ones with Distorted Guitar, basses with Bass and drums with the Drum Kit, from the next time a score plays. Nylon Guitar and Ukulele share **Nylon-string guitars**, where the larger, Nylon Guitar, plays (pick the Ukulele there, or give one track its own sound: [One track's own sound](#one-tracks-own-sound)); Steel String Guitar has **Steel-string guitars**. To use another set for a kind of track, pick it in the MIDI plugin's settings window (**Tools → Plugins…**, **MIDI (SoundFont, SFZ)**, **Settings…**): each set is listed by its name, with its licence and credit, and each row's first entry says which set plays when you pick nothing. A pick always wins. The installer writes a `CREDITS.txt` beside the sets; the drum kit's licence asks that music you publish with it credit "Drum samples provided by DrumGizmo.org".
 
 ## Sets to download yourself
 
@@ -51,7 +51,7 @@ All three together take about 2 GB of disk. OxiGuitar holds the samples of the s
    - **Basses**: `01-darkblack_keysw`;
    - **Drums**: `DrumGizmo MuldjordKit` (in its `Stereo` folder).
 
-   These guitars are clean. Leave **Overdriven guitars** and **Distorted guitars** on a General MIDI set, whose own overdriven and distortion guitars then play there, or pick a distorted set of your own; or play the clean guitars through an amp model ([Amp models (NAM)](amp-models.md)). Leave **Acoustic guitars** and **Everything else** on a General MIDI set (below). The choice holds for every file; one track can play another row's set, or a set of its own ([One track's own sound](#one-tracks-own-sound)).
+   These guitars are clean. Leave **Overdriven guitars** and **Distorted guitars** on a General MIDI set, whose own overdriven and distortion guitars then play there, or pick a distorted set of your own; or play the clean guitars through an amp model ([Amp models (NAM)](amp-models.md)). Leave **Nylon-string guitars**, **Steel-string guitars** and **Everything else** on a General MIDI set (below). The choice holds for every file; one track can play another row's set, or a set of its own ([One track's own sound](#one-tracks-own-sound)).
 4. **Play.** A change in the settings window takes effect at once: if the song was playing it stops, the new sets load (a few seconds for a big kit) and the ones no longer picked are let go, and the next Play uses them.
 
 If you publish music made with these sets, credit them: Karoryfer Lecolds for the guitars and basses, and, as the MuldjordKit's licence (CC BY 4.0) asks, Lars Muldjord and the DrumGizmo team for the drums.
@@ -93,7 +93,8 @@ The MIDI plugin's settings window (**Tools → Plugins…**, **MIDI (SoundFont, 
 | **Clean guitars** | Jazz (27), Clean (28), Muted (29) and Harmonics (32) electric guitar |
 | **Overdriven guitars** | Overdriven guitar (30) |
 | **Distorted guitars** | Distortion guitar (31) |
-| **Acoustic guitars** | Nylon (25) and steel-string (26) guitar |
+| **Nylon-string guitars** | Nylon-string guitar (25) |
+| **Steel-string guitars** | Steel-string guitar (26) |
 | **Basses** | The eight basses (33–40) |
 | **Drums** | The drum kit |
 | **Everything else** | The rest, banjos and the other fretted instruments among them |
@@ -104,9 +105,9 @@ The MIDI plugin's settings window (**Tools → Plugins…**, **MIDI (SoundFont, 
    { "name": "Black and Green Guitars", "role": "clean-guitars", "licence": "CC0", "credit": "Karoryfer Samples" }
    ```
 
-   Every key is optional. `role` (`clean-guitars`, `overdriven-guitars`, `distorted-guitars`, `acoustic-guitars`, `basses` or `drums`) says which row the set is made for; `electric-guitars`, from before the three electric rows, stands for all three. OxiGuitar doesn't pick a set by its role: you pick it. The file is only read; nothing is sent anywhere. A settings file from before the three electric rows keeps working: its one **Electric guitars** pick holds for each of the three until that row has a pick of its own.
+   Every key is optional. `role` (`clean-guitars`, `overdriven-guitars`, `distorted-guitars`, `nylon-guitars`, `steel-guitars`, `basses` or `drums`) says which row the set is made for; `electric-guitars`, from before the three electric rows, stands for all three, and `acoustic-guitars`, from before nylon and steel strings were split, for both acoustic rows. Where nothing is picked for a row, OxiGuitar plays the best set whose `role` names that row (yours before the installed ones, those before the system's, then the larger first), so a set with a `role` plays by itself; a set without one plays only where you pick it. The file is only read; nothing is sent anywhere. A settings file from before the three electric rows keeps working: its one **Electric guitars** pick holds for each of the three until that row has a pick of its own.
 
-- **The best found** plays a General MIDI set: one in your `soundfonts` folder before your system's, the larger of several. It is never an SFZ instrument.
+- **Automatic** is a row's first entry, and says what plays: the best set whose `oxiguitar-set.json` names the row's role, if there is one; else a General MIDI set, one in your `soundfonts` folder before your system's, the larger of several. A General MIDI set is the only fallback; an SFZ instrument with no `role` is never it.
 - **An SFZ instrument** is listed as its set's folder and its own name ("… (SFZ)"). It is one instrument, not a set of 128, so it plays only in a row you pick it for. Many SFZ sets have several instruments (programs) for the same recording, with different microphones or articulations. For the recommended sets, the keyswitched programs (`…_keyswitch`, `…_keysw`) are the ones with every articulation.
 - OxiGuitar reads SoundFont 2 (`.sf2`), SoundFont 3 (`.sf3`) and Downloadable Sounds (`.dls`) files, and SFZ instruments with WAV, FLAC or Ogg Vorbis samples, in folders up to five levels deep. It never changes anything there.
 - If an instrument can't load, or some of its samples are missing, the bottom of the window says so and a General MIDI set plays instead.

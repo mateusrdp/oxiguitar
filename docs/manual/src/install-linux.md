@@ -31,11 +31,11 @@ dnf installs the recommended plugins with it, and `sudo dnf upgrade` keeps them 
 
 ## The recorded sound sets
 
-`oxiguitar-midi` suggests `oxiguitar-bettersounds-soundfonts`, the installer of the free recorded sound sets we recommend (about 1.2 GB; [Better sounds](better-sounds.md#the-sound-set-installer)). With apt, installing it asks whether to download them now (no is the default); with dnf, it says how. Any time later, `oxiguitar-install-sounds` chooses and downloads them, after asking you, into `/usr/share/oxiguitar/soundfonts`, where OxiGuitar looks too. OxiGuitar itself never downloads anything.
+`oxiguitar-midi` suggests `oxiguitar-bettersounds-soundfonts`, the installer of the free recorded sound sets we recommend (about 1.2 GB; [Better sounds](better-sounds.md#the-sound-set-installer)). Installing it downloads the sets into `/usr/share/oxiguitar/soundfonts`, where OxiGuitar looks and uses them by itself: with apt it asks first (yes is the default, so an unattended install downloads them), with dnf it just does. If you say no, or a download fails, `sudo oxiguitar-install-sounds --system` chooses and downloads them any time later. OxiGuitar itself never downloads anything.
 
 ## Coming later
 
-- **Any Linux, through Flathub:** OxiGuitar as a Flatpak, with each plugin an extension you add in GNOME Software or Discover.
+- **Any Linux, as a Flatpak:** OxiGuitar with each plugin as an extension, from a Flatpak repository of our own that you add once (no third party), planned before v1.0.
 
 ## AppImage
 

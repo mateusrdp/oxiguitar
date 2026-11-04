@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- The manual says the sound-set installer's sets play by themselves (the MIDI plugin uses a set for the row its `oxiguitar-set.json` names), and that the Linux packages install them as they are installed, and the Acoustic guitars row is two: Nylon-string guitars and Steel-string guitars.
+
 ## [0.13.0] - 2026-11-04
 
 ### Changed
