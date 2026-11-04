@@ -35,7 +35,7 @@ dnf installs the recommended plugins with it, and `sudo dnf upgrade` keeps them 
 
 ## Coming later
 
-- **Any Linux, through Flathub:** OxiGuitar as a Flatpak, with each plugin an extension you add in GNOME Software or Discover.
+- **Any Linux, as a Flatpak:** OxiGuitar with each plugin as an extension, from a Flatpak repository of our own that you add once (no third party), planned before v1.0.
 
 ## AppImage
 
