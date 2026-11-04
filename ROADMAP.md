@@ -12,7 +12,7 @@ On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so tha
 | M1 Viewer | v0.1 | **Done** (17 Oct 2026; v0.1.0 published as a pre-release, 18 Oct 2026) |
 | M2 Plugin system and window shell | v0.2 | **Done** (19 Oct 2026; v0.2.0 published as a pre-release, 19 Oct 2026) |
 | M3 Editor | v0.5 | **Done** (21 Oct 2026; v0.5.0 published as a pre-release, 21 Oct 2026) |
-| M4 Player (with the NAM plugin) | **v1.0** (v0.9, v0.10 and v0.11 for testers) | Slices 1–7 built (21 Oct – 1 Nov 2026): it plays in the window, SoundFonts, SFZ, NAM and WAV export; **v0.9.0, v0.10.0 and v0.11.0 for testers** (pre-releases; 0.10 adds SFZ, 0.11 freezes plugin interface 1.4); the gates by ear and v1.0 next |
+| M4 Player (with the NAM plugin) | **v1.0** (v0.9 to v0.13 for testers) | Slices 1–7 built (21 Oct – 1 Nov 2026): it plays in the window, SoundFonts, SFZ, NAM and WAV export; **v0.9.0 to v0.12.1 for testers** (pre-releases; 0.10 adds SFZ, 0.11 freezes plugin interface 1.4, 0.12 moves the plugins into repositories of their own, #165); v0.13 brings #151, #152 and the equalizer plugin; then "Before v1.0" below |
 | M5 Guitar Pro 8 notation and editing parity | | Not started |
 | M6 Format plugins: MusicXML, ABC, MuseScore, MIDI files | | Not started |
 | M7 A generated guitar for NAM (plugin) | | Not started |
@@ -190,7 +190,7 @@ The plan, proposed 21 Oct 2026 for Mateus's approval, with the audio spike's mea
 
 - In the core: score-to-event conversion with repeats, jumps, tempo changes and feel (PLAY-3, PLAY-4); the transport in the top area (play, play selection, stop, pause, rewind, count-in, loop, audible and visual metronome, PLAY-5); the follow cursor; the mixer (PLAY-6), in each Tracks row rather than a tab of its own; the output choice.
 - As plugins: the sound-set instrument (SF2, SF3, DLS and SFZ; PLAY-1), reading the system's sets and the user's `soundfonts` folder, never downloading (PLAY-8 as changed on 21 Oct 2026), audio-device plugins per system, WAV export (PLAY-7). Instruments declare the classes of instrument they play.
-- v1.0's minimum: the Guitar Pro 7+ format plugin reading and writing, the basic MIDI player and the NAM plugin, in `oxiguitar-plugins-basic`.
+- v1.0's minimum: the Guitar Pro 7+ format plugin reading and writing, the basic MIDI player and the NAM plugin, each released from its own repository since 0.12 (#165; `oxiguitar-plugins-basic` is gone), installed with the core by the package repositories and the Homebrew tap.
 
 - A slide from a note to no note (a voice's last note, or before a rest) plays as a slide off the note: down toward the open string, up toward the last fret, fading out (Mateus, 20 Oct 2026: it is common on stringed instruments and must stay allowed; the player gives it a direction).
 - Instruments declared by a plugin built for an interface before the instrument interface's are ignored by the player (Mateus, 19 Oct 2026: the `instruments` manifest key stays in 1.0, and this rule avoids rework). Until then no plugin counts as an output.
@@ -208,6 +208,25 @@ Mateus's order after v0.9 (26 Oct 2026): **SFZ before NAM**. SFZ brings recorded
 5. **The SFZ sampler** (in v1.0: Mateus, 26 Oct 2026), in the SoundFont plugin: round robins, velocity layers, release samples, key switches, choke groups; WAV, FLAC and Ogg samples, notes starting on their exact sample; SFZ instruments in the `soundfonts` folder and the settings window, with mapping files for drum kits that aren't General MIDI-mapped. With it, the manual's Better sounds page gets its basses and drums, and README and the Hear it page examples of recorded basses and drums, once Mateus has heard them. Mateus's answers (26 Oct 2026): an SFZ instrument plays only where picked; Guitars split into Electric and Acoustic guitars; samples whole in memory at their own bit depth. Five pull requests (player.md, "SFZ, as built"): reading SFZ instruments and their samples (built 26 Oct 2026); the sampler (built 26 Oct 2026); effects, mapping files and the settings window (built 26 Oct 2026); listening packs (built 26 Oct 2026, for Mateus's ears); the manual's and README's basses and drums (built 26 Oct 2026). Mateus listened (26 Oct 2026): Black and Green's recorded hammer-ons sound more natural than carrying on the string, so they play by default; the MuldjordKit sounds the most natural of the kits; the recommended sets are Black and Green Guitars, Black and Blue Basses and the MuldjordKit, and polishing stops there.
 6. **The NAM plugin**: amp models and cabinet IRs per track from the track dialog, on a DI sound set. With it, README and the manual's Hear it page get NAM sound examples and a screenshot of its track settings (Mateus, 26 Oct 2026). Built (1 Nov 2026): effects after each track's instrument with the tracks lined up (#173); the plugin with nam-rs, four Guitarix cabinets and the track dialog's section (#174); the build for Linux on x86-64-v3 processors with NeuralAmpModeler-rs, chosen by the processor-features step brought back, and the user's copy winning a full tie (#175). Left: README and Hear it examples once Mateus picks a capture whose licence allows publishing.
 7. **WAV export**, the milestone's gates, then v1.0. Built (1 Nov 2026): interface 1.4's audio exporters, File → Export with its dialog and progress, `oxiguitar-cli export` (#178); the WAV plugin, 16/24-bit or float at 44.1 or 48 kHz from its settings (#179); the practice tools' gate on every reference song (`practice.rs`). Left: Mateus's ear on the written effects, then v1.0. README.md shows the main features (Mateus, 26 Oct 2026): screenshots and example sounds, added with v0.9 (the score and the editor, playing with the cursor and the mixer; the manual's Hear it page with good sets only); recorded basses and drums join them with slice 5, NAM's track settings and NAM sound examples with slice 6, from an amp capture whose licence allows publishing.
+
+### Before v1.0 (reviewed 4 Nov 2026, for Mateus's decision)
+
+Where M4 stands against its "done when" (below) and the brief's v1.0 minimum, after v0.13:
+
+- Built and tested in CI: golden timelines of every reference song; notes on their frames over ten minutes; the practice tools on every reference song; the transport greyed out, with the footer saying why, when nothing can play; the Guitar Pro 7+ plugin reading and writing, the MIDI plugin and the NAM plugin, each released on its own (#165), with the equalizer (#152).
+- **Mateus's ear** (the one gate no test can pass): playback of the reference songs against their written effects, with the recommended sets, and #143 and the track dialog's new sections in a real window on Debian sid.
+- **Out of the box on Windows and macOS**: never run by a person yet (CI installs and starts the packages; no one has played a song on them). One tester on each.
+- **Homebrew and dnf** install paths: untested (no such system at hand). One tester on each, or a CI job that installs from the tap and the dnf repository and opens a file (the apt path is tested by Mateus).
+- **#146, the rest**: Help names the manual; the MIDI settings window's drop-downs widen with the window; picking a set plays a short sample of it. (The installer and the manual's Better sounds page, the other half, are done.)
+- **README**: screenshots of the Track tab's sections and example sounds (NAM's wait for a capture whose licence allows publishing).
+- **First releases** of oxiguitar-eq and oxiguitar-bettersounds-soundfonts, and the plugins whose CHANGELOGs have changes, with the Release button (no script, no `bump.sh` needed since oxiguitar-packages#14).
+
+Proposed for v1.0 or after, Mateus to decide:
+
+- **#157, automatic fingering**: an editor feature, not in M4's definition; a session of its own after v0.13. In v1.0 if he wants it there, otherwise v1.1.
+- **#163, Flatpak** and **winget**: deferred as of 1 Nov 2026; after v1.0 unless he moves them.
+- **#171, TuxGuitar's format**: an M6 format plugin.
+- The open M1 items (slurs, hairpins, ornaments, fermatas, ottavas and fingering in the engraving) belong to M5's notation set and stay there.
 
 Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes (the cursor shows the sample being heard); golden-file tests cover event output; the practice tools work on every reference song; it plays out of the box on Windows, macOS and Linux with the system's own sound set; with no instrument or sound set the transport is greyed out and the footer says where to get one.
 
