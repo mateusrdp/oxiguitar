@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Removed
+
+- **The Homebrew tap is dropped** (Mateus, 4 Nov 2026: Homebrew no longer supports Intel Macs, most of OxiGuitar's macOS users): publishing a release no longer tells `mateusrdp/homebrew-oxiguitar`, and the README and the manual no longer offer `brew`. macOS has the `.dmg` and each plugin's `.pkg` installer, which need no password and do not need Homebrew. Anyone who installed with `brew` can keep the casks they have; they will not be updated.
+
 ### Changed
 
 - The manual says the sound-set installer's sets play by themselves (the MIDI plugin uses a set for the row its `oxiguitar-set.json` names), and that the Linux packages install them as they are installed, and the Acoustic guitars row is two: Nylon-string guitars and Steel-string guitars.

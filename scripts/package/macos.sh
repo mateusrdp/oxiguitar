@@ -4,7 +4,7 @@
 #
 # Builds OxiGuitar.app and its disk image, from a universal binary. The app
 # holds no plugin: they have repositories of their own (#165) and come
-# through the Homebrew tap (casks) or their own .pkg and zip files. Runs on
+# through their own .pkg and zip files. Runs on
 # macOS (iconutil, codesign, hdiutil). Used by .github/workflows/release.yml.
 #
 # Usage: scripts/package/macos.sh VERSION

@@ -1,14 +1,15 @@
-# Tells the package repositories and the Homebrew tap when the maintainer
+# Tells the package repositories when the maintainer
 # publishes a release, as each plugin's publish workflow does: publishing the
 # draft is the one act that updates what people install. It checks the
 # release's files against its SHA256SUMS, then sends the event
 # `plugin-published` (the name every repository listens for) to
 # mateusrdp/oxiguitar-packages, which rebuilds the signed apt and dnf
-# repositories from the latest published releases, and to
-# mateusrdp/homebrew-oxiguitar, which opens a pull request with the new cask.
+# repositories from the latest published releases. (A Homebrew tap used to be
+# told too; it was dropped on 4 Nov 2026, as Homebrew no longer supports Intel
+# Macs.)
 #
-# It needs the secret PACKAGES_TOKEN, a token that can dispatch to those two
-# repositories (the plugins' publish workflows use the same one); without it
+# It needs the secret PACKAGES_TOKEN, a token that can dispatch to that
+# repository (the plugins' publish workflows use the same one); without it
 # nothing is sent and the run says so.
 name: Publish
 
@@ -54,7 +55,7 @@ jobs:
           fi
           payload="$(jq -nc --arg tag "$TAG" --arg repo "$GITHUB_REPOSITORY" \
             '{event_type: "plugin-published", client_payload: {plugin: "oxiguitar", tag: $tag, repository: $repo}}')"
-          for target in mateusrdp/oxiguitar-packages mateusrdp/homebrew-oxiguitar; do
+          for target in mateusrdp/oxiguitar-packages; do
             GH_TOKEN="$PACKAGES_TOKEN" gh api "repos/$target/dispatches" --method POST --input - <<< "$payload"
             echo "Told $target."
           done

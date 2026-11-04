@@ -1,6 +1,6 @@
 ## Which file do I need?
 
-One download for your system. **None carries plugins**: the plugins that open Guitar Pro files and play them have releases and packages of their own ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi) and the others). The package repositories and the Homebrew tap bring them with OxiGuitar and keep them up to date; [Installing](https://mateusrdp.github.io/oxiguitar/installing.html) explains each way.
+One download for your system. **None carries plugins**: the plugins that open Guitar Pro files and play them have releases and packages of their own ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi) and the others). The Linux package repositories bring them with OxiGuitar and keep them up to date, and on Windows and macOS each plugin has an installer; [Installing](https://mateusrdp.github.io/oxiguitar/installing.html) explains each way.
 
 | System | Download |
 | --- | --- |
