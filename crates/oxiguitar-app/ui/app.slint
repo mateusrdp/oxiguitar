@@ -689,6 +689,13 @@ export struct InspectorField {
 
 // The rows of the Bar and Note tabs, each as its kind says: label on the
 // left (40 %), control filling the rest.
+//
+// A control the user changed keeps its own value from then on (Slint drops
+// a binding the user overrides), so each one also watches its row's value
+// and puts it back when the row is changed in place, as it is for another
+// track or bar with the same rows (issue #204: every guitar showed the
+// instrument last picked for one of them, until a drum kit's rows rebuilt
+// the list).
 component FieldRows inherits VerticalLayout {
     in property <[InspectorField]> fields;
     callback changed(string, int);
@@ -704,6 +711,8 @@ component FieldRows inherits VerticalLayout {
             }
         }
         if f.kind == 1 : CheckBox {
+            property <int> wanted: f.value;
+            changed wanted => { self.checked = self.wanted == 1; }
             text: f.label;
             checked: f.value == 1;
             toggled => { root.changed(f.id, self.checked ? 1 : 0); }
@@ -719,6 +728,8 @@ component FieldRows inherits VerticalLayout {
                 vertical-stretch: 0;
                 min-width: 60px;
                 horizontal-stretch: 1;
+                property <int> wanted: f.value;
+                changed wanted => { self.current-index = self.wanted; }
                 model: f.options;
                 current-index: f.value;
                 selected => { root.changed(f.id, self.current-index); }
@@ -730,6 +741,8 @@ component FieldRows inherits VerticalLayout {
             SpinBox {
                 min-width: 60px;
                 horizontal-stretch: 1;
+                property <int> wanted: f.value;
+                changed wanted => { self.value = self.wanted; }
                 minimum: f.min;
                 maximum: f.max;
                 value: f.value;
@@ -746,6 +759,8 @@ component FieldRows inherits VerticalLayout {
             spacing: 6px;
             Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
             LineEdit {
+                property <string> wanted: f.text;
+                changed wanted => { self.text = self.wanted; }
                 horizontal-stretch: 1;
                 min-width: 60px;
                 text: f.text;
@@ -771,6 +786,8 @@ component FieldRows inherits VerticalLayout {
                 property <length> line: 28px;
                 height: ceil(f.options.length / 4) * self.line;
                 for name[i] in f.options : CheckBox {
+                    property <bool> wanted: mod(floor(f.value / pow(2, i)), 2) == 1;
+                    changed wanted => { self.checked = self.wanted; }
                     x: mod(i, 4) * ticks.width / 4;
                     y: floor(i / 4) * ticks.line;
                     width: ticks.width / 4;
@@ -982,7 +999,11 @@ component SongView inherits Rectangle {
             for f in root.fields : VerticalLayout {
                 spacing: 2px;
                 Text { text: f.label; font-size: 11px; color: Palette.foreground.transparentize(0.35); }
+                // Back to the score's text when it changes (another file,
+                // Undo), even after the user typed here (issue #204).
                 if !f.multiline : LineEdit {
+                    property <string> wanted: f.text;
+                    changed wanted => { self.text = self.wanted; }
                     text: f.text;
                     accepted(t) => { root.edited(f.id, t); }
                     changed has-focus => {
@@ -992,6 +1013,8 @@ component SongView inherits Rectangle {
                     }
                 }
                 if f.multiline : TextEdit {
+                    property <string> wanted: f.text;
+                    changed wanted => { self.text = self.wanted; }
                     height: 72px;
                     text: f.text;
                     wrap: word-wrap;

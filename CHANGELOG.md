@@ -6,6 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
+- Publishing a release tells the package repositories and the Homebrew tap by itself (`publish.yml`, #226, as each plugin's does), so the apt and dnf repositories and the tap follow without running their workflows by hand.
 - The plugins' release workflows (`plugin-release.yml`, `plugin-publish.yml`) and their packaging scripts moved to [oxiguitar-packages](https://github.com/mateusrdp/oxiguitar-packages), where plugin repositories call them `@main`: a change to the packaging no longer waits for an OxiGuitar release. The plugin guide's Building page says so.
 - The manual is up to date with plugins released on their own (they no longer come in OxiGuitar's download; an old bundled plugin left in your plugin folder outranks the new ones, so delete it), opens the Better sounds page with the sound-set installer (half of #146), and names the Track tab among the right panel's tabs.
 - The right panel widens as far as the window allows (it stopped at 500 px), and its Song, Track, Bar and Note tabs scroll sideways when their contents can't be narrower than the panel, instead of pushing them off to the right.
@@ -20,6 +21,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Fixed
 
+- On a file with several guitars, picking an instrument for one in the Track tab no longer makes every other guitar show that instrument (#204). Only the shown value was wrong (the sound followed each track's own instrument): a drop-down, tickbox, number or text field the user had changed kept its own value when the tab showed another track or bar with the same rows. The Song tab's fields likewise.
 - Text that another voice holds (as Guitar Pro can save it on voice 2) can be changed and removed: Shift + T, Edit → Text… and the Beat tab's Text show and edit the text drawn at the caret's beat, whichever voice holds it (#153). New reference `beat-text-in-voice-2`.
 - A sound set picked in the MIDI plugin's settings window (or any change to the settings of a plugin that plays) takes effect at once: playback stops, the instruments are prepared again with the new sets, and the next Play uses them; no restart (#143).
 
