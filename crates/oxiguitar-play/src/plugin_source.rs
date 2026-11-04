@@ -24,7 +24,10 @@ pub struct Group {
     pub plugin: String,
     /// The instrument's id in the plugin.
     pub instrument: String,
-    /// The score's tracks it plays.
+    /// The score's tracks it plays, by their routes: `t` for track `t`,
+    /// `tracks + t` for its chord voice (#151; [`crate::events::chords`]),
+    /// which plays the track's chord diagrams with its own copy of the
+    /// track's instrument settings and effects.
     pub tracks: Vec<usize>,
     /// Each of them as the instrument is told about it.
     pub prepared: Vec<PreparedTrack>,
@@ -124,26 +127,46 @@ pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
                 })
             })
             .collect();
-        match out
+        // The chord voice, when the track's chords are played: the same
+        // instrument and effects, prepared as a track of their own.
+        let chords = plays_chords(track).then(|| {
+            let mut voice = prepared.clone();
+            voice.info.name = format!("{} (chords)", track.name);
+            (score.tracks.len() + t, voice, effects.clone())
+        });
+        let at = match out
             .groups
-            .iter_mut()
-            .find(|g| g.plugin == plugin && g.instrument == id)
+            .iter()
+            .position(|g| g.plugin == plugin && g.instrument == id)
         {
-            Some(g) => {
-                g.tracks.push(t);
-                g.prepared.push(prepared);
-                g.effects.push(effects);
+            Some(at) => at,
+            None => {
+                out.groups.push(Group {
+                    plugin,
+                    instrument: id,
+                    tracks: Vec::new(),
+                    prepared: Vec::new(),
+                    effects: Vec::new(),
+                });
+                out.groups.len() - 1
             }
-            None => out.groups.push(Group {
-                plugin,
-                instrument: id,
-                tracks: vec![t],
-                prepared: vec![prepared],
-                effects: vec![effects],
-            }),
+        };
+        let g = &mut out.groups[at];
+        for (route, prepared, effects) in std::iter::once((t, prepared, effects)).chain(chords) {
+            g.tracks.push(route);
+            g.prepared.push(prepared);
+            g.effects.push(effects);
         }
     }
     out
+}
+
+/// Whether a track's chord diagrams play (#151): asked for, and a track
+/// with strings that shows some.
+fn plays_chords(track: &oxiguitar_model::Track) -> bool {
+    track.play_chords
+        && !track.chords.is_empty()
+        && track.staves.first().is_some_and(|s| !s.tuning.is_empty())
 }
 
 /// The sources [`prepare`] made, and what they play.
@@ -152,7 +175,8 @@ pub struct Prepared {
     pub sources: Sources,
     /// How many sources there are (the routes name them from 0).
     pub count: usize,
-    /// Each track's source and slot, or `None` when nothing plays it.
+    /// Each track's source and slot, then each track's chord voice's
+    /// (`tracks + t`), or `None` when nothing plays it.
     pub routes: Vec<Option<Route>>,
     /// The instruments' names.
     pub names: Vec<String>,
@@ -173,12 +197,20 @@ pub fn prepare(
     rate: u32,
     capacity: usize,
 ) -> Result<Prepared, String> {
-    let name_of = |t: usize| {
+    // A route's track: a chord voice's (`tracks + t`) is track `t`.
+    let track_of = |route: usize| route % score.tracks.len().max(1);
+    let name_of = |route: usize| {
+        let t = track_of(route);
         let n = score.tracks[t].name.trim();
-        if n.is_empty() {
+        let name = if n.is_empty() {
             format!("track {}", t + 1)
         } else {
             format!("\u{201c}{n}\u{201d}")
+        };
+        if route >= score.tracks.len() {
+            format!("{name}'s chords")
+        } else {
+            name
         }
     };
     let mut silent: Vec<String> = plan
@@ -191,12 +223,12 @@ pub fn prepare(
             )
         })
         .collect();
-    let mut routes = vec![None; score.tracks.len()];
+    let mut routes = vec![None; score.tracks.len() * 2];
     let mut slots = Vec::new();
     let mut names = Vec::new();
     let mut first_error = None;
     for g in &plan.groups {
-        let class = class_of(score, g.tracks[0]);
+        let class = class_of(score, track_of(g.tracks[0]));
         let Some(instrument) = plugins.playable(class).into_iter().find(|i| {
             i.spec.id == g.instrument
                 && i.plugin.manifest.as_ref().is_some_and(|m| m.id == g.plugin)
@@ -233,7 +265,7 @@ pub fn prepare(
             let mut chain = Vec::new();
             for pick in g.effects.get(k).into_iter().flatten() {
                 let Some(effect) = plugins
-                    .effects_for(class_of(score, t))
+                    .effects_for(class_of(score, track_of(t)))
                     .into_iter()
                     .find(|e| {
                         e.spec.id == pick.effect
@@ -269,9 +301,11 @@ pub fn prepare(
             }
             effects.push(chain);
         }
+        // A chord voice is mixed as its track: its volume, pan, mute and
+        // solo.
         slots.push(Slot::new(
             Box::new(PluginSource::new(instance, effects)),
-            g.tracks.clone(),
+            g.tracks.iter().map(|&r| track_of(r)).collect(),
             capacity,
         ));
     }

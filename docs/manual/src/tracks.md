@@ -18,6 +18,7 @@ The **Track** tab on the right shows the caret's track (click a track's row to s
 - **Name**, and a short name for the systems after the first.
 - **Instrument**: the General MIDI sound, or Drum Kit.
 - **Strings**: none for an instrument without tablature, or 3 to 10. **Capo** and the number of **frets**.
+- **Play its chords**: the track's chord diagrams (the chords shown over the music, Chord… or A) are played too, each until the next one, as a quick downstroke of the strings the diagram shows ([Playing a score](playback.md#playing-the-chords)).
 - **Tuning**: a key and a pattern. The patterns are Standard, Drop (the lowest string a tone down, as Drop D), Open with the root on the lowest string (Open D, Open E), Open with the fifth on the lowest string (Open G, Open A), and Other, where you type the notes, lowest first (`D2 A2 D3 G3 A3 D4`; a note without an octave goes above the one before it). Tunings are named the same way at the top of the page: "Standard tuning", "Tuning: Drop D", or the notes.
 - **If the strings change**: keep the notes' pitches, finding new frets near the old ones, or keep the frets and let the notes change.
 

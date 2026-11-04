@@ -1353,6 +1353,73 @@ fn the_player_puts_each_track_s_effects_after_its_instrument() {
     );
 }
 
+/// A track whose chords are played (#151) gets a chord voice beside it in
+/// its instrument's group, with its own copy of the track's effects, a
+/// route after the score's tracks, and the timeline's chords on it.
+#[test]
+fn a_track_s_chords_play_on_a_voice_of_their_own() {
+    use oxiguitar_play::plugin_source::{plan, prepare};
+
+    let dir = folder("chords", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let mut score =
+        oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
+            .unwrap()
+            .score;
+    let n = score.tracks.len();
+    let t = score
+        .tracks
+        .iter()
+        .position(|t| t.staves.first().is_some_and(|s| !s.tuning.is_empty()))
+        .expect("a track with strings");
+    let before = plan(&plugins, &score);
+    {
+        let track = &mut score.tracks[t];
+        track.chords = vec![oxiguitar_model::ChordDiagram {
+            name: "E".into(),
+            first_fret: 1,
+            frets: vec![Some(0), Some(0), Some(1), Some(2), Some(2), Some(0)],
+        }];
+        let beat = track.staves[0].bars[0].voices[0]
+            .beats
+            .iter_mut()
+            .find(|b| b.grace.is_none())
+            .unwrap();
+        beat.chord = Some(0);
+    }
+    // Shown but not played: nothing changes.
+    assert_eq!(plan(&plugins, &score), before);
+    score.tracks[t].play_chords = true;
+    let with = plan(&plugins, &score);
+    let g = with.groups.iter().find(|g| g.tracks.contains(&t)).unwrap();
+    let k = g
+        .tracks
+        .iter()
+        .position(|&r| r == n + t)
+        .expect("the chord voice");
+    assert_eq!(g.prepared[k].info.index as usize, t);
+    assert!(g.prepared[k].info.name.ends_with("(chords)"));
+    let own = g.tracks.iter().position(|&r| r == t).unwrap();
+    assert_eq!(g.effects[k], g.effects[own]);
+    let ready = prepare(&plugins, &score, &with, 48_000, 512).unwrap();
+    assert!(ready.silent.is_empty(), "{:?}", ready.silent);
+    assert_eq!(ready.routes.len(), 2 * n);
+    assert!(ready.routes[n + t].is_some());
+    assert_ne!(ready.routes[n + t], ready.routes[t]);
+    let timeline = oxiguitar_play::Timeline::new(&score);
+    // Six strings, each time the first bar is played (the song repeats it).
+    let visits = timeline
+        .map
+        .visits
+        .iter()
+        .filter(|v| v.visit.bar == 0)
+        .count();
+    assert_eq!(timeline.chords.len(), 6 * visits);
+    assert!(timeline.chords.iter().all(|c| c.track == n + t));
+}
+
 #[test]
 fn an_audio_device_plays_the_engine_through_the_host() {
     // The fake device (priority -100) is the only one here, so it is

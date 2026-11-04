@@ -33,6 +33,10 @@ Each track's row at the bottom has a **mute** button (the loudspeaker crossed ou
 
 However loud a song is, OxiGuitar never lets the sound go past just under full scale, so it doesn't distort when many tracks play at once.
 
+## Playing the chords
+
+A track with chord diagrams over its music (Chord…, or A) can play them too: tick **Play its chords** in its **Track** tab. Each chord sounds from the beat that shows it until the next chord, or the end of the song, as a quick downstroke of the strings its diagram shows, softly under the track's own notes. It plays with the track's instrument, sound and effects, but as a part of its own, as if on a second guitar: a distorted guitar's chords go through their own copy of its amp, so the two never pile into one muddy distortion. The track's volume, pan, mute and solo hold for its chords too. The choice is kept beside the score, in `FILE.oxg`. Only tracks with strings play chords, since a diagram is frets on strings.
+
 ## Each track's sound
 
 Select a track (click its name) and open the **Track** tab on the right: under the track's name, instrument and strings, the plugins add sections that change how that one track sounds. They are kept beside the score, in `FILE.oxg`, so the song sounds the same the next time; the score itself doesn't change.

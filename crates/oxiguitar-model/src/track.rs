@@ -35,6 +35,10 @@ pub struct Track {
     /// it in the track dialog (#152); empty for the default order. Saved
     /// beside the score with [`Track::plugins`].
     pub effects: Vec<String>,
+    /// Whether its chord diagrams are played, each until the next, by a
+    /// copy of its instrument and effects, as a voice of its own (#151).
+    /// Saved beside the score with [`Track::plugins`].
+    pub play_chords: bool,
 }
 
 /// What a track sounds like through General MIDI.

@@ -122,6 +122,7 @@ fn export_file(asked: &Asked) -> Result<(), String> {
         for (track, entry) in score.tracks.iter_mut().zip(settled) {
             track.plugins = entry.plugins;
             track.effects = entry.effects;
+            track.play_chords = entry.chords;
         }
     }
     let timeline = Timeline::new(&score);
