@@ -56,7 +56,9 @@ component PluginWidgetView inherits HorizontalLayout {
     callback chosen(string, int);
     callback pointer(string, int, float, float, int);
     callback canvas-room(string, length, length);
-    horizontal-stretch: w.kind == "canvas" || w.kind == "list" || w.kind == "field" ? 1 : 0;
+    // Choices too: they reach the edge of the window and follow it when it
+    // is resized, so the names of sounds, which are long, are not cut short.
+    horizontal-stretch: w.kind == "canvas" || w.kind == "list" || w.kind == "field" || w.kind == "choice" ? 1 : 0;
 
     if w.kind == "label" : Text {
         text: w.text;

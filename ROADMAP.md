@@ -2,7 +2,7 @@
 
 The milestones from the project brief, with live status. Requirement IDs (FMT-1, VIEW-3, …) refer to the brief's product requirements; decision records live in [docs/adr/](docs/adr/).
 
-v1.0 ships at the end of M4: the viewer, the editor, the player and the plugin system, with at least the Guitar Pro 7+ format plugin (reading and writing) and a basic MIDI player (Mateus, 18 Oct 2026), and the NAM plugin (Mateus, 25 Oct 2026). From M5 on, the work closes the gap with Guitar Pro 8.
+v1.0 ships after M4 and the work listed in "The way to v1.0" (Mateus, 4 Nov 2026: the format plugins, #157, #222, the rest of the palette and Flatpak come first, then a parity check, a beta and a period of use). It was first planned for the end of M4: the viewer, the editor, the player and the plugin system, with at least the Guitar Pro 7+ format plugin (reading and writing) and a basic MIDI player (Mateus, 18 Oct 2026), and the NAM plugin (Mateus, 25 Oct 2026). From M5 on, the work closes the gap with Guitar Pro 8.
 
 On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so that every later milestone is built on it: the core reads, edits, writes, shows (with PDF export) and drives playback, and everything else (every file format, every sound, every other export and tool, anything platform-specific) is a plugin. See [ADR 0008](docs/adr/0008-plugin-architecture.md) and [docs/design/plugins.md](docs/design/plugins.md). Milestones after M1 were renumbered.
 
@@ -12,9 +12,9 @@ On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so tha
 | M1 Viewer | v0.1 | **Done** (17 Oct 2026; v0.1.0 published as a pre-release, 18 Oct 2026) |
 | M2 Plugin system and window shell | v0.2 | **Done** (19 Oct 2026; v0.2.0 published as a pre-release, 19 Oct 2026) |
 | M3 Editor | v0.5 | **Done** (21 Oct 2026; v0.5.0 published as a pre-release, 21 Oct 2026) |
-| M4 Player (with the NAM plugin) | **v1.0** (v0.9 to v0.13 for testers) | Slices 1–7 built (21 Oct – 1 Nov 2026): it plays in the window, SoundFonts, SFZ, NAM and WAV export; **v0.9.0 to v0.12.1 for testers** (pre-releases; 0.10 adds SFZ, 0.11 freezes plugin interface 1.4, 0.12 moves the plugins into repositories of their own, #165); v0.13 brings #151, #152 and the equalizer plugin; then "Before v1.0" below |
+| M4 Player (with the NAM plugin) | **v1.0** (v0.9 to v0.13 for testers) | Slices 1–7 built (21 Oct – 1 Nov 2026): it plays in the window, SoundFonts, SFZ, NAM and WAV export; **v0.9.0 to v0.13.0 for testers** (pre-releases; 0.10 adds SFZ, 0.11 freezes plugin interface 1.4, 0.12 moves the plugins into repositories of their own, #165, 0.13 brings chords, the equalizer plugin and the effects order, #151 and #152); the way to v1.0 is in "The way to v1.0" below: v0.14 (live plugin settings, #232), v0.15 (#157), v0.16 (#222), the formats (#223), v0.17 (the palette), Flatpak (#163), then a parity check, a beta and v1.0 |
 | M5 Guitar Pro 8 notation and editing parity | | Not started |
-| M6 Format plugins: TuxGuitar, MusicXML, ABC, MuseScore, MIDI files | **v1.0** (moved, #223) | Not started; after #157 |
+| M6 Format plugins: MusicXML, MuseScore, MIDI files, ABC, TuxGuitar | **v1.0** (moved, #223) | Not started; after #157 and #222, in that order of importance |
 | M7 A generated guitar for NAM (plugin) | | Not started |
 | M8 Guitar Pro RSE compatibility (plugin) | | Not started |
 | M9 Realistic drums, hardware plugins, remaining Guitar Pro 8 features | | Not started |
@@ -209,35 +209,36 @@ Mateus's order after v0.9 (26 Oct 2026): **SFZ before NAM**. SFZ brings recorded
 6. **The NAM plugin**: amp models and cabinet IRs per track from the track dialog, on a DI sound set. With it, README and the manual's Hear it page get NAM sound examples and a screenshot of its track settings (Mateus, 26 Oct 2026). Built (1 Nov 2026): effects after each track's instrument with the tracks lined up (#173); the plugin with nam-rs, four Guitarix cabinets and the track dialog's section (#174); the build for Linux on x86-64-v3 processors with NeuralAmpModeler-rs, chosen by the processor-features step brought back, and the user's copy winning a full tie (#175). Left: README and Hear it examples once Mateus picks a capture whose licence allows publishing.
 7. **WAV export**, the milestone's gates, then v1.0. Built (1 Nov 2026): interface 1.4's audio exporters, File → Export with its dialog and progress, `oxiguitar-cli export` (#178); the WAV plugin, 16/24-bit or float at 44.1 or 48 kHz from its settings (#179); the practice tools' gate on every reference song (`practice.rs`). Left: Mateus's ear on the written effects, then v1.0. README.md shows the main features (Mateus, 26 Oct 2026): screenshots and example sounds, added with v0.9 (the score and the editor, playing with the cursor and the mixer; the manual's Hear it page with good sets only); recorded basses and drums join them with slice 5, NAM's track settings and NAM sound examples with slice 6, from an amp capture whose licence allows publishing.
 
-### Before v1.0 (reviewed 4 Nov 2026, for Mateus's decision)
+### The way to v1.0 (decided by Mateus, 4 Nov 2026)
 
-Where M4 stands against its "done when" (below) and the brief's v1.0 minimum, after v0.13:
+v0.13 is released. The order from here, each step in a session of its own:
 
-- Built and tested in CI: golden timelines of every reference song; notes on their frames over ten minutes; the practice tools on every reference song; the transport greyed out, with the footer saying why, when nothing can play; the Guitar Pro 7+ plugin reading and writing, the MIDI plugin and the NAM plugin, each released on its own (#165), with the equalizer (#152).
-- **Mateus's ear** (the one gate no test can pass): playback of the reference songs against their written effects, with the recommended sets, and #143 and the track dialog's new sections in a real window on Debian sid.
-- **Out of the box on Windows and macOS**: never run by a person yet (CI installs and starts the packages; no one has played a song on them). One tester on each.
-- **Homebrew and dnf** install paths: untested (no such system at hand). One tester on each, or a CI job that installs from the tap and the dnf repository and opens a file (the apt path is tested by Mateus).
-- **#146, the rest**: Help names the manual; the MIDI settings window's drop-downs widen with the window; picking a set plays a short sample of it. (The installer and the manual's Better sounds page, the other half, are done.)
+1. **v0.14: plugin track settings take effect while playing (#232, from oxiguitar-eq#7).** Today the equalizer's sliders change nothing until pause and play: the core refuses plugin edits while the sound runs and the running processor cannot receive settings. Plugin interface 1.5 adds an optional `Processor::update`, the window lets track-section changes through, and the equalizer (then the amp) follows. More important than #157 (Mateus, 4 Nov 2026), so it goes first.
+2. **v0.15: #157, automatic fingering.** It is also what the formats below need: they hold notes without strings and frets.
+3. **v0.16: #222, rearrange bars**, a tool of the core editor like transpose: it fits all the bars in the time signature they are now assigned (3/4 to 4/4, 6/8 to 3/4, and back), finding where tuplets are needed.
+4. **#223, the other file formats**, each a plugin in a repository of its own, reading and writing, released on its own (no core version of its own), in Mateus's order of importance: **MusicXML** (`oxiguitar-musicxml`), **MuseScore** (`oxiguitar-musescore`), **MIDI files** (`oxiguitar-midi-file`), **ABC** (`oxiguitar-abc`), and last, **TuxGuitar** (`oxiguitar-tuxguitar`, #171; the least important of them). All but TuxGuitar take their frets from #157. There is no large corpus of these formats to test on: each first implementation follows the formats' specifications and the open-source programs that read and write them, with fixtures of our own and the few sample files we have (scores.tar.gz's five MuseScore and MusicXML files), and gets better with users' files.
+5. **v0.17: the rest of the missing elements on the palette** (the open M1 items: slurs, hairpins, ornaments, fermatas, ottavas and fingering in the engraving, and whatever else the palette lacks against Guitar Pro 8, listed when the session begins).
+6. **#163, Flatpak**, from a repository of our own and no third party, until v1.0 is out and mature: OxiGuitar as a Flatpak app and each plugin as an extension, built in CI, signed with our key and served as a static OSTree repository on GitHub Pages, like the apt and dnf ones, with a `.flatpakrepo` file to add it. Every Flatpak app needs a runtime (org.freedesktop.Platform), so we mirror that too, from its public OSTree repository, in a repository and Pages site of its own (oxiguitar-flatpak-runtime), so the 1 GB site limit of Pages isn't shared with apt and dnf; the app's `.flatpakref` names it as `RuntimeRepo`. Mirroring a runtime means redistributing its GPL binaries, so the mirror carries the source offer (a link to the upstream sources of each version) and a workflow that checks it against the runtime's own signatures before re-signing it with ours. The runtime's size against that limit is checked first. Flathub is for after v1.0.
+
+**Then we stop**: a feature-parity check against TuxGuitar and Guitar Pro 8, a reassessment of this roadmap, and the decision whether to release a **v1.0 beta**. **v1.0** follows after a period of Mateus using and testing it, registering and fixing the issues he finds. v1.0 does not wait for Windows and macOS users: Mateus recruits beta testers for them as the work goes on, and what they find is fixed as it comes.
+
+Also to do on the way, outside the order:
+
+- Closing what the human checks find: **Mateus's ear** on the reference songs against their written effects, with the recommended sets (the one gate no test can pass), and #143 and the Track tab's sections in a real window on Debian sid.
+- **Homebrew and dnf** install paths: tested by CI (the casks are installed and the packages are installed and removed on every release), not yet by a person; the apt path is tested by Mateus.
+- **#146, the rest**: Help names the manual; the MIDI settings window's drop-downs widen with the window; picking a set plays a short sample of it.
 - **README**: screenshots of the Track tab's sections and example sounds (NAM's wait for a capture whose licence allows publishing).
-- **First releases** of oxiguitar-eq and oxiguitar-bettersounds-soundfonts, and the plugins whose CHANGELOGs have changes, with the Release button (no script, no `bump.sh` needed since oxiguitar-packages#14).
-
-Also before v1.0 (Mateus, 4 Nov 2026), in this order:
-
-1. **#157, automatic fingering** (a session of its own, right after v0.13): it is the dependency of the formats below, which hold notes without strings and frets.
-2. **#223, the other file formats**, each a plugin in a repository of its own, reading and writing: TuxGuitar (`oxiguitar-tuxguitar`, which has tablature: #171), MusicXML (`oxiguitar-musicxml`), ABC (`oxiguitar-abc`), MuseScore (`oxiguitar-musescore`) and MIDI files (`oxiguitar-midi-file`); all but TuxGuitar take their frets from #157. This brings M6's format plugins into v1.0. There is no large corpus of these formats to test on: each first implementation follows the formats' specifications and the open-source programs that read and write them, with fixtures of our own and the few sample files we have (scores.tar.gz's five MuseScore and MusicXML files), and gets better with users' files.
-3. **#163, Flatpak**, from a repository of our own and no third party, until v1.0 is out and mature (decided 4 Nov 2026): OxiGuitar as a Flatpak app and each plugin as an extension, built in CI, signed with our key and served as a static OSTree repository on GitHub Pages, like the apt and dnf ones, with a `.flatpakrepo` file to add it. Every Flatpak app needs a runtime (org.freedesktop.Platform), so we mirror that too, from its public OSTree repository, in a repository and Pages site of its own (oxiguitar-flatpak-runtime), so the 1 GB site limit of Pages isn't shared with apt and dnf; the app's `.flatpakref` names it as `RuntimeRepo`. Mirroring a runtime means redistributing its GPL binaries, so the mirror carries the source offer (a link to the upstream sources of each version) and a workflow that checks it against the runtime's own signatures before re-signing it with ours. Flathub is for after v1.0.
 
 Still to decide:
 
 - **winget**: deferred as of 1 Nov 2026; after v1.0 unless Mateus moves it.
-- The open M1 items (slurs, hairpins, ornaments, fermatas, ottavas and fingering in the engraving) belong to M5's notation set and stay there.
 
 Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes (the cursor shows the sample being heard); golden-file tests cover event output; the practice tools work on every reference song; it plays out of the box on Windows, macOS and Linux with the system's own sound set; with no instrument or sound set the transport is greyed out and the footer says where to get one.
 
 ## Later milestones
 
 - **M5** — the full Guitar Pro 8 notation set (TAB-2), its editing tools, stylesheets and design mode, per-note playback settings.
-- **M6** — format plugins, each reading and writing, one plugin per format: MusicXML (.musicxml, .xml, .mxl), ABC, MuseScore (.mscz, .mscx) and MIDI files, with tab derivation for staves without tablature (TAB-3, TAB-4). Their sample files are counted apart from the Guitar Pro corpus (decided 16 Oct 2026).
+- **M6** — format plugins, each reading and writing, one plugin per format, in Mateus's order of importance (4 Nov 2026; now before v1.0, #223): MusicXML (.musicxml, .xml, .mxl), MuseScore (.mscz, .mscx), MIDI files, ABC and TuxGuitar, with tab derivation for staves without tablature (TAB-3, TAB-4). Their sample files are counted apart from the Guitar Pro corpus (decided 16 Oct 2026).
 - **M7** — a generated guitar signal for the NAM plugin (which ships in v1.0 on a DI sound set, Mateus, 25 Oct 2026): a pure-Rust plucked-string model (string, fret, pick position, pickup) that renders palm mute, harmonics, slides, bends and vibrato better than samples can, a few basic effects, per-track tone presets.
 - **M8** — research spike and go/no-go on reading users' own Guitar Pro RSE soundbanks, as an instrument plugin.
 - **M9** — a realistic drums instrument plugin (with a research spike on Singular Sound BeatBuddy content, used only from the user's own copy), audio tracks, advanced practice tools, line-in, PNG/SVG export, external MIDI devices.

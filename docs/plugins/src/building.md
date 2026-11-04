@@ -81,7 +81,7 @@ jobs:
       contents: write
 ```
 
-`plugin-publish.yml` is called on `release: published`. It checks that the release holds every file and sum, then sends a `plugin-published` event to the package repositories (when the secret `PACKAGES_TOKEN` is set) and, when you give it a `winget-id`, opens the pull request on winget-pkgs (`WINGET_TOKEN`). The signing of the package repositories and the Homebrew tap live in their own repositories. Nothing is signed with an Apple or Microsoft certificate: macOS asks for "Open Anyway" once for the app, and a plugin installed by the `.pkg` is not quarantined.
+`plugin-publish.yml` is called on `release: published`. It checks that the release holds every file and sum, then sends a `plugin-published` event to the package repositories (when the secret `PACKAGES_TOKEN` is set) and, when you give it a `winget-id`, opens the pull request on winget-pkgs (`WINGET_TOKEN`). The signing of the package repositories lives in its own repository. Nothing is signed with an Apple or Microsoft certificate: macOS asks for "Open Anyway" once for the app, and a plugin installed by the `.pkg` is not quarantined.
 
 You can use the scripts without the workflows: oxiguitar-packages' `scripts/plugin-package/` holds `deb.sh`, `rpm.sh`, `windows.sh` (with `windows.iss`) and `macos-pkg.sh`, each documented at its top, and `specs.sh`, which turns a folder of built files into their arguments.
 

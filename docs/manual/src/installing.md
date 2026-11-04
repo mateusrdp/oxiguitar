@@ -1,6 +1,6 @@
 # Installing
 
-Download the one file for your system from the [releases page](https://github.com/mateusrdp/oxiguitar/releases). Each exists for x86_64 (Intel, AMD) and ARM64 machines; the macOS app runs on both. The downloads hold the program only; the plugins, which open Guitar Pro files of every version from 3 to 8 and play them through your system's sound, are separate and come with the package repositories and the Homebrew tap, or from each plugin's releases page (below, and the system pages).
+Download the one file for your system from the [releases page](https://github.com/mateusrdp/oxiguitar/releases). Each exists for x86_64 (Intel, AMD) and ARM64 machines; the macOS app runs on both. The downloads hold the program only; the plugins, which open Guitar Pro files of every version from 3 to 8 and play them through your system's sound, are separate and come with the package repositories (Linux), or from each plugin's releases page (below, and the system pages).
 
 | System | Download | Install |
 | --- | --- | --- |

@@ -20,7 +20,7 @@ OxiGuitar values your privacy first. It never uploads anything. No telemetry, no
 
 ## Status
 
-**v0.11.0, a pre-release for testers of the player (milestone M4), 1 November 2026**: v0.10's player with recorded guitars, basses and drums (SFZ), now with amp models (NAM), WAV export and a dialog that says what is missing, instead of a line at the bottom. The plugins are about to move to repositories of their own (the plugin interface is frozen at 1.4 with this release). v1.0 follows it.
+**v0.13.0, a pre-release for testers of the player (milestone M4), 4 November 2026**: v0.12's plugins in repositories of their own, with apt and dnf repositories that keep OxiGuitar and its plugins up to date, now with an equalizer plugin, an order for each track's effects, a track's chord diagrams playing on a voice of their own, a sound-set installer for free recorded guitars, basses and drums, and a right panel that widens and scrolls. v1.0 follows it.
 
 OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). And it plays them: from the caret or the selection, looping, with a count-in and a metronome (heard, seen, or both), at 25 to 200 % speed, with each track's volume, pan, mute and solo, and a cursor on the very beat you're hearing. It uses the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). `oxiguitar-cli play` plays a score from the terminal too. Coming with v1.0, and built: guitars and basses through **amp models** (Neural Amp Modeler captures) and cabinets, picked per track in its Properties ([Amp models](https://mateusrdp.github.io/oxiguitar/amp-models.html)), and **File → Export WAV Audio…**, the whole song or some bars, as written or at your practice speed ([Exporting audio](https://mateusrdp.github.io/oxiguitar/audio-export.html)). See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
@@ -37,6 +37,85 @@ OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF
 </p>
 
 **Hear it:** a band with recorded guitars, bass and drums, the bass and the drum kit alone, guitar techniques, bends and strums, played by OxiGuitar with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
+
+## Install
+
+OxiGuitar is the program plus **plugins**: it opens, plays and exports files only through them. A usable set is the program, the **Guitar Pro** and **MIDI** plugins, and an audio output (all recommended, and installed with the program by apt and dnf), then the extras we suggest: **WAV** (export your song as audio), **NAM** (amp models), **Equalizer**, and the free **recorded sound sets** (clean, overdriven and distorted guitars, nylon and steel strings, ukulele, bass and drums; about 1.2 GB, downloaded from their authors after the package manager or the installer says so). The steps below install all of them. Leave out what you don't want: every name is a package of its own.
+
+None of the downloads is code-signed yet, so Windows and macOS warn the first time you open OxiGuitar ([how to get past it](https://mateusrdp.github.io/oxiguitar/installing.html)). Nothing here runs unless you run it, and OxiGuitar itself never downloads anything.
+
+### Debian, Ubuntu and relatives (apt)
+
+**Once**, add our signed repository (it stays; you never repeat this):
+
+```sh
+sudo install -d -m 0755 /etc/apt/keyrings
+sudo curl -fsSL https://mateusrdp.github.io/oxiguitar-packages/oxiguitar.gpg -o /etc/apt/keyrings/oxiguitar.gpg
+sudo curl -fsSL https://mateusrdp.github.io/oxiguitar-packages/oxiguitar.sources -o /etc/apt/sources.list.d/oxiguitar.sources
+sudo apt update
+```
+
+**Install** OxiGuitar with the recommended plugins (Guitar Pro, MIDI, ALSA and PipeWire audio) and the extras:
+
+```sh
+sudo apt install oxiguitar oxiguitar-wav oxiguitar-nam oxiguitar-eq oxiguitar-bettersounds-soundfonts
+```
+
+The last package asks whether to download the recorded sound sets (the default answer is yes; an unattended install downloads them). Say no, or install without it, and `sudo oxiguitar-install-sounds --system` fetches them any time later.
+
+**Update** with your system's own updates, which now include OxiGuitar and every plugin you installed:
+
+```sh
+sudo apt update && sudo apt upgrade
+```
+
+### Fedora and relatives (dnf)
+
+**Once**, add the repository (the same one, signed the same way):
+
+```sh
+sudo curl -fsSL https://mateusrdp.github.io/oxiguitar-packages/oxiguitar.repo -o /etc/yum.repos.d/oxiguitar.repo
+```
+
+**Install** (dnf adds the recommended plugins itself):
+
+```sh
+sudo dnf install oxiguitar oxiguitar-wav oxiguitar-nam oxiguitar-eq oxiguitar-bettersounds-soundfonts
+```
+
+The last package downloads the recorded sound sets as it installs, which takes a while; to skip that and fetch them later with `sudo oxiguitar-install-sounds --system`, install it with `sudo env OXIGUITAR_SKIP_SOUNDS=1 dnf install oxiguitar-bettersounds-soundfonts`.
+
+**Update** with `sudo dnf upgrade`.
+
+### Any Linux (AppImage)
+
+The AppImage is the program alone, with no repository to add and no automatic updates:
+
+1. Download `OxiGuitar-VERSION-x86_64.AppImage` (or `aarch64`) from the [latest release](https://github.com/mateusrdp/oxiguitar/releases/latest), then `chmod +x` it and run it.
+2. Download the Linux zip of each plugin from its latest release, unzip it and put the `.oxp` file in `~/.local/share/oxiguitar/plugins/`: [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [ALSA](https://github.com/mateusrdp/oxiguitar-alsa/releases/latest) (the output the AppImage uses), then [WAV](https://github.com/mateusrdp/oxiguitar-wav/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest) and [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest).
+3. For the sound sets, download `install.sh` from the [sound-set installer's latest release](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases/latest) and run `bash install.sh` in a terminal. It shows what it would download and asks first.
+
+To update, download the newer files and replace the old ones.
+
+### Windows
+
+There is no repository to add yet (winget is planned), so everything is a download, and each plugin has a small setup program that installs for you alone, with no administrator password:
+
+1. Unzip `OxiGuitar-VERSION-windows-x86_64.zip` (or `arm64`) from the [latest release](https://github.com/mateusrdp/oxiguitar/releases/latest) anywhere, and run `oxiguitar.exe`.
+2. From each plugin's latest release, run its `-setup.exe`: [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [WASAPI](https://github.com/mateusrdp/oxiguitar-wasapi/releases/latest) (the audio output), then [WAV](https://github.com/mateusrdp/oxiguitar-wav/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest) and [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest). Windows then lists them under Installed apps.
+3. For the sound sets, download `install.ps1` from the [sound-set installer's latest release](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases/latest) and run `powershell -ExecutionPolicy Bypass -File .\install.ps1`. It shows what it would download and asks first.
+
+To update, download the newer zip and setup programs and install them over the old ones.
+
+### macOS
+
+Open `OxiGuitar-VERSION-macos-universal.dmg` from the [latest release](https://github.com/mateusrdp/oxiguitar/releases/latest) and drag OxiGuitar to Applications, then run the `.pkg` installer from each plugin's latest release (no password needed): [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [Core Audio](https://github.com/mateusrdp/oxiguitar-coreaudio/releases/latest), then [WAV](https://github.com/mateusrdp/oxiguitar-wav/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest) and [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest). To update, install the newer files over the old.
+
+**The sound sets:** download `install.sh` from the [sound-set installer's latest release](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases/latest) and run `bash install.sh` in Terminal. It shows what it would download and asks first.
+
+### After installing
+
+Open a song. OxiGuitar plays each kind of track with the matching recorded set by itself (clean, overdriven and distorted guitars, nylon and steel strings, bass, drums); **Tools → Plugins…** lists the plugins it found and **Settings…** on MIDI changes the sets. The [manual](https://mateusrdp.github.io/oxiguitar/) says more, and [Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html) lists the sets.
 
 ## How to get involved
 
@@ -64,14 +143,11 @@ How can you help, you ask?
 | Linux | the AppImage: distributions with glibc 2.35 or newer (Debian 12 and later, Ubuntu 22.04+, Fedora 36+); the .deb and .rpm: glibc 2.39 or newer (Debian trixie and sid, Ubuntu 24.04+, Fedora 40+) | x86\_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
-Each [release](https://github.com/mateusrdp/oxiguitar/releases) has one download for your system: a portable .exe for Windows (in a zip); one AppImage for any Linux, which holds both the Wayland and the X11 build, starts the right one and plays through ALSA (which PipeWire desktops pass on to PipeWire); a .deb and an .rpm for Debian, Ubuntu and Fedora; one .dmg for macOS. **None carries the plugins** that open Guitar Pro files and play them: those live in repositories of their own ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi), [oxiguitar-nam](https://github.com/mateusrdp/oxiguitar-nam), [oxiguitar-wav](https://github.com/mateusrdp/oxiguitar-wav) and the audio outputs), with releases, packages and updates of their own. The package repositories and the Homebrew tap below install OxiGuitar and its plugins together and keep them up to date.
+Each [release](https://github.com/mateusrdp/oxiguitar/releases) has one download for your system: a portable .exe for Windows (in a zip); one AppImage for any Linux, which holds both the Wayland and the X11 build, starts the right one and plays through ALSA (which PipeWire desktops pass on to PipeWire); a .deb and an .rpm for Debian, Ubuntu and Fedora; one .dmg for macOS. **None carries the plugins** that open Guitar Pro files and play them: those live in repositories of their own ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi), [oxiguitar-nam](https://github.com/mateusrdp/oxiguitar-nam), [oxiguitar-wav](https://github.com/mateusrdp/oxiguitar-wav) and the audio outputs), with releases, packages and updates of their own. The Linux package repositories below install OxiGuitar and its plugins together and keep them up to date.
 
 Every release carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Guitar Pro file types (.gp, .gpx, .gp5, .gp4, .gp3), so double-clicking a file opens OxiGuitar; the portable .exe and the AppImage register nothing, and the [user manual](https://mateusrdp.github.io/oxiguitar/installing.html) shows how to do it by hand. The [manual](https://mateusrdp.github.io/oxiguitar/) explains the whole program in a few short pages.
 
-- **Debian, Ubuntu (recommended):** add the [apt repository](https://github.com/mateusrdp/oxiguitar-packages) once, then `sudo apt install oxiguitar`. apt installs the recommended `oxiguitar-guitarpro`, `oxiguitar-midi`, `oxiguitar-alsa` and `oxiguitar-pipewire` plugins with it, suggests `oxiguitar-nam` (amp models; install with `-o APT::Install-Suggests="true"`), and keeps all of them up to date. The repository's page has the three commands that add it.
-- **Fedora:** the same repository serves dnf: add its `.repo` file once (the [repository's page](https://github.com/mateusrdp/oxiguitar-packages) has the command), then `sudo dnf install oxiguitar`; the plugins come along as recommended packages.
-- **macOS:** the .dmg for the app, or the Homebrew tap: `brew tap mateusrdp/oxiguitar`, then `brew install --cask oxiguitar oxiguitar-guitarpro oxiguitar-midi`.
-- **Windows and the AppImage:** download the plugins' zips (the plugin file alone, to put in OxiGuitar's plugin folder) or their per-user installers from each plugin's releases page; the [manual](https://mateusrdp.github.io/oxiguitar/installing.html) says where.
+- **Installing:** the [Install](#install) section above has the steps for each system, from adding our repositories (a one-off step) to updating.
 - **Linux on X11:** the AppImage works on X11 as it is. The .deb and .rpm above are the Wayland build, for today's desktops; a desktop without Wayland needs the X11 build's package instead, `oxiguitar-x11_….deb` or `oxiguitar-x11-….rpm`. The X11 build is deprecated and will be dropped. Each build carries only its own display system's code, and installing one package replaces the other.
 
 None of the packages is code-signed yet, so the first launch shows a warning:
