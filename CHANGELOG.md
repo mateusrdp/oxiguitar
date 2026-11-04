@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-04
+
 ### Changed
 
 - Publishing a release tells the package repositories and the Homebrew tap by itself (`publish.yml`, #226, as each plugin's does), so the apt and dnf repositories and the tap follow without running their workflows by hand.
