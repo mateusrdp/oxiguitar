@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-11-04
+
 ### Changed
 
 - **A plugin's settings window opens twice as large (960 by 640), and its drop-down lists stretch to the window's edge** and follow it when it is resized, in the settings window and in the panels that show a plugin's tab. The names of sounds are long and were cut short by drop-downs as wide as their longest option; the list that opens is as wide as the box.
