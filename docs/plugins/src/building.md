@@ -56,7 +56,7 @@ The Linux files are built on Ubuntu 22.04, the oldest Ubuntu LTS still in standa
 
 ## Packages and installers (the official plugins' workflow)
 
-The official plugins live in repositories of their own and are released with two reusable workflows from the `oxiguitar` repository, which any plugin repository may call. `plugin-release.yml` runs the same five builds as above (it expects the template's `build-oxp.sh`, which writes `dist/NAME-VERSION-SYSTEM-ARCH.oxp`) and then makes, from those files:
+The official plugins live in repositories of their own and are released with two reusable workflows from the [`oxiguitar-packages`](https://github.com/mateusrdp/oxiguitar-packages) repository, which any plugin repository may call. They live there, apart from OxiGuitar, so a change to the packaging never waits for an OxiGuitar release: call them `@main`. `plugin-release.yml` runs the same five builds as above (it expects the template's `build-oxp.sh`, which writes `dist/NAME-VERSION-SYSTEM-ARCH.oxp`) and then makes, from those files:
 
 - a zip per target, and `SHA256SUMS`;
 - a `.deb` and an `.rpm` per Linux processor, named `oxiguitar-NAME`, that install the file in `/usr/lib/oxiguitar/plugins/`;
@@ -70,23 +70,24 @@ Each package is installed and removed in its own kind of system (Debian, Fedora,
 ```yaml
 jobs:
   release:
-    uses: mateusrdp/oxiguitar/.github/workflows/plugin-release.yml@v0.11.0
+    uses: mateusrdp/oxiguitar-packages/.github/workflows/plugin-release.yml@main
     with:
       name: example
       title: Example
       description: "What it does, in one line."
-      tools-ref: v0.11.0
+      # Optional: depends-deb/-rpm and suggests-deb/-rpm, such as
+      # suggests-deb: oxiguitar-bettersounds-soundfonts
     permissions:
       contents: write
 ```
 
 `plugin-publish.yml` is called on `release: published`. It checks that the release holds every file and sum, then sends a `plugin-published` event to the package repositories (when the secret `PACKAGES_TOKEN` is set) and, when you give it a `winget-id`, opens the pull request on winget-pkgs (`WINGET_TOKEN`). The signing of the package repositories and the Homebrew tap live in their own repositories. Nothing is signed with an Apple or Microsoft certificate: macOS asks for "Open Anyway" once for the app, and a plugin installed by the `.pkg` is not quarantined.
 
-You can use the scripts without the workflows: `scripts/plugin-package/` holds `deb.sh`, `rpm.sh`, `windows.sh` (with `windows.iss`) and `macos-pkg.sh`, each documented at its top, and `specs.sh`, which turns a folder of built files into their arguments.
+You can use the scripts without the workflows: oxiguitar-packages' `scripts/plugin-package/` holds `deb.sh`, `rpm.sh`, `windows.sh` (with `windows.iss`) and `macos-pkg.sh`, each documented at its top, and `specs.sh`, which turns a folder of built files into their arguments.
 
 ## Before you release
 
-- Raise the version in both `Cargo.toml` and `manifest.json`.
+- Raise the version in both `Cargo.toml` and `manifest.json` (the official plugins' Release button, in oxiguitar-packages, does it for them).
 - Run the contract suite on each system's file, not only on yours (the workflow does).
 - Try the file in OxiGuitar on at least one system ([Testing](testing.md)).
 - Say in your README what the plugin does, which OxiGuitar it needs (0.2 or later for interface 1.1), what it downloads or sends anywhere (ideally nothing), and where to report its bugs.
