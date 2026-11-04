@@ -1,14 +1,14 @@
 # Amp models (NAM)
 
-OxiGuitar can play a guitar or bass track through an **amp model**: a capture of a real amplifier (or pedal, or a whole rig) made with [Neural Amp Modeler](https://github.com/sdatkinson/neural-amp-modeler), stored in a `.nam` file. The track's sound goes through the model, then through a **cabinet**: an impulse response of a speaker cabinet and its microphone. The NAM plugin does it; it comes with OxiGuitar. OxiGuitar downloads nothing: models are files you get and put in a folder.
+OxiGuitar can play a guitar or bass track through an **amp model**: a capture of a real amplifier (or pedal, or a whole rig) made with [Neural Amp Modeler](https://github.com/sdatkinson/neural-amp-modeler), stored in a `.nam` file. The track's sound goes through the model, then through a **cabinet**: an impulse response of a speaker cabinet and its microphone. The NAM plugin does it, a plugin of its own (`oxiguitar-nam`, [The official plugins](official-plugins.md)). OxiGuitar downloads nothing: models are files you get and put in a folder.
 
 ## What you need
 
 1. **A clean guitar sound to feed the amp.** An amp model expects what a guitar's cable carries, a clean, plain signal, called DI (direct input). Any guitar sound plays through it, but a DI set sounds the most real. FreePats' **Direct** set is one ([Better sounds](better-sounds.md), "Electric guitars as SoundFonts"): put its `.sf2` file in your `soundfonts` folder and pick it for **Clean guitars** in the MIDI plugin's settings window, or for the track alone (below). A track whose instrument is an overdriven or distortion guitar plays the **Overdriven guitars** or **Distorted guitars** set, already distorted: for the amp, set that track's **Sound** to **Like clean guitars** (below).
 2. **Amp models.** Thousands are shared for free, most of them at [TONE3000](https://www.tone3000.com/). Each capture's page says its licence; most allow using it and publishing what you play through it, but not passing the file on. A capture marked as an amp head (amp only) needs a cabinet after it; a full rig already has one.
-3. **Cabinets, if you want others.** Four come with OxiGuitar (below). Any `.wav` impulse response works, mono or the first channel of a stereo file, at any sample rate.
+3. **Cabinets, if you want others.** Four come with the NAM plugin (below). Any `.wav` impulse response works, mono or the first channel of a stereo file, at any sample rate.
 
-If a track's amp is on and a folder is empty, a dialog says what is missing, once: **No amp model to play** when the `nam` folder holds no model, **No cabinet of your own** when it holds no impulse response (the four built-in cabinets still work). Tick **Don't show this again** to silence either; see [Advice dialogs](plugins.md#advice-dialogs). The NAM plugin works through the MIDI plugin's sound, so it needs the MIDI plugin installed (both come with every download).
+If a track's amp is on and a folder is empty, a dialog says what is missing, once: **No amp model to play** when the `nam` folder holds no model, **No cabinet of your own** when it holds no impulse response (the four built-in cabinets still work). Tick **Don't show this again** to silence either; see [Advice dialogs](plugins.md#advice-dialogs). The NAM plugin works through the MIDI plugin's sound, so it needs the MIDI plugin installed (its packages bring it along).
 
 ## Where to put them
 
