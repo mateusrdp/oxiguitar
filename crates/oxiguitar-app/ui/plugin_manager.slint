@@ -167,8 +167,9 @@ export component PluginSettingsWindow inherits Window {
     in property <string> window-title: "Settings";
     title: root.window-title;
     icon: @image-url("../../../assets/icon/png/oxiguitar-256.png");
-    preferred-width: 480px;
-    preferred-height: 320px;
+    // Twice as large as it was (480 by 320): the names of sounds are long.
+    preferred-width: 960px;
+    preferred-height: 640px;
     min-width: 320px;
     min-height: 160px;
     default-font-family: "Noto Sans";

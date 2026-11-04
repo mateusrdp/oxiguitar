@@ -4,6 +4,11 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- **A plugin's settings window opens twice as large (960 by 640), and its drop-down lists stretch to the window's edge** and follow it when it is resized, in the settings window and in the panels that show a plugin's tab. The names of sounds are long and were cut short by drop-downs as wide as their longest option; the list that opens is as wide as the box.
+- The manual's page on better sounds says how to put a set in by hand: keep every file and the folders, just unpack it into the `soundfonts` folder, WAV or FLAC, how to keep only the patches you like, and how to name what the lists show (`oxiguitar-set.json`).
+
 ### Removed
 
 - **The Homebrew tap is dropped** (Mateus, 4 Nov 2026: Homebrew no longer supports Intel Macs, most of OxiGuitar's macOS users): publishing a release no longer tells `mateusrdp/homebrew-oxiguitar`, and the README and the manual no longer offer `brew`. macOS has the `.dmg` and each plugin's `.pkg` installer, which need no password and do not need Homebrew. Anyone who installed with `brew` can keep the casks they have; they will not be updated.

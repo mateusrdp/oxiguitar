@@ -123,6 +123,30 @@ The settings window's rows hold for every song. One track can sound otherwise: s
 
 The choice is kept per track beside the score, in `FILE.oxg`, like every plugin's track settings; the score itself doesn't change.
 
+## Putting a set in by hand, and choosing from it
+
+The sound-set installer does everything below for you. For a set you download yourself, this is how it works.
+
+**Keep every file, and the folders as they are.** An SFZ instrument is a small text file (`.sfz`) that points to its samples by their place under it (`samples/Gtr/A3.flac`), and often to other text files (`#include "controls/common.sfz"`). Move or drop one, or flatten the folders, and the instrument loses its sounds: the bottom of the window says samples are missing and a General MIDI set plays instead. So a pack stays as a whole folder, with the folders inside it as it came.
+
+**Unpack it into the `soundfonts` folder, and that is all.** Extract the zip so that its folder lands inside `soundfonts` (the folder for your system is in the table above). If the zip has no folder of its own, make one first, such as `soundfonts/My Guitar`, and extract into it. OxiGuitar looks up to five levels deep; open the settings window again and the pack is in the lists. There is nothing to register or edit.
+
+**WAV or FLAC.** Both play, as does Ogg Vorbis. FLAC is lossless, so it sounds the same as WAV and takes about half the room: take the FLAC when a pack offers both. The `.sfz` files name their samples with the extension, so use a pack's `.sfz` files with the samples they name: take one download or the other whole, and do not mix a WAV pack's samples into a FLAC pack's folder. (The sets we install are as their authors publish them: the Karoryfer ones are WAV only.)
+
+**Keeping only the patches you like.** Each `.sfz` file is one instrument (a patch), and each shows as one entry in the lists. A pack with a dozen of them (one for each guitar, microphone or set of articulations) shows a dozen entries. To see fewer, delete the `.sfz` files you will not use; the samples and the folders they share can stay, which is why this is safe. To give the room back too, delete the samples only those files used: open one of the deleted `.sfz` files before you delete it, its `sample=` lines say which. The `LICENSE` file stays, and so does any `.sfz` another one `#include`s (a file named `controls`, `common` or `modules` is usually that). With the installer, `--patches recommended` keeps one patch of each set.
+
+**Choosing what the list says.** Without more, an entry reads `FOLDER: FILE NAME (SFZ)`, from the first folder under `soundfonts` and the file's name, so renaming the folder or the file renames the entry (`Black and Green Guitars: 06-green_hammer-on (SFZ)`). For a set you want to name properly, put a file called `oxiguitar-set.json` in its folder (the one under `soundfonts`):
+
+   ```json
+   { "name": "Karoryfer", "role": "clean-guitars",
+     "credit": "Karoryfer Samples (Black and Green Guitars, green hammer-on)",
+     "recommended": "Programs/06-green_hammer-on.sfz",
+     "patches": { "Programs/06-green_hammer-on.sfz": "green hammer-on",
+                  "Programs/02-black_keyswitch.sfz": "black" } }
+   ```
+
+   The entry then reads `name: product (patch)`: `Karoryfer: Black and Green Guitars (green hammer-on)`. The product is what comes before the comma in the last parentheses of `credit`, and the patch is the name `patches` gives that file (paths from the set's folder), or what comes after the comma. `recommended` is the patch that plays where nothing is picked, and `role` says which row the set is for (the keys are in the section above). Close the settings window and open it again after you edit the file.
+
 ## Other SFZ sets
 
 Any SFZ instrument plays. One OxiGuitar has no layout for plays its notes as they are: palm mutes and dead notes ended early, hammer-ons carrying on the ringing string. OxiGuitar also knows the layouts of SM Drums, Naked Drums (its own programs) and Karoryfer's Big Rusty, Swirly and Unruly Drums, so their drums play at the right keys; of all the kits, we found the MuldjordKit the most natural.
