@@ -158,11 +158,14 @@ component PluginWidgetView inherits HorizontalLayout {
 
 // A plugin's section of the track dialog (interface 1.3): its heading, and
 // its rows or a message instead (while the plugin is asked, or why it
-// can't be shown).
+// can't be shown). A section of a plugin with effects for the track can
+// move up or down, which changes the order the effects run in (#152).
 export struct PluginSection {
     title: string,
     rows: [PluginRow],
     message: string,
+    up: bool,
+    down: bool,
 }
 
 // A plugin's rows in a layout that takes their own height: a track

@@ -16,7 +16,7 @@ sudo apt update
 sudo apt install oxiguitar
 ```
 
-`oxiguitar` recommends `oxiguitar-guitarpro`, `oxiguitar-midi` and the audio outputs `oxiguitar-alsa` and `oxiguitar-pipewire`, so apt installs them with it (leave out recommended packages and you get the program alone), and suggests `oxiguitar-nam` for amp models; add any plugin by name. `sudo apt upgrade` then keeps OxiGuitar and its plugins current. The repository's key is signed into the `.gpg` file; its fingerprint is on the [repository's page](https://github.com/mateusrdp/oxiguitar-packages). A downloaded `.deb` works too, but then you install the plugins' `.deb` files yourself.
+`oxiguitar` recommends `oxiguitar-guitarpro`, `oxiguitar-midi` and the audio outputs `oxiguitar-alsa` and `oxiguitar-pipewire`, so apt installs them with it (leave out recommended packages and you get the program alone), and suggests `oxiguitar-nam` for amp models and `oxiguitar-eq` for an equalizer; add any plugin by name. `sudo apt upgrade` then keeps OxiGuitar and its plugins current. The repository's key is signed into the `.gpg` file; its fingerprint is on the [repository's page](https://github.com/mateusrdp/oxiguitar-packages). A downloaded `.deb` works too, but then you install the plugins' `.deb` files yourself.
 
 ## Our dnf repository (Fedora and relatives)
 
@@ -29,10 +29,13 @@ sudo dnf install oxiguitar
 
 dnf installs the recommended plugins with it, and `sudo dnf upgrade` keeps them current.
 
+## The recorded sound sets
+
+`oxiguitar-midi` suggests `oxiguitar-bettersounds-soundfonts`, the installer of the free recorded sound sets we recommend (about 1.2 GB; [Better sounds](better-sounds.md#the-sound-set-installer)). With apt, installing it asks whether to download them now (no is the default); with dnf, it says how. Any time later, `oxiguitar-install-sounds` chooses and downloads them, after asking you, into `/usr/share/oxiguitar/soundfonts`, where OxiGuitar looks too. OxiGuitar itself never downloads anything.
+
 ## Coming later
 
 - **Any Linux, through Flathub:** OxiGuitar as a Flatpak, with each plugin an extension you add in GNOME Software or Discover.
-- **The sound sets**: a package `oxiguitar-bettersounds-soundfonts` that downloads the recommended free SFZ sets into `/usr/share/oxiguitar/soundfonts`, after asking you; OxiGuitar looks there too ([Better sounds](better-sounds.md)).
 
 ## AppImage
 

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! The engraver's map of where things are (M3, slice 1), checked against
-//! what it draws: in every one of the 50 reference scores, every note of
+//! what it draws: in every one of the 51 reference scores, every note of
 //! every shown staff is found, its fret number on the tablature lies in the
 //! box the map gives for its string, and a click there names that note's
 //! track, bar, beat and string.

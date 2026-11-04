@@ -54,6 +54,11 @@ pub struct Timeline {
     pub map: TimeMap,
     /// Every note, by start time.
     pub notes: Vec<NoteEvent>,
+    /// The chords of the tracks whose chord diagrams are played, by start
+    /// time, each track's on its chord voice (`tracks + t`;
+    /// [`events::chords`], #151). Apart from `notes`, so the cursor and the
+    /// practice tools see only the score's own notes.
+    pub chords: Vec<NoteEvent>,
     /// The metronome's clicks, from the song's start.
     pub clicks: Vec<Click>,
     /// The count-in's clicks, from the count-in's start.
@@ -68,11 +73,13 @@ impl Timeline {
         let order = playing_order(&score.master_bars);
         let map = TimeMap::new(score, &order);
         let notes = events::notes(score, &map);
+        let chords = events::chords(score, &map);
         let clicks = click::metronome(score, &map);
         let (count_in, count_in_length) = click::count_in(score, &map);
         Timeline {
             map,
             notes,
+            chords,
             clicks,
             count_in,
             count_in_length,

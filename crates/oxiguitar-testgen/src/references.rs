@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The visual-regression references: fifty small scores, each about one
+//! The visual-regression references: fifty-one small scores, each about one
 //! part of engraving, and how each is shown.
 //!
 //! The scores are saved in `fixtures/reference/` as Guitar Pro 7 files, so
@@ -307,6 +307,19 @@ pub fn references() -> Vec<Reference> {
                 "Beat Text",
                 &["@tlet_ring q 5:0+4:2 5:0 @tpalm_mute e 6:0 6:0 6:0 6:0 | \
                    @tharmonics h 1:12 @tslower h 1:7 | w 6:0"],
+            ),
+        ),
+        reference(
+            "beat-text-in-voice-2",
+            "Text held by voice 2 under a moving voice 1, as Guitar Pro can save it: drawn \
+             above the staff all the same, and edited from voice 1 too (#153).",
+            guitar(
+                "Beat Text in Voice 2",
+                &[
+                    "s 2:0 1:0 3:0 1:0 2:0 1:0 3:0 1:0 2:1 1:0 3:2 1:0 2:1 1:0 3:2 1:0 | \
+                     s 2:3 1:0 3:2 1:0 2:3 1:0 3:2 1:0 h 2:1+1:0",
+                    "q 5:3 5:3 @tIntro_/_Solo q 4:2 4:2 | h 5:3 6:0",
+                ],
             ),
         ),
         {
@@ -786,11 +799,11 @@ mod tests {
     #[test]
     fn fifty_references_with_full_bars() {
         let refs = references();
-        assert_eq!(refs.len(), 50);
+        assert_eq!(refs.len(), 51);
         let mut names: Vec<&str> = refs.iter().map(|r| r.name).collect();
         names.sort_unstable();
         names.dedup();
-        assert_eq!(names.len(), 50, "names are unique");
+        assert_eq!(names.len(), 51, "names are unique");
         let mut problems = Vec::new();
         for r in &refs {
             check_bars(&r.song, r.name, &mut problems);

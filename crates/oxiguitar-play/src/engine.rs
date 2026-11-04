@@ -165,8 +165,14 @@ pub struct Slot {
     source: Box<dyn Source>,
     buffers: Buffers,
     events: Vec<RtEvent>,
-    /// The score's track of each of the source's tracks.
+    /// The score's track of each of the source's tracks, whose mix it
+    /// takes (a chord voice's is its track's, #151).
     tracks: Vec<usize>,
+    /// The gains each of them was mixed with at the end of the last piece,
+    /// for ramps; NaN until the first, which takes its gains at once. Per
+    /// buffer, not per track: a track and its chord voice ramp alike, each
+    /// from its own last gains.
+    gains: Vec<(f32, f32)>,
     /// Each track's left and right delay, up to the latest track's
     /// latency (set by [`Sources::new`]).
     delays: Vec<[Delay; 2]>,
@@ -183,6 +189,7 @@ impl Slot {
             buffers: Buffers::new(tracks.len(), capacity),
             events: Vec::with_capacity(EVENTS),
             delays: Vec::new(),
+            gains: vec![(f32::NAN, f32::NAN); tracks.len()],
             source,
             tracks,
         }
@@ -363,8 +370,6 @@ pub fn engine(rate: u32, capacity: usize) -> (Engine, Control) {
         schedule: Arc::new(Schedule::default()),
         sources: Box::new(Sources::new(Vec::new())),
         mix: [TrackMix::default(); MAX_TRACKS],
-        // Not yet mixed: the first piece takes its gains at once.
-        gains: [(f32::NAN, f32::NAN); MAX_TRACKS],
         master: 1.0,
         limit: 1.0,
         release: 1.0 - (-1.0 / (RELEASE * rate as f32)).exp(),
@@ -422,9 +427,6 @@ pub struct Engine {
     schedule: Arc<Schedule>,
     sources: Box<Sources>,
     mix: [TrackMix; MAX_TRACKS],
-    /// The gains each track was mixed with at the end of the last piece,
-    /// for ramps.
-    gains: [(f32, f32); MAX_TRACKS],
     master: f32,
     /// The limiter's gain now, and how far it returns to 1 each frame.
     limit: f32,
@@ -831,11 +833,11 @@ impl Engine {
                 // Constant power.
                 let angle = (m.pan.clamp(-1.0, 1.0) + 1.0) * std::f32::consts::FRAC_PI_4;
                 let target = (v * angle.cos(), v * angle.sin());
-                let from = match self.gains[track] {
+                let from = match slot.gains[k] {
                     (l, _) if l.is_nan() => target,
                     g => g,
                 };
-                self.gains[track] = target;
+                slot.gains[k] = target;
                 let Some((l, r)) = slot.buffers.track(k) else {
                     continue;
                 };

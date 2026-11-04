@@ -15,10 +15,12 @@ The app holds the program only. Install the plugins either way:
   brew install --cask oxiguitar-guitarpro oxiguitar-midi
   ```
 
-  Add `oxiguitar-wav`, `oxiguitar-nam` (which needs `oxiguitar-midi`, and installs it) and `oxiguitar-coreaudio` the same way, and `brew upgrade` keeps them current. Each plugin's cask puts its file in the folder above and clears macOS's quarantine mark.
+  Add `oxiguitar-wav`, `oxiguitar-nam` (which needs `oxiguitar-midi`, and installs it), `oxiguitar-eq` and `oxiguitar-coreaudio` the same way (installing `oxiguitar` prints the suggested ones), and `brew upgrade` keeps them current. Each plugin's cask puts its file in the folder above and clears macOS's quarantine mark.
 - **An installer (.pkg) for each plugin,** from its releases page, for those without Homebrew. It installs for you alone, in your own Library, without asking for a password.
 
 You need at least the Guitar Pro plugin, the MIDI plugin and the Core Audio plugin (the one that sends sound to your speakers).
+
+For the free recorded sound sets we recommend, the sound-set installer's releases page has `install.sh`: run it in Terminal (`bash install.sh`); it lists what it would download, from where and under which licence, and asks before it fetches anything, into your `soundfonts` folder ([Better sounds](better-sounds.md#the-sound-set-installer)).
 
 ### Why macOS asks about OxiGuitar
 

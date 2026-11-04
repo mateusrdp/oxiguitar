@@ -35,6 +35,11 @@ pub struct TrackSettings {
     /// What plugins keep for the track, by plugin id (their sections of the
     /// track dialog, plugin interface 1.3).
     pub plugins: std::collections::BTreeMap<String, String>,
+    /// The order of the track's effects, by plugin id; empty for the
+    /// default (#152).
+    pub effects: Vec<String>,
+    /// Whether the track's chord diagrams are played (#151).
+    pub play_chords: bool,
 }
 
 impl TrackSettings {
@@ -50,6 +55,8 @@ impl TrackSettings {
             tuning: staff.map(|s| s.tuning.clone()).unwrap_or_default(),
             keep_pitches: true,
             plugins: track.plugins.clone(),
+            effects: track.effects.clone(),
+            play_chords: track.play_chords,
         }
     }
 }
@@ -203,6 +210,8 @@ fn properties(
     track.short_name.clone_from(&to.short_name);
     track.instrument = to.instrument;
     track.plugins.clone_from(&to.plugins);
+    track.effects.clone_from(&to.effects);
+    track.play_chords = to.play_chords;
     restring(&mut track, to);
     let mut regions = vec![Region::Track(t)];
     let bars = score.bar_count();

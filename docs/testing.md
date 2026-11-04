@@ -41,7 +41,7 @@ Times on the development machine (2 cores, 16 October 2026): 0.18 s with one tra
 
 M1 asks for visual regression tests over 50 reference scores, generated and kept in the repository. `crates/oxiguitar-testgen/tests/visual.rs` holds it:
 
-- **The references** are defined in `crates/oxiguitar-testgen/src/references.rs`: fifty small scores, each about one part of engraving (rhythm, tuplets, keys and times, repeats, chord names, lyrics, dynamics, every effect, bass, seven strings, drums, piano, several tracks, the four layouts, Letter paper, the dark page, a system that must shrink to fit), with the options to show each. `fixtures/reference/README.md` lists them.
+- **The references** are defined in `crates/oxiguitar-testgen/src/references.rs`: fifty-one small scores, each about one part of engraving (rhythm, tuplets, keys and times, repeats, chord names, lyrics, dynamics, every effect, bass, seven strings, drums, piano, several tracks, the four layouts, Letter paper, the dark page, a system that must shrink to fit), with the options to show each. `fixtures/reference/README.md` lists them.
 - **Kept in the repository** (`fixtures/reference/`): each as a Guitar Pro 7 file and its pictures at 1.5 pixels per point, `NAME-1.png` and on for each page. 1.4 MB in all, grey PNGs where the page is grey.
 - **As Guitar Pro 7.6 saves them** (`fixtures/guitar-pro-7.6/`, M3): ten of the references opened and saved by Mateus in Guitar Pro 7.6, their score XML only. `cargo test -p oxiguitar-testgen --test guitar_pro_7_6` reads each against our original: everything survives but for chord diagrams without a spelled-out chord, tempo text and the mixer, which Guitar Pro changes (the folder's README). The .gp writer is compared against them in slice 2.
 - **The check** first makes sure the stored file is what the generator makes, then reads it as the app does, through the Guitar Pro 7–8 plugin built as `gp.oxp` (no reader warnings allowed), engraves it, draws it and compares the pictures. A pixel counts as changed when a channel moved by more than 40 of 255, and a picture fails when more than 4 pixels changed or its size changed: anti-aliasing noise passes, a missing staccato dot does not. A second test makes sure a picture shifted by one pixel, or with a dot painted out, fails.
@@ -56,7 +56,7 @@ OXIGUITAR_BLESS=1 cargo test -p oxiguitar-testgen --test visual -- --nocapture
 git status fixtures/reference
 ```
 
-Blessing writes every picture that differs at all, the stored scores, the index, and removes files that are no longer references. To add a reference, add it to `references()` (the test there keeps the count at fifty and every bar full) and bless.
+Blessing writes every picture that differs at all, the stored scores, the index, and removes files that are no longer references. To add a reference, add it to `references()` (the test there keeps the count at fifty-one and every bar full) and bless.
 
 The references show what the engraver draws today. When an engraving change is intended, the pictures it touches change and are blessed again; the ones that showed gaps (directions in `sections-and-directions`, ppp and pp crowding in `dynamics`) were blessed that way in session 6.
 

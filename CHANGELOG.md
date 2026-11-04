@@ -4,6 +4,29 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-04
+
+### Changed
+
+- Publishing a release tells the package repositories and the Homebrew tap by itself (`publish.yml`, #226, as each plugin's does), so the apt and dnf repositories and the tap follow without running their workflows by hand.
+- The plugins' release workflows (`plugin-release.yml`, `plugin-publish.yml`) and their packaging scripts moved to [oxiguitar-packages](https://github.com/mateusrdp/oxiguitar-packages), where plugin repositories call them `@main`: a change to the packaging no longer waits for an OxiGuitar release. The plugin guide's Building page says so.
+- The manual is up to date with plugins released on their own (they no longer come in OxiGuitar's download; an old bundled plugin left in your plugin folder outranks the new ones, so delete it), opens the Better sounds page with the sound-set installer (half of #146), and names the Track tab among the right panel's tabs.
+- The right panel widens as far as the window allows (it stopped at 500 px), and its Song, Track, Bar and Note tabs scroll sideways when their contents can't be narrower than the panel, instead of pushing them off to the right.
+
+### Added
+
+- **Play a track's chords** (#151): the Track tab's "Play its chords" plays the track's chord diagrams, each until the next one, as a downstroke of the strings it shows, with the track's instrument and effects but as a part of its own, so a distorted guitar's chords go through their own amp instead of piling into the track's. Saved beside the score.
+- The order of a track's effects is the user's (#152): in the Track tab, the section of each plugin with an effect for the track (the NAM amp, the equalizer) has up and down arrows, and the track's effects run in the order the sections stand. The order is saved per track in the song's `.oxg` file (`"effects"`, by plugin id; one step to undo); without one, the amp runs first, then the equalizer, then any other effect as found. Effect sections come after the others (such as the MIDI plugin's Sound).
+- The `.deb` and `.rpm` of `oxiguitar` and `oxiguitar-x11` (and `debian/`) suggest `oxiguitar-eq`, the new equalizer plugin, beside `oxiguitar-nam` (#152).
+- The manual covers clean and distorted guitars (#152): the MIDI plugin's three electric rows and a track's own Sound (Better sounds), feeding an amp model a clean guitar and the equalizer after it (Amp models), each track's sound and the order of its effects (Playing a score), and the Equalizer plugin (The official plugins).
+- The reusable plugin release workflow takes `suggests-deb` and `suggests-rpm`, so a plugin's `.deb` and `.rpm` can suggest other packages (the MIDI plugin suggests `oxiguitar-bettersounds-soundfonts`).
+
+### Fixed
+
+- On a file with several guitars, picking an instrument for one in the Track tab no longer makes every other guitar show that instrument (#204). Only the shown value was wrong (the sound followed each track's own instrument): a drop-down, tickbox, number or text field the user had changed kept its own value when the tab showed another track or bar with the same rows. The Song tab's fields likewise.
+- Text that another voice holds (as Guitar Pro can save it on voice 2) can be changed and removed: Shift + T, Edit → Text… and the Beat tab's Text show and edit the text drawn at the caret's beat, whichever voice holds it (#153). New reference `beat-text-in-voice-2`.
+- A sound set picked in the MIDI plugin's settings window (or any change to the settings of a plugin that plays) takes effect at once: playback stops, the instruments are prepared again with the new sets, and the next Play uses them; no restart (#143).
+
 ## [0.12.1] - 2026-11-03
 
 ### Changed

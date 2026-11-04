@@ -689,6 +689,13 @@ export struct InspectorField {
 
 // The rows of the Bar and Note tabs, each as its kind says: label on the
 // left (40 %), control filling the rest.
+//
+// A control the user changed keeps its own value from then on (Slint drops
+// a binding the user overrides), so each one also watches its row's value
+// and puts it back when the row is changed in place, as it is for another
+// track or bar with the same rows (issue #204: every guitar showed the
+// instrument last picked for one of them, until a drum kit's rows rebuilt
+// the list).
 component FieldRows inherits VerticalLayout {
     in property <[InspectorField]> fields;
     callback changed(string, int);
@@ -704,6 +711,8 @@ component FieldRows inherits VerticalLayout {
             }
         }
         if f.kind == 1 : CheckBox {
+            property <int> wanted: f.value;
+            changed wanted => { self.checked = self.wanted == 1; }
             text: f.label;
             checked: f.value == 1;
             toggled => { root.changed(f.id, self.checked ? 1 : 0); }
@@ -719,6 +728,8 @@ component FieldRows inherits VerticalLayout {
                 vertical-stretch: 0;
                 min-width: 60px;
                 horizontal-stretch: 1;
+                property <int> wanted: f.value;
+                changed wanted => { self.current-index = self.wanted; }
                 model: f.options;
                 current-index: f.value;
                 selected => { root.changed(f.id, self.current-index); }
@@ -730,6 +741,8 @@ component FieldRows inherits VerticalLayout {
             SpinBox {
                 min-width: 60px;
                 horizontal-stretch: 1;
+                property <int> wanted: f.value;
+                changed wanted => { self.value = self.wanted; }
                 minimum: f.min;
                 maximum: f.max;
                 value: f.value;
@@ -746,6 +759,8 @@ component FieldRows inherits VerticalLayout {
             spacing: 6px;
             Text { text: f.label; font-size: 12px; vertical-alignment: center; width: 40%; wrap: word-wrap; }
             LineEdit {
+                property <string> wanted: f.text;
+                changed wanted => { self.text = self.wanted; }
                 horizontal-stretch: 1;
                 min-width: 60px;
                 text: f.text;
@@ -771,6 +786,8 @@ component FieldRows inherits VerticalLayout {
                 property <length> line: 28px;
                 height: ceil(f.options.length / 4) * self.line;
                 for name[i] in f.options : CheckBox {
+                    property <bool> wanted: mod(floor(f.value / pow(2, i)), 2) == 1;
+                    changed wanted => { self.checked = self.wanted; }
                     x: mod(i, 4) * ticks.width / 4;
                     y: floor(i / 4) * ticks.line;
                     width: ticks.width / 4;
@@ -799,9 +816,15 @@ component TrackTab inherits Rectangle {
     callback section-slid(int, string, float);
     callback section-edited(int, string, string);
     callback section-chosen(int, string, int);
+    // The section at the index moves up (true) or down: its effects run
+    // earlier or later.
+    callback section-moved(int, bool);
+    // As wide as the panel, or wider when something in it can't be
+    // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        VerticalLayout {
-            width: scroll.visible-width;
+        viewport-width: max(self.visible-width, content.min-width);
+        content := VerticalLayout {
+            width: scroll.viewport-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -814,10 +837,31 @@ component TrackTab inherits Rectangle {
             for section[i] in root.sections : VerticalLayout {
                 spacing: 2px;
                 Rectangle { height: 1px; background: Palette.border; }
-                Text {
-                    text: section.title;
-                    font-size: 13px;
-                    font-weight: 700;
+                HorizontalLayout {
+                    spacing: 2px;
+                    Text {
+                        text: section.title;
+                        font-size: 13px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    if section.up || section.down : IconButton {
+                        width: 24px;
+                        height: 24px;
+                        icon: @image-url("../../../assets/icons/ui/chevron-up.svg");
+                        tip: "Move up: this effect runs earlier";
+                        enabled: section.up;
+                        clicked => { root.section-moved(i, true); }
+                    }
+                    if section.up || section.down : IconButton {
+                        width: 24px;
+                        height: 24px;
+                        icon: @image-url("../../../assets/icons/ui/chevron-down.svg");
+                        tip: "Move down: this effect runs later";
+                        enabled: section.down;
+                        clicked => { root.section-moved(i, false); }
+                    }
                 }
                 PluginRows {
                     rows: section.rows;
@@ -846,9 +890,12 @@ component BarTab inherits Rectangle {
     in property <[InspectorField]> fields;
     callback changed(string, int);
     callback edited(string, string);
+    // As wide as the panel, or wider when something in it can't be
+    // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        VerticalLayout {
-            width: scroll.visible-width;
+        viewport-width: max(self.visible-width, content.min-width);
+        content := VerticalLayout {
+            width: scroll.viewport-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -909,9 +956,12 @@ component BarTab inherits Rectangle {
 component NoteTab inherits Rectangle {
     in property <[InspectorField]> fields;
     callback changed(string, int);
+    // As wide as the panel, or wider when something in it can't be
+    // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        VerticalLayout {
-            width: scroll.visible-width;
+        viewport-width: max(self.visible-width, content.min-width);
+        content := VerticalLayout {
+            width: scroll.viewport-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -937,16 +987,23 @@ export struct SongField {
 component SongView inherits Rectangle {
     in property <[SongField]> fields;
     callback edited(string, string);
+    // As wide as the panel, or wider when something in it can't be
+    // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        VerticalLayout {
-            width: scroll.visible-width;
+        viewport-width: max(self.visible-width, content.min-width);
+        content := VerticalLayout {
+            width: scroll.viewport-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
             for f in root.fields : VerticalLayout {
                 spacing: 2px;
                 Text { text: f.label; font-size: 11px; color: Palette.foreground.transparentize(0.35); }
+                // Back to the score's text when it changes (another file,
+                // Undo), even after the user typed here (issue #204).
                 if !f.multiline : LineEdit {
+                    property <string> wanted: f.text;
+                    changed wanted => { self.text = self.wanted; }
                     text: f.text;
                     accepted(t) => { root.edited(f.id, t); }
                     changed has-focus => {
@@ -956,6 +1013,8 @@ component SongView inherits Rectangle {
                     }
                 }
                 if f.multiline : TextEdit {
+                    property <string> wanted: f.text;
+                    changed wanted => { self.text = self.wanted; }
                     height: 72px;
                     text: f.text;
                     wrap: word-wrap;
@@ -1307,6 +1366,9 @@ export component AppWindow inherits Window {
     in-out property <length> bottom-height: 120px;
     in-out property <length> left-width: 220px;
     in-out property <length> right-width: 240px;
+    // The most the right panel may take: the window less the left panel and
+    // 160 px of score.
+    property <length> right-room: root.width - (root.left-shown && !root.left-area.collapsed ? root.left-width : 0px) - 160px - 12px;
 
     in property <[TrackRow]> tracks;
     in property <[ToolRow]> tools;
@@ -1468,6 +1530,7 @@ export component AppWindow inherits Window {
     // (0 clicked, 1 toggled, 2 slid, 3 edited, 4 chosen) and its value.
     in property <[PluginSection]> track-sections;
     callback track-section-event(int, string, int, bool, float, string, int);
+    callback track-section-moved(int, bool);
     in property <bool> transpose-dialog-shown: false;
     in property <string> transpose-heading;
     in-out property <int> transpose-amount;
@@ -2331,7 +2394,9 @@ export component AppWindow inherits Window {
 
                 // Right area: Song, Bar and Note, then plugins' tabs.
                 if root.right-shown && !root.right-area.collapsed : SideSplitter {
-                    dragged(d) => { root.right-width = clamp(root.right-width - d, 120px, 500px); }
+                    // As wide as the window allows, leaving the score
+                    // 160 px (Mateus, 3 Nov 2026: as wide as possible).
+                    dragged(d) => { root.right-width = clamp(root.right-width - d, 120px, max(120px, root.right-room)); }
                 }
                 if root.right-shown && !root.right-area.collapsed : VerticalLayout {
                     width: root.right-width;
@@ -2356,6 +2421,7 @@ export component AppWindow inherits Window {
                             section-slid(i, id, v) => { root.track-section-event(i, id, 2, false, v, "", 0); }
                             section-edited(i, id, t) => { root.track-section-event(i, id, 3, false, 0, t, 0); }
                             section-chosen(i, id, n) => { root.track-section-event(i, id, 4, false, 0, "", n); }
+                            section-moved(i, up) => { root.track-section-moved(i, up); }
                         }
                         if root.right-area.active-id == "bar" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's bar shows here, with each voice's beats and the bar's own settings."; }
                         if root.right-area.active-id == "bar" && root.has-score : BarTab {

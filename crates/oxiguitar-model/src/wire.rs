@@ -364,8 +364,10 @@ fn track_to(t: &Track) -> w::Track {
         lyrics,
         // Plugins' settings for the track stay in the core: saved beside
         // the score (FILE.oxg), handed to a plugin only with its own
-        // requests (interface 1.3).
+        // requests (interface 1.3); the order of the track's effects too.
         plugins: _,
+        effects: _,
+        play_chords: _,
     } = t;
     let Instrument {
         midi_program,
@@ -461,6 +463,8 @@ fn track_from(t: w::Track) -> Result<Track, String> {
             })
             .collect(),
         plugins: Default::default(),
+        effects: Vec::new(),
+        play_chords: false,
     })
 }
 

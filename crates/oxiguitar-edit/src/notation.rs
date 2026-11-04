@@ -8,7 +8,8 @@
 //!   one list, each once: a diagram the track has already is used again.
 //!   On a rest, a diagram with frets puts its notes in the beat, as Guitar
 //!   Pro 8 does when the beat is empty.
-//! - [`Command::Text`] sets the free text above the caret's beat.
+//! - [`Command::Text`] sets the free text above the caret's beat: the one
+//!   shown there, even when another voice holds it ([`Caret::text_beat`]).
 //! - [`Command::Syllable`] types one syllable of a line of the caret's
 //!   track's lyrics at a beat, as MuseScore does (Mateus, 21 Oct 2026):
 //!   the line's text changes only there (`oxiguitar_model::lyrics`). A line
@@ -161,6 +162,8 @@ fn text(
     label: &str,
 ) -> Option<crate::Touched> {
     let text = text.trim().to_owned();
+    // The text shown at the caret's beat, whichever voice holds it (#153).
+    let c = c.text_beat(score)?;
     let beat = c.voice_in(score)?.beats.get(c.beat)?;
     if beat.kind == BeatKind::Empty || beat.text == text {
         return None;
@@ -373,6 +376,30 @@ mod tests {
             )
             .is_none()
         );
+    }
+
+    #[test]
+    fn text_held_by_another_voice_can_be_changed_and_removed() {
+        let mut s = crate::caret::tests::text_in_voice_2("Intro / Solo");
+        let mut h = History::new();
+        let c = Caret {
+            beat: 1,
+            ..Caret::at_start(&s, 0).unwrap()
+        };
+        let text = |s: &Score| {
+            let bar = &s.tracks[0].staves[0].bars[0];
+            (
+                bar.voices[0].beats[1].text.clone(),
+                bar.voices[1].beats[1].text.clone(),
+            )
+        };
+        apply(&mut s, &mut h, c, None, Command::Text("Solo".into())).unwrap();
+        assert_eq!(text(&s), (String::new(), "Solo".into()));
+        apply(&mut s, &mut h, c, None, Command::Text(String::new())).unwrap();
+        assert_eq!(text(&s), (String::new(), String::new()));
+        h.undo(&mut s);
+        h.undo(&mut s);
+        assert_eq!(text(&s), (String::new(), "Intro / Solo".into()));
     }
 
     fn syl(line: usize, beat: usize, text: &str, hyphen: bool) -> Command {

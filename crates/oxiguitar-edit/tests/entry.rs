@@ -291,6 +291,8 @@ fn commands() -> Vec<Command> {
             .unwrap(),
             keep_pitches: true,
             plugins: Default::default(),
+            effects: Vec::new(),
+            play_chords: false,
         })),
         Command::TrackProperties(Box::new(oxiguitar_edit::TrackSettings {
             name: "Seven".into(),
@@ -310,6 +312,8 @@ fn commands() -> Vec<Command> {
             .unwrap(),
             keep_pitches: false,
             plugins: Default::default(),
+            effects: Vec::new(),
+            play_chords: false,
         })),
         Command::Transpose(oxiguitar_edit::Transposition {
             amount: 3,
@@ -736,4 +740,48 @@ fn every_edit_is_saved_as_gp5_and_read_back_equal() {
     }
     assert!(compared > 40, "only {compared} files were compared");
     assert!(exact > 10, "only {exact} saved without a loss");
+}
+
+/// #153: text that Guitar Pro saved on voice 2 (as "Intro / Solo" in a
+/// reported file) is found, changed and removed from voice 1 too, and the
+/// change is saved.
+#[test]
+fn text_in_voice_2_is_edited_from_voice_1() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/reference/beat-text-in-voice-2.gp");
+    let data = std::fs::read(&path).unwrap();
+    let mut score = oxiguitar_plugin_test::released::guitar_pro::read(&data)
+        .unwrap()
+        .score;
+    let held = |s: &Score| {
+        s.tracks[0].staves[0].bars[0].voices[1].beats[2]
+            .text
+            .clone()
+    };
+    assert_eq!(
+        held(&score),
+        "Intro / Solo",
+        "the reader keeps voice 2's text"
+    );
+    // Voice 1's ninth sixteenth starts where voice 2's third quarter does.
+    let c = Caret {
+        beat: 8,
+        ..Caret::at_start(&score, 0).unwrap()
+    };
+    assert_eq!(c.voice, 0);
+    let mut h = History::new();
+    apply(&mut score, &mut h, c, None, Command::Text("Solo".into())).unwrap();
+    assert_eq!(held(&score), "Solo");
+    let saved = oxiguitar_plugin_test::released::guitar_pro::write_gp(&score).unwrap();
+    let back = oxiguitar_plugin_test::released::guitar_pro::read(&saved.data)
+        .unwrap()
+        .score;
+    assert_eq!(held(&back), "Solo");
+    apply(&mut score, &mut h, c, None, Command::Text(String::new())).unwrap();
+    assert!(
+        score.tracks[0].staves[0].bars[0]
+            .voices
+            .iter()
+            .all(|v| { v.beats.iter().all(|b| b.text.is_empty()) })
+    );
 }

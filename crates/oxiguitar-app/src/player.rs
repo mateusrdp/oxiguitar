@@ -646,13 +646,13 @@ fn track_mix(m: Mix) -> TrackMix {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use oxiguitar_model::{Bar, Beat, Duration, MasterBar, Note, NoteValue, Staff, Track, Voice};
     use oxiguitar_play::{Engine, Route, engine};
 
     /// Four bars of four quarter notes at 120 (two seconds a bar).
-    fn score() -> Arc<Score> {
+    pub(crate) fn score() -> Arc<Score> {
         let beat = Beat {
             duration: Duration::new(NoteValue::Quarter),
             notes: vec![Note::fretted(1, 0)],

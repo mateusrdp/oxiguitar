@@ -12,9 +12,12 @@ The zip holds the program only, portable: unzip it anywhere and run `oxiguitar.e
 - **You need at least** the Guitar Pro plugin, the MIDI plugin and the WASAPI plugin (the one that sends sound to your speakers). The releases pages are linked from [the official plugins](official-plugins.md).
 - Updates are by hand: install the newer setup program over the old one.
 
+## The recorded sound sets
+
+The sound-set installer's releases page has `install.ps1`, a PowerShell script that lists what it would download, from where and under which licence, and asks before it fetches anything, into your `soundfonts` folder ([Better sounds](better-sounds.md#the-sound-set-installer)). OxiGuitar itself never downloads anything.
+
 ## Coming later
 
 - **winget**, to install and update OxiGuitar and each plugin by name. winget's package repository reviews each new package by hand, so the first ones take a while to appear; not published yet.
-- **The sound sets**: a setup program that lists what it will download and from where, and asks before it fetches anything. OxiGuitar itself never downloads. ([Better sounds](better-sounds.md)).
 
 If a plugin is missing, OxiGuitar says so once when it starts and links here.

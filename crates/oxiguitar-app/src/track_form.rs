@@ -170,6 +170,10 @@ pub(crate) struct TrackForm {
     /// What the plugins' sections of the dialog hold, by plugin id
     /// (interface 1.3).
     pub(crate) plugins: std::collections::BTreeMap<String, String>,
+    /// The order of the track's effects, by plugin id (#152).
+    pub(crate) effects: Vec<String>,
+    /// Play the track's chord diagrams (#151).
+    pub(crate) play_chords: bool,
 }
 
 impl TrackForm {
@@ -200,6 +204,8 @@ impl TrackForm {
             frets: i32::from(s.fret_count),
             keep_pitches: true,
             plugins: s.plugins,
+            effects: s.effects,
+            play_chords: s.play_chords,
         }
     }
 
@@ -273,6 +279,8 @@ impl TrackForm {
             tuning: self.tuning()?,
             keep_pitches: self.keep_pitches,
             plugins: self.plugins.clone(),
+            effects: self.effects.clone(),
+            play_chords: self.play_chords,
         })
     }
 }
@@ -312,6 +320,7 @@ pub(crate) fn fields(f: &TrackForm, message: &str, error: bool) -> Vec<Field> {
         ),
         effect_form::number_in("capo", "Capo", f.capo, 0, 24),
         effect_form::number_in("frets", "Frets", f.frets, 12, 36),
+        effect_form::switch("chords", "Play its chords", f.play_chords),
         effect_form::heading("Tuning".to_owned()),
         list(
             "key",
@@ -356,6 +365,7 @@ pub(crate) fn changed(f: &mut TrackForm, id: &str, value: i32, text: &str) {
         "pattern" => f.pattern = value,
         "notes" => f.notes = text.to_owned(),
         "keep" => f.keep_pitches = value == 0,
+        "chords" => f.play_chords = value != 0,
         _ => {}
     }
 }

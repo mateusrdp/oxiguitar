@@ -54,13 +54,15 @@ pub struct Schedule {
 
 impl Schedule {
     /// The schedule of `timeline`, each track routed by `routes` (one per
-    /// track of the score; `None` for a track nothing plays), for `sources`
-    /// sources.
+    /// track of the score, then one per track's chord voice, as
+    /// [`crate::events::chords`] numbers them; `None` for a track nothing
+    /// plays), for `sources` sources. The chords' ids follow the notes'.
     pub fn new(timeline: &Timeline, routes: &[Option<Route>], sources: usize) -> Schedule {
         let mut pitch = Vec::new();
         let mut notes: Vec<Routed> = timeline
             .notes
             .iter()
+            .chain(&timeline.chords)
             .enumerate()
             .filter_map(|(i, n)| {
                 let route = routes.get(n.track).copied().flatten()?;
