@@ -2,7 +2,7 @@
 
 OxiGuitar opens, plays and exports files only through plugins ([Settings and plugins](plugins.md)). These are the ones the OxiGuitar project makes. Every one is free software, licensed GPL-3.0-or-later like OxiGuitar, and sends nothing anywhere.
 
-OxiGuitar's own download holds the program only. Each plugin has a repository and releases of its own, on GitHub at `github.com/mateusrdp/` followed by the repository's name below, and is updated on its own. Our apt and dnf repositories and our Homebrew tap install OxiGuitar with the essential plugins and keep them all updated; elsewhere each plugin's releases page has a zip and an installer. The install pages say how: [Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md).
+OxiGuitar's own download holds the program only. Each plugin has a repository and releases of its own, on GitHub at `github.com/mateusrdp/` followed by the repository's name below, and is updated on its own. Our apt and dnf repositories install OxiGuitar with the essential plugins and keep them all updated; elsewhere each plugin's releases page has a zip and an installer. The install pages say how: [Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md).
 
 ## Essential
 
