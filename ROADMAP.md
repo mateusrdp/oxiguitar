@@ -14,7 +14,7 @@ On 18 October 2026 Mateus moved the plugin system forward, from M5 to M2, so tha
 | M3 Editor | v0.5 | **Done** (21 Oct 2026; v0.5.0 published as a pre-release, 21 Oct 2026) |
 | M4 Player (with the NAM plugin) | **v1.0** (v0.9 to v0.13 for testers) | Slices 1–7 built (21 Oct – 1 Nov 2026): it plays in the window, SoundFonts, SFZ, NAM and WAV export; **v0.9.0 to v0.12.1 for testers** (pre-releases; 0.10 adds SFZ, 0.11 freezes plugin interface 1.4, 0.12 moves the plugins into repositories of their own, #165); v0.13 brings #151, #152 and the equalizer plugin; then "Before v1.0" below |
 | M5 Guitar Pro 8 notation and editing parity | | Not started |
-| M6 Format plugins: MusicXML, ABC, MuseScore, MIDI files | | Not started |
+| M6 Format plugins: TuxGuitar, MusicXML, ABC, MuseScore, MIDI files | **v1.0** (moved, #223) | Not started; after #157 |
 | M7 A generated guitar for NAM (plugin) | | Not started |
 | M8 Guitar Pro RSE compatibility (plugin) | | Not started |
 | M9 Realistic drums, hardware plugins, remaining Guitar Pro 8 features | | Not started |
@@ -221,11 +221,15 @@ Where M4 stands against its "done when" (below) and the brief's v1.0 minimum, af
 - **README**: screenshots of the Track tab's sections and example sounds (NAM's wait for a capture whose licence allows publishing).
 - **First releases** of oxiguitar-eq and oxiguitar-bettersounds-soundfonts, and the plugins whose CHANGELOGs have changes, with the Release button (no script, no `bump.sh` needed since oxiguitar-packages#14).
 
-Proposed for v1.0 or after, Mateus to decide:
+Also before v1.0 (Mateus, 4 Nov 2026), in this order:
 
-- **#157, automatic fingering**: an editor feature, not in M4's definition; a session of its own after v0.13. In v1.0 if he wants it there, otherwise v1.1.
-- **#163, Flatpak** and **winget**: deferred as of 1 Nov 2026; after v1.0 unless he moves them.
-- **#171, TuxGuitar's format**: an M6 format plugin.
+1. **#157, automatic fingering** (a session of its own, right after v0.13): it is the dependency of the formats below, which hold notes without strings and frets.
+2. **#223, the other file formats**, each a plugin in a repository of its own, reading and writing: TuxGuitar (`oxiguitar-tuxguitar`, which has tablature: #171), MusicXML (`oxiguitar-musicxml`), ABC (`oxiguitar-abc`), MuseScore (`oxiguitar-musescore`) and MIDI files (`oxiguitar-midi-file`); all but TuxGuitar take their frets from #157. This brings M6's format plugins into v1.0. There is no large corpus of these formats to test on: each first implementation follows the formats' specifications and the open-source programs that read and write them, with fixtures of our own and the few sample files we have (scores.tar.gz's five MuseScore and MusicXML files), and gets better with users' files.
+3. **#163, Flatpak**, from an unofficial repository of our own, like the apt and dnf ones (no third party in the publishing): OxiGuitar as a Flatpak app and each plugin as an extension, built in CI, signed with our key and served as a static OSTree repository on oxiguitar-packages' Pages, with a `.flatpakrepo` file to add it. The one part we don't publish is the runtime (org.freedesktop.Platform), which every Flatpak app needs: users get it from Flathub, where most distributions already point Flatpak, unless Mateus prefers we mirror it (see the open question in START-HERE).
+
+Still to decide:
+
+- **winget**: deferred as of 1 Nov 2026; after v1.0 unless Mateus moves it.
 - The open M1 items (slurs, hairpins, ornaments, fermatas, ottavas and fingering in the engraving) belong to M5's notation set and stay there.
 
 Done when: playback matches the written effects by ear; playback starts in under 100 ms and stays in sync over 10 minutes (the cursor shows the sample being heard); golden-file tests cover event output; the practice tools work on every reference song; it plays out of the box on Windows, macOS and Linux with the system's own sound set; with no instrument or sound set the transport is greyed out and the footer says where to get one.
