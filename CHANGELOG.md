@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-11-07
+
 ### Fixed
 
 - **The MIDI plugin's settings drop-down lists reach the window's edge and follow it when it is resized**, so long option strings are never cut off.
