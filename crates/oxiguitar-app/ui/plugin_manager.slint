@@ -10,7 +10,7 @@
 // of their own.
 
 import { Button, CheckBox, ScrollView, Palette } from "std-widgets.slint";
-import { PluginTab, PluginRow } from "plugin_tab.slint";
+import { PluginTab, PluginRow, PluginWidgetView } from "plugin_tab.slint";
 
 export struct ManagerRow {
     name: string,
@@ -161,17 +161,16 @@ export component PluginManagerWindow inherits Window {
 // A plugin's settings window (interface 1.3), opened from the plugin
 // manager: the plugin's widgets, which keep their values in the plugin's
 // own part of settings.json as the user changes them. One window, showing
-// one plugin at a time.
+// one plugin at a time. Copied from PluginManagerWindow structure.
 export component PluginSettingsWindow inherits Window {
     // "NAME Settings".
     in property <string> window-title: "Settings";
     title: root.window-title;
     icon: @image-url("../../../assets/icon/png/oxiguitar-256.png");
-    // Twice as large as it was (480 by 320): the names of sounds are long.
-    preferred-width: 960px;
-    preferred-height: 640px;
-    min-width: 320px;
-    min-height: 160px;
+    preferred-width: 820px;
+    preferred-height: 460px;
+    min-width: 480px;
+    min-height: 240px;
     default-font-family: "Noto Sans";
 
     in property <bool> dark-interface: true;
@@ -194,18 +193,50 @@ export component PluginSettingsWindow inherits Window {
     VerticalLayout {
         padding: 12px;
         spacing: 8px;
-        PluginTab {
+        Text {
+            text: "Plugin settings. Changes are saved automatically.";
+            font-size: 12px;
+            wrap: word-wrap;
+            color: Palette.foreground.transparentize(0.25);
+        }
+        Rectangle {
             vertical-stretch: 1;
-            rows: root.rows;
-            message: root.message;
-            clicked(id) => { root.clicked(id); }
-            toggled(id, on) => { root.toggled(id, on); }
-            slid(id, v) => { root.slid(id, v); }
-            edited(id, t) => { root.edited(id, t); }
-            chosen(id, n) => { root.chosen(id, n); }
+            border-width: 1px;
+            border-color: Palette.border;
+            border-radius: 4px;
+            ScrollView {
+                VerticalLayout {
+                    alignment: start;
+                    if root.message != "" : Text {
+                        x: 12px;
+                        height: 40px;
+                        text: root.message;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        color: Palette.foreground.transparentize(0.4);
+                    }
+                    if root.message == "" : VerticalLayout {
+                        alignment: start;
+                        padding: 6px;
+                        spacing: 6px;
+                        for row in root.rows : VerticalLayout {
+                            spacing: 2px;
+                            for w in row.widgets : PluginWidgetView {
+                                w: w;
+                                clicked(id) => { root.clicked(id); }
+                                toggled(id, on) => { root.toggled(id, on); }
+                                slid(id, v) => { root.slid(id, v); }
+                                edited(id, t) => { root.edited(id, t); }
+                                chosen(id, i) => { root.chosen(id, i); }
+                            }
+                        }
+                    }
+                }
+            }
         }
         HorizontalLayout {
-            alignment: end;
+            spacing: 12px;
+            Rectangle { horizontal-stretch: 1; }
             Button {
                 text: "Close";
                 clicked => { root.close-clicked(); }

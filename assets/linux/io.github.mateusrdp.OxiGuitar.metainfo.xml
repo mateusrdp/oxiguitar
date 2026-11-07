@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.13.2" date="2026-11-07" type="development">
+      <description>
+        <p>The MIDI plugin's settings drop-down lists reach the window's edge and follow it when it is resized, so long option strings are never cut off.</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.13.2</url>
+    </release>
     <release version="0.13.1" date="2026-11-04" type="development">
       <description>
         <p>A plugin's settings window opens twice as large (960 by 640), and its drop-down lists stretch to the window's edge and follow it when it is resized, in the settings window and in the panels that show a plugin's tab. The names of sounds are long and were cut short by drop-downs as wide as their ...</p>
