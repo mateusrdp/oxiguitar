@@ -27,7 +27,7 @@
 //! two threads at once, and releases one only once it is no longer
 //! rendered and no update for it is under way. An update (interface 1.5)
 //! may come while the audio thread runs the instance: the glue leaves it
-//! in the instance's [`Mailbox`], which the audio thread empties before
+//! in the instance's mailbox (`Mailbox`), which the audio thread empties before
 //! its next `process`, so only the audio thread ever touches the
 //! processor. The glue also counts the plugin's allocations made while it
 //! renders ([`Counting`], the global allocator `export_plugin!` installs),
