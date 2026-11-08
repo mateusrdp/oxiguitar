@@ -2,8 +2,8 @@
 name = "oxiguitar-plugin"
 description = "The SDK for OxiGuitar plugins: implement a few traits, call export_plugin!, and build a .oxp file. No unsafe code to write."
 # The SDK follows the plugin interface's version, not the program's
-# (#165): 1.5.0 until interface 1.6.
-version = "1.5.0"
+# (#165): 1.6.0 until interface 1.7.
+version = "1.6.0"
 edition.workspace = true
 rust-version.workspace = true
 # Permissive, so plugins built with it may use any GPL-compatible licence

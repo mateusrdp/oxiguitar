@@ -289,6 +289,9 @@ impl Document {
         // Notes the file gave as pitches, on strings, get a string and fret
         // (#157): a format without tablature shows its tab at once.
         oxiguitar_edit::finger_pitched(&mut score);
+        // A file's spellings stay only where they aren't the ones
+        // OxiGuitar works out itself.
+        oxiguitar_edit::plain_spellings(&mut score);
         // What plugins keep per track lives beside the file (FILE.oxg).
         let sidecar_problem = match Sidecar::read_for(path) {
             Ok(Some(mut sidecar)) => {

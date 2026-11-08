@@ -4,6 +4,15 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **The rest of the palette works** (v0.17, `docs/design/palette.md`): every notation tool that said "comes in M5" now edits the score, on the caret's note or beat or on every one selected, each one step for Undo. Slurs (Legato), crescendo and decrescendo hairpins, 8va, 8vb, 15ma and 15mb lines, and extended barres cover the selected beats. Fermatas (short, medium or long from the Note tab), upper and lower mordents, turns and inverted turns, wide left-hand vibrato, slight whammy-bar vibrato, fade-out and volume swell, sustain pedal (down, up, off), open and closed wah, arpeggios up and down, rasgueado (its pattern from the Note tab), finger and thumb golpe, pick scrapes, dead slap, string numbers, slash notation, beaming (automatic, forced, broken, secondary broken) and Force Groups. Double flat to double sharp spell the note with that accidental, and Change Accidental steps through its spellings. Left- and Right-Hand Fingering step through the fingers. Single and Double Repeat Sign repeat the bar (or two bars) before, copying them; editing such a bar takes the sign off. Nested N-tuplet puts a tuplet inside another.
+- **A note's spelling is kept**: a file's own spelling of a note (A flat rather than G sharp) is kept where it isn't the one OxiGuitar would choose itself.
+
+### Changed
+
+- **Plugin interface 1.6** (the SDK crates are at 1.6.0): the score version 2 carries every new mark as an extension, version 1's fields keeping what they held (a plugin made for 1.5 still sees a fade-in and a vibrato). A file written by a plugin made for an older interface now names, among its losses, each kind of mark that plugin couldn't receive.
+
 ## [0.16.0] - 2026-11-08
 
 ### Added

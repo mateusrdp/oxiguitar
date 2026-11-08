@@ -1462,6 +1462,7 @@ export component AppWindow inherits Window {
     callback question-answered(int);
     // Custom N-tuplet (bar_form.rs).
     in property <bool> tuplet-dialog-shown: false;
+    in property <bool> tuplet-nested: false;
     in-out property <int> tuplet-notes: 3;
     in-out property <int> tuplet-in-time-of: 2;
     pure callback tuplet-usual(int) -> int;
@@ -2714,6 +2715,7 @@ export component AppWindow inherits Window {
     if root.tuplet-dialog-shown : TupletDialog {
         width: root.width;
         height: root.height;
+        nested: root.tuplet-nested;
         notes <=> root.tuplet-notes;
         in-time-of <=> root.tuplet-in-time-of;
         usual(n) => { return root.tuplet-usual(n); }

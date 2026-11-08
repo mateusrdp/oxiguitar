@@ -10,7 +10,7 @@ use oxiguitar_model::{
 };
 
 use crate::draw::{G, Painter, glyphs};
-use crate::pitch::{BarAccidentals, drum, spell, staff_step, written};
+use crate::pitch::{BarAccidentals, drum, spell_as, staff_step, written};
 use crate::rhythm::{self, BeatRef, Column};
 
 /// One note as it will be drawn.
@@ -117,10 +117,12 @@ impl Lanes {
     fn of_beat(b: &BeatInfo) -> Lanes {
         let mut l = Lanes::default();
         let e = &b.effects;
-        l.vibrato = e.vibrato_wide;
+        l.vibrato = e.bridge_vibrato.is_some();
         l.let_ring = e.let_ring;
-        l.technique =
-            e.technique.is_some() || e.whammy.is_some() || e.fade_in || e.pick_stroke.is_some();
+        l.technique = e.technique.is_some()
+            || e.whammy.is_some()
+            || e.fade.is_some()
+            || e.pick_stroke.is_some();
         for n in &b.notes {
             let f = &n.effects;
             l.bend |= f
@@ -128,7 +130,7 @@ impl Lanes {
                 .as_ref()
                 .is_some_and(|b| b.points.iter().any(|p| p.cents != 0));
             l.hp |= f.hammer_pull;
-            l.vibrato |= f.vibrato;
+            l.vibrato |= f.vibrato.is_some();
             l.trill |= f.trill.is_some();
             l.palm_mute |= f.palm_mute;
             l.let_ring |= f.let_ring;
@@ -427,7 +429,11 @@ impl Planner<'_> {
             }
             NotePlace::Pitched(p) => (Some(p), None, None),
         };
-        let spelled = spell(written(pitch?, self.staff.transposition, clef), key);
+        let spelled = spell_as(
+            written(pitch?, self.staff.transposition, clef),
+            key,
+            n.spelling,
+        );
         Some(NoteInfo {
             step: staff_step(spelled.diatonic, clef),
             accidental: acc.accidental(spelled, n.tie),

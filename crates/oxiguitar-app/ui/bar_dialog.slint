@@ -75,6 +75,8 @@ component Label inherits Text {
 }
 
 export component TupletDialog inherits Rectangle {
+    // Nested N-tuplet: the tuplet goes inside the one the beats have.
+    in property <bool> nested: false;
     in-out property <int> notes: 3;
     in-out property <int> in-time-of: 2;
     // The usual "in the time of" for a number of notes (`bar_form.rs`).
@@ -83,7 +85,7 @@ export component TupletDialog inherits Rectangle {
     Card {
         width: root.width;
         height: root.height;
-        heading: "Custom N-tuplet";
+        heading: root.nested ? "Nested N-tuplet" : "Custom N-tuplet";
         card-width: 360px;
         done(ok) => { root.done(ok); }
         HorizontalLayout {

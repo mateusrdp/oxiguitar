@@ -2,8 +2,8 @@
 name = "oxiguitar-plugin-api"
 description = "The OxiGuitar plugin interface: the C tables, the messages that cross them, the manifest and the score as plugins see it."
 # The SDK follows the plugin interface's version, not the program's
-# (#165): 1.5.0 until interface 1.6.
-version = "1.5.0"
+# (#165): 1.6.0 until interface 1.7.
+version = "1.6.0"
 edition.workspace = true
 rust-version.workspace = true
 # Permissive, unlike the rest of the workspace, so that plugins built on it

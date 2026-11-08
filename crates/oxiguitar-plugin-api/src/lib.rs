@@ -86,7 +86,7 @@ pub use blob::Blob;
 pub use message::{DecodeError, decode, encode};
 
 /// The interface version this crate describes: (major, minor).
-pub const INTERFACE: (u32, u32) = (1, 5);
+pub const INTERFACE: (u32, u32) = (1, 6);
 
 /// The symbol a plugin exports. It returns a pointer to the plugin's
 /// [`abi::PluginTableV1`].
