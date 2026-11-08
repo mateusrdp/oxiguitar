@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-08
+
 ### Added
 
 - **A track's sections in the Track tab work while the song plays** (#232, from oxiguitar-eq#7): the equalizer's bands and mode and the amp's Input and Output change the sound as you move them, gliding there so nothing clicks, with the equalizer 0.2 and the amp plugin 0.3. The change is saved beside the score as before and is one step for Undo. What has to load something (another Sound set, the amp turned on or off, another model or cabinet) is kept and heard the next time Play starts, without stopping the song. Moving a section, Undo and every other edit still wait for Pause or Stop.
