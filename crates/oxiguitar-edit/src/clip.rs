@@ -376,6 +376,9 @@ fn paste_bars(
                         Some(bars) => bars
                             .iter()
                             .map(|b| Bar {
+                                // A pasted bar holds its music: no longer
+                                // a repeat of the bar before it.
+                                simile: None,
                                 // A bar keeps its clef where the track
                                 // sounds in the same octave (Guitar Pro
                                 // holds the octave per track); else it
@@ -492,6 +495,7 @@ fn empty(clef: oxiguitar_model::Clef) -> Bar {
     Bar {
         clef,
         voices: vec![Voice::default()],
+        simile: None,
     }
 }
 

@@ -983,16 +983,29 @@ impl Plugins {
 
     /// Writes `score` with the plugin that owns `format`. A plugin built
     /// for interface 1.2 or later gets the score version 2, without what
-    /// its version doesn't know; an older one gets version 1, and what
-    /// version 1 can't hold is added to the losses.
+    /// its version doesn't know; an older one gets version 1. What the
+    /// plugin's version can't hold is added to the losses.
     pub fn write(&self, format: FormatRef<'_>, score: &Score2) -> Result<WrittenFile, Error> {
         let minor = format
             .plugin
             .manifest
             .as_ref()
             .map_or(0, |m| m.interface.minor);
-        let mut lost = Vec::new();
+        let lost: Vec<LogEntry>;
         let request = if minor >= 2 {
+            let name = format.plugin.name();
+            lost = score
+                .extensions_newer_than(minor)
+                .into_iter()
+                .map(|(what, bar, count)| LogEntry {
+                    level: oxiguitar_plugin_api::message::Level::Warning,
+                    message: format!(
+                        "{what} can't be passed to {name}, made for an older OxiGuitar"
+                    ),
+                    place: format!("bar {bar}"),
+                    count: u32::try_from(count).unwrap_or(u32::MAX),
+                })
+                .collect();
             let mut score = score.clone();
             score.keep_known(minor);
             Request::Write2 {

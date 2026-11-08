@@ -218,9 +218,15 @@ pub(crate) struct AtCaret {
     pub(crate) free_time: bool,
     /// The effects of the caret's note and beat, a bit per entry of
     /// [`EFFECTS`].
-    pub(crate) effects: u64,
+    pub(crate) effects: u128,
     /// The caret's beat's dynamic.
     pub(crate) dynamic: Option<oxiguitar_model::Dynamic>,
+    /// A fermata at the caret beat's moment.
+    pub(crate) fermata: bool,
+    /// The caret's bar's repeat sign.
+    pub(crate) simile: Option<oxiguitar_model::Simile>,
+    /// The sustain pedal goes down or up at the caret's beat.
+    pub(crate) pedal: bool,
 }
 
 impl AtCaret {
@@ -236,7 +242,10 @@ impl AtCaret {
 /// Every effect the palette shows as on or off.
 pub(crate) const EFFECTS: &[oxiguitar_edit::Effect] = {
     use oxiguitar_edit::{Effect as E, HarmonicKind as H};
-    use oxiguitar_model::{BeatTechnique as T, GraceKind as G, Slide, StrokeDirection as D};
+    use oxiguitar_model::{
+        Beaming as B, BeatTechnique as T, Golpe, GraceKind as G, Hairpin, Ornament as O, Ottava,
+        Slide, StrokeDirection as D, Wah as W,
+    };
     &[
         E::Dead,
         E::Ghost,
@@ -272,13 +281,46 @@ pub(crate) const EFFECTS: &[oxiguitar_edit::Effect] = {
         E::PickStroke(D::Up),
         E::Grace(G::BeforeBeat),
         E::Grace(G::OnBeat),
+        E::WideLeftVibrato,
+        E::Ornament(O::UpperMordent),
+        E::Ornament(O::LowerMordent),
+        E::Ornament(O::Turn),
+        E::Ornament(O::InvertedTurn),
+        E::StringNumber,
+        E::BridgeVibrato,
+        E::FadeOut,
+        E::VolumeSwell,
+        E::Wah(W::Open),
+        E::Wah(W::Closed),
+        E::Arpeggio(D::Down),
+        E::Arpeggio(D::Up),
+        E::Rasgueado,
+        E::Golpe(Golpe::Finger),
+        E::Golpe(Golpe::Thumb),
+        E::PickScrape(D::Up),
+        E::PickScrape(D::Down),
+        E::DeadSlap,
+        E::Slur,
+        E::Hairpin(Hairpin::Crescendo),
+        E::Hairpin(Hairpin::Decrescendo),
+        E::Ottava(Ottava::Alta8),
+        E::Ottava(Ottava::Bassa8),
+        E::Ottava(Ottava::Alta15),
+        E::Ottava(Ottava::Bassa15),
+        E::Slash,
+        E::Barre,
+        E::Beaming(B::Automatic),
+        E::Beaming(B::Force),
+        E::Beaming(B::Break),
+        E::Beaming(B::BreakSecondary),
+        E::TupletGroup,
     ]
 };
 
 /// The bits of [`EFFECTS`] the caret's note and beat have: a note effect
 /// as the note on the caret's string has it (every note, on a staff
 /// without strings), a beat effect as the beat has it.
-fn effects_at(beat: &oxiguitar_model::Beat, string: Option<u8>) -> u64 {
+fn effects_at(beat: &oxiguitar_model::Beat, string: Option<u8>) -> u128 {
     let notes: Vec<&oxiguitar_model::Note> = beat
         .notes
         .iter()
@@ -286,15 +328,10 @@ fn effects_at(beat: &oxiguitar_model::Beat, string: Option<u8>) -> u64 {
         .collect();
     let mut bits = 0;
     for (i, e) in EFFECTS.iter().enumerate() {
-        let on = match e {
-            oxiguitar_edit::Effect::TremoloPicking
-            | oxiguitar_edit::Effect::WideVibrato
-            | oxiguitar_edit::Effect::FadeIn
-            | oxiguitar_edit::Effect::Technique(_)
-            | oxiguitar_edit::Effect::Brush(_)
-            | oxiguitar_edit::Effect::PickStroke(_)
-            | oxiguitar_edit::Effect::Grace(_) => e.on_beat(beat),
-            _ => !notes.is_empty() && notes.iter().all(|n| e.on_note(beat, n)),
+        let on = if e.on_notes() {
+            !notes.is_empty() && notes.iter().all(|n| e.on_note(beat, n))
+        } else {
+            e.on_beat(beat)
         };
         if on {
             bits |= 1 << i;
@@ -311,6 +348,8 @@ pub(crate) enum Dialog {
     Bar,
     /// Custom N-tuplet.
     Tuplet,
+    /// Nested N-tuplet: the tuplet dialog, for a tuplet inside the beat's.
+    NestedTuplet,
     /// The bend editor, for the caret's note.
     Bend,
     /// The whammy bar's editor, for the caret's beat.
@@ -884,6 +923,19 @@ impl Editing {
             .copied()
     }
 
+    /// The tuplet inside the caret beat's tuplet, if it has one.
+    pub(crate) fn inner_tuplet(&self) -> Option<Tuplet> {
+        let c = self.caret?;
+        let score = self.score.as_ref()?;
+        c.voice_in(score)?
+            .beats
+            .get(c.beat)?
+            .duration
+            .tuplets
+            .get(1)
+            .copied()
+    }
+
     /// The caret's line or space on the standard staff, if it is there.
     #[cfg(test)]
     pub(crate) fn height(&self) -> Option<(i32, Clef)> {
@@ -1038,6 +1090,17 @@ impl Editing {
                         .flatten()
                 })
             }),
+            fermata: c.voice_in(score).is_some_and(|v| {
+                let at = oxiguitar_edit::onsets(v).get(c.beat).copied();
+                bar.is_some_and(|m| m.fermatas.iter().any(|f| Some(f.position) == at))
+            }),
+            simile: score
+                .tracks
+                .get(c.track)
+                .and_then(|t| t.staves.get(c.staff))
+                .and_then(|s| s.bars.get(c.bar))
+                .and_then(|b| b.simile),
+            pedal: beat.is_some_and(|b| b.effects.pedal.is_some()),
         })
     }
 
@@ -1863,7 +1926,7 @@ mod tests {
         e.changed(Arc::new(s));
         let at = e.at_caret().unwrap();
         assert!(at.has(E::Dead) && !at.has(E::Ghost));
-        assert!(EFFECTS.len() <= 64);
+        assert!(EFFECTS.len() <= 128);
     }
 
     #[test]

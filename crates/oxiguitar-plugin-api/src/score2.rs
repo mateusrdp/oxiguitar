@@ -33,8 +33,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::score::{
     BeatEffects, BeatKind, ChordDiagram, Clef, Color, Direction, Duration, Dynamic, GraceKind,
-    Instrument, KeySignature, LyricLine, Marker, Mix, NoteEffects, NotePlace, Pitch, Score,
-    ScoreInfo, TempoChange, TimeSignature, TripletFeel,
+    Instrument, KeySignature, LyricLine, Marker, Mix, NoteEffects, NotePlace, Pitch, Ratio, Score,
+    ScoreInfo, StrokeDirection, TempoChange, TimeSignature, TripletFeel,
 };
 
 /// The interface minor version that first knows an extension.
@@ -43,13 +43,33 @@ pub trait Since {
     fn since(&self) -> u32;
 }
 
-/// What later interface versions add to the whole score. None yet.
+/// What an extension is called in a write's losses ("hairpins").
+pub trait Named {
+    /// Its name, plural where it counts marks.
+    fn what(&self) -> &'static str;
+}
+
+/// What later interface versions add to the whole score.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum ScoreExt {}
+pub enum ScoreExt {
+    /// Bars per system on the page when several tracks are shown, from the
+    /// first system on (Design Mode). Since 1.6.
+    Layout(Vec<u8>),
+}
 
 impl Since for ScoreExt {
     fn since(&self) -> u32 {
-        match *self {}
+        match self {
+            ScoreExt::Layout(_) => 6,
+        }
+    }
+}
+
+impl Named for ScoreExt {
+    fn what(&self) -> &'static str {
+        match self {
+            ScoreExt::Layout(_) => "the bars set for each system",
+        }
     }
 }
 
@@ -59,23 +79,71 @@ pub enum MasterBarExt {
     /// The bar is in free time: it has no time signature to add up to
     /// (a cadenza, a recitative). Since 1.2.
     FreeTime,
+    /// A fermata, holding every track at its moment in the bar. Since 1.6.
+    Fermata(Fermata),
 }
 
 impl Since for MasterBarExt {
     fn since(&self) -> u32 {
         match self {
             MasterBarExt::FreeTime => 2,
+            MasterBarExt::Fermata(_) => 6,
         }
     }
 }
 
-/// What later interface versions add to a track. None yet.
+impl Named for MasterBarExt {
+    fn what(&self) -> &'static str {
+        match self {
+            MasterBarExt::FreeTime => "free time",
+            MasterBarExt::Fermata(_) => "fermatas",
+        }
+    }
+}
+
+/// A fermata (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Fermata {
+    /// Where in the bar, in whole notes from its start.
+    pub position: Ratio,
+    /// How long it holds.
+    pub kind: FermataKind,
+    /// Guitar Pro's length value, kept for the round trip.
+    pub length: Ratio,
+}
+
+/// How long a fermata holds (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum FermataKind {
+    /// Short.
+    Short,
+    /// Medium, the usual one.
+    Medium,
+    /// Long.
+    Long,
+}
+
+/// What later interface versions add to a track.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum TrackExt {}
+pub enum TrackExt {
+    /// Bars per system on the page when the track is shown alone, from
+    /// the first system on (Design Mode). Since 1.6.
+    Layout(Vec<u8>),
+}
 
 impl Since for TrackExt {
     fn since(&self) -> u32 {
-        match *self {}
+        match self {
+            TrackExt::Layout(_) => 6,
+        }
+    }
+}
+
+impl Named for TrackExt {
+    fn what(&self) -> &'static str {
+        match self {
+            TrackExt::Layout(_) => "the bars set for each system",
+        }
     }
 }
 
@@ -89,14 +157,45 @@ impl Since for StaffExt {
     }
 }
 
-/// What later interface versions add to a staff's bar. None yet.
+impl Named for StaffExt {
+    fn what(&self) -> &'static str {
+        match *self {}
+    }
+}
+
+/// What later interface versions add to a staff's bar.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum BarExt {}
+pub enum BarExt {
+    /// A simile sign drawn in place of the bar's music, which is a copy of
+    /// the bar or bars it repeats. Since 1.6.
+    Simile(Simile),
+}
 
 impl Since for BarExt {
     fn since(&self) -> u32 {
-        match *self {}
+        match self {
+            BarExt::Simile(_) => 6,
+        }
     }
+}
+
+impl Named for BarExt {
+    fn what(&self) -> &'static str {
+        match self {
+            BarExt::Simile(_) => "repeat (simile) signs",
+        }
+    }
+}
+
+/// A simile sign (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Simile {
+    /// The bar repeats the bar before.
+    Simple,
+    /// The first of two bars repeating the two before them.
+    FirstOfDouble,
+    /// The second of two bars repeating the two before them.
+    SecondOfDouble,
 }
 
 /// What later interface versions add to a voice. None yet.
@@ -109,24 +208,220 @@ impl Since for VoiceExt {
     }
 }
 
-/// What later interface versions add to a beat. None yet.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum BeatExt {}
-
-impl Since for BeatExt {
-    fn since(&self) -> u32 {
+impl Named for VoiceExt {
+    fn what(&self) -> &'static str {
         match *self {}
     }
 }
 
-/// What later interface versions add to a note. None yet.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum NoteExt {}
+/// What later interface versions add to a beat. Marks that span several
+/// beats (slurs, hairpins, ottavas, barres) are on each beat they cover,
+/// as Guitar Pro stores them.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BeatExt {
+    /// Slurred to the next beat of its voice. Since 1.6.
+    Slur,
+    /// Under a hairpin. Since 1.6.
+    Hairpin(Hairpin),
+    /// Under an ottava line. Since 1.6.
+    Ottava(Ottava),
+    /// Slash notation. Since 1.6.
+    Slash,
+    /// How its beam joins the next beat's, when not automatic. Since 1.6.
+    Beaming(Beaming),
+    /// Equal tuplets from here are bracketed as one group. Since 1.6.
+    TupletGroup,
+    /// Under an extended barre. Since 1.6.
+    Barre {
+        /// The fret, from the capo.
+        fret: u8,
+        /// A half barre.
+        half: bool,
+    },
+    /// A fade out (version 1's `fade_in` holds a fade in). Since 1.6.
+    FadeOut,
+    /// A volume swell. Since 1.6.
+    VolumeSwell,
+    /// A slight vibrato with the whammy bar (version 1's `vibrato_wide`
+    /// holds a wide one). Since 1.6.
+    SlightBridgeVibrato,
+    /// The sustain pedal goes down or up. Since 1.6.
+    Pedal(Pedal),
+    /// A wah-wah mark. Since 1.6.
+    Wah(Wah),
+    /// An arpeggio, up or down. Since 1.6.
+    Arpeggio(StrokeDirection),
+    /// A rasgueado. Since 1.6.
+    Rasgueado(Rasgueado),
+    /// A golpe. Since 1.6.
+    Golpe(Golpe),
+    /// A pick scrape, up (towards the neck) or down. Since 1.6.
+    PickScrape(StrokeDirection),
+    /// A dead slap. Since 1.6.
+    DeadSlap,
+}
+
+impl Since for BeatExt {
+    fn since(&self) -> u32 {
+        6
+    }
+}
+
+impl Named for BeatExt {
+    fn what(&self) -> &'static str {
+        match self {
+            BeatExt::Slur => "slurs",
+            BeatExt::Hairpin(_) => "hairpins",
+            BeatExt::Ottava(_) => "ottava lines",
+            BeatExt::Slash => "slash notation",
+            BeatExt::Beaming(_) => "beaming changes",
+            BeatExt::TupletGroup => "forced tuplet groups",
+            BeatExt::Barre { .. } => "barres",
+            BeatExt::FadeOut => "fade-outs",
+            BeatExt::VolumeSwell => "volume swells",
+            BeatExt::SlightBridgeVibrato => "slight bridge vibratos",
+            BeatExt::Pedal(_) => "sustain pedal marks",
+            BeatExt::Wah(_) => "wah-wah marks",
+            BeatExt::Arpeggio(_) => "arpeggios",
+            BeatExt::Rasgueado(_) => "rasgueados",
+            BeatExt::Golpe(_) => "golpes",
+            BeatExt::PickScrape(_) => "pick scrapes",
+            BeatExt::DeadSlap => "dead slaps",
+        }
+    }
+}
+
+/// A hairpin (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Hairpin {
+    /// Crescendo.
+    Crescendo,
+    /// Decrescendo.
+    Decrescendo,
+}
+
+/// An ottava line (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Ottava {
+    /// 8va.
+    Alta8,
+    /// 8vb.
+    Bassa8,
+    /// 15ma.
+    Alta15,
+    /// 15mb.
+    Bassa15,
+}
+
+/// A beat's beaming, when not automatic (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Beaming {
+    /// Beamed to the next beat.
+    Force,
+    /// Not beamed to the next beat.
+    Break,
+    /// Only the first beam continues to the next beat.
+    BreakSecondary,
+}
+
+/// The sustain pedal (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Pedal {
+    /// Pressed.
+    Down,
+    /// Released.
+    Up,
+}
+
+/// A wah-wah mark (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Wah {
+    /// Open.
+    Open,
+    /// Closed.
+    Closed,
+}
+
+/// A golpe (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Golpe {
+    /// With a finger.
+    Finger,
+    /// With the thumb.
+    Thumb,
+}
+
+/// Guitar Pro's rasgueado patterns (since 1.6), by their fingers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[allow(missing_docs)]
+pub enum Rasgueado {
+    Ii,
+    Mi,
+    MiiTriplet,
+    MiiAnapaest,
+    PmpTriplet,
+    PmpAnapaest,
+    PeiTriplet,
+    PeiAnapaest,
+    PaiTriplet,
+    PaiAnapaest,
+    AmiTriplet,
+    AmiAnapaest,
+    Ppp,
+    Amii,
+    Amip,
+    Eami,
+    Eamii,
+    Peami,
+}
+
+/// What later interface versions add to a note.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NoteExt {
+    /// A wide left-hand vibrato (version 1's `vibrato` is also set).
+    /// Since 1.6.
+    WideVibrato,
+    /// An ornament. Since 1.6.
+    Ornament(Ornament),
+    /// The string's number is shown. Since 1.6.
+    StringNumber,
+    /// How the note is spelled on the staff. Since 1.6.
+    Spelling {
+        /// The step: 0 for C … 6 for B.
+        step: u8,
+        /// Semitones from the step's natural, -2 to 2.
+        alter: i8,
+    },
+}
 
 impl Since for NoteExt {
     fn since(&self) -> u32 {
-        match *self {}
+        6
     }
+}
+
+impl Named for NoteExt {
+    fn what(&self) -> &'static str {
+        match self {
+            NoteExt::WideVibrato => "wide vibratos",
+            NoteExt::Ornament(_) => "ornaments",
+            NoteExt::StringNumber => "string numbers",
+            NoteExt::Spelling { .. } => "chosen spellings",
+        }
+    }
+}
+
+/// An ornament (since 1.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Ornament {
+    /// Upper mordent.
+    UpperMordent,
+    /// Lower mordent.
+    LowerMordent,
+    /// Turn.
+    Turn,
+    /// Inverted turn.
+    InvertedTurn,
 }
 
 /// A whole piece: version 1's [`Score`], with extensions.
@@ -514,18 +809,55 @@ impl Score2 {
     /// many times), for the losses of a plugin built for an earlier
     /// interface version.
     pub fn extensions_used(&self) -> Vec<(&'static str, usize, usize)> {
-        let mut out: Vec<(&'static str, usize, usize)> = Vec::new();
-        for (i, m) in self.master_bars.iter().enumerate() {
-            for e in &m.ext {
-                let what = match e {
-                    MasterBarExt::FreeTime => "free time",
-                };
+        self.extensions_newer_than(0)
+    }
+
+    /// What [`Score2::keep_known`] with `minor` leaves out, as (what, first
+    /// bar from 1, how many times), for the losses of a plugin built for
+    /// interface 1.`minor`.
+    pub fn extensions_newer_than(&self, minor: u32) -> Vec<(&'static str, usize, usize)> {
+        fn count<T: Since + Named>(
+            out: &mut Vec<(&'static str, usize, usize)>,
+            ext: &[T],
+            bar: usize,
+            minor: u32,
+        ) {
+            for e in ext.iter().filter(|e| e.since() > minor) {
+                let what = e.what();
                 match out.iter_mut().find(|o| o.0 == what) {
-                    Some(o) => o.2 += 1,
-                    None => out.push((what, i + 1, 1)),
+                    Some(o) => {
+                        o.1 = o.1.min(bar);
+                        o.2 += 1;
+                    }
+                    None => out.push((what, bar, 1)),
                 }
             }
         }
+        let mut out: Vec<(&'static str, usize, usize)> = Vec::new();
+        count(&mut out, &self.ext, 1, minor);
+        for (i, m) in self.master_bars.iter().enumerate() {
+            count(&mut out, &m.ext, i + 1, minor);
+        }
+        for t in &self.tracks {
+            count(&mut out, &t.ext, 1, minor);
+            for s in &t.staves {
+                count(&mut out, &s.ext, 1, minor);
+                for (i, b) in s.bars.iter().enumerate() {
+                    count(&mut out, &b.ext, i + 1, minor);
+                    for v in &b.voices {
+                        count(&mut out, &v.ext, i + 1, minor);
+                        for beat in &v.beats {
+                            count(&mut out, &beat.ext, i + 1, minor);
+                            for n in &beat.notes {
+                                count(&mut out, &n.ext, i + 1, minor);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // The first bar each kind is in, whatever order they were found.
+        out.sort_by_key(|o| o.1);
         out
     }
 

@@ -134,6 +134,7 @@ fn settings_of(track: &Track) -> Track {
         plugins,
         effects,
         play_chords,
+        layout,
     } = track;
     Track {
         name: name.clone(),
@@ -151,6 +152,8 @@ fn settings_of(track: &Track) -> Track {
         effects: effects.clone(),
         // And whether its chords are played.
         play_chords: *play_chords,
+        // And its systems on the page (Design Mode).
+        layout: layout.clone(),
     }
 }
 

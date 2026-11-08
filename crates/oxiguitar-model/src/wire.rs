@@ -28,6 +28,8 @@ pub fn to_wire(score: &Score) -> w::Score {
         tempo_label,
         master_bars,
         tracks,
+        // Version 2's extension (to_wire2).
+        layout: _,
     } = score;
     w::Score {
         info: info_to(info),
@@ -63,6 +65,7 @@ pub fn from_wire(score: w::Score) -> Result<Score, String> {
             .enumerate()
             .map(|(i, t)| track_from(t).map_err(|e| format!("track {}: {e}", i + 1)))
             .collect::<Result<_, _>>()?,
+        layout: Vec::new(),
     })
 }
 
@@ -70,9 +73,35 @@ pub fn from_wire(score: w::Score) -> Result<Score, String> {
 /// what the model holds beyond it as extensions.
 pub fn to_wire2(score: &Score) -> w2::Score2 {
     let mut out = w2::Score2::from_v1(to_wire(score));
+    if !score.layout.is_empty() {
+        out.ext.push(w2::ScoreExt::Layout(score.layout.clone()));
+    }
     for (m, w) in score.master_bars.iter().zip(&mut out.master_bars) {
         if m.free_time {
             w.ext.push(w2::MasterBarExt::FreeTime);
+        }
+        for f in &m.fermatas {
+            w.ext.push(w2::MasterBarExt::Fermata(fermata_to(f)));
+        }
+    }
+    for (t, wt) in score.tracks.iter().zip(&mut out.tracks) {
+        if !t.layout.is_empty() {
+            wt.ext.push(w2::TrackExt::Layout(t.layout.clone()));
+        }
+        for (s, ws) in t.staves.iter().zip(&mut wt.staves) {
+            for (b, wb) in s.bars.iter().zip(&mut ws.bars) {
+                if let Some(simile) = b.simile {
+                    wb.ext.push(w2::BarExt::Simile(simile_to(simile)));
+                }
+                for (v, wv) in b.voices.iter().zip(&mut wb.voices) {
+                    for (beat, wbeat) in v.beats.iter().zip(&mut wv.beats) {
+                        wbeat.ext = beat_ext_to(beat);
+                        for (n, wn) in beat.notes.iter().zip(&mut wbeat.notes) {
+                            wn.ext = note_ext_to(n);
+                        }
+                    }
+                }
+            }
         }
     }
     out
@@ -81,16 +110,302 @@ pub fn to_wire2(score: &Score) -> w2::Score2 {
 /// The model form of a score, version 2, a plugin sent: as [`from_wire`],
 /// with the extensions.
 pub fn from_wire2(score: w2::Score2) -> Result<Score, String> {
-    let free: Vec<bool> = score
-        .master_bars
-        .iter()
-        .map(w2::MasterBar2::free_time)
-        .collect();
     let mut out = from_wire(score.to_v1())?;
-    for (m, free) in out.master_bars.iter_mut().zip(free) {
-        m.free_time = free;
+    for e in &score.ext {
+        match e {
+            w2::ScoreExt::Layout(l) => out.layout.clone_from(l),
+        }
+    }
+    for (m, w) in out.master_bars.iter_mut().zip(&score.master_bars) {
+        for e in &w.ext {
+            match e {
+                w2::MasterBarExt::FreeTime => m.free_time = true,
+                w2::MasterBarExt::Fermata(f) => m.fermatas.push(fermata_from(f)?),
+            }
+        }
+    }
+    for (t, wt) in out.tracks.iter_mut().zip(&score.tracks) {
+        for e in &wt.ext {
+            match e {
+                w2::TrackExt::Layout(l) => t.layout.clone_from(l),
+            }
+        }
+        for (s, ws) in t.staves.iter_mut().zip(&wt.staves) {
+            for (b, wb) in s.bars.iter_mut().zip(&ws.bars) {
+                for e in &wb.ext {
+                    match e {
+                        w2::BarExt::Simile(simile) => b.simile = Some(simile_from(*simile)),
+                    }
+                }
+                for (v, wv) in b.voices.iter_mut().zip(&wb.voices) {
+                    for (beat, wbeat) in v.beats.iter_mut().zip(&wv.beats) {
+                        beat_ext_from(beat, &wbeat.ext);
+                        for (n, wn) in beat.notes.iter_mut().zip(&wbeat.notes) {
+                            note_ext_from(n, &wn.ext);
+                        }
+                    }
+                }
+            }
+        }
     }
     Ok(out)
+}
+
+fn fermata_to(f: &Fermata) -> w2::Fermata {
+    // Guitar Pro's length, to a thousandth.
+    let thousandths = (f64::from(f.length) * 1000.0).round();
+    w2::Fermata {
+        position: ratio_to(f.position),
+        kind: match f.kind {
+            FermataKind::Short => w2::FermataKind::Short,
+            FermataKind::Medium => w2::FermataKind::Medium,
+            FermataKind::Long => w2::FermataKind::Long,
+        },
+        length: w::Ratio {
+            num: thousandths as i64,
+            den: 1000,
+        },
+    }
+}
+
+fn fermata_from(f: &w2::Fermata) -> Result<Fermata, String> {
+    let length = ratio_from(f.length)?;
+    Ok(Fermata {
+        position: ratio_from(f.position)?,
+        kind: match f.kind {
+            w2::FermataKind::Short => FermataKind::Short,
+            w2::FermataKind::Medium => FermataKind::Medium,
+            w2::FermataKind::Long => FermataKind::Long,
+        },
+        length: length.to_f64() as f32,
+    })
+}
+
+fn simile_to(s: Simile) -> w2::Simile {
+    match s {
+        Simile::Simple => w2::Simile::Simple,
+        Simile::FirstOfDouble => w2::Simile::FirstOfDouble,
+        Simile::SecondOfDouble => w2::Simile::SecondOfDouble,
+    }
+}
+
+fn simile_from(s: w2::Simile) -> Simile {
+    match s {
+        w2::Simile::Simple => Simile::Simple,
+        w2::Simile::FirstOfDouble => Simile::FirstOfDouble,
+        w2::Simile::SecondOfDouble => Simile::SecondOfDouble,
+    }
+}
+
+/// The two pairs of Rasgueado, model and wire, in the same order.
+const RASGUEADOS: [(Rasgueado, w2::Rasgueado); 18] = [
+    (Rasgueado::Ii, w2::Rasgueado::Ii),
+    (Rasgueado::Mi, w2::Rasgueado::Mi),
+    (Rasgueado::MiiTriplet, w2::Rasgueado::MiiTriplet),
+    (Rasgueado::MiiAnapaest, w2::Rasgueado::MiiAnapaest),
+    (Rasgueado::PmpTriplet, w2::Rasgueado::PmpTriplet),
+    (Rasgueado::PmpAnapaest, w2::Rasgueado::PmpAnapaest),
+    (Rasgueado::PeiTriplet, w2::Rasgueado::PeiTriplet),
+    (Rasgueado::PeiAnapaest, w2::Rasgueado::PeiAnapaest),
+    (Rasgueado::PaiTriplet, w2::Rasgueado::PaiTriplet),
+    (Rasgueado::PaiAnapaest, w2::Rasgueado::PaiAnapaest),
+    (Rasgueado::AmiTriplet, w2::Rasgueado::AmiTriplet),
+    (Rasgueado::AmiAnapaest, w2::Rasgueado::AmiAnapaest),
+    (Rasgueado::Ppp, w2::Rasgueado::Ppp),
+    (Rasgueado::Amii, w2::Rasgueado::Amii),
+    (Rasgueado::Amip, w2::Rasgueado::Amip),
+    (Rasgueado::Eami, w2::Rasgueado::Eami),
+    (Rasgueado::Eamii, w2::Rasgueado::Eamii),
+    (Rasgueado::Peami, w2::Rasgueado::Peami),
+];
+
+/// What a beat holds beyond version 1, as extensions.
+fn beat_ext_to(b: &Beat) -> Vec<w2::BeatExt> {
+    use w2::BeatExt as E;
+    let mut out = Vec::new();
+    if b.slur {
+        out.push(E::Slur);
+    }
+    if let Some(h) = b.hairpin {
+        out.push(E::Hairpin(match h {
+            Hairpin::Crescendo => w2::Hairpin::Crescendo,
+            Hairpin::Decrescendo => w2::Hairpin::Decrescendo,
+        }));
+    }
+    if let Some(o) = b.ottava {
+        out.push(E::Ottava(match o {
+            Ottava::Alta8 => w2::Ottava::Alta8,
+            Ottava::Bassa8 => w2::Ottava::Bassa8,
+            Ottava::Alta15 => w2::Ottava::Alta15,
+            Ottava::Bassa15 => w2::Ottava::Bassa15,
+        }));
+    }
+    if b.slash {
+        out.push(E::Slash);
+    }
+    match b.beaming {
+        Beaming::Automatic => {}
+        Beaming::Force => out.push(E::Beaming(w2::Beaming::Force)),
+        Beaming::Break => out.push(E::Beaming(w2::Beaming::Break)),
+        Beaming::BreakSecondary => out.push(E::Beaming(w2::Beaming::BreakSecondary)),
+    }
+    if b.tuplet_group {
+        out.push(E::TupletGroup);
+    }
+    if let Some(Barre { fret, half }) = b.barre {
+        out.push(E::Barre { fret, half });
+    }
+    let fx = &b.effects;
+    match fx.fade {
+        Some(Fade::Out) => out.push(E::FadeOut),
+        Some(Fade::Swell) => out.push(E::VolumeSwell),
+        // A fade in is version 1's.
+        Some(Fade::In) | None => {}
+    }
+    if fx.bridge_vibrato == Some(Vibrato::Slight) {
+        out.push(E::SlightBridgeVibrato);
+    }
+    if let Some(p) = fx.pedal {
+        out.push(E::Pedal(match p {
+            Pedal::Down => w2::Pedal::Down,
+            Pedal::Up => w2::Pedal::Up,
+        }));
+    }
+    if let Some(wah) = fx.wah {
+        out.push(E::Wah(match wah {
+            Wah::Open => w2::Wah::Open,
+            Wah::Closed => w2::Wah::Closed,
+        }));
+    }
+    if let Some(d) = fx.arpeggio {
+        out.push(E::Arpeggio(stroke_direction_to(d)));
+    }
+    if let Some(r) = fx.rasgueado
+        && let Some((_, w)) = RASGUEADOS.iter().find(|(m, _)| *m == r)
+    {
+        out.push(E::Rasgueado(*w));
+    }
+    if let Some(g) = fx.golpe {
+        out.push(E::Golpe(match g {
+            Golpe::Finger => w2::Golpe::Finger,
+            Golpe::Thumb => w2::Golpe::Thumb,
+        }));
+    }
+    if let Some(d) = fx.pick_scrape {
+        out.push(E::PickScrape(stroke_direction_to(d)));
+    }
+    if fx.dead_slap {
+        out.push(E::DeadSlap);
+    }
+    out
+}
+
+/// Sets what a beat's extensions hold.
+fn beat_ext_from(b: &mut Beat, ext: &[w2::BeatExt]) {
+    use w2::BeatExt as E;
+    for e in ext {
+        match *e {
+            E::Slur => b.slur = true,
+            E::Hairpin(h) => {
+                b.hairpin = Some(match h {
+                    w2::Hairpin::Crescendo => Hairpin::Crescendo,
+                    w2::Hairpin::Decrescendo => Hairpin::Decrescendo,
+                });
+            }
+            E::Ottava(o) => {
+                b.ottava = Some(match o {
+                    w2::Ottava::Alta8 => Ottava::Alta8,
+                    w2::Ottava::Bassa8 => Ottava::Bassa8,
+                    w2::Ottava::Alta15 => Ottava::Alta15,
+                    w2::Ottava::Bassa15 => Ottava::Bassa15,
+                });
+            }
+            E::Slash => b.slash = true,
+            E::Beaming(m) => {
+                b.beaming = match m {
+                    w2::Beaming::Force => Beaming::Force,
+                    w2::Beaming::Break => Beaming::Break,
+                    w2::Beaming::BreakSecondary => Beaming::BreakSecondary,
+                };
+            }
+            E::TupletGroup => b.tuplet_group = true,
+            E::Barre { fret, half } => b.barre = Some(Barre { fret, half }),
+            E::FadeOut => b.effects.fade = Some(Fade::Out),
+            E::VolumeSwell => b.effects.fade = Some(Fade::Swell),
+            E::SlightBridgeVibrato => b.effects.bridge_vibrato = Some(Vibrato::Slight),
+            E::Pedal(p) => {
+                b.effects.pedal = Some(match p {
+                    w2::Pedal::Down => Pedal::Down,
+                    w2::Pedal::Up => Pedal::Up,
+                });
+            }
+            E::Wah(wah) => {
+                b.effects.wah = Some(match wah {
+                    w2::Wah::Open => Wah::Open,
+                    w2::Wah::Closed => Wah::Closed,
+                });
+            }
+            E::Arpeggio(d) => b.effects.arpeggio = Some(stroke_direction_from(d)),
+            E::Rasgueado(r) => {
+                b.effects.rasgueado = RASGUEADOS.iter().find(|(_, w)| *w == r).map(|(m, _)| *m);
+            }
+            E::Golpe(g) => {
+                b.effects.golpe = Some(match g {
+                    w2::Golpe::Finger => Golpe::Finger,
+                    w2::Golpe::Thumb => Golpe::Thumb,
+                });
+            }
+            E::PickScrape(d) => b.effects.pick_scrape = Some(stroke_direction_from(d)),
+            E::DeadSlap => b.effects.dead_slap = true,
+        }
+    }
+}
+
+/// What a note holds beyond version 1, as extensions.
+fn note_ext_to(n: &Note) -> Vec<w2::NoteExt> {
+    use w2::NoteExt as E;
+    let mut out = Vec::new();
+    if n.effects.vibrato == Some(Vibrato::Wide) {
+        out.push(E::WideVibrato);
+    }
+    if let Some(o) = n.effects.ornament {
+        out.push(E::Ornament(match o {
+            Ornament::UpperMordent => w2::Ornament::UpperMordent,
+            Ornament::LowerMordent => w2::Ornament::LowerMordent,
+            Ornament::Turn => w2::Ornament::Turn,
+            Ornament::InvertedTurn => w2::Ornament::InvertedTurn,
+        }));
+    }
+    if n.effects.string_number {
+        out.push(E::StringNumber);
+    }
+    if let Some(Spelling { step, alter }) = n.spelling {
+        out.push(E::Spelling { step, alter });
+    }
+    out
+}
+
+/// Sets what a note's extensions hold.
+fn note_ext_from(n: &mut Note, ext: &[w2::NoteExt]) {
+    use w2::NoteExt as E;
+    for e in ext {
+        match *e {
+            E::WideVibrato => n.effects.vibrato = Some(Vibrato::Wide),
+            E::Ornament(o) => {
+                n.effects.ornament = Some(match o {
+                    w2::Ornament::UpperMordent => Ornament::UpperMordent,
+                    w2::Ornament::LowerMordent => Ornament::LowerMordent,
+                    w2::Ornament::Turn => Ornament::Turn,
+                    w2::Ornament::InvertedTurn => Ornament::InvertedTurn,
+                });
+            }
+            E::StringNumber => n.effects.string_number = true,
+            E::Spelling { step, alter } => {
+                let s = Spelling { step, alter };
+                n.spelling = (step < 7 && (-2..=2).contains(&alter)).then_some(s);
+            }
+        }
+    }
 }
 
 fn index_to(i: usize) -> u32 {
@@ -178,8 +493,9 @@ fn master_bar_to(b: &MasterBar) -> w::MasterBar {
         triplet_feel,
         tempo_changes,
         directions,
-        // Not in version 1: an extension of version 2 (to_wire2).
+        // Not in version 1: extensions of version 2 (to_wire2).
         free_time: _,
+        fermatas: _,
     } = b;
     w::MasterBar {
         time_signature: w::TimeSignature {
@@ -292,8 +608,9 @@ fn master_bar_from(b: w::MasterBar) -> Result<MasterBar, String> {
             })
             .collect::<Result<_, String>>()?,
         directions: directions.into_iter().map(direction_from).collect(),
-        // Version 2's extension (from_wire2).
+        // Version 2's extensions (from_wire2).
         free_time: false,
+        fermatas: Vec::new(),
     })
 }
 
@@ -368,6 +685,8 @@ fn track_to(t: &Track) -> w::Track {
         plugins: _,
         effects: _,
         play_chords: _,
+        // Version 2's extension (to_wire2).
+        layout: _,
     } = t;
     let Instrument {
         midi_program,
@@ -465,6 +784,7 @@ fn track_from(t: w::Track) -> Result<Track, String> {
         plugins: Default::default(),
         effects: Vec::new(),
         play_chords: false,
+        layout: Vec::new(),
     })
 }
 
@@ -487,7 +807,7 @@ fn staff_to(s: &Staff) -> w::Staff {
         show_tablature: *show_tablature,
         bars: bars
             .iter()
-            .map(|Bar { clef, voices }| w::Bar {
+            .map(|Bar { clef, voices, .. }| w::Bar {
                 clef: clef_to(*clef),
                 voices: voices
                     .iter()
@@ -522,6 +842,7 @@ fn staff_from(s: w::Staff) -> Result<Staff, String> {
             .enumerate()
             .map(|(i, b)| {
                 Ok(Bar {
+                    simile: None,
                     clef: clef_from(b.clef),
                     voices: b
                         .voices
@@ -576,17 +897,32 @@ fn beat_to(b: &Beat) -> w::Beat {
         effects,
         chord,
         text,
+        // Version 2's extensions (to_wire2).
+        slur: _,
+        hairpin: _,
+        ottava: _,
+        slash: _,
+        beaming: _,
+        tuplet_group: _,
+        barre: _,
     } = b;
     let BeatEffects {
         stroke,
         pick_stroke,
         whammy,
         technique,
-        fade_in,
-        vibrato_wide,
+        fade,
+        bridge_vibrato,
         tremolo_picking,
         dynamic,
         let_ring,
+        pedal: _,
+        wah: _,
+        arpeggio: _,
+        rasgueado: _,
+        golpe: _,
+        pick_scrape: _,
+        dead_slap: _,
     } = effects;
     w::Beat {
         kind: match kind {
@@ -612,8 +948,8 @@ fn beat_to(b: &Beat) -> w::Beat {
                 BeatTechnique::Slap => w::BeatTechnique::Slap,
                 BeatTechnique::Pop => w::BeatTechnique::Pop,
             }),
-            fade_in: *fade_in,
-            vibrato_wide: *vibrato_wide,
+            fade_in: *fade == Some(Fade::In),
+            vibrato_wide: *bridge_vibrato == Some(Vibrato::Wide),
             tremolo_picking: tremolo_picking.map(value_to),
             dynamic: dynamic.map(dynamic_to),
             let_ring: *let_ring,
@@ -668,14 +1004,16 @@ fn beat_from(b: w::Beat) -> Result<Beat, String> {
                 w::BeatTechnique::Slap => BeatTechnique::Slap,
                 w::BeatTechnique::Pop => BeatTechnique::Pop,
             }),
-            fade_in,
-            vibrato_wide,
+            fade: fade_in.then_some(Fade::In),
+            bridge_vibrato: vibrato_wide.then_some(Vibrato::Wide),
             tremolo_picking: tremolo_picking.map(value_from),
             dynamic: dynamic.map(dynamic_from),
             let_ring,
+            ..BeatEffects::default()
         },
         chord: chord.map(index_from),
         text,
+        ..Beat::default()
     })
 }
 
@@ -813,6 +1151,8 @@ fn note_to(n: &Note) -> w::Note {
         tie,
         dynamic,
         effects,
+        // Version 2's extension (to_wire2).
+        spelling: _,
     } = n;
     let NoteEffects {
         hammer_pull,
@@ -831,6 +1171,9 @@ fn note_to(n: &Note) -> w::Note {
         left_finger,
         right_finger,
         left_hand_tap,
+        // Version 2's extensions (to_wire2).
+        ornament: _,
+        string_number: _,
     } = effects;
     w::Note {
         place: match *place {
@@ -861,7 +1204,7 @@ fn note_to(n: &Note) -> w::Note {
                 Harmonic::Semi => w::Harmonic::Semi,
                 Harmonic::Feedback => w::Harmonic::Feedback,
             }),
-            vibrato: *vibrato,
+            vibrato: vibrato.is_some(),
             palm_mute: *palm_mute,
             let_ring: *let_ring,
             dead: *dead,
@@ -937,7 +1280,7 @@ fn note_from(n: w::Note) -> Result<Note, String> {
                 w::Harmonic::Semi => Harmonic::Semi,
                 w::Harmonic::Feedback => Harmonic::Feedback,
             }),
-            vibrato,
+            vibrato: vibrato.then_some(Vibrato::Slight),
             palm_mute,
             let_ring,
             dead,
@@ -955,7 +1298,9 @@ fn note_from(n: w::Note) -> Result<Note, String> {
             left_finger,
             right_finger,
             left_hand_tap,
+            ..NoteEffects::default()
         },
+        spelling: None,
     })
 }
 
@@ -987,5 +1332,100 @@ mod tests {
             from_wire(wire).unwrap_err(),
             "bar 1: 1/0 is not a valid fraction"
         );
+    }
+
+    /// A score with every mark of interface 1.6 on it.
+    fn marked() -> Score {
+        let mut score = Score::new();
+        score.layout = vec![4, 3];
+        let mut bar = MasterBar::default();
+        bar.fermatas.push(Fermata {
+            position: Ratio::new(1, 4).unwrap(),
+            kind: FermataKind::Long,
+            length: 0.5,
+        });
+        score.master_bars.push(bar);
+        let mut staff = Staff::default();
+        let mut note = Note::fretted(1, 3);
+        note.effects.vibrato = Some(Vibrato::Wide);
+        note.effects.ornament = Some(Ornament::InvertedTurn);
+        note.effects.string_number = true;
+        note.spelling = Some(Spelling { step: 1, alter: -2 });
+        let mut beat = Beat {
+            notes: vec![note],
+            slur: true,
+            hairpin: Some(Hairpin::Decrescendo),
+            ottava: Some(Ottava::Bassa15),
+            slash: true,
+            beaming: Beaming::BreakSecondary,
+            tuplet_group: true,
+            barre: Some(Barre {
+                fret: 5,
+                half: true,
+            }),
+            ..Beat::default()
+        };
+        let fx = &mut beat.effects;
+        fx.fade = Some(Fade::Swell);
+        fx.bridge_vibrato = Some(Vibrato::Slight);
+        fx.pedal = Some(Pedal::Up);
+        fx.wah = Some(Wah::Closed);
+        fx.arpeggio = Some(StrokeDirection::Up);
+        fx.rasgueado = Some(Rasgueado::PeiAnapaest);
+        fx.golpe = Some(Golpe::Thumb);
+        fx.pick_scrape = Some(StrokeDirection::Down);
+        fx.dead_slap = true;
+        staff.bars.push(Bar {
+            voices: vec![Voice { beats: vec![beat] }],
+            simile: Some(Simile::SecondOfDouble),
+            ..Bar::default()
+        });
+        score.tracks.push(Track {
+            staves: vec![staff],
+            layout: vec![2],
+            ..Track::default()
+        });
+        score
+    }
+
+    #[test]
+    fn every_mark_of_interface_1_6_goes_through_version_2() {
+        let score = marked();
+        let wire = to_wire2(&score);
+        assert_eq!(from_wire2(wire.clone()).unwrap(), score);
+        // Through the wire encoding too.
+        let bytes = oxiguitar_plugin_api::encode(&wire).unwrap();
+        let back: w2::Score2 = oxiguitar_plugin_api::decode(&bytes).unwrap();
+        assert_eq!(from_wire2(back).unwrap(), score);
+    }
+
+    #[test]
+    fn a_plugin_for_1_5_sees_version_1_s_part_of_each_mark_and_its_losses_are_named() {
+        let mut score = marked();
+        // A fade in and a wide bridge vibrato are version 1's own fields.
+        score.tracks[0].staves[0].bars[0].voices[0].beats[0]
+            .effects
+            .fade = Some(Fade::In);
+        score.tracks[0].staves[0].bars[0].voices[0].beats[0]
+            .effects
+            .bridge_vibrato = Some(Vibrato::Wide);
+        let mut wire = to_wire2(&score);
+        let lost = wire.extensions_newer_than(5);
+        let names: Vec<&str> = lost.iter().map(|l| l.0).collect();
+        assert!(names.contains(&"fermatas"));
+        assert!(names.contains(&"hairpins"));
+        assert!(names.contains(&"chosen spellings"));
+        assert!(!names.contains(&"fade-outs"));
+        assert!(wire.extensions_newer_than(6).is_empty());
+        wire.keep_known(5);
+        let old = from_wire2(wire).unwrap();
+        let beat = &old.tracks[0].staves[0].bars[0].voices[0].beats[0];
+        assert_eq!(beat.effects.fade, Some(Fade::In));
+        assert_eq!(beat.effects.bridge_vibrato, Some(Vibrato::Wide));
+        assert!(!beat.slur);
+        // A wide left-hand vibrato is a plain one to an older plugin.
+        assert_eq!(beat.notes[0].effects.vibrato, Some(Vibrato::Slight));
+        assert_eq!(beat.notes[0].spelling, None);
+        assert!(old.master_bars[0].fermatas.is_empty());
     }
 }

@@ -39,6 +39,10 @@ pub struct Track {
     /// copy of its instrument and effects, as a voice of its own (#151).
     /// Saved beside the score with [`Track::plugins`].
     pub play_chords: bool,
+    /// Bars per system on the page when this track is shown alone, from
+    /// the first system on (Design Mode); empty, or past its end, for the
+    /// automatic layout.
+    pub layout: Vec<u8>,
 }
 
 /// What a track sounds like through General MIDI.

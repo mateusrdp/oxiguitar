@@ -3166,18 +3166,24 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
     match dialog {
         // The Bar dialog's fields are the Bar tab's.
         editing::Dialog::Bar => show_tab(app, "bar"),
-        editing::Dialog::Tuplet => {
+        editing::Dialog::Tuplet | editing::Dialog::NestedTuplet => {
             if app.borrow().editing.bar_state().is_none() {
                 return;
             }
-            let t = app
-                .borrow()
-                .editing
-                .beat_tuplet()
-                .unwrap_or(oxiguitar_model::Tuplet {
-                    notes: 5,
-                    in_time_of: 4,
-                });
+            let nested = dialog == editing::Dialog::NestedTuplet;
+            let five = oxiguitar_model::Tuplet {
+                notes: 5,
+                in_time_of: 4,
+            };
+            let t = if nested {
+                app.borrow()
+                    .editing
+                    .inner_tuplet()
+                    .unwrap_or(oxiguitar_model::Tuplet::TRIPLET)
+            } else {
+                app.borrow().editing.beat_tuplet().unwrap_or(five)
+            };
+            ui.set_tuplet_nested(nested);
             ui.set_tuplet_notes(i32::from(t.notes));
             ui.set_tuplet_in_time_of(i32::from(t.in_time_of));
             ui.set_tuplet_dialog_shown(true);
@@ -4370,7 +4376,8 @@ fn paste_dialog_done(app: &Shared, ok: bool) {
     }
 }
 
-/// Custom N-tuplet closed: on OK, the beats go into that tuplet.
+/// Custom (or Nested) N-tuplet closed: on OK, the beats go into that
+/// tuplet (inside the one they have, for Nested).
 fn tuplet_dialog_done(app: &Shared, ok: bool) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -4383,10 +4390,12 @@ fn tuplet_dialog_done(app: &Shared, ok: bool) {
     let Some(t) = bar_form::tuplet(ui.get_tuplet_notes(), ui.get_tuplet_in_time_of()) else {
         return;
     };
-    let typed = app
-        .borrow_mut()
-        .editing
-        .tool(oxiguitar_edit::Command::Tuplet(t));
+    let command = if ui.get_tuplet_nested() {
+        oxiguitar_edit::Command::NestedTuplet(t)
+    } else {
+        oxiguitar_edit::Command::Tuplet(t)
+    };
+    let typed = app.borrow_mut().editing.tool(command);
     if let Some(t) = typed {
         send_typed(app, t);
     }

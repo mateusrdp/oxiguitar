@@ -27,8 +27,9 @@
 //! curve (or none), as the bend editor makes it.
 
 use oxiguitar_model::{
-    Accent, Bar, Beat, BeatKind, BeatTechnique, Bend, Duration, Dynamic, GraceKind, Harmonic, Note,
-    NotePlace, NoteValue, Score, Slide, Stroke, StrokeDirection, Trill,
+    Accent, Bar, Barre, Beaming, Beat, BeatKind, BeatTechnique, Bend, Duration, Dynamic, Fade,
+    Golpe, GraceKind, Hairpin, Harmonic, Note, NotePlace, NoteValue, Ornament, Ottava, Rasgueado,
+    Score, Slide, Stroke, StrokeDirection, Trill, Vibrato, Wah,
 };
 
 use crate::{Caret, Command, Edited, History, Region, Selection};
@@ -121,20 +122,77 @@ pub enum Effect {
     /// The beat a grace note before the beat (G) or on it (Ctrl + Alt +
     /// G).
     Grace(GraceKind),
+    /// Wide left-hand vibrato (v0.17, the rest of the palette).
+    WideLeftVibrato,
+    /// An ornament on the note.
+    Ornament(Ornament),
+    /// The string's number shown on the staff.
+    StringNumber,
+    /// Slight vibrato with the whammy bar, on the beat.
+    BridgeVibrato,
+    /// Fade out, on the beat.
+    FadeOut,
+    /// Volume swell, on the beat.
+    VolumeSwell,
+    /// A wah-wah mark, on the beat.
+    Wah(Wah),
+    /// An arpeggio up or down, on the beat.
+    Arpeggio(StrokeDirection),
+    /// A rasgueado (i i at first; the Inspector picks the pattern).
+    Rasgueado,
+    /// A golpe, on the beat.
+    Golpe(Golpe),
+    /// A pick scrape up or down, on the beat.
+    PickScrape(StrokeDirection),
+    /// A dead slap, on the beat.
+    DeadSlap,
+    /// A slur over the beats (the last selected beat ends it).
+    Slur,
+    /// A crescendo or decrescendo over the beats.
+    Hairpin(Hairpin),
+    /// An ottava line over the beats.
+    Ottava(Ottava),
+    /// Slash notation.
+    Slash,
+    /// An extended barre over the beats, at the lowest fret their notes use.
+    Barre,
+    /// How the beats' beams join the next (automatic undoes the others).
+    Beaming(Beaming),
+    /// Force Groups: equal tuplets from the beat on are bracketed as one.
+    TupletGroup,
 }
 
 impl Effect {
     /// Whether it acts on notes (else on beats).
-    fn on_notes(self) -> bool {
-        !matches!(
+    pub fn on_notes(self) -> bool {
+        matches!(
             self,
-            Effect::TremoloPicking
-                | Effect::WideVibrato
-                | Effect::FadeIn
-                | Effect::Technique(_)
-                | Effect::Brush(_)
-                | Effect::PickStroke(_)
-                | Effect::Grace(_)
+            Effect::Dead
+                | Effect::Ghost
+                | Effect::Accent
+                | Effect::HeavyAccent
+                | Effect::Staccato
+                | Effect::HammerPull
+                | Effect::LeftHandTap
+                | Effect::Slide(_)
+                | Effect::Vibrato
+                | Effect::PalmMute
+                | Effect::PalmMuteBeat
+                | Effect::LetRing
+                | Effect::Harmonic(_)
+                | Effect::Trill
+                | Effect::WideLeftVibrato
+                | Effect::Ornament(_)
+                | Effect::StringNumber
+        )
+    }
+
+    /// Whether a rest can take it (a beat effect that marks time, not
+    /// notes).
+    fn on_rests(self) -> bool {
+        matches!(
+            self,
+            Effect::Hairpin(_) | Effect::Ottava(_) | Effect::Beaming(_) | Effect::TupletGroup
         )
     }
 
@@ -150,6 +208,16 @@ impl Effect {
                 | Effect::TremoloPicking
                 | Effect::FadeIn
                 | Effect::Grace(_)
+                | Effect::Ornament(_)
+                | Effect::FadeOut
+                | Effect::VolumeSwell
+                | Effect::Arpeggio(_)
+                | Effect::Slur
+                | Effect::Hairpin(_)
+                | Effect::Ottava(_)
+                | Effect::Slash
+                | Effect::Beaming(_)
+                | Effect::TupletGroup
         )
     }
 
@@ -190,6 +258,39 @@ impl Effect {
             Effect::PickStroke(StrokeDirection::Up) => "Pickstroke Up",
             Effect::Grace(GraceKind::BeforeBeat) => "Grace Note",
             Effect::Grace(GraceKind::OnBeat) => "Grace Note on the Beat",
+            Effect::WideLeftVibrato => "Wide Vibrato",
+            Effect::Ornament(Ornament::UpperMordent) => "Upper Mordent",
+            Effect::Ornament(Ornament::LowerMordent) => "Lower Mordent",
+            Effect::Ornament(Ornament::Turn) => "Turn",
+            Effect::Ornament(Ornament::InvertedTurn) => "Inverted Turn",
+            Effect::StringNumber => "String Number",
+            Effect::BridgeVibrato => "Bridge Vibrato",
+            Effect::FadeOut => "Fade Out",
+            Effect::VolumeSwell => "Volume Swell",
+            Effect::Wah(Wah::Open) => "Open Wah-Wah",
+            Effect::Wah(Wah::Closed) => "Closed Wah-Wah",
+            Effect::Arpeggio(StrokeDirection::Down) => "Downward Arpeggio",
+            Effect::Arpeggio(StrokeDirection::Up) => "Upward Arpeggio",
+            Effect::Rasgueado => "Rasgueado",
+            Effect::Golpe(Golpe::Finger) => "Finger Golpe",
+            Effect::Golpe(Golpe::Thumb) => "Thumb Golpe",
+            Effect::PickScrape(StrokeDirection::Up) => "Upward Pick Scrape",
+            Effect::PickScrape(StrokeDirection::Down) => "Downward Pick Scrape",
+            Effect::DeadSlap => "Dead Slap",
+            Effect::Slur => "Slur",
+            Effect::Hairpin(Hairpin::Crescendo) => "Crescendo",
+            Effect::Hairpin(Hairpin::Decrescendo) => "Decrescendo",
+            Effect::Ottava(Ottava::Alta8) => "8va",
+            Effect::Ottava(Ottava::Bassa8) => "8vb",
+            Effect::Ottava(Ottava::Alta15) => "15ma",
+            Effect::Ottava(Ottava::Bassa15) => "15mb",
+            Effect::Slash => "Slash",
+            Effect::Barre => "Extended Barre",
+            Effect::Beaming(Beaming::Automatic) => "Automatic Beaming",
+            Effect::Beaming(Beaming::Force) => "Force Beaming",
+            Effect::Beaming(Beaming::Break) => "Break Beaming",
+            Effect::Beaming(Beaming::BreakSecondary) => "Break Secondary Beaming",
+            Effect::TupletGroup => "Force Groups",
         }
     }
 
@@ -205,7 +306,10 @@ impl Effect {
             Effect::HammerPull => fx.hammer_pull,
             Effect::LeftHandTap => fx.left_hand_tap,
             Effect::Slide(s) => fx.slides.contains(&s),
-            Effect::Vibrato => fx.vibrato,
+            Effect::Vibrato => fx.vibrato == Some(Vibrato::Slight),
+            Effect::WideLeftVibrato => fx.vibrato == Some(Vibrato::Wide),
+            Effect::Ornament(o) => fx.ornament == Some(o),
+            Effect::StringNumber => fx.string_number,
             Effect::PalmMute | Effect::PalmMuteBeat => fx.palm_mute,
             Effect::LetRing => fx.let_ring || beat.effects.let_ring,
             Effect::Harmonic(k) => fx.harmonic.and_then(HarmonicKind::of) == Some(k),
@@ -225,8 +329,24 @@ impl Effect {
                         .iter()
                         .any(|n| n.effects.tremolo_picking.is_some())
             }
-            Effect::WideVibrato => fx.vibrato_wide,
-            Effect::FadeIn => fx.fade_in,
+            Effect::WideVibrato => fx.bridge_vibrato == Some(Vibrato::Wide),
+            Effect::BridgeVibrato => fx.bridge_vibrato == Some(Vibrato::Slight),
+            Effect::FadeIn => fx.fade == Some(Fade::In),
+            Effect::FadeOut => fx.fade == Some(Fade::Out),
+            Effect::VolumeSwell => fx.fade == Some(Fade::Swell),
+            Effect::Wah(w) => fx.wah == Some(w),
+            Effect::Arpeggio(d) => fx.arpeggio == Some(d),
+            Effect::Rasgueado => fx.rasgueado.is_some(),
+            Effect::Golpe(g) => fx.golpe == Some(g),
+            Effect::PickScrape(d) => fx.pick_scrape == Some(d),
+            Effect::DeadSlap => fx.dead_slap,
+            Effect::Slur => beat.slur,
+            Effect::Hairpin(h) => beat.hairpin == Some(h),
+            Effect::Ottava(o) => beat.ottava == Some(o),
+            Effect::Slash => beat.slash,
+            Effect::Barre => beat.barre.is_some(),
+            Effect::Beaming(m) => beat.beaming == m,
+            Effect::TupletGroup => beat.tuplet_group,
             Effect::Technique(t) => fx.technique == Some(t),
             Effect::Brush(d) => fx.stroke.is_some_and(|s| s.direction == d),
             Effect::PickStroke(d) => fx.pick_stroke == Some(d),
@@ -254,6 +374,10 @@ pub enum NoteChange {
     LeftFinger(Option<u8>),
     /// The right hand's finger (p 0, i 1, m 2, a 3, c 4), or none.
     RightFinger(Option<u8>),
+    /// A left-hand vibrato, slight or wide, or none.
+    Vibrato(Option<Vibrato>),
+    /// An ornament, or none.
+    Ornament(Option<Ornament>),
 }
 
 impl NoteChange {
@@ -261,7 +385,10 @@ impl NoteChange {
     fn needs_strings(self) -> bool {
         !matches!(
             self,
-            NoteChange::Accent(_) | NoteChange::LeftFinger(_) | NoteChange::RightFinger(_)
+            NoteChange::Accent(_)
+                | NoteChange::LeftFinger(_)
+                | NoteChange::RightFinger(_)
+                | NoteChange::Ornament(_)
         )
     }
 
@@ -273,6 +400,8 @@ impl NoteChange {
             NoteChange::Harmonic(_) => "Harmonic",
             NoteChange::Trill(_) => "Trill",
             NoteChange::LeftFinger(_) | NoteChange::RightFinger(_) => "Fingering",
+            NoteChange::Vibrato(_) => "Vibrato",
+            NoteChange::Ornament(_) => "Ornament",
         }
     }
 }
@@ -292,12 +421,28 @@ pub enum BeatChange {
     /// A grace note (a thirty-second, as Guitar Pro writes them), or a
     /// beat of its own again.
     Grace(Option<GraceKind>),
+    /// A rasgueado's pattern, or none.
+    Rasgueado(Option<Rasgueado>),
+    /// An extended barre's fret and shape, or none.
+    Barre(Option<Barre>),
+    /// A fade in, fade out or volume swell, or none.
+    Fade(Option<Fade>),
+    /// A vibrato with the whammy bar, slight or wide, or none.
+    BridgeVibrato(Option<Vibrato>),
 }
 
 impl BeatChange {
     /// Whether it needs notes on strings.
     fn needs_strings(self) -> bool {
-        !matches!(self, BeatChange::Tremolo(_) | BeatChange::Grace(_))
+        !matches!(
+            self,
+            BeatChange::Tremolo(_) | BeatChange::Grace(_) | BeatChange::Fade(_)
+        )
+    }
+
+    /// Whether a rest can take it.
+    fn on_rests(self) -> bool {
+        false
     }
 
     /// The change's name, as Edit → Undo shows it.
@@ -308,6 +453,10 @@ impl BeatChange {
             BeatChange::PickStroke(_) => "Pickstroke",
             BeatChange::Technique(_) => "Technique",
             BeatChange::Grace(_) => "Grace Note",
+            BeatChange::Rasgueado(_) => "Rasgueado",
+            BeatChange::Barre(_) => "Extended Barre",
+            BeatChange::Fade(_) => "Fade",
+            BeatChange::BridgeVibrato(_) => "Bridge Vibrato",
         }
     }
 }
@@ -404,13 +553,15 @@ fn run(
         Edit::Beat(change) => {
             (strings || !change.needs_strings())
                 && each_beat(&mut bars, first, &targets, c, |b| {
-                    (b.kind == BeatKind::Notes).then_some(())?;
+                    (b.kind == BeatKind::Notes || (change.on_rests() && b.kind == BeatKind::Rest))
+                        .then_some(())?;
                     beat_change(b, *change);
                     Some(())
                 })
         }
     };
     let staff = crate::entry::staff_of(score, c)?;
+    unmark_similes(staff.bars.get(first..=last)?, &mut bars);
     if !changed || staff.bars.get(first..=last).is_some_and(|old| old == bars) {
         return None;
     }
@@ -434,6 +585,16 @@ fn run(
         touched,
         caret: c.clamp(score).unwrap_or(c),
     })
+}
+
+/// A bar whose music an edit changed no longer repeats the bar before it:
+/// its simile sign comes off (docs/design/palette.md).
+pub(crate) fn unmark_similes(old: &[Bar], new: &mut [Bar]) {
+    for (o, n) in old.iter().zip(new) {
+        if n.simile.is_some() && o.simile == n.simile && o.voices != n.voices {
+            n.simile = None;
+        }
+    }
 }
 
 /// The target beat `(bar, beat)` of the caret's voice in `bars` (which
@@ -506,13 +667,33 @@ fn toggle(
     frets: u8,
 ) -> bool {
     let all = all_notes || e == Effect::PalmMuteBeat;
+    let takes = |b: &Beat| b.kind == BeatKind::Notes || (e.on_rests() && b.kind == BeatKind::Rest);
+    // An extended barre lies at the lowest fret any target note uses.
+    let mut barre = None;
+    if e == Effect::Barre {
+        for &at in targets {
+            if let Some(b) = beat_mut(bars, first, c, at) {
+                for n in &b.notes {
+                    if let NotePlace::Fretted { fret, .. } = n.place
+                        && fret > 0
+                        && !n.tie
+                    {
+                        barre = Some(barre.map_or(fret, |f: u8| f.min(fret)));
+                    }
+                }
+            }
+        }
+        if barre.is_none() {
+            return false;
+        }
+    }
     // What is there now: every target note (or beat) that can take it.
     let mut have = Vec::new();
     for &at in targets {
         let Some(b) = beat_mut(bars, first, c, at) else {
             continue;
         };
-        if b.kind != BeatKind::Notes {
+        if !takes(b) {
             continue;
         }
         if e.on_notes() {
@@ -528,6 +709,25 @@ fn toggle(
         } else if !e.needs_strings() || (strings && !b.notes.is_empty()) {
             have.push(e.on_beat(b));
         }
+    }
+    // A slur needs two beats: at the caret, from its beat to the next.
+    if e == Effect::Slur && targets.len() > 1 {
+        // The last selected beat ends the slur: it isn't slurred onward.
+        let last = targets.len() - 1;
+        let on = !targets
+            .iter()
+            .take(last)
+            .all(|&at| beat_mut(bars, first, c, at).is_some_and(|b| b.slur));
+        let mut any = false;
+        for (i, &at) in targets.iter().enumerate() {
+            if let Some(b) = beat_mut(bars, first, c, at)
+                && b.kind == BeatKind::Notes
+            {
+                b.slur = on && i < last;
+                any = true;
+            }
+        }
+        return any;
     }
     if have.is_empty() {
         return false;
@@ -561,11 +761,15 @@ fn toggle(
         })
     } else {
         each_beat(bars, first, targets, c, |b| {
-            if b.kind != BeatKind::Notes || (e.needs_strings() && (!strings || b.notes.is_empty()))
-            {
+            if !takes(b) || (e.needs_strings() && (!strings || b.notes.is_empty())) {
                 return None;
             }
             set_beat(b, e, on);
+            if e == Effect::Barre {
+                b.barre = on
+                    .then_some(barre.map(|fret| Barre { fret, half: false }))
+                    .flatten();
+            }
             Some(())
         })
     }
@@ -599,7 +803,10 @@ fn set_note(n: &mut Note, e: Effect, on: bool, frets: u8) {
                 fx.slides.sort_by_key(|x| !slide_in(*x));
             }
         }
-        Effect::Vibrato => fx.vibrato = on,
+        Effect::Vibrato => fx.vibrato = on.then_some(Vibrato::Slight),
+        Effect::WideLeftVibrato => fx.vibrato = on.then_some(Vibrato::Wide),
+        Effect::Ornament(o) => fx.ornament = on.then_some(o),
+        Effect::StringNumber => fx.string_number = on,
         Effect::PalmMute | Effect::PalmMuteBeat => fx.palm_mute = on,
         Effect::LetRing => fx.let_ring = on,
         Effect::Harmonic(k) => fx.harmonic = on.then(|| k.harmonic()),
@@ -628,8 +835,31 @@ fn set_beat(b: &mut Beat, e: Effect, on: bool) {
                 n.effects.tremolo_picking = None;
             }
         }
-        Effect::WideVibrato => fx.vibrato_wide = on,
-        Effect::FadeIn => fx.fade_in = on,
+        Effect::WideVibrato => fx.bridge_vibrato = on.then_some(Vibrato::Wide),
+        Effect::BridgeVibrato => fx.bridge_vibrato = on.then_some(Vibrato::Slight),
+        Effect::FadeIn => fx.fade = on.then_some(Fade::In),
+        Effect::FadeOut => fx.fade = on.then_some(Fade::Out),
+        Effect::VolumeSwell => fx.fade = on.then_some(Fade::Swell),
+        Effect::Wah(w) => fx.wah = on.then_some(w),
+        Effect::Arpeggio(d) => {
+            fx.arpeggio = on.then_some(d);
+            // One way to spread the chord.
+            if on {
+                fx.stroke = None;
+            }
+        }
+        Effect::Rasgueado => fx.rasgueado = on.then_some(Rasgueado::Ii),
+        Effect::Golpe(g) => fx.golpe = on.then_some(g),
+        Effect::PickScrape(d) => fx.pick_scrape = on.then_some(d),
+        Effect::DeadSlap => fx.dead_slap = on,
+        Effect::Hairpin(h) => b.hairpin = on.then_some(h),
+        Effect::Ottava(o) => b.ottava = on.then_some(o),
+        Effect::Slash => b.slash = on,
+        Effect::Beaming(m) => {
+            b.beaming = if on { m } else { Beaming::Automatic };
+        }
+        Effect::TupletGroup => b.tuplet_group = on,
+        Effect::Slur => b.slur = on,
         Effect::Technique(t) => fx.technique = on.then_some(t),
         Effect::Brush(direction) => {
             let speed = fx.stroke.map_or(NoteValue::Sixteenth, |s| s.speed);
@@ -680,6 +910,8 @@ fn note_change(n: &mut Note, change: NoteChange, frets: u8) -> Option<()> {
                 fx.right_finger = f;
             }
         }
+        NoteChange::Vibrato(v) => fx.vibrato = v,
+        NoteChange::Ornament(o) => fx.ornament = o,
     }
     Some(())
 }
@@ -702,6 +934,10 @@ fn beat_change(b: &mut Beat, change: BeatChange) {
             }
             b.grace = g;
         }
+        BeatChange::Rasgueado(r) => fx.rasgueado = r,
+        BeatChange::Barre(barre) => b.barre = barre,
+        BeatChange::Fade(f) => fx.fade = f,
+        BeatChange::BridgeVibrato(v) => fx.bridge_vibrato = v,
     }
 }
 
@@ -1055,5 +1291,149 @@ mod tests {
         assert_eq!(beat(&s, 1).notes[0].effects.bend, Some(bend));
         apply(&mut s, &mut h, at(1, 3), None, Command::Bend(None)).unwrap();
         assert_eq!(beat(&s, 1).notes[0].effects.bend, None);
+    }
+
+    fn sel(from: usize, to: usize) -> Selection {
+        Selection::Beats {
+            track: 0,
+            staff: 0,
+            voice: 0,
+            from: (0, from),
+            to: (0, to),
+        }
+    }
+
+    #[test]
+    fn a_slur_covers_the_selection_and_the_last_beat_ends_it() {
+        let (mut s, mut h) = song();
+        assert!(fx(&mut s, &mut h, at(0, 1), Some(sel(0, 2)), Effect::Slur));
+        let slurred: Vec<bool> = (0..4).map(|i| beat(&s, i).slur).collect();
+        assert_eq!(slurred, [true, true, false, false]);
+        assert!(fx(&mut s, &mut h, at(0, 1), Some(sel(0, 2)), Effect::Slur));
+        assert!((0..4).all(|i| !beat(&s, i).slur));
+        // At the caret: from its beat to the next.
+        assert!(fx(&mut s, &mut h, at(3, 3), None, Effect::Slur));
+        assert!(beat(&s, 3).slur);
+    }
+
+    #[test]
+    fn run_marks_take_rests_too_and_one_replaces_another() {
+        let (mut s, mut h) = song();
+        apply(&mut s, &mut h, at(2, 3), None, Command::Rest).unwrap();
+        assert!(fx(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            Some(sel(0, 3)),
+            Effect::Hairpin(Hairpin::Crescendo)
+        ));
+        assert!((0..4).all(|i| beat(&s, i).hairpin == Some(Hairpin::Crescendo)));
+        assert!(fx(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            Some(sel(1, 2)),
+            Effect::Ottava(Ottava::Alta8)
+        ));
+        assert_eq!(beat(&s, 2).ottava, Some(Ottava::Alta8));
+        assert!(fx(
+            &mut s,
+            &mut h,
+            at(1, 3),
+            None,
+            Effect::Ottava(Ottava::Bassa15)
+        ));
+        assert_eq!(beat(&s, 1).ottava, Some(Ottava::Bassa15));
+        assert!(fx(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            None,
+            Effect::Beaming(Beaming::Break)
+        ));
+        assert_eq!(beat(&s, 0).beaming, Beaming::Break);
+        assert!(fx(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            None,
+            Effect::Beaming(Beaming::Break)
+        ));
+        assert_eq!(beat(&s, 0).beaming, Beaming::Automatic);
+    }
+
+    #[test]
+    fn a_barre_lies_at_the_lowest_fret_and_the_inspector_changes_it() {
+        let (mut s, mut h) = song();
+        assert!(fx(&mut s, &mut h, at(0, 1), Some(sel(0, 3)), Effect::Barre));
+        assert!((0..4).all(|i| beat(&s, i).barre
+            == Some(Barre {
+                fret: 5,
+                half: false
+            })));
+        let half = Barre {
+            fret: 7,
+            half: true,
+        };
+        apply(
+            &mut s,
+            &mut h,
+            at(1, 3),
+            None,
+            Command::Beat(BeatChange::Barre(Some(half))),
+        )
+        .unwrap();
+        assert_eq!(beat(&s, 1).barre, Some(half));
+    }
+
+    #[test]
+    fn new_note_and_beat_marks_switch_on_and_off() {
+        let (mut s, mut h) = song();
+        assert!(fx(&mut s, &mut h, at(1, 3), None, Effect::WideLeftVibrato));
+        assert_eq!(beat(&s, 1).notes[0].effects.vibrato, Some(Vibrato::Wide));
+        // V replaces it with a slight one.
+        assert!(fx(&mut s, &mut h, at(1, 3), None, Effect::Vibrato));
+        assert_eq!(beat(&s, 1).notes[0].effects.vibrato, Some(Vibrato::Slight));
+        assert!(fx(
+            &mut s,
+            &mut h,
+            at(1, 3),
+            None,
+            Effect::Ornament(Ornament::Turn)
+        ));
+        assert_eq!(beat(&s, 1).notes[0].effects.ornament, Some(Ornament::Turn));
+        assert!(fx(&mut s, &mut h, at(0, 1), None, Effect::FadeOut));
+        assert_eq!(beat(&s, 0).effects.fade, Some(Fade::Out));
+        assert!(fx(&mut s, &mut h, at(0, 1), None, Effect::FadeIn));
+        assert_eq!(beat(&s, 0).effects.fade, Some(Fade::In));
+        assert!(fx(&mut s, &mut h, at(0, 1), None, Effect::Rasgueado));
+        assert_eq!(beat(&s, 0).effects.rasgueado, Some(Rasgueado::Ii));
+        apply(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            None,
+            Command::Beat(BeatChange::Rasgueado(Some(Rasgueado::Peami))),
+        )
+        .unwrap();
+        assert_eq!(beat(&s, 0).effects.rasgueado, Some(Rasgueado::Peami));
+        assert!(fx(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            None,
+            Effect::Arpeggio(StrokeDirection::Up)
+        ));
+        assert_eq!(beat(&s, 0).effects.arpeggio, Some(StrokeDirection::Up));
+        assert!(fx(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            None,
+            Effect::Golpe(Golpe::Thumb)
+        ));
+        assert!(fx(&mut s, &mut h, at(0, 1), None, Effect::DeadSlap));
+        assert!(beat(&s, 0).effects.dead_slap);
+        assert_eq!(h.undo_label(), Some("Dead Slap"));
     }
 }

@@ -384,13 +384,7 @@ fn beat_notes(
                 None => Attack::Picked,
             }
         };
-        let vibrato = if fx.vibrato_wide {
-            Vibrato::Wide
-        } else if nfx.vibrato {
-            Vibrato::Normal
-        } else {
-            Vibrato::None
-        };
+        let vibrato = vibrato_of(fx.bridge_vibrato, nfx.vibrato);
         let mut curves = Vec::new();
         if let Some(b) = &nfx.bend {
             curves.push(Curve::of_bend(b, start, end));
@@ -414,7 +408,7 @@ fn beat_notes(
             ghost: nfx.ghost,
             let_ring: nfx.let_ring || fx.let_ring,
             vibrato,
-            fade_in: fx.fade_in,
+            fade_in: fx.fade == Some(oxiguitar_model::Fade::In),
             fade_out: false,
             grace,
             pitch: Vec::new(),
@@ -723,13 +717,27 @@ fn extend_tie(work: &mut [Work], note: &Note, staff: &Staff, voice: usize, end: 
     if let Some(b) = &note.effects.bend {
         w.curves.push(Curve::of_bend(b, tied_from, end));
     }
-    if note.effects.vibrato && w.event.vibrato == Vibrato::None {
-        w.event.vibrato = Vibrato::Normal;
+    if w.event.vibrato == Vibrato::None {
+        w.event.vibrato = vibrato_of(None, note.effects.vibrato);
     }
     w.hammer = note.effects.hammer_pull;
     w.slides = note.effects.slides.clone();
     w.event.let_ring |= note.effects.let_ring;
     true
+}
+
+/// How a note's pitch wavers: the whammy bar's vibrato on its beat, or its
+/// own left-hand one.
+fn vibrato_of(
+    bridge: Option<oxiguitar_model::Vibrato>,
+    left: Option<oxiguitar_model::Vibrato>,
+) -> Vibrato {
+    use oxiguitar_model::Vibrato as V;
+    match (bridge, left) {
+        (Some(V::Wide), _) | (None, Some(V::Wide)) => Vibrato::Wide,
+        (Some(V::Slight), _) | (None, Some(V::Slight)) => Vibrato::Normal,
+        (None, None) => Vibrato::None,
+    }
 }
 
 /// Hammer-ons, slides and let ring: what a note does to the next one on its

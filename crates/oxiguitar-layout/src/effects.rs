@@ -242,9 +242,10 @@ fn runs(p: &Painter<'_>, list: &mut DisplayList, marks: &[&Mark<'_>], g: &Geomet
     type Test = fn(&BeatInfo) -> bool;
     let kinds: [(Lane, Test); 6] = [
         (Lane::Vibrato, |b| {
-            b.notes.iter().any(|n| n.effects.vibrato) && !b.effects.vibrato_wide
+            b.notes.iter().any(|n| n.effects.vibrato.is_some())
+                && b.effects.bridge_vibrato.is_none()
         }),
-        (Lane::Vibrato, |b| b.effects.vibrato_wide),
+        (Lane::Vibrato, |b| b.effects.bridge_vibrato.is_some()),
         (Lane::Trill, |b| {
             b.notes.iter().any(|n| n.effects.trill.is_some())
         }),
@@ -401,7 +402,7 @@ fn single(p: &Painter<'_>, list: &mut DisplayList, m: &Mark<'_>, g: &Geometry<'_
         if b.effects.whammy.is_some() {
             put("w/bar", list);
         }
-        if b.effects.fade_in {
+        if b.effects.fade == Some(oxiguitar_model::Fade::In) {
             // A small swell hairpin.
             let w = 1.6 * sp;
             let y = lane.base - 0.45 * sp;

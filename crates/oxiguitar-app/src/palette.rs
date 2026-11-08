@@ -23,7 +23,7 @@ use crate::editing::AtCaret;
 use crate::icons::{Face, Fit, Pen, S, VALUES, glyph};
 use oxiguitar_display::smufl::glyph::Glyph;
 use oxiguitar_edit::{Command, Effect};
-use oxiguitar_model::{Dynamic, NoteValue};
+use oxiguitar_model::{Dynamic, NoteValue, Simile};
 
 /// One tool.
 #[derive(Clone, Copy, Debug)]
@@ -168,6 +168,18 @@ pub(crate) fn command_of(id: &str) -> Option<Command> {
         "f" => Command::Dynamic(Dynamic::F),
         "ff" => Command::Dynamic(Dynamic::FF),
         "fff" => Command::Dynamic(Dynamic::FFF),
+        "fermata" => Command::Fermata(None),
+        "repeat-1-bar" => Command::Simile(Simile::Simple),
+        "repeat-2-bars" => Command::Simile(Simile::FirstOfDouble),
+        "sustain-pedal" => Command::Pedal,
+        "double-flat" => Command::Spell(-2),
+        "flat" => Command::Spell(-1),
+        "natural" => Command::Spell(0),
+        "sharp" => Command::Spell(1),
+        "double-sharp" => Command::Spell(2),
+        "change-accidental" => Command::Respell,
+        "left-hand-fingering" => Command::NextFinger { right: false },
+        "right-hand-fingering" => Command::NextFinger { right: true },
         _ => return effect_of(id).map(Command::Effect),
     })
 }
@@ -175,7 +187,10 @@ pub(crate) fn command_of(id: &str) -> Option<Command> {
 /// The effect an effect tool switches (M3 slice 6).
 pub(crate) fn effect_of(id: &str) -> Option<Effect> {
     use oxiguitar_edit::HarmonicKind as H;
-    use oxiguitar_model::{BeatTechnique, GraceKind, Slide, StrokeDirection};
+    use oxiguitar_model::{
+        Beaming, BeatTechnique, Golpe, GraceKind, Hairpin, Ornament, Ottava, Slide,
+        StrokeDirection, Wah,
+    };
     Some(match id {
         "ghost" => Effect::Ghost,
         "accent" => Effect::Accent,
@@ -208,6 +223,39 @@ pub(crate) fn effect_of(id: &str) -> Option<Effect> {
         "tapping" => Effect::Technique(BeatTechnique::Tap),
         "slap" => Effect::Technique(BeatTechnique::Slap),
         "pop" => Effect::Technique(BeatTechnique::Pop),
+        "wide-vibrato" => Effect::WideLeftVibrato,
+        "bridge-vibrato" => Effect::BridgeVibrato,
+        "upper-mordent" => Effect::Ornament(Ornament::UpperMordent),
+        "lower-mordent" => Effect::Ornament(Ornament::LowerMordent),
+        "turn" => Effect::Ornament(Ornament::Turn),
+        "inverted-turn" => Effect::Ornament(Ornament::InvertedTurn),
+        "string-number" => Effect::StringNumber,
+        "fade-out" => Effect::FadeOut,
+        "volume-swell" => Effect::VolumeSwell,
+        "wah-open" => Effect::Wah(Wah::Open),
+        "wah-closed" => Effect::Wah(Wah::Closed),
+        "arpeggio-down" => Effect::Arpeggio(StrokeDirection::Down),
+        "arpeggio-up" => Effect::Arpeggio(StrokeDirection::Up),
+        "rasgueado" => Effect::Rasgueado,
+        "finger-golpe" => Effect::Golpe(Golpe::Finger),
+        "thumb-golpe" => Effect::Golpe(Golpe::Thumb),
+        "pick-scrape-up" => Effect::PickScrape(StrokeDirection::Up),
+        "pick-scrape-down" => Effect::PickScrape(StrokeDirection::Down),
+        "dead-slap" => Effect::DeadSlap,
+        "legato" => Effect::Slur,
+        "crescendo" => Effect::Hairpin(Hairpin::Crescendo),
+        "decrescendo" => Effect::Hairpin(Hairpin::Decrescendo),
+        "8va" => Effect::Ottava(Ottava::Alta8),
+        "8vb" => Effect::Ottava(Ottava::Bassa8),
+        "15ma" => Effect::Ottava(Ottava::Alta15),
+        "15mb" => Effect::Ottava(Ottava::Bassa15),
+        "slash" => Effect::Slash,
+        "barre" => Effect::Barre,
+        "beams-auto" => Effect::Beaming(Beaming::Automatic),
+        "beams-force" => Effect::Beaming(Beaming::Force),
+        "beams-break" => Effect::Beaming(Beaming::Break),
+        "beams-break-secondary" => Effect::Beaming(Beaming::BreakSecondary),
+        "tuplet-groups" => Effect::TupletGroup,
         _ => return None,
     })
 }
@@ -225,6 +273,7 @@ pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
         | "directions"
         | "section" => Dialog::Bar,
         "tuplet" => Dialog::Tuplet,
+        "nested-tuplet" => Dialog::NestedTuplet,
         "bend" => Dialog::Bend,
         "chord" | "chords" => Dialog::Chord,
         "text" => Dialog::Text,
@@ -254,6 +303,10 @@ pub(crate) fn checked(id: &str, at: &AtCaret) -> bool {
         Some(Command::FreeTime) => at.free_time,
         Some(Command::Effect(e)) => at.has(e),
         Some(Command::Dynamic(d)) => at.dynamic == Some(d),
+        Some(Command::Fermata(_)) => at.fermata,
+        Some(Command::Simile(Simile::Simple)) => at.simile == Some(Simile::Simple),
+        Some(Command::Simile(_)) => at.simile.is_some_and(|s| s != Simile::Simple),
+        Some(Command::Pedal) => at.pedal,
         _ => false,
     }
 }
@@ -270,9 +323,9 @@ pub(crate) fn tool_tip(id: &str, name: &str) -> String {
     match working(id) {
         Some(Some(keys)) => format!("{name} ({keys})"),
         Some(None) => name.to_owned(),
-        // Every tool that doesn't work yet is beyond TAB-1 and comes with
-        // Guitar Pro 8's notation, in M5.
-        None => format!("{name} (comes in M5)"),
+        // Every notation tool works since v0.17; the editing modes come
+        // with it too (docs/design/palette.md).
+        None => format!("{name} (comes later)"),
     }
 }
 
@@ -1381,7 +1434,13 @@ mod tests {
         assert!(!matches("Natural Harmonic", "pinch"));
         assert_eq!(tool_tip("chord", "Chord"), "Chord (A)");
         assert_eq!(tool_tip("lyrics", "Lyrics"), "Lyrics (Ctrl + T)");
-        assert_eq!(tool_tip("fermata", "Fermata"), "Fermata (comes in M5)");
+        assert_eq!(tool_tip("fermata", "Fermata"), "Fermata");
+        // Every tool works but the two editing modes (v0.17).
+        let idle: Vec<&str> = tools()
+            .filter(|(_, t)| working(t.id).is_none())
+            .map(|(_, t)| t.id)
+            .collect();
+        assert_eq!(idle, ["multivoice", "design-mode"]);
         assert_eq!(command_of("ff"), Some(Command::Dynamic(Dynamic::FF)));
         assert_eq!(
             command_of("shift-slide"),

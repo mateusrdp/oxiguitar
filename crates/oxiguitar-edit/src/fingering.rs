@@ -529,7 +529,8 @@ fn places_for(
 ) -> Vec<(u8, u8)> {
     let strings = u8::try_from(staff.string_count()).unwrap_or(0);
     let fx = &n.effects;
-    let shaped = fx.bend.is_some() || fx.vibrato || !fx.slides.is_empty() || fx.trill.is_some();
+    let shaped =
+        fx.bend.is_some() || fx.vibrato.is_some() || !fx.slides.is_empty() || fx.trill.is_some();
     let mut out = Vec::new();
     for s in 1..=strings {
         let Some(open) = staff.pitch_of(s, 0).map(|p| p.0) else {
@@ -1576,7 +1577,7 @@ mod tests {
         let q = NoteValue::Quarter;
         let mut beats = vec![pitched(&[64], q), pitched(&[64], q), pitched(&[64], q)];
         beats[0].notes[0].effects.bend = Some(oxiguitar_model::Bend::default());
-        beats[1].notes[0].effects.vibrato = true;
+        beats[1].notes[0].effects.vibrato = Some(oxiguitar_model::Vibrato::Slight);
         let mut s = song(&GUITAR, 0, vec![beats]);
         finger_pitched(&mut s);
         let p = places(&s);

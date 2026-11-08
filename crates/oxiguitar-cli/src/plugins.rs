@@ -86,6 +86,7 @@ pub(crate) fn open(path: &str, data: &[u8]) -> Result<Opened, String> {
         .map_err(|e| format!("the {plugin} plugin gave a score this OxiGuitar can't hold ({e})"))?;
     // Pitches on strings get a string and fret, as the app does (#157).
     oxiguitar_edit::finger_pitched(&mut score);
+    oxiguitar_edit::plain_spellings(&mut score);
     Ok(Opened {
         format: name,
         extensions,
