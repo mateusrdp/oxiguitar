@@ -160,6 +160,9 @@ pub enum Command {
     TrackProperties(Box<crate::TrackSettings>),
     /// A transposition of the caret's track, the selection or every track.
     Transpose(crate::Transposition),
+    /// A string and fret found again for every note of the caret's track,
+    /// the selection or every track (#157).
+    Fingering(crate::Scope),
     /// An effect switched on or off at the caret, or on the selection
     /// (TAB-1).
     Effect(crate::Effect),
@@ -253,6 +256,7 @@ impl Command {
             Command::MoveTrackDown => "Move Track Down",
             Command::TrackProperties(_) => "Track Properties",
             Command::Transpose(_) => "Transpose",
+            Command::Fingering(_) => "Find Fingering",
             Command::Effect(e) => e.label(),
             Command::Dynamic(_) => "Dynamic",
             Command::Bend(_) => "Bend",
@@ -303,6 +307,9 @@ pub fn apply(
         return edited;
     }
     if let Some(edited) = crate::transpose::apply(score, history, caret, selection, &command) {
+        return edited;
+    }
+    if let Some(edited) = crate::fingering::apply(score, history, caret, selection, &command) {
         return edited;
     }
     if let Some(edited) = crate::effects::apply(score, history, caret, selection, &command) {
@@ -756,6 +763,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::MoveTrackDown
         | Command::TrackProperties(_)
         | Command::Transpose(_)
+        | Command::Fingering(_)
         | Command::Effect(_)
         | Command::Dynamic(_)
         | Command::Bend(_)

@@ -64,26 +64,7 @@ pub(crate) fn apply(
     if !changed {
         return Some(None);
     }
-    let regions = match t.scope {
-        Scope::All => vec![Region::Whole],
-        _ => {
-            let tracks = match (t.scope, selection) {
-                (Scope::Selection, Some(s)) => s.tracks(),
-                _ => (c.track, c.track),
-            };
-            let bars = score.bar_count();
-            (tracks.0..=tracks.1)
-                .flat_map(|track| {
-                    let staves = score.tracks.get(track).map_or(0, |tr| tr.staves.len());
-                    (0..staves).map(move |staff| Region::Bars {
-                        track,
-                        staff,
-                        bars: 0..bars,
-                    })
-                })
-                .collect()
-        }
-    };
+    let regions = regions(score, c, selection, t.scope);
     let label = command.label();
     let touched = history.record(score, label, regions, |s| *s = work);
     Some(Some(Edited {
@@ -104,16 +85,15 @@ pub fn notes_lost(
     transpose(&mut work, c, selection, t).1
 }
 
-/// Transposes `score` in place: whether anything changed, and how many
-/// notes went.
-fn transpose(
-    score: &mut Score,
+/// The beats a command with `scope` works on: (track, staff, bar, and the
+/// voice and beats, or the whole bar).
+pub(crate) fn spans(
+    score: &Score,
     c: Caret,
     selection: Option<Selection>,
-    t: &Transposition,
-) -> (bool, usize) {
-    // Which beats of which staves: (track, staff, bar, voice and beats).
-    let targets: Vec<crate::Span> = match (t.scope, selection) {
+    scope: Scope,
+) -> Vec<crate::Span> {
+    match (scope, selection) {
         (Scope::Selection, Some(s)) => s.spans(score),
         (Scope::Selection, None) => vec![crate::Span {
             at: crate::StaffBar {
@@ -132,7 +112,48 @@ fn transpose(
             Some(s) => s.spans(score),
             None => Vec::new(),
         },
-    };
+    }
+}
+
+/// What a command with `scope` records for undo: every staff of the
+/// tracks it reaches, or the whole score.
+pub(crate) fn regions(
+    score: &Score,
+    c: Caret,
+    selection: Option<Selection>,
+    scope: Scope,
+) -> Vec<Region> {
+    match scope {
+        Scope::All => vec![Region::Whole],
+        _ => {
+            let tracks = match (scope, selection) {
+                (Scope::Selection, Some(s)) => s.tracks(),
+                _ => (c.track, c.track),
+            };
+            let bars = score.bar_count();
+            (tracks.0..=tracks.1)
+                .flat_map(|track| {
+                    let staves = score.tracks.get(track).map_or(0, |tr| tr.staves.len());
+                    (0..staves).map(move |staff| Region::Bars {
+                        track,
+                        staff,
+                        bars: 0..bars,
+                    })
+                })
+                .collect()
+        }
+    }
+}
+
+/// Transposes `score` in place: whether anything changed, and how many
+/// notes went.
+fn transpose(
+    score: &mut Score,
+    c: Caret,
+    selection: Option<Selection>,
+    t: &Transposition,
+) -> (bool, usize) {
+    let targets = spans(score, c, selection, t.scope);
     let keys: Vec<KeySignature> = score.master_bars.iter().map(|b| b.key_signature).collect();
     let mut changed = false;
     let mut lost = 0;

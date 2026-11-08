@@ -24,6 +24,10 @@
 //!   the bars an edit touched ([`Touched`]), nothing more (Mateus, 19 Oct
 //!   2026: speed first). Such bars are allowed; the window marks them.
 //!
+//! - Automatic fingering ([`Command::Fingering`], [`finger_pitched`],
+//!   #157): a string and fret for each note, by the cheapest path through
+//!   the passage (`docs/design/fingering.md`).
+//!
 //! See `docs/design/editor.md` for the rules and the parity checklist.
 
 mod bars;
@@ -32,6 +36,7 @@ mod check;
 mod clip;
 mod effects;
 mod entry;
+mod fingering;
 pub mod harmony;
 mod history;
 mod notation;
@@ -45,6 +50,7 @@ pub use check::{BarCheck, adds_up};
 pub use clip::{Clip, ClipTrack, Paste, copy};
 pub use effects::{BeatChange, Effect, HarmonicKind, NoteChange};
 pub use entry::{Command, Edited, apply, new_score};
+pub use fingering::{HARD_FINGERS, HARD_SHIFT, HARD_STRETCH, finger_pitched};
 pub use history::{Change, History, Region, Touched};
 pub use notation::{LYRIC_LINES, tidy_info};
 pub use selection::{Selection, Span};

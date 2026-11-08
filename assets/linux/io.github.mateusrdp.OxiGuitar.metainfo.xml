@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.15.0" date="2026-11-08" type="development">
+      <description>
+        <p>Find Fingering (#157): a string and fret for every note of the selection (right-click on the page, or Edit → Find Fingering for Selection), a track (right-click on its name) or every track (Tools), as one step for Undo. It searches the whole passage for the way through it that asks least of the ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.15.0</url>
+    </release>
     <release version="0.14.0" date="2026-11-08" type="development">
       <description>
         <p>A track's sections in the Track tab work while the song plays (#232, from oxiguitar-eq#7): the equalizer's bands and mode and the amp's Input and Output change the sound as you move them, gliding there so nothing clicks, with the equalizer 0.2 and the amp plugin 0.3. The change is saved beside the ...</p>

@@ -1,5 +1,26 @@
 {
-  "lastAnalyzedCommit": "520ed911d547fe42021fe8a5475378aaf4da76a7",
-  "analyzedAt": "2026-10-29T03:28:12.912146+00:00",
-  "graphVersion": "1.0.0"
+  "lastAnalyzedCommit": "1dd6efb8d126165a8f4e9351c0d7b1c43023c917",
+  "analyzedAt": "2026-11-07T19:54:07.357Z",
+  "graphVersion": "1.0.0",
+  "stats": {
+    "totalNodes": 662,
+    "totalEdges": 140,
+    "totalLayers": 7,
+    "totalTourStops": 10,
+    "filesScanned": 618,
+    "nodeTypes": {
+      "file": 618,
+      "function": 9,
+      "document": 10,
+      "config": 21,
+      "service": 2,
+      "resource": 2
+    },
+    "edgeTypes": {
+      "contains": 9,
+      "imports": 131
+    },
+    "layersCovered": 419,
+    "unassignedFileNodes": 234
+  }
 }

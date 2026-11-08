@@ -1735,6 +1735,7 @@ export component AppWindow inherits Window {
             MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
             MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
             MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
+            MenuItem { title: "Find Fingering for Selection"; enabled: root.has-score; activated => { root.edit-command("fingering-selection"); } }
         }
         Menu {
             title: "View";
@@ -1773,6 +1774,7 @@ export component AppWindow inherits Window {
             // Guitar Pro 8's "Check bar duration" key.
             MenuItem { title: "Next Bar That Doesn't Add Up"; enabled: root.bad-bars; shortcut: @keys(F4); activated => { root.next-bad-bar(); } }
             MenuItem { title: "Transpose…"; enabled: root.has-score; activated => { root.edit-command("transpose-all"); } }
+            MenuItem { title: "Find Fingering"; enabled: root.has-score; activated => { root.edit-command("fingering-all"); } }
             MenuSeparator {}
             MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
         }
@@ -2235,6 +2237,7 @@ export component AppWindow inherits Window {
                             height: flick.viewport-height;
                             Menu {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
+                                MenuItem { title: "Find Fingering"; activated => { root.page-menu("fingering"); } }
                                 MenuSeparator { }
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
                                 MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
@@ -2523,6 +2526,7 @@ export component AppWindow inherits Window {
                                 ContextMenuArea {
                                     Menu {
                                         MenuItem { title: "Transpose…"; activated => { root.track-menu(i, "transpose"); } }
+                                        MenuItem { title: "Find Fingering"; activated => { root.track-menu(i, "fingering"); } }
                                         MenuSeparator { }
                                         MenuItem { title: "Add Track"; activated => { root.track-menu(i, "add"); } }
                                         MenuItem { title: "Duplicate"; activated => { root.track-menu(i, "duplicate"); } }
