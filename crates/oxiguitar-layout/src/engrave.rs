@@ -65,7 +65,13 @@ impl BarX {
 
 /// Baselines of the lines of marks above a view's top staff.
 #[derive(Default)]
-struct Lines {
+pub(crate) struct Lines {
+    /// Fermatas.
+    pub(crate) fermata: Option<f32>,
+    /// Ottava lines.
+    pub(crate) ottava: Option<f32>,
+    /// Extended barres.
+    pub(crate) barre: Option<f32>,
     ending: Option<f32>,
     chord: Option<f32>,
     text: Option<f32>,
@@ -83,11 +89,13 @@ pub(crate) struct Band {
     /// Top and bottom lines of the band's staves.
     pub(crate) top: f32,
     pub(crate) bottom: f32,
-    lines: Lines,
+    pub(crate) lines: Lines,
     /// Effect lanes, nearest the staff first.
     pub(crate) lanes: Vec<LanePos>,
-    /// Baseline of the dynamics under the staff.
+    /// Baseline of the dynamics (and hairpins) under the staff.
     pub(crate) dynamics: Option<f32>,
+    /// Baseline of the sustain pedal's marks, under the dynamics.
+    pub(crate) pedal: Option<f32>,
     /// Baselines of the lyric lines, by line number.
     pub(crate) lyrics: Vec<f32>,
     /// Where the first lyric line's baseline is, or would be.
@@ -105,6 +113,7 @@ pub(crate) enum Lane {
     LetRing,
     Harmonic,
     Technique,
+    Whammy,
 }
 
 /// One effect lane: its kind, its top and its baseline.
@@ -128,6 +137,7 @@ fn lane_list(l: Lanes, tab: bool) -> Vec<(Lane, f32)> {
     [
         (Lane::Hp, tab && l.hp, 2.6),
         (Lane::Bend, tab && l.bend, 3.6),
+        (Lane::Whammy, tab && l.whammy, 3.4),
         (Lane::Vibrato, l.vibrato, 1.4),
         (Lane::Trill, l.trill, 2.0),
         (Lane::PalmMute, l.palm_mute, 1.8),
@@ -181,7 +191,8 @@ pub(crate) fn system(
         });
         x = end;
     }
-    let right = x;
+    let last_bar_end = x;
+    let right = x + spec.courtesy;
 
     // Vertical: each view's marks, staff and tablature, top to bottom.
     let range = spec.first..spec.end;
@@ -204,6 +215,15 @@ pub(crate) fn system(
         let low = vplans.iter().map(|b| b.low).min().unwrap_or(0);
         let chords = vplans.iter().any(|b| b.has_chords);
         let text = vplans.iter().any(|b| b.has_text);
+        let any_beat = |f: &dyn Fn(&BeatInfo) -> bool| {
+            vplans
+                .iter()
+                .filter(|b| b.simile.is_none())
+                .any(|b| b.voices.iter().flatten().any(f))
+        };
+        let fermatas = any_beat(&|b| b.fermata.is_some());
+        let ottavas = any_beat(&|b| b.ottava.is_some());
+        let barres = any_beat(&|b| b.barre.is_some());
         let first = vi == 0;
         // Tab-only views draw rhythm: voices 1 and 3 above the tab, 2 and 4
         // below, so marks above start beyond the upward stems.
@@ -222,12 +242,8 @@ pub(crate) fn system(
             .fold(Lanes::default(), Lanes::or);
         let lane_kinds = lane_list(lanes_used, v.show_tab);
         let lanes_height: f32 = lane_kinds.iter().map(|(_, h)| h * sp).sum();
-        let has_dynamics = vplans.iter().any(|b| {
-            b.voices
-                .iter()
-                .flatten()
-                .any(|bt| bt.show_dynamic.is_some())
-        });
+        let has_dynamics = any_beat(&|bt| bt.show_dynamic.is_some() || bt.hairpin.is_some());
+        let has_pedal = any_beat(&|bt| bt.effects.pedal.is_some());
         let lyric_lines = vplans
             .iter()
             .flat_map(|b| b.voices.iter().flatten())
@@ -258,6 +274,9 @@ pub(crate) fn system(
                 base
             })
         };
+        let fermata = line(fermatas, 2.4 * sp);
+        let ottava = line(ottavas, 2.4 * sp);
+        let barre = line(barres, 2.4 * sp);
         let ending = line(first && has_endings, 2.6 * sp);
         let chord = line(chords, 2.8 * sp);
         let text = line(text, 2.4 * sp);
@@ -267,6 +286,9 @@ pub(crate) fn system(
         let top = cursor + stack;
         let up = |o: Option<f32>| o.map(|d| top - d);
         let lines = Lines {
+            fermata: up(fermata),
+            ottava: up(ottava),
+            barre: up(barre),
             ending: up(ending),
             chord: up(chord),
             text: up(text),
@@ -278,10 +300,14 @@ pub(crate) fn system(
         let std_top = v.show_std.then_some(top);
         // Under the staff (or under the tab and its rhythm): dynamics, then
         // lyrics.
-        let under_lines = |from: f32| -> (Option<f32>, Vec<f32>, f32, f32) {
+        let under_lines = |from: f32| -> (Option<f32>, Option<f32>, Vec<f32>, f32, f32) {
             let mut y = from;
             let dynamics = has_dynamics.then(|| {
                 y += 2.6 * sp;
+                y - 0.6 * sp
+            });
+            let pedal = has_pedal.then(|| {
+                y += 2.4 * sp;
                 y - 0.6 * sp
             });
             let first = y + 2.4 * sp - 0.5 * sp;
@@ -291,13 +317,13 @@ pub(crate) fn system(
                     y - 0.5 * sp
                 })
                 .collect();
-            (dynamics, lyrics, y, first)
+            (dynamics, pedal, lyrics, y, first)
         };
         let std_bottom = top + 4.0 * sp + below_std;
-        let (mut dynamics, mut lyrics, after_std, mut lyric_first) = if v.show_std {
+        let (mut dynamics, mut pedal, mut lyrics, after_std, mut lyric_first) = if v.show_std {
             under_lines(std_bottom)
         } else {
-            (None, Vec::new(), std_bottom, std_bottom)
+            (None, None, Vec::new(), std_bottom, std_bottom)
         };
         let tab_top = v.show_tab.then_some(if v.show_std {
             after_std + 2.0 * sp + lanes_height
@@ -335,8 +361,9 @@ pub(crate) fn system(
             after_std - bottom + 1.5 * sp
         };
         if !v.show_std {
-            let (d, l, end, first) = under_lines(bottom + after - 1.0 * sp);
+            let (d, ped, l, end, first) = under_lines(bottom + after - 1.0 * sp);
             dynamics = d;
+            pedal = ped;
             lyrics = l;
             lyric_first = first;
             after = end - bottom + 1.0 * sp;
@@ -349,6 +376,7 @@ pub(crate) fn system(
             lines,
             lanes,
             dynamics,
+            pedal,
             lyrics,
             lyric_first,
         });
@@ -414,17 +442,25 @@ pub(crate) fn system(
             if let Some(range) = ctx.bar_start(&mut list, bx, k == 0, plan.clef) {
                 times.insert(bx.index, range);
             }
-            if let Some(top) = band.std_top {
-                ctx.std_bar(&mut list, plan, grid, bx, top, vi, &mut ties);
-            }
-            if let Some(top) = band.tab_top {
-                ctx.tab_bar(&mut list, plan, grid, bx, top);
-                if band.std_top.is_none() {
-                    ctx.tab_rhythm(&mut list, plan, grid, bx, top);
+            if let Some(kind) = plan.simile {
+                ctx.simile(&mut list, kind, bx);
+            } else {
+                if let Some(top) = band.std_top {
+                    ctx.std_bar(&mut list, plan, grid, bx, top, vi, &mut ties);
+                }
+                if let Some(top) = band.tab_top {
+                    ctx.tab_bar(&mut list, plan, grid, bx, top);
+                    if band.std_top.is_none() {
+                        ctx.tab_rhythm(&mut list, plan, grid, bx, top);
+                    }
                 }
             }
             ctx.bar_end(&mut list, bx);
             ctx.marks(&mut list, plan, grid, bx, vi == 0);
+        }
+        if spec.courtesy > 0.0 {
+            let clef = plan_of(spec.end.saturating_sub(1)).map_or(Clef::Treble8vb, |b| b.clef);
+            ctx.courtesy(&mut list, last_bar_end, spec.end, clef);
         }
         // Effects, once every bar of the view is placed.
         let mut marks = Vec::new();
@@ -432,6 +468,10 @@ pub(crate) fn system(
             let (Some(plan), Some(grid)) = (plan_of(bx.index), plans.grids.get(bx.index)) else {
                 continue;
             };
+            // A simile bar shows its sign, not its music's marks.
+            if plan.simile.is_some() {
+                continue;
+            }
             for (voice, beats) in plan.voices.iter().enumerate() {
                 for b in beats {
                     let Some(onset) = b.onset else { continue };
@@ -804,6 +844,73 @@ impl Ctx<'_> {
         time
     }
 
+    /// Courtesy signatures after a system's last bar line at `x`: the key
+    /// and time signatures bar `next` (the next system's first) changes to.
+    fn courtesy(&self, list: &mut DisplayList, x: f32, next: usize, clef: Clef) {
+        let p = self.p;
+        let sp = self.sp();
+        let (Some(prev), Some(mb)) = (
+            next.checked_sub(1)
+                .and_then(|i| self.score.master_bars.get(i)),
+            self.score.master_bars.get(next),
+        ) else {
+            return;
+        };
+        let mut x = x + 0.6 * sp;
+        let (old, new) = (prev.key_signature.fifths, mb.key_signature.fifths);
+        if old != new {
+            if let Some(top) = self.band.std_top {
+                let mut kx = x;
+                let naturals = cancelled_steps(old, new, clef);
+                for step in &naturals {
+                    p.glyph(
+                        list,
+                        glyphs::NATURAL,
+                        kx,
+                        step_y(top, sp, *step),
+                        Paint::Ink,
+                    );
+                    kx += p.width(glyphs::NATURAL) + 0.15 * sp;
+                }
+                if !naturals.is_empty() {
+                    kx += 0.4 * sp;
+                }
+                for (step, alter) in key_signature_steps_for(new, clef) {
+                    let g = accidental_glyph(alter);
+                    p.glyph(list, g, kx, step_y(top, sp, step), Paint::Ink);
+                    kx += p.width(g) + 0.15 * sp;
+                }
+            }
+            x += p.key_change_width(old, new) + sp;
+        }
+        let ts = mb.time_signature;
+        if prev.time_signature != ts {
+            let w = p.time_width(ts.numerator, ts.denominator);
+            let cx = x + w / 2.0;
+            if let Some(top) = self.band.std_top {
+                p.time_signature(
+                    list,
+                    ts.numerator,
+                    ts.denominator,
+                    cx,
+                    step_y(top, sp, 6),
+                    step_y(top, sp, 2),
+                );
+            }
+            if let Some(top) = self.band.tab_top {
+                let h = self.tab_bottom(top) - top;
+                p.time_signature(
+                    list,
+                    ts.numerator,
+                    ts.denominator,
+                    cx,
+                    top + 0.27 * h,
+                    top + 0.73 * h,
+                );
+            }
+        }
+    }
+
     /// A start-repeat sign whose thick line begins at `x`; returns its right
     /// edge.
     fn repeat_start(&self, list: &mut DisplayList, x: f32) -> f32 {
@@ -863,6 +970,27 @@ impl Ctx<'_> {
                 p.thin_bar(list, x, top, bottom);
             }
         }
+    }
+
+    /// A simile sign in place of a bar's music: one bar's in its middle,
+    /// two bars' across the bar line between them.
+    fn simile(&self, list: &mut DisplayList, kind: oxiguitar_model::Simile, bx: &BarX) {
+        use oxiguitar_model::Simile;
+        let p = self.p;
+        let sp = self.sp();
+        let (g, cx) = match kind {
+            Simile::Simple => (glyphs::REPEAT_1_BAR, (bx.notes + bx.end) / 2.0),
+            Simile::FirstOfDouble => (glyphs::REPEAT_2_BARS, bx.end),
+            Simile::SecondOfDouble => return,
+        };
+        let w = p.width(g);
+        let (above, below) = p.height(g);
+        for (top, bottom, _) in self.staves() {
+            let mid = (top + bottom) / 2.0;
+            let y = mid + (above - below) / 2.0;
+            p.glyph(list, g, cx - w / 2.0, y, Paint::Ink);
+        }
+        let _ = sp;
     }
 
     /// Notes, rests, beams and ties of one bar on the standard staff.
@@ -1114,6 +1242,13 @@ impl Ctx<'_> {
                 Some((i, s, beam_count(b.value)))
             })
             .collect();
+        // Break Secondary Beaming: past the first beam, a run ends at a
+        // beat that breaks it.
+        let breaks_after = |j: usize| {
+            ms.get(j)
+                .and_then(|m| beats.get(m.0))
+                .is_some_and(|b| b.beaming == oxiguitar_model::Beaming::BreakSecondary)
+        };
         let (Some(first), Some(last)) = (ms.first(), ms.last()) else {
             return;
         };
@@ -1161,11 +1296,16 @@ impl Ctx<'_> {
                     continue;
                 }
                 let start = k;
-                while has(k + 1) {
+                while has(k + 1) && !(level > 0 && breaks_after(k)) {
                     k += 1;
                 }
                 let (xa, xb) = match (ms.get(start), ms.get(k)) {
                     (Some(a), Some(b)) if start < k => (a.1.x - t / 2.0, b.1.x + t / 2.0),
+                    // A lone note after a secondary break: its hook points
+                    // on, into its own group.
+                    (Some(a), _) if level > 0 && start > 0 && breaks_after(start - 1) => {
+                        (a.1.x - t / 2.0, a.1.x + hook)
+                    }
                     (Some(a), _) if start + 1 == ms.len() => (a.1.x - hook, a.1.x + t / 2.0),
                     (Some(a), _) => (a.1.x - t / 2.0, a.1.x + hook),
                     _ => break,
@@ -1202,7 +1342,9 @@ impl Ctx<'_> {
         let up = stem.map_or(b.up, |s| s.up);
         let count = b.notes.len();
         for (k, n) in b.notes.iter().enumerate() {
-            let head = if n.diamond {
+            let head = if b.slash {
+                slash_head(b.value)
+            } else if n.diamond {
                 diamond_head(b.value)
             } else {
                 notehead(b.value, n.dead)
@@ -1297,8 +1439,17 @@ impl Ctx<'_> {
         top: f32,
         hw: f32,
     ) {
+        let inner = tuplet_groups_at(beats, 1);
         for (range, t) in tuplet_groups(beats) {
-            self.tuplet_mark(list, beats, xs, stems, range, t, top, hw);
+            // An outer tuplet with tuplets inside goes beyond theirs.
+            let nested = inner
+                .iter()
+                .any(|(r, _)| r.start >= range.start && r.end <= range.end);
+            let lift = if nested { 2.2 * self.sp() } else { 0.0 };
+            self.tuplet_mark(list, beats, xs, stems, range, t, top, hw, lift);
+        }
+        for (range, t) in inner {
+            self.tuplet_mark(list, beats, xs, stems, range, t, top, hw, 0.0);
         }
     }
 
@@ -1313,6 +1464,7 @@ impl Ctx<'_> {
         t: Tuplet,
         top: f32,
         hw: f32,
+        lift: f32,
     ) {
         let p = self.p;
         let sp = self.sp();
@@ -1354,16 +1506,16 @@ impl Ctx<'_> {
         let (above, below) = digits.first().map_or((sp, 0.0), |g| p.height(*g));
         let cx = (xa + xb) / 2.0;
         let base = if up {
-            edge - 0.4 * sp - below
+            edge - 0.4 * sp - below - lift
         } else {
-            edge + 0.4 * sp + above
+            edge + 0.4 * sp + above + lift
         };
         let mut x = cx - w / 2.0;
         for g in &digits {
             p.glyph(list, *g, x, base, Paint::Ink);
             x += p.width(*g);
         }
-        if !beamed && a != b {
+        if (!beamed || lift > 0.0) && a != b {
             let by = base - (above - below) / 2.0;
             let hook = if up { 0.6 * sp } else { -0.6 * sp };
             let l = xa - hw / 2.0;
@@ -1676,10 +1828,23 @@ impl Ctx<'_> {
         let lines = &self.band.lines;
         let hw = p.width(glyphs::NOTEHEAD_BLACK);
         let mut text_right = f32::NEG_INFINITY;
+        let mut fermatas: Vec<f32> = Vec::new();
         for beats in &plan.voices {
             for b in beats {
                 let Some(onset) = b.onset else { continue };
                 let x = bx.x_of(grid, onset) - hw / 2.0;
+                if let (Some(kind), Some(base)) = (b.fermata, lines.fermata)
+                    && !fermatas.iter().any(|f| (f - x).abs() < 0.1)
+                {
+                    let g = match kind {
+                        oxiguitar_model::FermataKind::Short => glyphs::FERMATA_SHORT,
+                        oxiguitar_model::FermataKind::Medium => glyphs::FERMATA,
+                        oxiguitar_model::FermataKind::Long => glyphs::FERMATA_LONG,
+                    };
+                    let w = p.width(g);
+                    p.glyph(list, g, x + hw / 2.0 - w / 2.0, base, Paint::Ink);
+                    fermatas.push(x);
+                }
                 if let (Some(name), Some(base)) = (&b.chord, lines.chord) {
                     p.text(list, name, chord_name_size(sp), x, base, Paint::Ink);
                 }
@@ -1821,6 +1986,15 @@ struct Stem {
 }
 
 /// A diamond notehead for a natural harmonic.
+/// A slash notehead for a note value (slash notation).
+fn slash_head(value: NoteValue) -> G {
+    match value {
+        NoteValue::DoubleWhole | NoteValue::Whole => glyphs::NOTEHEAD_SLASH_WHOLE,
+        NoteValue::Half => glyphs::NOTEHEAD_SLASH_HALF,
+        _ => glyphs::NOTEHEAD_SLASH,
+    }
+}
+
 fn diamond_head(value: NoteValue) -> G {
     match value {
         NoteValue::DoubleWhole | NoteValue::Whole => glyphs::NOTEHEAD_DIAMOND_WHOLE,
@@ -1907,12 +2081,34 @@ fn usual_tuplet(t: Tuplet) -> bool {
 }
 
 /// Consecutive beats that form one tuplet: they share the ratio and add up
-/// to its number of notes of the shortest value among them.
+/// to its number of notes of the shortest value among them. Force Groups
+/// (a beat's `tuplet_group`) joins the equal tuplets that follow it into
+/// its group, up to the next beat that starts a group of its own.
 fn tuplet_groups(beats: &[BeatInfo]) -> Vec<(std::ops::Range<usize>, Tuplet)> {
+    let mut out: Vec<(std::ops::Range<usize>, Tuplet)> = Vec::new();
+    for (range, t) in tuplet_groups_at(beats, 0) {
+        let joins = out.last().is_some_and(|(prev, pt)| {
+            *pt == t
+                && prev.end == range.start
+                && beats.get(prev.start).is_some_and(|b| b.tuplet_group)
+                && !beats.get(range.start).is_some_and(|b| b.tuplet_group)
+        });
+        match out.last_mut() {
+            Some((prev, _)) if joins => prev.end = range.end,
+            _ => out.push((range, t)),
+        }
+    }
+    out
+}
+
+/// The tuplet groups of the tuplets at `level` (0 the outermost, 1 one
+/// nested in it).
+fn tuplet_groups_at(beats: &[BeatInfo], level: usize) -> Vec<(std::ops::Range<usize>, Tuplet)> {
+    let at = |b: &BeatInfo| b.tuplets.get(level).copied();
     let mut out = Vec::new();
     let mut i = 0;
     while i < beats.len() {
-        let Some(t) = beats.get(i).and_then(|b| b.onset.and(b.tuplet)) else {
+        let Some(t) = beats.get(i).and_then(|b| b.onset.and(at(b))) else {
             i += 1;
             continue;
         };
@@ -1920,7 +2116,7 @@ fn tuplet_groups(beats: &[BeatInfo]) -> Vec<(std::ops::Range<usize>, Tuplet)> {
         let mut written = Ratio::ZERO;
         let mut shortest = NoteValue::DoubleWhole;
         while let Some(b) = beats.get(i) {
-            if b.tuplet != Some(t) || b.onset.is_none() {
+            if at(b) != Some(t) || b.onset.is_none() {
                 break;
             }
             written = written + dotted(b.value, b.dots);

@@ -179,6 +179,7 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
                 .enumerate()
                 .map(|(i, mb)| planner.bar(staff.bars.get(i).unwrap_or(&empty), mb))
                 .collect();
+            mark_slurs(&mut planned);
             if dynamics {
                 mark_dynamics(&mut planned);
                 measure_dynamics(&mut planned, p);
@@ -199,6 +200,30 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
         })
         .collect();
     Plans { bars, grids }
+}
+
+/// Marks each beat a slur reaches from the beat before it in its voice,
+/// across bar lines, so a slur that begins on an earlier system is drawn
+/// coming in.
+fn mark_slurs(bars: &mut [BarPlan]) {
+    let voices = bars.iter().map(|b| b.voices.len()).max().unwrap_or(0);
+    for v in 0..voices {
+        let mut slurred = false;
+        for bar in bars.iter_mut() {
+            let Some(beats) = bar.voices.get_mut(v) else {
+                slurred = false;
+                continue;
+            };
+            for b in beats.iter_mut().filter(|b| b.grace.is_none()) {
+                if b.kind == BeatKind::Empty {
+                    slurred = false;
+                    continue;
+                }
+                b.slur_in = slurred;
+                slurred = b.slur;
+            }
+        }
+    }
 }
 
 /// Marks where the first voice's dynamic marking changes, across the whole
@@ -314,6 +339,31 @@ pub(crate) struct SystemSpec {
     pub(crate) prefix: f32,
     /// Extra room given to each bar to fill the line.
     pub(crate) extra: Vec<f32>,
+    /// Room after the last bar line for courtesy signatures: the key and
+    /// time signatures the next system starts with, when they change there.
+    pub(crate) courtesy: f32,
+}
+
+/// The width of the courtesy signatures at the end of a system whose next
+/// bar is `next`: a key change and a time change shown again before the
+/// line breaks; 0 when neither changes there.
+pub(crate) fn courtesy_width(score: &Score, p: &Painter<'_>, next: usize) -> f32 {
+    let sp = p.sp;
+    let (Some(prev), Some(mb)) = (
+        next.checked_sub(1).and_then(|i| score.master_bars.get(i)),
+        score.master_bars.get(next),
+    ) else {
+        return 0.0;
+    };
+    let mut w = 0.0;
+    if prev.key_signature.fifths != mb.key_signature.fifths {
+        w += p.key_change_width(prev.key_signature.fifths, mb.key_signature.fifths) + sp;
+    }
+    if prev.time_signature != mb.time_signature {
+        let ts = mb.time_signature;
+        w += p.time_width(ts.numerator, ts.denominator) + sp;
+    }
+    if w > 0.0 { w + 0.6 * sp } else { 0.0 }
 }
 
 /// The track names shown at the start of a system, one per shown track in
@@ -448,6 +498,7 @@ pub(crate) fn break_systems(
         let prefix = indent + system_prefix(p, fifths);
         let mut used = prefix;
         let mut end = first;
+        let mut naturals = Vec::new();
         while end < n {
             let natural = bar_prefix(score, p, end, end == first)
                 + plans.grids.get(end).map_or(4.0 * p.sp, BarGrid::natural)
@@ -456,10 +507,19 @@ pub(crate) fn break_systems(
                 break;
             }
             used += natural;
+            naturals.push(natural);
             end += 1;
         }
+        // Courtesy signatures need room at the end: a bar moves to the
+        // next line when they wouldn't fit.
+        let mut courtesy = courtesy_width(score, p, end);
+        while courtesy > 0.0 && used + courtesy > width && end > first + 1 {
+            used -= naturals.pop().unwrap_or(0.0);
+            end -= 1;
+            courtesy = courtesy_width(score, p, end);
+        }
         let last = end >= n;
-        let spare = width - used;
+        let spare = width - used - courtesy;
         // Overfull (one bar wider than the line): squeeze. Otherwise
         // stretch, except a last system less than two thirds full.
         let stretch = spare < 0.0 || !(last && used < width * 2.0 / 3.0);
@@ -478,6 +538,7 @@ pub(crate) fn break_systems(
             indent,
             prefix,
             extra,
+            courtesy,
         });
         first = end;
     }

@@ -4,7 +4,7 @@
 //! Time within a bar: columns of beats that start together, and beam groups
 //! (NOT-2).
 
-use oxiguitar_model::{Bar, BeatKind, NoteValue, Ratio, TimeSignature, Voice};
+use oxiguitar_model::{Bar, Beaming, BeatKind, NoteValue, Ratio, TimeSignature, Voice};
 
 /// A beat of one voice, by voice and beat index in the bar.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -129,19 +129,28 @@ pub(crate) fn beam_unit(ts: TimeSignature) -> Ratio {
 }
 
 /// Groups of two or more beats of one voice that share a beam: consecutive
-/// notes of an eighth or shorter, inside one beam unit. Returns beat indices.
+/// notes of an eighth or shorter, inside one beam unit, unless a beat's
+/// beaming joins it to the next beat (Force) or parts them (Break).
+/// Returns beat indices.
 pub(crate) fn beam_groups(voice: &Voice, ts: TimeSignature) -> Vec<Vec<usize>> {
     let unit = beam_unit(ts);
     let mut groups: Vec<Vec<usize>> = Vec::new();
     let mut current: Vec<usize> = Vec::new();
     let mut current_unit: Option<i64> = None;
+    let mut previous = Beaming::Automatic;
     for (i, (beat, onset)) in voice.beats.iter().zip(onsets(voice)).enumerate() {
         let Some(onset) = onset else { continue };
         let beamable = beat.kind == BeatKind::Notes && beat.duration.value >= NoteValue::Eighth;
         let unit_index = onset
             .checked_div(unit)
             .map(|q| q.numer().div_euclid(q.denom()));
-        if !beamable || unit_index != current_unit {
+        let apart = match previous {
+            Beaming::Force => false,
+            Beaming::Break => true,
+            Beaming::Automatic | Beaming::BreakSecondary => unit_index != current_unit,
+        };
+        previous = beat.beaming;
+        if !beamable || apart {
             if current.len() >= 2 {
                 groups.push(std::mem::take(&mut current));
             }
