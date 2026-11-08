@@ -25,7 +25,11 @@
 //! the contract (`oxiguitar_plugin_api::realtime`): it names only
 //! instances this plugin made and hasn't released, never one instance from
 //! two threads at once, and releases one only once it is no longer
-//! rendered. The glue also counts the plugin's allocations made while it
+//! rendered and no update for it is under way. An update (interface 1.5)
+//! may come while the audio thread runs the instance: the glue leaves it
+//! in the instance's mailbox (`Mailbox`), which the audio thread empties before
+//! its next `process`, so only the audio thread ever touches the
+//! processor. The glue also counts the plugin's allocations made while it
 //! renders ([`Counting`], the global allocator `export_plugin!` installs),
 //! for the contract suite.
 
@@ -33,10 +37,10 @@
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::any::Any;
-use std::cell::Cell;
+use std::cell::{Cell, UnsafeCell};
 use std::ffi::c_void;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use oxiguitar_plugin_api::abi::{
@@ -50,7 +54,7 @@ use oxiguitar_plugin_api::realtime::{
     HostRender, PitchPoint, ProcessCall, RealtimeTableV1, RenderCall, RtEvent,
 };
 
-use crate::audio::{Instance, Keeper, Piece};
+use crate::audio::{Instance, Keeper, Piece, Update};
 use crate::{Host, HostServices, Plugin, dispatch_kept};
 
 /// The plugin, once the host has started it. One `.oxp` file holds one
@@ -321,11 +325,110 @@ unsafe extern "C" fn collect(ctx: *mut c_void, bytes: RawBytes) {
     answer.extend_from_slice(unsafe { slice(bytes) });
 }
 
-/// An instance as the host holds it: the instance, and whether it
-/// panicked (then it is silent from then on).
+/// An instance as the host holds it: what the audio thread uses, and the
+/// updates waiting for it (interface 1.5).
 struct Held {
+    /// Whether it is an effect's (never changes).
+    effect: bool,
+    /// Its updates, which `call` posts while the audio thread may be
+    /// running it.
+    mailbox: Mailbox,
+    /// The audio thread's: touched only by `render` and `process`, and by
+    /// `release` once those are over.
+    audio: UnsafeCell<Audio>,
+}
+
+/// The instance, and whether it panicked (then it is silent from then on).
+struct Audio {
     instance: Instance,
     failed: bool,
+}
+
+/// How many updates the audio thread can have taken and not yet had
+/// freed. `post` frees them before it leaves a new one, so at most two are
+/// ever here: the one taken just before that and the new one.
+const SPENT: usize = 4;
+
+/// Where updates wait for the audio thread, and where it leaves them once
+/// done, to be freed off it (interface 1.5). Lock-free: the audio thread
+/// only swaps and stores pointers, never allocating or freeing.
+struct Mailbox {
+    /// The newest update not yet taken (a leaked `Box<Update>`), or null.
+    next: AtomicPtr<Update>,
+    /// Updates the processor has taken, to be freed off the audio thread.
+    /// Only the audio thread fills a slot, and only when it is empty; only
+    /// `post` and `drop` empty one.
+    spent: [AtomicPtr<Update>; SPENT],
+}
+
+impl Mailbox {
+    fn new() -> Mailbox {
+        Mailbox {
+            next: AtomicPtr::new(std::ptr::null_mut()),
+            spent: std::array::from_fn(|_| AtomicPtr::new(std::ptr::null_mut())),
+        }
+    }
+
+    /// Off the audio thread: frees what the processor is done with, then
+    /// leaves `update` for it. An update it never took is freed: the newest
+    /// wins.
+    fn post(&self, update: Update) {
+        self.sweep();
+        let new = Box::into_raw(Box::new(update));
+        let old = self.next.swap(new, Ordering::AcqRel);
+        if !old.is_null() {
+            // SAFETY: a pointer in `next` is a leaked box `post` made;
+            // swapping it out made this thread its only holder.
+            drop(unsafe { Box::from_raw(old) });
+        }
+    }
+
+    /// Off the audio thread: frees the updates the processor is done with.
+    fn sweep(&self) {
+        for slot in &self.spent {
+            let p = slot.swap(std::ptr::null_mut(), Ordering::AcqRel);
+            if !p.is_null() {
+                // SAFETY: a pointer in `spent` is a leaked box `post` made,
+                // which the audio thread put there once done with it;
+                // swapping it out made this thread its only holder.
+                drop(unsafe { Box::from_raw(p) });
+            }
+        }
+    }
+
+    /// On the audio thread: hands the newest update to `apply`, when there
+    /// is one and room to leave it afterwards. Allocates and frees nothing.
+    fn deliver(&self, apply: impl FnOnce(&mut Update)) {
+        let Some(slot) = self
+            .spent
+            .iter()
+            .find(|s| s.load(Ordering::Acquire).is_null())
+        else {
+            return;
+        };
+        let p = self.next.swap(std::ptr::null_mut(), Ordering::AcqRel);
+        if p.is_null() {
+            return;
+        }
+        // SAFETY: a leaked box `post` made; swapping it out of `next` made
+        // this thread its only holder until it is stored in `spent`.
+        apply(unsafe { &mut *p });
+        // The slot was empty and only this thread fills slots, so it still
+        // is.
+        slot.store(p, Ordering::Release);
+    }
+}
+
+impl Drop for Mailbox {
+    fn drop(&mut self) {
+        self.sweep();
+        let p = *self.next.get_mut();
+        if !p.is_null() {
+            // SAFETY: as in `post`; the mailbox is going, so no one else
+            // holds it.
+            drop(unsafe { Box::from_raw(p) });
+        }
+    }
 }
 
 /// Keeps instances as boxes whose addresses are their numbers.
@@ -334,8 +437,12 @@ struct Boxes;
 impl Keeper for Boxes {
     fn keep(&self, instance: Instance) -> u64 {
         let held = Box::new(Held {
-            instance,
-            failed: false,
+            effect: matches!(instance, Instance::Effect(_)),
+            mailbox: Mailbox::new(),
+            audio: UnsafeCell::new(Audio {
+                instance,
+                failed: false,
+            }),
         });
         Box::into_raw(held) as usize as u64
     }
@@ -345,10 +452,26 @@ impl Keeper for Boxes {
             return false;
         }
         // SAFETY: the host releases only a number `keep` gave it, once, and
-        // only after its last `render` or `process` returned (the
+        // only after its last `render`, `process` or update returned (the
         // interface's contract), so this is the box `keep` leaked and no
         // one else holds it.
         drop(unsafe { Box::from_raw(id as usize as *mut Held) });
+        true
+    }
+
+    fn update(&self, id: u64, update: Update) -> bool {
+        if id == 0 {
+            return false;
+        }
+        // SAFETY: the host names only an instance `keep` made and it hasn't
+        // released (the interface's contract). The audio thread may be in
+        // `process` with it: this touches only `effect`, never written,
+        // and the mailbox, made for being shared, never `audio`.
+        let held = unsafe { &*(id as usize as *const Held) };
+        if !held.effect {
+            return false;
+        }
+        held.mailbox.post(update);
         true
     }
 }
@@ -370,9 +493,10 @@ unsafe extern "C" fn render(instance: u64, call: *const RenderCall) -> Status {
     if instance == 0 || call.is_null() {
         return Status::FAILED;
     }
-    // SAFETY: the number is a box `Boxes::keep` leaked, alive and used only
-    // by this thread during the call (this function's contract).
-    let held = unsafe { &mut *(instance as usize as *mut Held) };
+    // SAFETY: the number is a box `Boxes::keep` leaked, alive, and whose
+    // `audio` only this thread uses during the call (this function's
+    // contract; other threads touch only its mailbox).
+    let held = unsafe { &mut *(*(instance as usize as *const Held)).audio.get() };
     if held.failed {
         return Status::PANICKED;
     }
@@ -437,8 +561,11 @@ unsafe extern "C" fn process(instance: u64, call: *const ProcessCall) -> Status 
     if instance == 0 || call.is_null() {
         return Status::FAILED;
     }
-    // SAFETY: as in `render`.
-    let held = unsafe { &mut *(instance as usize as *mut Held) };
+    // SAFETY: as in `render`: the box is alive; its mailbox is shared, its
+    // `audio` this thread's alone during the call.
+    let shared = unsafe { &*(instance as usize as *const Held) };
+    // SAFETY: as just said.
+    let held = unsafe { &mut *shared.audio.get() };
     if held.failed {
         return Status::PANICKED;
     }
@@ -469,8 +596,15 @@ unsafe extern "C" fn process(instance: u64, call: *const ProcessCall) -> Status 
             std::slice::from_raw_parts_mut(r, frames),
         )
     };
-    let ok =
-        rendering(|| catch_unwind(AssertUnwindSafe(|| processor.process(left, right))).is_ok());
+    // An update waiting (interface 1.5) is taken between two calls: here,
+    // before this one's frames.
+    let ok = rendering(|| {
+        catch_unwind(AssertUnwindSafe(|| {
+            shared.mailbox.deliver(|u| processor.apply(u));
+            processor.process(left, right);
+        }))
+        .is_ok()
+    });
     if ok {
         Status::OK
     } else {

@@ -84,7 +84,7 @@ use oxiguitar_plugin_api::message::{Answer, HostAnswer, HostRequest, Request};
 pub mod audio;
 pub mod glue;
 
-pub use audio::{Effect, Instrument, Piece, Processor, Renderer};
+pub use audio::{Effect, Instrument, Piece, Processor, Renderer, Update};
 pub use oxiguitar_plugin_api::manifest::{ExportKind, ExporterSpec};
 
 /// A plugin: the one value an `.oxp` file holds. Built once when the host
@@ -533,6 +533,23 @@ pub fn dispatch_kept(
                 Ok(Answer::Done)
             } else {
                 Err(Error::not_found(format!("no instance {instance}")))
+            }
+        }
+        Request::UpdateEffect {
+            instance,
+            prepare,
+            previous,
+        } => {
+            let effect = plugin.effect(&prepare.effect).ok_or_else(|| {
+                Error::not_found(format!("this plugin has no effect {:?}", prepare.effect))
+            })?;
+            let Some(update) = effect.update(&prepare, &previous)? else {
+                return Ok(Answer::Updated(false));
+            };
+            if keeper.update(instance, update) {
+                Ok(Answer::Updated(true))
+            } else {
+                Err(Error::not_found(format!("no effect instance {instance}")))
             }
         }
         Request::ExportStart { exporter } => {

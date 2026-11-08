@@ -324,7 +324,9 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
             })
         };
         // No editing while playing: the window and plugins alike are
-        // refused until the sound is paused or stopped.
+        // refused until the sound is paused or stopped. Only what plugins
+        // keep for a track (their sections of the Track tab) changes while
+        // the song plays: the effects follow it (#232).
         let edits = matches!(
             request,
             Request::ApplyTool(_)
@@ -334,7 +336,14 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 | Request::PluginEdit { .. }
                 | Request::PluginTool(..)
         );
-        if edits && st.open.playing() {
+        let settings_only = match &request {
+            Request::Edit { command, caret, .. } => st
+                .doc
+                .as_ref()
+                .is_some_and(|d| d.plugin_settings_only(command, *caret)),
+            _ => false,
+        };
+        if edits && !settings_only && st.open.playing() {
             sink(Event::Refused);
             continue;
         }
@@ -1008,6 +1017,74 @@ mod tests {
             if let Event::Changed { edit, .. } = next(&rx) {
                 assert_eq!(edit.undo.as_deref(), Some("Type Fret"));
                 break;
+            }
+        }
+    }
+
+    /// #232: while the score plays, a track section's settings still go
+    /// into the track (the effects follow them as they play); any other
+    /// change of the track, even made with them, waits.
+    #[test]
+    fn a_track_section_s_settings_change_while_the_score_plays() {
+        let (tx, rx) = channel();
+        let open = OpenScore::default();
+        let worker = Worker::start(crate::test_plugins().clone(), open.clone(), move |e| {
+            let _ = tx.send(e);
+        });
+        worker.send(Request::New);
+        let score = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        let caret = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        let mut level = oxiguitar_edit::TrackSettings::of(&score.tracks[0]);
+        level
+            .plugins
+            .insert("oxiguitar.eq".into(), r#"{"mode":"basic"}"#.into());
+        let send = |to: &oxiguitar_edit::TrackSettings| {
+            worker.send(Request::Edit {
+                command: Command::TrackProperties(Box::new(to.clone())),
+                caret,
+                selection: None,
+            });
+        };
+        open.set_playing(true);
+        send(&level);
+        let changed = loop {
+            match next(&rx) {
+                Event::Changed { score, .. } => break score,
+                Event::Refused => panic!("a section's settings were refused while playing"),
+                _ => {}
+            }
+        };
+        assert_eq!(
+            changed.tracks[0]
+                .plugins
+                .get("oxiguitar.eq")
+                .map(String::as_str),
+            Some(r#"{"mode":"basic"}"#)
+        );
+        // The notes are as they were; only the settings changed.
+        assert_eq!(changed.tracks[0].staves, score.tracks[0].staves);
+        // A rename with the settings is an edit of the score: it waits.
+        let mut renamed = oxiguitar_edit::TrackSettings::of(&changed.tracks[0]);
+        renamed.name = "Lead".into();
+        renamed
+            .plugins
+            .insert("oxiguitar.eq".into(), r#"{"mode":"graphic"}"#.into());
+        send(&renamed);
+        // And so does moving a section: the order of the effects.
+        let mut moved = oxiguitar_edit::TrackSettings::of(&changed.tracks[0]);
+        moved.effects = vec!["oxiguitar.eq".into(), "oxiguitar.nam".into()];
+        send(&moved);
+        for _ in 0..2 {
+            loop {
+                match next(&rx) {
+                    Event::Refused => break,
+                    Event::Changed { .. } => panic!("the track was edited while playing"),
+                    _ => {}
+                }
             }
         }
     }

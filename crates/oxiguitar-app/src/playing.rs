@@ -189,6 +189,17 @@ pub(crate) fn sync(app: &Shared) {
     };
     ui.set_still_frame(still.unwrap_or_default());
     s.open_score.set_playing(p.refuses_edits());
+    // The score changed while the song played (a track section's
+    // settings, #232): what couldn't follow then is prepared now.
+    let again = !p.refuses_edits() && s.changed_while_playing;
+    drop(s);
+    if again {
+        let mut s = app.borrow_mut();
+        s.changed_while_playing = false;
+        if let Some(score) = s.editing.score() {
+            send_score(&mut s, score, false);
+        }
+    }
 }
 
 /// The score was opened or changed: the player's thread builds it again.
@@ -249,10 +260,13 @@ fn send_score(s: &mut crate::App, score: std::sync::Arc<oxiguitar_model::Score>,
     s.player.score_changed(revision);
     let mixes: Vec<_> = (0..s.track_count).map(|i| s.mixer.get(i)).collect();
     s.player.set_mixes(&mixes);
+    let live = s.player.refuses_edits();
+    s.changed_while_playing |= live;
     s.sound.send(ToSound::Score {
         score,
         revision,
         fresh,
+        live,
     });
 }
 

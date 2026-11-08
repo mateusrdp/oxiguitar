@@ -22,6 +22,44 @@ Two numbers describe it: `latency()`, the frames its sound comes late by (the cu
 
 An effect works on one track's sound after its instrument, in the order the track lists them: NAM is the first. Declare it under `effects` (the same shape as an instrument, by class), and implement `Effect::prepare`, which hands back a `Processor`: `process(left, right)` changes the track's buffers in place, under the same rules.
 
+### Following settings while the song plays
+
+Since interface 1.5 (OxiGuitar 0.14), an effect can follow its track's settings as the user changes them in its [track section](track-sections.md) while the song plays: an equalizer's slider, an amp's level. Without it, the song keeps the settings it started with until it next starts. It takes two methods, one on each side of the audio thread:
+
+- `Effect::update(prepare, previous)`, off the audio thread, gets what the processor was prepared with, but with the track's new settings in `prepare.track.settings`, and the settings it follows now in `previous`, to see what changed. Do the slow work here (read the JSON, compute coefficients, allocate) and hand back `Some(Update::new(value))`, whatever value the processor needs. `Ok(None)`, the default, says the processor can't follow these settings while it runs (a new model file to load, say): OxiGuitar then prepares the effect again when the song next starts.
+- `Processor::apply(update)`, on the audio thread, between two calls of `process`, gets that update (`update.get::<T>()`). The audio thread's rules hold: take the values out, or swap your old ones into it, and allocate nothing; the update is freed off the audio thread. Move towards the new values over a few milliseconds instead of jumping, or the change clicks: ramp a gain, glide a filter's coefficients.
+
+```rust
+impl Effect for Level {
+    fn prepare(&self, p: &PrepareEffect) -> Result<Box<dyn Processor>, Error> {
+        let gain = gain_of(&p.track.settings);
+        Ok(Box::new(Scale { gain, target: gain }))
+    }
+
+    fn update(&self, p: &PrepareEffect, _previous: &str) -> Result<Option<Update>, Error> {
+        Ok(Some(Update::new(gain_of(&p.track.settings))))
+    }
+}
+
+impl Processor for Scale {
+    fn process(&mut self, left: &mut [f32], right: &mut [f32]) {
+        for (l, r) in left.iter_mut().zip(right) {
+            self.gain += (self.target - self.gain) * 0.002; // about 10 ms
+            *l *= self.gain;
+            *r *= self.gain;
+        }
+    }
+
+    fn apply(&mut self, update: &mut Update) {
+        if let Some(&target) = update.get::<f32>() {
+            self.target = target;
+        }
+    }
+}
+```
+
+The update reaches the processor before its next `process` call; if the user moves a slider faster than the audio thread runs, only the newest update is taken. The SDK's glue keeps the two threads apart with no lock. The contract suite hands each effect an update and checks that taking it allocates nothing and makes no system call. Ask for interface 1.5 in the manifest (`"interface": "1.5"`).
+
 ## Tracks and classes
 
 - **One instrument per track.** Each track chooses its instrument, with one default for the rest.

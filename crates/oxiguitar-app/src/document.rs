@@ -472,6 +472,30 @@ impl Document {
         Some(edited.caret)
     }
 
+    /// Whether `command` at `caret` changes only what plugins keep for a
+    /// track (their sections of the Track tab): the one edit allowed while
+    /// the song plays, since effects follow it as they play (#232).
+    pub(crate) fn plugin_settings_only(&self, command: &Command, caret: Caret) -> bool {
+        let Command::TrackProperties(to) = command else {
+            return false;
+        };
+        let Some(track) = self.score.tracks.get(caret.track) else {
+            return false;
+        };
+        let now = oxiguitar_edit::TrackSettings::of(track);
+        let only = oxiguitar_edit::TrackSettings {
+            plugins: now.plugins.clone(),
+            keep_pitches: now.keep_pitches,
+            ..(**to).clone()
+        };
+        only == now
+            && to.plugins != now.plugins
+            && track
+                .staves
+                .iter()
+                .all(|s| s.tuning == to.tuning && s.capo == to.capo)
+    }
+
     /// A plugin's change, the whole score changed, as one command named
     /// `name` that the user can undo.
     pub(crate) fn apply_change(&mut self, name: &str, new: Score) {

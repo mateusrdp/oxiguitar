@@ -1908,7 +1908,7 @@ impl Plugins {
 
     /// A plugin answered with something it wasn't asked for: a broken
     /// contract, so it is withdrawn.
-    fn unexpected(&self, index: usize, answer: &Answer<'_>) -> Error {
+    pub(crate) fn unexpected(&self, index: usize, answer: &Answer<'_>) -> Error {
         let kind = match answer {
             Answer::Read { .. } => "a score",
             Answer::Written { .. } => "a file",
@@ -1923,6 +1923,7 @@ impl Plugins {
             Answer::ExportStarted { .. } | Answer::Exported(_) | Answer::ExportFinished { .. } => {
                 "an export's bytes"
             }
+            Answer::Updated(_) => "an update's answer",
         };
         self.fail(
             index,

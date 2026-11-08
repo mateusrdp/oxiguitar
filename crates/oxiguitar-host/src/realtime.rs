@@ -12,7 +12,9 @@
 
 use oxiguitar_plugin_api::abi::Status;
 use oxiguitar_plugin_api::audio_device::{self, Open, Opened};
-use oxiguitar_plugin_api::message::{Error, ErrorKind, Request};
+use std::sync::Arc;
+
+use oxiguitar_plugin_api::message::{Answer, Error, ErrorKind, PrepareEffect, Request};
 use oxiguitar_plugin_api::realtime::{PitchPoint, ProcessCall, RenderCall, RtEvent};
 use oxiguitar_plugin_api::{decode, encode};
 
@@ -22,9 +24,9 @@ use crate::loader::Loaded;
 /// A prepared instrument or effect.
 pub struct Instance {
     loaded: Loaded,
-    plugins: Plugins,
-    index: usize,
-    id: u64,
+    /// The plugin's instance, freed when the last holder (this, or an
+    /// [`Updater`]) lets go.
+    held: Arc<Held>,
     latency: u32,
     resolution: u32,
     /// The addresses of the buffers of the call being made, sized once
@@ -37,8 +39,8 @@ pub struct Instance {
 impl std::fmt::Debug for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Instance")
-            .field("plugin", &self.plugins.found()[self.index].name())
-            .field("id", &self.id)
+            .field("plugin", &self.held.plugins.found()[self.held.index].name())
+            .field("id", &self.held.id)
             .field("latency", &self.latency)
             .finish_non_exhaustive()
     }
@@ -56,9 +58,7 @@ impl Instance {
     ) -> Instance {
         Instance {
             loaded,
-            plugins,
-            index,
-            id,
+            held: Arc::new(Held { plugins, index, id }),
             latency,
             resolution,
             pointers: Vec::with_capacity(buffers),
@@ -125,7 +125,7 @@ impl Instance {
             outputs: self.pointers.as_ptr().cast::<*mut f32>(),
             output_count: self.pointers.len() as u32,
         };
-        let status = self.loaded.render(self.id, &call);
+        let status = self.loaded.render(self.held.id, &call);
         self.pointers.clear();
         if status == Status::OK {
             true
@@ -149,7 +149,7 @@ impl Instance {
             buffers: pointers.as_ptr(),
             buffer_count: 2,
         };
-        let status = self.loaded.process(self.id, &call);
+        let status = self.loaded.process(self.held.id, &call);
         if status == Status::OK {
             true
         } else {
@@ -159,13 +159,79 @@ impl Instance {
     }
 }
 
-impl Drop for Instance {
+impl Instance {
+    /// What sends this effect its track's new settings while it runs
+    /// (interface 1.5), from a thread other than the audio thread.
+    pub fn updater(&self) -> Updater {
+        Updater {
+            held: self.held.clone(),
+        }
+    }
+}
+
+/// A plugin's instance, as the host names it: released when the last
+/// [`Instance`] or [`Updater`] holding it is dropped.
+struct Held {
+    plugins: Plugins,
+    index: usize,
+    id: u64,
+}
+
+impl Drop for Held {
     fn drop(&mut self) {
         // Off the audio thread (the engine hands its sources back before
-        // they are dropped): the plugin frees its instance.
+        // they are dropped, and updaters live elsewhere): the plugin frees
+        // its instance.
         let _ = self
             .plugins
             .send_index(self.index, &Request::Release { instance: self.id });
+    }
+}
+
+/// Sends a prepared effect its track's new settings while the audio
+/// thread runs it (interface 1.5). It keeps the plugin's instance alive,
+/// so an update never names a released one; use it from any thread but
+/// the audio thread.
+#[derive(Clone)]
+pub struct Updater {
+    held: Arc<Held>,
+}
+
+impl std::fmt::Debug for Updater {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Updater")
+            .field("id", &self.held.id)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Updater {
+    /// Hands the effect `prepare`: what it was prepared with, but for the
+    /// track's settings, which are new; `previous` are the ones it follows
+    /// now. True when the effect will follow
+    /// them from its next `process` call; false when it can't while it
+    /// runs (it was built for an interface before 1.5, or it needs
+    /// preparing again for these settings).
+    pub fn update(&self, prepare: PrepareEffect, previous: &str) -> Result<bool, Error> {
+        let h = &self.held;
+        let knows = h.plugins.found()[h.index]
+            .manifest
+            .as_ref()
+            .is_some_and(|m| m.knows_minor(5));
+        if !knows {
+            return Ok(false);
+        }
+        match h.plugins.send_index(
+            h.index,
+            &Request::UpdateEffect {
+                instance: h.id,
+                prepare: Box::new(prepare),
+                previous: previous.to_owned(),
+            },
+        )? {
+            Answer::Updated(followed) => Ok(followed),
+            other => Err(h.plugins.unexpected(h.index, &other)),
+        }
     }
 }
 

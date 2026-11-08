@@ -58,7 +58,9 @@
 //!   audio thread, and the `cpu` condition. 1.4 (frozen with OxiGuitar 0.11): a link among a tab's widgets,
 //!   exporters in File → Export (`exporters` in the manifest; audio exports,
 //!   which the core renders and the plugin encodes), plugins that need or
-//!   replace other plugins (`needs`, `replaces`) and advice dialogs.
+//!   replace other plugins (`needs`, `replaces`) and advice dialogs. 1.5
+//!   (frozen with OxiGuitar 0.14): effects that follow their track's settings while
+//!   the song plays (`message::Request::UpdateEffect`).
 //!
 //! # Licence
 //!
@@ -84,7 +86,7 @@ pub use blob::Blob;
 pub use message::{DecodeError, decode, encode};
 
 /// The interface version this crate describes: (major, minor).
-pub const INTERFACE: (u32, u32) = (1, 4);
+pub const INTERFACE: (u32, u32) = (1, 5);
 
 /// The symbol a plugin exports. It returns a pointer to the plugin's
 /// [`abi::PluginTableV1`].

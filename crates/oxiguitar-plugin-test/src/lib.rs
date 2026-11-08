@@ -734,7 +734,7 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                 frames: FRAMES as u32,
                 track: checked_track(0, class, settings),
             };
-            let mut instance = match plugins.prepare_effect(effect, prepare) {
+            let mut instance = match plugins.prepare_effect(effect, prepare.clone()) {
                 Ok(i) => {
                     report.check(format!("effect {id}: it prepares"), Ok(()));
                     i
@@ -763,6 +763,40 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                     let _ = instance.process(&mut l, &mut r);
                 }),
             );
+            // Interface 1.5: an effect that follows its track's settings
+            // while it runs takes them on the audio thread under the same
+            // rules.
+            match instance
+                .updater()
+                .update(prepare.clone(), &prepare.track.settings)
+            {
+                Ok(false) => {}
+                Ok(true) => {
+                    let before = instance.allocations();
+                    let ran = instance.process(&mut l, &mut r);
+                    let after = instance.allocations();
+                    report.check(
+                        format!("effect {id}: it takes an update while running"),
+                        if ran { Ok(()) } else { Err("it failed".into()) },
+                    );
+                    report.check(
+                        format!("effect {id}: it allocates nothing taking an update"),
+                        allocations(before, after),
+                    );
+                    let _ = instance
+                        .updater()
+                        .update(prepare.clone(), &prepare.track.settings);
+                    report.check(
+                        format!("effect {id}: it makes no system call taking an update"),
+                        watched(|| {
+                            let _ = instance.process(&mut l, &mut r);
+                        }),
+                    );
+                }
+                Err(e) => {
+                    report.check(format!("effect {id}: it answers an update"), Err(e.message))
+                }
+            }
         }
     }
 }
