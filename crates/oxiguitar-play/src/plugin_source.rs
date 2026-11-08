@@ -8,7 +8,7 @@
 //! them.
 
 use oxiguitar_host::Plugins;
-use oxiguitar_host::realtime::Instance;
+use oxiguitar_host::realtime::{Instance, Updater};
 use oxiguitar_model::Score;
 use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::message::{Prepare, PrepareEffect, PreparedTrack, TrackInfo};
@@ -184,6 +184,79 @@ pub struct Prepared {
     /// theirs couldn't get ready) and about effects that couldn't get
     /// ready (their tracks play without them).
     pub silent: Vec<String>,
+    /// Every effect prepared, to send its track's settings to while the
+    /// song plays ([`follow`]).
+    pub live: Vec<LiveEffect>,
+}
+
+/// An effect as prepared on one route, which can be sent its track's
+/// settings while it runs (interface 1.5, [`follow`]).
+#[derive(Debug)]
+pub struct LiveEffect {
+    /// The route ([`Group::tracks`]).
+    route: usize,
+    /// Its place in the route's chain of the plan ([`Group::effects`]).
+    at: usize,
+    /// What it was prepared with; its settings are the ones it follows now.
+    prepare: PrepareEffect,
+    updater: Updater,
+}
+
+/// The song plays and `new` is the plan for the score as it now is,
+/// `old` the one its instruments and effects were prepared for: sends each
+/// effect whose track's settings changed its new ones (interface 1.5),
+/// without preparing anything. Returns whether what plays now follows
+/// `new`. False when anything else differs (an instrument, its settings,
+/// the effects or their order) or an effect can't follow its new settings
+/// while it runs: then `new` is to be prepared once the song stops.
+pub fn follow(live: &mut [LiveEffect], old: &Plan, new: &Plan) -> bool {
+    // Only the effects' settings may differ.
+    if shape_of(new) != shape_of(old) {
+        return false;
+    }
+    let mut all = true;
+    for g in &new.groups {
+        for (k, &route) in g.tracks.iter().enumerate() {
+            for (at, pick) in g.effects[k].iter().enumerate() {
+                let Some(e) = live.iter_mut().find(|e| e.route == route && e.at == at) else {
+                    // It couldn't get ready: it can follow nothing.
+                    all &= old_settings(old, route, at) == Some(&pick.settings);
+                    continue;
+                };
+                if e.prepare.track.settings == pick.settings {
+                    continue;
+                }
+                let mut prepare = e.prepare.clone();
+                prepare.track.settings.clone_from(&pick.settings);
+                match e.updater.update(prepare.clone(), &e.prepare.track.settings) {
+                    Ok(true) => e.prepare = prepare,
+                    _ => all = false,
+                }
+            }
+        }
+    }
+    all
+}
+
+/// `plan` without its effects' settings.
+fn shape_of(plan: &Plan) -> Plan {
+    let mut out = plan.clone();
+    for pick in out
+        .groups
+        .iter_mut()
+        .flat_map(|g| g.effects.iter_mut().flatten())
+    {
+        pick.settings.clear();
+    }
+    out
+}
+
+/// The settings `plan` gives the effect `at` of `route`'s chain.
+fn old_settings(plan: &Plan, route: usize, at: usize) -> Option<&String> {
+    plan.groups.iter().find_map(|g| {
+        let k = g.tracks.iter().position(|&r| r == route)?;
+        g.effects.get(k)?.get(at).map(|p| &p.settings)
+    })
 }
 
 /// Prepares `plan`'s instruments for `score` at `rate`, in pieces of at
@@ -227,6 +300,7 @@ pub fn prepare(
     let mut slots = Vec::new();
     let mut names = Vec::new();
     let mut first_error = None;
+    let mut live = Vec::new();
     for g in &plan.groups {
         let class = class_of(score, track_of(g.tracks[0]));
         let Some(instrument) = plugins.playable(class).into_iter().find(|i| {
@@ -263,7 +337,7 @@ pub fn prepare(
         let mut effects = Vec::with_capacity(g.tracks.len());
         for (k, &t) in g.tracks.iter().enumerate() {
             let mut chain = Vec::new();
-            for pick in g.effects.get(k).into_iter().flatten() {
+            for (at, pick) in g.effects.get(k).into_iter().flatten().enumerate() {
                 let Some(effect) = plugins
                     .effects_for(class_of(score, track_of(t)))
                     .into_iter()
@@ -283,16 +357,22 @@ pub fn prepare(
                     settings: pick.settings.clone(),
                     ..g.prepared[k].clone()
                 };
-                match plugins.prepare_effect(
-                    effect,
-                    PrepareEffect {
-                        effect: pick.effect.clone(),
-                        rate,
-                        frames: capacity as u32,
-                        track,
-                    },
-                ) {
-                    Ok(i) => chain.push(i),
+                let prepare = PrepareEffect {
+                    effect: pick.effect.clone(),
+                    rate,
+                    frames: capacity as u32,
+                    track,
+                };
+                match plugins.prepare_effect(effect, prepare.clone()) {
+                    Ok(i) => {
+                        live.push(LiveEffect {
+                            route: t,
+                            at,
+                            prepare,
+                            updater: i.updater(),
+                        });
+                        chain.push(i);
+                    }
                     Err(e) => silent.push(format!(
                         "{ename} couldn't get ready on {}: {e}. It plays without it.",
                         name_of(t)
@@ -320,6 +400,7 @@ pub fn prepare(
         routes,
         names,
         silent,
+        live,
     })
 }
 

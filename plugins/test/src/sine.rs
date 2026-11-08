@@ -13,7 +13,7 @@
 //! notes N frames late.
 
 use oxiguitar_plugin::audio::{Piece, Prepare, PrepareEffect, RtEventKind, RtNote};
-use oxiguitar_plugin::{Effect, Error, Instrument, Processor, Renderer};
+use oxiguitar_plugin::{Effect, Error, Instrument, Processor, Renderer, Update};
 
 /// The most notes sounding at once; more are dropped.
 pub const VOICES: usize = 64;
@@ -132,23 +132,73 @@ impl Renderer for Sines {
     }
 }
 
-/// The effect `gain`: halves the track.
+/// The effect `gain`: scales the track by its section's `level` (0 to 1),
+/// half when the track has none. It follows a new level while it runs
+/// (interface 1.5): the change ramps over [`RAMP`] frames.
 #[derive(Debug)]
 pub struct Gain;
 
+/// Frames a new gain takes to reach.
+pub const RAMP: u32 = 64;
+
+/// The track's level, from its settings for this plugin.
+fn level(prepare: &PrepareEffect) -> f32 {
+    oxiguitar_plugin::serde_json::from_str::<oxiguitar_plugin::serde_json::Value>(
+        &prepare.track.settings,
+    )
+    .ok()
+    .and_then(|v| {
+        v.get("level")
+            .and_then(oxiguitar_plugin::serde_json::Value::as_f64)
+    })
+    .map_or(0.5, |l| l.clamp(0.0, 1.0) as f32)
+}
+
 #[derive(Debug)]
-struct Halve;
+struct Scale {
+    gain: f32,
+    target: f32,
+    /// What the gain changes by a frame until it reaches the target.
+    step: f32,
+}
 
 impl Effect for Gain {
-    fn prepare(&self, _prepare: &PrepareEffect) -> Result<Box<dyn Processor>, Error> {
-        Ok(Box::new(Halve))
+    fn prepare(&self, prepare: &PrepareEffect) -> Result<Box<dyn Processor>, Error> {
+        let gain = level(prepare);
+        Ok(Box::new(Scale {
+            gain,
+            target: gain,
+            step: 0.0,
+        }))
+    }
+
+    fn update(&self, prepare: &PrepareEffect, _previous: &str) -> Result<Option<Update>, Error> {
+        Ok(Some(Update::new(level(prepare))))
     }
 }
 
-impl Processor for Halve {
+impl Processor for Scale {
     fn process(&mut self, left: &mut [f32], right: &mut [f32]) {
-        for v in left.iter_mut().chain(right.iter_mut()) {
-            *v *= 0.5;
+        for (l, r) in left.iter_mut().zip(right.iter_mut()) {
+            if self.gain != self.target {
+                let next = self.gain + self.step;
+                self.gain = if (self.step > 0.0 && next >= self.target)
+                    || (self.step < 0.0 && next <= self.target)
+                {
+                    self.target
+                } else {
+                    next
+                };
+            }
+            *l *= self.gain;
+            *r *= self.gain;
+        }
+    }
+
+    fn apply(&mut self, update: &mut Update) {
+        if let Some(&target) = update.get::<f32>() {
+            self.target = target;
+            self.step = (target - self.gain) / RAMP as f32;
         }
     }
 }

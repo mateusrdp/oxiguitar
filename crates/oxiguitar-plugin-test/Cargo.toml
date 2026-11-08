@@ -2,8 +2,8 @@
 name = "oxiguitar-plugin-test"
 description = "The OxiGuitar plugin contract suite: builds a plugin as an .oxp file and checks it against the plugin interface."
 # The SDK follows the plugin interface's version, not the program's
-# (#165): 1.4.0 until interface 1.5.
-version = "1.4.0"
+# (#165): 1.5.0 until interface 1.6.
+version = "1.5.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

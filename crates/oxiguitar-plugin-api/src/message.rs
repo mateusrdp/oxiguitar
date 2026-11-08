@@ -38,6 +38,9 @@
 //! Interface 1.4 added exporters ([`Request::ExportStart`] and its
 //! siblings) and advice, a dialog the user can silence
 //! ([`HostRequest::Advise`]).
+//!
+//! Interface 1.5 added effects that follow their track's settings while
+//! the song plays ([`Request::UpdateEffect`], [`Answer::Updated`]).
 
 use std::fmt;
 
@@ -283,6 +286,28 @@ pub enum Request<'a> {
         /// The export was stopped; nothing more is written.
         cancelled: bool,
     },
+    /// The track's settings for this plugin changed while `instance`, an
+    /// effect this plugin prepared, runs on the audio thread (the user
+    /// moved a slider of the plugin's section of the Track tab while the
+    /// song plays). Off the audio thread, the plugin gets the new settings
+    /// (`prepare.track.settings`) ready; the instance takes them between
+    /// two of its `process` calls, without a click. `prepare` is what the
+    /// instance was prepared with, but for the settings; `previous` are
+    /// the settings it follows now, so the plugin can tell what changed.
+    /// Answered with
+    /// [`Answer::Updated`]: whether the instance will follow them. When it
+    /// won't, the host prepares the effect again the next time the song
+    /// starts. This request may come while the audio thread runs the
+    /// instance, unlike every other; the SDK's glue keeps the two apart.
+    /// Since interface 1.5.
+    UpdateEffect {
+        /// The instance.
+        instance: u64,
+        /// What it is prepared for, with the track's new settings.
+        prepare: Box<PrepareEffect>,
+        /// The track's settings it follows now, a JSON object as text.
+        previous: String,
+    },
 }
 
 /// What an instrument is prepared for. Since interface 1.3.
@@ -422,6 +447,10 @@ pub enum Answer<'a> {
         /// as long as what was written.
         start: Option<Blob<'a>>,
     },
+    /// The answer to [`Request::UpdateEffect`]: true when the instance
+    /// will follow the new settings (from its next `process` call), false
+    /// when it can't while it runs. Since interface 1.5.
+    Updated(bool),
 }
 
 impl Answer<'_> {
@@ -460,6 +489,7 @@ impl Answer<'_> {
                 data: data.into_owned(),
                 start: start.map(Blob::into_owned),
             },
+            Answer::Updated(applied) => Answer::Updated(applied),
         }
     }
 }
@@ -865,6 +895,50 @@ mod tests {
         })
         .unwrap();
         assert_eq!(start[0], release[0] + 1);
+    }
+
+    #[test]
+    fn interface_1_5_update_round_trips_and_comes_last() {
+        let update = Request::UpdateEffect {
+            instance: 7,
+            prepare: Box::new(PrepareEffect {
+                effect: "eq".into(),
+                rate: 48_000,
+                frames: 512,
+                track: PreparedTrack {
+                    info: TrackInfo {
+                        index: 1,
+                        name: "Lead".into(),
+                        class: InstrumentClass::Fretted,
+                    },
+                    program: 29,
+                    percussion: false,
+                    tuning: vec![64, 59, 55, 50, 45, 40],
+                    capo: 0,
+                    settings: r#"{"mode":"basic"}"#.into(),
+                },
+            }),
+            previous: "{}".into(),
+        };
+        let bytes = encode(&update).unwrap();
+        assert_eq!(decode::<Request<'_>>(&bytes).unwrap(), update);
+        for answer in [Answer::Updated(true), Answer::Updated(false)] {
+            let encoded = encode(&answer).unwrap();
+            assert_eq!(decode::<Answer<'_>>(&encoded).unwrap(), answer);
+        }
+        // After 1.4's last variants.
+        let finish = encode(&Request::ExportFinish {
+            exporter: String::new(),
+            cancelled: false,
+        })
+        .unwrap();
+        assert_eq!(bytes[0], finish[0] + 1);
+        let finished = encode(&Answer::ExportFinished {
+            data: Blob::owned(Vec::new()),
+            start: None,
+        })
+        .unwrap();
+        assert_eq!(encode(&Answer::Updated(true)).unwrap()[0], finished[0] + 1);
     }
 
     #[test]

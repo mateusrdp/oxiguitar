@@ -17,7 +17,8 @@
 //!   (only on Plan 9, so never chosen);
 //! - two instruments, one playing only drums and one everything but drums,
 //!   both a sine per note (interface 1.3: [`sine`]), and the effect `gain`,
-//!   which halves a track;
+//!   which scales a track by its section's level (half by default) and
+//!   follows a new level while it runs (interface 1.5);
 //! - two tabs (interface 1.1): `panel`, in the bottom area, with one widget
 //!   of every kind and a canvas that marks where the pointer last went
 //!   down, and `side`, in the right area, with one line of text. `panel`'s

@@ -11,6 +11,13 @@
 //! tracks' sound into the buffers. An [`Effect`] works the same way on one
 //! track's buffers, after its instrument ([`Processor::process`]).
 //!
+//! An effect may also follow its track's settings while the song plays
+//! (interface 1.5): when the user changes them, [`Effect::update`] reads
+//! them off the audio thread into an [`Update`], and the audio thread hands
+//! that to the processor between two calls of `process`
+//! ([`Processor::apply`]). An effect that doesn't is prepared again the
+//! next time the song starts, as before 1.5.
+//!
 //! On the audio thread, never allocate, lock, wait or make a system call:
 //! a device callback is a few milliseconds, and a late one is a click the
 //! listener hears. The contract suite counts allocations and, on Linux,
@@ -20,6 +27,8 @@ pub use oxiguitar_plugin_api::message::{Prepare, PrepareEffect, PreparedTrack};
 pub use oxiguitar_plugin_api::realtime::{
     PitchPoint, RtEvent, RtEventKind, RtNote, attack, flags, harmonic, sound,
 };
+
+use std::any::Any;
 
 use crate::Error;
 
@@ -57,6 +66,42 @@ pub trait Keeper {
     fn keep(&self, instance: Instance) -> u64;
     /// Frees the instance `id`; false if there is none.
     fn release(&self, id: u64) -> bool;
+    /// Hands `update` to the effect instance `id`, which takes it before
+    /// its next `process` call (interface 1.5). False when there is no
+    /// such instance; the default keeps none.
+    fn update(&self, id: u64, update: Update) -> bool {
+        let _ = (id, update);
+        false
+    }
+}
+
+/// What an effect made of its track's new settings, off the audio thread
+/// ([`Effect::update`]), for its processor to take on the audio thread
+/// ([`Processor::apply`]): whatever the effect needs, such as filter
+/// coefficients or gains. Interface 1.5.
+pub struct Update(Box<dyn Any + Send>);
+
+impl Update {
+    /// An update holding `value`.
+    pub fn new<T: Any + Send>(value: T) -> Update {
+        Update(Box::new(value))
+    }
+
+    /// The value, if it is a `T`.
+    pub fn get<T: Any>(&self) -> Option<&T> {
+        self.0.downcast_ref()
+    }
+
+    /// The value, if it is a `T`, to change or swap with.
+    pub fn get_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.0.downcast_mut()
+    }
+}
+
+impl std::fmt::Debug for Update {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Update(..)")
+    }
 }
 
 /// An instrument the manifest declares under `instruments`.
@@ -71,6 +116,22 @@ pub trait Instrument: Send + Sync {
 pub trait Effect: Send + Sync {
     /// Gets ready to process the track `prepare.track` at `prepare.rate`.
     fn prepare(&self, prepare: &PrepareEffect) -> Result<Box<dyn Processor>, Error>;
+
+    /// The track's settings for this plugin changed while the song plays
+    /// (`prepare.track.settings`; the rest is what the processor was
+    /// prepared with), from `previous`, the settings it follows now. Off
+    /// the audio thread: read them and make what the
+    /// processor needs to follow them, which it takes in
+    /// [`Processor::apply`]. Do the slow work here (parsing, allocating,
+    /// computing coefficients), none of it there. Interface 1.5.
+    ///
+    /// `Ok(None)`, the default: the processor can't follow these settings
+    /// while it runs (a new model to load, say), and the host prepares the
+    /// effect again the next time the song starts.
+    fn update(&self, prepare: &PrepareEffect, previous: &str) -> Result<Option<Update>, Error> {
+        let _ = (prepare, previous);
+        Ok(None)
+    }
 }
 
 /// A prepared instrument, called on the audio thread.
@@ -102,6 +163,18 @@ pub trait Processor: Send {
     /// The frames it delays the sound by.
     fn latency(&self) -> u32 {
         0
+    }
+
+    /// Takes what [`Effect::update`] made of the track's new settings, on
+    /// the audio thread, between two calls of [`Processor::process`]
+    /// (interface 1.5). Move towards the new values over the next few
+    /// milliseconds rather than jumping, so the change makes no click.
+    /// Allocate and free nothing: take what you need out of `update`, or
+    /// swap your old values into it; the update is dropped off the audio
+    /// thread. The default ignores it (an effect whose `update` answers
+    /// `None` is never handed one).
+    fn apply(&mut self, update: &mut Update) {
+        let _ = update;
     }
 }
 

@@ -3681,7 +3681,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde_json",
@@ -3689,7 +3689,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-api"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "postcard",
  "serde",
@@ -3698,7 +3698,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-test"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "libc",
  "oxiguitar-host",
