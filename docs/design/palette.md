@@ -92,13 +92,13 @@ The timeline goldens change only for reference songs that use these marks; new r
 
 ## Multivoice (Ctrl + M)
 
-Guitar Pro 8: "all notes active for changes". Here, with Multivoice on (the palette's button lit; Edit → Multivoice too), every voice is drawn in full ink, the caret moves left and right through the moments any voice of the staff has a beat, taking the voice of the beat it lands on (the current voice first when several start together), and up and down onto the note on that string of whichever voice sounds there. Typing, effects and the Inspector act on the caret's voice as usual; a selection covers every voice. Ctrl + 1 to 4 still pick a voice and turn Multivoice off.
+Guitar Pro 8: "all notes active for changes". Here, with Multivoice on (the palette's button lit; Ctrl + M), every voice is drawn in full ink, the caret moves left and right through the moments any voice of the staff has a beat, taking the voice of the beat it lands on (the current voice first when several start together), and up and down onto the note on that string of whichever voice sounds there. Typing, effects and the Inspector act on the caret's voice as usual, and a selection stays in one voice. Ctrl + 1 to 4 still pick a voice and turn Multivoice off.
 
 ## Design Mode
 
 Guitar Pro 8's Design Mode sets bars per system, bar widths and beat positions by dragging. Guitar Pro files store the first of these (bars per system, for the score and for each track); OxiGuitar v0.17 does that one, and leaves widths and beat positions to the automatic spacing.
 
-- The palette's Design Mode (and View → Design Mode) toggles it. In the Page layout, each system then shows its bar count at its left margin, and the page's right-click menu offers **One Bar More on This System**, **One Bar Less on This System** and **Automatic Layout from Here**. Each is one step to undo.
+- The palette's Design Mode (and View → Design Mode) toggles it. In the Page and Parchment layouts, each system then shows its bar count over its first bar, and the page's right-click menu offers **One Bar More on This System**, **One Bar Less on This System** and **Automatic Layout from Here**. Each is one step to undo.
 - The page follows a stored layout in the Page layout (the score's for several tracks, the track's for one track alone); a system that can't hold its bars at their narrowest is broken automatically and drawn with its count in red in Design Mode. Other layouts ignore it.
 - Files carry their layout: Guitar Pro writes one into every .gp file, so .gp files now open with Guitar Pro's systems.
 

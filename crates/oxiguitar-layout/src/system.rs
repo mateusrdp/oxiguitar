@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use oxiguitar_model::{Bar, BeatKind, Clef, Dynamic, Score, Staff};
 
+use crate::Layout;
 use crate::draw::{Painter, glyphs};
 use crate::effects;
 use crate::grid::BarGrid;
@@ -342,6 +343,25 @@ pub(crate) struct SystemSpec {
     /// Room after the last bar line for courtesy signatures: the key and
     /// time signatures the next system starts with, when they change there.
     pub(crate) courtesy: f32,
+    /// Whether the system's bars were set in Design Mode: `None` when it
+    /// takes as many as fit, `Some(true)` when it holds the bars set for
+    /// it, `Some(false)` when it couldn't and took as many as fit.
+    pub(crate) stored: Option<bool>,
+}
+
+/// The bars per system set in Design Mode that `views` follow in `layout`:
+/// the track's when one track is shown, the score's when several are; none
+/// in the Vertical and Horizontal layouts, whose lines are the window's.
+pub(crate) fn stored_layout<'s>(score: &'s Score, views: &[View], layout: Layout) -> &'s [u8] {
+    if !matches!(layout, Layout::Page | Layout::Parchment) {
+        return &[];
+    }
+    let mut tracks: Vec<usize> = views.iter().map(|v| v.track).collect();
+    tracks.dedup();
+    match tracks.as_slice() {
+        [one] => score.tracks.get(*one).map_or(&[], |t| t.layout.as_slice()),
+        _ => &score.layout,
+    }
 }
 
 /// The width of the courtesy signatures at the end of a system whose next
@@ -483,7 +503,7 @@ pub(crate) fn break_systems(
     views: &[View],
     plans: &Plans,
     p: &Painter<'_>,
-    width: f32,
+    (width, stored): (f32, &[u8]),
 ) -> Vec<SystemSpec> {
     let n = score.master_bars.len();
     let mut systems = Vec::new();
@@ -498,11 +518,32 @@ pub(crate) fn break_systems(
         let prefix = indent + system_prefix(p, fifths);
         let mut used = prefix;
         let mut end = first;
+        let natural_of = |i: usize| {
+            bar_prefix(score, p, i, i == first)
+                + plans.grids.get(i).map_or(4.0 * p.sp, BarGrid::natural)
+                + bar_suffix(score, p, i)
+        };
+        // The bars set for this system in Design Mode, if they fit at
+        // their narrowest; else as many as fit.
+        let set = stored
+            .get(systems.len())
+            .map(|&k| usize::from(k).max(1).min(n - first));
         let mut naturals = Vec::new();
-        while end < n {
-            let natural = bar_prefix(score, p, end, end == first)
-                + plans.grids.get(end).map_or(4.0 * p.sp, BarGrid::natural)
-                + bar_suffix(score, p, end);
+        let mut kept = None;
+        if let Some(k) = set {
+            let widths: Vec<f32> = (first..first + k).map(natural_of).collect();
+            let total: f32 = widths.iter().sum::<f32>() + courtesy_width(score, p, first + k);
+            if total <= width || k == 1 {
+                used += widths.iter().sum::<f32>();
+                naturals = widths;
+                end = first + k;
+                kept = Some(true);
+            } else {
+                kept = Some(false);
+            }
+        }
+        while kept != Some(true) && end < n {
+            let natural = natural_of(end);
             if end > first && used + natural > width {
                 break;
             }
@@ -511,9 +552,9 @@ pub(crate) fn break_systems(
             end += 1;
         }
         // Courtesy signatures need room at the end: a bar moves to the
-        // next line when they wouldn't fit.
+        // next line when they wouldn't fit (unless the bars were set).
         let mut courtesy = courtesy_width(score, p, end);
-        while courtesy > 0.0 && used + courtesy > width && end > first + 1 {
+        while kept != Some(true) && courtesy > 0.0 && used + courtesy > width && end > first + 1 {
             used -= naturals.pop().unwrap_or(0.0);
             end -= 1;
             courtesy = courtesy_width(score, p, end);
@@ -539,6 +580,7 @@ pub(crate) fn break_systems(
             prefix,
             extra,
             courtesy,
+            stored: kept,
         });
         first = end;
     }

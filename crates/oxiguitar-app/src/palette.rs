@@ -86,6 +86,8 @@ pub(crate) fn working(id: &str) -> Option<Option<&'static str>> {
         "voice-2" => "Ctrl + 2",
         "voice-3" => "Ctrl + 3",
         "voice-4" => "Ctrl + 4",
+        "multivoice" => "Ctrl + M",
+        "design-mode" => return Some(None),
         "rest" => "R",
         "dotted" => "Shift + .",
         "double-dotted" => "Ctrl + .",
@@ -288,7 +290,10 @@ pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
 /// tied.
 pub(crate) fn checked(id: &str, at: &AtCaret) -> bool {
     if let Some(v) = voice_of(id) {
-        return at.voice == v;
+        return at.voice == v && !at.multivoice;
+    }
+    if id == "multivoice" {
+        return at.multivoice;
     }
     match command_of(id) {
         Some(Command::Value(v)) => at.value == Some(v),
@@ -323,8 +328,8 @@ pub(crate) fn tool_tip(id: &str, name: &str) -> String {
     match working(id) {
         Some(Some(keys)) => format!("{name} ({keys})"),
         Some(None) => name.to_owned(),
-        // Every notation tool works since v0.17; the editing modes come
-        // with it too (docs/design/palette.md).
+        // Every tool works since v0.17 (docs/design/palette.md): none is
+        // left to come.
         None => format!("{name} (comes later)"),
     }
 }
@@ -1440,7 +1445,7 @@ mod tests {
             .filter(|(_, t)| working(t.id).is_none())
             .map(|(_, t)| t.id)
             .collect();
-        assert_eq!(idle, ["multivoice", "design-mode"]);
+        assert!(idle.is_empty(), "{idle:?}");
         assert_eq!(command_of("ff"), Some(Command::Dynamic(Dynamic::FF)));
         assert_eq!(
             command_of("shift-slide"),

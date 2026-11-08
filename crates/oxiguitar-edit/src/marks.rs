@@ -34,6 +34,9 @@ pub(crate) fn apply(
     Some(match command {
         Command::Fermata(kind) => fermata(score, history, c, selection, *kind, command.label()),
         Command::Simile(kind) => simile(score, history, c, *kind, command.label()),
+        Command::SystemLayout { track, layout } => {
+            system_layout(score, history, c, (*track, layout), command.label())
+        }
         Command::Pedal => staff_edit(
             score,
             history,
@@ -365,6 +368,34 @@ fn simile(
     })
 }
 
+/// Bars per system: a track's (`Some`) or the score's.
+fn system_layout(
+    score: &mut Score,
+    history: &mut History,
+    c: Caret,
+    (track, layout): (Option<usize>, &[u8]),
+    label: &str,
+) -> Option<Edited> {
+    let now = match track {
+        Some(t) => &score.tracks.get(t)?.layout,
+        None => &score.layout,
+    };
+    if now.as_slice() == layout {
+        return None;
+    }
+    let region = track.map_or(Region::Info, Region::Track);
+    let layout = layout.to_vec();
+    let touched = history.record(score, label, vec![region], |s| match track {
+        Some(t) => {
+            if let Some(tr) = s.tracks.get_mut(t) {
+                tr.layout = layout;
+            }
+        }
+        None => s.layout = layout,
+    });
+    Some(Edited { touched, caret: c })
+}
+
 /// `bar` without its sign.
 fn unmarked(bar: &Bar) -> Bar {
     Bar {
@@ -642,6 +673,21 @@ mod tests {
         let notes = &s.tracks[0].staves[0].bars[0].voices[0].beats;
         let kept: Vec<_> = notes.iter().take(3).map(|b| b.notes[0].spelling).collect();
         assert_eq!(kept, [None, Some(Spelling { step: 5, alter: -1 }), None]);
+    }
+
+    #[test]
+    fn bars_per_system_are_set_and_undone() {
+        let (mut s, mut h) = song();
+        let set = |layout: Vec<u8>, track| Command::SystemLayout { track, layout };
+        apply(&mut s, &mut h, at(0, 0, 1), None, set(vec![2, 1], Some(0))).unwrap();
+        assert_eq!(s.tracks[0].layout, [2, 1]);
+        apply(&mut s, &mut h, at(0, 0, 1), None, set(vec![3], None)).unwrap();
+        assert_eq!(s.layout, [3]);
+        assert!(apply(&mut s, &mut h, at(0, 0, 1), None, set(vec![3], None)).is_none());
+        h.undo(&mut s).unwrap();
+        assert!(s.layout.is_empty());
+        h.undo(&mut s).unwrap();
+        assert!(s.tracks[0].layout.is_empty());
     }
 
     #[test]

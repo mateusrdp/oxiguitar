@@ -1030,3 +1030,56 @@ fn a_key_change_at_a_line_break_is_shown_again_before_it() {
     // key); and one before the break: the courtesy key signature.
     assert_eq!(count_char(&e, '\u{E262}'), second + later + 1);
 }
+
+#[test]
+fn systems_hold_the_bars_set_in_design_mode() {
+    let (fonts, meta) = setup();
+    let mut score = tune_in_g(20);
+    let first_bars = |e: &Engraved| -> Vec<usize> {
+        e.hits
+            .systems
+            .iter()
+            .map(|s| s.staves[0].bars[0].bar)
+            .collect()
+    };
+    let automatic = first_bars(&engrave(&score, &fonts, &meta, &Options::default()));
+    // One track shown: its own layout. Two bars, then three, then the
+    // rest as many as fit.
+    score.tracks[0].layout = vec![2, 3];
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    let set = first_bars(&e);
+    assert_eq!(set[..3], [0, 2, 5], "{set:?} (automatic {automatic:?})");
+    // The score's layout is for several tracks: not used here.
+    score.tracks[0].layout.clear();
+    score.layout = vec![1];
+    assert_eq!(
+        first_bars(&engrave(&score, &fonts, &meta, &Options::default())),
+        automatic
+    );
+    // Not in the Vertical layout.
+    score.tracks[0].layout = vec![1, 1];
+    let vertical = Options {
+        layout: Layout::Vertical,
+        screen_width: 800.0,
+        ..Options::default()
+    };
+    assert_ne!(
+        first_bars(&engrave(&score, &fonts, &meta, &vertical))[..2],
+        [0, 1]
+    );
+    // More bars than fit: as many as fit, and Design Mode says so in red.
+    score.tracks[0].layout = vec![20];
+    let design = Options {
+        design: true,
+        ..Options::default()
+    };
+    let e = engrave(&score, &fonts, &meta, &design);
+    assert_eq!(first_bars(&e), automatic);
+    let red = e.pages[0].items.iter().any(|i| match i {
+        Item::Glyphs(run) => {
+            run.text.ends_with(" bars") && run.paint == oxiguitar_display::Paint::Warning
+        }
+        _ => false,
+    });
+    assert!(red, "the count in red");
+}

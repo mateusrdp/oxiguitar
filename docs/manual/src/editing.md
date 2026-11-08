@@ -189,6 +189,27 @@ Slides in from below and from above and out upwards, popping and the semi-harmon
 
 The palette's **dynamics**, ppp to fff, set the dynamic of the caret's beat, or of every selected beat (rests too), and its notes play at it. They have no keys. View → Dynamics shows them on the page.
 
+### The rest of Guitar Pro 8's notation
+
+Every other tool of the palette works too (v0.17); they have no keys, as in Guitar Pro, and the palette's search finds them ("mordent", "8va", "barre"). Like the effects, each goes on the caret's note or beat, or on every one selected, and a second press takes it off.
+
+- **Over several beats**: **Legato** (a slur), **Crescendo** and **Decrescendo**, the **8va**, **8vb**, **15ma** and **15mb** lines, **Extended Barre** (at the lowest fret the notes use; the Note tab changes the fret and makes it a half barre), **Slash** notation, the four **beaming** tools and **Force Groups** (equal tuplets bracketed as one group). Select the beats first: a slur runs from the first selected beat to the last; at the caret it joins the caret's beat to the next.
+- **On a note**: upper and lower **mordent**, **turn** and **inverted turn**, **wide vibrato**, **String Number**. **Left-Hand Fingering** and **Right-Hand Fingering** step through the fingers, one press each (the Note tab picks one directly).
+- **On a beat**: **Fermata** (at the beat's moment, for every track; the Note tab makes it short, medium or long), **Sustain Pedal** (down, then up, then off; on a selection, down at its start and up at its end), **Fade-out** and **Volume Swell** (one fade a beat), the whammy bar's slight **vibrato**, **Closed** and **Open Wah-Wah**, **Arpeggio** up and down, **Rasgueado** (the Note tab picks one of Guitar Pro's eighteen patterns), finger and thumb **Golpe**, **Pick Scrape** up and down, **Dead Slap**.
+- **Accidentals**: **Double Flat** to **Double Sharp** write the note with that accidental where one names it (C sharp as D flat), and **Change Accidental** steps through the ways to write it. A file's own spellings are kept where they differ from the ones OxiGuitar would choose.
+- **Single** and **Double Repeat Sign**: the bar (or the bar and the next) repeats the bar (or two bars) before it: they are copied in and the sign is drawn in their place. Pressing it again, or changing a note in the bar, takes the sign off and keeps the music.
+- **Nested N-tuplet** puts a tuplet inside the one the selected notes already have.
+
+How each one sounds is on the [Playback](playback.md#how-the-marks-sound) page.
+
+### Multivoice
+
+**Multivoice** (**Ctrl + M**, or its button at the top of the palette) works on all four voices at once: every voice is drawn in full ink, **Left** and **Right** step through every moment any voice has a note or rest, landing on that voice's beat (the caret's own voice when several start together), and **Up** and **Down** move onto the voice whose note is on that string. Typing, effects and the Note tab act on the voice the caret is in. **Ctrl + 1** to **4** pick one voice again and leave Multivoice.
+
+### Design Mode
+
+**Design Mode** (View → Design Mode, or its button at the top of the palette) sets how many bars each line of the Page and Parchment layouts holds. Each line shows its number of bars at its left. Right-click on a bar: **One Bar More on This System**, **One Bar Less on This System**, or **Automatic Layout from Here** (lines from there on hold as many bars as fit). The lines before it keep the bars they show. A line that can't hold the bars set for it holds as many as fit, and its count turns red. With one track shown, the layout is that track's; with several, the score's. A .gp file keeps them, as Guitar Pro does. Each change is one step to undo.
+
 ### Bends and the whammy bar
 
 **B** (or the palette's **Bend**) opens the **bend editor** for the note on the caret's string; **Ctrl + Alt + V** (or **Whammy Bar**) opens it for the beat's whammy bar. Pick a type (Bend, Bend and release, Release, Prebend, Prebend and bend, Prebend and release; for the whammy bar Dive, Dip, Return, Predive, Predive and dive) and a pitch from ¼ tone to 3 tones, or drag the curve's points on the grid: time across the note in twelfths, pitch up the side in quarter tones. A press on an empty grid starts a bend at that pitch. The curve has an origin, a middle held at one pitch between two places, and a destination, which is the shape a .gp file holds. **Enter** applies it, **Escape** cancels, and "No bend" takes the bend away. With a selection, the curve goes on every selected note (or beat).

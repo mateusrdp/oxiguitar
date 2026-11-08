@@ -169,6 +169,9 @@ pub struct Options {
     /// greyed out, as Guitar Pro's editor shows them (Mateus, 20 Oct
     /// 2026). `None` (prints, PDF) shows every voice in ink.
     pub active_voice: Option<usize>,
+    /// Design Mode (v0.17): each system shows how many bars it holds, in
+    /// red where it can't hold the bars set for it. Never in a print.
+    pub design: bool,
 }
 
 /// Which notations a track shows (VIEW-1).
@@ -241,6 +244,7 @@ impl Default for Options {
             notation: BTreeMap::new(),
             marked: BTreeSet::new(),
             active_voice: None,
+            design: false,
         }
     }
 }
@@ -282,7 +286,8 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
             _ => (sheet_width - 2.0 * options.margin).max(10.0 * sp),
         };
         let plans = system::plan_all(score, &views, &painter, options.dynamics);
-        let systems = system::break_systems(score, &views, &plans, &painter, width);
+        let stored = system::stored_layout(score, &views, layout);
+        let systems = system::break_systems(score, &views, &plans, &painter, (width, stored));
         let drawn: Vec<engrave::DrawnSystem> = systems
             .iter()
             .map(|s| {
@@ -293,7 +298,7 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
                     s,
                     &painter,
                     &options.marked,
-                    options.active_voice,
+                    (options.active_voice, options.design),
                 )
             })
             .collect();

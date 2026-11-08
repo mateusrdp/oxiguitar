@@ -1335,6 +1335,9 @@ export component AppWindow inherits Window {
     in-out property <bool> paper-0: true;
     in-out property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
+    // Design Mode (docs/design/palette.md): systems show their bar counts
+    // and the page menu sets them.
+    in-out property <bool> design-mode: false;
     // The window's own colours (Mateus, 27 Oct 2026): until the user picks
     // View → Dark Interface, they follow the desktop's light or dark
     // setting, and are light when the desktop says nothing; main.rs
@@ -1758,6 +1761,7 @@ export component AppWindow inherits Window {
             MenuItem { title: "Dark Interface"; checkable: true; checked: root.dark-interface; activated => { root.chosen-dark = self.checked; root.follow-desktop = false; } }
             MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
+            MenuItem { title: "Design Mode"; checkable: true; checked <=> root.design-mode; activated => { root.settings-changed(); } }
             MenuSeparator { }
             MenuItem { title: "Toolbar"; checkable: true; checked <=> root.toolbar-shown; }
             Menu {
@@ -2249,6 +2253,10 @@ export component AppWindow inherits Window {
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
                                 MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
                                 MenuItem { title: "Paste"; activated => { root.page-menu("paste"); } }
+                                if root.design-mode : MenuSeparator { }
+                                if root.design-mode : MenuItem { title: "One Bar More on This System"; activated => { root.page-menu("design-more"); } }
+                                if root.design-mode : MenuItem { title: "One Bar Less on This System"; activated => { root.page-menu("design-less"); } }
+                                if root.design-mode : MenuItem { title: "Automatic Layout from Here"; activated => { root.page-menu("design-auto"); } }
                             }
                         }
                         // The selection and the caret, over the tiles: moving

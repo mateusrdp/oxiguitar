@@ -909,6 +909,9 @@ fn main() -> Result<(), slint::PlatformError> {
         "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
         "fingering" => find_fingering(&a, oxiguitar_edit::Scope::Selection),
         "fit" => open_fit(&a, false),
+        "design-more" => design_layout(&a, Some(true)),
+        "design-less" => design_layout(&a, Some(false)),
+        "design-auto" => design_layout(&a, None),
         "cut" => clipboard(&a, editing::ClipKey::Cut),
         "copy" => clipboard(&a, editing::ClipKey::Copy),
         "paste" => clipboard(&a, editing::ClipKey::Paste),
@@ -1069,6 +1072,10 @@ fn main() -> Result<(), slint::PlatformError> {
             search_palette(&a);
             return true;
         }
+        if ctrl && !alt && !shift && matches!(name.as_str(), "m" | "M") {
+            toggle_multivoice(&a);
+            return true;
+        }
         if let Some(k) = editing::clip_key(name.as_str(), shift, ctrl, alt) {
             clipboard(&a, k);
             return true;
@@ -1163,6 +1170,20 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     let a = app.clone();
     ui.on_palette_tool_clicked(move |id| {
+        match id.as_str() {
+            "multivoice" => {
+                toggle_multivoice(&a);
+                return;
+            }
+            "design-mode" => {
+                if let Some(ui) = a.borrow().ui.upgrade() {
+                    ui.set_design_mode(!ui.get_design_mode());
+                }
+                settings_changed(&a);
+                return;
+            }
+            _ => {}
+        }
         if let Some(d) = palette::dialog_of(id.as_str()) {
             open_edit_dialog(&a, d);
             return;
@@ -2565,15 +2586,47 @@ fn caret_moved(app: &Shared) {
     ));
 }
 
+/// Multivoice on or off (Ctrl + M, the palette's button): every voice in
+/// ink and the caret walking all of them, or back to the caret's voice.
+fn toggle_multivoice(app: &Shared) {
+    app.borrow_mut().editing.toggle_multivoice();
+    caret_moved(app);
+    if let Some(ui) = app.borrow().ui.upgrade() {
+        set_palette(app, &ui, false);
+    }
+}
+
+/// Design Mode's page menu: one bar more or less on the caret's system, or
+/// the automatic layout from it on, for the shown track alone (its own
+/// layout) or the shown tracks together (the score's).
+fn design_layout(app: &Shared, more: Option<bool>) {
+    let typed = {
+        let mut s = app.borrow_mut();
+        let Some(layout) = s.editing.system_layout(more) else {
+            return;
+        };
+        let track = match s.settings.tracks.as_slice() {
+            [one] => Some(*one),
+            _ => None,
+        };
+        s.editing
+            .tool(oxiguitar_edit::Command::SystemLayout { track, layout })
+    };
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
 /// The page greys out the voices the caret isn't in: a new voice is a new
-/// engraving (Mateus, 20 Oct 2026).
+/// engraving (Mateus, 20 Oct 2026). In Multivoice every voice is in ink.
 fn follow_voice(app: &Shared) {
     let mut s = app.borrow_mut();
     let Some(voice) = s.editing.at_caret().map(|a| a.voice) else {
         return;
     };
-    if s.settings.active_voice != Some(voice) && s.track_count > 0 {
-        s.settings.active_voice = Some(voice);
+    let voice = (!s.editing.multivoice()).then_some(voice);
+    if s.settings.active_voice != voice && s.track_count > 0 {
+        s.settings.active_voice = voice;
         let settings = s.settings.clone();
         s.worker.send(Request::Engrave(settings));
     }
@@ -2674,6 +2727,7 @@ fn settings_changed(app: &Shared) {
         .copied()
         .unwrap_or_default();
     s.settings.dynamics = ui.get_dynamics();
+    s.settings.design = ui.get_design_mode();
     s.settings.screen_width = screen_width(&ui, s.zoom);
     // Remember the View menu for next time, when it changed.
     let dark = ui.get_dark_interface();
