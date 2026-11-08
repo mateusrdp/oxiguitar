@@ -27,6 +27,22 @@ A blue line moves through the music with the sound, and the beat you are hearing
 - **Visual Metronome** (the button with rays, next to it) flashes on every beat, brighter on the bar's first, whether or not the metronome is heard.
 - **Speed** plays from 25 % to 200 % of the written tempo, in steps of 5. The pitch doesn't change.
 
+## How the marks sound
+
+Every effect of the score is heard as written, the notation of Guitar Pro 8's palette included:
+
+- A **fermata** holds its beat, and everything sounding through it: half again (short), twice (medium) or three times (long) its length. Every track waits for it.
+- A **crescendo** or **decrescendo** moves the notes under it towards the next dynamic, or a dynamic's step louder or softer when there is none.
+- **Mordents** play the note, the note a step above (upper) or below (lower) in the key, and the note again, the first two quickly; a **turn** plays the step above, the note, the step below and the note across the note's length (an inverted turn starts below).
+- **Fade out** dies away over the beat; a **volume swell** rises and dies away.
+- **Wide vibrato** waves twice as far as slight; the whammy bar's slight vibrato half as far as its wide one.
+- Under the **sustain pedal**, notes ring until it comes up (or their string is struck again).
+- An **arpeggio** rolls the chord over the first half of its beat (at most a quarter note).
+- A **rasgueado** strikes the chord once for each finger of its pattern across the beat, short-short-long for an anapaest pattern; an index finger's second stroke (i i) comes back up.
+- A **golpe** is a muted knock (the lowest string for the thumb, the highest for a finger), a **dead slap** every string muted.
+- Ottava lines, slurs and slash notation change how the music is written, not how it sounds; wah and pick scrapes are shown only, as in Guitar Pro.
+- A bar with a **repeat sign** plays the bar (or two bars) it repeats.
+
 ## The mixer
 
 Each track's row at the bottom has a **mute** button (the loudspeaker crossed out), a **solo** button (headphones: when any track is soloed, only soloed tracks are heard), a **volume** slider and a **pan** knob (drag it, or use the arrow keys; a double click centres it). They start as the file sets them and change the sound as you move them. **Level**, in the Player tab, is the volume of everything together. None of this is saved into the file; it lasts until you close OxiGuitar.
