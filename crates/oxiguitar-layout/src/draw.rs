@@ -73,6 +73,57 @@ pub(crate) mod glyphs {
     pub(crate) const SEGNO: G = G("segno", '\u{E047}');
     pub(crate) const CODA: G = G("coda", '\u{E048}');
     pub(crate) const CODA_SQUARE: G = G("codaSquare", '\u{E049}');
+    pub(crate) const FERMATA: G = G("fermataAbove", '\u{E4C0}');
+    pub(crate) const FERMATA_SHORT: G = G("fermataShortAbove", '\u{E4C4}');
+    pub(crate) const FERMATA_LONG: G = G("fermataLongAbove", '\u{E4C6}');
+    pub(crate) const REPEAT_1_BAR: G = G("repeat1Bar", '\u{E500}');
+    pub(crate) const REPEAT_2_BARS: G = G("repeat2Bars", '\u{E501}');
+    pub(crate) const NOTEHEAD_SLASH: G = G("noteheadSlashHorizontalEnds", '\u{E101}');
+    pub(crate) const NOTEHEAD_SLASH_WHOLE: G = G("noteheadSlashWhiteWhole", '\u{E102}');
+    pub(crate) const NOTEHEAD_SLASH_HALF: G = G("noteheadSlashWhiteHalf", '\u{E103}');
+    pub(crate) const OTTAVA_ALTA: G = G("ottavaAlta", '\u{E511}');
+    pub(crate) const OTTAVA_BASSA: G = G("ottavaBassaVb", '\u{E51C}');
+    pub(crate) const QUINDICESIMA_ALTA: G = G("quindicesimaAlta", '\u{E515}');
+    pub(crate) const QUINDICESIMA_BASSA: G = G("quindicesimaBassaMb", '\u{E51D}');
+    pub(crate) const PEDAL: G = G("keyboardPedalPed", '\u{E650}');
+    pub(crate) const PEDAL_UP: G = G("keyboardPedalUp", '\u{E655}');
+    pub(crate) const WAH_CLOSED: G = G("brassMuteClosed", '\u{E5E5}');
+    pub(crate) const WAH_OPEN: G = G("brassMuteOpen", '\u{E5E7}');
+    pub(crate) const GOLPE: G = G("guitarGolpe", '\u{E842}');
+    pub(crate) const UPPER_MORDENT: G = G("ornamentShortTrill", '\u{E56C}');
+    pub(crate) const LOWER_MORDENT: G = G("ornamentMordent", '\u{E56D}');
+    pub(crate) const TURN: G = G("ornamentTurn", '\u{E567}');
+    pub(crate) const TURN_INVERTED: G = G("ornamentTurnInverted", '\u{E568}');
+    pub(crate) const ARPEGGIO_SEGMENT: G = G("wiggleArpeggiatoUp", '\u{EAA9}');
+    pub(crate) const ARPEGGIO_UP_ARROW: G = G("wiggleArpeggiatoUpArrow", '\u{EAAD}');
+    pub(crate) const ARPEGGIO_DOWN_ARROW: G = G("wiggleArpeggiatoDownArrow", '\u{EAAE}');
+    pub(crate) const FINGER_THUMB: G = G("fingeringTUpper", '\u{ED16}');
+
+    /// The fingering digit glyph for 0–5.
+    pub(crate) fn finger(d: u8) -> G {
+        const NAMES: [&str; 6] = [
+            "fingering0",
+            "fingering1",
+            "fingering2",
+            "fingering3",
+            "fingering4",
+            "fingering5",
+        ];
+        let d = d.min(5);
+        G(
+            NAMES.get(usize::from(d)).copied().unwrap_or("fingering0"),
+            char::from_u32(0xED10 + u32::from(d)).unwrap_or('\u{ED10}'),
+        )
+    }
+
+    /// The right hand's finger letters: p, i, m, a, c.
+    pub(crate) const RIGHT_FINGERS: [G; 5] = [
+        G("fingeringPLower", '\u{ED17}'),
+        G("fingeringILower", '\u{ED19}'),
+        G("fingeringMLower", '\u{ED1A}'),
+        G("fingeringALower", '\u{ED1B}'),
+        G("fingeringCLower", '\u{ED1C}'),
+    ];
     pub(crate) const FLAGS_UP: [G; 4] = [
         G("flag8thUp", '\u{E240}'),
         G("flag16thUp", '\u{E242}'),

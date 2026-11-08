@@ -121,12 +121,45 @@ impl TempoMap {
         }
         // Stable: two changes at one place keep their order, the later wins.
         points.sort_by(|a, b| a.at.total_cmp(&b.at));
+        let mut map = TempoMap { points };
+        map.integrate();
+        // Fermatas hold every track: the held beat is played slower, by
+        // as many times as the fermata holds, so everything sounding
+        // through it lasts that much longer (docs/design/palette.md).
+        let holds = fermata_holds(score, starts);
+        if !holds.is_empty() {
+            let mut points = map.points.clone();
+            for (at, end, hold) in holds {
+                let (bpm_at, bpm_end) = (map.bpm(at), map.bpm(end));
+                let linear_end = map.points[map.point_at(end)].linear;
+                points.push(Point {
+                    at,
+                    bpm: (bpm_at / hold).clamp(BPM_RANGE.0, BPM_RANGE.1),
+                    linear: false,
+                    seconds: 0.0,
+                });
+                points.push(Point {
+                    at: end,
+                    bpm: bpm_end,
+                    linear: linear_end,
+                    seconds: 0.0,
+                });
+            }
+            points.sort_by(|a, b| a.at.total_cmp(&b.at));
+            map = TempoMap { points };
+            map.integrate();
+        }
+        map
+    }
+
+    /// The seconds from the start to each point.
+    fn integrate(&mut self) {
+        let points = &mut self.points;
         for k in 1..points.len() {
             let (p, q) = (points[k - 1], points[k]);
             let to = if p.linear { q.bpm } else { p.bpm };
             points[k].seconds = p.seconds + ramp_seconds(p.at, q.at, p.bpm, to);
         }
-        TempoMap { points }
     }
 
     /// The index of the last point at or before `x`.
@@ -152,6 +185,45 @@ impl TempoMap {
         let p = self.points[k];
         p.seconds + ramp_seconds(p.at, x, p.bpm, self.bpm(x))
     }
+}
+
+/// Each fermata as (score position, end of the beat it holds, how many
+/// times longer that beat lasts). The held beat ends at the next moment any
+/// voice of any track has a beat, or at the bar's end.
+fn fermata_holds(score: &Score, starts: &[f64]) -> Vec<(f64, f64, f64)> {
+    let mut out = Vec::new();
+    for (i, mb) in score.master_bars.iter().enumerate() {
+        let (Some(&start), Some(&end)) = (starts.get(i), starts.get(i + 1)) else {
+            continue;
+        };
+        for f in &mb.fermatas {
+            let at = f.position;
+            let next = score
+                .tracks
+                .iter()
+                .flat_map(|t| t.staves.iter())
+                .filter_map(|s| s.bars.get(i))
+                .flat_map(|b| b.voices.iter())
+                .flat_map(|v| {
+                    let mut pos = Ratio::ZERO;
+                    v.beats
+                        .iter()
+                        .filter(|b| b.grace.is_none())
+                        .filter_map(move |b| {
+                            pos = pos.checked_add(b.duration.length()?)?;
+                            Some(pos)
+                        })
+                })
+                .filter(|p| *p > at)
+                .min();
+            let x = start + at.to_f64();
+            let to = next.map_or(end, |n| (start + n.to_f64()).min(end));
+            if to > x {
+                out.push((x, to, f.kind.hold().to_f64()));
+            }
+        }
+    }
+    out
 }
 
 /// Swing and triplet feel: where a position inside a bar is played.
@@ -405,6 +477,48 @@ mod tests {
         assert_eq!(feel(TripletFeel::Dotted16th, r(1, 16)), r(3, 32));
         assert_eq!(feel(TripletFeel::Scottish8th, r(1, 8)), r(1, 16));
         assert_eq!(feel(TripletFeel::None, r(1, 8)), r(1, 8));
+    }
+
+    #[test]
+    fn a_fermata_holds_its_beat() {
+        use oxiguitar_model::{
+            Beat, Duration, Fermata, FermataKind, NoteValue, Staff, Track, Voice,
+        };
+        let mut s = score(2, 120.0);
+        let beats = vec![
+            Beat {
+                duration: Duration::new(NoteValue::Quarter),
+                ..Beat::default()
+            };
+            4
+        ];
+        s.tracks.push(Track {
+            staves: vec![Staff {
+                bars: vec![
+                    oxiguitar_model::Bar {
+                        voices: vec![Voice {
+                            beats: beats.clone()
+                        }],
+                        ..oxiguitar_model::Bar::default()
+                    };
+                    2
+                ],
+                ..Staff::default()
+            }],
+            ..Track::default()
+        });
+        s.master_bars[0].fermatas.push(Fermata {
+            position: r(1, 2),
+            kind: FermataKind::Medium,
+            length: 0.0,
+        });
+        let m = TimeMap::new(&s, &playing_order(&s.master_bars));
+        // The third quarter lasts twice its half second: the bar lasts 2.5 s.
+        assert!((m.visits[0].end - 2.5).abs() < 1e-9, "{}", m.visits[0].end);
+        assert!((m.time(0, r(3, 4)) - 2.0).abs() < 1e-9);
+        assert!((m.time(0, r(1, 2)) - 1.0).abs() < 1e-9);
+        // The next bar at the tempo again.
+        assert!((m.visits[1].end - m.visits[1].start - 2.0).abs() < 1e-9);
     }
 
     #[test]

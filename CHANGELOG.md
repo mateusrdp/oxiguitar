@@ -4,6 +4,22 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-08
+
+### Added
+
+- **The rest of the palette works** (v0.17, `docs/design/palette.md`): every notation tool that said "comes in M5" now edits the score, on the caret's note or beat or on every one selected, each one step for Undo. Slurs (Legato), crescendo and decrescendo hairpins, 8va, 8vb, 15ma and 15mb lines, and extended barres cover the selected beats. Fermatas (short, medium or long from the Note tab), upper and lower mordents, turns and inverted turns, wide left-hand vibrato, slight whammy-bar vibrato, fade-out and volume swell, sustain pedal (down, up, off), open and closed wah, arpeggios up and down, rasgueado (its pattern from the Note tab), finger and thumb golpe, pick scrapes, dead slap, string numbers, slash notation, beaming (automatic, forced, broken, secondary broken) and Force Groups. Double flat to double sharp spell the note with that accidental, and Change Accidental steps through its spellings. Left- and Right-Hand Fingering step through the fingers. Single and Double Repeat Sign repeat the bar (or two bars) before, copying them; editing such a bar takes the sign off. Nested N-tuplet puts a tuplet inside another.
+- **The marks are drawn** (`docs/design/engraving.md`, "The rest of the palette"): fermatas, ottava lines (the notes under them where they are written) and extended barres over the staff; slurs, carried across lines; hairpins and the sustain pedal under it; ornaments, left- and right-hand fingers and circled string numbers on the staff; fades, rasgueado, wah, golpe, pick scrapes and dead slaps in the techniques' lane, with room made for them; whammy-bar curves in place of a bare "w/bar"; arpeggios; slash noteheads; forced and broken beams; forced tuplet groups and nested tuplet brackets; repeat signs in place of the bars' music.
+- **Courtesy signatures**: a key or time signature that changes at the start of the next line is shown at the end of the line before it.
+- **The marks are heard** (the manual's Playback page, "How the marks sound"): fermatas hold every track; hairpins move towards the next dynamic; mordents and turns play their neighbours in the key; fade out and volume swell shape the note; the pedal lets notes ring; arpeggios roll; rasgueados strike once a finger; golpes and dead slaps are muted knocks.
+- **Multivoice** (Ctrl + M, the palette's button): every voice in ink, the caret stepping through every voice's beats and onto the voice whose note is on its string; Ctrl + 1 to 4 leave it.
+- **Design Mode** (View → Design Mode, the palette's button): each line of the Page and Parchment layouts shows how many bars it holds; right-click on a bar for one bar more or less on its line, or the automatic layout from there. A track shown alone has its own layout, several tracks the score's; each change is one step for Undo. Lines that can't hold the bars set for them hold as many as fit, their count in red.
+- **A note's spelling is kept**: a file's own spelling of a note (A flat rather than G sharp) is kept where it isn't the one OxiGuitar would choose itself.
+
+### Changed
+
+- **Plugin interface 1.6** (the SDK crates are at 1.6.0): the score version 2 carries every new mark as an extension, version 1's fields keeping what they held (a plugin made for 1.5 still sees a fade-in and a vibrato). A file written by a plugin made for an older interface now names, among its losses, each kind of mark that plugin couldn't receive.
+
 ## [0.16.0] - 2026-11-08
 
 ### Added

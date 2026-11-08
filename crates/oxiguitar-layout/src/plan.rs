@@ -5,12 +5,13 @@
 //! way stems point, how wide each column must be (NOT-1, NOT-2, NOT-4).
 
 use oxiguitar_model::{
-    Bar, BeatEffects, BeatKind, Clef, Dynamic, GraceKind, Harmonic, KeySignature, MasterBar, Note,
-    NoteEffects, NotePlace, NoteValue, Pitch, Ratio, Staff, Track, Tuplet,
+    Bar, Barre, Beaming, BeatEffects, BeatKind, Clef, Dynamic, FermataKind, GraceKind, Hairpin,
+    Harmonic, KeySignature, MasterBar, Note, NoteEffects, NotePlace, NoteValue, Ottava, Pitch,
+    Ratio, Simile, Staff, Track, Tuplet,
 };
 
 use crate::draw::{G, Painter, glyphs};
-use crate::pitch::{BarAccidentals, drum, spell, staff_step, written};
+use crate::pitch::{BarAccidentals, drum, spell_as, staff_step, written};
 use crate::rhythm::{self, BeatRef, Column};
 
 /// One note as it will be drawn.
@@ -74,6 +75,27 @@ pub(crate) struct BeatInfo {
     pub(crate) show_dynamic: Option<Dynamic>,
     /// Lyric syllables under this beat: (line, syllable).
     pub(crate) lyrics: Vec<(usize, String)>,
+    /// Every tuplet, outermost first ([`BeatInfo::tuplet`] is the first).
+    pub(crate) tuplets: Vec<Tuplet>,
+    /// Slurred to the next beat of its voice.
+    pub(crate) slur: bool,
+    /// The beat before it in its voice (maybe in the bar before) is slurred
+    /// to it, set across the staff in [`crate::system::plan_all`].
+    pub(crate) slur_in: bool,
+    /// Under a hairpin.
+    pub(crate) hairpin: Option<Hairpin>,
+    /// Under an ottava line (its notes drawn where they are written).
+    pub(crate) ottava: Option<Ottava>,
+    /// Drawn with slash noteheads.
+    pub(crate) slash: bool,
+    /// Under an extended barre.
+    pub(crate) barre: Option<Barre>,
+    /// How its beam joins the next beat's.
+    pub(crate) beaming: Beaming,
+    /// Equal tuplets from here are bracketed as one group.
+    pub(crate) tuplet_group: bool,
+    /// A fermata at the beat's moment.
+    pub(crate) fermata: Option<FermataKind>,
 }
 
 /// Lanes of effect marks a bar needs above its tablature (or above its staff
@@ -95,8 +117,11 @@ pub(crate) struct Lanes {
     pub(crate) let_ring: bool,
     /// Harmonic kinds other than natural (A.H., P.H., T.H., S.H., Fdbk.).
     pub(crate) harmonic: bool,
-    /// Tap, slap, pop, whammy bar, fade in, pick strokes.
+    /// Tap, slap, pop, fades, pick strokes, wah, rasgueado, golpe, pick
+    /// scrapes, dead slaps; ornaments on staves without standard notation.
     pub(crate) technique: bool,
+    /// Whammy-bar curves.
+    pub(crate) whammy: bool,
 }
 
 impl Lanes {
@@ -111,16 +136,24 @@ impl Lanes {
             let_ring: self.let_ring || o.let_ring,
             harmonic: self.harmonic || o.harmonic,
             technique: self.technique || o.technique,
+            whammy: self.whammy || o.whammy,
         }
     }
 
-    fn of_beat(b: &BeatInfo) -> Lanes {
+    fn of_beat(b: &BeatInfo, std: bool) -> Lanes {
         let mut l = Lanes::default();
         let e = &b.effects;
-        l.vibrato = e.vibrato_wide;
+        l.vibrato = e.bridge_vibrato.is_some();
         l.let_ring = e.let_ring;
-        l.technique =
-            e.technique.is_some() || e.whammy.is_some() || e.fade_in || e.pick_stroke.is_some();
+        l.whammy = e.whammy.is_some();
+        l.technique = e.technique.is_some()
+            || e.fade.is_some()
+            || e.pick_stroke.is_some()
+            || e.wah.is_some()
+            || e.rasgueado.is_some()
+            || e.golpe.is_some()
+            || e.pick_scrape.is_some()
+            || e.dead_slap;
         for n in &b.notes {
             let f = &n.effects;
             l.bend |= f
@@ -128,12 +161,12 @@ impl Lanes {
                 .as_ref()
                 .is_some_and(|b| b.points.iter().any(|p| p.cents != 0));
             l.hp |= f.hammer_pull;
-            l.vibrato |= f.vibrato;
+            l.vibrato |= f.vibrato.is_some();
             l.trill |= f.trill.is_some();
             l.palm_mute |= f.palm_mute;
             l.let_ring |= f.let_ring;
             l.harmonic |= f.harmonic.is_some_and(|h| h != Harmonic::Natural);
-            l.technique |= f.left_hand_tap;
+            l.technique |= f.left_hand_tap || (!std && f.ornament.is_some());
         }
         l
     }
@@ -177,6 +210,8 @@ pub(crate) struct BarPlan {
     pub(crate) has_text: bool,
     /// Effect lanes this bar needs.
     pub(crate) lanes: Lanes,
+    /// A simile sign drawn in place of the bar's music.
+    pub(crate) simile: Option<Simile>,
 }
 
 /// The distance a duration asks for, in staff spaces: grows with the
@@ -219,6 +254,21 @@ impl Planner<'_> {
                     .iter()
                     .zip(rhythm::onsets(v))
                     .map(|(b, onset)| BeatInfo {
+                        tuplets: b.duration.tuplets.clone(),
+                        slur: b.slur,
+                        slur_in: false,
+                        hairpin: b.hairpin,
+                        ottava: b.ottava,
+                        slash: b.slash,
+                        barre: b.barre,
+                        beaming: b.beaming,
+                        tuplet_group: b.tuplet_group,
+                        fermata: onset.and_then(|at| {
+                            mb.fermatas
+                                .iter()
+                                .find(|f| f.position == at)
+                                .map(|f| f.kind)
+                        }),
                         onset,
                         kind: if shown { b.kind } else { BeatKind::Empty },
                         value: b.duration.value,
@@ -278,7 +328,7 @@ impl Planner<'_> {
                     let mut notes: Vec<NoteInfo> = beat
                         .notes
                         .iter()
-                        .filter_map(|n| self.note(n, clef, key, &mut acc))
+                        .filter_map(|n| self.note(n, clef, (key, beat.ottava), &mut acc))
                         .collect();
                     notes.sort_by_key(|n| n.step);
                     if let Some(info) = voices.get_mut(r.voice).and_then(|v| v.get_mut(g)) {
@@ -294,9 +344,20 @@ impl Planner<'_> {
                 let mut notes: Vec<NoteInfo> = beat
                     .notes
                     .iter()
-                    .filter_map(|n| self.note(n, clef, key, &mut acc))
+                    .filter_map(|n| self.note(n, clef, (key, beat.ottava), &mut acc))
                     .collect();
                 notes.sort_by_key(|n| n.step);
+                if beat.slash {
+                    // Slash notation: the rhythm on the middle line, the
+                    // frets still on the tab.
+                    for n in &mut notes {
+                        n.step = 4;
+                        n.accidental = None;
+                        n.diamond = false;
+                        n.dead = false;
+                        n.ghost = false;
+                    }
+                }
                 place_accidentals(&mut notes);
                 if let Some(info) = voices.get_mut(r.voice).and_then(|v| v.get_mut(r.beat)) {
                     info.notes = notes;
@@ -347,6 +408,17 @@ impl Planner<'_> {
             } else {
                 0
             };
+            // Ornaments and right-hand fingers above the notes.
+            let over = if b
+                .notes
+                .iter()
+                .any(|n| n.effects.ornament.is_some() || n.effects.right_finger.is_some())
+            {
+                4
+            } else {
+                0
+            };
+            high = high.max(last.step + over);
             if b.up {
                 high = high.max(last.step + stem + tuplet);
                 low = low.min(first.step - artic);
@@ -364,9 +436,10 @@ impl Planner<'_> {
         let lanes = voices
             .iter()
             .flatten()
-            .map(Lanes::of_beat)
+            .map(|b| Lanes::of_beat(b, self.show_std))
             .fold(Lanes::default(), Lanes::or);
         BarPlan {
+            simile: bar.simile,
             lanes,
             has_chords: voices.iter().flatten().any(|b| b.chord.is_some()),
             has_text: voices.iter().flatten().any(|b| !b.text.is_empty()),
@@ -380,11 +453,13 @@ impl Planner<'_> {
         }
     }
 
+    /// A note as drawn; under an ottava line it sits where it is written,
+    /// an octave or two from where it sounds.
     fn note(
         &self,
         n: &Note,
         clef: Clef,
-        key: KeySignature,
+        (key, ottava): (KeySignature, Option<Ottava>),
         acc: &mut BarAccidentals,
     ) -> Option<NoteInfo> {
         if self.track.instrument.percussion {
@@ -427,7 +502,12 @@ impl Planner<'_> {
             }
             NotePlace::Pitched(p) => (Some(p), None, None),
         };
-        let spelled = spell(written(pitch?, self.staff.transposition, clef), key);
+        let shift = ottava.map_or(0, Ottava::shift);
+        let spelled = spell_as(
+            written(pitch?, self.staff.transposition, clef) - shift,
+            key,
+            n.spelling,
+        );
         Some(NoteInfo {
             step: staff_step(spelled.diatonic, clef),
             accidental: acc.accidental(spelled, n.tie),
@@ -501,6 +581,9 @@ impl Planner<'_> {
             if let Some(name) = &b.chord {
                 chord_w = chord_w.max(p.text_width(name, chord_name_size(sp)));
             }
+            // The technique lane's marks are laid out from the beat
+            // rightwards, as chord names are: the column keeps them apart.
+            chord_w = chord_w.max(technique_width(p, b));
         }
         if !self.show_std {
             left = 0.0;
@@ -545,6 +628,42 @@ impl Planner<'_> {
 pub(crate) const GRACE_SCALE: f32 = 0.65;
 
 /// Distance between grace notes, on the staff and on the tab.
+/// How wide a beat's marks in the technique lane are, laid out left to
+/// right (see `effects::single`).
+fn technique_width(p: &Painter<'_>, b: &BeatInfo) -> f32 {
+    let sp = p.sp;
+    let text = |t: &str| p.text_width(t, 1.6 * sp) + 0.4 * sp;
+    let fx = &b.effects;
+    let mut w = 0.0;
+    if fx.technique.is_some() || b.notes.iter().any(|n| n.effects.left_hand_tap) {
+        w += text("T");
+    }
+    w += match fx.fade {
+        Some(oxiguitar_model::Fade::Swell) => 3.6 * sp,
+        Some(_) => 2.0 * sp,
+        None => 0.0,
+    };
+    if let Some(r) = fx.rasgueado {
+        w += text(&format!("rasg. {}", r.fingers()));
+    }
+    if fx.wah.is_some() {
+        w += p.width(glyphs::WAH_OPEN) + 0.4 * sp;
+    }
+    if fx.golpe.is_some() {
+        w += p.width(glyphs::GOLPE) + text("p");
+    }
+    if fx.pick_scrape.is_some() {
+        w += 3.2 * sp;
+    }
+    if fx.dead_slap {
+        w += text("dead slap");
+    }
+    if fx.pick_stroke.is_some() {
+        w += p.width(glyphs::DOWN_BOW);
+    }
+    if w > 0.0 { w + 0.6 * sp } else { 0.0 }
+}
+
 pub(crate) fn grace_step(p: &Painter<'_>, tab_gap: f32) -> f32 {
     let head = p.width(glyphs::NOTEHEAD_BLACK) * GRACE_SCALE;
     let number = p.tab_number_width(tab_gap * GRACE_SCALE, "10");

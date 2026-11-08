@@ -849,3 +849,237 @@ fn other_voices_are_greyed_out_for_the_editor() {
     // A voice the song doesn't use greys out both.
     assert!(muted(Some(3)) > second);
 }
+
+/// A guitar bar of four quarter notes on string 2, frets 1 to 4, each beat
+/// changed by `mark`.
+fn marked_bar(mark: impl Fn(usize, &mut Beat)) -> Bar {
+    let beats = (0..4)
+        .map(|k| {
+            let mut b = Beat {
+                duration: Duration::new(NoteValue::Quarter),
+                notes: vec![Note::fretted(2, 1 + k as u8)],
+                ..Beat::default()
+            };
+            mark(k, &mut b);
+            b
+        })
+        .collect();
+    Bar {
+        voices: vec![Voice { beats }],
+        ..Bar::default()
+    }
+}
+
+/// Every mark of the rest of the palette (v0.17), a bar or two each.
+fn palette_song() -> Score {
+    use oxiguitar_model::{
+        Barre, Beaming, Fade, Fermata, FermataKind, Golpe, Hairpin, Ornament, Ottava, Pedal,
+        Rasgueado, Ratio, Simile, StrokeDirection, Wah,
+    };
+    let mut staff = Staff {
+        tuning: Staff::standard_guitar_tuning(),
+        ..Staff::default()
+    };
+    staff.bars = vec![
+        marked_bar(|k, b| {
+            b.slur = k < 2;
+            b.hairpin = Some(Hairpin::Crescendo);
+            b.effects.pedal = match k {
+                0 => Some(Pedal::Down),
+                3 => Some(Pedal::Up),
+                _ => None,
+            };
+        }),
+        marked_bar(|k, b| {
+            b.ottava = Some(Ottava::Alta8);
+            if k == 0 {
+                b.notes[0].effects.ornament = Some(Ornament::Turn);
+                b.notes[0].effects.left_finger = Some(1);
+                b.notes[0].effects.right_finger = Some(1);
+                b.notes[0].effects.string_number = true;
+            }
+        }),
+        marked_bar(|k, b| match k {
+            0 => b.effects.fade = Some(Fade::Out),
+            1 => {
+                b.effects.wah = Some(Wah::Closed);
+                b.effects.golpe = Some(Golpe::Thumb);
+            }
+            2 => {
+                b.effects.rasgueado = Some(Rasgueado::Ii);
+                b.effects.pick_scrape = Some(StrokeDirection::Up);
+            }
+            _ => b.effects.dead_slap = true,
+        }),
+        marked_bar(|k, b| {
+            b.barre = Some(Barre {
+                fret: 5,
+                half: false,
+            });
+            if k == 0 {
+                b.notes.push(Note::fretted(3, 5));
+                b.effects.arpeggio = Some(StrokeDirection::Up);
+            }
+        }),
+        marked_bar(|_, b| b.slash = true),
+        marked_bar(|_, _| {}),
+        marked_bar(|_, _| {}),
+        marked_bar(|_, _| {}),
+        marked_bar(|_, b| {
+            b.duration = Duration::new(NoteValue::Eighth);
+            b.beaming = Beaming::Break;
+        }),
+    ];
+    staff.bars[5].simile = Some(Simile::Simple);
+    staff.bars[6].simile = Some(Simile::FirstOfDouble);
+    staff.bars[7].simile = Some(Simile::SecondOfDouble);
+    let mut score = Score::new();
+    score.master_bars = vec![MasterBar::default(); staff.bars.len()];
+    score.master_bars[8].time_signature = TimeSignature {
+        numerator: 2,
+        denominator: 4,
+    };
+    score.master_bars[0].fermatas.push(Fermata {
+        position: Ratio::new(1, 4).unwrap(),
+        kind: FermataKind::Long,
+        length: 0.0,
+    });
+    score.tracks.push(Track {
+        staves: vec![staff],
+        ..Track::default()
+    });
+    score
+}
+
+#[test]
+fn the_marks_of_the_rest_of_the_palette_are_drawn() {
+    let (fonts, meta) = setup();
+    let score = palette_song();
+    for notation in [
+        Notation {
+            standard: true,
+            tablature: true,
+        },
+        Notation {
+            standard: false,
+            tablature: true,
+        },
+    ] {
+        let options = Options {
+            notation: [(0, notation)].into_iter().collect(),
+            ..Options::default()
+        };
+        let e = engrave(&score, &fonts, &meta, &options);
+        check("palette", &e, &fonts);
+        let std = notation.standard;
+        // Fermata (long), wah, golpe, pedal down and up, 8va: once.
+        for (c, what) in [
+            ('\u{E4C6}', "long fermata"),
+            ('\u{E5E5}', "closed wah"),
+            ('\u{E842}', "golpe"),
+            ('\u{E650}', "pedal"),
+            ('\u{E655}', "pedal release"),
+            ('\u{E511}', "8va"),
+        ] {
+            assert_eq!(count_char(&e, c), 1, "{what}, standard {std}");
+        }
+        // The repeat signs: on each staff.
+        let staves = if std { 2 } else { 1 };
+        assert_eq!(count_char(&e, '\u{E500}'), staves, "one-bar repeat");
+        assert_eq!(count_char(&e, '\u{E501}'), staves, "two-bar repeat");
+        // On the staff only: the turn, the fingers, slash heads.
+        let staff_only = [
+            ('\u{E567}', "turn"),
+            ('\u{ED11}', "finger 1"),
+            ('\u{ED19}', "i"),
+            ('\u{E101}', "slash heads"),
+        ];
+        for (c, what) in staff_only {
+            let n = count_char(&e, c);
+            if std {
+                assert!(n >= 1, "{what}");
+            } else if c != '\u{E567}' {
+                assert_eq!(n, 0, "{what} on a tab-only staff");
+            }
+        }
+        let t: Vec<String> = e.pages.iter().flat_map(texts).collect();
+        for want in ["rasg. ii", "dead slap", "CV"] {
+            assert!(t.iter().any(|s| s == want), "{want}: {t:?}");
+        }
+    }
+}
+
+#[test]
+fn a_key_change_at_a_line_break_is_shown_again_before_it() {
+    let (fonts, meta) = setup();
+    let mut score = tune_in_g(40);
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    let second = e.hits.systems[1].staves[0].bars[0].bar;
+    // From the second system's first bar on, G major.
+    for mb in score.master_bars.iter_mut().skip(second) {
+        mb.key_signature.fifths = 1;
+    }
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    assert_eq!(
+        e.hits.systems[1].staves[0].bars[0].bar, second,
+        "the line still breaks there"
+    );
+    let later = e.hits.systems.len() - 1;
+    // In C, each bar's F sharp has its sharp; from the change on, one
+    // sharp at the start of each later system (the F sharps are in the
+    // key); and one before the break: the courtesy key signature.
+    assert_eq!(count_char(&e, '\u{E262}'), second + later + 1);
+}
+
+#[test]
+fn systems_hold_the_bars_set_in_design_mode() {
+    let (fonts, meta) = setup();
+    let mut score = tune_in_g(20);
+    let first_bars = |e: &Engraved| -> Vec<usize> {
+        e.hits
+            .systems
+            .iter()
+            .map(|s| s.staves[0].bars[0].bar)
+            .collect()
+    };
+    let automatic = first_bars(&engrave(&score, &fonts, &meta, &Options::default()));
+    // One track shown: its own layout. Two bars, then three, then the
+    // rest as many as fit.
+    score.tracks[0].layout = vec![2, 3];
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    let set = first_bars(&e);
+    assert_eq!(set[..3], [0, 2, 5], "{set:?} (automatic {automatic:?})");
+    // The score's layout is for several tracks: not used here.
+    score.tracks[0].layout.clear();
+    score.layout = vec![1];
+    assert_eq!(
+        first_bars(&engrave(&score, &fonts, &meta, &Options::default())),
+        automatic
+    );
+    // Not in the Vertical layout.
+    score.tracks[0].layout = vec![1, 1];
+    let vertical = Options {
+        layout: Layout::Vertical,
+        screen_width: 800.0,
+        ..Options::default()
+    };
+    assert_ne!(
+        first_bars(&engrave(&score, &fonts, &meta, &vertical))[..2],
+        [0, 1]
+    );
+    // More bars than fit: as many as fit, and Design Mode says so in red.
+    score.tracks[0].layout = vec![20];
+    let design = Options {
+        design: true,
+        ..Options::default()
+    };
+    let e = engrave(&score, &fonts, &meta, &design);
+    assert_eq!(first_bars(&e), automatic);
+    let red = e.pages[0].items.iter().any(|i| match i {
+        Item::Glyphs(run) => {
+            run.text.ends_with(" bars") && run.paint == oxiguitar_display::Paint::Warning
+        }
+        _ => false,
+    });
+    assert!(red, "the count in red");
+}

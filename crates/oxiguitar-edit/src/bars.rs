@@ -216,6 +216,7 @@ fn insert(
                 Bar {
                     clef,
                     voices: vec![Voice::default()],
+                    simile: None,
                 },
             );
         }

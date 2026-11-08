@@ -90,13 +90,24 @@ Decided with Mateus on 16 Oct 2026.
 - **Tests:** `cargo test --release -p oxiguitar-layout --test engrave` engraves the public fixtures, damaged scores, a 300-bar 8-track score and the same bars in all four layouts. Where `corpus/files/` exists, it also engraves every Guitar Pro file in the corpus with all its tracks, in every layout. Each run checks that every item lands on the page or sheet, every glyph exists in its font and output is deterministic.
 - **By eye:** `oxiguitar-cli render FILE --png out/page --pdf out/score.pdf [--layout page|vertical|horizontal|parchment] [--width PT] [--paper a4|letter] [--tracks all] [--dark] [--no-dynamics] [--tool ID]`. Long sheets are cut into PNGs of at most 8192 pixels.
 
+## The rest of the palette (v0.17)
+
+Drawn since v0.17 (docs/design/palette.md):
+
+- **Lines above the staff**, in their own lines over the chord names: fermatas (short, medium, long) at their beat; ottava lines ("8va", "8vb", "15ma", "15mb" in Bravura, a dashed line and a hook) over the run of beats they cover, whose notes are drawn on the staff where they are written; extended barres ("C" or "½C" and the fret in Roman numerals, a dashed line).
+- **Slurs** over (or under, away from the stems) the noteheads of a run, from the beat to the next; one that goes on past a system ends at its edge, and one that comes in starts before the first beat. On a tab-only staff, over the numbers.
+- **Under the staff**: hairpins on the dynamics' line, clear of a dynamic at their start; the sustain pedal's "Ped." and its release on a line of their own.
+- **Notes**: ornaments over the notes, left-hand fingers (T, 1–4) before each notehead, right-hand fingers (p i m a c) over the chord, string numbers circled under the notehead (over it when the stem points down), each note's own spelling when it spells its written pitch.
+- **The technique lane** (over the tab, or the staff): fade in, fade out and swell as small hairpins, "rasg." with the pattern's fingers, wah (+, o), golpe, pick scrapes as a wavy line and an arrow, "dead slap"; ornaments there on tab-only staves. The column makes room for these, as for chord names.
+- **Whammy-bar curves** in a lane of their own over the tab: "w/bar", the curve from its zero line, its deepest amount.
+- **Arpeggios**: a wavy line before the chord, its arrowhead the way it rolls.
+- **Slash notation**: slash noteheads on the middle line, the rhythm kept; the tab keeps its numbers.
+- **Beaming**: Force and Break join or part a beat from the next; Break Secondary ends every beam but the first after the beat. **Force Groups** brackets the equal tuplets after a beat as one group. **Nested tuplets** get a bracket of their own, the outer one beyond it.
+- **Simile bars**: the one-bar repeat sign in the middle of the bar, the two-bar sign across the bar line between the two, on each staff; their music isn't drawn.
+- **Courtesy signatures**: a key or time signature that changes at the start of the next system is shown after the last bar line; the line breaks a bar earlier when they wouldn't fit.
+
 ## Not drawn yet
 
-These are the M1 engraving items still to do (see ROADMAP.md):
-
-- **Notation marks not in the score model yet:** slurs between different notes (other than hammer-ons, pull-offs and legato slides), hairpins, ornaments, fermatas and ottava lines (NOT-3). The readers log them as not carried over.
-- **Effects:** whammy-bar curves (shown as "w/bar" only), fingering numbers, and articulations on tab-only tracks.
-- **Overlap pass, second round:** bend amounts of quick successive bends can touch, and dense chords can crowd ledger lines (VIEW-7). Tuplet numbers, articulations and dynamics now reserve their room (dynamics like chord names: they stay under their beat and the music opens up).
-- **Nested tuplets:** only the outermost tuplet of a note is marked (TAB-2, M4).
-- **Courtesy signatures:** key and time signatures at the end of a system before a change.
+- **Overlap pass, second round:** bend amounts of quick successive bends can touch, and dense chords can crowd ledger lines (VIEW-7). Tuplet numbers, articulations, dynamics, chord names and the technique lane's marks reserve their room.
+- **Articulations on tab-only tracks.**
 - **Grand staff details:** voices are split one by one, so a part written as one voice with both hands gets each hand's stems from that voice's rule; cross-staff beams and clef changes within a staff are not drawn.

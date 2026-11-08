@@ -35,16 +35,17 @@ pub mod tuning;
 pub mod wire;
 
 pub use bar::{
-    Bar, Beat, BeatEffects, BeatKind, BeatTechnique, Clef, GraceKind, Stroke, StrokeDirection,
-    Voice,
+    Bar, Barre, Beaming, Beat, BeatEffects, BeatKind, BeatTechnique, Clef, Fade, Golpe, GraceKind,
+    Hairpin, Ottava, Pedal, Rasgueado, Simile, Stroke, StrokeDirection, Vibrato, Voice, Wah,
 };
 pub use duration::{Duration, NoteValue, Tuplet};
 pub use note::{
-    Accent, Bend, BendPoint, Dynamic, Harmonic, Note, NoteEffects, NotePlace, Pitch, Slide, Trill,
+    Accent, Bend, BendPoint, Dynamic, Harmonic, Note, NoteEffects, NotePlace, Ornament, Pitch,
+    Slide, Spelling, Trill,
 };
 pub use ratio::Ratio;
 pub use score::{
-    Color, Direction, KeyMode, KeySignature, Marker, MasterBar, Score, ScoreInfo, TempoChange,
-    TimeSignature, TripletFeel,
+    Color, Direction, Fermata, FermataKind, KeyMode, KeySignature, Marker, MasterBar, Score,
+    ScoreInfo, TempoChange, TimeSignature, TripletFeel,
 };
 pub use track::{ChordDiagram, Instrument, LyricLine, Mix, Staff, Track};

@@ -333,9 +333,16 @@ fn piece(beat: &Beat, duration: Duration, first: bool, last: bool) -> Beat {
         e.stroke = None;
         e.pick_stroke = None;
         e.technique = None;
-        e.fade_in = false;
+        e.fade = None;
         e.dynamic = None;
         e.whammy = None;
+        e.pedal = None;
+        e.wah = None;
+        e.arpeggio = None;
+        e.rasgueado = None;
+        e.golpe = None;
+        e.pick_scrape = None;
+        e.dead_slap = false;
         for n in &mut b.notes {
             n.tie = true;
             let e = &mut n.effects;
@@ -345,6 +352,8 @@ fn piece(beat: &Beat, duration: Duration, first: bool, last: bool) -> Beat {
             e.left_finger = None;
             e.right_finger = None;
             e.left_hand_tap = false;
+            e.ornament = None;
+            e.string_number = false;
             e.slides
                 .retain(|s| !matches!(s, Slide::InFromBelow | Slide::InFromAbove));
         }
@@ -799,7 +808,11 @@ fn rebar_passage(score: &Score, k0: usize, k1: usize) -> Option<Rebarred> {
             while vs.len() > 1 && vs.last().is_some_and(|v| v.beats.is_empty()) {
                 vs.pop();
             }
-            out.push(Bar { clef, voices: vs });
+            out.push(Bar {
+                clef,
+                voices: vs,
+                simile: None,
+            });
         }
         staves.push(out);
     }

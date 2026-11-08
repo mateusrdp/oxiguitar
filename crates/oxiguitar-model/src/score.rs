@@ -25,6 +25,10 @@ pub struct Score {
     pub master_bars: Vec<MasterBar>,
     /// The tracks, in display order.
     pub tracks: Vec<Track>,
+    /// Bars per system on the page when several tracks are shown, from
+    /// the first system on (Design Mode); empty, or past its end, for the
+    /// automatic layout.
+    pub layout: Vec<u8>,
 }
 
 impl Score {
@@ -127,6 +131,42 @@ pub struct MasterBar {
     /// The bar is in free time: no time signature to add up to (a
     /// cadenza). Its time signature is kept for the bars after it.
     pub free_time: bool,
+    /// Fermatas, each holding every track at its moment in the bar.
+    pub fermatas: Vec<Fermata>,
+}
+
+/// A fermata at a moment of a bar.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Fermata {
+    /// Where in the bar, in whole notes from its start.
+    pub position: Ratio,
+    /// How long it holds.
+    pub kind: FermataKind,
+    /// Guitar Pro's length value, kept for the round trip (0 if none).
+    pub length: f32,
+}
+
+/// How long a fermata holds.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum FermataKind {
+    /// A short hold.
+    Short,
+    /// The usual hold.
+    #[default]
+    Medium,
+    /// A long hold.
+    Long,
+}
+
+impl FermataKind {
+    /// How many times its beat's length the held beat lasts.
+    pub fn hold(self) -> Ratio {
+        match self {
+            FermataKind::Short => Ratio::new(3, 2).unwrap_or(Ratio::ONE),
+            FermataKind::Medium => Ratio::new(2, 1).unwrap_or(Ratio::ONE),
+            FermataKind::Long => Ratio::new(3, 1).unwrap_or(Ratio::ONE),
+        }
+    }
 }
 
 impl Default for MasterBar {
@@ -143,6 +183,7 @@ impl Default for MasterBar {
             tempo_changes: Vec::new(),
             directions: Vec::new(),
             free_time: false,
+            fermatas: Vec::new(),
         }
     }
 }

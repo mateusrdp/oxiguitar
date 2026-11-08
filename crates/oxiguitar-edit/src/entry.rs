@@ -189,6 +189,38 @@ pub enum Command {
     Text(String),
     /// The score's information: title, artist and the rest.
     Info(Box<oxiguitar_model::ScoreInfo>),
+    /// A fermata at the caret beat's moment in its bar, or at each selected
+    /// beat's: on (medium) or off; with a kind, that kind (the Inspector).
+    Fermata(Option<oxiguitar_model::FermataKind>),
+    /// A repeat sign on the caret's bar (`Simple`), or on it and the next
+    /// (`FirstOfDouble`); on a bar that has one, off.
+    Simile(oxiguitar_model::Simile),
+    /// The sustain pedal: at the caret down, up, off; on a selection, down
+    /// at its start and up at its end.
+    Pedal,
+    /// The caret's note (or the selected notes) spelled with this
+    /// accidental, -2 (double flat) to 2 (double sharp), where one spells
+    /// it.
+    Spell(i8),
+    /// The next way to spell the caret's note (or the selected notes).
+    Respell,
+    /// The next finger of the left (or right) hand on the caret's note.
+    NextFinger {
+        /// The right hand's fingers (p i m a c) rather than the left's.
+        right: bool,
+    },
+    /// A tuplet inside the one the caret's beat (or the selected beats)
+    /// already has; another one again takes it off.
+    NestedTuplet(Tuplet),
+    /// Bars per system on the page (Design Mode): a track's own, shown
+    /// alone, or (`None`) the score's, for several tracks shown together.
+    /// Empty for the automatic layout.
+    SystemLayout {
+        /// The track, or `None` for the score.
+        track: Option<usize>,
+        /// Bars per system, from the first.
+        layout: Vec<u8>,
+    },
     /// A syllable of line `line` (from 0) of the caret's track's lyrics,
     /// at beat `at` (bar, beat) of its first staff's first voice; empty to
     /// leave that beat empty. `hyphen` when the word goes on.
@@ -271,6 +303,15 @@ impl Command {
             Command::Text(_) => "Text",
             Command::Info(_) => "Score Information",
             Command::Syllable { .. } => "Lyrics",
+            Command::Fermata(_) => "Fermata",
+            Command::Simile(_) => "Repeat Sign",
+            Command::Pedal => "Sustain Pedal",
+            Command::Spell(_) => "Accidental",
+            Command::Respell => "Change Accidental",
+            Command::NextFinger { right: false } => "Left-Hand Fingering",
+            Command::NextFinger { right: true } => "Right-Hand Fingering",
+            Command::NestedTuplet(_) => "Nested Tuplet",
+            Command::SystemLayout { .. } => "Bars per System",
         }
     }
 }
@@ -325,6 +366,9 @@ pub fn apply(
     if let Some(edited) = crate::notation::apply(score, history, caret, &command) {
         return edited;
     }
+    if let Some(edited) = crate::marks::apply(score, history, caret, selection, &command) {
+        return edited;
+    }
     let label = command.label();
     let undone = matches!(command, Command::Fret { again: true, .. })
         && history.undo_label() == Some(FRET)
@@ -337,6 +381,11 @@ pub fn apply(
     };
     let mut plan = plan;
     plan.bars.iter_mut().for_each(tidy);
+    if let Some(old) =
+        staff_of(score, caret).and_then(|s| s.bars.get(plan.first..plan.first + plan.bars.len()))
+    {
+        crate::effects::unmark_similes(old, &mut plan.bars);
+    }
     if let Some(staff) = staff_of(score, caret) {
         // Every voice: some commands move notes between voices.
         for voice in 0..crate::VOICES {
@@ -498,6 +547,7 @@ fn append_bar(score: &mut Score, history: &mut History, c: Caret) -> Option<Edit
                 staff.bars.push(Bar {
                     clef,
                     voices: vec![Voice::default()],
+                    simile: None,
                 });
             }
         },
@@ -781,7 +831,31 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Chord(_)
         | Command::Text(_)
         | Command::Info(_)
-        | Command::Syllable { .. } => None,
+        | Command::Syllable { .. }
+        | Command::Fermata(_)
+        | Command::Simile(_)
+        | Command::Pedal
+        | Command::Spell(_)
+        | Command::Respell
+        | Command::NextFinger { .. }
+        | Command::SystemLayout { .. } => None,
+        Command::NestedTuplet(t) => {
+            let targets = targets(score, c, selection);
+            let off = staff
+                .bars
+                .get(c.bar)
+                .and_then(|b| b.voices.get(c.voice))
+                .and_then(|v| v.beats.get(c.beat))
+                .is_some_and(|b| b.duration.tuplets.get(1) == Some(&t));
+            on_beats(score, c, &targets, |b| {
+                let mut to = b.duration.tuplets.clone();
+                to.truncate(1);
+                if !off {
+                    to.push(t);
+                }
+                (b.duration.tuplets != to).then(|| b.duration.tuplets = to)
+            })
+        }
         Command::Tuplet(t) => {
             let targets = targets(score, c, selection);
             let off = staff
@@ -825,6 +899,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             let bar = Bar {
                 clef: old.clef,
                 voices: vec![Voice::default()],
+                simile: None,
             };
             one(bar, Caret { beat: 0, ..c })
         }
@@ -1057,6 +1132,7 @@ fn tied_to(origin: &Note) -> Note {
         tie: true,
         dynamic: origin.dynamic,
         effects: Default::default(),
+        spelling: origin.spelling,
     }
 }
 

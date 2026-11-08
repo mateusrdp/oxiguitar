@@ -11,7 +11,10 @@
 //! [`crate::engrave::Lane`].
 
 use oxiguitar_display::{DisplayList, Paint, Path, Point};
-use oxiguitar_model::{BeatTechnique, Dynamic, Harmonic, Slide, StrokeDirection};
+use oxiguitar_model::{
+    BeatTechnique, Dynamic, Fade, Golpe, Hairpin, Harmonic, Ornament, Ottava, Pedal, Slide,
+    StrokeDirection, Vibrato, Wah,
+};
 
 use crate::draw::{G, Painter, glyphs};
 use crate::engrave::{Band, Lane};
@@ -59,13 +62,263 @@ pub(crate) fn draw(p: &Painter<'_>, list: &mut DisplayList, marks: &[Mark<'_>], 
         v.dedup();
         v
     };
+    // Marks for the whole staff (ottava lines, barres, hairpins) come from
+    // the first voice that has them, so two voices don't draw them twice.
+    let first_with = |f: fn(&BeatInfo) -> bool| {
+        voices
+            .iter()
+            .copied()
+            .find(|v| marks.iter().any(|m| m.voice == *v && f(m.beat)))
+    };
+    let ottava_voice = first_with(|b| b.ottava.is_some());
+    let barre_voice = first_with(|b| b.barre.is_some());
+    let hairpin_voice = first_with(|b| b.hairpin.is_some());
     for voice in voices {
         let mine: Vec<&Mark<'_>> = marks.iter().filter(|m| m.voice == voice).collect();
         connections(p, list, &mine, g);
+        slurs(p, list, &mine, g);
         runs(p, list, &mine, g);
+        if ottava_voice == Some(voice) {
+            ottavas(p, list, &mine, g);
+        }
+        if barre_voice == Some(voice) {
+            barres(p, list, &mine, g);
+        }
+        if hairpin_voice == Some(voice) {
+            hairpins(p, list, &mine, g);
+        }
     }
     for m in marks {
         single(p, list, m, g);
+    }
+}
+
+/// Runs of consecutive marks of one voice that `same` says belong
+/// together, each as (first index, last index).
+fn spans<T: PartialEq>(
+    marks: &[&Mark<'_>],
+    of: impl Fn(&BeatInfo) -> Option<T>,
+) -> Vec<(usize, usize, T)> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < marks.len() {
+        let Some(v) = marks.get(i).and_then(|m| of(m.beat)) else {
+            i += 1;
+            continue;
+        };
+        let start = i;
+        while marks
+            .get(i + 1)
+            .and_then(|m| of(m.beat))
+            .is_some_and(|w| w == v)
+        {
+            i += 1;
+        }
+        out.push((start, i, v));
+        i += 1;
+    }
+    out
+}
+
+/// Slurs: from a beat to the next beat of its voice, over the noteheads on
+/// the side away from the stems, and over the tab's numbers; one that
+/// carries on past the system ends at its edge, one that comes in starts
+/// before the first beat.
+fn slurs(p: &Painter<'_>, list: &mut DisplayList, marks: &[&Mark<'_>], g: &Geometry<'_>) {
+    let sp = p.sp;
+    let hw = p.width(glyphs::NOTEHEAD_BLACK);
+    let mut i = 0;
+    while i < marks.len() {
+        let Some(m) = marks.get(i) else { break };
+        let comes_in = i == 0 && m.beat.slur_in;
+        if !m.beat.slur && !comes_in {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        let mut end = if m.beat.slur { i + 1 } else { i };
+        while marks.get(end).is_some_and(|x| x.beat.slur) {
+            end += 1;
+        }
+        let first = marks.get(start).copied();
+        let last = marks.get(end).copied();
+        let (Some(first), last) = (first, last) else {
+            break;
+        };
+        // Its ends: the notes it joins, or the system's edges.
+        let open_left = comes_in;
+        let x0 = if open_left {
+            first.x - 2.0 * sp
+        } else {
+            first.x
+        };
+        let x1 = last.map_or(g.right - 0.5 * sp, |l| l.x);
+        if x1 <= x0 {
+            i = end.max(i + 1);
+            continue;
+        }
+        let up = first.beat.up;
+        let dir = if up { 1.0 } else { -1.0 };
+        let reach = |m: Option<&&Mark<'_>>| {
+            m.and_then(|m| {
+                let n = if up {
+                    m.beat.notes.first()
+                } else {
+                    m.beat.notes.last()
+                }?;
+                g.step_y(n.step, sp)
+            })
+        };
+        if g.band.std_top.is_some() {
+            let ya = reach(Some(&first)).unwrap_or(0.0) + dir * 0.9 * sp;
+            let yb = reach(last.as_ref()).unwrap_or(ya - dir * 0.9 * sp) + dir * 0.9 * sp;
+            let (ya, yb) = (ya.max(yb).min(ya), yb);
+            let height = dir * (0.5 * sp + 0.06 * (x1 - x0)).min(2.0 * sp);
+            p.slur(
+                list,
+                Point::new(x0 + if open_left { 0.0 } else { 0.1 * hw }, ya),
+                Point::new(x1, yb),
+                height,
+            );
+        } else if let Some(t) = g.band.tab_top {
+            let y = t - 0.6 * g.tg;
+            let height = -(0.5 * sp + 0.05 * (x1 - x0)).min(1.6 * sp);
+            p.slur(list, Point::new(x0, y), Point::new(x1, y), height);
+        }
+        i = end.max(i + 1);
+    }
+}
+
+/// Ottava lines: "8va" (and the rest) with a dashed line and a hook at the
+/// end of the run, above the staff.
+fn ottavas(p: &Painter<'_>, list: &mut DisplayList, marks: &[&Mark<'_>], g: &Geometry<'_>) {
+    let Some(base) = g.band.lines.ottava else {
+        return;
+    };
+    let sp = p.sp;
+    let hw = p.width(glyphs::NOTEHEAD_BLACK);
+    for (a, b, o) in spans(marks, |b| b.ottava) {
+        let (Some(first), Some(last)) = (marks.get(a), marks.get(b)) else {
+            continue;
+        };
+        let gl = match o {
+            Ottava::Alta8 => glyphs::OTTAVA_ALTA,
+            Ottava::Bassa8 => glyphs::OTTAVA_BASSA,
+            Ottava::Alta15 => glyphs::QUINDICESIMA_ALTA,
+            Ottava::Bassa15 => glyphs::QUINDICESIMA_BASSA,
+        };
+        let x0 = first.x - hw / 2.0;
+        let x1 = (last.next_x - 0.4 * sp).max(x0 + 2.0 * sp);
+        p.glyph_scaled(list, gl, 0.8, x0, base, Paint::Ink);
+        let w = p.width(gl) * 0.8;
+        let y = base - 0.6 * sp;
+        dashes(p, list, x0 + w + 0.3 * sp, x1, y);
+        let hook = match o {
+            Ottava::Alta8 | Ottava::Alta15 => 0.8 * sp,
+            Ottava::Bassa8 | Ottava::Bassa15 => -0.8 * sp,
+        };
+        p.vline(list, x1, y, y + hook, 0.1 * sp);
+    }
+}
+
+/// Extended barres: "C" (or "½C") and the fret in Roman numerals, with a
+/// dashed line over the run.
+fn barres(p: &Painter<'_>, list: &mut DisplayList, marks: &[&Mark<'_>], g: &Geometry<'_>) {
+    let Some(base) = g.band.lines.barre else {
+        return;
+    };
+    let sp = p.sp;
+    let hw = p.width(glyphs::NOTEHEAD_BLACK);
+    for (a, b, barre) in spans(marks, |b| b.barre) {
+        let (Some(first), Some(last)) = (marks.get(a), marks.get(b)) else {
+            continue;
+        };
+        let label = format!(
+            "{}C{}",
+            if barre.half { "½" } else { "" },
+            roman(barre.fret)
+        );
+        let x0 = first.x - hw / 2.0;
+        let x1 = (last.next_x - 0.4 * sp).max(x0 + 2.0 * sp);
+        dashed_label(p, list, &label, x0, x1, base, a == b);
+    }
+}
+
+/// A fret in Roman numerals, as barres are marked (V, VII, XII).
+pub(crate) fn roman(n: u8) -> String {
+    const PARTS: [(u8, &str); 9] = [
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I"),
+        (0, ""),
+        (0, ""),
+        (0, ""),
+    ];
+    let mut n = n;
+    let mut out = String::new();
+    for (value, text) in PARTS {
+        if value == 0 {
+            break;
+        }
+        while n >= value {
+            out.push_str(text);
+            n -= value;
+        }
+    }
+    out
+}
+
+/// Hairpins: wedges on the dynamics line, from the first beat of each run
+/// to the end of its last.
+fn hairpins(p: &Painter<'_>, list: &mut DisplayList, marks: &[&Mark<'_>], g: &Geometry<'_>) {
+    let Some(base) = g.band.dynamics else {
+        return;
+    };
+    let sp = p.sp;
+    let hw = p.width(glyphs::NOTEHEAD_BLACK);
+    for (a, b, h) in spans(marks, |b| b.hairpin) {
+        let (Some(first), Some(last)) = (marks.get(a), marks.get(b)) else {
+            continue;
+        };
+        // Clear of a dynamic at its start.
+        let start = first.x - hw / 2.0
+            + if first.beat.show_dynamic.is_some() {
+                2.6 * sp
+            } else {
+                0.0
+            };
+        let end = (last.next_x - 0.5 * sp).max(start + 1.5 * sp);
+        let y = base - 0.45 * sp;
+        let open = 0.55 * sp;
+        let (narrow, wide) = match h {
+            Hairpin::Crescendo => (start, end),
+            Hairpin::Decrescendo => (end, start),
+        };
+        p.line_between(
+            list,
+            Point::new(narrow, y),
+            Point::new(wide, y - open),
+            0.1 * sp,
+        );
+        p.line_between(
+            list,
+            Point::new(narrow, y),
+            Point::new(wide, y + open),
+            0.1 * sp,
+        );
+    }
+}
+
+/// A dashed line from `x0` to `x1` at `y`.
+fn dashes(p: &Painter<'_>, list: &mut DisplayList, x0: f32, x1: f32, y: f32) {
+    let sp = p.sp;
+    let mut x = x0;
+    while x < x1 {
+        p.hline(list, x, (x + 0.6 * sp).min(x1), y, 0.1 * sp);
+        x += 1.0 * sp;
     }
 }
 
@@ -242,9 +495,10 @@ fn runs(p: &Painter<'_>, list: &mut DisplayList, marks: &[&Mark<'_>], g: &Geomet
     type Test = fn(&BeatInfo) -> bool;
     let kinds: [(Lane, Test); 6] = [
         (Lane::Vibrato, |b| {
-            b.notes.iter().any(|n| n.effects.vibrato) && !b.effects.vibrato_wide
+            b.notes.iter().any(|n| n.effects.vibrato.is_some())
+                && b.effects.bridge_vibrato.is_none()
         }),
-        (Lane::Vibrato, |b| b.effects.vibrato_wide),
+        (Lane::Vibrato, |b| b.effects.bridge_vibrato.is_some()),
         (Lane::Trill, |b| {
             b.notes.iter().any(|n| n.effects.trill.is_some())
         }),
@@ -277,10 +531,23 @@ fn runs(p: &Painter<'_>, list: &mut DisplayList, marks: &[&Mark<'_>], g: &Geomet
             let x1 = (last.next_x - 0.4 * sp).max(x0 + 1.5 * sp);
             match k {
                 0 | 1 => {
-                    let g_ = if k == 0 {
-                        glyphs::VIBRATO
-                    } else {
+                    // Wide if any beat of the run is.
+                    let wide = marks.get(start..=i).is_some_and(|run| {
+                        run.iter().any(|m| {
+                            if k == 0 {
+                                m.beat
+                                    .notes
+                                    .iter()
+                                    .any(|n| n.effects.vibrato == Some(Vibrato::Wide))
+                            } else {
+                                m.beat.effects.bridge_vibrato == Some(Vibrato::Wide)
+                            }
+                        })
+                    });
+                    let g_ = if wide {
                         glyphs::VIBRATO_WIDE
+                    } else {
+                        glyphs::VIBRATO
                     };
                     wiggle(p, list, g_, x0, x1, pos.base);
                 }
@@ -387,37 +654,84 @@ fn single(p: &Painter<'_>, list: &mut DisplayList, m: &Mark<'_>, g: &Geometry<'_
     }
     if let Some(lane) = g.band.lane(Lane::Technique) {
         let mut x = m.x - hw / 2.0;
-        let mut put = |text: &str, list: &mut DisplayList| {
-            x += p.text(list, text, 1.6 * sp, x, lane.base, Paint::Ink) + 0.4 * sp;
+        let put = |text: &str, x: &mut f32, list: &mut DisplayList| {
+            *x += p.text(list, text, 1.6 * sp, *x, lane.base, Paint::Ink) + 0.4 * sp;
         };
         let tap = b.notes.iter().any(|n| n.effects.left_hand_tap);
         match b.effects.technique {
-            Some(BeatTechnique::Tap) => put("T", list),
-            Some(BeatTechnique::Slap) => put("S", list),
-            Some(BeatTechnique::Pop) => put("P", list),
-            None if tap => put("T", list),
+            Some(BeatTechnique::Tap) => put("T", &mut x, list),
+            Some(BeatTechnique::Slap) => put("S", &mut x, list),
+            Some(BeatTechnique::Pop) => put("P", &mut x, list),
+            None if tap => put("T", &mut x, list),
             None => {}
         }
-        if b.effects.whammy.is_some() {
-            put("w/bar", list);
-        }
-        if b.effects.fade_in {
-            // A small swell hairpin.
+        if let Some(fade) = b.effects.fade {
+            // Small hairpins: opening for a fade in, closing for a fade
+            // out, both for a swell.
             let w = 1.6 * sp;
             let y = lane.base - 0.45 * sp;
-            p.line_between(
-                list,
-                Point::new(x, y),
-                Point::new(x + w, y - 0.4 * sp),
-                0.1 * sp,
-            );
-            p.line_between(
-                list,
-                Point::new(x, y),
-                Point::new(x + w, y + 0.4 * sp),
-                0.1 * sp,
-            );
+            let wedge = |list: &mut DisplayList, x: f32, opening: bool| {
+                let (narrow, wide) = if opening { (x, x + w) } else { (x + w, x) };
+                for d in [-0.4 * sp, 0.4 * sp] {
+                    p.line_between(
+                        list,
+                        Point::new(narrow, y),
+                        Point::new(wide, y + d),
+                        0.1 * sp,
+                    );
+                }
+            };
+            match fade {
+                Fade::In => wedge(list, x, true),
+                Fade::Out => wedge(list, x, false),
+                Fade::Swell => {
+                    wedge(list, x, true);
+                    x += w;
+                    wedge(list, x, false);
+                }
+            }
             x += w + 0.4 * sp;
+        }
+        if let Some(r) = b.effects.rasgueado {
+            put(&format!("rasg. {}", r.fingers()), &mut x, list);
+        }
+        if let Some(wah) = b.effects.wah {
+            let gl = match wah {
+                Wah::Open => glyphs::WAH_OPEN,
+                Wah::Closed => glyphs::WAH_CLOSED,
+            };
+            p.glyph(list, gl, x, lane.base - 0.2 * sp, Paint::Ink);
+            x += p.width(gl) + 0.4 * sp;
+        }
+        if let Some(golpe) = b.effects.golpe {
+            p.glyph(list, glyphs::GOLPE, x, lane.base, Paint::Ink);
+            x += p.width(glyphs::GOLPE) + 0.2 * sp;
+            if golpe == Golpe::Thumb {
+                put("p", &mut x, list);
+            } else {
+                x += 0.2 * sp;
+            }
+        }
+        if let Some(dir) = b.effects.pick_scrape {
+            // A wavy line with an arrow: up the neck, or down to the bridge.
+            let w = 2.4 * sp;
+            wiggle(p, list, glyphs::VIBRATO, x, x + w, lane.base - 0.1 * sp);
+            let (gl, y) = match dir {
+                StrokeDirection::Up => (glyphs::ARROWHEAD_UP, lane.base - 0.2 * sp),
+                StrokeDirection::Down => (glyphs::ARROWHEAD_DOWN, lane.base - 0.9 * sp),
+            };
+            p.glyph_scaled(list, gl, 0.4, x + w, y, Paint::Ink);
+            x += w + 0.8 * sp;
+        }
+        if b.effects.dead_slap {
+            put("dead slap", &mut x, list);
+        }
+        if g.band.std_top.is_none() {
+            for o in b.notes.iter().filter_map(|n| n.effects.ornament).take(1) {
+                let gl = ornament_glyph(o);
+                p.glyph(list, gl, x, lane.base, Paint::Ink);
+                x += p.width(gl) + 0.4 * sp;
+            }
         }
         if let Some(dir) = b.effects.pick_stroke {
             let gl = match dir {
@@ -425,6 +739,34 @@ fn single(p: &Painter<'_>, list: &mut DisplayList, m: &Mark<'_>, g: &Geometry<'_
                 StrokeDirection::Up => glyphs::UP_BOW,
             };
             p.glyph_scaled(list, gl, 0.8, x, lane.base, Paint::Ink);
+        }
+    }
+
+    // Whammy-bar curves, in their lane above the tab.
+    if let (Some(lane), Some(whammy)) = (g.band.lane(Lane::Whammy), &b.effects.whammy) {
+        whammy_curve(p, list, m, lane.top, lane.base, &whammy.points);
+    }
+
+    // Arpeggios: a wavy line left of the chord, its arrow the way it rolls.
+    if let Some(dir) = b.effects.arpeggio {
+        let left = b
+            .notes
+            .iter()
+            .map(|n| tab_half(p, g, n))
+            .fold(hw / 2.0, f32::max);
+        let spans = [
+            b.notes
+                .iter()
+                .filter_map(|n| n.tab.as_ref().and_then(|(s, _)| g.string_y(*s)))
+                .fold(None, extend),
+            b.notes
+                .iter()
+                .filter_map(|n| g.step_y(n.step, sp))
+                .fold(None, extend),
+        ];
+        for (top, bottom) in spans.into_iter().flatten() {
+            let x = m.x - left - 1.0 * sp;
+            arpeggio(p, list, x, top - 0.6 * sp, bottom + 0.6 * sp, dir);
         }
     }
 
@@ -506,15 +848,243 @@ fn single(p: &Painter<'_>, list: &mut DisplayList, m: &Mark<'_>, g: &Geometry<'_
         }
     }
 
-    // Dynamics and lyrics under the staff.
+    // Ornaments over the notes, left-hand fingers before each notehead,
+    // right-hand fingers over the chord, string numbers after each note.
+    if g.band.std_top.is_some()
+        && let (Some(low), Some(high)) = (b.notes.first(), b.notes.last())
+    {
+        let top_y = g.step_y(high.step.max(8), sp).unwrap_or(0.0);
+        let mut y = top_y - 1.2 * sp;
+        let _ = low;
+        if let Some(o) = b.notes.iter().find_map(|n| n.effects.ornament) {
+            let gl = ornament_glyph(o);
+            let w = p.width(gl);
+            p.glyph(list, gl, m.x - w / 2.0, y, Paint::Ink);
+            y -= 1.4 * sp;
+        }
+        let right: Vec<u8> = b
+            .notes
+            .iter()
+            .rev()
+            .filter_map(|n| n.effects.right_finger)
+            .collect();
+        for (k, f) in right.iter().enumerate() {
+            if let Some(gl) = glyphs::RIGHT_FINGERS.get(usize::from(*f)) {
+                let w = p.width(*gl);
+                p.glyph(
+                    list,
+                    *gl,
+                    m.x - w / 2.0,
+                    y - k as f32 * 1.2 * sp,
+                    Paint::Ink,
+                );
+            }
+        }
+        for n in &b.notes {
+            let Some(ny) = g.step_y(n.step, sp) else {
+                continue;
+            };
+            if let Some(f) = n.effects.left_finger {
+                let gl = if f == 0 {
+                    glyphs::FINGER_THUMB
+                } else {
+                    glyphs::finger(f)
+                };
+                let w = p.width(gl) * 0.8;
+                let acc = if n.accidental.is_some() {
+                    1.2 * sp
+                } else {
+                    0.0
+                };
+                p.glyph_scaled(
+                    list,
+                    gl,
+                    0.8,
+                    m.x - hw / 2.0 - acc - 0.25 * sp - w,
+                    ny + 0.35 * sp,
+                    Paint::Ink,
+                );
+            }
+            if n.effects.string_number
+                && let Some((string, _)) = &n.tab
+            {
+                // Under the notehead (over it when the stem points down).
+                let cx = m.x;
+                let ny = if b.up { ny + 1.6 * sp } else { ny - 1.6 * sp };
+                let r = 0.55 * sp;
+                circle(list, cx, ny, r, 0.08 * sp);
+                p.text_centred(
+                    list,
+                    &string.to_string(),
+                    1.0 * sp,
+                    cx,
+                    ny + 0.35 * sp,
+                    Paint::Ink,
+                );
+            }
+        }
+    }
+
+    // Dynamics, pedal marks and lyrics under the staff.
     if let (Some(d), Some(base)) = (b.show_dynamic, g.band.dynamics) {
         let gl = dynamic_glyph(d);
         p.glyph(list, gl, m.x - hw / 2.0, base, Paint::Ink);
+    }
+    if let (Some(pedal), Some(base)) = (b.effects.pedal, g.band.pedal) {
+        let gl = match pedal {
+            Pedal::Down => glyphs::PEDAL,
+            Pedal::Up => glyphs::PEDAL_UP,
+        };
+        p.glyph_scaled(list, gl, 0.7, m.x - hw / 2.0, base, Paint::Ink);
     }
     for (line, syllable) in &b.lyrics {
         if let Some(base) = g.band.lyrics.get(*line) {
             p.text_centred(list, syllable, lyric_size(sp), m.x, *base, Paint::Ink);
         }
+    }
+}
+
+/// The span `(top, bottom)` grown to take in `y`.
+fn extend(acc: Option<(f32, f32)>, y: f32) -> Option<(f32, f32)> {
+    Some(acc.map_or((y, y), |(a, z)| (a.min(y), z.max(y))))
+}
+
+/// A wavy vertical line from `top` to `bottom` at `x`, with an arrowhead
+/// at the end it rolls towards: up the page for a downward arpeggio (from
+/// the low string), down for an upward one.
+fn arpeggio(
+    p: &Painter<'_>,
+    list: &mut DisplayList,
+    x: f32,
+    top: f32,
+    bottom: f32,
+    dir: StrokeDirection,
+) {
+    let sp = p.sp;
+    let amp = 0.25 * sp;
+    let step = 0.5 * sp;
+    let mut path = Path::new().move_to(x, bottom);
+    let mut y = bottom;
+    let mut side = 1.0;
+    while y - step > top {
+        let next = y - step;
+        path = path.cubic_to(
+            Point::new(x + side * amp, y - step / 3.0),
+            Point::new(x + side * amp, next + step / 3.0),
+            Point::new(x, next),
+        );
+        side = -side;
+        y = next;
+    }
+    list.stroke(path, 0.1 * sp, Paint::Ink);
+    let scale = 0.45;
+    let (gl, tip) = match dir {
+        StrokeDirection::Down => (glyphs::ARROWHEAD_UP, top),
+        StrokeDirection::Up => (glyphs::ARROWHEAD_DOWN, bottom),
+    };
+    let w = p.width(gl) * scale;
+    let h = p.height(gl).0 * scale;
+    let y = match dir {
+        StrokeDirection::Down => tip + h,
+        StrokeDirection::Up => tip,
+    };
+    p.glyph_scaled(list, gl, scale, x - w / 2.0, y, Paint::Ink);
+}
+
+/// A circle of radius `r` centred on (`cx`, `cy`).
+fn circle(list: &mut DisplayList, cx: f32, cy: f32, r: f32, width: f32) {
+    // Four cubic arcs: k is the usual control distance for a quarter.
+    let k = 0.552_284_8 * r;
+    let path = Path::new()
+        .move_to(cx + r, cy)
+        .cubic_to(
+            Point::new(cx + r, cy + k),
+            Point::new(cx + k, cy + r),
+            Point::new(cx, cy + r),
+        )
+        .cubic_to(
+            Point::new(cx - k, cy + r),
+            Point::new(cx - r, cy + k),
+            Point::new(cx - r, cy),
+        )
+        .cubic_to(
+            Point::new(cx - r, cy - k),
+            Point::new(cx - k, cy - r),
+            Point::new(cx, cy - r),
+        )
+        .cubic_to(
+            Point::new(cx + k, cy - r),
+            Point::new(cx + r, cy - k),
+            Point::new(cx + r, cy),
+        )
+        .close();
+    list.stroke(path, width, Paint::Ink);
+}
+
+/// An ornament's symbol.
+fn ornament_glyph(o: Ornament) -> G {
+    match o {
+        Ornament::UpperMordent => glyphs::UPPER_MORDENT,
+        Ornament::LowerMordent => glyphs::LOWER_MORDENT,
+        Ornament::Turn => glyphs::TURN,
+        Ornament::InvertedTurn => glyphs::TURN_INVERTED,
+    }
+}
+
+/// The whammy bar's curve over a beat: "w/bar", then the curve from its
+/// zero line (dips go down, pulls up), with its deepest amount.
+fn whammy_curve(
+    p: &Painter<'_>,
+    list: &mut DisplayList,
+    m: &Mark<'_>,
+    top: f32,
+    base: f32,
+    points: &[oxiguitar_model::BendPoint],
+) {
+    let sp = p.sp;
+    let size = 1.3 * sp;
+    let x0 = m.x;
+    let label_w = p.text(list, "w/bar", size, x0, top + size, Paint::Ink);
+    let start = x0 + label_w + 0.3 * sp;
+    let span = ((m.next_x - start) * 0.9).max(2.0 * sp);
+    let zero = (top + base) / 2.0 + 0.3 * sp;
+    let deepest = points
+        .iter()
+        .map(|pt| pt.cents)
+        .max_by_key(|c| c.unsigned_abs())
+        .unwrap_or(0);
+    let range = deepest.unsigned_abs().max(1) as f32;
+    let reach = 1.0 * sp;
+    let at = |pt: &oxiguitar_model::BendPoint| {
+        let t = pt.offset.to_f64().clamp(0.0, 1.0) as f32;
+        Point::new(start + t * span, zero - pt.cents as f32 / range * reach)
+    };
+    let mut path: Option<Path> = None;
+    for pt in points {
+        let q = at(pt);
+        path = Some(match path {
+            None => Path::new().move_to(q.x, q.y),
+            Some(path) => path.line_to(q.x, q.y),
+        });
+    }
+    if let Some(path) = path {
+        list.stroke(path, 0.1 * sp, Paint::Ink);
+    }
+    if deepest != 0 {
+        let amount = bend_amount(deepest);
+        let label = if deepest < 0 {
+            format!("-{amount}")
+        } else {
+            amount
+        };
+        p.text(
+            list,
+            &label,
+            size,
+            start + span + 0.2 * sp,
+            zero + 0.4 * sp,
+            Paint::Ink,
+        );
     }
 }
 

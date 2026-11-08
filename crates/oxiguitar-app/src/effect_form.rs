@@ -13,8 +13,9 @@
 
 use oxiguitar_edit::{BeatChange, Caret, Command, Effect, NoteChange};
 use oxiguitar_model::{
-    Accent, Beat, BeatKind, BeatTechnique, Dynamic, GraceKind, Harmonic, Note, NotePlace,
-    NoteValue, Score, Slide, Stroke, StrokeDirection, Trill,
+    Accent, Barre, Beat, BeatKind, BeatTechnique, Dynamic, Fade, FermataKind, GraceKind, Harmonic,
+    Note, NotePlace, NoteValue, Ornament, Rasgueado, Score, Slide, Stroke, StrokeDirection, Trill,
+    Vibrato,
 };
 
 /// What a row shows.
@@ -223,6 +224,48 @@ const BRUSH_VALUES: [NoteValue; 5] = [
 ];
 const TECHNIQUES: [&str; 4] = ["None", "Tapping", "Slap", "Pop"];
 const GRACES: [&str; 3] = ["None", "Before the beat", "On the beat"];
+const VIBRATOS: [&str; 3] = ["None", "Slight", "Wide"];
+const VIBRATO_VALUES: [Vibrato; 2] = [Vibrato::Slight, Vibrato::Wide];
+const ORNAMENTS: [&str; 5] = [
+    "None",
+    "Upper mordent",
+    "Lower mordent",
+    "Turn",
+    "Inverted turn",
+];
+const ORNAMENT_VALUES: [Ornament; 4] = [
+    Ornament::UpperMordent,
+    Ornament::LowerMordent,
+    Ornament::Turn,
+    Ornament::InvertedTurn,
+];
+const FADES: [&str; 4] = ["None", "Fade in", "Fade out", "Volume swell"];
+const FADE_VALUES: [Fade; 3] = [Fade::In, Fade::Out, Fade::Swell];
+const FERMATAS: [&str; 4] = ["None", "Short", "Medium", "Long"];
+const FERMATA_VALUES: [FermataKind; 3] =
+    [FermataKind::Short, FermataKind::Medium, FermataKind::Long];
+const BARRES: [&str; 3] = ["None", "Full", "Half"];
+
+/// The index of `v` in `values`, from 1, or 0 for none.
+fn pick_of<T: PartialEq>(values: &[T], v: Option<T>) -> usize {
+    v.and_then(|v| values.iter().position(|x| *x == v))
+        .map_or(0, |i| i + 1)
+}
+
+/// The value picked at `pick` (0 for none) in `values`.
+fn picked<T: Copy>(values: &[T], pick: usize) -> Option<Option<T>> {
+    match pick {
+        0 => Some(None),
+        i => values.get(i - 1).copied().map(Some),
+    }
+}
+
+/// The rasgueado patterns' names, "None" first.
+fn rasgueados() -> Vec<String> {
+    std::iter::once("None".to_owned())
+        .chain(Rasgueado::ALL.iter().map(|r| r.name()))
+        .collect()
+}
 
 /// The caret's beat, its note (on the caret's string; on a staff without
 /// strings, the beat's first), and whether the staff has strings.
@@ -328,7 +371,12 @@ pub(crate) fn fields(score: &Score, c: Caret) -> Vec<Field> {
                 &SLIDES_OUT,
                 slide_out.unwrap_or(0),
             ));
-            out.push(switch("vibrato", "Vibrato", fx.vibrato));
+            out.push(choice(
+                "vibrato",
+                "Vibrato",
+                &VIBRATOS,
+                pick_of(&VIBRATO_VALUES, fx.vibrato),
+            ));
             out.push(switch("palm-mute", "Palm mute", fx.palm_mute));
             out.push(switch(
                 "let-ring",
@@ -364,6 +412,12 @@ pub(crate) fn fields(score: &Score, c: Caret) -> Vec<Field> {
             }
             out.push(button("bend", "Bend", curve_summary(fx.bend.as_ref())));
         }
+        out.push(choice(
+            "ornament",
+            "Ornament",
+            &ORNAMENTS,
+            pick_of(&ORNAMENT_VALUES, fx.ornament),
+        ));
         out.push(choice(
             "left-finger",
             "Left hand",
@@ -413,6 +467,22 @@ pub(crate) fn fields(score: &Score, c: Caret) -> Vec<Field> {
         shown.to_owned()
     };
     out.push(button("text", "Text", text));
+    let fermata = c.voice_in(score).and_then(|v| {
+        let at = oxiguitar_edit::onsets(v).get(c.beat).copied()?;
+        score
+            .master_bars
+            .get(c.bar)?
+            .fermatas
+            .iter()
+            .find(|f| f.position == at)
+            .map(|f| f.kind)
+    });
+    out.push(choice(
+        "fermata",
+        "Fermata",
+        &FERMATAS,
+        pick_of(&FERMATA_VALUES, fermata),
+    ));
     if rest {
         return out;
     }
@@ -440,7 +510,12 @@ pub(crate) fn fields(score: &Score, c: Caret) -> Vec<Field> {
             Some(GraceKind::OnBeat) => 2,
         },
     ));
-    out.push(switch("fade-in", "Fade in", fx.fade_in));
+    out.push(choice(
+        "fade",
+        "Fade",
+        &FADES,
+        pick_of(&FADE_VALUES, fx.fade),
+    ));
     if strings && !beat.notes.is_empty() {
         let direction = |d: Option<StrokeDirection>| match d {
             None => 0,
@@ -478,11 +553,29 @@ pub(crate) fn fields(score: &Score, c: Caret) -> Vec<Field> {
                 Some(BeatTechnique::Pop) => 3,
             },
         ));
-        out.push(switch(
-            "wide-vibrato",
-            "Wide vibrato (whammy bar)",
-            fx.vibrato_wide,
+        out.push(choice(
+            "bridge-vibrato",
+            "Vibrato (whammy bar)",
+            &VIBRATOS,
+            pick_of(&VIBRATO_VALUES, fx.bridge_vibrato),
         ));
+        let names = rasgueados();
+        let names: Vec<&str> = names.iter().map(String::as_str).collect();
+        out.push(choice(
+            "rasgueado",
+            "Rasgueado",
+            &names,
+            pick_of(&Rasgueado::ALL, fx.rasgueado),
+        ));
+        out.push(choice(
+            "barre",
+            "Extended barre",
+            &BARRES,
+            beat.barre.map_or(0, |b| if b.half { 2 } else { 1 }),
+        ));
+        if let Some(b) = beat.barre {
+            out.push(number("barre-fret", "Barre fret", b.fret, frets.min(99)));
+        }
         out.push(button(
             "whammy",
             "Whammy bar",
@@ -521,12 +614,42 @@ pub(crate) fn changed(score: &Score, c: Caret, id: &str, value: i32) -> Option<A
         "ghost" => effect(Effect::Ghost),
         "staccato" => effect(Effect::Staccato),
         "hammer" => effect(Effect::HammerPull),
-        "vibrato" => effect(Effect::Vibrato),
         "palm-mute" => effect(Effect::PalmMute),
         "let-ring" => effect(Effect::LetRing),
         "lh-tap" => effect(Effect::LeftHandTap),
-        "fade-in" => effect(Effect::FadeIn),
-        "wide-vibrato" => effect(Effect::WideVibrato),
+        "vibrato" => note_change(NoteChange::Vibrato(picked(&VIBRATO_VALUES, pick?)?)),
+        "ornament" => note_change(NoteChange::Ornament(picked(&ORNAMENT_VALUES, pick?)?)),
+        "fade" => beat_change(BeatChange::Fade(picked(&FADE_VALUES, pick?)?)),
+        "bridge-vibrato" => beat_change(BeatChange::BridgeVibrato(picked(&VIBRATO_VALUES, pick?)?)),
+        "rasgueado" => beat_change(BeatChange::Rasgueado(picked(&Rasgueado::ALL, pick?)?)),
+        "barre" => {
+            let fret = beat.barre.map_or_else(
+                || {
+                    beat.notes
+                        .iter()
+                        .filter_map(|n| match n.place {
+                            NotePlace::Fretted { fret, .. } if fret > 0 => Some(fret),
+                            _ => None,
+                        })
+                        .min()
+                        .unwrap_or(1)
+                },
+                |b| b.fret,
+            );
+            beat_change(BeatChange::Barre(match pick? {
+                0 => None,
+                i => Some(Barre { fret, half: i == 2 }),
+            }))
+        }
+        "barre-fret" => beat_change(BeatChange::Barre(Some(Barre {
+            fret: u8::try_from(value).ok()?,
+            ..beat.barre?
+        }))),
+        "fermata" => Some(Action::Edit(Command::Fermata(match pick? {
+            // None takes the one there off.
+            0 => None,
+            i => Some(*FERMATA_VALUES.get(i - 1)?),
+        }))),
         "bend" => Some(Action::Bend),
         "whammy" => Some(Action::Whammy),
         "chord" => Some(Action::Chord),
@@ -731,7 +854,7 @@ mod tests {
         apply(&mut s, &mut h, at(1, 2), None, Command::Rest).unwrap();
         let f = fields(&s, at(1, 2));
         assert_eq!(f[0].label, "Rest · quarter note");
-        assert_eq!(f.len(), 4, "dynamic, chord and text");
+        assert_eq!(f.len(), 5, "dynamic, chord, text and fermata");
     }
 
     #[test]

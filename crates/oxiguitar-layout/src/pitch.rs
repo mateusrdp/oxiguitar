@@ -4,7 +4,7 @@
 //! Where a pitch sits on a five-line staff, and which accidental it needs
 //! (NOT-1).
 
-use oxiguitar_model::{Clef, KeySignature, Pitch};
+use oxiguitar_model::{Clef, KeySignature, Pitch, Spelling};
 
 /// A written note: its diatonic position and alteration.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -15,54 +15,37 @@ pub(crate) struct Spelled {
     pub(crate) alter: i8,
 }
 
-/// Letter (0 = C) and alteration of each pitch class, spelt with sharps.
-const SHARPS: [(i32, i8); 12] = [
-    (0, 0),
-    (0, 1),
-    (1, 0),
-    (1, 1),
-    (2, 0),
-    (3, 0),
-    (3, 1),
-    (4, 0),
-    (4, 1),
-    (5, 0),
-    (5, 1),
-    (6, 0),
-];
-/// The same, spelt with flats.
-const FLATS: [(i32, i8); 12] = [
-    (0, 0),
-    (1, -1),
-    (1, 0),
-    (2, -1),
-    (2, 0),
-    (3, 0),
-    (4, -1),
-    (4, 0),
-    (5, -1),
-    (5, 0),
-    (6, -1),
-    (6, 0),
-];
-
-/// Spells a written MIDI pitch: with flats in flat keys, sharps otherwise,
-/// except that in flat keys the relative minor's leading tone stays sharp
-/// (F♯ in B♭ major / G minor, C♯ in F major / D minor).
+/// Spells a written MIDI pitch as OxiGuitar works it out
+/// ([`Spelling::automatic`]: flats in flat keys, sharps otherwise, the
+/// relative minor's leading tone sharp).
 pub(crate) fn spell(written: i32, key: KeySignature) -> Spelled {
     let pc = written.rem_euclid(12);
     let octave = written.div_euclid(12);
-    let major_tonic = (7 * i32::from(key.fifths)).rem_euclid(12);
-    let leading_tone = (major_tonic + 9 + 11) % 12;
-    let table = if key.fifths < 0 && pc != leading_tone {
-        &FLATS
-    } else {
-        &SHARPS
-    };
-    let (letter, alter) = table.get(pc as usize).copied().unwrap_or((0, 0));
+    let s = Spelling::automatic(Pitch(pc as u8), key);
     Spelled {
-        diatonic: octave * 7 + letter,
-        alter,
+        diatonic: octave * 7 + i32::from(s.step),
+        alter: s.alter,
+    }
+}
+
+/// Spells a written MIDI pitch with the note's own spelling when it has
+/// one that spells it, else as [`spell`] does.
+pub(crate) fn spell_as(written: i32, key: KeySignature, own: Option<Spelling>) -> Spelled {
+    let pc = written.rem_euclid(12);
+    match own.filter(|s| s.spells(Pitch(pc as u8))) {
+        Some(s) => {
+            // The octave of the step: B sharp 3 is written in octave 3.
+            let natural = [0, 2, 4, 5, 7, 9, 11]
+                .get(usize::from(s.step))
+                .copied()
+                .unwrap_or(0);
+            let octave = (written - i32::from(s.alter) - natural).div_euclid(12);
+            Spelled {
+                diatonic: octave * 7 + i32::from(s.step),
+                alter: s.alter,
+            }
+        }
+        None => spell(written, key),
     }
 }
 

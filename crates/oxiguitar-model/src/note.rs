@@ -49,6 +49,104 @@ pub struct Note {
     pub dynamic: Dynamic,
     /// Effects on this note.
     pub effects: NoteEffects,
+    /// How the note is spelled on the staff, when chosen (in a file or with
+    /// the accidental tools) rather than worked out from the key. It counts
+    /// only while it spells the note's written pitch ([`Spelling::spells`]:
+    /// the sounding pitch plus the staff's transposition).
+    pub spelling: Option<Spelling>,
+}
+
+/// A note's name on the staff, as written: a step and an alteration.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Spelling {
+    /// The step: 0 for C, 1 for D … 6 for B.
+    pub step: u8,
+    /// Semitones from the step's natural: -2 double flat … 2 double sharp.
+    pub alter: i8,
+}
+
+impl Spelling {
+    /// The semitones above C of each natural step.
+    const NATURALS: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
+
+    /// Whether it names `pitch` (a written pitch, in any octave).
+    pub fn spells(self, pitch: Pitch) -> bool {
+        Spelling::NATURALS
+            .get(usize::from(self.step))
+            .is_some_and(|n| (n + i32::from(self.alter) - i32::from(pitch.0)).rem_euclid(12) == 0)
+            && (-2..=2).contains(&self.alter)
+    }
+
+    /// The spelling of `pitch` with alteration `alter`, if one exists (C
+    /// with a sharp has none: it would be B sharp, a step below).
+    pub fn with_alter(pitch: Pitch, alter: i8) -> Option<Spelling> {
+        (0..7u8)
+            .map(|step| Spelling { step, alter })
+            .find(|s| s.spells(pitch))
+    }
+
+    /// The spelling OxiGuitar works out for written `pitch` in `key`: with
+    /// flats in flat keys, sharps otherwise, except that in flat keys the
+    /// relative minor's leading tone stays sharp (F sharp in B flat major
+    /// and G minor, C sharp in F major and D minor).
+    pub fn automatic(pitch: Pitch, key: crate::KeySignature) -> Spelling {
+        const SHARPS: [(u8, i8); 12] = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (1, 1),
+            (2, 0),
+            (3, 0),
+            (3, 1),
+            (4, 0),
+            (4, 1),
+            (5, 0),
+            (5, 1),
+            (6, 0),
+        ];
+        const FLATS: [(u8, i8); 12] = [
+            (0, 0),
+            (1, -1),
+            (1, 0),
+            (2, -1),
+            (2, 0),
+            (3, 0),
+            (4, -1),
+            (4, 0),
+            (5, -1),
+            (5, 0),
+            (6, -1),
+            (6, 0),
+        ];
+        let pc = usize::from(pitch.0 % 12);
+        let major_tonic = (7 * i32::from(key.fifths)).rem_euclid(12);
+        let leading_tone = ((major_tonic + 9 + 11) % 12) as usize;
+        let table = if key.fifths < 0 && pc != leading_tone {
+            &FLATS
+        } else {
+            &SHARPS
+        };
+        let (step, alter) = table.get(pc).copied().unwrap_or((0, 0));
+        Spelling { step, alter }
+    }
+
+    /// Every spelling of `pitch`, from double sharp to double flat.
+    pub fn all(pitch: Pitch) -> Vec<Spelling> {
+        (-2..=2)
+            .rev()
+            .filter_map(|alter| Spelling::with_alter(pitch, alter))
+            .collect()
+    }
+
+    /// The octave the written note is in (as in scientific pitch
+    /// notation): B sharp 3 sounds as C 4, C flat 4 as B 3.
+    pub fn octave(self, pitch: Pitch) -> i32 {
+        let natural = Spelling::NATURALS
+            .get(usize::from(self.step))
+            .copied()
+            .unwrap_or(0);
+        (i32::from(pitch.0) - i32::from(self.alter) - natural).div_euclid(12) - 1
+    }
 }
 
 impl Note {
@@ -59,6 +157,7 @@ impl Note {
             tie: false,
             dynamic: Dynamic::default(),
             effects: NoteEffects::default(),
+            spelling: None,
         }
     }
 
@@ -104,8 +203,8 @@ pub struct NoteEffects {
     pub bend: Option<Bend>,
     /// Harmonic.
     pub harmonic: Option<Harmonic>,
-    /// Vibrato.
-    pub vibrato: bool,
+    /// Left-hand vibrato.
+    pub vibrato: Option<crate::Vibrato>,
     /// Palm mute.
     pub palm_mute: bool,
     /// Let ring.
@@ -128,6 +227,23 @@ pub struct NoteEffects {
     pub right_finger: Option<u8>,
     /// Left-hand tapping on this note.
     pub left_hand_tap: bool,
+    /// An ornament.
+    pub ornament: Option<Ornament>,
+    /// Show the string's number on the staff.
+    pub string_number: bool,
+}
+
+/// An ornament on a note.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Ornament {
+    /// The note, the step above, the note.
+    UpperMordent,
+    /// The note, the step below, the note.
+    LowerMordent,
+    /// The step above, the note, the step below, the note.
+    Turn,
+    /// The step below, the note, the step above, the note.
+    InvertedTurn,
 }
 
 /// Accent strength.
@@ -215,5 +331,58 @@ mod tests {
         assert_eq!(Pitch(40).name(), "E2");
         assert_eq!(Pitch(0).name(), "C-1");
         assert_eq!(Pitch(127).name(), "G9");
+    }
+
+    #[test]
+    fn spellings() {
+        // G sharp 4 / A flat 4.
+        let p = Pitch(68);
+        assert_eq!(
+            Spelling::with_alter(p, 1),
+            Some(Spelling { step: 4, alter: 1 })
+        );
+        assert_eq!(
+            Spelling::with_alter(p, -1),
+            Some(Spelling { step: 5, alter: -1 })
+        );
+        assert_eq!(Spelling::with_alter(p, 0), None);
+        assert_eq!(Spelling::all(p).len(), 2);
+        // C 4 is also B sharp 3 and D double flat 4.
+        let c = Pitch(60);
+        let b_sharp = Spelling::with_alter(c, 1).unwrap();
+        assert_eq!(b_sharp, Spelling { step: 6, alter: 1 });
+        assert_eq!(b_sharp.octave(c), 3);
+        assert_eq!(
+            Spelling::with_alter(c, -2),
+            Some(Spelling { step: 1, alter: -2 })
+        );
+        assert_eq!(Spelling { step: 0, alter: 0 }.octave(c), 4);
+        // C flat 4 sounds as B 3.
+        assert_eq!(Spelling { step: 0, alter: -1 }.octave(Pitch(59)), 4);
+        assert!(!Spelling { step: 0, alter: 0 }.spells(Pitch(61)));
+    }
+
+    #[test]
+    fn automatic_spellings_follow_the_key() {
+        use crate::KeySignature;
+        let c_major = KeySignature::default();
+        let f_major = KeySignature {
+            fifths: -1,
+            ..KeySignature::default()
+        };
+        // G sharp in C, A flat in F; C sharp stays sharp in F (D minor's
+        // leading tone).
+        assert_eq!(
+            Spelling::automatic(Pitch(68), c_major),
+            Spelling { step: 4, alter: 1 }
+        );
+        assert_eq!(
+            Spelling::automatic(Pitch(68), f_major),
+            Spelling { step: 5, alter: -1 }
+        );
+        assert_eq!(
+            Spelling::automatic(Pitch(61), f_major),
+            Spelling { step: 0, alter: 1 }
+        );
     }
 }

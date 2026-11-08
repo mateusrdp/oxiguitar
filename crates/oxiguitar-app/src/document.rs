@@ -33,8 +33,11 @@ pub(crate) struct Settings {
     /// Each track's notation, from the track list.
     pub(crate) notation: BTreeMap<usize, Notation>,
     /// The caret's voice: the other voices are greyed out on the screen
-    /// (never in a PDF).
+    /// (never in a PDF). `None` in Multivoice: every voice in ink.
     pub(crate) active_voice: Option<usize>,
+    /// Design Mode: each system shows how many bars it holds (never in a
+    /// PDF).
+    pub(crate) design: bool,
 }
 
 impl Default for Settings {
@@ -47,6 +50,7 @@ impl Default for Settings {
             screen_width: 800.0,
             notation: BTreeMap::new(),
             active_voice: Some(0),
+            design: false,
         }
     }
 }
@@ -61,6 +65,7 @@ impl Settings {
             dynamics: self.dynamics,
             notation: self.notation.clone(),
             active_voice: self.active_voice,
+            design: self.design,
             ..Options::default().with_paper(self.paper)
         }
     }
@@ -289,6 +294,9 @@ impl Document {
         // Notes the file gave as pitches, on strings, get a string and fret
         // (#157): a format without tablature shows its tab at once.
         oxiguitar_edit::finger_pitched(&mut score);
+        // A file's spellings stay only where they aren't the ones
+        // OxiGuitar works out itself.
+        oxiguitar_edit::plain_spellings(&mut score);
         // What plugins keep per track lives beside the file (FILE.oxg).
         let sidecar_problem = match Sidecar::read_for(path) {
             Ok(Some(mut sidecar)) => {

@@ -37,7 +37,8 @@ pub enum Region {
     /// A track's own settings (name, instrument, mixer, tuning, capo,
     /// chord diagrams, lyrics), not its bars.
     Track(usize),
-    /// The score's header (title, artist, tempo at the start).
+    /// The score's header (title, artist, tempo at the start) and its
+    /// bars per system.
     Info,
     /// Everything: for commands that add or remove bars or tracks.
     Whole,
@@ -115,6 +116,7 @@ enum Saved {
         info: Box<oxiguitar_model::ScoreInfo>,
         tempo: f64,
         label: String,
+        layout: Vec<u8>,
     },
     Whole(Box<Score>),
 }
@@ -134,6 +136,7 @@ fn settings_of(track: &Track) -> Track {
         plugins,
         effects,
         play_chords,
+        layout,
     } = track;
     Track {
         name: name.clone(),
@@ -151,6 +154,8 @@ fn settings_of(track: &Track) -> Track {
         effects: effects.clone(),
         // And whether its chords are played.
         play_chords: *play_chords,
+        // And its systems on the page (Design Mode).
+        layout: layout.clone(),
     }
 }
 
@@ -204,6 +209,7 @@ impl Saved {
                 info: Box::new(score.info.clone()),
                 tempo: score.initial_tempo,
                 label: score.tempo_label.clone(),
+                layout: score.layout.clone(),
             },
             Region::Whole => Saved::Whole(Box::new(score.clone())),
         })
@@ -247,10 +253,16 @@ impl Saved {
                     dst.staves = staves;
                 }
             }
-            Saved::Info { info, tempo, label } => {
+            Saved::Info {
+                info,
+                tempo,
+                label,
+                layout,
+            } => {
                 score.info = (**info).clone();
                 score.initial_tempo = *tempo;
                 score.tempo_label = label.clone();
+                score.layout.clone_from(layout);
             }
             Saved::Whole(s) => *score = (**s).clone(),
         }

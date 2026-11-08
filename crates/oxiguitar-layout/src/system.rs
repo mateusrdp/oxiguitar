@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use oxiguitar_model::{Bar, BeatKind, Clef, Dynamic, Score, Staff};
 
+use crate::Layout;
 use crate::draw::{Painter, glyphs};
 use crate::effects;
 use crate::grid::BarGrid;
@@ -179,6 +180,7 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
                 .enumerate()
                 .map(|(i, mb)| planner.bar(staff.bars.get(i).unwrap_or(&empty), mb))
                 .collect();
+            mark_slurs(&mut planned);
             if dynamics {
                 mark_dynamics(&mut planned);
                 measure_dynamics(&mut planned, p);
@@ -199,6 +201,30 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
         })
         .collect();
     Plans { bars, grids }
+}
+
+/// Marks each beat a slur reaches from the beat before it in its voice,
+/// across bar lines, so a slur that begins on an earlier system is drawn
+/// coming in.
+fn mark_slurs(bars: &mut [BarPlan]) {
+    let voices = bars.iter().map(|b| b.voices.len()).max().unwrap_or(0);
+    for v in 0..voices {
+        let mut slurred = false;
+        for bar in bars.iter_mut() {
+            let Some(beats) = bar.voices.get_mut(v) else {
+                slurred = false;
+                continue;
+            };
+            for b in beats.iter_mut().filter(|b| b.grace.is_none()) {
+                if b.kind == BeatKind::Empty {
+                    slurred = false;
+                    continue;
+                }
+                b.slur_in = slurred;
+                slurred = b.slur;
+            }
+        }
+    }
 }
 
 /// Marks where the first voice's dynamic marking changes, across the whole
@@ -314,6 +340,50 @@ pub(crate) struct SystemSpec {
     pub(crate) prefix: f32,
     /// Extra room given to each bar to fill the line.
     pub(crate) extra: Vec<f32>,
+    /// Room after the last bar line for courtesy signatures: the key and
+    /// time signatures the next system starts with, when they change there.
+    pub(crate) courtesy: f32,
+    /// Whether the system's bars were set in Design Mode: `None` when it
+    /// takes as many as fit, `Some(true)` when it holds the bars set for
+    /// it, `Some(false)` when it couldn't and took as many as fit.
+    pub(crate) stored: Option<bool>,
+}
+
+/// The bars per system set in Design Mode that `views` follow in `layout`:
+/// the track's when one track is shown, the score's when several are; none
+/// in the Vertical and Horizontal layouts, whose lines are the window's.
+pub(crate) fn stored_layout<'s>(score: &'s Score, views: &[View], layout: Layout) -> &'s [u8] {
+    if !matches!(layout, Layout::Page | Layout::Parchment) {
+        return &[];
+    }
+    let mut tracks: Vec<usize> = views.iter().map(|v| v.track).collect();
+    tracks.dedup();
+    match tracks.as_slice() {
+        [one] => score.tracks.get(*one).map_or(&[], |t| t.layout.as_slice()),
+        _ => &score.layout,
+    }
+}
+
+/// The width of the courtesy signatures at the end of a system whose next
+/// bar is `next`: a key change and a time change shown again before the
+/// line breaks; 0 when neither changes there.
+pub(crate) fn courtesy_width(score: &Score, p: &Painter<'_>, next: usize) -> f32 {
+    let sp = p.sp;
+    let (Some(prev), Some(mb)) = (
+        next.checked_sub(1).and_then(|i| score.master_bars.get(i)),
+        score.master_bars.get(next),
+    ) else {
+        return 0.0;
+    };
+    let mut w = 0.0;
+    if prev.key_signature.fifths != mb.key_signature.fifths {
+        w += p.key_change_width(prev.key_signature.fifths, mb.key_signature.fifths) + sp;
+    }
+    if prev.time_signature != mb.time_signature {
+        let ts = mb.time_signature;
+        w += p.time_width(ts.numerator, ts.denominator) + sp;
+    }
+    if w > 0.0 { w + 0.6 * sp } else { 0.0 }
 }
 
 /// The track names shown at the start of a system, one per shown track in
@@ -433,7 +503,7 @@ pub(crate) fn break_systems(
     views: &[View],
     plans: &Plans,
     p: &Painter<'_>,
-    width: f32,
+    (width, stored): (f32, &[u8]),
 ) -> Vec<SystemSpec> {
     let n = score.master_bars.len();
     let mut systems = Vec::new();
@@ -448,18 +518,49 @@ pub(crate) fn break_systems(
         let prefix = indent + system_prefix(p, fifths);
         let mut used = prefix;
         let mut end = first;
-        while end < n {
-            let natural = bar_prefix(score, p, end, end == first)
-                + plans.grids.get(end).map_or(4.0 * p.sp, BarGrid::natural)
-                + bar_suffix(score, p, end);
+        let natural_of = |i: usize| {
+            bar_prefix(score, p, i, i == first)
+                + plans.grids.get(i).map_or(4.0 * p.sp, BarGrid::natural)
+                + bar_suffix(score, p, i)
+        };
+        // The bars set for this system in Design Mode, if they fit at
+        // their narrowest; else as many as fit.
+        let set = stored
+            .get(systems.len())
+            .map(|&k| usize::from(k).max(1).min(n - first));
+        let mut naturals = Vec::new();
+        let mut kept = None;
+        if let Some(k) = set {
+            let widths: Vec<f32> = (first..first + k).map(natural_of).collect();
+            let total: f32 = widths.iter().sum::<f32>() + courtesy_width(score, p, first + k);
+            if total <= width || k == 1 {
+                used += widths.iter().sum::<f32>();
+                naturals = widths;
+                end = first + k;
+                kept = Some(true);
+            } else {
+                kept = Some(false);
+            }
+        }
+        while kept != Some(true) && end < n {
+            let natural = natural_of(end);
             if end > first && used + natural > width {
                 break;
             }
             used += natural;
+            naturals.push(natural);
             end += 1;
         }
+        // Courtesy signatures need room at the end: a bar moves to the
+        // next line when they wouldn't fit (unless the bars were set).
+        let mut courtesy = courtesy_width(score, p, end);
+        while kept != Some(true) && courtesy > 0.0 && used + courtesy > width && end > first + 1 {
+            used -= naturals.pop().unwrap_or(0.0);
+            end -= 1;
+            courtesy = courtesy_width(score, p, end);
+        }
         let last = end >= n;
-        let spare = width - used;
+        let spare = width - used - courtesy;
         // Overfull (one bar wider than the line): squeeze. Otherwise
         // stretch, except a last system less than two thirds full.
         let stretch = spare < 0.0 || !(last && used < width * 2.0 / 3.0);
@@ -478,6 +579,8 @@ pub(crate) fn break_systems(
             indent,
             prefix,
             extra,
+            courtesy,
+            stored: kept,
         });
         first = end;
     }

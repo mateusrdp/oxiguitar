@@ -31,8 +31,9 @@
 //!   four seconds past its written end.
 
 use oxiguitar_model::{
-    Accent, Beat, BeatKind, BeatTechnique, Bend, Dynamic, GraceKind, Harmonic, Note, NotePlace,
-    NoteValue, Ratio, Score, Slide, Staff, StrokeDirection,
+    Accent, Beat, BeatKind, BeatTechnique, Bend, Dynamic, Fade, Golpe, GraceKind, Hairpin,
+    Harmonic, Note, NotePlace, NoteValue, Ornament, Pedal, Rasgueado, Ratio, Score, Slide, Staff,
+    StrokeDirection,
 };
 
 use crate::time::TimeMap;
@@ -258,6 +259,8 @@ struct Work {
     curves: Vec<Curve>,
     /// The written end, before let ring.
     written_end: f64,
+    /// The hairpin over its beat.
+    hairpin: Option<Hairpin>,
 }
 
 /// The seconds a note value lasts at `bpm`.
@@ -318,6 +321,8 @@ struct Place {
     voice: usize,
     visit: usize,
     beat: usize,
+    /// The key signature's fifths, for ornaments' neighbours.
+    fifths: i8,
 }
 
 /// The beat's notes as events (several for tremolo picking and trills).
@@ -332,14 +337,25 @@ fn beat_notes(
     let fx = &beat.effects;
     // A strum: the order the strings are struck in.
     let mut notes: Vec<&Note> = beat.notes.iter().collect();
-    let spread = fx.stroke.map(|s| {
-        // Down: from the lowest string, which has the highest number.
-        notes.sort_by_key(|n| std::cmp::Reverse(n.string().unwrap_or(0)));
-        if s.direction == StrokeDirection::Up {
-            notes.reverse();
-        }
-        seconds(s.speed, span.bpm)
-    });
+    let spread = fx
+        .stroke
+        .map(|s| (s.direction, seconds(s.speed, span.bpm)))
+        .or_else(|| {
+            // An arpeggio rolls over the beat's first half, at most a
+            // quarter note.
+            fx.arpeggio.map(|d| {
+                let half = (span.end - span.start) / 2.0;
+                (d, half.min(seconds(NoteValue::Quarter, span.bpm)))
+            })
+        })
+        .map(|(direction, over)| {
+            // Down: from the lowest string, which has the highest number.
+            notes.sort_by_key(|n| std::cmp::Reverse(n.string().unwrap_or(0)));
+            if direction == StrokeDirection::Up {
+                notes.reverse();
+            }
+            over
+        });
     let count = notes.len().max(1) as f64;
     let whammy = fx.whammy.as_ref();
     for (rank, note) in notes.iter().enumerate() {
@@ -384,13 +400,7 @@ fn beat_notes(
                 None => Attack::Picked,
             }
         };
-        let vibrato = if fx.vibrato_wide {
-            Vibrato::Wide
-        } else if nfx.vibrato {
-            Vibrato::Normal
-        } else {
-            Vibrato::None
-        };
+        let vibrato = vibrato_of(fx.bridge_vibrato, nfx.vibrato);
         let mut curves = Vec::new();
         if let Some(b) = &nfx.bend {
             curves.push(Curve::of_bend(b, start, end));
@@ -414,8 +424,8 @@ fn beat_notes(
             ghost: nfx.ghost,
             let_ring: nfx.let_ring || fx.let_ring,
             vibrato,
-            fade_in: fx.fade_in,
-            fade_out: false,
+            fade_in: matches!(fx.fade, Some(Fade::In | Fade::Swell)),
+            fade_out: matches!(fx.fade, Some(Fade::Out | Fade::Swell)),
             grace,
             pitch: Vec::new(),
         };
@@ -426,11 +436,23 @@ fn beat_notes(
             slides: nfx.slides.clone(),
             curves,
             written_end: end,
+            hairpin: beat.hairpin,
         };
 
-        // Repeated notes: tremolo picking, or a trill.
+        // Repeated notes: a rasgueado, tremolo picking, a trill, an
+        // ornament.
         let tremolo = nfx.tremolo_picking.or(fx.tremolo_picking);
-        if let (Some(trill), Some(string)) = (nfx.trill, note.string()) {
+        if let Some(r) = fx.rasgueado {
+            rasgueado(work, r, (rank, notes.len()), out);
+        } else if let Some(o) = nfx.ornament {
+            ornament(
+                work,
+                o,
+                at.fifths,
+                seconds(NoteValue::ThirtySecond, span.bpm),
+                out,
+            );
+        } else if let (Some(trill), Some(string)) = (nfx.trill, note.string()) {
             let other = staff.pitch_of(string, trill.fret).map_or(key, |p| p.0);
             repeat(work, seconds(trill.speed, span.bpm), Some(other), out);
         } else if let Some(value) = tremolo {
@@ -438,6 +460,174 @@ fn beat_notes(
         } else {
             out.push(work);
         }
+    }
+}
+
+/// The beat's percussive hits: a golpe on the body (heard as a muted
+/// note on the lowest string for the thumb, the highest for a finger) and a
+/// dead slap (every string muted), short, at the beat's dynamic.
+fn hits(beat: &Beat, staff: &Staff, at: &Place, span: &Span, out: &mut Vec<Work>) {
+    let fx = &beat.effects;
+    let strings = u8::try_from(staff.string_count()).unwrap_or(0);
+    if strings == 0 || (fx.golpe.is_none() && !fx.dead_slap) {
+        return;
+    }
+    let mut struck: Vec<u8> = Vec::new();
+    match fx.golpe {
+        Some(Golpe::Thumb) => struck.push(strings),
+        Some(Golpe::Finger) => struck.push(1),
+        None => {}
+    }
+    if fx.dead_slap {
+        struck.extend(1..=strings);
+    }
+    struck.sort_unstable();
+    struck.dedup();
+    let level = velocity(beat.notes.first().map_or(Dynamic::F, |n| n.dynamic));
+    let end = span.end.min(span.start + 0.12);
+    for string in struck.into_iter().rev() {
+        let Some(key) = staff.pitch_of(string, 0) else {
+            continue;
+        };
+        let event = NoteEvent {
+            track: at.track,
+            staff: at.staff,
+            voice: at.voice,
+            visit: at.visit,
+            beat: at.beat,
+            string: Some(string),
+            key: key.0,
+            start: span.start,
+            end,
+            velocity: level.clamp(1, 127) as u8,
+            sound: Sound::Dead,
+            attack: if fx.dead_slap {
+                Attack::Slapped
+            } else {
+                Attack::Tapped
+            },
+            ghost: false,
+            let_ring: false,
+            vibrato: Vibrato::None,
+            fade_in: false,
+            fade_out: false,
+            grace: false,
+            pitch: Vec::new(),
+        };
+        out.push(Work {
+            event,
+            fret: Some(0),
+            hammer: false,
+            slides: Vec::new(),
+            curves: Vec::new(),
+            written_end: end,
+            hairpin: beat.hairpin,
+        });
+    }
+}
+
+/// How far apart a rasgueado's strings are struck within one stroke.
+const RASGUEADO_STRUM: f64 = 0.006;
+
+/// A rasgueado: one stroke for each finger of its pattern across the beat
+/// (short-short-long for an anapaest, even otherwise), each a quick strum
+/// down, but an index finger's second stroke (i i) comes back up. `rank` is
+/// the note's place in a downstroke, lowest string first, of `count`.
+fn rasgueado(work: Work, r: Rasgueado, (rank, count): (usize, usize), out: &mut Vec<Work>) {
+    let fingers: Vec<char> = r.fingers().chars().collect();
+    let n = fingers.len().max(1);
+    let (start, end) = (work.event.start, work.event.end);
+    let len = end - start;
+    let shares: Vec<f64> = if r.anapaest() && n == 3 {
+        vec![0.25, 0.25, 0.5]
+    } else {
+        vec![1.0 / n as f64; n]
+    };
+    let last = count.saturating_sub(1);
+    let mut t = start;
+    for (k, share) in shares.iter().enumerate() {
+        let up = k > 0 && fingers.get(k) == Some(&'i') && fingers.get(k - 1) == Some(&'i');
+        let order = if up { last.saturating_sub(rank) } else { rank };
+        let mut w = work.clone();
+        w.event.start = (t + order as f64 * RASGUEADO_STRUM).min(end);
+        w.event.end = (t + share * len).min(end).max(w.event.start + 1e-3);
+        w.written_end = w.event.end;
+        if k + 1 < n {
+            w.hammer = false;
+            w.slides.clear();
+        }
+        out.push(w);
+        t += share * len;
+    }
+}
+
+/// The note a step above (or below) `key` in the major scale of the key
+/// signature with `fifths`.
+fn neighbour(key: u8, fifths: i8, up: bool) -> u8 {
+    const MAJOR: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
+    let tonic = (7 * i32::from(fifths)).rem_euclid(12);
+    let in_scale = |p: i32| MAJOR.contains(&(p - tonic).rem_euclid(12));
+    let k = i32::from(key);
+    let step = if up { 1 } else { -1 };
+    let mut p = k + step;
+    while !in_scale(p) && (p - k).abs() < 3 {
+        p += step;
+    }
+    u8::try_from(p.clamp(0, 127)).unwrap_or(key)
+}
+
+/// An ornament: a mordent plays the note, its neighbour and the note again,
+/// the first two each `short` long (a thirty-second); a turn plays four
+/// notes across the note's length (upper, note, lower, note; inverted:
+/// lower first). The notes after the first are slurred.
+fn ornament(work: Work, o: Ornament, fifths: i8, short: f64, out: &mut Vec<Work>) {
+    let key = work.event.key;
+    let (start, end) = (work.event.start, work.event.end);
+    let len = end - start;
+    let upper = neighbour(key, fifths, true);
+    let lower = neighbour(key, fifths, false);
+    let parts: Vec<(u8, f64)> = match o {
+        Ornament::UpperMordent | Ornament::LowerMordent => {
+            let other = if o == Ornament::UpperMordent {
+                upper
+            } else {
+                lower
+            };
+            let d = short.min(len / 4.0);
+            vec![(key, d), (other, d), (key, len - 2.0 * d)]
+        }
+        Ornament::Turn => vec![
+            (upper, len / 4.0),
+            (key, len / 4.0),
+            (lower, len / 4.0),
+            (key, len / 4.0),
+        ],
+        Ornament::InvertedTurn => {
+            vec![
+                (lower, len / 4.0),
+                (key, len / 4.0),
+                (upper, len / 4.0),
+                (key, len / 4.0),
+            ]
+        }
+    };
+    let n = parts.len();
+    let mut t = start;
+    for (k, (part_key, d)) in parts.into_iter().enumerate() {
+        let mut w = work.clone();
+        w.event.key = part_key;
+        w.event.start = t;
+        w.event.end = (t + d).min(end).max(t + 1e-3);
+        w.written_end = w.event.end;
+        if k > 0 {
+            w.event.attack = Attack::Legato;
+        }
+        if k + 1 < n {
+            w.hammer = false;
+            w.slides.clear();
+        }
+        out.push(w);
+        t += d;
     }
 }
 
@@ -488,14 +678,20 @@ pub fn notes(score: &Score, map: &TimeMap) -> Vec<NoteEvent> {
                 let Some(bar) = staff.bars.get(v.visit.bar) else {
                     continue;
                 };
+                let fifths = score
+                    .master_bars
+                    .get(v.visit.bar)
+                    .map_or(0, |m| m.key_signature.fifths);
                 for (voi, voice) in bar.voices.iter().enumerate() {
                     if voice.is_empty() {
                         continue;
                     }
-                    voice_notes(staff, voice, (ti, si, voi, vi), map, &mut work);
+                    voice_notes(staff, voice, (ti, si, voi, vi, fifths), map, &mut work);
                 }
             }
-            second_pass(&mut work, staff);
+            let pedal = pedal_marks(staff, map);
+            second_pass(&mut work, staff, &pedal);
+            hairpins(&mut work);
             all.extend(work.into_iter().map(|w| w.event));
         }
     }
@@ -620,7 +816,7 @@ pub fn chords(score: &Score, map: &TimeMap) -> Vec<NoteEvent> {
 fn voice_notes(
     staff: &Staff,
     voice: &oxiguitar_model::Voice,
-    (track, staff_index, voice_index, visit): (usize, usize, usize, usize),
+    (track, staff_index, voice_index, visit, fifths): (usize, usize, usize, usize, i8),
     map: &TimeMap,
     work: &mut Vec<Work>,
 ) {
@@ -668,6 +864,7 @@ fn voice_notes(
                     voice: voice_index,
                     visit,
                     beat: *gi,
+                    fifths,
                 };
                 beat_notes(g, staff, &at, &span, true, work);
             }
@@ -683,7 +880,9 @@ fn voice_notes(
                 voice: voice_index,
                 visit,
                 beat: bi,
+                fifths,
             };
+            hits(beat, staff, &at, &Span { start, end, bpm }, work);
             // Tied notes extend the note they continue.
             let mut fresh = beat.clone();
             fresh.notes.clear();
@@ -723,8 +922,8 @@ fn extend_tie(work: &mut [Work], note: &Note, staff: &Staff, voice: usize, end: 
     if let Some(b) = &note.effects.bend {
         w.curves.push(Curve::of_bend(b, tied_from, end));
     }
-    if note.effects.vibrato && w.event.vibrato == Vibrato::None {
-        w.event.vibrato = Vibrato::Normal;
+    if w.event.vibrato == Vibrato::None {
+        w.event.vibrato = vibrato_of(None, note.effects.vibrato);
     }
     w.hammer = note.effects.hammer_pull;
     w.slides = note.effects.slides.clone();
@@ -732,9 +931,23 @@ fn extend_tie(work: &mut [Work], note: &Note, staff: &Staff, voice: usize, end: 
     true
 }
 
+/// How a note's pitch wavers: the whammy bar's vibrato on its beat, or its
+/// own left-hand one.
+fn vibrato_of(
+    bridge: Option<oxiguitar_model::Vibrato>,
+    left: Option<oxiguitar_model::Vibrato>,
+) -> Vibrato {
+    use oxiguitar_model::Vibrato as V;
+    match (bridge, left) {
+        (Some(V::Wide), _) | (None, Some(V::Wide)) => Vibrato::Wide,
+        (Some(V::Slight), _) | (None, Some(V::Slight)) => Vibrato::Normal,
+        (None, None) => Vibrato::None,
+    }
+}
+
 /// Hammer-ons, slides and let ring: what a note does to the next one on its
 /// string, and the pitch curves.
-fn second_pass(work: &mut [Work], staff: &Staff) {
+fn second_pass(work: &mut [Work], staff: &Staff, pedal: &[(f64, bool)]) {
     // Each note's next note on the same string (or key) in the same voice,
     // and on the same string in any voice (let ring).
     let n = work.len();
@@ -809,11 +1022,114 @@ fn second_pass(work: &mut [Work], staff: &Staff) {
         work[i].event.pitch = Curve::sum(&curves).points();
 
         // Let ring: on until the string is struck again, at most 4 s more.
-        if work[i].event.let_ring {
-            let until = next_on_string[i].map_or(f64::INFINITY, |j| work[j].event.start);
+        // Under the sustain pedal: until it comes up, or the string is
+        // struck again.
+        let until = next_on_string[i].map_or(f64::INFINITY, |j| work[j].event.start);
+        if let Some(up) = pedal_up(pedal, start) {
+            let ring = up.min(until);
+            work[i].event.end = work[i].event.end.max(ring);
+        } else if work[i].event.let_ring {
             let ring = (work[i].written_end + 4.0).min(until);
             work[i].event.end = work[i].event.end.max(ring);
         }
+    }
+}
+
+/// The sustain pedal's marks on a staff, as played: (time, down).
+fn pedal_marks(staff: &Staff, map: &TimeMap) -> Vec<(f64, bool)> {
+    let mut out = Vec::new();
+    for (vi, v) in map.visits.iter().enumerate() {
+        let Some(bar) = staff.bars.get(v.visit.bar) else {
+            continue;
+        };
+        for voice in &bar.voices {
+            let mut pos = Ratio::ZERO;
+            for b in &voice.beats {
+                if b.grace.is_some() {
+                    continue;
+                }
+                if let Some(p) = b.effects.pedal {
+                    out.push((map.time(vi, pos), p == Pedal::Down));
+                }
+                if let Some(len) = b.duration.length() {
+                    pos = pos + len;
+                }
+            }
+        }
+    }
+    out.sort_by(|a, b| a.0.total_cmp(&b.0));
+    out
+}
+
+/// When the pedal comes up, if it is down at `t`: the next release after
+/// the last mark at or before `t` (the song's end if it never does).
+fn pedal_up(pedal: &[(f64, bool)], t: f64) -> Option<f64> {
+    let k = pedal.partition_point(|m| m.0 <= t + 1e-9);
+    let (_, down) = *pedal.get(k.checked_sub(1)?)?;
+    if !down {
+        return None;
+    }
+    Some(
+        pedal
+            .get(k..)?
+            .iter()
+            .find(|m| !m.1)
+            .map_or(f64::INFINITY, |m| m.0),
+    )
+}
+
+/// Hairpins: across each run of a voice's notes under one hairpin, the
+/// level moves from the run's first note to the next note after it, or a
+/// dynamic's step (16) up or down when that one isn't louder (softer).
+fn hairpins(work: &mut [Work]) {
+    let mut order: Vec<usize> = (0..work.len()).collect();
+    order.sort_by(|&a, &b| {
+        (work[a].event.voice, work[a].event.track)
+            .cmp(&(work[b].event.voice, work[b].event.track))
+            .then(work[a].event.start.total_cmp(&work[b].event.start))
+    });
+    let mut k = 0;
+    while k < order.len() {
+        let Some(h) = work[order[k]].hairpin else {
+            k += 1;
+            continue;
+        };
+        let voice = work[order[k]].event.voice;
+        let start = k;
+        while order
+            .get(k + 1)
+            .is_some_and(|&j| work[j].hairpin == Some(h) && work[j].event.voice == voice)
+        {
+            k += 1;
+        }
+        let run: Vec<usize> = order[start..=k].to_vec();
+        let after = order
+            .get(k + 1)
+            .copied()
+            .filter(|&j| work[j].event.voice == voice);
+        let (Some(&first), Some(&last)) = (run.first(), run.last()) else {
+            k += 1;
+            continue;
+        };
+        let from = i32::from(work[first].event.velocity);
+        let up = h == Hairpin::Crescendo;
+        let step = if up { 16 } else { -16 };
+        let to = after
+            .map(|j| i32::from(work[j].event.velocity))
+            .filter(|v| if up { *v > from } else { *v < from })
+            .unwrap_or(from + step);
+        let (t0, t1) = (work[first].event.start, work[last].written_end);
+        for &i in &run {
+            let frac = if t1 > t0 {
+                ((work[i].event.start - t0) / (t1 - t0)).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let delta = (f64::from(to - from) * frac).round() as i32;
+            let v = i32::from(work[i].event.velocity) + delta;
+            work[i].event.velocity = v.clamp(1, 127) as u8;
+        }
+        k += 1;
     }
 }
 
@@ -841,6 +1157,25 @@ fn slide_out(w: &mut Work, fret: Option<u8>, staff: &Staff, down: bool) -> Curve
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn neighbours_are_steps_of_the_key() {
+        // In C: above E is F, below C is B; in G, above E is F sharp.
+        assert_eq!(neighbour(64, 0, true), 65);
+        assert_eq!(neighbour(60, 0, false), 59);
+        assert_eq!(neighbour(64, 1, true), 66);
+        assert_eq!(neighbour(67, 0, true), 69);
+    }
+
+    #[test]
+    fn the_pedal_holds_until_it_comes_up() {
+        let marks = [(1.0, true), (3.0, false), (5.0, true)];
+        assert_eq!(pedal_up(&marks, 0.5), None);
+        assert_eq!(pedal_up(&marks, 1.0), Some(3.0));
+        assert_eq!(pedal_up(&marks, 2.0), Some(3.0));
+        assert_eq!(pedal_up(&marks, 4.0), None);
+        assert_eq!(pedal_up(&marks, 6.0), Some(f64::INFINITY));
+    }
 
     #[test]
     fn velocities_follow_guitar_pro() {
@@ -963,5 +1298,163 @@ mod tests {
         assert!(chords_of(&strummed(false, 0)).is_empty());
         let capo = chords_of(&strummed(true, 2));
         assert_eq!(capo[0].key, 45);
+    }
+
+    /// One guitar bar at 120 of four quarter notes (string 2, frets 1 to 4,
+    /// two strings on the first beat), each beat changed by `mark`; its
+    /// notes as played.
+    fn played(mark: impl Fn(usize, &mut Beat)) -> Vec<NoteEvent> {
+        use oxiguitar_model::{Bar, Duration, MasterBar, Track, Voice};
+        let beats = (0..4)
+            .map(|k| {
+                let mut b = Beat {
+                    duration: Duration::new(NoteValue::Quarter),
+                    notes: vec![Note::fretted(2, 1 + k as u8)],
+                    ..Beat::default()
+                };
+                if k == 0 {
+                    b.notes.push(Note::fretted(3, 2));
+                }
+                mark(k, &mut b);
+                b
+            })
+            .collect();
+        let score = Score {
+            master_bars: vec![MasterBar::default()],
+            tracks: vec![Track {
+                staves: vec![Staff {
+                    tuning: Staff::standard_guitar_tuning(),
+                    bars: vec![Bar {
+                        voices: vec![Voice { beats }],
+                        ..Bar::default()
+                    }],
+                    ..Staff::default()
+                }],
+                ..Track::default()
+            }],
+            ..Score::new()
+        };
+        let order = crate::order::playing_order(&score.master_bars);
+        notes(&score, &TimeMap::new(&score, &order))
+    }
+
+    #[test]
+    fn an_arpeggio_rolls_over_half_the_beat() {
+        let e = played(|k, b| {
+            if k == 0 {
+                b.effects.arpeggio = Some(StrokeDirection::Down);
+            }
+        });
+        // String 3 (lower) first, string 2 a quarter of the beat later.
+        let first: Vec<(Option<u8>, f64)> = e.iter().take(2).map(|n| (n.string, n.start)).collect();
+        assert_eq!(first[0], (Some(3), 0.0));
+        assert_eq!(first[1].0, Some(2));
+        assert!((first[1].1 - 0.125).abs() < 1e-9, "{first:?}");
+    }
+
+    #[test]
+    fn a_rasgueado_strikes_once_for_each_finger() {
+        let e = played(|k, b| {
+            if k == 1 {
+                b.effects.rasgueado = Some(Rasgueado::MiiAnapaest);
+            }
+        });
+        let strokes: Vec<f64> = e.iter().filter(|n| n.beat == 1).map(|n| n.start).collect();
+        // m, i, i: short, short, long, over the half second of the beat.
+        assert_eq!(strokes.len(), 3);
+        assert!((strokes[0] - 0.5).abs() < 0.01);
+        assert!((strokes[1] - 0.625).abs() < 0.01);
+        assert!((strokes[2] - 0.75).abs() < 0.01);
+    }
+
+    #[test]
+    fn ornaments_play_their_neighbours_in_the_key() {
+        // String 2 fret 3: D 4 (62). Upper mordent: D E D.
+        let e = played(|k, b| {
+            if k == 2 {
+                b.notes[0].effects.ornament = Some(Ornament::UpperMordent);
+            }
+        });
+        let keys: Vec<u8> = e.iter().filter(|n| n.beat == 2).map(|n| n.key).collect();
+        assert_eq!(keys, [62, 64, 62]);
+        let turn = played(|k, b| {
+            if k == 2 {
+                b.notes[0].effects.ornament = Some(Ornament::Turn);
+            }
+        });
+        let keys: Vec<u8> = turn.iter().filter(|n| n.beat == 2).map(|n| n.key).collect();
+        assert_eq!(keys, [64, 62, 60, 62]);
+    }
+
+    #[test]
+    fn golpe_and_dead_slap_are_muted_hits() {
+        let e = played(|k, b| match k {
+            1 => b.effects.golpe = Some(Golpe::Thumb),
+            3 => b.effects.dead_slap = true,
+            _ => {}
+        });
+        let golpe: Vec<&NoteEvent> = e
+            .iter()
+            .filter(|n| n.beat == 1 && n.sound == Sound::Dead)
+            .collect();
+        assert_eq!(golpe.len(), 1);
+        assert_eq!(golpe[0].string, Some(6));
+        let slap = e
+            .iter()
+            .filter(|n| n.beat == 3 && n.sound == Sound::Dead)
+            .count();
+        assert_eq!(slap, 6);
+    }
+
+    #[test]
+    fn a_crescendo_rises_to_the_next_dynamic() {
+        let e = played(|k, b| {
+            if k < 3 {
+                b.hairpin = Some(Hairpin::Crescendo);
+            } else {
+                for n in &mut b.notes {
+                    n.dynamic = Dynamic::FF;
+                }
+            }
+        });
+        let v: Vec<u8> = e
+            .iter()
+            .filter(|n| n.string == Some(2))
+            .map(|n| n.velocity)
+            .collect();
+        // From forte (95) towards fortissimo (111), rising.
+        assert_eq!(v[0], 95);
+        assert!(v[1] > v[0] && v[2] > v[1] && v[2] < 111, "{v:?}");
+        assert_eq!(v[3], 111);
+    }
+
+    #[test]
+    fn notes_under_the_pedal_ring_until_it_comes_up() {
+        let e = played(|k, b| match k {
+            0 => b.effects.pedal = Some(Pedal::Down),
+            2 => b.effects.pedal = Some(Pedal::Up),
+            _ => {}
+        });
+        // String 3's note (beat 1) rings to the release at 1 s; string 2's
+        // is struck again at 0.5 s.
+        let low = e.iter().find(|n| n.string == Some(3)).unwrap();
+        assert!((low.end - 1.0).abs() < 1e-9, "{}", low.end);
+        let high = e
+            .iter()
+            .find(|n| n.string == Some(2) && n.beat == 0)
+            .unwrap();
+        assert!((high.end - 0.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn fades_out_and_swells_shape_the_volume() {
+        let e = played(|k, b| match k {
+            1 => b.effects.fade = Some(Fade::Out),
+            2 => b.effects.fade = Some(Fade::Swell),
+            _ => {}
+        });
+        let at = |beat: usize| e.iter().find(|n| n.beat == beat).unwrap();
+        assert!(!at(1).fade_in && at(1).fade_out);
+        assert!(at(2).fade_in && at(2).fade_out);
     }
 }
