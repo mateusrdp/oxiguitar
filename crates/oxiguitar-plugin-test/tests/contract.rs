@@ -118,11 +118,11 @@ fn the_test_plugin_passes_the_contract() {
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
     // of event, the selection in both its forms; 2 tools; the settings
     // window and its 2 widgets; the track section and its 2 widgets; 2
-    // instruments and an effect, 4 real-time checks each; the exporter's
-    // 3 checks.
+    // instruments and an effect, 4 real-time checks each; the effect's 3
+    // checks of an update (interface 1.5); the exporter's 3 checks.
     assert_eq!(
         report.passed.len(),
-        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4 + 3,
+        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4 + 3 + 3,
         "{:#?}",
         report.passed
     );
@@ -1351,6 +1351,109 @@ fn the_player_puts_each_track_s_effects_after_its_instrument() {
         changed.groups[0].effects[0][0].settings,
         r#"{"gain": true}"#
     );
+}
+
+/// Interface 1.5 (#232): an effect follows its track's new settings
+/// while it runs, from its next call, ramping to them; the instance stays
+/// alive while an updater holds it.
+#[test]
+fn an_effect_follows_new_settings_while_it_runs() {
+    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
+
+    let dir = folder("update", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let effect = plugins
+        .effects_for(InstrumentClass::Fretted)
+        .into_iter()
+        .find(|e| e.spec.id == "gain")
+        .unwrap();
+    let prepare = |level: f64| PrepareEffect {
+        effect: "gain".into(),
+        rate: 48_000,
+        frames: 512,
+        track: PreparedTrack {
+            info: TrackInfo {
+                index: 0,
+                name: "Lead".into(),
+                class: InstrumentClass::Fretted,
+            },
+            program: 29,
+            percussion: false,
+            tuning: vec![64, 59, 55, 50, 45, 40],
+            capo: 0,
+            settings: format!(r#"{{"level":{level}}}"#),
+        },
+    };
+    let mut instance = plugins.prepare_effect(effect, prepare(0.5)).unwrap();
+    let run = |instance: &mut oxiguitar_host::realtime::Instance| {
+        let (mut l, mut r) = (vec![1.0f32; 128], vec![1.0f32; 128]);
+        assert!(instance.process(&mut l, &mut r));
+        l
+    };
+    assert!(run(&mut instance).iter().all(|&v| (v - 0.5).abs() < 1e-6));
+    let updater = instance.updater();
+    assert!(updater.update(prepare(0.25), "{}").unwrap());
+    // Two updates before a call: the newest wins.
+    assert!(updater.update(prepare(0.1), "{}").unwrap());
+    let ramped = run(&mut instance);
+    assert!(
+        ramped[0] < 0.5 && ramped[0] > 0.1,
+        "it ramps: {}",
+        ramped[0]
+    );
+    assert!(ramped.windows(2).all(|w| w[1] <= w[0]), "smoothly down");
+    assert!(
+        (ramped[127] - 0.1).abs() < 1e-6,
+        "there by the end: {}",
+        ramped[127]
+    );
+    assert!(run(&mut instance).iter().all(|&v| (v - 0.1).abs() < 1e-6));
+    // Many updates, each taken: none is lost or left behind.
+    for k in 1..=20 {
+        let level = f64::from(k) / 20.0;
+        assert!(updater.update(prepare(level), "{}").unwrap());
+        run(&mut instance);
+        let settled = run(&mut instance);
+        assert!((settled[127] - level as f32).abs() < 1e-6, "{level}");
+    }
+    // The updater keeps the instance alive after the engine drops it.
+    drop(instance);
+    assert!(updater.update(prepare(0.5), "{}").unwrap());
+    drop(updater);
+}
+
+/// #232: while the song plays, the player sends the effects whose track's
+/// settings changed their new ones, and prepares nothing; any other change
+/// waits for the song to stop.
+#[test]
+fn the_player_sends_effects_their_new_settings_while_it_plays() {
+    use oxiguitar_play::plugin_source::{follow, plan, prepare};
+
+    let dir = folder("follow", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let mut score =
+        oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
+            .unwrap()
+            .score;
+    let old = plan(&plugins, &score);
+    let mut prepared = prepare(&plugins, &score, &old, 48_000, 512).unwrap();
+    // The same plan: nothing to send.
+    assert!(follow(&mut prepared.live, &old, &old));
+    // A track section's level: the effect follows it.
+    score.tracks[0]
+        .plugins
+        .insert("oxiguitar.test".into(), r#"{"level":0.2}"#.into());
+    let new = plan(&plugins, &score);
+    assert_ne!(new, old);
+    assert!(follow(&mut prepared.live, &old, &new));
+    // Another instrument program: only preparing again can follow it.
+    let mut other = score.clone();
+    other.tracks[0].instrument.midi_program = 0;
+    other.tracks[0].instrument.percussion = true;
+    let drums = plan(&plugins, &other);
+    assert!(!follow(&mut prepared.live, &new, &drums));
 }
 
 /// A track whose chords are played (#151) gets a chord voice beside it in

@@ -31,11 +31,13 @@ Select a guitar or bass track (click its name) and open the **Track** tab on the
 - **Cabinet**: **From the model** (none for a model that says it includes its cabinet, the first built-in one otherwise), **None**, one of the four built-in cabinets, or a `.wav` file from the `nam` folder.
 - **Input** and **Output**, from −24 to +24 dB. Input drives the amp harder or softer, as a guitar's volume knob does; output sets the track's level after it. A model whose file says how loud it plays is first brought to −18 dBFS, so models sound about as loud as each other.
 
+**Input** and **Output** work while the song plays: the level glides to the new one as you move the slider, so you can set the drive by ear. Turning the amp on or off, or picking another model or cabinet, loads files, so it is kept and heard the next time you press Play.
+
 The settings are saved per track beside the score, in `FILE.oxg`, like every plugin's track settings; the score itself doesn't change. A track whose model is missing (the file was moved or deleted) plays without it, and the bottom of the window says so.
 
 ## With the equalizer
 
-The amp has no tone controls of its own. The **Equalizer** plugin ([Playing a score](playback.md#each-tracks-sound)) shapes the sound after it: **Basic** is Bass, Middle and Treble, like an amp's tone stack, and **Graphic** is ten bands. A track's effects run in the order their sections stand in the Track tab, the amp first and then the equalizer unless you move them: the arrows by the **Amp (NAM)** and **Equalizer** headings move one before the other.
+The amp has no tone controls of its own. The **Equalizer** plugin ([Playing a score](playback.md#each-tracks-sound)) shapes the sound after it: **Basic** is Bass, Middle and Treble, like an amp's tone stack, and **Graphic** is ten bands. A track's effects run in the order their sections stand in the Track tab, the amp first and then the equalizer unless you move them: the arrows by the **Amp (NAM)** and **Equalizer** headings move one before the other. The equalizer's bands and its mode work while the song plays, as the amp's levels do ([Each track's sound](playback.md#each-tracks-sound)).
 
 ## How heavy it is
 

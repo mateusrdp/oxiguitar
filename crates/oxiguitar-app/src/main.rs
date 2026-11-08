@@ -246,6 +246,9 @@ struct App {
     player: player::Player,
     sound: sound::Sound,
     score_revision: u64,
+    /// The score changed while the song played (#232): it is sent to the
+    /// player's thread again once the song stops.
+    changed_while_playing: bool,
     /// Where the caret was when playing began, for Stop.
     began: Option<oxiguitar_edit::Caret>,
     /// What the player has said in the footer this session.
@@ -598,6 +601,7 @@ fn main() -> Result<(), slint::PlatformError> {
         player: player::Player::new(control),
         sound,
         score_revision: 0,
+        changed_while_playing: false,
         began: None,
         player_told: std::collections::HashSet::new(),
         outputs: Vec::new(),
@@ -4009,8 +4013,14 @@ fn widget_event(kind: i32, on: bool, value: f32, text: &str, chosen: i32) -> Tab
 }
 
 /// The Track tab's section `index` was moved up or down: the order of the
-/// track's effects changes, as one change of the track (#152).
+/// track's effects changes, as one change of the track (#152). Not while
+/// the song plays: the effects would have to be prepared again, and
+/// editing waits (only the sections' settings change while playing, #232).
 fn track_section_moved(app: &Shared, index: i32, up: bool) {
+    if app.borrow().player.refuses_edits() {
+        handle(app, Event::Refused);
+        return;
+    }
     let moved = {
         let mut s = app.borrow_mut();
         let moved = usize::try_from(index)

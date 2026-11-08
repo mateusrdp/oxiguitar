@@ -21,7 +21,7 @@ use std::thread::JoinHandle;
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::audio_device;
 use oxiguitar_model::Score;
-use oxiguitar_play::plugin_source::{self, Plan};
+use oxiguitar_play::plugin_source::{self, LiveEffect, Plan};
 use oxiguitar_play::{Control, Engine, Route, Schedule, Sources, Timeline, engine};
 
 /// The engine's largest piece, in frames.
@@ -32,11 +32,15 @@ pub(crate) enum ToSound {
     /// The score as it now is (opened or changed), counted by `revision`.
     /// `fresh`: prepare its instruments again even if its tracks' sounds
     /// look the same, as after a plugin's settings changed (#143: another
-    /// sound set picked).
+    /// sound set picked). `live`: the song plays, so nothing is prepared;
+    /// effects whose track's settings changed are sent them (#232), and
+    /// whatever else changed waits for the score sent again once the song
+    /// stops.
     Score {
         score: Arc<Score>,
         revision: u64,
         fresh: bool,
+        live: bool,
     },
     /// Open the output named `device` (empty: the system's default).
     Open { device: String },
@@ -122,6 +126,7 @@ impl Sound {
                     home: Arc::new(Mutex::new(None)),
                     stream: None,
                     plan: None,
+                    live: Vec::new(),
                     routes: Vec::new(),
                     sources: 0,
                     score: None,
@@ -157,6 +162,9 @@ struct Thread {
     stream: Option<oxiguitar_host::realtime::Stream>,
     /// What the instruments were prepared for, and the routes then.
     plan: Option<Plan>,
+    /// The effects prepared, to send their track's settings while the song
+    /// plays (#232).
+    live: Vec<LiveEffect>,
     routes: Vec<Option<Route>>,
     sources: usize,
     /// The latest score, for preparing again at another rate.
@@ -180,6 +188,7 @@ impl Thread {
                                     score,
                                     revision,
                                     fresh,
+                                    live,
                                 }) => {
                                     let before =
                                         matches!(newest, ToSound::Score { fresh: true, .. });
@@ -187,6 +196,7 @@ impl Thread {
                                         score,
                                         revision,
                                         fresh: fresh || before,
+                                        live,
                                     };
                                 }
                                 Ok(other) => {
@@ -205,7 +215,8 @@ impl Thread {
                         score,
                         revision,
                         fresh,
-                    } => self.score(score, revision, fresh),
+                        live,
+                    } => self.score(score, revision, fresh, live),
                     ToSound::Open { device } => self.open(&device),
                     ToSound::Close => self.close(),
                     ToSound::Devices => (self.tell)(FromSound::Devices(self.devices())),
@@ -221,14 +232,26 @@ impl Thread {
 
     /// The timeline and schedule for `score`, and its instruments when its
     /// tracks' sounds differ from what they were prepared for (or `fresh`:
-    /// at a new rate, or after a plugin's settings changed).
-    fn score(&mut self, score: Arc<Score>, revision: u64, fresh: bool) {
+    /// at a new rate, or after a plugin's settings changed). While the song
+    /// plays (`live`) nothing is prepared: effects follow their track's new
+    /// settings where they can (#232), and the plan stays the old one
+    /// otherwise, so the score sent again after the song stops prepares
+    /// what changed.
+    fn score(&mut self, score: Arc<Score>, revision: u64, fresh: bool, live: bool) {
         self.score = Some((score.clone(), revision));
         let timeline = Arc::new(Timeline::new(&score));
         let plan = plugin_source::plan(&self.plugins, &score);
         let mut sources = None;
         let mut silent = Vec::new();
-        if fresh || self.plan.as_ref() != Some(&plan) {
+        let changed = fresh || self.plan.as_ref() != Some(&plan);
+        if changed && live && !fresh {
+            if let Some(old) = &self.plan
+                && plugin_source::follow(&mut self.live, old, &plan)
+            {
+                self.plan = Some(plan);
+            }
+        } else if changed {
+            self.live.clear();
             if plan.is_empty() {
                 self.plan = Some(plan);
                 self.routes = vec![None; score.tracks.len()];
@@ -240,6 +263,7 @@ impl Thread {
                 Ok(p) => {
                     self.routes = p.routes;
                     self.sources = p.count;
+                    self.live = p.live;
                     silent = p.silent;
                     sources = Some(p.sources);
                     self.plan = Some(plan);
@@ -311,7 +335,7 @@ impl Thread {
                 self.engine = Some(eng);
                 (self.tell)(FromSound::NewEngine(control));
                 if let Some((score, revision)) = self.score.clone() {
-                    self.score(score, revision, true);
+                    self.score(score, revision, true, false);
                 }
                 let Some(eng) = self.engine.take() else {
                     return;
@@ -411,6 +435,7 @@ mod tests {
                 score: score.clone(),
                 revision,
                 fresh,
+                live: false,
             });
             loop {
                 match rx.recv_timeout(Duration::from_secs(60)).unwrap() {
@@ -424,5 +449,47 @@ mod tests {
         assert!(!ready(2, false), "the same tracks: the same instruments");
         assert!(ready(3, true), "fresh: prepared again");
         assert!(!ready(4, false));
+    }
+
+    /// #232: while the song plays, nothing is prepared. A section's level
+    /// reaches the running effect, so the song stopped needs nothing new;
+    /// another instrument waits for the song to stop.
+    #[test]
+    fn while_the_song_plays_effects_follow_and_the_rest_waits() {
+        let plugins = crate::test_support::tab_host().plugins.clone();
+        let (tx, rx) = channel();
+        let (sound, _control) = Sound::start(plugins, move |m| {
+            let _ = tx.send(m);
+        });
+        let ready = |score: &Arc<Score>, revision: u64, live: bool| {
+            sound.send(ToSound::Score {
+                score: score.clone(),
+                revision,
+                fresh: false,
+                live,
+            });
+            loop {
+                match rx.recv_timeout(Duration::from_secs(60)).unwrap() {
+                    FromSound::Ready(r) if r.revision == revision => return r.sources.is_some(),
+                    FromSound::Unplayable(why) => panic!("unplayable: {why}"),
+                    _ => {}
+                }
+            }
+        };
+        let score = crate::player::tests::score();
+        assert!(ready(&score, 1, false));
+        let mut level = (*score).clone();
+        for t in &mut level.tracks {
+            t.plugins
+                .insert("oxiguitar.test".into(), r#"{"level":0.25}"#.into());
+        }
+        let level = Arc::new(level);
+        assert!(!ready(&level, 2, true), "followed, not prepared");
+        assert!(!ready(&level, 3, false), "stopped: already as it plays");
+        let mut other = (*level).clone();
+        other.tracks[0].instrument.percussion = !other.tracks[0].instrument.percussion;
+        let other = Arc::new(other);
+        assert!(!ready(&other, 4, true), "playing: nothing prepared");
+        assert!(ready(&other, 5, false), "stopped: prepared now");
     }
 }

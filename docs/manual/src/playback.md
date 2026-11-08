@@ -17,7 +17,7 @@ OxiGuitar plays the open score through your sound card, with the [sound sets](be
 
 A blue line moves through the music with the sound, and the beat you are hearing is lightly boxed in blue (the caret is green). The page turns by itself to keep it in sight. While a song plays, each track's overview at the bottom shows where the sound is; click an overview to jump there.
 
-**The score can't be edited while it plays.** Pause it (Space), edit, and play on. If you type while it plays, the bottom of the window reminds you.
+**The score can't be edited while it plays.** Pause it (Space), edit, and play on. If you type while it plays, the bottom of the window reminds you. The plugins' sections of the **Track** tab are the exception: the equalizer's sliders and the amp's levels work while the song plays, and you hear the change at once ([Each track's sound](#each-tracks-sound)).
 
 ## Practising
 
@@ -46,6 +46,8 @@ Select a track (click its name) and open the **Track** tab on the right: under t
 - **Equalizer**, for every track: **Off** (the default), **Basic** (three bands: Bass, a shelf at 120 Hz; Middle, at 700 Hz; Treble, a shelf at 3.2 kHz) or **Graphic** (ten bands, one octave apart, from 31 Hz to 16 kHz). Each band goes from −12 to +12 dB in half-decibel steps; **Flat** sets them all back to 0. Basic and Graphic each keep their bands, so switching between them loses nothing. It works with or without an amp, adds no delay, and comes as a plugin of its own, `oxiguitar-eq` ([The official plugins](official-plugins.md)).
 
 Sections that change the sound after the instrument (the amp, the equalizer) come last, in the order they work: the sound goes through the first, then the next. The up and down arrows by such a section's heading move it, and so change that order for the track: an equalizer before the amp shapes what drives the amp, after it what you hear. Without a change, the amp comes first and the equalizer after it. Each change, like any edit, is one step for **Undo**.
+
+**While the song plays**, these sections still work, so you can set a tone by ear: the equalizer's mode and bands, and the amp's **Input** and **Output**, change the sound as you move them, gliding there in a few hundredths of a second so nothing clicks. A change that has to load something (another **Sound**, turning the amp on or off, another model or cabinet) is kept and takes effect the next time you press Play. Moving a section up or down waits for the song to be paused or stopped, and so does **Undo**.
 
 ## Output
 

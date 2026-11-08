@@ -1,5 +1,5 @@
 {
-  "interface": "1.4",
+  "interface": "1.5",
   "id": "oxiguitar.test",
   "name": "Test plugin",
   "version": "0.13.2",
@@ -23,7 +23,7 @@
     { "id": "no-drums", "name": "Test everything but drums", "does_not_play": ["drums"] }
   ],
   "effects": [
-    { "id": "gain", "name": "Test gain (halves the track)" }
+    { "id": "gain", "name": "Test gain (the section's level, half by default)" }
   ],
   "services": [
     { "interface": "test-echo", "id": "echo", "name": "Echo", "priority": 1 },
