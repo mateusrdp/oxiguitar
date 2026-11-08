@@ -286,6 +286,9 @@ impl Document {
         let mut score = oxiguitar_model::wire::from_wire2(read.score).map_err(|e| {
             format!("{name}: the {plugin} plugin gave a score this OxiGuitar can't hold ({e}).")
         })?;
+        // Notes the file gave as pitches, on strings, get a string and fret
+        // (#157): a format without tablature shows its tab at once.
+        oxiguitar_edit::finger_pitched(&mut score);
         // What plugins keep per track lives beside the file (FILE.oxg).
         let sidecar_problem = match Sidecar::read_for(path) {
             Ok(Some(mut sidecar)) => {
