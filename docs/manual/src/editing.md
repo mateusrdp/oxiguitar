@@ -1,6 +1,6 @@
 # Editing
 
-OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, add effects, chords, text and lyrics, set the score's information, undo, and find the bars that don't add up.
+OxiGuitar is becoming an editor. This page grows with it: today you can move around the score, select, enter and change notes, change bars, copy and paste, add and change tracks ([Tracks and notation](tracks.md)), transpose, find a fingering, add effects, chords, text and lyrics, set the score's information, undo, and find the bars that don't add up.
 
 ## The caret
 
@@ -109,6 +109,28 @@ Beats and bars paste into any track. Between a drum track and a pitched one only
 - **Tools → Transpose…**: every track, with the key signatures.
 
 Up is a positive number, down a negative one. **Keep the fingering** keeps each note on its string and moves its fret; otherwise each note goes to the fret nearest the one it had, so a run stays where your hand is. Notes that no string can play any more are left out, after a question saying how many. Drum tracks are never transposed. Undo brings everything back.
+
+## Finding a fingering
+
+**Find Fingering** gives every note a string and fret again, so the passage is as easy to play as OxiGuitar can make it: tabs found online often put notes where no hand would. It runs at once, as one step for Undo. There are three ways in, as for Transpose:
+
+- **Right-click on the page → Find Fingering**, or **Edit → Find Fingering for Selection**: the selection, or the caret's beat when nothing is selected. The notes just before and after stay as they are, and the new fingering joins them.
+- **Right-click on a track's name → Find Fingering**: the whole track.
+- **Tools → Find Fingering**: every track.
+
+It looks at the whole passage, not one note at a time, and picks the way through it that asks least of the left hand:
+
+- **Shapes a hand can hold**: four fingers, the index barring a fret, no finger behind a lower one, a stretch of four frets (five from the seventh fret up). The thumb takes a bass note on one of the two lowest strings only in chords, and other fingers barre only when nothing else fits.
+- **Little movement along the neck**: moving within two or three frets costs little, longer shifts cost more, and more again the faster the music. A repeated figure comes out with the same fingering.
+- **Few skipped strings** between single notes, and **the bass within reach**: a note still ringing keeps its string and its finger, so the melody is fingered around it.
+- **The chord diagram**, where the beat has one: its strings and frets.
+- **Hammer-ons, pull-offs and slides stay on one string**, and a tied note stays on the string of the note it continues.
+
+No part of the neck is preferred for its own sake: open strings and high frets are as good as any, as long as getting there is comfortable. Every note keeps its pitch. A harmonic stays the same harmonic: a natural harmonic may move to another string and fret that sounds the same note, and the other kinds keep their pitch and their distance (a tapped harmonic's touched fret moves with the note).
+
+Where no hand can play a beat comfortably, the beat gets a text saying why: **Hard: stretch** (the notes spread wider than a hand reaches), **Hard: fingers** (more notes than fingers) or **Hard: shift** (a jump of seven frets or more in an eighth note or less). A text of your own is never replaced; the next Find Fingering takes its own texts away where the beat is no longer hard. Drum tracks are left as they are.
+
+Files from formats that hold no tablature (MusicXML, MIDI files, ABC, when their plugins come) are fingered the same way as they open, so their tab shows at once; no text is written then.
 
 ## Effects
 

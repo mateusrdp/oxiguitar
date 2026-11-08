@@ -1090,6 +1090,53 @@ mod tests {
     }
 
     #[test]
+    fn find_fingering_is_one_change_and_marks_what_stays_hard() {
+        let (tx, rx) = channel();
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
+        worker.send(Request::New);
+        let score = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        let top = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        // F on the sixth string's first fret and B seven frets up on the
+        // first string: no hand spans that, wherever the B goes.
+        for (string, fret) in [(1, 7), (6, 1)] {
+            worker.send(Request::Edit {
+                command: Command::Fret { fret, again: false },
+                caret: oxiguitar_edit::Caret { string, ..top },
+                selection: None,
+            });
+            loop {
+                if let Event::Changed { caret: Some(_), .. } = next(&rx) {
+                    break;
+                }
+            }
+        }
+        worker.send(Request::Edit {
+            command: Command::Fingering(oxiguitar_edit::Scope::Track),
+            caret: top,
+            selection: None,
+        });
+        loop {
+            if let Event::Changed { score, edit, .. } = next(&rx) {
+                assert_eq!(edit.undo.as_deref(), Some("Find Fingering"));
+                let beat = &score.tracks[0].staves[0].bars[0].voices[0].beats[0];
+                assert_eq!(beat.text, oxiguitar_edit::HARD_STRETCH);
+                assert_eq!(beat.notes.len(), 2);
+                break;
+            }
+        }
+    }
+
+    #[test]
     fn a_new_score_takes_notes_and_is_saved_where_asked() {
         let (tx, rx) = channel();
         let worker = Worker::start(

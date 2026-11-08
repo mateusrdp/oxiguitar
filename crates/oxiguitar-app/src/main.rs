@@ -768,6 +768,8 @@ fn main() -> Result<(), slint::PlatformError> {
             "delete-track" => return track_action(&a, "delete"),
             "transpose-selection" => return open_transpose(&a, oxiguitar_edit::Scope::Selection),
             "transpose-all" => return open_transpose(&a, oxiguitar_edit::Scope::All),
+            "fingering-selection" => return find_fingering(&a, oxiguitar_edit::Scope::Selection),
+            "fingering-all" => return find_fingering(&a, oxiguitar_edit::Scope::All),
             _ => {}
         }
         let Some(command) = editing::menu_command(name.as_str()) else {
@@ -898,6 +900,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_page_menu(move |action| match action.as_str() {
         "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
+        "fingering" => find_fingering(&a, oxiguitar_edit::Scope::Selection),
         "cut" => clipboard(&a, editing::ClipKey::Cut),
         "copy" => clipboard(&a, editing::ClipKey::Copy),
         "paste" => clipboard(&a, editing::ClipKey::Paste),
@@ -3912,6 +3915,7 @@ fn track_action(app: &Shared, action: &str) {
     use oxiguitar_edit::Command;
     let command = match action {
         "transpose" => return open_transpose(app, oxiguitar_edit::Scope::Track),
+        "fingering" => return find_fingering(app, oxiguitar_edit::Scope::Track),
         "add" => Command::AddTrack,
         "duplicate" => Command::DuplicateTrack,
         "up" => Command::MoveTrackUp,
@@ -4200,6 +4204,19 @@ fn open_transpose(app: &Shared, scope: oxiguitar_edit::Scope) {
     ui.set_transpose_heading(heading.into());
     ui.set_transpose_amount(0);
     ui.set_transpose_dialog_shown(true);
+}
+
+/// Find Fingering (#157) for the caret's track, the selection or every
+/// track: one change, no dialog. Beats that stay hard to play get a text
+/// saying why.
+fn find_fingering(app: &Shared, scope: oxiguitar_edit::Scope) {
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Fingering(scope));
+    if let Some(typed) = typed {
+        send_typed(app, typed);
+    }
 }
 
 /// Transpose… closed: on OK, the transposition as one change, after a
