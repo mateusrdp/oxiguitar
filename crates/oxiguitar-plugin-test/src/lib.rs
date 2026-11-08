@@ -300,11 +300,7 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
         let mut inputs: Vec<(&str, Vec<u8>)> =
             vec![("nothing", Vec::new()), ("1 KiB of zeros", vec![0; 1024])];
         if let Some(sig) = format.signatures.first() {
-            let mut bytes = vec![0; usize::try_from(sig.at).unwrap_or(0).min(1 << 16)];
-            if let Some(text) = &sig.text {
-                bytes.extend_from_slice(text.as_bytes());
-            }
-            inputs.push(("its signature alone", bytes));
+            inputs.push(("its signature alone", sig.smallest_file()));
         }
         for (what, data) in inputs {
             let answer = plugins.send(
