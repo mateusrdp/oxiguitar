@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.17.0" date="2026-11-08" type="development">
+      <description>
+        <p>The rest of the palette works (v0.17, docs/design/palette.md): every notation tool that said "comes in M5" now edits the score, on the caret's note or beat or on every one selected, each one step for Undo. Slurs (Legato), crescendo and decrescendo hairpins, 8va, 8vb, 15ma and 15mb lines, and ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.17.0</url>
+    </release>
     <release version="0.16.0" date="2026-11-08" type="development">
       <description>
         <p>Fit Bars to Time Signature… (#222): after changing a song's time signature, fits the bars that no longer add up, in every track, as one step for Undo (Tools for the whole song, or right-click on the page for the selected bars). Re-bar lets the music flow across the bar lines: notes keep their ...</p>
