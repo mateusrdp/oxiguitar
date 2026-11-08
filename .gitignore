@@ -25,3 +25,8 @@ docs/plugins/template/Cargo.lock
 
 # Git worktrees
 .worktrees/
+
+# Understand Anything analysis artifacts
+.ua/intermediate/
+.ua/tmp/
+.ua/trash-*/
