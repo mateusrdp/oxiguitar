@@ -1059,7 +1059,10 @@ mod tests {
             }
         };
         assert_eq!(
-            changed.tracks[0].plugins.get("oxiguitar.eq").map(String::as_str),
+            changed.tracks[0]
+                .plugins
+                .get("oxiguitar.eq")
+                .map(String::as_str),
             Some(r#"{"mode":"basic"}"#)
         );
         // The notes are as they were; only the settings changed.

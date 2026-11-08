@@ -1136,7 +1136,9 @@ fn the_real_time_checks_catch_allocations_system_calls_and_late_notes() {
     // As it should be: every check passes.
     let fine = oxiguitar_plugin_test::check_realtime(&plugins, "{}");
     assert!(fine.ok(), "{:#?}", fine.failed);
-    assert_eq!(fine.passed.len(), 3 * 4, "{:#?}", fine.passed);
+    // Four checks for each instrument and the effect, and three of the
+    // effect's taking an update.
+    assert_eq!(fine.passed.len(), 3 * 4 + 3, "{:#?}", fine.passed);
 
     // Allocating and yielding its thread on every render: both are caught.
     let bad = oxiguitar_plugin_test::check_realtime(&plugins, r#"{"misbehave": true}"#);
@@ -1441,17 +1443,28 @@ fn the_player_sends_effects_their_new_settings_while_it_plays() {
     let mut prepared = prepare(&plugins, &score, &old, 48_000, 512).unwrap();
     // The same plan: nothing to send.
     assert!(follow(&mut prepared.live, &old, &old));
-    // A track section's level: the effect follows it.
+    // Only an effect's settings: it follows them. (The test plugin is the
+    // instrument too, so the plan is changed by hand here, as it is when
+    // the effect's plugin is another one: the equalizer, the amp.)
+    let mut new = old.clone();
+    for g in &mut new.groups {
+        for pick in g.effects.iter_mut().flatten() {
+            pick.settings = r#"{"level":0.2}"#.into();
+        }
+    }
+    assert!(follow(&mut prepared.live, &old, &new));
+    // The same settings again: nothing new to send.
+    assert!(follow(&mut prepared.live, &new, &new));
+    // The test plugin's section reaches its instrument too: an
+    // instrument's settings wait for the song to stop.
     score.tracks[0]
         .plugins
         .insert("oxiguitar.test".into(), r#"{"level":0.2}"#.into());
-    let new = plan(&plugins, &score);
-    assert_ne!(new, old);
-    assert!(follow(&mut prepared.live, &old, &new));
-    // Another instrument program: only preparing again can follow it.
+    let both = plan(&plugins, &score);
+    assert!(!follow(&mut prepared.live, &new, &both));
+    // So does another instrument.
     let mut other = score.clone();
-    other.tracks[0].instrument.midi_program = 0;
-    other.tracks[0].instrument.percussion = true;
+    other.tracks[0].instrument.percussion = !other.tracks[0].instrument.percussion;
     let drums = plan(&plugins, &other);
     assert!(!follow(&mut prepared.live, &new, &drums));
 }

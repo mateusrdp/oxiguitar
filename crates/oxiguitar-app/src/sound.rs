@@ -451,11 +451,11 @@ mod tests {
         assert!(!ready(4, false));
     }
 
-    /// #232: while the song plays, nothing is prepared. A section's level
-    /// reaches the running effect, so the song stopped needs nothing new;
-    /// another instrument waits for the song to stop.
+    /// #232: while the song plays, nothing is prepared; what can't follow
+    /// (here the test plugin's instrument, which gets the same section's
+    /// settings as its effect) is prepared once the song stops.
     #[test]
-    fn while_the_song_plays_effects_follow_and_the_rest_waits() {
+    fn while_the_song_plays_nothing_is_prepared() {
         let plugins = crate::test_support::tab_host().plugins.clone();
         let (tx, rx) = channel();
         let (sound, _control) = Sound::start(plugins, move |m| {
@@ -479,17 +479,13 @@ mod tests {
         let score = crate::player::tests::score();
         assert!(ready(&score, 1, false));
         let mut level = (*score).clone();
-        for t in &mut level.tracks {
-            t.plugins
-                .insert("oxiguitar.test".into(), r#"{"level":0.25}"#.into());
-        }
+        level.tracks[0]
+            .plugins
+            .insert("oxiguitar.test".into(), r#"{"level":0.25}"#.into());
         let level = Arc::new(level);
-        assert!(!ready(&level, 2, true), "followed, not prepared");
-        assert!(!ready(&level, 3, false), "stopped: already as it plays");
-        let mut other = (*level).clone();
-        other.tracks[0].instrument.percussion = !other.tracks[0].instrument.percussion;
-        let other = Arc::new(other);
-        assert!(!ready(&other, 4, true), "playing: nothing prepared");
-        assert!(ready(&other, 5, false), "stopped: prepared now");
+        assert!(!ready(&level, 2, true), "playing: nothing prepared");
+        assert!(!ready(&level, 3, true), "still playing");
+        assert!(ready(&level, 4, false), "stopped: prepared now");
+        assert!(!ready(&level, 5, false), "and only once");
     }
 }
