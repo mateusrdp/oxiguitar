@@ -239,6 +239,9 @@ struct App {
     chord_dialog: Option<chord_form::ChordForm>,
     /// What the open Transpose dialog applies to.
     transpose_scope: Option<oxiguitar_edit::Scope>,
+    /// Fit Bars to Time Signature… is open: for the whole song (Tools) or
+    /// the selected bars (the page's menu).
+    fit_whole_song: Option<bool>,
     /// What to do once the score is saved (after "Save the changes…?").
     after_save: Option<Then>,
     /// The player (M4): its controls and the engine's window half, its
@@ -597,6 +600,7 @@ fn main() -> Result<(), slint::PlatformError> {
         bend_dialog: None,
         chord_dialog: None,
         transpose_scope: None,
+        fit_whole_song: None,
         after_save: None,
         player: player::Player::new(control),
         sound,
@@ -770,6 +774,7 @@ fn main() -> Result<(), slint::PlatformError> {
             "transpose-all" => return open_transpose(&a, oxiguitar_edit::Scope::All),
             "fingering-selection" => return find_fingering(&a, oxiguitar_edit::Scope::Selection),
             "fingering-all" => return find_fingering(&a, oxiguitar_edit::Scope::All),
+            "fit-all" => return open_fit(&a, true),
             _ => {}
         }
         let Some(command) = editing::menu_command(name.as_str()) else {
@@ -883,6 +888,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_transpose_dialog_done(move |ok| transpose_dialog_done(&a, ok));
     let a = app.clone();
+    ui.on_fit_dialog_done(move |ok| fit_dialog_done(&a, ok));
+    let a = app.clone();
     ui.on_track_menu(move |i, action| {
         let i = usize::try_from(i).unwrap_or(0);
         let a = a.clone();
@@ -901,6 +908,7 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_page_menu(move |action| match action.as_str() {
         "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
         "fingering" => find_fingering(&a, oxiguitar_edit::Scope::Selection),
+        "fit" => open_fit(&a, false),
         "cut" => clipboard(&a, editing::ClipKey::Cut),
         "copy" => clipboard(&a, editing::ClipKey::Copy),
         "paste" => clipboard(&a, editing::ClipKey::Paste),
@@ -4214,6 +4222,55 @@ fn find_fingering(app: &Shared, scope: oxiguitar_edit::Scope) {
         .borrow_mut()
         .editing
         .tool(oxiguitar_edit::Command::Fingering(scope));
+    if let Some(typed) = typed {
+        send_typed(app, typed);
+    }
+}
+
+/// Opens Fit Bars to Time Signature… (#222) for the whole song or the
+/// selected bars (the caret's bar when nothing is selected).
+fn open_fit(app: &Shared, whole_song: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() || app.borrow().editing.track().is_none() {
+        return;
+    }
+    let heading = if whole_song {
+        "Fit every bar to its time signature"
+    } else if app.borrow().editing.selection().is_some() {
+        "Fit the selected bars to their time signature"
+    } else {
+        "Fit this bar to its time signature"
+    };
+    app.borrow_mut().fit_whole_song = Some(whole_song);
+    ui.set_fit_heading(heading.into());
+    ui.set_fit_dialog_shown(true);
+}
+
+/// Fit Bars to Time Signature… closed: on OK, the fit as one change.
+fn fit_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_fit_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(whole_song) = app.borrow_mut().fit_whole_song.take() else {
+        return;
+    };
+    if !ok {
+        return;
+    }
+    let how = if ui.get_fit_stretch() {
+        oxiguitar_edit::FitHow::Stretch
+    } else {
+        oxiguitar_edit::FitHow::Rebar
+    };
+    let fit = oxiguitar_edit::Fit { how, whole_song };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::FitBars(fit));
     if let Some(typed) = typed {
         send_typed(app, typed);
     }

@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.16.0" date="2026-11-08" type="development">
+      <description>
+        <p>Fit Bars to Time Signature… (#222): after changing a song's time signature, fits the bars that no longer add up, in every track, as one step for Undo (Tools for the whole song, or right-click on the page for the selected bars). Re-bar lets the music flow across the bar lines: notes keep their ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.16.0</url>
+    </release>
     <release version="0.15.0" date="2026-11-08" type="development">
       <description>
         <p>Find Fingering (#157): a string and fret for every note of the selection (right-click on the page, or Edit → Find Fingering for Selection), a track (right-click on its name) or every track (Tools), as one step for Undo. It searches the whole passage for the way through it that asks least of the ...</p>

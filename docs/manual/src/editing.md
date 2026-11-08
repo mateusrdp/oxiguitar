@@ -87,6 +87,22 @@ The **Bar** tab on the right (the palette's Clef, Key Signature, Time Signature,
 
 The palette's **Repeat Start**, **Repeat Close**, **Free Time** and **Double Bar Line** switch those at once, and light up when the caret's bar has them; **Triplet** lights up on a triplet beat.
 
+## Fitting bars to a new time signature
+
+You wrote a song in 4/4 and it turns out to be in 3/4, or 6/8 that reads better in another meter. Change the time signature first (the **Bar** tab changes it from the bar until the next change): the bars that no longer add up turn red. Then **Fit Bars to Time Signature…** fits them, in one of two ways:
+
+- **Re-bar** (notes keep their lengths): the music flows across the bar lines, as if you had written it in the new time signature from the start. A note that now crosses a bar line becomes two notes tied across it (the first keeps what is struck, such as an accent, a text or a chord; the last keeps a hammer-on, pull-off or slide to the next note). Bars are added or removed at the end of each passage, in every track, so 4/4 to 3/4 turns three bars into four. The song sounds the same.
+- **Stretch** (each bar keeps its notes): every red bar keeps its notes, scaled to fill its time signature, and the bars stay where they are. Where no plain note value fits, it uses a tuplet: 3/4 to 4/4 turns three quarters into a half-note triplet, and 4/4 triplet eighths in 3/4 become plain sixteenths. The tempo stays as it is, so a stretched bar plays as long as its new time signature.
+
+There are two ways in:
+
+- **Tools → Fit Bars to Time Signature…**: the whole song.
+- **Right-click on the page → Fit Bars to Time Signature…**: the selected bars, or the caret's bar when nothing is selected.
+
+Either way it works on every track, and only on bars that don't add up: the rest of the song stays exactly as it is. It is one step for Undo.
+
+Re-barring keeps a bar line wherever the song's structure needs one: at a repeat sign, an alternate ending, a section, a direction (segno, coda, fine and the jumps), a double bar line, and a change of time or key signature. Each passage between them is re-barred on its own; when its music doesn't fill its last bar, that bar is left short and stays red, so you see where the phrase didn't fit (8 bars of 4/4 are 10⅔ bars of 3/4). Tempo changes keep their moment in the music; lyrics stay on their notes (tied notes aren't sung). A first bar shorter than its time signature and than the bar after it is a pickup, and stays as it is.
+
 ## Copy, cut and paste
 
 OxiGuitar keeps its own clipboard: copying and pasting work inside OxiGuitar, not with other programs.
@@ -217,4 +233,4 @@ The **Song** tab, the first of the tabs on the right, holds the score's informat
 
 The **Bar** tab, on the right, shows the caret's bar: its time signature, and for each voice how much it holds against it, as Guitar Pro 8 shows a bar, counted in the time signature's own unit (quarter notes in 4/4, eighth notes in 6/8): "2/4" for two quarters in 2/4 (green), "1.5/4" for a dotted quarter (red), then *Full*, *½ beat short* or *1 beat too long*, and how many notes and rests were entered. The caret's voice is highlighted, and the last line says on which beat the caret's beat starts. It follows every move and every change, so it is the quickest way to see what a bar still needs while composing.
 
-A bar whose beats are longer or shorter than its time signature is laid in translucent red on the page. Such bars are allowed (many files have a few), and the PDF export shows the music without the red. When a file has any, the line at the bottom of the window says how many and where the first is. **Tools → Next Bar That Doesn't Add Up** (F4, as Guitar Pro's "Check bar duration") moves the caret to the next one in the tracks shown, going round to the start. A voice that holds nothing (Guitar Pro fills unused voices with empty beats) doesn't count.
+A bar whose beats are longer or shorter than its time signature is laid in translucent red on the page. Such bars are allowed (many files have a few); after a change of time signature, [Fit Bars to Time Signature](#fitting-bars-to-a-new-time-signature) fits them. The PDF export shows the music without the red. When a file has any, the line at the bottom of the window says how many and where the first is. **Tools → Next Bar That Doesn't Add Up** (F4, as Guitar Pro's "Check bar duration") moves the caret to the next one in the tracks shown, going round to the start. A voice that holds nothing (Guitar Pro fills unused voices with empty beats) doesn't count.

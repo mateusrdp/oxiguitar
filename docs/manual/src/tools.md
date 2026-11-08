@@ -2,7 +2,7 @@
 
 The **Tools** menu holds actions that change the open score. They only run when you choose them: OxiGuitar never changes a score on its own. A tool changes the score on screen, never the file on disk, until you save it; each tool's change is one step that **Edit → Undo** takes back.
 
-**Transpose…** and **Find Fingering** are in this menu too, for every track; [Editing](editing.md) describes them. The one change OxiGuitar makes as a file opens is giving notes a string and fret where the file has only their pitch, so a file without tablature shows tab ([Finding a fingering](editing.md#finding-a-fingering)).
+**Transpose…**, **Find Fingering** and **Fit Bars to Time Signature…** are in this menu too, for every track; [Editing](editing.md) describes them. The one change OxiGuitar makes as a file opens is giving notes a string and fret where the file has only their pitch, so a file without tablature shows tab ([Finding a fingering](editing.md#finding-a-fingering)).
 
 A tool that cannot run on the open score is greyed out, with the reason in brackets after its name. After OxiGuitar's own tools come those your plugins add, if any ([Settings and plugins](plugins.md)); `oxiguitar-cli tools` lists them all.
 

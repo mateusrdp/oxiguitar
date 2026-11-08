@@ -4,6 +4,12 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-08
+
+### Added
+
+- **Fit Bars to Time Signature…** (#222): after changing a song's time signature, fits the bars that no longer add up, in every track, as one step for Undo (Tools for the whole song, or right-click on the page for the selected bars). **Re-bar** lets the music flow across the bar lines: notes keep their lengths, those crossing a new bar line are tied across it, bars are added or removed, and the song sounds the same; repeats, endings, sections, directions, double bar lines and changes of time or key keep their bar lines, and a passage that doesn't fill its last bar leaves it short (marked red). **Stretch** keeps each bar's notes, scaled to fill its time signature, with tuplets where no plain value fits (3/4 to 4/4: a half-note triplet; 4/4 triplets in 3/4: sixteenths). Tempo changes keep their moment, lyrics stay on their notes and a pickup stays a pickup. The manual's Editing page has a section on it.
+
 ## [0.15.0] - 2026-11-08
 
 ### Added
