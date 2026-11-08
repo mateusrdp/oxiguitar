@@ -2,8 +2,8 @@
 name = "oxiguitar-plugin-api"
 description = "The OxiGuitar plugin interface: the C tables, the messages that cross them, the manifest and the score as plugins see it."
 # The SDK follows the plugin interface's version, not the program's
-# (#165): 1.6.0 until interface 1.7.
-version = "1.6.0"
+# (#165): 1.7.0 until interface 1.8.
+version = "1.7.0"
 edition.workspace = true
 rust-version.workspace = true
 # Permissive, unlike the rest of the workspace, so that plugins built on it
@@ -16,6 +16,9 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+# Signatures that look inside a ZIP container (`container_root`) inflate
+# the first 64 KiB of two members. Pure Rust; flate2 already brings it.
+miniz_oxide = { workspace = true }
 postcard.workspace = true
 
 [lints]

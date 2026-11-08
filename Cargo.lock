@@ -3682,7 +3682,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde_json",
@@ -3690,8 +3690,9 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-api"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
+ "miniz_oxide 0.9.1",
  "postcard",
  "serde",
  "serde_json",
@@ -3699,7 +3700,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-test"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "libc",
  "oxiguitar-host",
