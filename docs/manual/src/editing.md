@@ -128,7 +128,7 @@ It looks at the whole passage, not one note at a time, and picks the way through
 
 No part of the neck is preferred for its own sake: open strings and high frets are as good as any, as long as getting there is comfortable. Every note keeps its pitch. A harmonic stays the same harmonic: a natural harmonic may move to another string and fret that sounds the same note, and the other kinds keep their pitch and their distance (a tapped harmonic's touched fret moves with the note).
 
-Where no hand can play a beat comfortably, the beat gets a text saying why: **Hard: stretch** (the notes spread wider than a hand reaches), **Hard: fingers** (more notes than fingers) or **Hard: shift** (a jump of seven frets or more in an eighth note or less). A text of your own is never replaced; the next Find Fingering takes its own texts away where the beat is no longer hard. Drum tracks are left as they are.
+Where no hand can play a beat comfortably, the beat gets a text saying why: **Hard: stretch** (the notes spread wider than a hand reaches), **Hard: fingers** (more notes than fingers) or **Hard: shift** (a jump of seven frets or more in an eighth note or less). A text of your own is never replaced; the next Find Fingering takes its own texts away where the beat is no longer hard. Drum tracks are left as they are. A tie that continues nothing (some files have them, after a rest or on another string) becomes a plain note, as it can no longer be heard as a tie.
 
 Files from formats that hold no tablature (MusicXML, MIDI files, ABC, when their plugins come) are fingered the same way as they open, so their tab shows at once; no text is written then.
 

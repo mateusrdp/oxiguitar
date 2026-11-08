@@ -35,6 +35,16 @@ Hard spots, where the cheapest hand still breaks a limit (more than four fingers
 - **Files without tab:** fingered as they open, so the tab shows at once (not an Undo step, no texts).
 - **Scoring:** the whole neck is equally good; only the hand's comfort and the transitions count. Beats that stay hard get a text in the score: "Hard: stretch", "Hard: fingers" or "Hard: shift" (seven frets or more within an eighth note). A beat that has a text of its own keeps it; a later run takes away its own texts where the beat is no longer hard.
 
+## What the corpus taught (8 Nov 2026)
+
+`cargo test --release -p oxiguitar-edit --test fingering_corpus -- --nocapture` takes each Guitar Pro file's tab away, fingers the pitches again, and runs Find Fingering on every track; every note must sound as it did, ties included (a tied note sounds as the note before it on its string, as playback has it). On the files the gp5 and gp plugins read, about 177,000 notes, 66 % land exactly where the transcriber put them, and no file takes more than 0.06 s. What it found:
+
+- **A tie continues the note before it on its string**, whatever fret the file wrote on the tied note (some files have stale numbers there). For a note with only a pitch, the last note of that pitch in its voice.
+- **A tie that continues nothing** (nothing ringing up to it on its string) is struck, and its tie mark goes: playback would otherwise stretch whatever note the string last had.
+- **One note struck by two voices** is played once; it rings as long as the longer of the two, so a tie in either voice keeps its string.
+- **Frets past the neck** (some files write fret 25 on a 24-fret staff): a note may always keep the place it has; otherwise only the neck's frets are offered.
+- **No hand shape at all** (more notes than strings, or ringing notes where struck ones must go): the struck notes get distinct strings first and the ringing ones are cut short; a note no string is left for keeps its place (or stays a pitch). A ringing note moved costs a lot but not infinitely, so the path stays sound around it.
+
 ## Limits
 
 - Time is measured in whole notes, not seconds: a shift costs the same at any tempo for the same written values.

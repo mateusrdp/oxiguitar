@@ -52,6 +52,9 @@ fn natural(fret: u8) -> Option<u8> {
     })
 }
 
+/// A note a slice's shape leaves where it was: no string is free for it.
+const UNPLACED: (u8, u8) = (0, 0);
+
 /// Candidates kept for each slice: the cheapest by their own cost.
 const KEPT: usize = 48;
 /// The most assignments tried for one slice.
@@ -90,7 +93,10 @@ fn finger_scope(score: &mut Score, c: Caret, selection: Option<Selection>, scope
     // The spans of each staff.
     let mut by_staff: BTreeMap<(usize, usize), Vec<crate::Span>> = BTreeMap::new();
     for s in spans {
-        by_staff.entry((s.at.track, s.at.staff)).or_default().push(s);
+        by_staff
+            .entry((s.at.track, s.at.staff))
+            .or_default()
+            .push(s);
     }
     let starts = bar_starts(score);
     let mut changed = false;
@@ -218,6 +224,8 @@ struct Item {
     follows: Option<usize>,
     /// The note it hammers, pulls or slides to.
     legato_to: Option<usize>,
+    /// A tie that continues nothing: the note is struck instead.
+    untie: bool,
     /// Its place before.
     old: Option<(u8, u8)>,
     /// The sounding pitch (with a natural harmonic, the harmonic's).
@@ -285,7 +293,7 @@ fn finger_staff(
     let mut hard: Vec<Option<&'static str>> = path
         .iter()
         .zip(slices.iter())
-        .map(|(&(c, _), s)| s.cands[c].hard)
+        .map(|(&(c, _), s)| s.cands.get(c).and_then(|c| c.hard))
         .collect();
     for k in 1..path.len() {
         let (pa, pb) = (path[k - 1].1, path[k].1);
@@ -302,7 +310,7 @@ fn finger_staff(
     let mut place: Vec<Option<(u8, u8)>> = vec![None; items.len()];
     for (s, &(c, _)) in slices.iter().zip(&path) {
         for (m, &i) in s.members.iter().enumerate().take(s.struck) {
-            place[i] = s.cands[c].places.get(m).copied();
+            place[i] = s.cands.get(c).and_then(|c| c.places.get(m).copied());
         }
     }
     let hard_at: Vec<(At, &'static str)> = slices
@@ -320,8 +328,11 @@ fn finger_staff(
 /// The staff's notes as items: their times, places and links.
 fn collect(staff: &Staff, starts: &[f64], free: &dyn Fn(At) -> bool) -> Vec<Item> {
     let mut items: Vec<Item> = Vec::new();
-    // The last item of each voice by pitch, for ties.
+    // The last item of each voice by string, and by pitch for notes
+    // without one, for ties: a tied note continues the note before it on
+    // its string (as `retie` and playback have it), whatever fret it says.
     let mut last: BTreeMap<(usize, u8), usize> = BTreeMap::new();
+    let mut last_pitch: BTreeMap<(usize, u8), usize> = BTreeMap::new();
     // Each voice's beats in order, as the items they hold, for legato.
     let mut beats: BTreeMap<usize, Vec<Vec<usize>>> = BTreeMap::new();
     for (bar, b) in staff.bars.iter().enumerate() {
@@ -364,9 +375,8 @@ fn collect(staff: &Staff, starts: &[f64], free: &dyn Fn(At) -> bool) -> Vec<Item
                                 continue;
                             };
                             let p = if natural_h {
-                                natural(fret).map_or(open.0.saturating_add(12), |h| {
-                                    open.0.saturating_add(h)
-                                })
+                                natural(fret)
+                                    .map_or(open.0.saturating_add(12), |h| open.0.saturating_add(h))
                             } else {
                                 open.0.saturating_add(fret)
                             };
@@ -375,16 +385,34 @@ fn collect(staff: &Staff, starts: &[f64], free: &dyn Fn(At) -> bool) -> Vec<Item
                         NotePlace::Pitched(p) => (p.0, None),
                     };
                     let is_free = free(at);
-                    let follows = if n.tie {
-                        last.get(&(voice, pitch)).copied()
-                    } else {
-                        None
+                    let follows = match (n.tie, old) {
+                        (false, _) => None,
+                        (true, Some((string, _))) => last.get(&(voice, string)).copied(),
+                        (true, None) => last_pitch.get(&(voice, pitch)).copied(),
                     };
+                    // A tie continues a note still ringing up to it; one
+                    // that continues nothing (some files have them) is
+                    // struck, and loses its tie.
+                    let follows = follows.filter(|&f| {
+                        items
+                            .get(root_of(&items, f))
+                            .is_some_and(|r| r.end + 1e-6 >= time)
+                    });
+                    let untie = n.tie && follows.is_none();
+                    let pitch = follows.map_or(pitch, |f| items[f].pitch);
                     let mut options = if is_free && follows.is_none() {
                         places_for(staff, pitch, n, old)
                     } else {
                         Vec::new()
                     };
+                    // Its own place stays possible, even past the neck's
+                    // frets where a file put it.
+                    if let Some(o) = old
+                        && !options.is_empty()
+                        && !options.contains(&o)
+                    {
+                        options.push(o);
+                    }
                     let mut moves = is_free;
                     if options.is_empty() {
                         // Kept where it is (or left as a pitch).
@@ -409,11 +437,15 @@ fn collect(staff: &Staff, starts: &[f64], free: &dyn Fn(At) -> bool) -> Vec<Item
                         free: moves,
                         follows: root,
                         legato_to: None,
+                        untie,
                         old,
                         pitch,
                         chord: bt.chord,
                     });
-                    last.insert((voice, pitch), idx);
+                    if let Some((string, _)) = old {
+                        last.insert((voice, string), idx);
+                    }
+                    last_pitch.insert((voice, pitch), idx);
                     held.push(idx);
                 }
                 beats.entry(voice).or_default().push(held);
@@ -537,7 +569,11 @@ fn slice(items: &mut [Item]) -> Vec<Slice> {
         let mut kept: Vec<usize> = Vec::new();
         for &i in &members {
             match kept.iter().find(|&&k| items[k].pitch == items[i].pitch) {
-                Some(&k) => items[i].follows = Some(k),
+                Some(&k) => {
+                    // It rings as long as either does (a tie in one voice).
+                    items[k].end = items[k].end.max(items[i].end);
+                    items[i].follows = Some(k);
+                }
                 None => kept.push(i),
             }
         }
@@ -585,7 +621,11 @@ fn candidates(
             let Some(pm) = p.members.iter().position(|&x| x == i) else {
                 return own;
             };
-            let mut from: Vec<(u8, u8)> = p.cands.iter().filter_map(|c| c.places.get(pm).copied()).collect();
+            let mut from: Vec<(u8, u8)> = p
+                .cands
+                .iter()
+                .filter_map(|c| c.places.get(pm).copied())
+                .collect();
             from.sort_unstable();
             from.dedup();
             if from.is_empty() { own } else { from }
@@ -593,14 +633,70 @@ fn candidates(
         .collect();
     let mut found = Vec::new();
     let mut budget = BUDGET;
-    enumerate(&options, Some(6), &mut Vec::new(), 0, &mut found, &mut budget);
+    enumerate(
+        &options,
+        Some(6),
+        &mut Vec::new(),
+        0,
+        &mut found,
+        &mut budget,
+    );
     if found.is_empty() {
         budget = BUDGET;
         enumerate(&options, None, &mut Vec::new(), 0, &mut found, &mut budget);
     }
+    let mut stuck = false;
+    if found.is_empty() {
+        // More notes than strings, or notes still ringing where the struck
+        // ones must go: the struck notes first, the ringing ones cut short
+        // where they share a string (a new note stops an old one).
+        stuck = true;
+        budget = BUDGET;
+        let struck: Vec<Vec<(u8, u8)>> = options.iter().take(slice.struck).cloned().collect();
+        let mut first = Vec::new();
+        enumerate(&struck, None, &mut Vec::new(), 0, &mut first, &mut budget);
+        let held = options
+            .iter()
+            .skip(slice.struck)
+            .map(|o| o.first().copied().unwrap_or(UNPLACED));
+        found = first
+            .into_iter()
+            .map(|mut p| {
+                // A ringing note that shares a struck note's string stops.
+                for h in held.clone() {
+                    p.push(if p.iter().any(|q| q.0 == h.0) {
+                        UNPLACED
+                    } else {
+                        h
+                    });
+                }
+                p
+            })
+            .collect();
+        if found.is_empty() {
+            // Each note on the first string still free, in turn; one that
+            // finds none stays where it was.
+            let mut used = Vec::new();
+            let greedy = options
+                .iter()
+                .map(|o| match o.iter().find(|p| !used.contains(&p.0)) {
+                    Some(&p) => {
+                        used.push(p.0);
+                        p
+                    }
+                    None => UNPLACED,
+                })
+                .collect();
+            found.push(greedy);
+        }
+    }
     let inherited: Vec<Option<u8>> = match prev {
         Some(p) => {
-            let mut v: Vec<Option<u8>> = p.cands.iter().flat_map(|c| c.positions.iter().copied()).collect();
+            let mut v: Vec<Option<u8>> = p
+                .cands
+                .iter()
+                .flat_map(|c| c.positions.iter().copied())
+                .collect();
             v.sort_unstable();
             v.dedup();
             v
@@ -610,9 +706,16 @@ fn candidates(
     let mut cands: Vec<Cand> = found
         .into_iter()
         .map(|places| {
-            let (mut cost, hard, positions) = hand(staff, &places, slice.struck);
+            let (mut cost, mut hard, positions) = hand(staff, &places, slice.struck);
+            if stuck {
+                cost += HARD;
+                hard = hard.or(Some(HARD_FINGERS));
+            }
             // The beat's chord diagram: its strings and frets.
             for (m, &(s, f)) in places.iter().enumerate().take(slice.struck) {
+                if (s, f) == UNPLACED {
+                    continue;
+                }
                 let it = &items[slice.members[m]];
                 if let Some(d) = it.chord.and_then(|c| chords.get(c))
                     && d.frets.iter().any(Option::is_some)
@@ -685,12 +788,22 @@ fn enumerate(
 /// What holding `places` costs the hand, whether it can't be done
 /// comfortably at all, and where the index can be. Ringing notes count
 /// like struck ones: their fingers stay down.
-fn hand(staff: &Staff, places: &[(u8, u8)], struck: usize) -> (f64, Option<&'static str>, Vec<Option<u8>>) {
-    let fretted: Vec<(u8, u8)> = places.iter().copied().filter(|p| p.1 > 0).collect();
+fn hand(
+    staff: &Staff,
+    places: &[(u8, u8)],
+    struck: usize,
+) -> (f64, Option<&'static str>, Vec<Option<u8>>) {
+    let fretted: Vec<(u8, u8)> = places
+        .iter()
+        .copied()
+        .filter(|p| p.0 > 0 && p.1 > 0)
+        .collect();
     if fretted.is_empty() {
         return (0.0, None, Vec::new());
     }
-    let lowest_strings = u8::try_from(staff.string_count()).unwrap_or(0).saturating_sub(1);
+    let lowest_strings = u8::try_from(staff.string_count())
+        .unwrap_or(0)
+        .saturating_sub(1);
     let plain = shape(&fretted);
     // The thumb over the neck, on one of the two lowest strings, for a
     // bass note at or behind the index: chords only.
@@ -737,7 +850,11 @@ fn shape(fretted: &[(u8, u8)]) -> (f64, Option<&'static str>, Vec<Option<u8>>) {
     for p in fretted {
         *groups.entry(p.1).or_default() += 1;
     }
-    let mut others: Vec<usize> = groups.iter().filter(|(f, _)| **f != lo).map(|(_, n)| *n).collect();
+    let mut others: Vec<usize> = groups
+        .iter()
+        .filter(|(f, _)| **f != lo)
+        .map(|(_, n)| *n)
+        .collect();
     let mut fingers = 1 + others.iter().sum::<usize>();
     others.sort_unstable_by(|a, b| b.cmp(a));
     for n in others {
@@ -856,12 +973,13 @@ fn moving(
     dt: f64,
 ) -> f64 {
     let mut cost = 0.0;
-    // Notes still ringing stay where they were.
+    // Notes still ringing stay where they were: moving one would cut it
+    // short, which only a slice with no other way does.
     for (m, &i) in sb.members.iter().enumerate().skip(sb.struck) {
         if let Some(am) = sa.members.iter().position(|&x| x == i)
             && a.places.get(am) != b.places.get(m)
         {
-            return f64::INFINITY;
+            cost += 1000.0;
         }
     }
     // The hand's shift: cheap within the overlapping blocks of two or
@@ -921,7 +1039,7 @@ fn write(
                 return None;
             }
             match place.get(i).copied().flatten() {
-                Some(p) if it.free => Some(p),
+                Some(p) if it.free && p != UNPLACED => Some(p),
                 _ => it.old,
             }
         })
@@ -932,6 +1050,19 @@ fn write(
         }
     }
     let mut beats_touched: Vec<(usize, usize, usize)> = Vec::new();
+    for it in items.iter().filter(|it| it.untie) {
+        let at = it.at;
+        if let Some(n) = staff
+            .bars
+            .get_mut(at.bar)
+            .and_then(|b| b.voices.get_mut(at.voice))
+            .and_then(|v| v.beats.get_mut(at.beat))
+            .and_then(|b| b.notes.get_mut(at.note))
+        {
+            n.tie = false;
+            out.changed = true;
+        }
+    }
     for (it, to) in items.iter().zip(&new) {
         let Some((s, f)) = *to else { continue };
         if it.old == Some((s, f)) {
@@ -1089,7 +1220,9 @@ mod tests {
                     .notes
                     .iter()
                     .map(|n| match n.place {
-                        NotePlace::Fretted { string, fret } => staff.pitch_of(string, fret).unwrap().0,
+                        NotePlace::Fretted { string, fret } => {
+                            staff.pitch_of(string, fret).unwrap().0
+                        }
                         NotePlace::Pitched(p) => p.0,
                     })
                     .collect();
@@ -1116,7 +1249,11 @@ mod tests {
 
     #[test]
     fn open_e_chord_takes_its_open_shape() {
-        let mut s = song(&GUITAR, 0, vec![vec![pitched(&[40, 47, 52, 56, 59, 64], NoteValue::Whole)]]);
+        let mut s = song(
+            &GUITAR,
+            0,
+            vec![vec![pitched(&[40, 47, 52, 56, 59, 64], NoteValue::Whole)]],
+        );
         assert_eq!(finger_pitched(&mut s), 6);
         assert_eq!(
             places(&s)[0],
@@ -1126,7 +1263,11 @@ mod tests {
 
     #[test]
     fn barre_chord_is_one_index_and_three_fingers() {
-        let mut s = song(&GUITAR, 0, vec![vec![pitched(&[41, 48, 53, 57, 60, 65], NoteValue::Whole)]]);
+        let mut s = song(
+            &GUITAR,
+            0,
+            vec![vec![pitched(&[41, 48, 53, 57, 60, 65], NoteValue::Whole)]],
+        );
         assert!(finger_track(&mut s));
         assert_eq!(
             places(&s)[0],
@@ -1140,7 +1281,11 @@ mod tests {
         let scale = [60u8, 62, 64, 65, 67, 69, 71, 72];
         let bars = scale
             .chunks(8)
-            .map(|c| c.iter().map(|&p| pitched(&[p], NoteValue::Eighth)).collect())
+            .map(|c| {
+                c.iter()
+                    .map(|&p| pitched(&[p], NoteValue::Eighth))
+                    .collect()
+            })
             .collect();
         let mut s = song(&GUITAR, 0, bars);
         finger_pitched(&mut s);
@@ -1179,14 +1324,22 @@ mod tests {
     #[test]
     fn drop_d_power_chord_on_open_strings() {
         let tuning = [64, 59, 55, 50, 45, 38];
-        let mut s = song(&tuning, 0, vec![vec![pitched(&[38, 45, 50], NoteValue::Whole)]]);
+        let mut s = song(
+            &tuning,
+            0,
+            vec![vec![pitched(&[38, 45, 50], NoteValue::Whole)]],
+        );
         finger_pitched(&mut s);
         assert_eq!(places(&s)[0], vec![(4, 0), (5, 0), (6, 0)]);
     }
 
     #[test]
     fn frets_count_from_the_capo() {
-        let mut s = song(&GUITAR, 2, vec![vec![pitched(&[42, 49, 54, 58, 61, 66], NoteValue::Whole)]]);
+        let mut s = song(
+            &GUITAR,
+            2,
+            vec![vec![pitched(&[42, 49, 54, 58, 61, 66], NoteValue::Whole)]],
+        );
         finger_pitched(&mut s);
         // E shape behind a capo on 2: the same frets as open E.
         assert_eq!(
@@ -1200,7 +1353,11 @@ mod tests {
     fn a_bass_line_and_a_seven_string_low_b() {
         let bass = [43, 38, 33, 28];
         let line = [28u8, 31, 33, 35, 36, 38, 40, 43];
-        let bars = vec![line.iter().map(|&p| pitched(&[p], NoteValue::Eighth)).collect()];
+        let bars = vec![
+            line.iter()
+                .map(|&p| pitched(&[p], NoteValue::Eighth))
+                .collect(),
+        ];
         let mut s = song(&bass, 0, bars);
         assert_eq!(finger_pitched(&mut s), 8);
         assert_eq!(sounds(&s, 0).concat(), line);
@@ -1215,7 +1372,11 @@ mod tests {
         let mut s = song(&GUITAR, 0, vec![vec![pitched(&[20, 64], NoteValue::Whole)]]);
         assert_eq!(finger_pitched(&mut s), 1);
         let notes = &s.tracks[0].staves[0].bars[0].voices[0].beats[0].notes;
-        assert!(notes.iter().any(|n| n.place == NotePlace::Pitched(Pitch(20))));
+        assert!(
+            notes
+                .iter()
+                .any(|n| n.place == NotePlace::Pitched(Pitch(20)))
+        );
     }
 
     #[test]
@@ -1256,14 +1417,24 @@ mod tests {
     fn ties_keep_their_string_and_legato_stays_on_one() {
         // A hammer from fret 5 to 7 of the B string, then E5 tied over.
         let q = NoteValue::Quarter;
-        let mut beats = vec![pitched(&[64], q), pitched(&[66], q), pitched(&[69], q), pitched(&[69], q)];
+        let mut beats = vec![
+            pitched(&[64], q),
+            pitched(&[66], q),
+            pitched(&[69], q),
+            pitched(&[69], q),
+        ];
         beats[1].notes[0].effects.hammer_pull = true;
         beats[3].notes[0].tie = true;
         let mut s = song(&GUITAR, 0, vec![beats]);
         // Their strings first, as typed: E on the B string, then the hammer.
-        for (b, (st, f)) in [(2u8, 5u8), (2, 7), (2, 10), (2, 10)].into_iter().enumerate() {
-            s.tracks[0].staves[0].bars[0].voices[0].beats[b].notes[0].place =
-                NotePlace::Fretted { string: st, fret: f };
+        for (b, (st, f)) in [(2u8, 5u8), (2, 7), (2, 10), (2, 10)]
+            .into_iter()
+            .enumerate()
+        {
+            s.tracks[0].staves[0].bars[0].voices[0].beats[b].notes[0].place = NotePlace::Fretted {
+                string: st,
+                fret: f,
+            };
         }
         finger_track(&mut s);
         let p = places(&s);
@@ -1272,11 +1443,121 @@ mod tests {
     }
 
     #[test]
+    fn a_tie_across_a_bar_line_keeps_the_note_it_continues() {
+        let q = NoteValue::Quarter;
+        let mut a = vec![pitched(&[76, 71], q), pitched(&[83], q)];
+        let mut b = vec![pitched(&[83], q)];
+        b[0].notes[0].tie = true;
+        a[0].notes[0].place = NotePlace::Fretted {
+            string: 1,
+            fret: 12,
+        };
+        a[0].notes[1].place = NotePlace::Fretted {
+            string: 2,
+            fret: 12,
+        };
+        a[1].notes[0].place = NotePlace::Fretted {
+            string: 2,
+            fret: 24,
+        };
+        b[0].notes[0].place = NotePlace::Fretted {
+            string: 2,
+            fret: 24,
+        };
+        let mut s = song(&GUITAR, 0, vec![a, b]);
+        finger_track(&mut s);
+        let p = places(&s);
+        assert_eq!(p[1], p[2], "{p:?}");
+        assert_eq!(sounds(&s, 0)[2], vec![83]);
+    }
+
+    #[test]
+    fn a_note_two_voices_strike_rings_as_long_as_the_longer() {
+        // Voice 1: A3 a quarter, then a run. Voice 2: the same A3, tied
+        // over the bar: its string stays the A3's through the run.
+        let (q, w) = (NoteValue::Quarter, NoteValue::Whole);
+        let mut s = song(
+            &GUITAR,
+            0,
+            vec![
+                vec![
+                    pitched(&[57], q),
+                    pitched(&[59], q),
+                    pitched(&[60], q),
+                    pitched(&[62], q),
+                ],
+                vec![pitched(&[], w)],
+            ],
+        );
+        let mut held = vec![pitched(&[57], w)];
+        let mut tied = vec![pitched(&[57], w)];
+        tied[0].notes[0].tie = true;
+        s.tracks[0].staves[0].bars[0].voices.push(Voice {
+            beats: std::mem::take(&mut held),
+        });
+        s.tracks[0].staves[0].bars[1]
+            .voices
+            .push(Voice { beats: tied });
+        finger_pitched(&mut s);
+        let staff = &s.tracks[0].staves[0];
+        let a = staff.bars[0].voices[1].beats[0].notes[0].string();
+        for b in &staff.bars[0].voices[0].beats[1..] {
+            assert_ne!(b.notes[0].string(), a, "the run keeps off the ringing A");
+        }
+        assert_eq!(staff.bars[1].voices[1].beats[0].notes[0].string(), a);
+    }
+
+    #[test]
+    fn a_tie_that_continues_nothing_is_struck() {
+        // The tie in bar 2 follows a rest: nothing rings into it.
+        let q = NoteValue::Quarter;
+        let mut b = vec![pitched(&[57], q)];
+        b[0].notes[0].tie = true;
+        let mut s = song(
+            &GUITAR,
+            0,
+            vec![vec![pitched(&[57], q), pitched(&[], q)], b],
+        );
+        finger_pitched(&mut s);
+        let n = &s.tracks[0].staves[0].bars[1].voices[0].beats[0].notes[0];
+        assert!(!n.tie);
+        assert!(n.string().is_some());
+    }
+
+    #[test]
+    fn frets_past_the_neck_keep_their_pitch() {
+        // A chord written past fret 24 (some files have them), then tied,
+        // with an open E before it.
+        let frets = [24u8, 23, 24, 26, 25, 27];
+        let q = NoteValue::Quarter;
+        let mut s = song(&GUITAR, 0, vec![vec![pitched(&[], q), pitched(&[], q)]]);
+        for b in 0..2 {
+            let beat = &mut s.tracks[0].staves[0].bars[0].voices[0].beats[b];
+            beat.kind = BeatKind::Notes;
+            for (i, &f) in frets.iter().enumerate() {
+                let mut n = Note::fretted(i as u8 + 1, f);
+                n.tie = b == 1;
+                beat.notes.push(n);
+            }
+        }
+        let before = sounds(&s, 0);
+        finger_track(&mut s);
+        assert_eq!(sounds(&s, 0), before, "{:?}", places(&s));
+        let p = places(&s);
+        assert_eq!(p[0], p[1]);
+    }
+
+    #[test]
     fn a_ringing_bass_keeps_its_string_from_the_melody() {
         let (e, h) = (NoteValue::Eighth, NoteValue::Whole);
         let mut s = song(&GUITAR, 0, vec![vec![pitched(&[45], h)]]);
-        let melody: Vec<Beat> = [57u8, 60, 64, 60, 57, 60, 64, 60].iter().map(|&p| pitched(&[p], e)).collect();
-        s.tracks[0].staves[0].bars[0].voices.insert(0, Voice { beats: melody });
+        let melody: Vec<Beat> = [57u8, 60, 64, 60, 57, 60, 64, 60]
+            .iter()
+            .map(|&p| pitched(&[p], e))
+            .collect();
+        s.tracks[0].staves[0].bars[0]
+            .voices
+            .insert(0, Voice { beats: melody });
         finger_pitched(&mut s);
         let staff = &s.tracks[0].staves[0];
         let bass = staff.bars[0].voices[1].beats[0].notes[0].string().unwrap();
@@ -1291,7 +1572,10 @@ mod tests {
         let mut s = song(
             &GUITAR,
             0,
-            vec![vec![pitched(&[64], NoteValue::Whole)], vec![pitched(&[64], NoteValue::Whole)]],
+            vec![
+                vec![pitched(&[64], NoteValue::Whole)],
+                vec![pitched(&[64], NoteValue::Whole)],
+            ],
         );
         // High on the A string, then fifth fret of the B string.
         for (b, (string, fret)) in [(5, 19), (2, 5)].into_iter().enumerate() {
@@ -1300,7 +1584,14 @@ mod tests {
         }
         let mut h = History::new();
         let c = Caret::at_start(&s, 0).unwrap();
-        run(&mut s, &mut h, c, None, Command::Fingering(Scope::Selection)).unwrap();
+        run(
+            &mut s,
+            &mut h,
+            c,
+            None,
+            Command::Fingering(Scope::Selection),
+        )
+        .unwrap();
         let p = places(&s);
         assert_ne!(p[0], vec![(5, 19)], "it joins the bar after");
         assert_eq!(p[1], vec![(2, 5)]);
