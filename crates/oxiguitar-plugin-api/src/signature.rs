@@ -238,9 +238,7 @@ impl<'a> Sniff<'a> {
 
     /// The name of the file's first element, if it is XML.
     pub fn xml_root(&self) -> Option<&str> {
-        self.xml_root
-            .get_or_init(|| xml_root(self.data))
-            .as_deref()
+        self.xml_root.get_or_init(|| xml_root(self.data)).as_deref()
     }
 
     /// The name of the first element of the file's root file, if it is a
@@ -400,9 +398,13 @@ fn zip_entries(data: &[u8]) -> Vec<ZipEntry<'_>> {
 /// otherwise (without its mark), damaged characters replaced.
 fn xml_text(data: &[u8]) -> std::borrow::Cow<'_, str> {
     let utf16 = |be: bool| {
-        let units = data[2..]
-            .chunks_exact(2)
-            .map(|c| if be { u16::from_be_bytes([c[0], c[1]]) } else { u16::from_le_bytes([c[0], c[1]]) });
+        let units = data[2..].as_chunks::<2>().0.iter().map(|&pair| {
+            if be {
+                u16::from_be_bytes(pair)
+            } else {
+                u16::from_le_bytes(pair)
+            }
+        });
         char::decode_utf16(units)
             .map(|c| c.unwrap_or(char::REPLACEMENT_CHARACTER))
             .collect::<String>()
@@ -508,10 +510,20 @@ fn stored_zip(members: &[(String, Vec<u8>)]) -> Vec<u8> {
     for (name, contents) in members {
         let local = u32::try_from(z.len()).unwrap_or(u32::MAX);
         let crc = crc32(contents).to_le_bytes();
-        let size = u32::try_from(contents.len()).unwrap_or(u32::MAX).to_le_bytes();
+        let size = u32::try_from(contents.len())
+            .unwrap_or(u32::MAX)
+            .to_le_bytes();
         let name_len = u16::try_from(name.len()).unwrap_or(u16::MAX).to_le_bytes();
         // Version 2.0, no flags, stored, no date.
-        let common = [&[20, 0, 0, 0, 0, 0, 0, 0, 0, 0][..], &crc, &size, &size, &name_len, &[0, 0]].concat();
+        let common = [
+            &[20, 0, 0, 0, 0, 0, 0, 0, 0, 0][..],
+            &crc,
+            &size,
+            &size,
+            &name_len,
+            &[0, 0],
+        ]
+        .concat();
         z.extend_from_slice(b"PK\x03\x04");
         z.extend_from_slice(&common);
         z.extend_from_slice(name.as_bytes());
@@ -524,8 +536,12 @@ fn stored_zip(members: &[(String, Vec<u8>)]) -> Vec<u8> {
         directory.extend_from_slice(name.as_bytes());
     }
     let offset = u32::try_from(z.len()).unwrap_or(u32::MAX).to_le_bytes();
-    let size = u32::try_from(directory.len()).unwrap_or(u32::MAX).to_le_bytes();
-    let count = u16::try_from(members.len()).unwrap_or(u16::MAX).to_le_bytes();
+    let size = u32::try_from(directory.len())
+        .unwrap_or(u32::MAX)
+        .to_le_bytes();
+    let count = u16::try_from(members.len())
+        .unwrap_or(u16::MAX)
+        .to_le_bytes();
     z.extend_from_slice(&directory);
     z.extend_from_slice(b"PK\x05\x06\x00\x00\x00\x00");
     z.extend_from_slice(&count);
@@ -542,7 +558,11 @@ fn crc32(data: &[u8]) -> u32 {
     for &b in data {
         crc ^= u32::from(b);
         for _ in 0..8 {
-            crc = if crc & 1 == 1 { (crc >> 1) ^ 0xedb8_8320 } else { crc >> 1 };
+            crc = if crc & 1 == 1 {
+                (crc >> 1) ^ 0xedb8_8320
+            } else {
+                crc >> 1
+            };
         }
     }
     !crc
@@ -590,7 +610,11 @@ mod tests {
         assert!(!later.matches(&Sniff::new(b"BCFZ")), "never matches here");
         assert!(sig(r#"{"zip_member": "a"}"#).problem().is_none());
         assert!(sig(r#"{"xml_root": "score-partwise"}"#).problem().is_none());
-        assert!(sig(r#"{"container_root": "museScore"}"#).problem().is_none());
+        assert!(
+            sig(r#"{"container_root": "museScore"}"#)
+                .problem()
+                .is_none()
+        );
         for bad in ["", "a b", "<a>", "a/b"] {
             let json = format!(r#"{{"xml_root": {bad:?}}}"#);
             assert!(sig(&json).problem().is_some(), "{bad:?}");
@@ -613,16 +637,34 @@ mod tests {
             \n\t<score-partwise>";
         assert_eq!(xml_root(busy.as_bytes()).as_deref(), Some("score-partwise"));
         for be in [false, true] {
-            let mut utf16 = if be { vec![0xfe, 0xff] } else { vec![0xff, 0xfe] };
+            let mut utf16 = if be {
+                vec![0xfe, 0xff]
+            } else {
+                vec![0xff, 0xfe]
+            };
             for u in PARTWISE.encode_utf16() {
                 utf16.extend(if be { u.to_be_bytes() } else { u.to_le_bytes() });
             }
-            assert!(partwise.matches(&Sniff::new(&utf16)), "UTF-16, big endian {be}");
+            assert!(
+                partwise.matches(&Sniff::new(&utf16)),
+                "UTF-16, big endian {be}"
+            );
         }
-        assert_eq!(xml_root(b"<museScore version=\"4.60\">").as_deref(), Some("museScore"));
+        assert_eq!(
+            xml_root(b"<museScore version=\"4.60\">").as_deref(),
+            Some("museScore")
+        );
         assert_eq!(xml_root(b"<a/>").as_deref(), Some("a"));
         // Not XML, or no element where one was looked for.
-        for not in [&b""[..], b"hello <a>", b"<?xml", b"<!-- open", b"<", b"\0\0<a>", b"PK\x03\x04"] {
+        for not in [
+            &b""[..],
+            b"hello <a>",
+            b"<?xml",
+            b"<!-- open",
+            b"<",
+            b"\0\0<a>",
+            b"PK\x03\x04",
+        ] {
             assert_eq!(xml_root(not), None, "{not:?}");
         }
         let far = format!("<!--{}-->\n<a/>", " ".repeat(XML_PREFIX));
@@ -702,7 +744,10 @@ mod tests {
             );
             let b = zip(
                 &[
-                    ("score_style.mss", "<?xml version=\"1.0\"?>\n<museScore version=\"4.60\"><Style/></museScore>"),
+                    (
+                        "score_style.mss",
+                        "<?xml version=\"1.0\"?>\n<museScore version=\"4.60\"><Style/></museScore>",
+                    ),
                     ("Song.mscx", "<museScore version=\"4.60\"/>"),
                     ("META-INF/container.xml", mscz_container),
                 ],
@@ -725,12 +770,16 @@ mod tests {
             }
         }
         // No container, or a root file the archive doesn't hold.
-        assert_eq!(container_root(&zip(&[("score.xml", PARTWISE)], false)), None);
+        assert_eq!(
+            container_root(&zip(&[("score.xml", PARTWISE)], false)),
+            None
+        );
         let missing = zip(&[("META-INF/container.xml", mxl_container)], true);
         assert_eq!(container_root(&missing), None);
         assert_eq!(first_rootfile("<rootfiles></rootfiles>"), None);
         assert_eq!(
-            first_rootfile("<rootfiles><rootfile media-type=\"x\" full-path = \"a/b.xml\"/>").as_deref(),
+            first_rootfile("<rootfiles><rootfile media-type=\"x\" full-path = \"a/b.xml\"/>")
+                .as_deref(),
             Some("a/b.xml")
         );
     }
