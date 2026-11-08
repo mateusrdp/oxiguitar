@@ -92,6 +92,8 @@ pub(crate) struct Editing {
     clipboard: Option<Arc<oxiguitar_edit::Clip>>,
     /// Where lyrics are being typed on the page, if they are.
     lyric: Option<Lyric>,
+    /// Multivoice (Ctrl + M): the caret walks every voice's beats.
+    multivoice: bool,
 }
 
 /// Where a syllable is being typed (Ctrl + T, as in MuseScore; Mateus,
@@ -227,6 +229,8 @@ pub(crate) struct AtCaret {
     pub(crate) simile: Option<oxiguitar_model::Simile>,
     /// The sustain pedal goes down or up at the caret's beat.
     pub(crate) pedal: bool,
+    /// Multivoice is on.
+    pub(crate) multivoice: bool,
 }
 
 impl AtCaret {
@@ -1101,7 +1105,63 @@ impl Editing {
                 .and_then(|s| s.bars.get(c.bar))
                 .and_then(|b| b.simile),
             pedal: beat.is_some_and(|b| b.effects.pedal.is_some()),
+            multivoice: self.multivoice,
         })
+    }
+
+    /// Whether Multivoice is on.
+    pub(crate) fn multivoice(&self) -> bool {
+        self.multivoice
+    }
+
+    /// Multivoice on or off (Ctrl + M, the palette's button).
+    pub(crate) fn toggle_multivoice(&mut self) {
+        self.multivoice = !self.multivoice;
+    }
+
+    /// Bars per system for the shown tracks after a Design Mode change to
+    /// the system that holds the caret's bar: one bar `more` (or less), or
+    /// (`None`) the automatic layout from that system on. The systems
+    /// before it keep the bars they show now. `None` when nothing changes.
+    pub(crate) fn system_layout(&self, more: Option<bool>) -> Option<Vec<u8>> {
+        let c = self.caret?;
+        let counts: Vec<usize> = self
+            .hits
+            .systems
+            .iter()
+            .filter_map(|s| {
+                let bars = &s.staves.first()?.bars;
+                let first = bars.first()?.bar;
+                let last = bars.last()?.bar;
+                Some(last + 1 - first)
+            })
+            .collect();
+        let starts: Vec<usize> = self
+            .hits
+            .systems
+            .iter()
+            .filter_map(|s| s.staves.first()?.bars.first().map(|b| b.bar))
+            .collect();
+        let k = starts.iter().rposition(|first| *first <= c.bar)?;
+        let mut layout: Vec<u8> = counts
+            .iter()
+            .take(k + 1)
+            .map(|n| u8::try_from(*n).unwrap_or(u8::MAX))
+            .collect();
+        match more {
+            None => {
+                layout.truncate(k);
+            }
+            Some(more) => {
+                let n = layout.get_mut(k)?;
+                *n = if more {
+                    n.saturating_add(1)
+                } else {
+                    n.checked_sub(1).filter(|n| *n >= 1)?
+                };
+            }
+        }
+        Some(layout)
     }
 
     /// A key, with Shift and Ctrl as held. Returns whether it was the
@@ -1113,6 +1173,8 @@ impl Editing {
         let s = &*score;
         let shown = self.shown.clone();
         let moved = match (key, ctrl) {
+            (Key::Left, false) if self.multivoice => c.prev_moment(s),
+            (Key::Right, false) if self.multivoice => c.next_moment(s),
             (Key::Left, false) => c.prev_beat(s),
             (Key::Right, false) => c.next_beat(s),
             // Ctrl + Shift + arrows extend by bar; Ctrl alone with Left and
@@ -1135,6 +1197,8 @@ impl Editing {
                 self.height = Some((step.clamp(-8, 16), clef));
                 c
             }
+            (Key::Up, false) if self.multivoice => c.string_up().onto_sounding_voice(s),
+            (Key::Down, false) if self.multivoice => c.string_down(s).onto_sounding_voice(s),
             (Key::Up, false) => c.string_up(),
             (Key::Down, false) => c.string_down(s),
             (Key::Up, true) => c.prev_track(s, &shown),
@@ -1151,7 +1215,11 @@ impl Editing {
                 self.height = None;
                 c.prev_staff(s, &shown)
             }
-            (Key::Voice(v), true) => c.with_voice(s, v),
+            (Key::Voice(v), true) => {
+                // Picking a voice leaves Multivoice.
+                self.multivoice = false;
+                c.with_voice(s, v)
+            }
             (Key::Voice(_), false) => return false,
             (Key::SelectAll, true) => {
                 self.selection = Selection::all(s);
@@ -1537,6 +1605,39 @@ mod tests {
         e.opened(score(tracks, 3), shown[0]);
         e.engraved(hits(shown, 3));
         e
+    }
+
+    #[test]
+    fn design_mode_sets_the_caret_s_system() {
+        let mut e = editing(1, &[0]);
+        // One system of three bars.
+        assert_eq!(e.system_layout(Some(true)), Some(vec![4]));
+        assert_eq!(e.system_layout(Some(false)), Some(vec![2]));
+        assert_eq!(e.system_layout(None), Some(vec![]));
+        // Two systems, bars 0–1 and 2: the second one, the first kept.
+        let one = hits(&[0], 3);
+        let mut first = one.systems[0].clone();
+        let mut second = first.clone();
+        first.staves[0].bars.truncate(2);
+        second.staves[0].bars.drain(..2);
+        e.engraved(Arc::new(Hits {
+            systems: vec![first, second],
+        }));
+        e.key(Key::End, false, true);
+        assert_eq!(e.system_layout(Some(true)), Some(vec![2, 2]));
+        assert_eq!(e.system_layout(None), Some(vec![2]));
+        // Not below one bar.
+        assert_eq!(e.system_layout(Some(false)), None);
+    }
+
+    #[test]
+    fn multivoice_walks_and_greys_nothing() {
+        let mut e = editing(1, &[0]);
+        e.toggle_multivoice();
+        assert!(e.multivoice() && e.at_caret().unwrap().multivoice);
+        // Ctrl + 2 picks voice 2 and leaves Multivoice.
+        assert!(e.key(Key::Voice(1), false, true));
+        assert!(!e.multivoice());
     }
 
     #[test]

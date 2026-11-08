@@ -165,7 +165,7 @@ pub(crate) fn system(
     spec: &SystemSpec,
     p: &Painter<'_>,
     marked: &BTreeSet<(usize, usize, usize)>,
-    active_voice: Option<usize>,
+    (active_voice, design): (Option<usize>, bool),
 ) -> DrawnSystem {
     let sp = p.sp;
     let tg = TAB_GAP * sp;
@@ -421,15 +421,35 @@ pub(crate) fn system(
         };
         ctx.staff_lines(&mut list, spec.indent, right);
         ctx.clefs_and_key(&mut list, spec.indent, clef, fifths);
-        if vi == 0 && spec.index > 0 {
-            let number = (spec.first + 1).to_string();
+        if vi == 0 && (spec.index > 0 || design) {
+            let mut label = if spec.index > 0 {
+                (spec.first + 1).to_string()
+            } else {
+                String::new()
+            };
+            let mut paint = Paint::Muted;
+            if design {
+                // Design Mode: how many bars the system holds, red where
+                // it couldn't hold the bars set for it.
+                let bars = spec.end - spec.first;
+                if !label.is_empty() {
+                    label.push_str(" · ");
+                }
+                label.push_str(&format!(
+                    "{bars} {}",
+                    if bars == 1 { "bar" } else { "bars" }
+                ));
+                if spec.stored == Some(false) {
+                    paint = Paint::Warning;
+                }
+            }
             p.text(
                 &mut list,
-                &number,
+                &label,
                 1.6 * sp,
                 spec.indent,
                 band.top - 2.0 * sp,
-                Paint::Muted,
+                paint,
             );
         }
         for (k, bx) in bars.iter().enumerate() {

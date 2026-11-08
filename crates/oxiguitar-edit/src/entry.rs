@@ -212,6 +212,15 @@ pub enum Command {
     /// A tuplet inside the one the caret's beat (or the selected beats)
     /// already has; another one again takes it off.
     NestedTuplet(Tuplet),
+    /// Bars per system on the page (Design Mode): a track's own, shown
+    /// alone, or (`None`) the score's, for several tracks shown together.
+    /// Empty for the automatic layout.
+    SystemLayout {
+        /// The track, or `None` for the score.
+        track: Option<usize>,
+        /// Bars per system, from the first.
+        layout: Vec<u8>,
+    },
     /// A syllable of line `line` (from 0) of the caret's track's lyrics,
     /// at beat `at` (bar, beat) of its first staff's first voice; empty to
     /// leave that beat empty. `hyphen` when the word goes on.
@@ -302,6 +311,7 @@ impl Command {
             Command::NextFinger { right: false } => "Left-Hand Fingering",
             Command::NextFinger { right: true } => "Right-Hand Fingering",
             Command::NestedTuplet(_) => "Nested Tuplet",
+            Command::SystemLayout { .. } => "Bars per System",
         }
     }
 }
@@ -827,7 +837,8 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Pedal
         | Command::Spell(_)
         | Command::Respell
-        | Command::NextFinger { .. } => None,
+        | Command::NextFinger { .. }
+        | Command::SystemLayout { .. } => None,
         Command::NestedTuplet(t) => {
             let targets = targets(score, c, selection);
             let off = staff

@@ -288,6 +288,111 @@ impl Caret {
         self
     }
 
+    /// The beats of every voice of the caret's bar that hold music (the
+    /// caret's own voice always), as (voice, beat, onset), grace beats left
+    /// out.
+    fn moments(self, score: &Score, bar: usize) -> Vec<(usize, usize, Ratio)> {
+        let Some(b) = score
+            .tracks
+            .get(self.track)
+            .and_then(|t| t.staves.get(self.staff))
+            .and_then(|s| s.bars.get(bar))
+        else {
+            return Vec::new();
+        };
+        b.voices
+            .iter()
+            .enumerate()
+            .filter(|(v, voice)| *v == self.voice || !voice.is_empty())
+            .flat_map(|(v, voice)| {
+                voice
+                    .beats
+                    .iter()
+                    .zip(onsets(voice))
+                    .enumerate()
+                    .filter(|(_, (b, _))| b.grace.is_none())
+                    .map(move |(i, (_, at))| (v, i, at))
+            })
+            .collect()
+    }
+
+    /// The caret at `at` in bar `bar`: on the caret's own voice's beat
+    /// there if it has one, else the lowest voice's.
+    fn at_moment(self, moments: &[(usize, usize, Ratio)], bar: usize, at: Ratio) -> Option<Caret> {
+        let here = |v: &(usize, usize, Ratio)| v.2 == at;
+        let (voice, beat, _) = moments
+            .iter()
+            .filter(|m| here(m))
+            .min_by_key(|m| (m.0 != self.voice, m.0))
+            .copied()?;
+        Some(Caret {
+            bar,
+            voice,
+            beat,
+            ..self
+        })
+    }
+
+    /// Right arrow in Multivoice (v0.17): the next moment any voice of the
+    /// staff has a beat, in that beat's voice (the caret's own when several
+    /// start together); then the next bar's first. Stays put at the end.
+    pub fn next_moment(self, score: &Score) -> Caret {
+        let now = self.onset(score);
+        let here = self.moments(score, self.bar);
+        if let Some(at) = here.iter().map(|m| m.2).filter(|t| *t > now).min() {
+            return self.at_moment(&here, self.bar, at).unwrap_or(self);
+        }
+        if self.bar + 1 < score.bar_count() {
+            let next = self.moments(score, self.bar + 1);
+            if let Some(at) = next.iter().map(|m| m.2).min() {
+                return self.at_moment(&next, self.bar + 1, at).unwrap_or(self);
+            }
+            return Caret {
+                bar: self.bar + 1,
+                beat: 0,
+                ..self
+            };
+        }
+        self
+    }
+
+    /// Left arrow in Multivoice: the moment before, as
+    /// [`Caret::next_moment`].
+    pub fn prev_moment(self, score: &Score) -> Caret {
+        let now = self.onset(score);
+        let here = self.moments(score, self.bar);
+        if let Some(at) = here.iter().map(|m| m.2).filter(|t| *t < now).max() {
+            return self.at_moment(&here, self.bar, at).unwrap_or(self);
+        }
+        if self.bar > 0 {
+            let before = self.moments(score, self.bar - 1);
+            if let Some(at) = before.iter().map(|m| m.2).max() {
+                return self.at_moment(&before, self.bar - 1, at).unwrap_or(self);
+            }
+            return self.prev_beat(score);
+        }
+        self
+    }
+
+    /// Up or down in Multivoice: onto the voice whose note sounds on the
+    /// caret's string where the caret's beat starts, when the caret's own
+    /// voice has none there.
+    pub fn onto_sounding_voice(self, score: &Score) -> Caret {
+        let has = |c: Caret| {
+            c.voice_in(score)
+                .and_then(|v| v.beats.get(c.beat))
+                .is_some_and(|b| b.notes.iter().any(|n| n.string() == Some(c.string)))
+        };
+        if has(self) {
+            return self;
+        }
+        (0..VOICES)
+            .filter(|v| *v != self.voice)
+            .map(|v| self.with_voice(score, v))
+            .find(|c| c.onset(score) == self.onset(score) && has(*c))
+            .unwrap_or(self)
+    }
+
     /// Home: the first beat of the bar.
     pub fn bar_start(self) -> Caret {
         Caret { beat: 0, ..self }
@@ -481,6 +586,46 @@ pub(crate) mod tests {
         second.beats[1].text = text.into();
         s.tracks[0].staves[0].bars[0].voices.push(second);
         s
+    }
+
+    #[test]
+    fn multivoice_walks_every_voice_s_moments() {
+        let mut score = crate::new_score();
+        // Voice 1: two halves on string 1; voice 2: four quarters on
+        // string 3.
+        let half = beat(NoteValue::Half);
+        let mut quarter = beat(NoteValue::Quarter);
+        quarter.notes = vec![Note::fretted(3, 2)];
+        let bar = &mut score.tracks[0].staves[0].bars[0];
+        bar.voices = vec![
+            Voice {
+                beats: vec![half.clone(), half],
+            },
+            Voice {
+                beats: vec![quarter; 4],
+            },
+        ];
+        let c = Caret::at_start(&score, 0).unwrap();
+        let steps: Vec<(usize, usize)> = std::iter::successors(Some(c), |c| {
+            let n = c.next_moment(&score);
+            (n != *c).then_some(n)
+        })
+        .map(|c| (c.voice, c.beat))
+        .collect();
+        // 0: voice 1, its own; a quarter: only voice 2 starts there; a
+        // half: both start, and the caret stays in voice 2; three
+        // quarters: voice 2.
+        assert_eq!(steps, [(0, 0), (1, 1), (1, 2), (1, 3)]);
+        let back = Caret {
+            voice: 1,
+            beat: 3,
+            ..c
+        }
+        .prev_moment(&score);
+        assert_eq!((back.voice, back.beat), (1, 2));
+        // String 3 at the start: voice 1 has no note there, voice 2 has.
+        let down = Caret { string: 3, ..c }.onto_sounding_voice(&score);
+        assert_eq!((down.voice, down.beat), (1, 0));
     }
 
     #[test]
