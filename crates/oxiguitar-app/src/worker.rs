@@ -1137,6 +1137,69 @@ mod tests {
     }
 
     #[test]
+    fn fit_bars_rebars_every_track_as_one_change() {
+        let (tx, rx) = channel();
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
+        worker.send(Request::New);
+        let score = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        let top = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        let edit = |command: Command, caret: oxiguitar_edit::Caret| {
+            worker.send(Request::Edit {
+                command,
+                caret,
+                selection: None,
+            });
+            loop {
+                if let Event::Changed {
+                    score, edit, bad, ..
+                } = next(&rx)
+                {
+                    break (score, edit, bad);
+                }
+            }
+        };
+        // Four quarters in 4/4, then the bar marked 3/4: it doesn't add up.
+        for beat in 0..4 {
+            edit(
+                Command::Fret {
+                    fret: beat as u8,
+                    again: false,
+                },
+                oxiguitar_edit::Caret { beat, ..top },
+            );
+        }
+        let (_, _, bad) = edit(
+            Command::TimeSignature(oxiguitar_model::TimeSignature {
+                numerator: 3,
+                denominator: 4,
+            }),
+            top,
+        );
+        assert_eq!(bad.len(), 1);
+        let fit = oxiguitar_edit::Fit {
+            how: oxiguitar_edit::FitHow::Rebar,
+            whole_song: true,
+        };
+        let (score, edit_state, bad) = edit(Command::FitBars(fit), top);
+        assert_eq!(edit_state.undo.as_deref(), Some("Fit Bars"));
+        assert_eq!(score.bar_count(), 2);
+        let second = &score.tracks[0].staves[0].bars[1].voices[0].beats;
+        assert_eq!(second.len(), 1);
+        // The last bar holds one quarter: left short, and marked.
+        assert_eq!(bad.iter().map(|b| b.bar).collect::<Vec<_>>(), [1]);
+    }
+
+    #[test]
     fn a_new_score_takes_notes_and_is_saved_where_asked() {
         let (tx, rx) = channel();
         let worker = Worker::start(

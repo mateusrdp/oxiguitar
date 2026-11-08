@@ -28,6 +28,10 @@
 //!   #157): a string and fret for each note, by the cheapest path through
 //!   the passage (`docs/design/fingering.md`).
 //!
+//! - Fitting bars to their time signature ([`Command::FitBars`], #222):
+//!   the music re-barred across the bar lines, or each bar stretched to
+//!   fill its time signature (`docs/design/fit-bars.md`).
+//!
 //! See `docs/design/editor.md` for the rules and the parity checklist.
 
 mod bars;
@@ -37,6 +41,7 @@ mod clip;
 mod effects;
 mod entry;
 mod fingering;
+mod fit;
 pub mod harmony;
 mod history;
 mod notation;
@@ -51,6 +56,7 @@ pub use clip::{Clip, ClipTrack, Paste, copy};
 pub use effects::{BeatChange, Effect, HarmonicKind, NoteChange};
 pub use entry::{Command, Edited, apply, new_score};
 pub use fingering::{HARD_FINGERS, HARD_SHIFT, HARD_STRETCH, finger_pitched};
+pub use fit::{Fit, FitHow};
 pub use history::{Change, History, Region, Touched};
 pub use notation::{LYRIC_LINES, tidy_info};
 pub use selection::{Selection, Span};

@@ -187,6 +187,44 @@ export component TransposeDialog inherits Rectangle {
     }
 }
 
+// Fit Bars to Time Signature… (#222): re-bar the music across the bar
+// lines, or stretch each bar to fill its time signature. The heading
+// names what it applies to.
+export component FitDialog inherits Rectangle {
+    in property <string> heading: "Fit Bars to Time Signature";
+    in-out property <bool> stretch: false;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 460px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            ComboBox {
+                model: ["Re-bar: notes keep their lengths", "Stretch: each bar keeps its notes"];
+                current-index: root.stretch ? 1 : 0;
+                selected => { root.stretch = self.current-index == 1; }
+            }
+            Text {
+                text: root.stretch
+                    ? "Each bar that doesn't add up keeps its notes, scaled to fill its time signature, with tuplets where needed. The bars stay where they are."
+                    : "The music flows across the bar lines: notes that cross one are tied, and bars are added or removed in every track. Repeats, endings and sections keep their bar lines.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+            Text {
+                text: "Only bars that don't add up change, in every track.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+        }
+    }
+}
+
 // A point of a bend curve on the editor's grid (`bend_form::Point`).
 export struct GridPoint {
     col: int,
