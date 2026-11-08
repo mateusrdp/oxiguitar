@@ -42,6 +42,8 @@ Hard spots, where the cheapest hand still breaks a limit (more than four fingers
 - **A tie continues the note before it on its string**, whatever fret the file wrote on the tied note (some files have stale numbers there). For a note with only a pitch, the last note of that pitch in its voice.
 - **A tie that continues nothing** (nothing ringing up to it on its string) is struck, and its tie mark goes: playback would otherwise stretch whatever note the string last had.
 - **One note struck by two voices** is played once; it rings as long as the longer of the two, so a tie in either voice keeps its string.
+- **The left hand's effects** (bend, vibrato, slide, trill) need a fretted note: no open string is offered for them, unless the note is open already.
+- **A hammer, pull or slide** goes to the next note on its string in its voice. When that note is the very next beat, the search keeps the two on one string (a cost); otherwise the note keeps its place, and so does the note it reaches, since moving either would make it reach another note.
 - **Frets past the neck** (some files write fret 25 on a 24-fret staff): a note may always keep the place it has; otherwise only the neck's frets are offered.
 - **No hand shape at all** (more notes than strings, or ringing notes where struck ones must go): the struck notes get distinct strings first and the ringing ones are cut short; a note no string is left for keeps its place (or stays a pitch). A ringing note moved costs a lot but not infinitely, so the path stays sound around it.
 

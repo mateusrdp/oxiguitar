@@ -124,7 +124,8 @@ It looks at the whole passage, not one note at a time, and picks the way through
 - **Little movement along the neck**: moving within two or three frets costs little, longer shifts cost more, and more again the faster the music. A repeated figure comes out with the same fingering.
 - **Few skipped strings** between single notes, and **the bass within reach**: a note still ringing keeps its string and its finger, so the melody is fingered around it.
 - **The chord diagram**, where the beat has one: its strings and frets.
-- **Hammer-ons, pull-offs and slides stay on one string**, and a tied note stays on the string of the note it continues.
+- **Hammer-ons, pull-offs and slides stay on one string**, and a tied note stays on the string of the note it continues. A hammer, pull or slide whose next note on its string isn't the very next beat keeps its place.
+- **Bends, vibrato, slides and trills stay off open strings**, since the left hand plays them (a note already open keeps its place).
 
 No part of the neck is preferred for its own sake: open strings and high frets are as good as any, as long as getting there is comfortable. Every note keeps its pitch. A harmonic stays the same harmonic: a natural harmonic may move to another string and fret that sounds the same note, and the other kinds keep their pitch and their distance (a tapped harmonic's touched fret moves with the note).
 

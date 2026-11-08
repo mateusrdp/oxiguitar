@@ -452,11 +452,14 @@ fn collect(staff: &Staff, starts: &[f64], free: &dyn Fn(At) -> bool) -> Vec<Item
             }
         }
     }
-    // Hammers, pulls and slides go to the next beat of their voice, to the
-    // note on the same string (or its only note).
+    // Hammers, pulls and slides go to the next note on their string in
+    // their voice. In the next beat, the search keeps the two on one
+    // string; otherwise the note keeps its place (and the note further on
+    // that it reaches, if any), or the legato would reach another note. A note with only a pitch goes to the next beat's
+    // only note.
+    let mut pinned: Vec<usize> = Vec::new();
     for list in beats.values() {
-        for pair in list.windows(2) {
-            let (now, next) = (&pair[0], &pair[1]);
+        for (k, now) in list.iter().enumerate() {
             for &i in now {
                 let Some(n) = note_of(staff, items[i].at) else {
                     continue;
@@ -469,14 +472,28 @@ fn collect(staff: &Staff, starts: &[f64], free: &dyn Fn(At) -> bool) -> Vec<Item
                 if !legato {
                     continue;
                 }
-                let string = items[i].old.map(|o| o.0);
-                let to = next
-                    .iter()
-                    .copied()
-                    .find(|&j| string.is_some() && items[j].old.map(|o| o.0) == string)
-                    .or_else(|| (next.len() == 1).then(|| next[0]));
-                items[i].legato_to = to;
+                let Some(next) = list.get(k + 1) else {
+                    continue;
+                };
+                let Some(string) = items[i].old.map(|o| o.0) else {
+                    items[i].legato_to = (next.len() == 1).then(|| next[0]);
+                    continue;
+                };
+                let on_string = |j: &usize| items[*j].old.map(|o| o.0) == Some(string);
+                if let Some(&j) = next.iter().find(|j| on_string(j)) {
+                    items[i].legato_to = Some(j);
+                } else {
+                    pinned.push(i);
+                    pinned.extend(list[k + 1..].iter().flatten().find(|j| on_string(j)));
+                }
             }
+        }
+    }
+    for i in pinned {
+        let it = &mut items[i];
+        if let Some(o) = it.old {
+            it.options = vec![o];
+            it.free = false;
         }
     }
     items
@@ -511,6 +528,8 @@ fn places_for(
     old: Option<(u8, u8)>,
 ) -> Vec<(u8, u8)> {
     let strings = u8::try_from(staff.string_count()).unwrap_or(0);
+    let fx = &n.effects;
+    let shaped = fx.bend.is_some() || fx.vibrato || !fx.slides.is_empty() || fx.trill.is_some();
     let mut out = Vec::new();
     for s in 1..=strings {
         let Some(open) = staff.pitch_of(s, 0).map(|p| p.0) else {
@@ -527,6 +546,11 @@ fn places_for(
         let Some(f) = pitch.checked_sub(open).filter(|f| *f <= staff.fret_count) else {
             continue;
         };
+        // What the left hand does to a note needs it fretted: a bend,
+        // vibrato, a slide or a trill on an open string can't be played.
+        if f == 0 && shaped && old.is_none_or(|o| o.1 != 0) {
+            continue;
+        }
         let delta = i16::from(f) - i16::from(old.map_or(f, |o| o.1));
         let fits = |other: u8| {
             let o = i16::from(other) + delta;
@@ -1545,6 +1569,55 @@ mod tests {
         assert_eq!(sounds(&s, 0), before, "{:?}", places(&s));
         let p = places(&s);
         assert_eq!(p[0], p[1]);
+    }
+
+    #[test]
+    fn bends_and_vibrato_stay_off_open_strings() {
+        let q = NoteValue::Quarter;
+        let mut beats = vec![pitched(&[64], q), pitched(&[64], q), pitched(&[64], q)];
+        beats[0].notes[0].effects.bend = Some(oxiguitar_model::Bend::default());
+        beats[1].notes[0].effects.vibrato = true;
+        let mut s = song(&GUITAR, 0, vec![beats]);
+        finger_pitched(&mut s);
+        let p = places(&s);
+        assert!(p[0][0].1 > 0 && p[1][0].1 > 0, "{p:?}");
+        assert_eq!(sounds(&s, 0).concat(), vec![64, 64, 64]);
+    }
+
+    #[test]
+    fn a_hammer_to_a_note_beats_away_keeps_both_strings() {
+        // An open E hammered to the next note on its string, two beats on;
+        // another string's note between.
+        let q = NoteValue::Quarter;
+        let mut s = song(
+            &GUITAR,
+            0,
+            vec![vec![
+                pitched(&[64], q),
+                pitched(&[60], q),
+                pitched(&[65], q),
+            ]],
+        );
+        let beats = &mut s.tracks[0].staves[0].bars[0].voices[0].beats;
+        beats[0].notes[0].place = NotePlace::Fretted { string: 1, fret: 0 };
+        beats[0].notes[0].effects.hammer_pull = true;
+        beats[1].notes[0].place = NotePlace::Fretted { string: 2, fret: 1 };
+        beats[2].notes[0].place = NotePlace::Fretted { string: 1, fret: 1 };
+        finger_track(&mut s);
+        let p = places(&s);
+        assert_eq!((p[0][0], p[2][0]), ((1, 0), (1, 1)), "{p:?}");
+    }
+
+    #[test]
+    fn a_hammer_to_nothing_keeps_its_place() {
+        let q = NoteValue::Quarter;
+        let mut s = song(&GUITAR, 0, vec![vec![pitched(&[64], q), pitched(&[60], q)]]);
+        let beats = &mut s.tracks[0].staves[0].bars[0].voices[0].beats;
+        beats[0].notes[0].place = NotePlace::Fretted { string: 1, fret: 0 };
+        beats[0].notes[0].effects.hammer_pull = true;
+        beats[1].notes[0].place = NotePlace::Fretted { string: 2, fret: 1 };
+        finger_track(&mut s);
+        assert_eq!(places(&s)[0][0], (1, 0));
     }
 
     #[test]
