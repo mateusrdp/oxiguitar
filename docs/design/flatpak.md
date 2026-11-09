@@ -111,7 +111,7 @@ The app reads it and nothing else of the user's; **the user, a file manager or a
 
 Two conveniences could come later, if wanted: a button in the plugin manager that copies a chosen `.oxp` into the user's plugin folder through the file dialog (today the manager "never downloads, copies, installs or removes anything"), and the same for amp models (a host-provided file picker for plugin sections, a plugin-interface addition).
 
-## Questions for Mateus
+## Decided by Mateus, sound sets (9 Nov 2026)
 
-1. **The sound-set installer:** should `install.sh` fill the Flatpak's `soundfonts` folder too when the OxiGuitar Flatpak is installed? (Proposed: yes, automatically, the same command for everyone.)
-2. **The MIDI plugin's message** when it finds no sound set: should it say, inside the Flatpak, where to put one and which command fills it? (Proposed: yes; it already tells other users where to get one.)
+- **The sound-set installer fills the Flatpak's folder.** oxiguitar-bettersounds-soundfonts' `install.sh`, when the OxiGuitar Flatpak is installed (`flatpak info io.github.mateusrdp.OxiGuitar` succeeds, or `~/.var/app/io.github.mateusrdp.OxiGuitar` exists), also installs into `~/.var/app/io.github.mateusrdp.OxiGuitar/data/oxiguitar/soundfonts`, and says so. The `.deb` and `.rpm` put their sets in `/usr/share/oxiguitar/soundfonts`, which the Flatpak can't see, so for a Flatpak user it is the script; the manual's Better sounds page says so in its list ("Flatpak: run `install.sh`").
+- **The MIDI plugin's message when it finds no sound set** already names the right folder by itself (the host's `soundfonts` folder, the Flatpak's own inside the sandbox), but has no link; it gets the Better sounds link (`notify_with_link`, as the basic-sets advice's fallback does), so it points every user, in the Flatpak or not, to the page that says how. The "Only basic sounds are installed" advice never shows in the Flatpak (it sees no system set) and needs no change.
