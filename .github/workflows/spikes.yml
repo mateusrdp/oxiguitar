@@ -11,6 +11,9 @@ on:
   pull_request:
     paths:
       - "spikes/**"
+      # The Flatpak spike has its own workflow (flatpak.yml).
+      - "!spikes/flatpak/**"
+      - "!spikes/README.md"
       - "crates/oxiguitar-display/**"
       - "crates/oxiguitar-render/**"
       - ".github/workflows/spikes.yml"

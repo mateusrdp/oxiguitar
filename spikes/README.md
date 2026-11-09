@@ -65,3 +65,7 @@ Does the chain **timed events → SoundFont synthesiser → NAM → audio device
 The spikes workflow runs both on every target and prints the measurements as notices.
 
 `amp DI.sf2 GM.sf2 MODEL.nam CAB.wav OUT-DIR NAME` (feature `nam2`: x86_64, Rust 1.99, `RUSTFLAGS="-C target-cpu=x86-64-v3"`): the song's guitar from a DI sound set through NeuralAmpModeler-rs (amp model, then the cabinet impulse response through its convolution engine) over bass and drums, as 16-bit WAV files for listening; nam-rs runs the same model to compare speed and output. The spikes workflow's `listen` job, started by hand, renders FreePats' DI guitars through four amp captures and keeps them as the artifact `listening-di`.
+
+## flatpak/ — the Flatpak (#163)
+
+The app's Flatpak manifest (`io.github.mateusrdp.OxiGuitar.yml`: built from source in the Freedesktop SDK with Rust 1.99 from rustup, the Wayland build, one extension point for plugins), one plugin as an extension of it (`io.github.mateusrdp.OxiGuitar.Plugin.test.yml`: the core's test plugin, built on the runner as `test.oxp`). The workflow `.github/workflows/flatpak.yml` builds both on x86_64 and ARM64, runs the CLI in the sandbox to show the host finds the extension's plugin with no change to the core, and keeps both bundles for 14 days. Design and questions: [docs/design/flatpak.md](../docs/design/flatpak.md). Flathub can't be reached from a development session's shell, so the spike runs only in CI.

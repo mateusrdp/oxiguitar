@@ -1,0 +1,71 @@
+# The OxiGuitar Flatpak, as the spike builds it (#163, docs/design/flatpak.md).
+# The workflow (.github/workflows/flatpak.yml) writes the runtime branch it
+# found in place of RUNTIME_VERSION before building.
+id: io.github.mateusrdp.OxiGuitar
+runtime: org.freedesktop.Platform
+runtime-version: "RUNTIME_VERSION"
+sdk: org.freedesktop.Sdk
+# Starts the Wayland or the X11 build, as the AppImage does (oxiguitar-start).
+command: oxiguitar-start
+finish-args:
+  # Both builds, as in the AppImage: Wayland where the session has it, X11
+  # only where it doesn't (fallback-x11), chosen by oxiguitar-start.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  # OpenGL for Slint's femtovg renderer.
+  - --device=dri
+  # Sound: the ALSA plugin reaches the sound server through the runtime's
+  # ALSA configuration, the PipeWire plugin through PipeWire's socket.
+  - --socket=pulseaudio
+  - --filesystem=xdg-run/pipewire-0:ro
+add-extensions:
+  # Each plugin is an extension, io.github.mateusrdp.OxiGuitar.Plugin.NAME,
+  # mounted at /app/lib/oxiguitar/NAME. Flatpak links every extension's
+  # plugins/ folder into /app/lib/oxiguitar/plugins, the system plugin folder
+  # OxiGuitar already derives from /app/bin/oxiguitar.
+  io.github.mateusrdp.OxiGuitar.Plugin:
+    directory: lib/oxiguitar
+    subdirectories: true
+    merge-dirs: plugins
+    no-autodownload: true
+    autodelete: true
+modules:
+  - name: oxiguitar
+    buildsystem: simple
+    build-options:
+      # Our own repository, not Flathub: the build may reach the network
+      # for rustup and the crates (Cargo.lock pins them).
+      build-args:
+        - --share=network
+      env:
+        CARGO_HOME: /run/build/oxiguitar/.cargo-home
+        RUSTUP_HOME: /run/build/oxiguitar/.rustup-home
+        CARGO_TERM_COLOR: always
+    build-commands:
+      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.99 --no-modify-path
+      - .cargo-home/bin/cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      - .cargo-home/bin/cargo build --release --locked -p oxiguitar-app --no-default-features --features x11 --target-dir target/x11
+      - install -Dm755 target/release/oxiguitar /app/bin/oxiguitar
+      - install -Dm755 target/x11/release/oxiguitar /app/bin/oxiguitar-x11
+      - install -Dm755 spikes/flatpak/oxiguitar-start /app/bin/oxiguitar-start
+      - install -Dm755 target/release/oxiguitar-cli /app/bin/oxiguitar-cli
+      - install -d /app/lib/oxiguitar
+      # The menu entry starts the launcher: Flatpak runs the command its Exec
+      # line names, which would otherwise always be the Wayland build.
+      - sed 's/^Exec=oxiguitar /Exec=oxiguitar-start /' assets/linux/io.github.mateusrdp.OxiGuitar.desktop > io.github.mateusrdp.OxiGuitar.desktop
+      - grep -qx 'Exec=oxiguitar-start %f' io.github.mateusrdp.OxiGuitar.desktop
+      - install -Dm644 io.github.mateusrdp.OxiGuitar.desktop /app/share/applications/io.github.mateusrdp.OxiGuitar.desktop
+      - install -Dm644 assets/linux/io.github.mateusrdp.OxiGuitar.xml /app/share/mime/packages/io.github.mateusrdp.OxiGuitar.xml
+      - install -Dm644 assets/linux/io.github.mateusrdp.OxiGuitar.metainfo.xml /app/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml
+      # The PNG icons only, which go up to 512 px: appstreamcli compose stopped
+      # the first spike run with a file-read-error, and AppStream 1.0 gives
+      # the scalable SVG "Unrecognized image file format" (not yet understood).
+      - for s in 16 24 32 48 64 128 256 512; do install -Dm644 assets/icon/png/oxiguitar-$s.png /app/share/icons/hicolor/${s}x${s}/apps/io.github.mateusrdp.OxiGuitar.png; done
+      - install -Dm644 LICENSE /app/share/licenses/io.github.mateusrdp.OxiGuitar/LICENSE
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - .git
