@@ -77,7 +77,7 @@ Built in slice 6: every effect below, from its key and the palette, on the caret
 - [x] Losses named before writing (FMT-3), and what the opened file had that OxiGuitar couldn't keep (FMT-2) (slice 2)
 - [x] A question before closing or opening over unsaved changes (slice 2)
 - [x] File → New
-- Not planned: TuxGuitar also writes Guitar Pro 3 and 4 and its own .tg; OxiGuitar writes .gp and .gp5 only (the brief: Guitar Pro 3–4 are read only).
+- Not planned: TuxGuitar also writes Guitar Pro 3 and 4; OxiGuitar's Guitar Pro plugins write .gp and .gp5 only (the brief: Guitar Pro 3–4 are read only). TuxGuitar's own .tg is written by its plugin (oxiguitar-tuxguitar, #223), in TuxGuitar 2's form.
 
 ## Editing rules
 

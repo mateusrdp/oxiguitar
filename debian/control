@@ -43,6 +43,7 @@ Suggests:
  oxiguitar-eq,
  oxiguitar-musicxml,
  oxiguitar-midi-file,
+ oxiguitar-tuxguitar,
 Built-Using:
  ${oxiguitar:Built-Using},
 Description: guitar tablature and score viewer
@@ -56,5 +57,5 @@ Description: guitar tablature and score viewer
  of their own: oxiguitar-guitarpro (Guitar Pro files), oxiguitar-midi
  (sound) and oxiguitar-alsa and oxiguitar-pipewire (audio output), all
  recommended, and oxiguitar-nam (amplifier models), oxiguitar-eq (an
- equalizer), oxiguitar-musicxml (MusicXML files) and oxiguitar-midi-file
- (MIDI files), suggested.
+ equalizer), oxiguitar-musicxml (MusicXML files), oxiguitar-midi-file
+ (MIDI files) and oxiguitar-tuxguitar (TuxGuitar files), suggested.

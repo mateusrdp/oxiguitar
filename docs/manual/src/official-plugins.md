@@ -33,11 +33,8 @@ One sends the sound to your speakers. OxiGuitar uses the one that fits your syst
 | **Equalizer** | A three-band or ten-band equalizer on any track, with or without an amp model ([Playing a score](playback.md#each-tracks-sound)). Suggested by OxiGuitar's packages, as NAM is | `oxiguitar-eq` |
 | **MusicXML** | Opens and saves MusicXML (.musicxml, .xml) and compressed MusicXML (.mxl), the format MuseScore, Finale, Sibelius, Dorico and Guitar Pro exchange scores in. Suggested by OxiGuitar's packages. Guitars and basses open as tablature, with the file's own frets when it has a tablature staff and fingered by OxiGuitar when it has only notes; other parts open as notation, their tablature one click away in the Track tab. Needs OxiGuitar 0.18 or later | `oxiguitar-musicxml` |
 | **MIDI files** | Opens MIDI files (.mid, .midi, karaoke .kar, .rmi) and saves .mid files. A MIDI file holds played notes, not note values, so OxiGuitar puts each beat's notes on the grid that fits them best (straight or triplets) as it opens; guitars and basses open as tablature, fingered by OxiGuitar, other tracks as notation, channel 10 as drums. Saving writes the song as OxiGuitar plays it, repeats played out and bends as pitch bend. Not the MIDI plugin above, which plays sound sets. Suggested by OxiGuitar's packages. Needs OxiGuitar 0.18 or later | `oxiguitar-midi-file` |
+| **TuxGuitar** | Opens and saves TuxGuitar 2's files (.tg): tracks, both voices, chord diagrams, lyrics and every note effect TuxGuitar has. Files from TuxGuitar 1.5 or older open once TuxGuitar 2 has saved them again; TuxGuitar 1.x can't open what OxiGuitar saves. Suggested by OxiGuitar's packages. Needs OxiGuitar 0.18 or later | `oxiguitar-tuxguitar` |
 | **Better sounds** | Not a plugin but an installer: downloads the free recorded sound sets we recommend (clean, overdriven and distorted electric guitars, nylon and steel-string guitars, ukulele, bass, drums; about 1.2 GB), into your `soundfonts` folder (by hand, after you say yes) or for every user (the Linux packages do it as they install) ([Better sounds](better-sounds.md#the-sound-set-installer)). Suggested by the MIDI plugin's packages | `oxiguitar-bettersounds-soundfonts` |
-
-## Planned
-
-A plugin for TuxGuitar's format is planned ([ROADMAP.md](https://github.com/mateusrdp/oxiguitar/blob/main/ROADMAP.md)). It will join this page when it exists.
 
 ## Plugins from elsewhere
 
