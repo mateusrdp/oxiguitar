@@ -85,6 +85,7 @@ The spike's run of 9 Nov 2026 (run 42587616431, both architectures green):
 - **The runtime is org.freedesktop.Platform 26.08** (Flathub also has 25.08).
 - **The app builds in the 26.08 SDK** with Rust 1.99 from rustup in about 7 minutes (x86_64; 5.5 on ARM64), and every library it needs is in the runtime. Its bundle is 13 MB (x86_64) and 11 MB (ARM64); the app and the test plugin's package take 19 MB and 18 MB in an OSTree repository, so our Pages site holds the app and every plugin easily.
 - **Plugins as separate packages work with no change to the core.** In the sandbox `/app/lib/oxiguitar/plugins/test.oxp` is Flatpak's link to `/app/lib/oxiguitar/test/plugins/test.oxp`, and `oxiguitar-cli detect` says "read by the Test plugin plugin".
+- **Both builds through the launcher** (run 42598928786): with only an X server (Xvfb, no Wayland) the sandbox gets `DISPLAY` and no `WAYLAND_DISPLAY`, `oxiguitar-start` starts `/app/bin/oxiguitar-x11`, and it is still running 15 seconds later; the exported menu entry runs `flatpak run --command=oxiguitar-start ... %f`. Both builds' libraries are all in the runtime.
 - **appstreamcli compose refused the scalable SVG icon** ("Unrecognized image file format", also with a one-rectangle SVG, so not our drawing); hence the PNG icons.
 - **The runtime from Flathub** is 282.7 MB to download for x86_64 (270.5 MB for ARM64) plus 150.5 MB (139.1 MB) for its GL drivers, once per machine and shared with every other Flatpak app using 26.08.
 
