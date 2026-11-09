@@ -1,0 +1,61 @@
+# The OxiGuitar Flatpak, as the spike builds it (#163, docs/design/flatpak.md).
+# The workflow (.github/workflows/flatpak.yml) writes the runtime branch it
+# found in place of RUNTIME_VERSION before building.
+id: io.github.mateusrdp.OxiGuitar
+runtime: org.freedesktop.Platform
+runtime-version: "RUNTIME_VERSION"
+sdk: org.freedesktop.Sdk
+command: oxiguitar
+finish-args:
+  # The Wayland build only: it holds no X11 code (ADR 0009).
+  - --socket=wayland
+  # OpenGL for Slint's femtovg renderer.
+  - --device=dri
+  # Sound: the ALSA plugin reaches the sound server through the runtime's
+  # ALSA configuration, the PipeWire plugin through PipeWire's socket.
+  - --socket=pulseaudio
+  - --filesystem=xdg-run/pipewire-0:ro
+  # The host's own sound sets (/usr/share/sounds/sf2 and the rest), read-only,
+  # seen at /run/host/usr/share/... (an open question in the design).
+  - --filesystem=host-os:ro
+add-extensions:
+  # Each plugin is an extension, io.github.mateusrdp.OxiGuitar.Plugin.NAME,
+  # mounted at /app/lib/oxiguitar/NAME. Flatpak links every extension's
+  # plugins/ folder into /app/lib/oxiguitar/plugins, the system plugin folder
+  # OxiGuitar already derives from /app/bin/oxiguitar.
+  io.github.mateusrdp.OxiGuitar.Plugin:
+    directory: lib/oxiguitar
+    subdirectories: true
+    merge-dirs: plugins
+    no-autodownload: true
+    autodelete: true
+modules:
+  - name: oxiguitar
+    buildsystem: simple
+    build-options:
+      # Our own repository, not Flathub: the build may reach the network
+      # for rustup and the crates (Cargo.lock pins them).
+      build-args:
+        - --share=network
+      env:
+        CARGO_HOME: /run/build/oxiguitar/.cargo-home
+        RUSTUP_HOME: /run/build/oxiguitar/.rustup-home
+        CARGO_TERM_COLOR: always
+    build-commands:
+      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.99 --no-modify-path
+      - .cargo-home/bin/cargo build --release --locked -p oxiguitar-app -p oxiguitar-cli
+      - install -Dm755 target/release/oxiguitar /app/bin/oxiguitar
+      - install -Dm755 target/release/oxiguitar-cli /app/bin/oxiguitar-cli
+      - install -d /app/lib/oxiguitar
+      - install -Dm644 assets/linux/io.github.mateusrdp.OxiGuitar.desktop /app/share/applications/io.github.mateusrdp.OxiGuitar.desktop
+      - install -Dm644 assets/linux/io.github.mateusrdp.OxiGuitar.xml /app/share/mime/packages/io.github.mateusrdp.OxiGuitar.xml
+      - install -Dm644 assets/linux/io.github.mateusrdp.OxiGuitar.metainfo.xml /app/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml
+      - for s in 16 24 32 48 64 128 256 512; do install -Dm644 assets/icon/png/oxiguitar-$s.png /app/share/icons/hicolor/${s}x${s}/apps/io.github.mateusrdp.OxiGuitar.png; done
+      - install -Dm644 assets/icon/oxiguitar-placeholder.svg /app/share/icons/hicolor/scalable/apps/io.github.mateusrdp.OxiGuitar.svg
+      - install -Dm644 LICENSE /app/share/licenses/io.github.mateusrdp.OxiGuitar/LICENSE
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - .git

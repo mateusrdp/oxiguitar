@@ -1,0 +1,140 @@
+# The Flatpak spike (#163, spikes/flatpak, docs/design/flatpak.md), on x86_64
+# and ARM64. It answers what the roadmap asks before anything is built:
+#
+# - how big a mirror of the runtime would be, against GitHub Pages' 1 GB site
+#   limit (spikes/flatpak/runtime-size.sh, in the job summary);
+# - whether OxiGuitar builds in the Freedesktop SDK and runs in the sandbox;
+# - whether a plugin packaged as an extension of the app is found by the
+#   host with no change to the core (Flatpak's merge-dirs links it into
+#   /app/lib/oxiguitar/plugins, the system plugin folder OxiGuitar derives).
+#
+# Advisory only: not part of ci-success. The app bundle with the test plugin's
+# extension is kept 14 days under the Actions tab.
+name: Flatpak (spike)
+
+on:
+  pull_request:
+    paths:
+      - "spikes/flatpak/**"
+      - ".github/workflows/flatpak.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Must match rust-version in Cargo.toml.
+  MSRV: "1.99"
+  APP: io.github.mateusrdp.OxiGuitar
+
+jobs:
+  flatpak:
+    name: Flatpak (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: ubuntu-24.04 }
+          - { arch: aarch64, os: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Flatpak tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder ostree
+          # Ubuntu 24.04 keeps unprivileged user namespaces from bubblewrap,
+          # which Flatpak builds and runs in.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          flatpak --version
+          flatpak-builder --version
+          flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Newest runtime
+        id: runtime
+        run: |
+          branches="$(flatpak --user remote-ls flathub --runtime --arch=${{ matrix.arch }} --columns=application,branch \
+            | awk '$1 == "org.freedesktop.Platform" { print $2 }' | sort -uV)"
+          echo "org.freedesktop.Platform branches on Flathub:" $branches
+          version="$(grep -E '^[0-9]+\.08$' <<<"$branches" | tail -1)"
+          echo "Using $version"
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+
+      - name: Runtime mirror size
+        continue-on-error: true
+        run: |
+          spikes/flatpak/runtime-size.sh ${{ matrix.arch }} ${{ steps.runtime.outputs.version }} "$RUNNER_TEMP/sizes" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
+
+      - name: The test plugin as an .oxp
+        run: |
+          cargo rustc --release --locked -p oxiguitar-test-plugin --features oxp --crate-type cdylib
+          cp target/release/liboxiguitar_test_plugin.so spikes/flatpak/test.oxp
+
+      - name: Build the app
+        run: |
+          sed -i "s/RUNTIME_VERSION/${{ steps.runtime.outputs.version }}/" spikes/flatpak/*.yml
+          flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean \
+            --state-dir="$RUNNER_TEMP/state" --repo="$RUNNER_TEMP/repo" \
+            "$RUNNER_TEMP/build-app" "spikes/flatpak/$APP.yml"
+          flatpak --user remote-add --no-gpg-verify local "$RUNNER_TEMP/repo"
+          flatpak --user install -y --noninteractive local "$APP"
+
+      - name: Build the test plugin's extension
+        run: |
+          flatpak-builder --user --disable-rofiles-fuse --force-clean \
+            --state-dir="$RUNNER_TEMP/state" --repo="$RUNNER_TEMP/repo" \
+            "$RUNNER_TEMP/build-plugin" "spikes/flatpak/$APP.Plugin.test.yml"
+          flatpak --user install -y --noninteractive local "$APP.Plugin.test"
+
+      - name: Run it in the sandbox
+        run: |
+          # A runner has no desktop session: each run gets its own bus.
+          run() { dbus-run-session -- flatpak run "$@"; }
+          flatpak --user info "$APP"
+          echo "--- /app/lib/oxiguitar"
+          run --command=ls "$APP" -lR /app/lib/oxiguitar
+          echo "--- libraries the app needs"
+          run --command=sh "$APP" -c 'ldd /app/bin/oxiguitar'
+          if run --command=sh "$APP" -c 'ldd /app/bin/oxiguitar' | grep 'not found'; then
+            echo "::error::a library the app needs is missing from the runtime"
+            exit 1
+          fi
+          printf 'OXGTEST\n' >"$RUNNER_TEMP/song.oxgtest"
+          out="$(run --filesystem="$RUNNER_TEMP:ro" --command=oxiguitar-cli "$APP" detect "$RUNNER_TEMP/song.oxgtest")"
+          echo "$out"
+          grep -q 'read by the Test plugin plugin' <<<"$out" \
+            || { echo "::error::the host didn't find the plugin extension"; exit 1; }
+          echo "--- host sound sets seen from the sandbox"
+          run --command=sh "$APP" -c 'ls /run/host/usr/share/sounds /run/host/usr/share/soundfonts 2>&1 || true'
+
+      - name: Sizes of our own
+        run: |
+          {
+            echo "### Our repository, ${{ matrix.arch }}"
+            echo
+            echo "App and test-plugin extension in the OSTree repository: $(du -sh "$RUNNER_TEMP/repo" | cut -f1)"
+            echo
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          flatpak build-bundle "$RUNNER_TEMP/repo" "oxiguitar-${{ matrix.arch }}.flatpak" "$APP" master \
+            --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak build-bundle --runtime "$RUNNER_TEMP/repo" "oxiguitar-test-plugin-${{ matrix.arch }}.flatpak" \
+            "$APP.Plugin.test" master
+          ls -lh ./*.flatpak
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-spike-${{ matrix.arch }}
+          path: "*.flatpak"
+          retention-days: 14

@@ -1,0 +1,24 @@
+# One plugin as a Flatpak extension of the app (#163, docs/design/flatpak.md):
+# the core's test plugin, built on the runner as test.oxp and copied in, as a
+# real plugin's extension would copy its released .oxp file. The workflow
+# writes the runtime branch in place of RUNTIME_VERSION.
+id: io.github.mateusrdp.OxiGuitar.Plugin.test
+runtime: io.github.mateusrdp.OxiGuitar
+runtime-version: master
+sdk: org.freedesktop.Sdk//RUNTIME_VERSION
+build-extension: true
+separate-locales: false
+appstream-compose: false
+build-options:
+  # The app's extension point is lib/oxiguitar; this extension is its
+  # subfolder "test", whose plugins/ folder Flatpak merges into
+  # /app/lib/oxiguitar/plugins.
+  prefix: /app/lib/oxiguitar/test
+modules:
+  - name: test-plugin
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 test.oxp ${FLATPAK_DEST}/plugins/test.oxp
+    sources:
+      - type: file
+        path: test.oxp
