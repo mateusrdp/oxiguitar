@@ -98,8 +98,8 @@ jobs:
           echo "--- /app/lib/oxiguitar"
           run --command=ls "$APP" -lR /app/lib/oxiguitar
           echo "--- libraries the app needs"
-          run --command=sh "$APP" -c 'ldd /app/bin/oxiguitar'
-          if run --command=sh "$APP" -c 'ldd /app/bin/oxiguitar' | grep 'not found'; then
+          run --command=sh "$APP" -c 'ldd /app/bin/oxiguitar /app/bin/oxiguitar-x11'
+          if run --command=sh "$APP" -c 'ldd /app/bin/oxiguitar /app/bin/oxiguitar-x11' | grep 'not found'; then
             echo "::error::a library the app needs is missing from the runtime"
             exit 1
           fi
@@ -108,8 +108,27 @@ jobs:
           echo "$out"
           grep -q 'read by the Test plugin plugin' <<<"$out" \
             || { echo "::error::the host didn't find the plugin extension"; exit 1; }
-          echo "--- host sound sets seen from the sandbox"
-          run --command=sh "$APP" -c 'ls /run/host/usr/share/sounds /run/host/usr/share/soundfonts 2>&1 || true'
+          echo "--- the menu entry"
+          grep '^Exec' ~/.local/share/flatpak/exports/share/applications/$APP.desktop
+
+      - name: The X11 build through the launcher
+        # An X server and no Wayland: oxiguitar-start must pick the X11 build,
+        # which must open its window and keep running.
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1280x800x24 &
+          export DISPLAY=:99
+          unset WAYLAND_DISPLAY
+          sleep 2
+          dbus-run-session -- flatpak run --command=sh "$APP" -c 'echo "DISPLAY=$DISPLAY WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"'
+          set +e
+          timeout 20 dbus-run-session -- flatpak run "$APP" >"$RUNNER_TEMP/x11.log" 2>&1 &
+          sleep 15
+          ps -eo args | grep '[/]app/bin/oxiguitar' | tee "$RUNNER_TEMP/ps.txt"
+          wait
+          cat "$RUNNER_TEMP/x11.log"
+          grep -q '/app/bin/oxiguitar-x11' "$RUNNER_TEMP/ps.txt" \
+            || { echo "::error::the launcher didn't keep the X11 build running"; exit 1; }
 
       - name: Sizes of our own
         run: |

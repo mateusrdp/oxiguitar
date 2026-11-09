@@ -10,6 +10,8 @@ This document is the design as of session 40 (9 Nov 2026), with the spike that c
 - **No mirror of the runtime.** Our repository holds our packages only; the runtime (org.freedesktop.Platform) comes from Flathub's own repository, as for any Flatpak app. This replaces the roadmap's earlier plan of mirroring it in a repository of its own.
 - **English only:** no translations, so the runtime's translations extension isn't needed either.
 - **The Flatpak installs the PNG icons** (16 to 512 px); the SVG stays everywhere else (the `.deb`, `.rpm` and AppImage).
+- **The default Flatpak sandbox**: no permission beyond what the window and sound need. The user must still have a way to add plugins, sound sets and amp models (see "Adding plugins, sound sets and amp models").
+- **Both builds, as in the AppImage**: the Wayland build and the X11 build, with a launcher choosing.
 
 ## What exists
 
@@ -23,8 +25,8 @@ This document is the design as of session 40 (9 Nov 2026), with the spike that c
 
 - Id `io.github.mateusrdp.OxiGuitar` (the desktop file, metainfo and icons already use it). Runtime `org.freedesktop.Platform` 26.08, from Flathub.
 - **Built from source in the Freedesktop SDK** with Rust 1.99 from rustup, `cargo build --release --locked`. The build reaches the network (`--share=network`) for rustup and the crates: allowed in our own repository (Flathub would want the crates as listed sources). Built in the SDK, the program links against the runtime's own libraries (fontconfig, Wayland, libxkbcommon, Mesa).
-- **The Wayland build only** (question 2).
-- Installs `oxiguitar`, `oxiguitar-cli`, the desktop file, metainfo, MIME type, the PNG icons and LICENSE.
+- **Both builds, as in the AppImage** (`scripts/package/AppRun`): `oxiguitar` (Wayland), `oxiguitar-x11`, and the launcher `oxiguitar-start` as the Flatpak's command. With `--socket=wayland` and `--socket=fallback-x11` Flatpak gives the sandbox Wayland in a Wayland session and X11 only where there is none, and the launcher starts the build for what it was given. The Flatpak's desktop file says `Exec=oxiguitar-start %f` (Flatpak runs the command an `Exec` line names, so `oxiguitar` there would always start the Wayland build).
+- Installs `oxiguitar`, `oxiguitar-x11`, `oxiguitar-start`, `oxiguitar-cli`, the desktop file, metainfo, MIME type, the PNG icons and LICENSE.
 
 ## Each plugin its own package, with no change to the core
 
@@ -51,12 +53,12 @@ A plugin's package holds its released `.oxp` files for its architecture, unchang
 | Permission | Why |
 | --- | --- |
 | `--socket=wayland` | The window (Wayland build). |
+| `--socket=fallback-x11`, `--share=ipc` | The window on X11 desktops (X11 build); X11 is given only where there is no Wayland. |
 | `--device=dri` | OpenGL for the femtovg renderer. |
 | `--socket=pulseaudio` | The ALSA plugin: the runtime's ALSA library plays through the sound server. |
 | `--filesystem=xdg-run/pipewire-0:ro` | The PipeWire plugin's socket. |
-| `--filesystem=host-os:ro` | The system's own sound sets, read-only at `/run/host/usr/share/...` (question 1). |
 
-No network, no home folder: files come through the portal. The app downloads and uploads nothing, as everywhere.
+No network, no home folder, nothing of the system's: score files come through the portal, and everything else the app reads is in its own folders (below). The app downloads and uploads nothing, as everywhere.
 
 ## Releases and the repository
 
@@ -83,11 +85,32 @@ The spike's run of 9 Nov 2026 (run 42587616431, both architectures green):
 - **The runtime is org.freedesktop.Platform 26.08** (Flathub also has 25.08).
 - **The app builds in the 26.08 SDK** with Rust 1.99 from rustup in about 7 minutes (x86_64; 5.5 on ARM64), and every library it needs is in the runtime. Its bundle is 13 MB (x86_64) and 11 MB (ARM64); the app and the test plugin's package take 19 MB and 18 MB in an OSTree repository, so our Pages site holds the app and every plugin easily.
 - **Plugins as separate packages work with no change to the core.** In the sandbox `/app/lib/oxiguitar/plugins/test.oxp` is Flatpak's link to `/app/lib/oxiguitar/test/plugins/test.oxp`, and `oxiguitar-cli detect` says "read by the Test plugin plugin".
-- **`host-os:ro` shows the host's `/usr/share/sounds` at `/run/host/usr/share/sounds`** (empty on a CI runner, which has no sound set).
 - **appstreamcli compose refused the scalable SVG icon** ("Unrecognized image file format", also with a one-rectangle SVG, so not our drawing); hence the PNG icons.
 - **The runtime from Flathub** is 282.7 MB to download for x86_64 (270.5 MB for ARM64) plus 150.5 MB (139.1 MB) for its GL drivers, once per machine and shared with every other Flatpak app using 26.08.
 
+## Adding plugins, sound sets and amp models
+
+A Flatpak keeps its own folders: `$XDG_DATA_HOME` inside the sandbox is `~/.var/app/io.github.mateusrdp.OxiGuitar/data`, so OxiGuitar's data folder there is
+
+```
+~/.var/app/io.github.mateusrdp.OxiGuitar/data/oxiguitar/
+    plugins/      the user's own plugin files
+    soundfonts/   sound sets
+    nam/          amp models and cabinets
+```
+
+The app reads it and nothing else of the user's; **the user, a file manager or a script on the computer can always write into it**, with no permission and without the app running. That is the default Flatpak way, and it is how all three get in.
+
+- **Our plugins** are Flatpak packages in our repository: `flatpak install oxiguitar io.github.mateusrdp.OxiGuitar.Plugin.guitarpro`, updated with `flatpak update`. GNOME Software and KDE Discover list them under the app's add-ons, installed with a click. Nothing changes in OxiGuitar.
+- **Any other plugin file** (someone else's, a test build): copied into `plugins/` above. That works today; **Help → About** already lists the plugin folders, so it shows this path.
+- **Sound sets:** the sandbox has no network, and the app downloads nothing anyway, so the download can't happen inside it. The sound-set installer runs on the computer, as it does now, and writes into the Flatpak's `soundfonts/` folder. Proposed change to oxiguitar-bettersounds-soundfonts' `install.sh`: when the OxiGuitar Flatpak is installed (`flatpak info io.github.mateusrdp.OxiGuitar` succeeds, or `~/.var/app/io.github.mateusrdp.OxiGuitar` exists), install there too, and say so; the same one command for every user. A sound set the user already has is copied into the same folder by hand. Packaging the sets as Flatpaks instead would mean hosting several GB of them ourselves, where the installer deliberately fetches them from their own authors' sites.
+- **Amp models (NAM) and cabinets:** copied into `nam/` above, as into `~/.local/share/oxiguitar/nam/` without Flatpak. A plugin's track section can't open a file dialog (its widgets are Label, Button, Toggle, Slider, Field, Choice, Link), so there is no picking them from inside the app today.
+- **The system's own sound sets** (`/usr/share/sounds/sf2` and the rest) are not visible in the default sandbox, so the Flatpak does not play out of the box as the `.deb` does: it needs a sound set from the installer or copied in. The MIDI plugin's "no sound set" message should then name the Flatpak's folder and the installer. (The one permission that would change it, read-only access to the system's files, `--filesystem=host-os:ro`, is outside the default way and was left out.)
+- **The manual** gets a "Flatpak" section in install-linux.md with these folders and commands.
+
+Two conveniences could come later, if wanted: a button in the plugin manager that copies a chosen `.oxp` into the user's plugin folder through the file dialog (today the manager "never downloads, copies, installs or removes anything"), and the same for amp models (a host-provided file picker for plugin sections, a plugin-interface addition).
+
 ## Questions for Mateus
 
-1. **Should the Flatpak play with sound sets already on the computer?** The sandbox doesn't see the system's `/usr/share/sounds` unless it is given read access to it (`host-os:ro`), and the MIDI plugin would then look there too (a small change in oxiguitar-midi). Nor does it see the sets the sound-set installer put in `~/.local/share/oxiguitar/soundfonts`: a Flatpak keeps its own folders under `~/.var/app/io.github.mateusrdp.OxiGuitar/`. Proposed: yes to both, read-only (the system's sets through `host-os:ro`, the installer's folder through `--filesystem=xdg-data/oxiguitar/soundfonts:ro`, which the MIDI plugin would also look in). Without it, a Flatpak user hears nothing until they copy a sound set into the Flatpak's own `soundfonts` folder.
-2. **Is the Wayland build enough for the Flatpak?** Users on X11 desktops would use the `.deb`, `.rpm` or AppImage instead. The other way is both builds in the Flatpak with a small launcher choosing, as the AppImage does.
+1. **The sound-set installer:** should `install.sh` fill the Flatpak's `soundfonts` folder too when the OxiGuitar Flatpak is installed? (Proposed: yes, automatically, the same command for everyone.)
+2. **The MIDI plugin's message** when it finds no sound set: should it say, inside the Flatpak, where to put one and which command fills it? (Proposed: yes; it already tells other users where to get one.)
