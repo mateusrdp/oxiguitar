@@ -4,6 +4,11 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- **The README's Status** says where OxiGuitar stands at v0.18.0 (it still described v0.13.0).
+- **The plugin template** (`docs/plugins/template`) builds against the v0.18.0 SDK (interface 1.7) instead of v0.11.0. Its manifest still asks for interface 1.1, as the guide explains.
+
 ## [0.18.0] - 2026-11-09
 
 ### Added
