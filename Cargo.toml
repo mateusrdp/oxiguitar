@@ -8,7 +8,7 @@ members = ["crates/*", "plugins/*"]
 exclude = ["spikes", "fuzz", "docs/plugins/template"]
 
 [workspace.package]
-version = "0.17.0"
+version = "0.18.0"
 edition = "2024"
 # Rust from rustup, raised only when something needs it, so Debian unstable
 # can catch up before an upload (CONTRIBUTING.md, "Minimum Rust version").
@@ -33,6 +33,9 @@ oxiguitar-plugin-api = { path = "crates/oxiguitar-plugin-api" }
 oxiguitar-plugin = { path = "crates/oxiguitar-plugin" }
 oxiguitar-plugin-test = { path = "crates/oxiguitar-plugin-test" }
 oxiguitar-test-plugin = { path = "plugins/test" }
+# Inflating the start of a ZIP member to recognise a file (plugin
+# signatures, `container_root`).
+miniz_oxide = "0.9"
 # Reading plugin manifests without loading the plugin. 0.37 is the version
 # Debian has (rust-object 0.37.3). `unaligned`: without it object insists on
 # its structures' natural alignment and rejects real Mach-O files ("Invalid

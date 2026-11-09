@@ -36,6 +36,10 @@ OxiGuitar recognises a file by its **contents**, from the manifests, before any 
 | `"text": "FICHIER GUITAR PRO v5"` | This UTF-8 text is found at byte `at` (default 0) |
 | `"hex": "42434658"` | These bytes are found at byte `at` |
 | `"zip_member": "Content/score.gpif"` | The file is a ZIP archive holding a member of exactly this name |
+| `"xml_root": "score-partwise"` | The file is XML whose first element has exactly this name (interface 1.7) |
+| `"container_root": "score-partwise"` | The file is a ZIP container whose root file's first element has exactly this name (interface 1.7) |
+
+`xml_root` looks past what may come before the first element, wherever it leaves it: a byte order mark (UTF-8, or UTF-16, which is decoded), the XML declaration, comments, processing instructions and the document type with its internal subset, all within the file's first 64 KiB. `container_root` does the same for the root file of a ZIP container, the layout of compressed MusicXML (`.mxl`) and of MuseScore's `.mscz`: `META-INF/container.xml` lists root files, and the first is the one looked at (only its first 64 KiB is inflated). A ZIP member's name alone can't tell these apart, since both hold `META-INF/container.xml`. A plugin that uses either test asks for interface 1.7: an older OxiGuitar doesn't know them, and a signature with a test it doesn't know never matches there.
 
 Make a signature as narrow as the format allows: when two plugins' signatures match one file, the first plugin in folder order reads it. A plugin that declares an extension but doesn't recognise a file with it makes OxiGuitar ask the user for a bug report; a file nobody recognises gets a feature request instead. Both point at OxiGuitar's issue tracker, so tell users in your README where to report your plugin's bugs.
 
@@ -52,7 +56,7 @@ pub struct Read {
 }
 ```
 
-`data` is the whole file. **Treat it as untrusted**: any file a user has can be damaged or made on purpose to break readers. Every problem is an `Error` that says where (its `offset` in bytes, and a `context` such as "bar 12, track 2"), never a panic, an endless loop or an allocation of whatever size the file claims. The contract suite feeds every reader an empty file, a kilobyte of zeros and its own signature alone; fuzz yours too if it reads a binary format ([Testing](testing.md)).
+`data` is the whole file. **Treat it as untrusted**: any file a user has can be damaged or made on purpose to break readers. Every problem is an `Error` that says where (its `offset` in bytes, and a `context` such as "bar 12, track 2"), never a panic, an endless loop or an allocation of whatever size the file claims. The contract suite feeds every reader an empty file, a kilobyte of zeros and its own signature alone (the smallest file its first signature recognises, `Signature::smallest_file`); fuzz yours too if it reads a binary format ([Testing](testing.md)).
 
 The **log** is what the file holds that the score can't carry, or carries only roughly: an effect OxiGuitar doesn't have, a value out of range that was clamped, a bar that didn't add up. Report it rather than dropping it silently. Each entry has a `level` (`Info` when nothing was lost, `Warning` when something was), a `message`, the first `place` it happened, and a `count`: one entry per kind of problem, counted, not one per bar. `oxiguitar-cli info FILE` prints the log; the window doesn't show it yet.
 

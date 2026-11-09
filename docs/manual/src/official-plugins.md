@@ -31,11 +31,12 @@ One sends the sound to your speakers. OxiGuitar uses the one that fits your syst
 | **WAV** | File → Export WAV Audio…: the whole song or some bars as a WAV file ([Exporting audio](audio-export.md)) | `oxiguitar-wav` |
 | **NAM** | Amp models (Neural Amp Modeler captures) and cabinets for guitar and bass tracks ([Amp models](amp-models.md)). Needs the MIDI plugin, which makes the sound it shapes | `oxiguitar-nam` |
 | **Equalizer** | A three-band or ten-band equalizer on any track, with or without an amp model ([Playing a score](playback.md#each-tracks-sound)). Suggested by OxiGuitar's packages, as NAM is | `oxiguitar-eq` |
+| **MusicXML** | Opens and saves MusicXML (.musicxml, .xml) and compressed MusicXML (.mxl), the format MuseScore, Finale, Sibelius, Dorico and Guitar Pro exchange scores in. Guitars and basses open as tablature, with the file's own frets when it has a tablature staff and fingered by OxiGuitar when it has only notes; other parts open as notation, their tablature one click away in the Track tab. Needs OxiGuitar 0.18 or later | `oxiguitar-musicxml` |
 | **Better sounds** | Not a plugin but an installer: downloads the free recorded sound sets we recommend (clean, overdriven and distorted electric guitars, nylon and steel-string guitars, ukulele, bass, drums; about 1.2 GB), into your `soundfonts` folder (by hand, after you say yes) or for every user (the Linux packages do it as they install) ([Better sounds](better-sounds.md#the-sound-set-installer)). Suggested by the MIDI plugin's packages | `oxiguitar-bettersounds-soundfonts` |
 
 ## Planned
 
-Plugins for MusicXML, ABC and MuseScore files, and for TuxGuitar's format, are planned ([ROADMAP.md](https://github.com/mateusrdp/oxiguitar/blob/main/ROADMAP.md)). They will join this page when they exist.
+Plugins for MuseScore files, MIDI files and ABC, and for TuxGuitar's format, are planned ([ROADMAP.md](https://github.com/mateusrdp/oxiguitar/blob/main/ROADMAP.md)). They will join this page when they exist.
 
 ## Plugins from elsewhere
 
