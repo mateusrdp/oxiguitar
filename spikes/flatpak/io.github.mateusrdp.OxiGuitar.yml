@@ -50,8 +50,10 @@ modules:
       - install -Dm644 assets/linux/io.github.mateusrdp.OxiGuitar.desktop /app/share/applications/io.github.mateusrdp.OxiGuitar.desktop
       - install -Dm644 assets/linux/io.github.mateusrdp.OxiGuitar.xml /app/share/mime/packages/io.github.mateusrdp.OxiGuitar.xml
       - install -Dm644 assets/linux/io.github.mateusrdp.OxiGuitar.metainfo.xml /app/share/metainfo/io.github.mateusrdp.OxiGuitar.metainfo.xml
+      # The PNG icons only, which go up to 512 px: appstreamcli compose stopped
+      # the first spike run with a file-read-error, and AppStream 1.0 gives
+      # the scalable SVG "Unrecognized image file format" (not yet understood).
       - for s in 16 24 32 48 64 128 256 512; do install -Dm644 assets/icon/png/oxiguitar-$s.png /app/share/icons/hicolor/${s}x${s}/apps/io.github.mateusrdp.OxiGuitar.png; done
-      - install -Dm644 assets/icon/oxiguitar-placeholder.svg /app/share/icons/hicolor/scalable/apps/io.github.mateusrdp.OxiGuitar.svg
       - install -Dm644 LICENSE /app/share/licenses/io.github.mateusrdp.OxiGuitar/LICENSE
     sources:
       - type: dir
