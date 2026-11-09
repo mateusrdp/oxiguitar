@@ -127,7 +127,7 @@ fn finger_scope(score: &mut Score, c: Caret, selection: Option<Selection>, scope
 
 /// Gives a string and fret to every note that has only a pitch, on every
 /// staff with strings (not drums): a file read from a format without
-/// tablature (MusicXML, MIDI files, ABC) shows its tab at once. Notes that
+/// tablature (MusicXML, MIDI files) shows its tab at once. Notes that
 /// have a string keep it, and no text is written. Returns how many notes
 /// were placed.
 pub fn finger_pitched(score: &mut Score) -> usize {

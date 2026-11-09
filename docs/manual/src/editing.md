@@ -147,7 +147,7 @@ No part of the neck is preferred for its own sake: open strings and high frets a
 
 Where no hand can play a beat comfortably, the beat gets a text saying why: **Hard: stretch** (the notes spread wider than a hand reaches), **Hard: fingers** (more notes than fingers) or **Hard: shift** (a jump of seven frets or more in an eighth note or less). A text of your own is never replaced; the next Find Fingering takes its own texts away where the beat is no longer hard. Drum tracks are left as they are. A tie that continues nothing (some files have them, after a rest or on another string) becomes a plain note, as it can no longer be heard as a tie.
 
-Files from formats that hold no tablature (MusicXML and MIDI files, and ABC when its plugin comes) are fingered the same way as they open, so their tab shows at once; no text is written then.
+Files from formats that hold no tablature (MusicXML and MIDI files) are fingered the same way as they open, so their tab shows at once; no text is written then.
 
 ## Effects
 

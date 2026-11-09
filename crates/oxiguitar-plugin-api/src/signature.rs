@@ -19,8 +19,8 @@
 //! The last two (interface 1.7) recognise XML formats by their first
 //! element, wherever the file's declaration, comments and document type
 //! leave it: in the file itself, or in the root file of a ZIP container
-//! (the layout of compressed MusicXML, `.mxl`, and of MuseScore's `.mscz`:
-//! `META-INF/container.xml` names the root file).
+//! (the layout of compressed MusicXML, `.mxl`, and of other programs'
+//! files: `META-INF/container.xml` names the root file).
 //!
 //! File extensions are never used to recognise a file: they lie (four
 //! files in our test corpus named `.gp3` are Guitar Pro 5).
@@ -57,7 +57,7 @@ pub struct Signature {
     /// The file must be a ZIP container whose `META-INF/container.xml`
     /// names, as its first root file, a member whose first element has
     /// exactly this name, as for `xml_root` (interface 1.7). Compressed
-    /// MusicXML (`.mxl`) and MuseScore's `.mscz` are such containers.
+    /// MusicXML (`.mxl`) is such a container.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub container_root: Option<String>,
     /// Tests this version doesn't know.

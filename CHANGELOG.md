@@ -9,6 +9,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 - **The README's Status** says where OxiGuitar stands at v0.18.0 (it still described v0.13.0).
 - **The plugin template** (`docs/plugins/template`) builds against the v0.18.0 SDK (interface 1.7) instead of v0.11.0. Its manifest still asks for interface 1.1, as the guide explains.
 - **The Linux packages** (`.deb` and `.rpm`, and `debian/control`) suggest `oxiguitar-musicxml` and `oxiguitar-midi-file` as well as `oxiguitar-nam` and `oxiguitar-eq` (#223).
+- **The roadmap drops MuseScore and ABC files** (Mateus, 9 Nov 2026): the format plugins still to come are TuxGuitar's. The manual tells MuseScore and ABC users to export MusicXML.
 
 ## [0.18.0] - 2026-11-09
 
