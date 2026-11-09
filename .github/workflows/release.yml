@@ -144,7 +144,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
             dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends|Suggests):"
             dpkg -s oxiguitar | grep -E "^Recommends:.*oxiguitar-guitarpro.*oxiguitar-midi"
-            dpkg -s oxiguitar | grep -E "^Suggests:.*oxiguitar-nam.*oxiguitar-eq.*oxiguitar-musicxml.*oxiguitar-midi-file"
+            dpkg -s oxiguitar | grep -E "^Suggests:.*oxiguitar-nam.*oxiguitar-eq.*oxiguitar-musicxml.*oxiguitar-midi-file.*oxiguitar-tuxguitar"
             ! dpkg -s oxiguitar | grep -E "^Depends:.*oxiguitar-(plugins|guitarpro|midi)"
             test ! -e /usr/lib/oxiguitar/plugins
             oxiguitar-cli info "$0" > /dev/null
@@ -187,6 +187,7 @@ jobs:
             rpm -q --suggests oxiguitar | grep -q "^oxiguitar-eq"
             rpm -q --suggests oxiguitar | grep -q "^oxiguitar-musicxml"
             rpm -q --suggests oxiguitar | grep -q "^oxiguitar-midi-file"
+            rpm -q --suggests oxiguitar | grep -q "^oxiguitar-tuxguitar"
             test ! -e /usr/lib/oxiguitar/plugins
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2

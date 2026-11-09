@@ -16,7 +16,7 @@ sudo apt update
 sudo apt install oxiguitar
 ```
 
-`oxiguitar` recommends `oxiguitar-guitarpro`, `oxiguitar-midi` and the audio outputs `oxiguitar-alsa` and `oxiguitar-pipewire`, so apt installs them with it (leave out recommended packages and you get the program alone), and suggests `oxiguitar-nam` for amp models, `oxiguitar-eq` for an equalizer, and `oxiguitar-musicxml` and `oxiguitar-midi-file` to open and save MusicXML and MIDI files; add any plugin by name. `sudo apt upgrade` then keeps OxiGuitar and its plugins current. The repository's key is signed into the `.gpg` file; its fingerprint is on the [repository's page](https://github.com/mateusrdp/oxiguitar-packages). A downloaded `.deb` works too, but then you install the plugins' `.deb` files yourself.
+`oxiguitar` recommends `oxiguitar-guitarpro`, `oxiguitar-midi` and the audio outputs `oxiguitar-alsa` and `oxiguitar-pipewire`, so apt installs them with it (leave out recommended packages and you get the program alone), and suggests `oxiguitar-nam` for amp models, `oxiguitar-eq` for an equalizer, and `oxiguitar-musicxml`, `oxiguitar-midi-file` and `oxiguitar-tuxguitar` to open and save MusicXML, MIDI and TuxGuitar files; add any plugin by name. `sudo apt upgrade` then keeps OxiGuitar and its plugins current. The repository's key is signed into the `.gpg` file; its fingerprint is on the [repository's page](https://github.com/mateusrdp/oxiguitar-packages). A downloaded `.deb` works too, but then you install the plugins' `.deb` files yourself.
 
 ## Our dnf repository (Fedora and relatives)
 
