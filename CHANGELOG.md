@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-09
+
 ### Added
 
 - **Plugin interface 1.7**: format plugins can recognise XML files by their first element (`xml_root`), wherever the declaration, comments and document type leave it, and ZIP containers by their root file's first element (`container_root`), as compressed MusicXML (`.mxl`) and MuseScore's `.mscz` need (#223). The SDK crates are at 1.7.0.
