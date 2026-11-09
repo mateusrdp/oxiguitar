@@ -1,8 +1,6 @@
 # The Flatpak spike (#163, spikes/flatpak, docs/design/flatpak.md), on x86_64
-# and ARM64. It answers what the roadmap asks before anything is built:
+# and ARM64. It answers:
 #
-# - how big a mirror of the runtime would be, against GitHub Pages' 1 GB site
-#   limit (spikes/flatpak/runtime-size.sh, in the job summary);
 # - whether OxiGuitar builds in the Freedesktop SDK and runs in the sandbox;
 # - whether a plugin packaged as an extension of the app is found by the
 #   host with no change to the core (Flatpak's merge-dirs links it into
@@ -66,12 +64,6 @@ jobs:
           version="$(grep -E '^[0-9]+\.08$' <<<"$branches" | tail -1)"
           echo "Using $version"
           echo "version=$version" >>"$GITHUB_OUTPUT"
-
-      - name: Runtime mirror size
-        continue-on-error: true
-        run: |
-          spikes/flatpak/runtime-size.sh ${{ matrix.arch }} ${{ steps.runtime.outputs.version }} "$RUNNER_TEMP/sizes" \
-            | tee -a "$GITHUB_STEP_SUMMARY"
 
       - uses: dtolnay/rust-toolchain@master
         with:
