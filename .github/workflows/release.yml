@@ -128,8 +128,9 @@ jobs:
       - run: scripts/package/linux.sh all "$VERSION" wayland
       - run: scripts/package/linux.sh all "$VERSION" x11
       # The core installs without plugins (it recommends the Guitar Pro and
-      # MIDI ones, suggests NAM and the equalizer) and, given a released Guitar Pro plugin in
-      # an OxiGuitar home, opens the sample. Each build starts in its own
+      # MIDI ones, suggests NAM, the equalizer, MusicXML and MIDI files) and,
+      # given a released Guitar Pro plugin in an OxiGuitar home, opens the
+      # sample. Each build starts in its own
       # kind of session: the Wayland build in a headless Weston
       # (scripts/package/in-wayland.sh), the X11 build under Xvfb. Installing
       # oxiguitar-x11 replaces oxiguitar.
@@ -143,7 +144,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/oxiguitar_*.deb
             dpkg -s oxiguitar | grep -E "^(Version|Depends|Recommends|Suggests):"
             dpkg -s oxiguitar | grep -E "^Recommends:.*oxiguitar-guitarpro.*oxiguitar-midi"
-            dpkg -s oxiguitar | grep -E "^Suggests:.*oxiguitar-nam.*oxiguitar-eq"
+            dpkg -s oxiguitar | grep -E "^Suggests:.*oxiguitar-nam.*oxiguitar-eq.*oxiguitar-musicxml.*oxiguitar-midi-file"
             ! dpkg -s oxiguitar | grep -E "^Depends:.*oxiguitar-(plugins|guitarpro|midi)"
             test ! -e /usr/lib/oxiguitar/plugins
             oxiguitar-cli info "$0" > /dev/null
@@ -184,6 +185,8 @@ jobs:
             rpm -q --recommends oxiguitar | grep -q "^oxiguitar-midi"
             rpm -q --suggests oxiguitar | grep -q "^oxiguitar-nam"
             rpm -q --suggests oxiguitar | grep -q "^oxiguitar-eq"
+            rpm -q --suggests oxiguitar | grep -q "^oxiguitar-musicxml"
+            rpm -q --suggests oxiguitar | grep -q "^oxiguitar-midi-file"
             test ! -e /usr/lib/oxiguitar/plugins
             oxiguitar-cli info "$0" > /dev/null
             grep -q "application/x-gtp:\*\.gp$" /usr/share/mime/globs2
