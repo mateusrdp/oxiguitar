@@ -72,11 +72,28 @@ or opens the `.flatpakref`, which adds both our repository and the runtime mirro
 
 ## Measured
 
-Filled in from the spike's run (job summaries of `Flatpak (spike)`): the runtime branch, each runtime ref's size on Flathub and mirrored, and our own app and extension sizes, per architecture.
+The spike's run of 9 Nov 2026 (run 42587616431, both architectures green):
+
+- **The runtime is org.freedesktop.Platform 26.08** (Flathub also has 25.08).
+- **The app builds in the 26.08 SDK** with Rust 1.99 from rustup in about 7 minutes (x86_64; 5.5 on ARM64), and every library it needs is in the runtime. Its bundle is 13 MB (x86_64) and 11 MB (ARM64); the app and the test plugin's extension take 19 MB and 18 MB in an OSTree repository.
+- **Plugins as extensions work with no change to the core.** In the sandbox `/app/lib/oxiguitar/plugins/test.oxp` is Flatpak's link to `/app/lib/oxiguitar/test/plugins/test.oxp`, and `oxiguitar-cli detect` says "read by the Test plugin plugin".
+- **`host-os:ro` shows the host's `/usr/share/sounds` at `/run/host/usr/share/sounds`** (empty on a CI runner, which has no sound set).
+- **appstreamcli compose refused the scalable SVG icon** ("Unrecognized image file format", also with a one-rectangle SVG, so not our drawing); the Flatpak installs the PNG icons only (16 to 512 px) until that is understood.
+- **The runtime mirror**, as an archive repository holding the latest commit of each ref:
+
+| Ref (26.08) | x86_64 on Flathub (download) | x86_64 mirrored | ARM64 on Flathub | ARM64 mirrored |
+| --- | --- | --- | --- | --- |
+| `org.freedesktop.Platform` | 282.7 MB | 249.8 MiB | 270.5 MB | 237.0 MiB |
+| `org.freedesktop.Platform.GL.default` | 150.5 MB | 141.0 MiB | 139.1 MB | 129.4 MiB |
+| Platform and GL together | | **390.8 MiB** | | **366.3 MiB** |
+| `org.freedesktop.Platform.Locale` (only the languages Flatpak installed on the runner) | 385.4 MB | 206.8 MiB | 385.4 MB | 206.8 MiB |
+| All three | | 596.2 MiB | | 571.7 MiB |
+
+**Platform and GL for both architectures: 757 MiB, under Pages' 1 GB site limit** (about three quarters of it). With the translations, 1,168 MiB: over. Flathub's server refuses a plain `ostree pull` (HTTP 403), so the mirror is made through Flatpak (each ref installed alone, which checks Flathub's signature, then `ostree pull-local` into the archive repository), as `spikes/flatpak/runtime-size.sh` does.
 
 ## Open questions for Mateus
 
-1. **The runtime mirror against the 1 GB limit.** Platform and GL for x86_64 and ARM64 together, with each update kept only as its latest commit (see "Measured"). If it doesn't fit: a site per architecture (two runtime repositories), or leaving GL to the host (not possible: Flatpak apps can't use the host's Mesa), or the software renderer only (no GL extension; slower drawing). The Platform's translations (`.Locale`) are optional and need not be mirrored.
+1. **The runtime mirror against the 1 GB limit.** Measured above: Platform and GL for both architectures take 757 MiB, so one site holds them, without the translations (the Platform's `.Locale` is optional: without it the runtime libraries' own messages stay in English; OxiGuitar's own text and the file dialog, which is the desktop's portal, are unaffected). Proposed: one site, Platform and GL only. A new runtime branch (26.08 to 27.08) briefly needs both on the site while the app moves over, which doesn't fit: the mirror would switch branches in one go, together with an app release built on the new one. If that is too tight: a site per architecture (two runtime repositories, each about 380 MiB).
 2. **Sound sets.** With `host-os:ro` the sandbox sees the system's sound sets at `/run/host/usr/share/sounds/sf2` and so on; the MIDI plugin would look there too when it runs in a Flatpak (a small change in oxiguitar-midi, keeping "plays out of the box with the system's own sound set"). Without it, a Flatpak user hears nothing until they put a set in the `soundfonts` folder. And the sound-set installer writes to `~/.local/share/oxiguitar/soundfonts`, while the Flatpak's own folders are under `~/.var/app/io.github.mateusrdp.OxiGuitar/` (settings in `config/oxiguitar`, plugins and sets in `data/oxiguitar`). Proposed: the Flatpak keeps its own folders (the Flatpak way: no plugin built for the host mixed into the sandbox), and the installer gains a Flatpak target for that folder.
 3. **X11.** The Wayland build only (X11 desktops use the `.deb`, `.rpm` or AppImage), or both builds with `--socket=fallback-x11` and a launcher choosing, as the AppImage does.
 4. **Which plugins come with the app.** Flatpak has no "Recommends": an extension point either installs every extension the repository has (`no-autodownload: false`) or none. Proposed: none, and the install instructions and the `.flatpakref` page name the recommended ones (guitarpro, midi, pipewire; alsa too, though inside the sandbox it plays through the same sound server). The other way, every plugin installed with the app, costs the user about the size of all plugins together.
