@@ -117,15 +117,18 @@ jobs:
         run: |
           sudo apt-get install -y xvfb
           Xvfb :99 -screen 0 1280x800x24 &
+          xvfb=$!
           export DISPLAY=:99
           unset WAYLAND_DISPLAY
           sleep 2
           dbus-run-session -- flatpak run --command=sh "$APP" -c 'echo "DISPLAY=$DISPLAY WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"'
           set +e
           timeout 20 dbus-run-session -- flatpak run "$APP" >"$RUNNER_TEMP/x11.log" 2>&1 &
+          app=$!
           sleep 15
           ps -eo args | grep '[/]app/bin/oxiguitar' | tee "$RUNNER_TEMP/ps.txt"
-          wait
+          wait "$app"
+          kill "$xvfb"
           cat "$RUNNER_TEMP/x11.log"
           grep -q '/app/bin/oxiguitar-x11' "$RUNNER_TEMP/ps.txt" \
             || { echo "::error::the launcher didn't keep the X11 build running"; exit 1; }
