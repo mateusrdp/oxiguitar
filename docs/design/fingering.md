@@ -1,6 +1,6 @@
 # Automatic fingering (#157, v0.15)
 
-Picks a string and fret for each note of a passage so a human hand can play it, and plays it with as little effort as it can. The brief calls it tab derivation (TAB-3, TAB-4): the format readers that hold pitches without strings (MusicXML, MuseScore, MIDI files, ABC; #223) depend on it, and the editor offers it as a tool for tabs whose fingering is poor.
+Picks a string and fret for each note of a passage so a human hand can play it, and plays it with as little effort as it can. The brief calls it tab derivation (TAB-3, TAB-4): the format readers that hold pitches without strings (MusicXML, MIDI files; #223) depend on it, and the editor offers it as a tool for tabs whose fingering is poor.
 
 ## What exists
 
