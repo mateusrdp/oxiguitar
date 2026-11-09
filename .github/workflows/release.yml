@@ -1,7 +1,8 @@
 # Release packages: a portable .exe in a zip (Windows x86_64 and ARM64), a
 # .deb and an .rpm of each Linux build (Wayland: oxiguitar; X11, deprecated:
 # oxiguitar-x11), one AppImage holding both builds (x86_64 and ARM64 each),
-# and a universal .dmg (macOS), none of them code-signed. None carries a
+# a Flatpak bundle (x86_64 and ARM64 each; docs/design/flatpak.md) and a
+# universal .dmg (macOS), none of them code-signed. None carries a
 # plugin: the plugins have repositories and releases of their own (#165,
 # github.com/mateusrdp/oxiguitar-guitarpro and the others). The .deb and
 # .rpm recommend the Guitar Pro and MIDI plugins and suggest NAM, so the
@@ -366,6 +367,130 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  flatpak:
+    name: Flatpak (${{ matrix.arch }})
+    # The app as a Flatpak bundle (#163, docs/design/flatpak.md), built from
+    # source in the Freedesktop SDK (scripts/package/io.github.mateusrdp.OxiGuitar.yml)
+    # with the runtime from Flathub, then installed and run in its sandbox.
+    # oxiguitar-packages' Site workflow imports the bundles of published
+    # releases into our Flatpak repository; its plugins are extensions made
+    # by oxiguitar-packages' plugin-release.yml.
+    needs: meta
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: ubuntu-24.04 }
+          - { arch: aarch64, os: ubuntu-24.04-arm }
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      APP: io.github.mateusrdp.OxiGuitar
+    steps:
+      - uses: actions/checkout@v5
+      - name: Flatpak tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder ostree dbus xvfb xauth weston
+          # Ubuntu 24.04 keeps unprivileged user namespaces from bubblewrap,
+          # which Flatpak builds and runs in.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          flatpak --version
+          flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      - uses: actions/download-artifact@v8
+        with:
+          name: third-party-licenses
+          path: dist
+      - name: Build
+        run: |
+          flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean \
+            --state-dir="$RUNNER_TEMP/state" --repo="$RUNNER_TEMP/repo" \
+            "$RUNNER_TEMP/build" "scripts/package/$APP.yml"
+          bundle="dist/OxiGuitar-$VERSION-${{ matrix.arch }}.flatpak"
+          # The bundle names Flathub, where its runtime comes from.
+          flatpak build-bundle "$RUNNER_TEMP/repo" "$bundle" "$APP" stable \
+            --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          ls -l "$bundle"
+          echo "BUNDLE=$bundle" >> "$GITHUB_ENV"
+      # The latest release of the Guitar Pro plugins, copied into the
+      # Flatpak's own plugin folder as a user would copy a plugin file (our
+      # plugins' own Flatpak packages are tested in oxiguitar-packages).
+      - name: A released Guitar Pro plugin for the smoke tests
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/released-plugins.sh "$RUNNER_TEMP/released" guitarpro
+          plugins="$HOME/.var/app/$APP/data/oxiguitar/plugins"
+          mkdir -p "$plugins"
+          cp "$RUNNER_TEMP/released/files/"*.oxp "$plugins/"
+      - name: Test the bundle
+        run: |
+          # A runner has no desktop session: each run gets its own bus.
+          run() { dbus-run-session -- flatpak run "$@"; }
+          flatpak --user install -y --noninteractive "$BUNDLE"
+          flatpak --user info "$APP" | tee "$RUNNER_TEMP/info.txt"
+          grep -qE '^ *Branch: stable$' "$RUNNER_TEMP/info.txt"
+          grep -qE '^ *Runtime: org.freedesktop.Platform/${{ matrix.arch }}/26.08$' "$RUNNER_TEMP/info.txt"
+          # The default sandbox: nothing of the host's files.
+          flatpak --user info --show-permissions "$APP" | tee "$RUNNER_TEMP/permissions.txt"
+          ! grep -qE 'host|home' "$RUNNER_TEMP/permissions.txt"
+          grep -q 'merge-dirs=plugins' ~/.local/share/flatpak/app/$APP/current/active/metadata
+          # Every library both builds need is in the runtime.
+          run --command=sh "$APP" -c 'ldd /app/bin/oxiguitar /app/bin/oxiguitar-x11 /app/bin/oxiguitar-cli' > "$RUNNER_TEMP/ldd.txt"
+          if grep 'not found' "$RUNNER_TEMP/ldd.txt"; then
+            echo "::error::a library the app needs is missing from the runtime"
+            exit 1
+          fi
+          # No plugin of its own, PNG icons only, the launcher in the menu.
+          run --command=sh "$APP" -c 'test -d /app/lib/oxiguitar && ! ls /app/lib/oxiguitar/plugins/*.oxp 2> /dev/null'
+          run --command=sh "$APP" -c 'test -f /app/share/icons/hicolor/512x512/apps/'"$APP"'.png && ! find /app/share/icons -name "*.svg" | grep -q .'
+          grep '^Exec=' ~/.local/share/flatpak/exports/share/applications/$APP.desktop
+          grep -q '^Exec=.*--command=oxiguitar-start .*%f' ~/.local/share/flatpak/exports/share/applications/$APP.desktop
+          # The sample opens with the plugin in the Flatpak's own folder.
+          # (The sandbox sees only the folder it is given, so the path is whole.)
+          run --filesystem="$PWD/fixtures:ro" --command=oxiguitar-cli "$APP" info "$PWD/$SAMPLE" > /dev/null
+          out="$(run --filesystem="$PWD/fixtures:ro" --command=oxiguitar-cli "$APP" detect "$PWD/$SAMPLE")"
+          echo "$out"
+          grep -q 'Guitar Pro' <<< "$out"
+      - name: Both builds through the launcher
+        run: |
+          # In a Wayland session (a headless Weston) oxiguitar-start starts the
+          # Wayland build; with only an X server, the X11 build. Each opens
+          # the sample and quits after three seconds.
+          for display in wayland x11; do
+            log="$RUNNER_TEMP/$display.log"
+            cmd=(dbus-run-session -- flatpak run --filesystem="$PWD/fixtures:ro" --env=OXIGUITAR_EXIT_AFTER_MS=3000 "$APP" "$PWD/$SAMPLE")
+            if [[ "$display" == wayland ]]; then
+              scripts/package/in-wayland.sh "${cmd[@]}" > "$log" 2>&1 & app=$!
+            else
+              env -u WAYLAND_DISPLAY xvfb-run -a "${cmd[@]}" > "$log" 2>&1 & app=$!
+            fi
+            # Which build the launcher started, seen while it runs.
+            : > "$RUNNER_TEMP/$display-ps.txt"
+            for _ in $(seq 100); do
+              ps -eo args | grep '^[/]app/bin/oxiguitar' > "$RUNNER_TEMP/$display-ps.txt" && break
+              sleep 0.1
+            done
+            cat "$RUNNER_TEMP/$display-ps.txt"
+            status=0
+            wait "$app" || status=$?
+            cat "$log"
+            [[ $status -eq 0 ]] || { echo "::error::the $display build failed ($status)"; exit 1; }
+            if [[ "$display" == wayland ]]; then
+              grep -q '^/app/bin/oxiguitar ' "$RUNNER_TEMP/$display-ps.txt"
+            else
+              grep -q '^/app/bin/oxiguitar-x11 ' "$RUNNER_TEMP/$display-ps.txt"
+            fi
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/OxiGuitar-[0-9]*.flatpak
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
   windows:
     name: Windows (${{ matrix.arch }})
     needs: meta
@@ -516,7 +641,7 @@ jobs:
     # Collecting the packages and their checksums runs on every build, so a
     # build by hand tests it before a tag relies on it; only a v* tag goes on
     # to create the draft release.
-    needs: [meta, linux, appimage, windows, macos]
+    needs: [meta, linux, appimage, flatpak, windows, macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -532,7 +657,7 @@ jobs:
           # are: without it the action unpacks anything that is a zip, so
           # the Windows .zip packages arrived as folders (v0.1.0's first
           # tag build, 18 Oct 2026).
-          pattern: "*.{deb,rpm,AppImage,zip,dmg}"
+          pattern: "*.{deb,rpm,AppImage,flatpak,zip,dmg}"
           path: dist
           merge-multiple: true
           skip-decompress: true
@@ -540,7 +665,7 @@ jobs:
         run: |
           # Each kind of file, by name. For each Linux architecture: a .deb
           # and an .rpm of each build of the core (Wayland, X11) and one
-          # AppImage holding both builds. A zip for each Windows architecture
+          # AppImage holding both builds, and a Flatpak bundle. A zip for each Windows architecture
           # and the universal .dmg. No plugin anywhere: they have releases of
           # their own (#165).
           find dist -mindepth 1 -maxdepth 1 -printf '%y %s %f\n' | sort -k3
@@ -562,10 +687,11 @@ jobs:
           expect 2 'oxiguitar-x11-*.rpm' 'X11 core .rpm'
           expect 2 'OxiGuitar-[0-9]*.AppImage' 'AppImage'
           expect 0 'OxiGuitar-x11-*.AppImage' 'X11 AppImage (the AppImage holds both builds)'
+          expect 2 'OxiGuitar-[0-9]*.flatpak' 'Flatpak bundle'
           expect 2 'OxiGuitar-[0-9]*-windows-*.zip' 'Windows zip'
           expect 1 '*.dmg' '.dmg'
           expect 0 '*.oxp' 'plugin on its own'
-          expect 13 '*' 'files in all'
+          expect 15 '*' 'files in all'
           for f in dist/OxiGuitar-[0-9]*-windows-*.zip; do
             unzip -tq "$f" > /dev/null || { echo "::error::$f is not a valid zip" >&2; exit 1; }
             unzip -l "$f" | grep -q 'oxiguitar.exe' || { echo "::error::$f has no oxiguitar.exe" >&2; exit 1; }

@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# The Flatpak's entry point, as the AppImage's AppRun (scripts/package/AppRun):
+# The Flatpak's entry point (scripts/package/io.github.mateusrdp.OxiGuitar.yml),
+# as the AppImage's AppRun (scripts/package/AppRun):
 # the Flatpak holds both Linux builds, each with only its own display system's
 # code (ADR 0009). With `--socket=wayland` and `--socket=fallback-x11`, Flatpak
 # gives the sandbox Wayland in a Wayland session and X11 only where there is
