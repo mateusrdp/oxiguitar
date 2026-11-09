@@ -37,7 +37,7 @@ One sends the sound to your speakers. OxiGuitar uses the one that fits your syst
 
 ## Planned
 
-Plugins for MuseScore files and ABC, and for TuxGuitar's format, are planned ([ROADMAP.md](https://github.com/mateusrdp/oxiguitar/blob/main/ROADMAP.md)). They will join this page when they exist.
+Plugins for ABC and for TuxGuitar's format are planned ([ROADMAP.md](https://github.com/mateusrdp/oxiguitar/blob/main/ROADMAP.md)). They will join this page when they exist.
 
 ## Plugins from elsewhere
 

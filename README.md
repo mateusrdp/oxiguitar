@@ -6,7 +6,7 @@
 
 It is written entirely in Rust. Why Rust you'd ask? Because what do you get when you *Oxi*dise METAL \\m/? RUST! And because it’s very fast, of course. We don’t just *want* - we *need* great performance. First because we respect your hardware and your time (especially in this gawd damned economy), and second because we need a lot of grunt to give you a good experience with all the cool features we want in.
 
-It opens the industry’s usual files (Guitar Pro 3 to 8 today; MuseScore, MusicXML, ABC and MIDI files are planned), because no one wants to have to rewrite their entire tab collection they’ve been diligently maintaining since the 90’s just to be able to use Mat's fancy f\*cking app. It needs to be useful from the get-go. It shows them as standard notation and tablature and allows you to play, edit and save them. Every input/output format is a plugin, so you can write your own if we still don’t support what you need.
+It opens the industry’s usual files (Guitar Pro 3 to 8, MusicXML and MIDI files today; ABC and TuxGuitar are planned), because no one wants to have to rewrite their entire tab collection they’ve been diligently maintaining since the 90’s just to be able to use Mat's fancy f\*cking app. It needs to be useful from the get-go. It shows them as standard notation and tablature and allows you to play, edit and save them. Every input/output format is a plugin, so you can write your own if we still don’t support what you need.
 
 We support a wide variety of typesetting tools, and try to stay aligned with the music industry standard. Because what's the point of opening your fancy tabs and not being able to display all the work you put in it, right?
 

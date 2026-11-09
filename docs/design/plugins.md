@@ -15,7 +15,7 @@ This document is the design, accepted by Mateus on 18 Oct 2026 with his answers 
 
 | Core | Plugins |
 | --- | --- |
-| The score model, edit commands, undo and redo, selection | Every file format, reading and writing: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp); later MusicXML, ABC, MuseScore, MIDI files |
+| The score model, edit commands, undo and redo, selection | Every file format, reading and writing: Guitar Pro 3, 4, 5, 6 (.gpx), 7–8 (.gp); later MusicXML, ABC, MIDI files, TuxGuitar |
 | Engraving and the four layouts, drawn on screen (nobody can edit what they cannot see), and **PDF export** of what is shown, a feature of the viewer (Mateus, 18 Oct 2026) | Other exports: PNG, SVG, WAV |
 | The window shell: menus, toolbar, the four tabbed areas, the page, the footer; **Infer Key Signatures** in the Tools menu, a feature of the editor (Mateus, 18 Oct 2026) | Other tools for the Tools menu |
 | The player's transport: play, play selection, stop, pause, rewind, count-in, loop, metronome; the cursor; turning the score into timed events (repeats, jumps, tempo, effects) | Sound: the MIDI synthesiser, NAM guitar, RSE banks, realistic drums |
