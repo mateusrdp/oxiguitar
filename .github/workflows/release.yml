@@ -128,8 +128,9 @@ jobs:
       - run: scripts/package/linux.sh all "$VERSION" wayland
       - run: scripts/package/linux.sh all "$VERSION" x11
       # The core installs without plugins (it recommends the Guitar Pro and
-      # MIDI ones, suggests NAM, the equalizer, MusicXML and MIDI files) and, given a released Guitar Pro plugin in
-      # an OxiGuitar home, opens the sample. Each build starts in its own
+      # MIDI ones, suggests NAM, the equalizer, MusicXML and MIDI files) and,
+      # given a released Guitar Pro plugin in an OxiGuitar home, opens the
+      # sample. Each build starts in its own
       # kind of session: the Wayland build in a headless Weston
       # (scripts/package/in-wayland.sh), the X11 build under Xvfb. Installing
       # oxiguitar-x11 replaces oxiguitar.
