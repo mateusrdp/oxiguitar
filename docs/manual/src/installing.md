@@ -7,6 +7,7 @@ Download the one file for your system from the [releases page](https://github.co
 | Any Linux | `OxiGuitar-VERSION-x86_64.AppImage` or `-aarch64` | `chmod +x OxiGuitar-*.AppImage`, then run it |
 | Debian, Ubuntu | our apt repository ([Linux](install-linux.md)), or `oxiguitar_VERSION_amd64.deb` (or `_arm64`) | `sudo apt install oxiguitar`, or `sudo apt install ./oxiguitar_*.deb` |
 | Fedora | our dnf repository ([Linux](install-linux.md)), or `oxiguitar-VERSION-1.x86_64.rpm` (or `.aarch64`) | `sudo dnf install oxiguitar`, or `sudo dnf install ./oxiguitar-*.rpm` |
+| Any Linux, as a Flatpak | our Flatpak repository ([Linux](install-linux.md#flatpak-any-linux)), or `OxiGuitar-VERSION-x86_64.flatpak` (or `-aarch64`) | `flatpak install oxiguitar io.github.mateusrdp.OxiGuitar`, or `flatpak install ./OxiGuitar-*.flatpak` |
 | Windows 10 and 11 | `OxiGuitar-VERSION-windows-x86_64.zip` or `-arm64` | Unzip anywhere and run `oxiguitar.exe` |
 | macOS | `OxiGuitar-VERSION-macos-universal.dmg` | Open it and drag OxiGuitar to Applications |
 
@@ -17,6 +18,7 @@ The AppImage needs glibc 2.35 or newer (Debian 12 or later, Ubuntu 22.04 or late
 OxiGuitar comes in two Linux builds: the **Wayland build**, for today's desktops (GNOME, KDE Plasma and most others run Wayland), and the **X11 build**, for desktops that still run only an X server. Each carries only its own display system's code.
 
 - **The AppImage holds both** and starts the right one by itself: the Wayland build in a Wayland session, the X11 build otherwise. It plays through ALSA, which desktops with PipeWire pass on to PipeWire; the .deb and .rpm also have a PipeWire plugin, used first.
+- **The Flatpak holds both** too, and chooses the same way.
 - **The .deb and .rpm above are the Wayland build.** For an X11 desktop, install the X11 build's package instead: `oxiguitar-x11_VERSION_amd64.deb` (`sudo apt install oxiguitar-x11`) or `oxiguitar-x11-VERSION-1.x86_64.rpm`. Installing one build's package replaces the other's.
 
 If you start the wrong package's build, it says which one you need. **The X11 build is deprecated** and will be dropped once desktops have left X11.

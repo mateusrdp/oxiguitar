@@ -10,5 +10,6 @@ One download for your system. **None carries plugins**: the plugins that open Gu
 | Any Linux (x86_64; `aarch64` for ARM) | `OxiGuitar-@VERSION@-x86_64.AppImage`, for Wayland and X11 desktops alike |
 | Debian, Ubuntu (x86_64; `arm64` for ARM) | `oxiguitar_@VERSION@_amd64.deb`, or `apt install oxiguitar` from the apt repository |
 | Fedora (x86_64; `aarch64` for ARM) | `oxiguitar-@VERSION@-1.x86_64.rpm`, or `dnf install oxiguitar` from the dnf repository |
+| Any Linux, as a Flatpak (x86_64; `aarch64` for ARM) | `flatpak install oxiguitar io.github.mateusrdp.OxiGuitar` from our Flatpak repository; `OxiGuitar-@VERSION@-x86_64.flatpak` is the same app as one file |
 
 The .deb and .rpm above are the Wayland build; a Linux desktop without Wayland takes the files named `oxiguitar-x11` instead. SHA256SUMS holds every file's checksum.
