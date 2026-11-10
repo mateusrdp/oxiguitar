@@ -419,6 +419,7 @@ impl Painter<'_> {
 
     /// A tab number centred on (`cx`, `y`) with the string line knocked out
     /// behind it. `gap` is the distance between tab lines.
+    #[allow(dead_code)]
     pub(crate) fn tab_number(
         &self,
         list: &mut DisplayList,
@@ -426,6 +427,20 @@ impl Painter<'_> {
         y: f32,
         gap: f32,
         label: &str,
+    ) {
+        self.tab_number_with(list, cx, y, gap, label, Paint::Ink);
+    }
+
+    /// A tab number centred on (`cx`, `y`) with the string line knocked out
+    /// behind it, drawn with `paint`. `gap` is the distance between tab lines.
+    pub(crate) fn tab_number_with(
+        &self,
+        list: &mut DisplayList,
+        cx: f32,
+        y: f32,
+        gap: f32,
+        label: &str,
+        paint: Paint,
     ) {
         let size = tab_number_size(gap);
         let w = self.text_width(label, size);
@@ -441,7 +456,7 @@ impl Painter<'_> {
             size,
             cx - w / 2.0,
             y + 0.357 * size,
-            Paint::Ink,
+            paint,
         );
     }
 

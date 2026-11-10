@@ -485,9 +485,9 @@ pub(crate) fn system(
                     ctx.std_bar(&mut list, plan, grid, bx, top, vi, &mut ties, paint);
                 }
                 if let Some(top) = band.tab_top {
-                    ctx.tab_bar(&mut list, plan, grid, bx, top);
+                    ctx.tab_bar(&mut list, plan, grid, bx, top, paint);
                     if band.std_top.is_none() {
-                        ctx.tab_rhythm(&mut list, plan, grid, bx, top);
+                        ctx.tab_rhythm(&mut list, plan, grid, bx, top, paint);
                     }
                 }
             }
@@ -1617,6 +1617,7 @@ impl Ctx<'_> {
         grid: &BarGrid,
         bx: &BarX,
         top: f32,
+        paint: Paint,
     ) {
         for vi in shown_voices(plan) {
             let Some(beats) = plan.voices.get(vi) else {
@@ -1624,7 +1625,7 @@ impl Ctx<'_> {
             };
             let groups = plan.groups.get(vi).map_or(&[][..], Vec::as_slice);
             let start = list.len();
-            self.tab_voice(list, beats, groups, grid, bx, top, voice_stems_up(vi));
+            self.tab_voice(list, beats, groups, grid, bx, top, voice_stems_up(vi), paint);
             self.dim(list, vi, start);
         }
     }
@@ -1640,6 +1641,7 @@ impl Ctx<'_> {
         bx: &BarX,
         top: f32,
         up: bool,
+        _paint: Paint,
     ) {
         let p = self.p;
         let sp = self.sp();
@@ -1789,7 +1791,15 @@ impl Ctx<'_> {
     }
 
     /// Fret numbers on the tablature.
-    fn tab_bar(&self, list: &mut DisplayList, plan: &BarPlan, grid: &BarGrid, bx: &BarX, top: f32) {
+    fn tab_bar(
+        &self,
+        list: &mut DisplayList,
+        plan: &BarPlan,
+        grid: &BarGrid,
+        bx: &BarX,
+        top: f32,
+        paint: Paint,
+    ) {
         let step = grace_step(self.p, self.tg);
         let sp = self.sp();
         for (vi, beats) in plan.voices.iter().enumerate() {
@@ -1816,7 +1826,7 @@ impl Ctx<'_> {
                 for n in &b.notes {
                     if let Some((string, label)) = &n.tab {
                         let y = top + f32::from(string.saturating_sub(1)) * self.tg;
-                        self.p.tab_number(list, gx, y, self.tg * GRACE_SCALE, label);
+                        self.p.tab_number_with(list, gx, y, self.tg * GRACE_SCALE, label, paint);
                     }
                 }
             }
@@ -1829,7 +1839,7 @@ impl Ctx<'_> {
                 for n in &b.notes {
                     if let Some((string, label)) = &n.tab {
                         let y = top + f32::from(string.saturating_sub(1)) * self.tg;
-                        self.p.tab_number(list, cx, y, self.tg, label);
+                        self.p.tab_number_with(list, cx, y, self.tg, label, paint);
                     }
                 }
             }
