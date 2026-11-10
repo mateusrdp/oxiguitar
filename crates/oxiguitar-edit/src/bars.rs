@@ -184,6 +184,7 @@ fn master(
             let coloured_bars = bars.get(first..=last)?
                 .iter()
                 .map(|b| MasterBar {
+                    bar_color: None,
                     track_bar_color: *color,
                     ..b.clone()
                 })

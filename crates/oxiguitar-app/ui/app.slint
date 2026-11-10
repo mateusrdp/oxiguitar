@@ -1520,16 +1520,9 @@ export component AppWindow inherits Window {
     callback chord-changed(string, int, string);
     callback chord-dialog-done(bool);
     in property <bool> display-options-shown: false;
-    in-out property <int> display-options-colour-r: 128;
-    in-out property <int> display-options-colour-g: 128;
-    in-out property <int> display-options-colour-b: 128;
+    in-out property <int> display-options-selected: 0;
     in-out property <bool> display-options-global: true;
-    in-out property <string> display-options-hex: "808080";
-    in-out property <int> display-options-preview-r: 128;
-    in-out property <int> display-options-preview-g: 128;
-    in-out property <int> display-options-preview-b: 128;
-    callback display-options-hex-completed(string);
-    callback display-options-done(bool, int, int, int, bool);
+    callback display-options-done(int, bool);
     in property <bool> paste-dialog-shown: false;
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
@@ -2808,19 +2801,10 @@ export component AppWindow inherits Window {
     if root.display-options-shown : DisplayOptionsDialog {
         width: root.width;
         height: root.height;
-        colour-r <=> root.display-options-colour-r;
-        colour-g <=> root.display-options-colour-g;
-        colour-b <=> root.display-options-colour-b;
-        hex <=> root.display-options-hex;
+        selected <=> root.display-options-selected;
         global <=> root.display-options-global;
-        r-changed(v) => { root.display-options-preview-r = v; }
-        g-changed(v) => { root.display-options-preview-g = v; }
-        b-changed(v) => { root.display-options-preview-b = v; }
-        hex-completed(h) => {
-            root.display-options-hex-completed(h);
-        }
-        done(ok, r, g, b, gbl) => {
-            root.display-options-done(ok, r, g, b, gbl);
+        apply(idx, gbl) => {
+            root.display-options-done(idx, gbl);
         }
     }
 

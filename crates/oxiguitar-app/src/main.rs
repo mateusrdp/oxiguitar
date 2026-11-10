@@ -825,28 +825,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_chord_dialog_done(move |ok| chord_dialog_done(&a, ok));
     let a = app.clone();
-    ui.on_display_options_done(move |ok, r, g, b, gbl| {
-        display_options_done(&a, ok, r, g, b, gbl)
-    });
-    let a = app.clone();
-    ui.on_display_options_hex_completed(move |hex| {
-        let Some(ui) = a.borrow().ui.upgrade() else { return; };
-        // Strip leading '#'.
-        let hex = hex.strip_prefix('#').unwrap_or(&hex);
-        if hex.len() == 6 {
-            if let (Ok(r), Ok(g), Ok(b)) = (
-                u8::from_str_radix(&hex[0..2], 16),
-                u8::from_str_radix(&hex[2..4], 16),
-                u8::from_str_radix(&hex[4..6], 16),
-            ) {
-                ui.set_display_options_colour_r(i32::from(r));
-                ui.set_display_options_colour_g(i32::from(g));
-                ui.set_display_options_colour_b(i32::from(b));
-                ui.set_display_options_preview_r(i32::from(r));
-                ui.set_display_options_preview_g(i32::from(g));
-                ui.set_display_options_preview_b(i32::from(b));
-            }
-        }
+    ui.on_display_options_done(move |idx, gbl| {
+        display_options_done(&a, idx, gbl)
     });
     let a = app.clone();
     ui.on_text_dialog_done(move |ok| {
@@ -3325,20 +3305,19 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
             };
             // Prefer bar_color (global) when set; fall back to track_bar_color.
             let colour = bar_color.or(track_bar_color);
-            if let Some(c) = colour {
-                ui.set_display_options_colour_r(i32::from(c.r));
-                ui.set_display_options_colour_g(i32::from(c.g));
-                ui.set_display_options_colour_b(i32::from(c.b));
-            } else {
-                ui.set_display_options_colour_r(128);
-                ui.set_display_options_colour_g(128);
-                ui.set_display_options_colour_b(128);
-            }
-            ui.set_display_options_hex(format!("{:02X}{:02X}{:02X}", colour.map_or(128u8, |c| c.r), colour.map_or(128u8, |c| c.g), colour.map_or(128u8, |c| c.b)).into());
-            ui.set_display_options_preview_r(i32::from(colour.map_or(128u8, |c| c.r)));
-            ui.set_display_options_preview_g(i32::from(colour.map_or(128u8, |c| c.g)));
-            ui.set_display_options_preview_b(i32::from(colour.map_or(128u8, |c| c.b)));
+            // Map current colour to swatch index; 0 = automatic.
+            let selected = match colour {
+                Some(c) if c.r == 0xFF && c.g == 0x44 && c.b == 0x44 => 1,
+                Some(c) if c.r == 0xFF && c.g == 0x8C && c.b == 0x00 => 2,
+                Some(c) if c.r == 0xFF && c.g == 0xD7 && c.b == 0x00 => 3,
+                Some(c) if c.r == 0x44 && c.g == 0xCC && c.b == 0x44 => 4,
+                Some(c) if c.r == 0x44 && c.g == 0x88 && c.b == 0xFF => 5,
+                Some(c) if c.r == 0xAA && c.g == 0x44 && c.b == 0xFF => 6,
+                Some(c) if c.r == 0xFF && c.g == 0x44 && c.b == 0xAA => 7,
+                _ => 0,
+            };
             // Global is true when bar_color is set (not just track_bar_color).
+            ui.set_display_options_selected(i32::from(selected));
             ui.set_display_options_global(bar_color.is_some());
             ui.set_display_options_shown(true);
         }
@@ -3529,32 +3508,24 @@ fn chord_dialog_done(app: &Shared, ok: bool) {
     }
 }
 
-/// The Display Options dialog closed: on OK, apply bar colours.
-fn display_options_done(
-    app: &Shared,
-    ok: bool,
-    colour_r: i32,
-    colour_g: i32,
-    colour_b: i32,
-    global: bool,
-) {
+/// The Display Options dialog closed: on swatch click, apply bar colour.
+fn display_options_done(app: &Shared, selected: i32, global: bool) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
     ui.set_display_options_shown(false);
     ui.invoke_focus_page();
-    if !ok {
-        return;
-    }
-    // Default colour (128,128,128) means unset.
-    let colour = if colour_r == 128 && colour_g == 128 && colour_b == 128 {
-        None
-    } else {
-        Some(oxiguitar_model::Color {
-            r: colour_r as u8,
-            g: colour_g as u8,
-            b: colour_b as u8,
-        })
+    // Swatch 0 = automatic (no custom colour); 1-7 = swatch colours.
+    let colour = match selected {
+        0 => None,
+        1 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x44, b: 0x44 }),
+        2 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x8C, b: 0x00 }),
+        3 => Some(oxiguitar_model::Color { r: 0xFF, g: 0xD7, b: 0x00 }),
+        4 => Some(oxiguitar_model::Color { r: 0x44, g: 0xCC, b: 0x44 }),
+        5 => Some(oxiguitar_model::Color { r: 0x44, g: 0x88, b: 0xFF }),
+        6 => Some(oxiguitar_model::Color { r: 0xAA, g: 0x44, b: 0xFF }),
+        7 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x44, b: 0xAA }),
+        _ => None,
     };
     // Global: store in bar_color (all tracks); else in track_bar_colors (current track).
     if global {
