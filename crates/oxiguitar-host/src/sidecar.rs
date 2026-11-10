@@ -190,7 +190,7 @@ impl Sidecar {
                         k.clone(),
                         arr.iter()
                             .map(|item| {
-                                let item: &Value = *item;
+                                let item = *item;
                                 if item.is_null() {
                                     None
                                 } else {

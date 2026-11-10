@@ -377,8 +377,10 @@ mod tests {
 
     #[test]
     fn resolve_colour_returns_track_bar_when_set() {
-        let mut bar = MasterBar::default();
-        bar.track_bar_color = Some(Color { r: 255, g: 0, b: 0 });
+        let bar = MasterBar {
+            track_bar_color: Some(Color { r: 255, g: 0, b: 0 }),
+            ..Default::default()
+        };
         let system = Color {
             r: 128,
             g: 128,
@@ -392,8 +394,10 @@ mod tests {
 
     #[test]
     fn resolve_colour_falls_back_to_bar_colour() {
-        let mut bar = MasterBar::default();
-        bar.bar_color = Some(Color { r: 0, g: 255, b: 0 });
+        let bar = MasterBar {
+            bar_color: Some(Color { r: 0, g: 255, b: 0 }),
+            ..Default::default()
+        };
         let system = Color {
             r: 128,
             g: 128,
@@ -407,12 +411,14 @@ mod tests {
 
     #[test]
     fn resolve_colour_falls_back_to_section_colour() {
-        let mut bar = MasterBar::default();
-        bar.marker = Some(Marker {
-            letter: String::new(),
-            text: String::new(),
-            color: Color { r: 0, g: 0, b: 255 },
-        });
+        let bar = MasterBar {
+            marker: Some(Marker {
+                letter: String::new(),
+                text: String::new(),
+                color: Color { r: 0, g: 0, b: 255 },
+            }),
+            ..Default::default()
+        };
         let system = Color {
             r: 128,
             g: 128,
@@ -426,17 +432,15 @@ mod tests {
 
     #[test]
     fn resolve_colour_bar_overrides_section() {
-        let mut bar = MasterBar::default();
-        bar.marker = Some(Marker {
-            letter: String::new(),
-            text: String::new(),
-            color: Color { r: 0, g: 0, b: 255 },
-        });
-        bar.bar_color = Some(Color {
-            r: 255,
-            g: 255,
-            b: 0,
-        });
+        let bar = MasterBar {
+            marker: Some(Marker {
+                letter: String::new(),
+                text: String::new(),
+                color: Color { r: 0, g: 0, b: 255 },
+            }),
+            bar_color: Some(Color { r: 255, g: 255, b: 0 }),
+            ..Default::default()
+        };
         let system = Color {
             r: 128,
             g: 128,
@@ -454,8 +458,10 @@ mod tests {
 
     #[test]
     fn resolve_colour_track_overrides_bar() {
-        let mut bar = MasterBar::default();
-        bar.bar_color = Some(Color { r: 0, g: 255, b: 0 });
+        let bar = MasterBar {
+            bar_color: Some(Color { r: 0, g: 255, b: 0 }),
+            ..Default::default()
+        };
         let track = Color { r: 255, g: 0, b: 0 };
         let system = Color {
             r: 128,
@@ -470,18 +476,19 @@ mod tests {
 
     #[test]
     fn resolve_colour_skips_default_section_colour() {
-        let mut bar = MasterBar::default();
-        // Section with default (0,0,0) colour should be skipped
-        bar.marker = Some(Marker {
-            letter: String::new(),
-            text: String::new(),
-            color: Color::default(),
-        });
-        bar.bar_color = Some(Color {
-            r: 255,
-            g: 100,
-            b: 50,
-        });
+        let bar = MasterBar {
+            marker: Some(Marker {
+                letter: String::new(),
+                text: String::new(),
+                color: Color::default(),
+            }),
+            bar_color: Some(Color {
+                r: 255,
+                g: 100,
+                b: 50,
+            }),
+            ..Default::default()
+        };
         let system = Color {
             r: 128,
             g: 128,

@@ -1511,6 +1511,7 @@ impl Ctx<'_> {
     }
 
     /// Tuplet numbers (and brackets where no single beam shows the group).
+    #[allow(clippy::too_many_arguments)]
     fn tuplets(
         &self,
         list: &mut DisplayList,
