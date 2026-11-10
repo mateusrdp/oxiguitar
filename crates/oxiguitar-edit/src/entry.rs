@@ -166,6 +166,9 @@ pub enum Command {
     /// The selected bars, or the whole song, fitted to the time signature
     /// they have now, in every track (#222).
     FitBars(crate::Fit),
+    /// Chords found for the notes of the selected bars, or of the whole
+    /// song, and written on the caret's track (#235).
+    Harmonize(crate::Harmonize),
     /// An effect switched on or off at the caret, or on the selection
     /// (TAB-1).
     Effect(crate::Effect),
@@ -293,6 +296,7 @@ impl Command {
             Command::Transpose(_) => "Transpose",
             Command::Fingering(_) => "Find Fingering",
             Command::FitBars(_) => "Fit Bars",
+            Command::Harmonize(_) => "Harmonize",
             Command::Effect(e) => e.label(),
             Command::Dynamic(_) => "Dynamic",
             Command::Bend(_) => "Bend",
@@ -355,6 +359,9 @@ pub fn apply(
         return edited;
     }
     if let Some(edited) = crate::fingering::apply(score, history, caret, selection, &command) {
+        return edited;
+    }
+    if let Some(edited) = crate::harmonize::apply(score, history, caret, selection, &command) {
         return edited;
     }
     if let Some(edited) = crate::fit::apply(score, history, caret, selection, &command) {
@@ -822,6 +829,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Transpose(_)
         | Command::Fingering(_)
         | Command::FitBars(_)
+        | Command::Harmonize(_)
         | Command::Effect(_)
         | Command::Dynamic(_)
         | Command::Bend(_)

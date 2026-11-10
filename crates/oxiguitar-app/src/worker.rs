@@ -1137,6 +1137,60 @@ mod tests {
     }
 
     #[test]
+    fn harmonize_writes_chords_as_one_change() {
+        let (tx, rx) = channel();
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
+        worker.send(Request::New);
+        let score = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        let top = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        // A C on the fifth string.
+        worker.send(Request::Edit {
+            command: Command::Fret {
+                fret: 3,
+                again: false,
+            },
+            caret: oxiguitar_edit::Caret { string: 5, ..top },
+            selection: None,
+        });
+        loop {
+            if let Event::Changed { caret: Some(_), .. } = next(&rx) {
+                break;
+            }
+        }
+        worker.send(Request::Edit {
+            command: Command::Harmonize(oxiguitar_edit::Harmonize {
+                sevenths: false,
+                inside_bars: false,
+                keep: false,
+                whole_track: true,
+            }),
+            caret: top,
+            selection: None,
+        });
+        loop {
+            if let Event::Changed { score, edit, .. } = next(&rx) {
+                assert_eq!(edit.undo.as_deref(), Some("Harmonize"));
+                let track = &score.tracks[0];
+                let chord = track.staves[0].bars[0].voices[0].beats[0].chord;
+                let diagram = &track.chords[chord.expect("a chord on the first beat")];
+                assert!(!diagram.name.is_empty());
+                assert_eq!(diagram.frets.len(), 6);
+                break;
+            }
+        }
+    }
+
+    #[test]
     fn fit_bars_rebars_every_track_as_one_change() {
         let (tx, rx) = channel();
         let worker = Worker::start(
