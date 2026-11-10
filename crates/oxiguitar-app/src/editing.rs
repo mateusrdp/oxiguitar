@@ -735,30 +735,6 @@ impl Editing {
         self.bar_colour_global = global;
     }
 
-    /// The currently selected bar colour swatch index (0 = Auto).
-    pub(crate) fn bar_colour_index(&self) -> i32 {
-        // Read from the caret's bar.
-        let Some(c) = self.caret else {
-            return 0;
-        };
-        let Some(score) = self.score.as_ref() else {
-            return 0;
-        };
-        let Some(master_bar) = score.master_bars.get(c.bar) else {
-            return 0;
-        };
-        let colour = master_bar.bar_color.or(master_bar.track_bar_color);
-        match colour {
-            Some(c) if c.r == 0xFF && c.g == 0x44 && c.b == 0x44 => 1,
-            Some(c) if c.r == 0xFF && c.g == 0x8C && c.b == 0x00 => 2,
-            Some(c) if c.r == 0xFF && c.g == 0xD7 && c.b == 0x00 => 3,
-            Some(c) if c.r == 0x44 && c.g == 0xCC && c.b == 0x44 => 4,
-            Some(c) if c.r == 0x44 && c.g == 0x88 && c.b == 0xFF => 5,
-            Some(c) if c.r == 0xAA && c.g == 0x44 && c.b == 0xFF => 6,
-            Some(c) if c.r == 0xFF && c.g == 0x44 && c.b == 0xAA => 7,
-            _ => 0,
-        }
-    }
 
     /// The score the caret is in.
     pub(crate) fn score(&self) -> Option<Arc<Score>> {

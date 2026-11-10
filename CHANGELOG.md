@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Fixed
+
+- **Bar colour picker now works on all bars** (#272): the colour swatches in the Bar tab sidebar apply to every bar, and muting still greys out voices correctly — `mute_from` now converts both `Paint::Ink` and `Paint::Custom` to `Paint::Muted`.
+
 ### Added
 
 - **A Flatpak** (#163): each release carries `OxiGuitar-VERSION-x86_64.flatpak` and `-aarch64`, the app built in the Freedesktop SDK on the org.freedesktop.Platform 26.08 runtime, with both builds and the `oxiguitar-start` launcher choosing between them as the AppImage does, in Flatpak's default sandbox. It holds no plugin: each plugin is a Flatpak extension of its own, and oxiguitar-packages serves the app and the plugins from a Flatpak repository. The manual's Linux page says how to add it, and where the Flatpak's own plugin, sound set and amp model folders are.

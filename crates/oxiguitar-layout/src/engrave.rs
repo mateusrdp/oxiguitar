@@ -454,6 +454,9 @@ pub(crate) fn system(
                 paint,
             );
         }
+        // Draw staff lines once at system level (before bar loop) so they
+        // span the full system width. Bar colour is applied to bars below.
+        ctx.staff_lines(&mut list, spec.indent, right, Paint::Ink);
         for (k, bx) in bars.iter().enumerate() {
             let Some(plan) = plan_of(bx.index) else {
                 continue;
@@ -461,7 +464,12 @@ pub(crate) fn system(
             let Some(grid) = plans.grids.get(bx.index) else {
                 continue;
             };
-            // Resolve this bar's colour and draw staff-line segments.
+            // Resolve this bar's colour and draw bar elements.
+            // mute_from converts both Ink and Custom→Muted, so custom
+            // colours can be muted. Only use Paint::Custom when the user
+            // explicitly selected a swatch (track_bar_color.is_some());
+            // otherwise keep Paint::Ink so the default bar colour doesn't
+            // change and golden images stay aligned with the theme.
             let master_bar = score.master_bars.get(bx.index);
             let track_bar_color = score
                 .track_bar_colors
@@ -473,12 +481,13 @@ pub(crate) fn system(
             let resolved = master_bar
                 .map(|mb| mb.resolve_colour(track_bar_color, system_colour))
                 .unwrap_or(system_colour);
-            let paint = Paint::Custom(oxiguitar_display::Rgba::rgb(
-                resolved.r, resolved.g, resolved.b,
-            ));
-            // SPIKE: use spec.indent for the first bar so staff lines connect to the clef.
-            let left = if k == 0 { spec.indent } else { bx.start };
-            ctx.staff_lines(&mut list, left, bx.end, paint);
+            let paint = if track_bar_color.is_some() {
+                Paint::Custom(oxiguitar_display::Rgba::rgb(
+                    resolved.r, resolved.g, resolved.b,
+                ))
+            } else {
+                Paint::Ink
+            };
             if let Some(range) = ctx.bar_start(&mut list, bx, k == 0, plan.clef, paint) {
                 times.insert(bx.index, range);
             }

@@ -3563,17 +3563,8 @@ fn bar_global_changed(app: &Shared, id: &str, global: bool) {
     if id != "bar-colour" {
         return;
     }
-    // Store the global setting and re-apply the current swatch.
+    // Store the global setting only; swatch clicks use it next time.
     app.borrow_mut().editing.set_bar_colour_global(global);
-    let value = app.borrow().editing.bar_colour_index();
-    let command = app.borrow().editing.bar_changed(id, value, "");
-    let Some(command) = command else {
-        return;
-    };
-    let typed = app.borrow_mut().editing.tool(command);
-    if let Some(t) = typed {
-        send_typed(app, t);
-    }
 }
 
 /// Shows the right area's tab `id` ("bar", "note"), expanding the area and
