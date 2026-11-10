@@ -29,7 +29,7 @@
 //! a fret, a rest or a tie adds a beat as long as the beat before it.
 
 use oxiguitar_model::{
-    Bar, Beat, BeatKind, BeatTechnique, Clef, Direction, Duration, Dynamic, KeySignature, Marker,
+    Bar, Beat, BeatKind, BeatTechnique, Clef, Color, Direction, Duration, Dynamic, KeySignature, Marker,
     Note, NotePlace, NoteValue, Pitch, Score, Staff, TimeSignature, TripletFeel, Tuplet, Voice,
 };
 
@@ -234,6 +234,10 @@ pub enum Command {
         /// A hyphen follows.
         hyphen: bool,
     },
+    /// This colour for the caret's bar (global: all tracks); `None` for none.
+    SetBarColor(Option<Color>),
+    /// This colour for the caret's bar on the selected track only; `None` for none.
+    SetTrackBarColor(Option<Color>),
 }
 
 impl Command {
@@ -312,6 +316,8 @@ impl Command {
             Command::NextFinger { right: true } => "Right-Hand Fingering",
             Command::NestedTuplet(_) => "Nested Tuplet",
             Command::SystemLayout { .. } => "Bars per System",
+            Command::SetBarColor(_) => "Bar Colour",
+            Command::SetTrackBarColor(_) => "Track Bar Colour",
         }
     }
 }
@@ -1006,6 +1012,8 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             beat.notes.sort_by_key(|n| n.string());
             one(bar, Caret { string: to, ..c })
         }
+        // Not a note-entry command.
+        Command::SetBarColor(_) | Command::SetTrackBarColor(_) => None,
     }
 }
 

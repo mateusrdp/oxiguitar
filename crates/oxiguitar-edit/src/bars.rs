@@ -14,7 +14,7 @@
 //! undoing one costs those bars, not the score.
 
 use oxiguitar_model::{
-    Bar, Clef, Direction, KeySignature, Marker, MasterBar, Ratio, Score, TempoChange,
+    Bar, Clef, Color, Direction, KeySignature, Marker, MasterBar, Ratio, Score, TempoChange,
     TimeSignature, TripletFeel, Voice,
 };
 
@@ -140,6 +140,26 @@ fn master(
         }
         Command::KeySignature(ks) => until_changed(bars, first, |b| &mut b.key_signature, *ks),
         Command::TripletFeel(feel) => until_changed(bars, first, |b| &mut b.triplet_feel, *feel),
+        Command::SetBarColor(color) => Some((
+            first,
+            bars.get(first..=last)?
+                .iter()
+                .map(|b| MasterBar {
+                    bar_color: *color,
+                    ..b.clone()
+                })
+                .collect(),
+        )),
+        Command::SetTrackBarColor(color) => Some((
+            first,
+            bars.get(first..=last)?
+                .iter()
+                .map(|b| MasterBar {
+                    track_bar_color: *color,
+                    ..b.clone()
+                })
+                .collect(),
+        )),
         _ => None,
     }
 }
@@ -789,5 +809,86 @@ mod tests {
         );
         while h.undo(&mut s).is_some() {}
         assert_eq!(s, score(4));
+    }
+
+    #[test]
+    fn set_bar_colour_changes_the_bar() {
+        let mut s = score(3);
+        let mut h = History::new();
+        let colour = Color {
+            r: 255,
+            g: 128,
+            b: 0,
+        };
+        let e = do_it(
+            &mut s,
+            &mut h,
+            at(1),
+            None,
+            Command::SetBarColor(Some(colour)),
+        )
+        .unwrap();
+        assert_eq!(s.master_bars[1].bar_color, Some(colour));
+        assert_eq!(h.undo_label(), Some("Bar Colour"));
+        assert!(!e.touched.bars.is_empty());
+        // Clearing it.
+        do_it(
+            &mut s,
+            &mut h,
+            at(1),
+            None,
+            Command::SetBarColor(None),
+        )
+        .unwrap();
+        assert_eq!(s.master_bars[1].bar_color, None);
+        h.undo(&mut s);
+        assert_eq!(s.master_bars[1].bar_color, Some(colour));
+    }
+
+    #[test]
+    fn set_track_bar_colour_changes_the_bar() {
+        let mut s = score(3);
+        let mut h = History::new();
+        let colour = Color {
+            r: 0,
+            g: 255,
+            b: 128,
+        };
+        let e = do_it(
+            &mut s,
+            &mut h,
+            at(2),
+            None,
+            Command::SetTrackBarColor(Some(colour)),
+        )
+        .unwrap();
+        assert_eq!(s.master_bars[2].track_bar_color, Some(colour));
+        assert_eq!(h.undo_label(), Some("Track Bar Colour"));
+        assert!(!e.touched.bars.is_empty());
+    }
+
+    #[test]
+    fn colour_commands_on_selection_affect_all_selected_bars() {
+        let mut s = score(5);
+        let mut h = History::new();
+        let colour = Color {
+            r: 100,
+            g: 100,
+            b: 200,
+        };
+        let sel = Selection::between(at(1), at(3));
+        do_it(
+            &mut s,
+            &mut h,
+            at(1),
+            Some(sel),
+            Command::SetBarColor(Some(colour)),
+        )
+        .unwrap();
+        assert_eq!(s.master_bars[1].bar_color, Some(colour));
+        assert_eq!(s.master_bars[2].bar_color, Some(colour));
+        assert_eq!(s.master_bars[3].bar_color, Some(colour));
+        assert_eq!(s.master_bars[0].bar_color, None);
+        assert_eq!(s.master_bars[4].bar_color, None);
     }
 }

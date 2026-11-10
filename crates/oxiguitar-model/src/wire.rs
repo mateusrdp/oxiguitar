@@ -496,6 +496,9 @@ fn master_bar_to(b: &MasterBar) -> w::MasterBar {
         // Not in version 1: extensions of version 2 (to_wire2).
         free_time: _,
         fermatas: _,
+        // Not yet in the wire format.
+        bar_color: _,
+        track_bar_color: _,
     } = b;
     w::MasterBar {
         time_signature: w::TimeSignature {
@@ -611,6 +614,8 @@ fn master_bar_from(b: w::MasterBar) -> Result<MasterBar, String> {
         // Version 2's extensions (from_wire2).
         free_time: false,
         fermatas: Vec::new(),
+        bar_color: None,
+        track_bar_color: None,
     })
 }
 
