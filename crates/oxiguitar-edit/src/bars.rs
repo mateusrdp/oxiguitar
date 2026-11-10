@@ -13,12 +13,23 @@
 //! Changes to what every track shares are recorded as master bars, so
 //! undoing one costs those bars, not the score.
 
+use std::collections::BTreeMap;
+
 use oxiguitar_model::{
     Bar, Clef, Direction, KeySignature, Marker, MasterBar, Ratio, Score, TempoChange,
     TimeSignature, TripletFeel, Voice,
 };
 
 use crate::{Caret, Command, Edited, History, Region, Selection};
+
+/// What [`master`] returns: the range of modified master bars, and an
+/// optional per-track colour map for `SetTrackBarColor`.
+struct MasterResult {
+    from: usize,
+    bars: Vec<MasterBar>,
+    /// Track index → one entry per bar: `None` for no custom colour.
+    track_colours: Option<BTreeMap<usize, Vec<Option<oxiguitar_model::Color>>>>,
+}
 
 /// Runs a bar command; `None` for a command that isn't one, or that
 /// changes nothing.
@@ -42,7 +53,8 @@ pub(crate) fn apply(
         Command::Tempo(bpm) => tempo(score, history, c, first, *bpm, label),
         Command::Bar(to) => properties(score, history, c, selection, to, label),
         _ => {
-            let (from, bars) = master(score, first, last, command)?;
+            let track_id = c.track;
+            let MasterResult { from, bars, track_colours } = master(score, first, last, command, track_id)?;
             if score.master_bars.get(from..from + bars.len())? == bars.as_slice() {
                 return Some(None);
             }
@@ -50,6 +62,12 @@ pub(crate) fn apply(
             let touched = history.record(score, label, vec![Region::MasterBars(from..end)], |s| {
                 if let Some(dst) = s.master_bars.get_mut(from..end) {
                     dst.clone_from_slice(&bars);
+                }
+                // Apply per-track colour map (SetTrackBarColor).
+                if let Some(ref tc) = track_colours {
+                    for (ti, colour_vec) in tc {
+                        s.track_bar_colors.entry(*ti).or_default().clone_from(colour_vec);
+                    }
                 }
             });
             Some(Edited { touched, caret: c })
@@ -65,12 +83,17 @@ fn master(
     first: usize,
     last: usize,
     command: &Command,
-) -> Option<(usize, Vec<MasterBar>)> {
+    track_id: usize,
+) -> Option<MasterResult> {
     let bars = &score.master_bars;
     let one = |at: usize, f: &dyn Fn(&mut MasterBar)| {
         let mut b = bars.get(at)?.clone();
         f(&mut b);
-        Some((at, vec![b]))
+        Some(MasterResult {
+            from: at,
+            bars: vec![b],
+            track_colours: None,
+        })
     };
     match command {
         Command::RepeatStart => {
@@ -92,28 +115,30 @@ fn master(
             let on = !bars.get(last)?.double_bar;
             one(last, &|b| b.double_bar = on)
         }
-        Command::AlternateEndings(endings) => Some((
-            first,
-            bars.get(first..=last)?
+        Command::AlternateEndings(endings) => Some(MasterResult {
+            from: first,
+            bars: bars.get(first..=last)?
                 .iter()
                 .map(|b| MasterBar {
                     alternate_endings: *endings,
                     ..b.clone()
                 })
                 .collect(),
-        )),
+            track_colours: None,
+        }),
         Command::FreeTime => {
             let on = !bars.get(first)?.free_time;
-            Some((
-                first,
-                bars.get(first..=last)?
+            Some(MasterResult {
+                from: first,
+                bars: bars.get(first..=last)?
                     .iter()
                     .map(|b| MasterBar {
                         free_time: on,
                         ..b.clone()
                     })
                     .collect(),
-            ))
+                track_colours: None,
+            })
         }
         Command::Direction(d) => {
             let has = bars.get(first)?.directions.contains(d);
@@ -132,34 +157,50 @@ fn master(
             one(first, &|b| b.marker.clone_from(&marker))
         }
         Command::TimeSignature(ts) => {
-            let (from, mut out) = until_changed(bars, first, |b| &mut b.time_signature, *ts)?;
+            let MasterResult { from, bars: mut out, .. } = until_changed(bars, first, |b| &mut b.time_signature, *ts)?;
             for (b, old) in out.iter_mut().zip(bars.get(from..)?) {
                 rescale_tempo(b, old.time_signature);
             }
-            Some((from, out))
+            Some(MasterResult {
+                from,
+                bars: out,
+                track_colours: None,
+            })
         }
         Command::KeySignature(ks) => until_changed(bars, first, |b| &mut b.key_signature, *ks),
         Command::TripletFeel(feel) => until_changed(bars, first, |b| &mut b.triplet_feel, *feel),
-        Command::SetBarColor(color) => Some((
-            first,
-            bars.get(first..=last)?
+        Command::SetBarColor(color) => Some(MasterResult {
+            from: first,
+            bars: bars.get(first..=last)?
                 .iter()
                 .map(|b| MasterBar {
                     bar_color: *color,
                     ..b.clone()
                 })
                 .collect(),
-        )),
-        Command::SetTrackBarColor(color) => Some((
-            first,
-            bars.get(first..=last)?
+            track_colours: None,
+        }),
+        Command::SetTrackBarColor(color) => {
+            let coloured_bars = bars.get(first..=last)?
                 .iter()
                 .map(|b| MasterBar {
                     track_bar_color: *color,
                     ..b.clone()
                 })
-                .collect(),
-        )),
+                .collect();
+            // Build per-track colour Vec: None for bars outside the range,
+            // Some(color) for bars first..=last.
+            let total = bars.len();
+            let mut colour_vec = vec![None; total];
+            colour_vec[first..=last].fill(*color);
+            let mut track_colours = BTreeMap::new();
+            track_colours.insert(track_id, colour_vec);
+            Some(MasterResult {
+                from: first,
+                bars: coloured_bars,
+                track_colours: Some(track_colours),
+            })
+        },
         _ => None,
     }
 }
@@ -193,7 +234,7 @@ fn until_changed<T: Copy + PartialEq>(
     first: usize,
     field: impl Fn(&mut MasterBar) -> &mut T,
     value: T,
-) -> Option<(usize, Vec<MasterBar>)> {
+) -> Option<MasterResult> {
     let mut start = bars.get(first)?.clone();
     let old = *field(&mut start);
     let mut out = Vec::new();
@@ -205,7 +246,11 @@ fn until_changed<T: Copy + PartialEq>(
         *field(&mut b) = value;
         out.push(b);
     }
-    Some((first, out))
+    Some(MasterResult {
+        from: first,
+        bars: out,
+        track_colours: None,
+    })
 }
 
 /// A bar before bar `at`, in its time, key and feel; in every staff an

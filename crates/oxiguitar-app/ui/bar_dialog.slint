@@ -717,17 +717,34 @@ export component ExportProgress inherits Rectangle {
     }
 }
 
-// Display Options… (bar colours): pick a bar colour or track bar colour.
+// Display Options… (bar colours): one colour picker, a "Default" button,
+// and a "Global" checkbox. If the colour is the default (128,128,128) the
+// bar is unset; anything else is treated as enabled.
 export component DisplayOptionsDialog inherits Rectangle {
-    in-out property <bool> bar-colour-set: false;
-    in-out property <int> bar-colour-r: 128;
-    in-out property <int> bar-colour-g: 128;
-    in-out property <int> bar-colour-b: 128;
-    in-out property <bool> track-bar-colour-set: false;
-    in-out property <int> track-bar-colour-r: 128;
-    in-out property <int> track-bar-colour-g: 128;
-    in-out property <int> track-bar-colour-b: 128;
-    callback done(bool, bool, int, int, int, bool, int, int, int);
+    in-out property <int> colour_r: 128;
+    in-out property <int> colour_g: 128;
+    in-out property <int> colour_b: 128;
+    in-out property <bool> global: true;
+    in-out property <string> hex: "808080";
+    callback done(bool, int, int, int, bool);
+    // Called when the HEX textbox is finished editing; Rust parses it.
+    callback hex-completed(string);
+
+    // Preview swatch colour.
+    property <int> preview-r: 128;
+    property <int> preview-g: 128;
+    property <int> preview-b: 128;
+
+    // Sync preview whenever any RGB value changes.
+    callback r-changed(int);
+    callback g-changed(int);
+    callback b-changed(int);
+    init => {
+        root.r-changed(root.colour_r);
+        root.g-changed(root.colour_g);
+        root.b-changed(root.colour_b);
+    }
+
     Card {
         width: root.width;
         height: root.height;
@@ -735,61 +752,60 @@ export component DisplayOptionsDialog inherits Rectangle {
         card-width: 420px;
         done(ok) => {
             root.done(ok,
-                root.bar-colour-set, root.bar-colour-r, root.bar-colour-g, root.bar-colour-b,
-                root.track-bar-colour-set, root.track-bar-colour-r, root.track-bar-colour-g, root.track-bar-colour-b);
+                root.colour_r, root.colour_g, root.colour_b,
+                root.global);
         }
         VerticalLayout {
             spacing: 8px;
-            // Bar Colour (global)
-            Label { text: "Bar Colour"; }
+            // Colour picker row: swatch + RGB spinboxes + HEX textbox + Default button
             HorizontalLayout {
                 spacing: 8px;
-                CheckBox {
-                    text: "Enable";
-                    checked: root.bar-colour-set;
-                    toggled => { root.bar-colour-set = self.checked; }
-                }
+                // Colour preview swatch.
                 Rectangle {
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 3px;
-                    background: rgb(root.bar-colour-set ? root.bar-colour-r : 128,
-                                    root.bar-colour-set ? root.bar-colour-g : 128,
-                                    root.bar-colour-set ? root.bar-colour-b : 128);
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 4px;
+                    border-color: Palette.border;
+                    border-width: 1px;
+                    background: rgb(root.preview-r, root.preview-g, root.preview-b);
                 }
+                // RGB spinboxes.
                 Text { text: "R"; font-size: 11px; vertical-alignment: center; }
-                SpinBox { minimum: 0; maximum: 255; value: root.bar-colour-set ? root.bar-colour-r : 128; enabled: root.bar-colour-set; edited(v) => { root.bar-colour-r = v; } }
+                SpinBox { minimum: 0; maximum: 255; value: root.colour_r; edited(v) => { root.colour_r = v; root.r-changed(v); } }
                 Text { text: "G"; font-size: 11px; vertical-alignment: center; }
-                SpinBox { minimum: 0; maximum: 255; value: root.bar-colour-set ? root.bar-colour-g : 128; enabled: root.bar-colour-set; edited(v) => { root.bar-colour-g = v; } }
+                SpinBox { minimum: 0; maximum: 255; value: root.colour_g; edited(v) => { root.colour_g = v; root.g-changed(v); } }
                 Text { text: "B"; font-size: 11px; vertical-alignment: center; }
-                SpinBox { minimum: 0; maximum: 255; value: root.bar-colour-set ? root.bar-colour-b : 128; enabled: root.bar-colour-set; edited(v) => { root.bar-colour-b = v; } }
+                SpinBox { minimum: 0; maximum: 255; value: root.colour_b; edited(v) => { root.colour_b = v; root.b-changed(v); } }
+                // HEX textbox.
+                LineEdit {
+                    width: 80px;
+                    text: root.hex;
+                    placeholder-text: "#808080";
+                    accepted => {
+                        root.hex-completed(root.hex);
+                    }
+                }
+                // Default button.
+                Button {
+                    text: "Default";
+                    clicked => {
+                        root.colour_r = 128;
+                        root.colour_g = 128;
+                        root.colour_b = 128;
+                        root.hex = "808080";
+                        root.preview-r = 128;
+                        root.preview-g = 128;
+                        root.preview-b = 128;
+                    }
+                }
             }
-            // Track Bar Colour (per-track)
-            Label { text: "Track Bar Colour"; }
-            HorizontalLayout {
-                spacing: 8px;
-                CheckBox {
-                    text: "Enable";
-                    checked: root.track-bar-colour-set;
-                    toggled => { root.track-bar-colour-set = self.checked; }
-                }
-                Rectangle {
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 3px;
-                    background: rgb(root.track-bar-colour-set ? root.track-bar-colour-r : 128,
-                                    root.track-bar-colour-set ? root.track-bar-colour-g : 128,
-                                    root.track-bar-colour-set ? root.track-bar-colour-b : 128);
-                }
-                Text { text: "R"; font-size: 11px; vertical-alignment: center; }
-                SpinBox { minimum: 0; maximum: 255; value: root.track-bar-colour-set ? root.track-bar-colour-r : 128; enabled: root.track-bar-colour-set; edited(v) => { root.track-bar-colour-r = v; } }
-                Text { text: "G"; font-size: 11px; vertical-alignment: center; }
-                SpinBox { minimum: 0; maximum: 255; value: root.track-bar-colour-set ? root.track-bar-colour-g : 128; enabled: root.track-bar-colour-set; edited(v) => { root.track-bar-colour-g = v; } }
-                Text { text: "B"; font-size: 11px; vertical-alignment: center; }
-                SpinBox { minimum: 0; maximum: 255; value: root.track-bar-colour-set ? root.track-bar-colour-b : 128; enabled: root.track-bar-colour-set; edited(v) => { root.track-bar-colour-b = v; } }
+            CheckBox {
+                text: "Global (apply to all tracks)";
+                checked: root.global;
+                toggled => { root.global = self.checked; }
             }
             Text {
-                text: "Section colour is set via the Bar tab's section marker. Colours cascade: Track Bar > Bar > Section > System.";
+                text: "Pick a colour to customise the bar background. Click Default to revert. Global: the colour is stored per bar and applies to every track. Unchecked: stored per track for the selected bars only. Section colour is set via the Bar tab's section marker. Colours cascade: Track Bar > Bar > Section > System.";
                 font-size: 11px;
                 wrap: word-wrap;
                 color: Palette.foreground.transparentize(0.4);

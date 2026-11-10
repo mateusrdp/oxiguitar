@@ -1520,15 +1520,16 @@ export component AppWindow inherits Window {
     callback chord-changed(string, int, string);
     callback chord-dialog-done(bool);
     in property <bool> display-options-shown: false;
-    in-out property <bool> display-options-bar-colour-set: false;
-    in-out property <int> display-options-bar-colour-r: 128;
-    in-out property <int> display-options-bar-colour-g: 128;
-    in-out property <int> display-options-bar-colour-b: 128;
-    in-out property <bool> display-options-track-bar-colour-set: false;
-    in-out property <int> display-options-track-bar-colour-r: 128;
-    in-out property <int> display-options-track-bar-colour-g: 128;
-    in-out property <int> display-options-track-bar-colour-b: 128;
-    callback display-options-done(bool, bool, int, int, int, bool, int, int, int);
+    in-out property <int> display-options-colour-r: 128;
+    in-out property <int> display-options-colour-g: 128;
+    in-out property <int> display-options-colour-b: 128;
+    in-out property <bool> display-options-global: true;
+    in-out property <string> display-options-hex: "808080";
+    in-out property <int> display-options-preview-r: 128;
+    in-out property <int> display-options-preview-g: 128;
+    in-out property <int> display-options-preview-b: 128;
+    callback display-options-hex-completed(string);
+    callback display-options-done(bool, int, int, int, bool);
     in property <bool> paste-dialog-shown: false;
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
@@ -2807,16 +2808,19 @@ export component AppWindow inherits Window {
     if root.display-options-shown : DisplayOptionsDialog {
         width: root.width;
         height: root.height;
-        bar-colour-set <=> root.display-options-bar-colour-set;
-        bar-colour-r <=> root.display-options-bar-colour-r;
-        bar-colour-g <=> root.display-options-bar-colour-g;
-        bar-colour-b <=> root.display-options-bar-colour-b;
-        track-bar-colour-set <=> root.display-options-track-bar-colour-set;
-        track-bar-colour-r <=> root.display-options-track-bar-colour-r;
-        track-bar-colour-g <=> root.display-options-track-bar-colour-g;
-        track-bar-colour-b <=> root.display-options-track-bar-colour-b;
-        done(ok, bs, br, bg, bb, tbs, tr, tg, tb) => {
-            root.display-options-done(ok, bs, br, bg, bb, tbs, tr, tg, tb);
+        colour-r <=> root.display-options-colour-r;
+        colour-g <=> root.display-options-colour-g;
+        colour-b <=> root.display-options-colour-b;
+        hex <=> root.display-options-hex;
+        global <=> root.display-options-global;
+        r-changed(v) => { root.display-options-preview-r = v; }
+        g-changed(v) => { root.display-options-preview-g = v; }
+        b-changed(v) => { root.display-options-preview-b = v; }
+        hex-completed(h) => {
+            root.display-options-hex-completed(h);
+        }
+        done(ok, r, g, b, gbl) => {
+            root.display-options-done(ok, r, g, b, gbl);
         }
     }
 

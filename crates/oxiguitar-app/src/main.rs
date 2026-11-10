@@ -825,8 +825,28 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_chord_dialog_done(move |ok| chord_dialog_done(&a, ok));
     let a = app.clone();
-    ui.on_display_options_done(move |ok, bs, br, bg, bb, tbs, tr, tg, tb| {
-        display_options_done(&a, ok, bs, br, bg, bb, tbs, tr, tg, tb)
+    ui.on_display_options_done(move |ok, r, g, b, gbl| {
+        display_options_done(&a, ok, r, g, b, gbl)
+    });
+    let a = app.clone();
+    ui.on_display_options_hex_completed(move |hex| {
+        let Some(ui) = a.borrow().ui.upgrade() else { return; };
+        // Strip leading '#'.
+        let hex = hex.strip_prefix('#').unwrap_or(&hex);
+        if hex.len() == 6 {
+            if let (Ok(r), Ok(g), Ok(b)) = (
+                u8::from_str_radix(&hex[0..2], 16),
+                u8::from_str_radix(&hex[2..4], 16),
+                u8::from_str_radix(&hex[4..6], 16),
+            ) {
+                ui.set_display_options_colour_r(i32::from(r));
+                ui.set_display_options_colour_g(i32::from(g));
+                ui.set_display_options_colour_b(i32::from(b));
+                ui.set_display_options_preview_r(i32::from(r));
+                ui.set_display_options_preview_g(i32::from(g));
+                ui.set_display_options_preview_b(i32::from(b));
+            }
+        }
     });
     let a = app.clone();
     ui.on_text_dialog_done(move |ok| {
@@ -3303,26 +3323,23 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
                 };
                 (master_bar.bar_color, master_bar.track_bar_color)
             };
-            ui.set_display_options_bar_colour_set(bar_color.is_some());
-            if let Some(c) = bar_color {
-                ui.set_display_options_bar_colour_r(i32::from(c.r));
-                ui.set_display_options_bar_colour_g(i32::from(c.g));
-                ui.set_display_options_bar_colour_b(i32::from(c.b));
+            // Prefer bar_color (global) when set; fall back to track_bar_color.
+            let colour = bar_color.or(track_bar_color);
+            if let Some(c) = colour {
+                ui.set_display_options_colour_r(i32::from(c.r));
+                ui.set_display_options_colour_g(i32::from(c.g));
+                ui.set_display_options_colour_b(i32::from(c.b));
             } else {
-                ui.set_display_options_bar_colour_r(128);
-                ui.set_display_options_bar_colour_g(128);
-                ui.set_display_options_bar_colour_b(128);
+                ui.set_display_options_colour_r(128);
+                ui.set_display_options_colour_g(128);
+                ui.set_display_options_colour_b(128);
             }
-            ui.set_display_options_track_bar_colour_set(track_bar_color.is_some());
-            if let Some(c) = track_bar_color {
-                ui.set_display_options_track_bar_colour_r(i32::from(c.r));
-                ui.set_display_options_track_bar_colour_g(i32::from(c.g));
-                ui.set_display_options_track_bar_colour_b(i32::from(c.b));
-            } else {
-                ui.set_display_options_track_bar_colour_r(128);
-                ui.set_display_options_track_bar_colour_g(128);
-                ui.set_display_options_track_bar_colour_b(128);
-            }
+            ui.set_display_options_hex(format!("{:02X}{:02X}{:02X}", colour.map_or(128u8, |c| c.r), colour.map_or(128u8, |c| c.g), colour.map_or(128u8, |c| c.b)).into());
+            ui.set_display_options_preview_r(i32::from(colour.map_or(128u8, |c| c.r)));
+            ui.set_display_options_preview_g(i32::from(colour.map_or(128u8, |c| c.g)));
+            ui.set_display_options_preview_b(i32::from(colour.map_or(128u8, |c| c.b)));
+            // Global is true when bar_color is set (not just track_bar_color).
+            ui.set_display_options_global(bar_color.is_some());
             ui.set_display_options_shown(true);
         }
     }
@@ -3516,14 +3533,10 @@ fn chord_dialog_done(app: &Shared, ok: bool) {
 fn display_options_done(
     app: &Shared,
     ok: bool,
-    bar_set: bool,
-    bar_r: i32,
-    bar_g: i32,
-    bar_b: i32,
-    track_set: bool,
-    track_r: i32,
-    track_g: i32,
-    track_b: i32,
+    colour_r: i32,
+    colour_g: i32,
+    colour_b: i32,
+    global: bool,
 ) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -3533,26 +3546,22 @@ fn display_options_done(
     if !ok {
         return;
     }
-    let cmd_bar = if bar_set {
-        Some(oxiguitar_model::Color {
-            r: bar_r as u8,
-            g: bar_g as u8,
-            b: bar_b as u8,
-        })
-    } else {
+    // Default colour (128,128,128) means unset.
+    let colour = if colour_r == 128 && colour_g == 128 && colour_b == 128 {
         None
-    };
-    let cmd_track = if track_set {
-        Some(oxiguitar_model::Color {
-            r: track_r as u8,
-            g: track_g as u8,
-            b: track_b as u8,
-        })
     } else {
-        None
+        Some(oxiguitar_model::Color {
+            r: colour_r as u8,
+            g: colour_g as u8,
+            b: colour_b as u8,
+        })
     };
-    edit_at_caret(app, oxiguitar_edit::Command::SetBarColor(cmd_bar));
-    edit_at_caret(app, oxiguitar_edit::Command::SetTrackBarColor(cmd_track));
+    // Global: store in bar_color (all tracks); else in track_bar_colors (current track).
+    if global {
+        edit_at_caret(app, oxiguitar_edit::Command::SetBarColor(colour));
+    } else {
+        edit_at_caret(app, oxiguitar_edit::Command::SetTrackBarColor(colour));
+    }
 }
 
 /// Shows the bend editor's state.

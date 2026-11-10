@@ -206,8 +206,10 @@ impl MasterBar {
     /// Resolve the effective colour for this bar by precedence:
     /// Track Bar Colour > Bar Colour > Section Colour > System Colour.
     ///
-    /// Section colour is taken from `marker.color` when it is not
-    /// `Color::default()` (0, 0, 0), which means "no section colour set".
+    /// Track bar colour is taken from the score's per-track map
+    /// (passed as `track_bar_color`). Section colour is taken from
+    /// `marker.color` when it is not `Color::default()` (0, 0, 0),
+    /// which means "no section colour set".
     pub fn resolve_colour(
         &self,
         track_bar_color: Option<Color>,
