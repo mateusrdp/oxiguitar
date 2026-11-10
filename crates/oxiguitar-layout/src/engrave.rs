@@ -471,17 +471,23 @@ pub(crate) fn system(
             // otherwise keep Paint::Ink so the default bar colour doesn't
             // change and golden images stay aligned with the theme.
             let master_bar = score.master_bars.get(bx.index);
-            let track_bar_color = score
-                .track_bar_colors
-                .get(&v.track)
-                .and_then(|v| v.get(bx.index))
-                .copied()
-                .flatten();
+            let track_bar_color = master_bar
+                .and_then(|mb| mb.track_bar_color)
+                .or_else(|| {
+                    score
+                        .track_bar_colors
+                        .get(&v.track)
+                        .and_then(|v| v.get(bx.index))
+                        .copied()
+                        .flatten()
+                });
             let system_colour = Color::default();
             let resolved = master_bar
                 .map(|mb| mb.resolve_colour(track_bar_color, system_colour))
                 .unwrap_or(system_colour);
-            let paint = if track_bar_color.is_some() {
+            let paint = if track_bar_color.is_some()
+                || master_bar.is_some_and(|mb| mb.bar_color.is_some())
+            {
                 Paint::Custom(oxiguitar_display::Rgba::rgb(
                     resolved.r, resolved.g, resolved.b,
                 ))
