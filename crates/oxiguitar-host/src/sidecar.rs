@@ -67,14 +67,20 @@ pub struct TrackEntry {
 pub struct Sidecar {
     /// The tracks, in the score's order.
     pub tracks: Vec<TrackEntry>,
+    /// One entry per bar: `None` for no custom colour, or an RGB object.
+    pub bar_colors: Vec<Option<serde_json::Value>>,
+    /// Track name → one entry per bar. Same structure as `bar_colors`.
+    pub track_bar_colors: BTreeMap<String, Vec<Option<serde_json::Value>>>,
 }
 
 impl Sidecar {
-    /// Whether no track keeps anything.
+    /// Whether no track keeps anything and no bar has a custom colour.
     pub fn is_empty(&self) -> bool {
         self.tracks
             .iter()
             .all(|t| t.plugins.is_empty() && t.effects.is_empty() && !t.chords)
+            && self.bar_colors.iter().all(Option::is_none)
+            && self.track_bar_colors.values().all(|v| v.iter().all(Option::is_none))
     }
 
     /// Reads the sidecar of the score at `score`: `Ok(None)` when it has
@@ -162,7 +168,38 @@ impl Sidecar {
                 }
             })
             .collect();
-        Ok(Sidecar { tracks })
+        let mut sidecar = Sidecar {
+            tracks,
+            ..Default::default()
+        };
+        if let Some(Value::Array(arr)) = top.get("bar_colors") {
+            sidecar.bar_colors = arr
+                .iter()
+                .map(|v| if v.is_null() { None } else { Some(v.clone()) })
+                .collect();
+        }
+        if let Some(Value::Object(obj)) = top.get("track_bar_colors") {
+            sidecar.track_bar_colors = obj
+                .iter()
+                .map(|(k, v)| {
+                    let arr: Vec<&Value> = v.as_array().into_iter().flatten().collect();
+                    (
+                        k.clone(),
+                        arr.iter()
+                            .map(|item| {
+                                let item: &Value = *item;
+                                if item.is_null() {
+                                    None
+                                } else {
+                                    Some(item.clone())
+                                }
+                            })
+                            .collect(),
+                    )
+                })
+                .collect();
+        }
+        Ok(sidecar)
     }
 
     /// The sidecar's text.
@@ -191,7 +228,29 @@ impl Sidecar {
                 entry
             })
             .collect();
-        let doc = serde_json::json!({ "oxiguitar": VERSION, "tracks": tracks });
+        let mut doc = serde_json::json!({ "oxiguitar": VERSION, "tracks": tracks });
+        if !self.bar_colors.iter().all(Option::is_none) {
+            let arr: Vec<Value> = self
+                .bar_colors
+                .iter()
+                .map(|c| c.clone().unwrap_or(Value::Null))
+                .collect();
+            doc["bar_colors"] = serde_json::json!(arr);
+        }
+        if !self.track_bar_colors.is_empty() {
+            let obj: Map<String, Value> = self
+                .track_bar_colors
+                .iter()
+                .map(|(name, colors)| {
+                    let arr: Vec<Value> = colors
+                        .iter()
+                        .map(|c| c.clone().unwrap_or(Value::Null))
+                        .collect();
+                    (name.clone(), serde_json::json!(arr))
+                })
+                .collect();
+            doc["track_bar_colors"] = Value::Object(obj);
+        }
         let mut text = serde_json::to_string_pretty(&doc).unwrap_or_default();
         text.push('\n');
         text
@@ -284,6 +343,7 @@ mod tests {
                 ),
                 entry("Bass", &[]),
             ],
+            ..Default::default()
         };
         let text = s.to_text();
         assert!(text.contains("\"oxiguitar\": 1"), "{text}");
@@ -311,6 +371,7 @@ mod tests {
                 entry("Rhythm", &[("p", "{\"a\":2}")]),
                 entry("Rhythm", &[("p", "{\"a\":3}")]),
             ],
+            ..Default::default()
         };
         let got = s.settle(&["Rhythm", "Lead", "Rhythm", "Rhythm", "Keys"]);
         let a = |i: usize| got[i].plugins.get("p").cloned().unwrap_or_default();
@@ -328,12 +389,14 @@ mod tests {
         let score = dir.join("song.gp");
         let empty = Sidecar {
             tracks: vec![entry("Lead", &[])],
+            ..Default::default()
         };
         empty.write_for(&score).unwrap();
         assert!(!path_for(&score).exists());
         assert_eq!(Sidecar::read_for(&score), Ok(None));
         let kept = Sidecar {
             tracks: vec![entry("Lead", &[("p", "{}")])],
+            ..Default::default()
         };
         kept.write_for(&score).unwrap();
         assert_eq!(Sidecar::read_for(&score), Ok(Some(kept)));
@@ -375,6 +438,7 @@ mod tests {
         ordered.effects = vec!["oxiguitar.eq".into(), "oxiguitar.nam".into()];
         let s = Sidecar {
             tracks: vec![ordered.clone(), entry("Bass", &[])],
+            ..Default::default()
         };
         let text = s.to_text();
         assert_eq!(text.matches("\"effects\"").count(), 1, "{text}");
@@ -386,6 +450,7 @@ mod tests {
                 plugins: BTreeMap::new(),
                 ..ordered
             }],
+            ..Default::default()
         };
         assert!(!only.is_empty());
         // What isn't a plugin id is left out, and so is a second mention.
@@ -412,6 +477,7 @@ mod tests {
         on.chords = true;
         let s = Sidecar {
             tracks: vec![on.clone(), entry("Lead", &[])],
+            ..Default::default()
         };
         let text = s.to_text();
         assert_eq!(text.matches("\"chords\": true").count(), 1, "{text}");
@@ -420,5 +486,87 @@ mod tests {
         assert_eq!(s.settle(&["Rhythm"])[0], on);
         let odd = r#"{"oxiguitar": 1, "tracks": [{"name": "A", "chords": "yes"}]}"#;
         assert!(!Sidecar::parse(odd).unwrap().tracks[0].chords);
+    }
+
+    #[test]
+    fn bar_colours_round_trip() {
+        let s = Sidecar {
+            tracks: vec![entry("Lead", &[])],
+            bar_colors: vec![
+                None,
+                Some(serde_json::json!({"r": 255, "g": 128, "b": 0})),
+                None,
+            ],
+            track_bar_colors: BTreeMap::new(),
+        };
+        let text = s.to_text();
+        assert!(text.contains("\"bar_colors\""), "{text}");
+        let parsed = Sidecar::parse(&text).unwrap();
+        assert_eq!(parsed, s);
+        // All-null should be omitted from output (is_empty-like).
+        let empty_colors = Sidecar {
+            tracks: vec![entry("Lead", &[])],
+            bar_colors: vec![None, None],
+            track_bar_colors: BTreeMap::new(),
+        };
+        let text2 = empty_colors.to_text();
+        assert!(!text2.contains("\"bar_colors\""), "{text2}");
+    }
+
+    #[test]
+    fn track_bar_colours_round_trip() {
+        let mut track_colors = BTreeMap::new();
+        track_colors.insert(
+            "Lead".into(),
+            vec![
+                None,
+                Some(serde_json::json!({"r": 0, "g": 255, "b": 128})),
+            ],
+        );
+        let s = Sidecar {
+            tracks: vec![entry("Lead", &[])],
+            bar_colors: vec![None, None], // all-null → omitted from output
+            track_bar_colors: track_colors,
+        };
+        let text = s.to_text();
+        assert!(text.contains("\"track_bar_colors\""), "{text}");
+        let parsed = Sidecar::parse(&text).unwrap();
+        // All-null bar_colors are omitted, so parse returns empty vec.
+        assert!(parsed.bar_colors.is_empty());
+        assert_eq!(parsed.track_bar_colors, s.track_bar_colors);
+    }
+
+    #[test]
+    fn is_empty_considers_colours() {
+        let empty = Sidecar {
+            tracks: vec![entry("Lead", &[])],
+            bar_colors: vec![None, None],
+            track_bar_colors: BTreeMap::new(),
+        };
+        assert!(empty.is_empty());
+        let with_colour = Sidecar {
+            tracks: vec![entry("Lead", &[])],
+            bar_colors: vec![None, Some(serde_json::json!({"r": 1, "g": 2, "b": 3}))],
+            track_bar_colors: BTreeMap::new(),
+        };
+        assert!(!with_colour.is_empty());
+        let with_track_colour = Sidecar {
+            tracks: vec![entry("Lead", &[])],
+            bar_colors: vec![None],
+            track_bar_colors: {
+                let mut m = BTreeMap::new();
+                m.insert("Lead".into(), vec![None, Some(serde_json::json!({"r": 1, "g": 2, "b": 3}))]);
+                m
+            },
+        };
+        assert!(!with_track_colour.is_empty());
+    }
+
+    #[test]
+    fn missing_colour_fields_parse_as_empty() {
+        let text = r#"{"oxiguitar": 1, "tracks": [{"name": "A"}]}"#;
+        let s = Sidecar::parse(text).unwrap();
+        assert!(s.bar_colors.is_empty());
+        assert!(s.track_bar_colors.is_empty());
     }
 }
