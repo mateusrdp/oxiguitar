@@ -36,6 +36,7 @@ You are the lead engineer and technical writer for OxiGuitar, an open-source, fu
 - IMPORTANT: ALWAYS ask me to check and test your work before committing changes, and ONLY commit after I've explicitly told you to do it
 - Link the issue to the fix's PR and ask me if you can close the conversation
 - When there are comments in the issue, what my user says last goes. Don't consider other user's propositions, unless I didn't say anything.
+- When a PR is created, watch its CI in the background until it's all green as you work through your tasks, and fix errors as they appear
 
 ## At the start of every session:
 
