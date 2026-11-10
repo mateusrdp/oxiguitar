@@ -825,6 +825,10 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_chord_dialog_done(move |ok| chord_dialog_done(&a, ok));
     let a = app.clone();
+    ui.on_display_options_done(move |ok, bs, br, bg, bb, tbs, tr, tg, tb| {
+        display_options_done(&a, ok, bs, br, bg, bb, tbs, tr, tg, tb)
+    });
+    let a = app.clone();
     ui.on_text_dialog_done(move |ok| {
         let Some(ui) = a.borrow().ui.upgrade() else {
             return;
@@ -909,6 +913,7 @@ fn main() -> Result<(), slint::PlatformError> {
         "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
         "fingering" => find_fingering(&a, oxiguitar_edit::Scope::Selection),
         "fit" => open_fit(&a, false),
+        "display-options" => open_edit_dialog(&a, editing::Dialog::DisplayOptions),
         "design-more" => design_layout(&a, Some(true)),
         "design-less" => design_layout(&a, Some(false)),
         "design-auto" => design_layout(&a, None),
@@ -3283,6 +3288,43 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
                 show_lyric(app, &ui, text);
             }
         }
+        editing::Dialog::DisplayOptions => {
+            let (bar_color, track_bar_color) = {
+                let s = app.borrow();
+                let editing = &s.editing;
+                let Some(score) = editing.score().clone() else {
+                    return;
+                };
+                let Some(caret) = editing.caret() else {
+                    return;
+                };
+                let Some(master_bar) = score.master_bars.get(caret.bar) else {
+                    return;
+                };
+                (master_bar.bar_color, master_bar.track_bar_color)
+            };
+            ui.set_display_options_bar_colour_set(bar_color.is_some());
+            if let Some(c) = bar_color {
+                ui.set_display_options_bar_colour_r(i32::from(c.r));
+                ui.set_display_options_bar_colour_g(i32::from(c.g));
+                ui.set_display_options_bar_colour_b(i32::from(c.b));
+            } else {
+                ui.set_display_options_bar_colour_r(128);
+                ui.set_display_options_bar_colour_g(128);
+                ui.set_display_options_bar_colour_b(128);
+            }
+            ui.set_display_options_track_bar_colour_set(track_bar_color.is_some());
+            if let Some(c) = track_bar_color {
+                ui.set_display_options_track_bar_colour_r(i32::from(c.r));
+                ui.set_display_options_track_bar_colour_g(i32::from(c.g));
+                ui.set_display_options_track_bar_colour_b(i32::from(c.b));
+            } else {
+                ui.set_display_options_track_bar_colour_r(128);
+                ui.set_display_options_track_bar_colour_g(128);
+                ui.set_display_options_track_bar_colour_b(128);
+            }
+            ui.set_display_options_shown(true);
+        }
     }
 }
 
@@ -3467,6 +3509,53 @@ fn chord_dialog_done(app: &Shared, ok: bool) {
     };
     if ok {
         edit_at_caret(app, oxiguitar_edit::Command::Chord(form.diagram()));
+    }
+}
+
+/// The Display Options dialog closed: on OK, apply bar colours.
+fn display_options_done(
+    app: &Shared,
+    ok: bool,
+    bar_set: bool,
+    bar_r: i32,
+    bar_g: i32,
+    bar_b: i32,
+    track_set: bool,
+    track_r: i32,
+    track_g: i32,
+    track_b: i32,
+) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_display_options_shown(false);
+    ui.invoke_focus_page();
+    if !ok {
+        return;
+    }
+    let cmd_bar = if bar_set {
+        Some(oxiguitar_model::Color {
+            r: bar_r as u8,
+            g: bar_g as u8,
+            b: bar_b as u8,
+        })
+    } else {
+        None
+    };
+    let cmd_track = if track_set {
+        Some(oxiguitar_model::Color {
+            r: track_r as u8,
+            g: track_g as u8,
+            b: track_b as u8,
+        })
+    } else {
+        None
+    };
+    if cmd_bar.is_some() {
+        edit_at_caret(app, oxiguitar_edit::Command::SetBarColor(cmd_bar));
+    }
+    if cmd_track.is_some() {
+        edit_at_caret(app, oxiguitar_edit::Command::SetTrackBarColor(cmd_track));
     }
 }
 

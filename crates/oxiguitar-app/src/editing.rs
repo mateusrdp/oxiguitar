@@ -364,6 +364,8 @@ pub(crate) enum Dialog {
     Text,
     /// Lyrics typed on the page, at the caret's beat (not a dialog).
     Lyrics,
+    /// Display Options… (bar colours).
+    DisplayOptions,
 }
 
 /// The dialog a key opens, as Guitar Pro 8's keys open its own: Ctrl + K

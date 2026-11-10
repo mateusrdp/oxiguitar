@@ -14,7 +14,7 @@
 //! undoing one costs those bars, not the score.
 
 use oxiguitar_model::{
-    Bar, Clef, Color, Direction, KeySignature, Marker, MasterBar, Ratio, Score, TempoChange,
+    Bar, Clef, Direction, KeySignature, Marker, MasterBar, Ratio, Score, TempoChange,
     TimeSignature, TripletFeel, Voice,
 };
 
@@ -594,7 +594,7 @@ impl BarState {
 mod tests {
     use super::*;
     use crate::{History, apply as run, new_score};
-    use oxiguitar_model::KeyMode;
+    use oxiguitar_model::{Color, KeyMode};
 
     fn score(bars: usize) -> Score {
         let mut s = new_score();

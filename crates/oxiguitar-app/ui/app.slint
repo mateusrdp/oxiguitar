@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog, FitDialog } from "bar_dialog.slint";
+import { AltBox, BendDialog, ChordDialog, DisplayOptionsDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog, FitDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -1519,6 +1519,16 @@ export component AppWindow inherits Window {
     in property <bool> chord-show-diagram: true;
     callback chord-changed(string, int, string);
     callback chord-dialog-done(bool);
+    in property <bool> display-options-shown: false;
+    in-out property <bool> display-options-bar-colour-set: false;
+    in-out property <int> display-options-bar-colour-r: 128;
+    in-out property <int> display-options-bar-colour-g: 128;
+    in-out property <int> display-options-bar-colour-b: 128;
+    in-out property <bool> display-options-track-bar-colour-set: false;
+    in-out property <int> display-options-track-bar-colour-r: 128;
+    in-out property <int> display-options-track-bar-colour-g: 128;
+    in-out property <int> display-options-track-bar-colour-b: 128;
+    callback display-options-done(bool, bool, int, int, int, bool, int, int, int);
     in property <bool> paste-dialog-shown: false;
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
@@ -2249,6 +2259,7 @@ export component AppWindow inherits Window {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
                                 MenuItem { title: "Find Fingering"; activated => { root.page-menu("fingering"); } }
                                 MenuItem { title: "Fit Bars to Time Signature…"; activated => { root.page-menu("fit"); } }
+                                MenuItem { title: "Display Options…"; activated => { root.page-menu("display-options"); } }
                                 MenuSeparator { }
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
                                 MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
@@ -2791,6 +2802,22 @@ export component AppWindow inherits Window {
         show-toggled(on) => { root.chord-changed("show", on ? 1 : 0, ""); }
         remove => { root.chord-changed("remove", 0, ""); }
         done(ok) => { root.chord-dialog-done(ok); }
+    }
+
+    if root.display-options-shown : DisplayOptionsDialog {
+        width: root.width;
+        height: root.height;
+        bar-colour-set <=> root.display-options-bar-colour-set;
+        bar-colour-r <=> root.display-options-bar-colour-r;
+        bar-colour-g <=> root.display-options-bar-colour-g;
+        bar-colour-b <=> root.display-options-bar-colour-b;
+        track-bar-colour-set <=> root.display-options-track-bar-colour-set;
+        track-bar-colour-r <=> root.display-options-track-bar-colour-r;
+        track-bar-colour-g <=> root.display-options-track-bar-colour-g;
+        track-bar-colour-b <=> root.display-options-track-bar-colour-b;
+        done(ok, bs, br, bg, bb, tbs, tr, tg, tb) => {
+            root.display-options-done(ok, bs, br, bg, bb, tbs, tr, tg, tb);
+        }
     }
 
     if root.paste-dialog-shown : PasteDialog {

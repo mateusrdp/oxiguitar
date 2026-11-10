@@ -716,3 +716,84 @@ export component ExportProgress inherits Rectangle {
         }
     }
 }
+
+// Display Options… (bar colours): pick a bar colour or track bar colour.
+export component DisplayOptionsDialog inherits Rectangle {
+    in-out property <bool> bar-colour-set: false;
+    in-out property <int> bar-colour-r: 128;
+    in-out property <int> bar-colour-g: 128;
+    in-out property <int> bar-colour-b: 128;
+    in-out property <bool> track-bar-colour-set: false;
+    in-out property <int> track-bar-colour-r: 128;
+    in-out property <int> track-bar-colour-g: 128;
+    in-out property <int> track-bar-colour-b: 128;
+    callback done(bool, bool, int, int, int, bool, int, int, int);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Display Options";
+        card-width: 420px;
+        done(ok) => {
+            root.done(ok,
+                root.bar-colour-set, root.bar-colour-r, root.bar-colour-g, root.bar-colour-b,
+                root.track-bar-colour-set, root.track-bar-colour-r, root.track-bar-colour-g, root.track-bar-colour-b);
+        }
+        VerticalLayout {
+            spacing: 8px;
+            // Bar Colour (global)
+            Label { text: "Bar Colour"; }
+            HorizontalLayout {
+                spacing: 8px;
+                CheckBox {
+                    text: "Enable";
+                    checked: root.bar-colour-set;
+                    toggled => { root.bar-colour-set = self.checked; }
+                }
+                Rectangle {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 3px;
+                    background: rgb(root.bar-colour-set ? root.bar-colour-r : 128,
+                                    root.bar-colour-set ? root.bar-colour-g : 128,
+                                    root.bar-colour-set ? root.bar-colour-b : 128);
+                }
+                Text { text: "R"; font-size: 11px; vertical-alignment: center; }
+                SpinBox { minimum: 0; maximum: 255; value: root.bar-colour-set ? root.bar-colour-r : 128; enabled: root.bar-colour-set; edited(v) => { root.bar-colour-r = v; } }
+                Text { text: "G"; font-size: 11px; vertical-alignment: center; }
+                SpinBox { minimum: 0; maximum: 255; value: root.bar-colour-set ? root.bar-colour-g : 128; enabled: root.bar-colour-set; edited(v) => { root.bar-colour-g = v; } }
+                Text { text: "B"; font-size: 11px; vertical-alignment: center; }
+                SpinBox { minimum: 0; maximum: 255; value: root.bar-colour-set ? root.bar-colour-b : 128; enabled: root.bar-colour-set; edited(v) => { root.bar-colour-b = v; } }
+            }
+            // Track Bar Colour (per-track)
+            Label { text: "Track Bar Colour"; }
+            HorizontalLayout {
+                spacing: 8px;
+                CheckBox {
+                    text: "Enable";
+                    checked: root.track-bar-colour-set;
+                    toggled => { root.track-bar-colour-set = self.checked; }
+                }
+                Rectangle {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 3px;
+                    background: rgb(root.track-bar-colour-set ? root.track-bar-colour-r : 128,
+                                    root.track-bar-colour-set ? root.track-bar-colour-g : 128,
+                                    root.track-bar-colour-set ? root.track-bar-colour-b : 128);
+                }
+                Text { text: "R"; font-size: 11px; vertical-alignment: center; }
+                SpinBox { minimum: 0; maximum: 255; value: root.track-bar-colour-set ? root.track-bar-colour-r : 128; enabled: root.track-bar-colour-set; edited(v) => { root.track-bar-colour-r = v; } }
+                Text { text: "G"; font-size: 11px; vertical-alignment: center; }
+                SpinBox { minimum: 0; maximum: 255; value: root.track-bar-colour-set ? root.track-bar-colour-g : 128; enabled: root.track-bar-colour-set; edited(v) => { root.track-bar-colour-g = v; } }
+                Text { text: "B"; font-size: 11px; vertical-alignment: center; }
+                SpinBox { minimum: 0; maximum: 255; value: root.track-bar-colour-set ? root.track-bar-colour-b : 128; enabled: root.track-bar-colour-set; edited(v) => { root.track-bar-colour-b = v; } }
+            }
+            Text {
+                text: "Section colour is set via the Bar tab's section marker. Colours cascade: Track Bar > Bar > Section > System.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+        }
+    }
+}

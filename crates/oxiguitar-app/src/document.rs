@@ -744,6 +744,7 @@ impl Document {
                     chords: t.play_chords,
                 })
                 .collect(),
+            ..Default::default()
         };
         let kept = sidecar.write_for(&prepared.path);
         if prepared.path == self.path {
