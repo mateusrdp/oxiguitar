@@ -641,7 +641,12 @@ impl Editing {
         let c = self.caret?;
         let score = self.score.as_ref()?;
         let (first, last) = self.selection.map_or((c.bar, c.bar), |s| s.bars());
-        let state = oxiguitar_edit::BarState::at(score, Caret { bar: first, ..c })?;
+        let state = oxiguitar_edit::BarState::at(
+            score,
+            Caret { bar: first, ..c },
+            self.bar_colour_global,
+            &score.track_bar_colors,
+        )?;
         let heading = if first == last {
             format!("Bar {}", first + 1)
         } else {
@@ -731,8 +736,25 @@ impl Editing {
     }
 
     /// Toggle the bar colour swatch global setting.
-    pub(crate) fn set_bar_colour_global(&mut self, global: bool) {
-        self.bar_colour_global = global;
+    ///
+    /// When toggling global off while a colour is set, returns a
+    /// `SetTrackBarColor` command for the current track's bar(s) so
+    /// the colour moves from all-tracks scope to the current track only.
+    /// Returns `None` when toggling global on or when no colour is set.
+    pub(crate) fn set_bar_colour_global(&mut self, global: bool) -> Option<Command> {
+        if global {
+            self.bar_colour_global = true;
+            return None;
+        }
+        // Toggling off: if a colour is set, apply it to the current track
+        // only so the engraver switches to reading track_bar_colors.
+        if let Some((bar_state, _)) = self.bar_state()
+            && let Some(colour) = bar_state.bar_color
+        {
+            return Some(Command::SetTrackBarColor(Some(colour)));
+        }
+        self.bar_colour_global = false;
+        None
     }
 
     /// The score the caret is in.

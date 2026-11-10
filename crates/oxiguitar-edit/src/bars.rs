@@ -495,7 +495,7 @@ fn properties(
     label: &'static str,
 ) -> Option<Edited> {
     let (first, _) = selection.map_or((c.bar, c.bar), |s| s.bars());
-    let now = BarState::at(score, Caret { bar: first, ..c })?;
+    let now = BarState::at(score, Caret { bar: first, ..c }, false, &BTreeMap::new())?;
     let mut steps = Vec::new();
     if to.time_signature != now.time_signature {
         steps.push(Command::TimeSignature(to.time_signature));
@@ -614,7 +614,17 @@ pub struct BarState {
 
 impl BarState {
     /// The caret's bar.
-    pub fn at(score: &Score, c: Caret) -> Option<BarState> {
+    ///
+    /// When `bar_colour_global` is true, `bar_color` comes from
+    /// `master_bars[bar].bar_color` (all tracks). When false, it comes
+    /// from `track_bar_colors[c.track][bar]` (current track only), falling
+    /// back to `master_bars[bar].bar_color` if the track has no entry.
+    pub fn at(
+        score: &Score,
+        c: Caret,
+        bar_colour_global: bool,
+        track_bar_colors: &BTreeMap<usize, Vec<Option<oxiguitar_model::Color>>>,
+    ) -> Option<BarState> {
         let b = score.master_bars.get(c.bar)?;
         let clef = score
             .tracks
@@ -636,6 +646,15 @@ impl BarState {
             })
             .last()
             .map_or(score.initial_tempo, |t| t.bpm);
+        // Resolve the colour source based on the global setting.
+        let bar_color = if bar_colour_global {
+            b.bar_color
+        } else {
+            track_bar_colors
+                .get(&c.track)
+                .and_then(|vec| vec.get(c.bar).copied().flatten())
+                .or(b.bar_color)
+        };
         Some(BarState {
             time_signature: b.time_signature,
             key_signature: b.key_signature,
@@ -649,7 +668,7 @@ impl BarState {
             marker: b.marker.clone(),
             double_bar: b.double_bar,
             free_time: b.free_time,
-            bar_color: b.bar_color.or(b.track_bar_color),
+            bar_color,
         })
     }
 }
@@ -757,7 +776,7 @@ mod tests {
     fn the_bar_dialog_is_one_change() {
         let mut s = score(3);
         let mut h = History::new();
-        let mut to = BarState::at(&s, at(1)).unwrap();
+        let mut to = BarState::at(&s, at(1), false, &BTreeMap::new()).unwrap();
         to.time_signature = TimeSignature {
             numerator: 3,
             denominator: 4,
@@ -773,7 +792,10 @@ mod tests {
             Command::Bar(Box::new(to.clone())),
         )
         .unwrap();
-        assert_eq!(BarState::at(&s, at(1)).unwrap(), to);
+        assert_eq!(
+            BarState::at(&s, at(1), false, &BTreeMap::new()).unwrap(),
+            to
+        );
         assert_eq!(s.master_bars[2].time_signature.numerator, 3);
         assert!(!e.touched.bars.is_empty());
         assert_eq!(h.undo_label(), Some("Bar Properties"));
@@ -858,8 +880,18 @@ mod tests {
         do_it(&mut s, &mut h, at(0), None, Command::Tempo(96)).unwrap();
         assert_eq!(s.initial_tempo, 96.0);
         do_it(&mut s, &mut h, at(2), None, Command::Tempo(140)).unwrap();
-        assert_eq!(BarState::at(&s, at(3)).unwrap().tempo, 140.0);
-        assert_eq!(BarState::at(&s, at(1)).unwrap().tempo, 96.0);
+        assert_eq!(
+            BarState::at(&s, at(3), false, &BTreeMap::new())
+                .unwrap()
+                .tempo,
+            140.0
+        );
+        assert_eq!(
+            BarState::at(&s, at(1), false, &BTreeMap::new())
+                .unwrap()
+                .tempo,
+            96.0
+        );
         assert!(do_it(&mut s, &mut h, at(2), None, Command::Tempo(140)).is_none());
         do_it(&mut s, &mut h, at(0), None, Command::DoubleBar).unwrap();
         do_it(&mut s, &mut h, at(0), None, Command::FreeTime).unwrap();

@@ -3563,8 +3563,16 @@ fn bar_global_changed(app: &Shared, id: &str, global: bool) {
     if id != "bar-colour" {
         return;
     }
-    // Store the global setting only; swatch clicks use it next time.
-    app.borrow_mut().editing.set_bar_colour_global(global);
+    // When toggling global off while a colour is set, apply it to the
+    // current track only so the colour moves from all-tracks scope
+    // to the current track. When toggling on, just store the setting.
+    let command = app.borrow_mut().editing.set_bar_colour_global(global);
+    if let Some(command) = command {
+        let typed = app.borrow_mut().editing.tool(command);
+        if let Some(t) = typed {
+            send_typed(app, t);
+        }
+    }
 }
 
 /// Shows the right area's tab `id` ("bar", "note"), expanding the area and
