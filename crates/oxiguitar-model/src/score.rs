@@ -133,6 +133,10 @@ pub struct MasterBar {
     pub free_time: bool,
     /// Fermatas, each holding every track at its moment in the bar.
     pub fermatas: Vec<Fermata>,
+    /// Custom colour for this bar (global: all tracks). `None` for no custom colour.
+    pub bar_color: Option<Color>,
+    /// Custom colour for this bar on the selected track only. `None` for no custom colour.
+    pub track_bar_color: Option<Color>,
 }
 
 /// A fermata at a moment of a bar.
@@ -184,6 +188,8 @@ impl Default for MasterBar {
             directions: Vec::new(),
             free_time: false,
             fermatas: Vec::new(),
+            bar_color: None,
+            track_bar_color: None,
         }
     }
 }
@@ -192,6 +198,28 @@ impl MasterBar {
     /// The length this bar should have, in whole notes.
     pub fn expected_length(&self) -> Option<Ratio> {
         self.time_signature.bar_length()
+    }
+
+    /// Resolve the effective colour for this bar by precedence:
+    /// Track Bar Colour > Bar Colour > Section Colour > System Colour.
+    ///
+    /// Section colour is taken from `marker.color` when it is not
+    /// `Color::default()` (0, 0, 0), which means "no section colour set".
+    pub fn resolve_colour(
+        &self,
+        track_bar_color: Option<Color>,
+        system_colour: Color,
+    ) -> Color {
+        track_bar_color
+            .or(self.bar_color)
+            .or(self.marker.as_ref().and_then(|m| {
+                if m.color != Color::default() {
+                    Some(m.color)
+                } else {
+                    None
+                }
+            }))
+            .unwrap_or(system_colour)
     }
 }
 
@@ -333,4 +361,108 @@ pub enum Direction {
     DalSegnoSegnoAlDoubleCoda,
     /// Dal segno segno al fine.
     DalSegnoSegnoAlFine,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn master_bar_default_has_no_colours() {
+        let bar = MasterBar::default();
+        assert!(bar.bar_color.is_none());
+        assert!(bar.track_bar_color.is_none());
+    }
+
+    #[test]
+    fn resolve_colour_returns_track_bar_when_set() {
+        let mut bar = MasterBar::default();
+        bar.track_bar_color = Some(Color { r: 255, g: 0, b: 0 });
+        let system = Color { r: 128, g: 128, b: 128 };
+        assert_eq!(
+            bar.resolve_colour(Some(Color { r: 255, g: 0, b: 0 }), system),
+            Color { r: 255, g: 0, b: 0 }
+        );
+    }
+
+    #[test]
+    fn resolve_colour_falls_back_to_bar_colour() {
+        let mut bar = MasterBar::default();
+        bar.bar_color = Some(Color { r: 0, g: 255, b: 0 });
+        let system = Color { r: 128, g: 128, b: 128 };
+        assert_eq!(
+            bar.resolve_colour(None, system),
+            Color { r: 0, g: 255, b: 0 }
+        );
+    }
+
+    #[test]
+    fn resolve_colour_falls_back_to_section_colour() {
+        let mut bar = MasterBar::default();
+        bar.marker = Some(Marker {
+            letter: String::new(),
+            text: String::new(),
+            color: Color { r: 0, g: 0, b: 255 },
+        });
+        let system = Color { r: 128, g: 128, b: 128 };
+        assert_eq!(
+            bar.resolve_colour(None, system),
+            Color { r: 0, g: 0, b: 255 }
+        );
+    }
+
+    #[test]
+    fn resolve_colour_bar_overrides_section() {
+        let mut bar = MasterBar::default();
+        bar.marker = Some(Marker {
+            letter: String::new(),
+            text: String::new(),
+            color: Color { r: 0, g: 0, b: 255 },
+        });
+        bar.bar_color = Some(Color { r: 255, g: 255, b: 0 });
+        let system = Color { r: 128, g: 128, b: 128 };
+        assert_eq!(
+            bar.resolve_colour(None, system),
+            Color { r: 255, g: 255, b: 0 }
+        );
+    }
+
+    #[test]
+    fn resolve_colour_track_overrides_bar() {
+        let mut bar = MasterBar::default();
+        bar.bar_color = Some(Color { r: 0, g: 255, b: 0 });
+        let track = Color { r: 255, g: 0, b: 0 };
+        let system = Color { r: 128, g: 128, b: 128 };
+        assert_eq!(
+            bar.resolve_colour(Some(track), system),
+            Color { r: 255, g: 0, b: 0 }
+        );
+    }
+
+    #[test]
+    fn resolve_colour_skips_default_section_colour() {
+        let mut bar = MasterBar::default();
+        // Section with default (0,0,0) colour should be skipped
+        bar.marker = Some(Marker {
+            letter: String::new(),
+            text: String::new(),
+            color: Color::default(),
+        });
+        bar.bar_color = Some(Color { r: 255, g: 100, b: 50 });
+        let system = Color { r: 128, g: 128, b: 128 };
+        assert_eq!(
+            bar.resolve_colour(None, system),
+            Color { r: 255, g: 100, b: 50 }
+        );
+    }
+
+    #[test]
+    fn resolve_colour_falls_to_system_when_nothing_set() {
+        let bar = MasterBar::default();
+        let system = Color { r: 42, g: 99, b: 17 };
+        assert_eq!(
+            bar.resolve_colour(None, system),
+            Color { r: 42, g: 99, b: 17 }
+        );
+    }
 }
