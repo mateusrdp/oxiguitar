@@ -322,8 +322,16 @@ impl Painter<'_> {
         list.line(Point::new(x0, y), Point::new(x1, y), width, Paint::Ink);
     }
 
+    pub(crate) fn hline_with(&self, list: &mut DisplayList, x0: f32, x1: f32, y: f32, width: f32, paint: Paint) {
+        list.line(Point::new(x0, y), Point::new(x1, y), width, paint);
+    }
+
     pub(crate) fn vline(&self, list: &mut DisplayList, x: f32, y0: f32, y1: f32, width: f32) {
         list.line(Point::new(x, y0), Point::new(x, y1), width, Paint::Ink);
+    }
+
+    pub(crate) fn vline_with(&self, list: &mut DisplayList, x: f32, y0: f32, y1: f32, width: f32, paint: Paint) {
+        list.line(Point::new(x, y0), Point::new(x, y1), width, paint);
     }
 
     /// A beam of `thickness` whose top edge runs from (`x0`, `y0`) to
@@ -337,6 +345,17 @@ impl Painter<'_> {
             .line_to(x0, y0 + h / 2.0)
             .close();
         list.fill(p, Paint::Ink);
+    }
+
+    pub(crate) fn beam_with(&self, list: &mut DisplayList, x0: f32, y0: f32, x1: f32, y1: f32, paint: Paint) {
+        let h = self.ed().beam_thickness * self.sp;
+        let p = Path::new()
+            .move_to(x0, y0 - h / 2.0)
+            .line_to(x1, y1 - h / 2.0)
+            .line_to(x1, y1 + h / 2.0)
+            .line_to(x0, y0 + h / 2.0)
+            .close();
+        list.fill(p, paint);
     }
 
     /// A tie or slur from `a` to `b`, bulging by `height` (negative is up),
@@ -355,9 +374,42 @@ impl Painter<'_> {
         list.fill(p, Paint::Ink);
     }
 
+    pub(crate) fn tie_with(
+        &self,
+        list: &mut DisplayList,
+        a: Point,
+        b: Point,
+        height: f32,
+        paint: Paint,
+    ) {
+        let mid = self.ed().slur_midpoint_thickness * self.sp;
+        let dx = b.x - a.x;
+        let outer = height * 4.0 / 3.0;
+        let inner = (height.abs() - mid).max(0.0).copysign(height) * 4.0 / 3.0;
+        let c = |t: f32, off: f32| Point::new(a.x + dx * t, a.y + (b.y - a.y) * t + off);
+        let p = Path::new()
+            .move_to(a.x, a.y)
+            .cubic_to(c(0.25, outer), c(0.75, outer), b)
+            .cubic_to(c(0.75, inner), c(0.25, inner), a)
+            .close();
+        list.fill(p, paint);
+    }
+
     /// A straight line between two points, `width` thick.
     pub(crate) fn line_between(&self, list: &mut DisplayList, a: Point, b: Point, width: f32) {
         list.line(a, b, width, Paint::Ink);
+    }
+
+    #[allow(dead_code)] // Utility for future use.
+    pub(crate) fn line_between_with(
+        &self,
+        list: &mut DisplayList,
+        a: Point,
+        b: Point,
+        width: f32,
+        paint: Paint,
+    ) {
+        list.line(a, b, width, paint);
     }
 
     /// A slur: like a tie, but between any two points.
@@ -469,10 +521,34 @@ impl Painter<'_> {
         self.vline(list, x, top, bottom, t);
     }
 
+    pub(crate) fn thin_bar_with(
+        &self,
+        list: &mut DisplayList,
+        x: f32,
+        top: f32,
+        bottom: f32,
+        paint: Paint,
+    ) {
+        let t = self.ed().thin_barline_thickness * self.sp;
+        self.vline_with(list, x, top, bottom, t, paint);
+    }
+
     /// A thick vertical line of the bar-line thickness.
     pub(crate) fn thick_bar(&self, list: &mut DisplayList, x: f32, top: f32, bottom: f32) {
         let t = self.ed().thick_barline_thickness * self.sp;
         self.vline(list, x, top, bottom, t);
+    }
+
+    pub(crate) fn thick_bar_with(
+        &self,
+        list: &mut DisplayList,
+        x: f32,
+        top: f32,
+        bottom: f32,
+        paint: Paint,
+    ) {
+        let t = self.ed().thick_barline_thickness * self.sp;
+        self.vline_with(list, x, top, bottom, t, paint);
     }
 
     /// Distance between a thin and a thick bar line, centre to centre.

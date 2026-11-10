@@ -29,6 +29,9 @@ pub struct Score {
     /// the first system on (Design Mode); empty, or past its end, for the
     /// automatic layout.
     pub layout: Vec<u8>,
+    /// Track index → one entry per bar: `None` for no custom colour.
+    /// Populated from the sidecar; not in the wire format.
+    pub track_bar_colors: std::collections::BTreeMap<usize, Vec<Option<Color>>>,
 }
 
 impl Score {

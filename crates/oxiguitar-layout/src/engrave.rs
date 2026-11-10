@@ -12,7 +12,7 @@
 use std::collections::{BTreeSet, HashMap};
 
 use oxiguitar_display::{DisplayList, Item, Paint, Path, Point, Rect};
-use oxiguitar_model::{BeatKind, Clef, Direction, GraceKind, NoteValue, Ratio, Score, Tuplet};
+use oxiguitar_model::{BeatKind, Clef, Color, Direction, GraceKind, NoteValue, Ratio, Score, Tuplet};
 
 use crate::draw::{G, Painter, accidental_glyph, glyphs};
 use crate::effects;
@@ -419,7 +419,7 @@ pub(crate) fn system(
             right,
             active_voice,
         };
-        ctx.staff_lines(&mut list, spec.indent, right);
+        // Staff lines are drawn per-bar below so they pick up the bar colour.
         ctx.clefs_and_key(&mut list, spec.indent, clef, fifths);
         if vi == 0 && (spec.index > 0 || design) {
             let mut label = if spec.index > 0 {
@@ -459,14 +459,28 @@ pub(crate) fn system(
             let Some(grid) = plans.grids.get(bx.index) else {
                 continue;
             };
-            if let Some(range) = ctx.bar_start(&mut list, bx, k == 0, plan.clef) {
+            // Resolve this bar's colour and draw staff-line segments.
+            let master_bar = score.master_bars.get(bx.index);
+            let track_bar_color = score
+                .track_bar_colors
+                .get(&v.track)
+                .and_then(|v| v.get(bx.index))
+                .copied()
+                .flatten();
+            let system_colour = Color::default();
+            let resolved = master_bar
+                .map(|mb| mb.resolve_colour(track_bar_color, system_colour))
+                .unwrap_or(system_colour);
+            let paint = Paint::Custom(oxiguitar_display::Rgba::rgb(resolved.r, resolved.g, resolved.b));
+            ctx.staff_lines(&mut list, bx.start, bx.end, paint);
+            if let Some(range) = ctx.bar_start(&mut list, bx, k == 0, plan.clef, paint) {
                 times.insert(bx.index, range);
             }
             if let Some(kind) = plan.simile {
-                ctx.simile(&mut list, kind, bx);
+                ctx.simile(&mut list, kind, bx, paint);
             } else {
                 if let Some(top) = band.std_top {
-                    ctx.std_bar(&mut list, plan, grid, bx, top, vi, &mut ties);
+                    ctx.std_bar(&mut list, plan, grid, bx, top, vi, &mut ties, paint);
                 }
                 if let Some(top) = band.tab_top {
                     ctx.tab_bar(&mut list, plan, grid, bx, top);
@@ -475,8 +489,8 @@ pub(crate) fn system(
                     }
                 }
             }
-            ctx.bar_end(&mut list, bx);
-            ctx.marks(&mut list, plan, grid, bx, vi == 0);
+            ctx.bar_end(&mut list, bx, paint);
+            ctx.marks(&mut list, plan, grid, bx, vi == 0, paint);
         }
         if spec.courtesy > 0.0 {
             let clef = plan_of(spec.end.saturating_sub(1)).map_or(Clef::Treble8vb, |b| b.clef);
@@ -729,17 +743,17 @@ impl Ctx<'_> {
         v
     }
 
-    fn staff_lines(&self, list: &mut DisplayList, left: f32, right: f32) {
+    fn staff_lines(&self, list: &mut DisplayList, left: f32, right: f32, paint: Paint) {
         let sp = self.sp();
         let t = self.line_t();
         if let Some(top) = self.band.std_top {
             for i in 0..5 {
-                self.p.hline(list, left, right, top + i as f32 * sp, t);
+                self.p.hline_with(list, left, right, top + i as f32 * sp, t, paint);
             }
         }
         if let Some(top) = self.band.tab_top {
             for i in 0..self.view.strings {
-                self.p.hline(list, left, right, top + i as f32 * self.tg, t);
+                self.p.hline_with(list, left, right, top + i as f32 * self.tg, t, paint);
             }
         }
     }
@@ -785,6 +799,7 @@ impl Ctx<'_> {
         bx: &BarX,
         first_in_system: bool,
         clef: Clef,
+        paint: Paint,
     ) -> Option<(f32, f32)> {
         let p = self.p;
         let sp = self.sp();
@@ -815,7 +830,7 @@ impl Ctx<'_> {
                         glyphs::NATURAL,
                         kx,
                         step_y(top, sp, *step),
-                        Paint::Ink,
+                        paint,
                     );
                     kx += p.width(glyphs::NATURAL) + 0.15 * sp;
                 }
@@ -824,7 +839,7 @@ impl Ctx<'_> {
                 }
                 for (step, alter) in key_signature_steps_for(new, clef) {
                     let g = accidental_glyph(alter);
-                    p.glyph(list, g, kx, step_y(top, sp, step), Paint::Ink);
+                    p.glyph(list, g, kx, step_y(top, sp, step), paint);
                     kx += p.width(g) + 0.15 * sp;
                 }
             }
@@ -964,8 +979,34 @@ impl Ctx<'_> {
         }
     }
 
+    fn repeat_dots_with(
+        &self,
+        list: &mut DisplayList,
+        x: f32,
+        top: f32,
+        bottom: f32,
+        std: bool,
+        paint: Paint,
+    ) {
+        let sp = self.sp();
+        let ys = if std {
+            [step_y(top, sp, 5), step_y(top, sp, 3)]
+        } else {
+            let mid = (top + bottom) / 2.0;
+            let off = if self.view.strings.is_multiple_of(2) {
+                self.tg
+            } else {
+                self.tg / 2.0
+            };
+            [mid - off, mid + off]
+        };
+        for y in ys {
+            self.p.glyph(list, glyphs::REPEAT_DOT, x, y, paint);
+        }
+    }
+
     /// The bar line closing a bar: plain, double, final or end-repeat.
-    fn bar_end(&self, list: &mut DisplayList, bx: &BarX) {
+    fn bar_end(&self, list: &mut DisplayList, bx: &BarX, paint: Paint) {
         let p = self.p;
         let sp = self.sp();
         let Some(mb) = self.score.master_bars.get(bx.index) else {
@@ -976,25 +1017,25 @@ impl Ctx<'_> {
         for (top, bottom, std) in self.staves() {
             let x = bx.end;
             if mb.repeat_end.is_some() || last {
-                p.thick_bar(list, x - thick / 2.0, top, bottom);
+                p.thick_bar_with(list, x - thick / 2.0, top, bottom, paint);
                 let thin_x = x - thick / 2.0 - p.thin_thick_step();
-                p.thin_bar(list, thin_x, top, bottom);
+                p.thin_bar_with(list, thin_x, top, bottom, paint);
                 if mb.repeat_end.is_some() {
                     let dot = p.width(glyphs::REPEAT_DOT);
-                    self.repeat_dots(list, thin_x - 0.35 * sp - dot, top, bottom, std);
+                    self.repeat_dots_with(list, thin_x - 0.35 * sp - dot, top, bottom, std, paint);
                 }
             } else if mb.double_bar {
-                p.thin_bar(list, x, top, bottom);
-                p.thin_bar(list, x - 0.5 * sp, top, bottom);
+                p.thin_bar_with(list, x, top, bottom, paint);
+                p.thin_bar_with(list, x - 0.5 * sp, top, bottom, paint);
             } else {
-                p.thin_bar(list, x, top, bottom);
+                p.thin_bar_with(list, x, top, bottom, paint);
             }
         }
     }
 
     /// A simile sign in place of a bar's music: one bar's in its middle,
     /// two bars' across the bar line between them.
-    fn simile(&self, list: &mut DisplayList, kind: oxiguitar_model::Simile, bx: &BarX) {
+    fn simile(&self, list: &mut DisplayList, kind: oxiguitar_model::Simile, bx: &BarX, paint: Paint) {
         use oxiguitar_model::Simile;
         let p = self.p;
         let sp = self.sp();
@@ -1008,7 +1049,7 @@ impl Ctx<'_> {
         for (top, bottom, _) in self.staves() {
             let mid = (top + bottom) / 2.0;
             let y = mid + (above - below) / 2.0;
-            p.glyph(list, g, cx - w / 2.0, y, Paint::Ink);
+            p.glyph(list, g, cx - w / 2.0, y, paint);
         }
         let _ = sp;
     }
@@ -1024,6 +1065,7 @@ impl Ctx<'_> {
         top: f32,
         view_index: usize,
         ties: &mut HashMap<(usize, usize, u8), (f32, f32)>,
+        paint: Paint,
     ) {
         let p = self.p;
         let sp = self.sp();
@@ -1056,7 +1098,7 @@ impl Ctx<'_> {
                 })
                 .collect();
             for g in groups {
-                self.beam_group(list, beats, g, &mut stems, top);
+                self.beam_group(list, beats, g, &mut stems, top, paint);
             }
             for (i, b) in beats.iter().enumerate() {
                 let Some(cx) = xs.get(i).copied().flatten() else {
@@ -1077,21 +1119,21 @@ impl Ctx<'_> {
                             step += if voice_stems_up(vi) { 4 } else { -4 };
                         }
                         let w = p.width(g);
-                        p.glyph(list, g, cx - w / 2.0, y(step), Paint::Ink);
+                        p.glyph(list, g, cx - w / 2.0, y(step), paint);
                         for d in 0..b.dots {
                             let dx = cx + w / 2.0 + 0.3 * sp + f32::from(d) * 0.5 * sp;
-                            p.glyph(list, glyphs::AUGMENTATION_DOT, dx, y(step | 1), Paint::Ink);
+                            p.glyph(list, glyphs::AUGMENTATION_DOT, dx, y(step | 1), paint);
                         }
                     }
                     BeatKind::Notes => {
                         let stem = stems.get(i).copied().flatten();
-                        self.chord(list, b, cx, top, stem, (view_index, vi), ties);
+                        self.chord(list, b, cx, top, stem, (view_index, vi), ties, paint);
                         if let Some(s) = stem {
-                            p.vline(list, s.x, s.base, s.tip, stem_t);
+                            p.vline_with(list, s.x, s.base, s.tip, stem_t, paint);
                             if let Some(g) = tremolo_glyph(b) {
                                 let w = p.width(g);
                                 let mid = s.base + (s.tip - s.base) * 0.55;
-                                p.glyph(list, g, s.x - w / 2.0 + 0.6 * sp, mid, Paint::Ink);
+                                p.glyph(list, g, s.x - w / 2.0 + 0.6 * sp, mid, paint);
                             }
                             let beams = beam_count(b.value);
                             if b.group.is_none() && beams > 0 {
@@ -1101,22 +1143,22 @@ impl Ctx<'_> {
                                     &glyphs::FLAGS_DOWN
                                 };
                                 if let Some(f) = flags.get(beams.min(4) - 1) {
-                                    p.glyph(list, *f, s.x - stem_t / 2.0, s.tip, Paint::Ink);
+                                    p.glyph(list, *f, s.x - stem_t / 2.0, s.tip, paint);
                                 }
                             }
                         }
                     }
                 }
             }
-            self.tuplets(list, beats, &xs, &stems, top, hw);
-            self.std_graces(list, beats, &xs, top);
+            self.tuplets(list, beats, &xs, &stems, top, hw, paint);
+            self.std_graces(list, beats, &xs, top, paint);
             self.dim(list, vi, start);
         }
     }
 
     /// Grace notes on the staff: small notes with stems up before their
     /// main note, slashed when played before the beat, slurred to it.
-    fn std_graces(&self, list: &mut DisplayList, beats: &[BeatInfo], xs: &[Option<f32>], top: f32) {
+    fn std_graces(&self, list: &mut DisplayList, beats: &[BeatInfo], xs: &[Option<f32>], top: f32, paint: Paint) {
         let p = self.p;
         let sp = self.sp();
         let y = |step: i32| step_y(top, sp, step);
@@ -1147,31 +1189,33 @@ impl Ctx<'_> {
                 let ext = ed.leger_line_extension * sp * scale;
                 let mut l = -2;
                 while l >= n.step {
-                    p.hline(
+                    p.hline_with(
                         list,
                         left - ext,
                         left + w + ext,
                         y(l),
                         ed.leger_line_thickness * sp,
+                        paint,
                     );
                     l -= 2;
                 }
                 let mut l = 10;
                 while l <= n.step {
-                    p.hline(
+                    p.hline_with(
                         list,
                         left - ext,
                         left + w + ext,
                         y(l),
                         ed.leger_line_thickness * sp,
+                        paint,
                     );
                     l += 2;
                 }
-                p.glyph_scaled(list, head, scale, left, ny, Paint::Ink);
+                p.glyph_scaled(list, head, scale, left, ny, paint);
                 if let Some(alter) = n.accidental {
                     let g = accidental_glyph(alter);
                     let aw = p.width(g) * scale;
-                    p.glyph_scaled(list, g, scale, left - 0.15 * sp - aw, ny, Paint::Ink);
+                    p.glyph_scaled(list, g, scale, left - 0.15 * sp - aw, ny, paint);
                 }
             }
             let (Some(low), Some(high)) = (b.notes.first(), b.notes.last()) else {
@@ -1181,10 +1225,10 @@ impl Ctx<'_> {
             let t = ed.stem_thickness * sp * scale;
             let sx = left + ax * scale - t / 2.0;
             let tip = y(high.step) - 2.5 * sp;
-            p.vline(list, sx, y(low.step) + ay * scale, tip, t);
+            p.vline_with(list, sx, y(low.step) + ay * scale, tip, t, paint);
             let beams = beam_count(b.value).clamp(1, 4);
             if let Some(f) = glyphs::FLAGS_UP.get(beams - 1) {
-                p.glyph_scaled(list, *f, scale, sx - t / 2.0, tip, Paint::Ink);
+                p.glyph_scaled(list, *f, scale, sx - t / 2.0, tip, paint);
             }
             if b.grace == Some(GraceKind::BeforeBeat) {
                 p.line_between(
@@ -1251,6 +1295,7 @@ impl Ctx<'_> {
         members: &[usize],
         stems: &mut [Option<Stem>],
         top: f32,
+        paint: Paint,
     ) {
         let p = self.p;
         let sp = self.sp();
@@ -1330,7 +1375,7 @@ impl Ctx<'_> {
                     (Some(a), _) => (a.1.x - t / 2.0, a.1.x + hook),
                     _ => break,
                 };
-                p.beam(list, xa, centre(xa, level), xb, centre(xb, level));
+                p.beam_with(list, xa, centre(xa, level), xb, centre(xb, level), paint);
                 k += 1;
             }
         }
@@ -1347,6 +1392,7 @@ impl Ctx<'_> {
         stem: Option<Stem>,
         voice: (usize, usize),
         ties: &mut HashMap<(usize, usize, u8), (f32, f32)>,
+        paint: Paint,
     ) {
         let p = self.p;
         let sp = self.sp();
@@ -1383,15 +1429,15 @@ impl Ctx<'_> {
             // Ledger lines from the staff out to the note.
             let mut l = -2;
             while l >= n.step {
-                p.hline(list, hx - ext, hx + w + ext, y(l), lt);
+                p.hline_with(list, hx - ext, hx + w + ext, y(l), lt, paint);
                 l -= 2;
             }
             let mut l = 10;
             while l <= n.step {
-                p.hline(list, hx - ext, hx + w + ext, y(l), lt);
+                p.hline_with(list, hx - ext, hx + w + ext, y(l), lt, paint);
                 l += 2;
             }
-            p.glyph(list, head, hx, ny, Paint::Ink);
+            p.glyph(list, head, hx, ny, paint);
             if n.ghost {
                 let lw = p.width(glyphs::PAREN_LEFT);
                 p.glyph(
@@ -1399,9 +1445,9 @@ impl Ctx<'_> {
                     glyphs::PAREN_LEFT,
                     hx - lw - 0.05 * sp,
                     ny,
-                    Paint::Ink,
+                    paint,
                 );
-                p.glyph(list, glyphs::PAREN_RIGHT, hx + w + 0.2 * sp, ny, Paint::Ink);
+                p.glyph(list, glyphs::PAREN_RIGHT, hx + w + 0.2 * sp, ny, paint);
             }
             if let Some(alter) = n.accidental {
                 let g = accidental_glyph(alter);
@@ -1414,7 +1460,7 @@ impl Ctx<'_> {
                 };
                 let ax =
                     edge - 0.2 * sp - paren - n.accidental_column as f32 * column_w - p.width(g);
-                p.glyph(list, g, ax, ny, Paint::Ink);
+                p.glyph(list, g, ax, ny, paint);
             }
             if b.dots > 0 {
                 let edge = if shifted_right {
@@ -1425,7 +1471,7 @@ impl Ctx<'_> {
                 let dot_step = if n.step % 2 == 0 { n.step + 1 } else { n.step };
                 for d in 0..b.dots {
                     let dx = edge + 0.35 * sp + f32::from(d) * 0.5 * sp;
-                    p.glyph(list, glyphs::AUGMENTATION_DOT, dx, y(dot_step), Paint::Ink);
+                    p.glyph(list, glyphs::AUGMENTATION_DOT, dx, y(dot_step), paint);
                 }
             }
             // Ties: from the same pitch's last note in this voice.
@@ -1441,7 +1487,7 @@ impl Ctx<'_> {
                     let to = hx - 0.15 * sp;
                     if to > from {
                         let height = dir * (0.35 * sp + 0.04 * (to - from)).min(1.2 * sp);
-                        p.tie(list, Point::new(from, ty), Point::new(to, ty), height);
+                        p.tie_with(list, Point::new(from, ty), Point::new(to, ty), height, paint);
                     }
                 }
                 ties.insert(key, (hx + w, ny));
@@ -1458,6 +1504,7 @@ impl Ctx<'_> {
         stems: &[Option<Stem>],
         top: f32,
         hw: f32,
+        paint: Paint,
     ) {
         let inner = tuplet_groups_at(beats, 1);
         for (range, t) in tuplet_groups(beats) {
@@ -1466,10 +1513,10 @@ impl Ctx<'_> {
                 .iter()
                 .any(|(r, _)| r.start >= range.start && r.end <= range.end);
             let lift = if nested { 2.2 * self.sp() } else { 0.0 };
-            self.tuplet_mark(list, beats, xs, stems, range, t, top, hw, lift);
+            self.tuplet_mark(list, beats, xs, stems, range, t, top, hw, lift, paint);
         }
         for (range, t) in inner {
-            self.tuplet_mark(list, beats, xs, stems, range, t, top, hw, 0.0);
+            self.tuplet_mark(list, beats, xs, stems, range, t, top, hw, 0.0, paint);
         }
     }
 
@@ -1485,6 +1532,7 @@ impl Ctx<'_> {
         top: f32,
         hw: f32,
         lift: f32,
+        paint: Paint,
     ) {
         let p = self.p;
         let sp = self.sp();
@@ -1532,7 +1580,7 @@ impl Ctx<'_> {
         };
         let mut x = cx - w / 2.0;
         for g in &digits {
-            p.glyph(list, *g, x, base, Paint::Ink);
+            p.glyph(list, *g, x, base, paint);
             x += p.width(*g);
         }
         if (!beamed || lift > 0.0) && a != b {
@@ -1546,12 +1594,12 @@ impl Ctx<'_> {
                 .move_to(l, by + hook)
                 .line_to(l, by)
                 .line_to(cx - gap, by);
-            list.stroke(path, t, Paint::Ink);
+            list.stroke(path, t, paint);
             let path = Path::new()
                 .move_to(cx + gap, by)
                 .line_to(r, by)
                 .line_to(r, by + hook);
-            list.stroke(path, t, Paint::Ink);
+            list.stroke(path, t, paint);
         }
     }
 
@@ -1789,7 +1837,7 @@ impl Ctx<'_> {
 
     /// Navigation marks over a bar: segno and coda signs at its start,
     /// fine, jumps (D.C., D.S.) and "To Coda" ending at its end.
-    fn directions(&self, list: &mut DisplayList, directions: &[Direction], bx: &BarX, base: f32) {
+    fn directions(&self, list: &mut DisplayList, directions: &[Direction], bx: &BarX, base: f32, paint: Paint) {
         let p = self.p;
         let sp = self.sp();
         let sign_height = 2.4 * sp;
@@ -1801,7 +1849,7 @@ impl Ctx<'_> {
         let sign_width = |g: G| p.width(g) * scale(g);
         let sign = |list: &mut DisplayList, g: G, x: f32| -> f32 {
             let k = scale(g);
-            p.glyph_scaled(list, g, k, x, base - p.height(g).1 * k, Paint::Ink);
+            p.glyph_scaled(list, g, k, x, base - p.height(g).1 * k, paint);
             sign_width(g)
         };
         let size = 1.9 * sp;
@@ -1822,7 +1870,7 @@ impl Ctx<'_> {
                 Some(text) => {
                     let signs_w: f32 = signs.iter().map(|&g| 0.4 * sp + sign_width(g)).sum();
                     let x = right - signs_w - p.text_width(text, size);
-                    let mut cx = x + p.text(list, text, size, x, base, Paint::Ink);
+                    let mut cx = x + p.text(list, text, size, x, base, paint);
                     for &g in signs {
                         cx += 0.4 * sp;
                         cx += sign(list, g, cx);
@@ -1842,6 +1890,7 @@ impl Ctx<'_> {
         grid: &BarGrid,
         bx: &BarX,
         top_view: bool,
+        paint: Paint,
     ) {
         let p = self.p;
         let sp = self.sp();
@@ -1862,17 +1911,17 @@ impl Ctx<'_> {
                         oxiguitar_model::FermataKind::Long => glyphs::FERMATA_LONG,
                     };
                     let w = p.width(g);
-                    p.glyph(list, g, x + hw / 2.0 - w / 2.0, base, Paint::Ink);
+                    p.glyph(list, g, x + hw / 2.0 - w / 2.0, base, paint);
                     fermatas.push(x);
                 }
                 if let (Some(name), Some(base)) = (&b.chord, lines.chord) {
-                    p.text(list, name, chord_name_size(sp), x, base, Paint::Ink);
+                    p.text(list, name, chord_name_size(sp), x, base, paint);
                 }
                 if let (false, Some(base)) = (b.text.is_empty(), lines.text) {
                     let size = 1.8 * sp;
                     let w = p.text_width(&b.text, size);
                     let x = x.max(text_right + 0.4 * sp).min(self.right - w).max(0.0);
-                    text_right = x + p.text(list, &b.text, size, x, base, Paint::Ink);
+                    text_right = x + p.text(list, &b.text, size, x, base, paint);
                 }
             }
         }
@@ -1900,16 +1949,16 @@ impl Ctx<'_> {
                     .line_to(rect.right(), rect.bottom())
                     .line_to(rect.x, rect.bottom())
                     .close();
-                list.stroke(path, 0.12 * sp, Paint::Ink);
-                p.text(list, &m.letter, size, x + pad, base, Paint::Ink);
+                list.stroke(path, 0.12 * sp, paint);
+                p.text(list, &m.letter, size, x + pad, base, paint);
                 x = rect.right() + 0.5 * sp;
             }
             if !m.text.is_empty() {
-                p.text(list, &m.text, size, x, base, Paint::Ink);
+                p.text(list, &m.text, size, x, base, paint);
             }
         }
         if let Some(base) = lines.direction {
-            self.directions(list, &mb.directions, bx, base);
+            self.directions(list, &mb.directions, bx, base, paint);
         }
         if let Some(base) = lines.tempo {
             let mut marks: Vec<(Ratio, f64)> = mb

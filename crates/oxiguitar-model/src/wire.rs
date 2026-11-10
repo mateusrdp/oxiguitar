@@ -30,6 +30,7 @@ pub fn to_wire(score: &Score) -> w::Score {
         tracks,
         // Version 2's extension (to_wire2).
         layout: _,
+        track_bar_colors: _,
     } = score;
     w::Score {
         info: info_to(info),
@@ -66,6 +67,7 @@ pub fn from_wire(score: w::Score) -> Result<Score, String> {
             .map(|(i, t)| track_from(t).map_err(|e| format!("track {}: {e}", i + 1)))
             .collect::<Result<_, _>>()?,
         layout: Vec::new(),
+        track_bar_colors: std::collections::BTreeMap::new(),
     })
 }
 

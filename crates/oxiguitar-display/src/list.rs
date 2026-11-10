@@ -93,6 +93,8 @@ pub enum Paint {
     /// What needs the user's attention, such as a bar whose beats don't
     /// add up: a translucent red laid under the notation.
     Warning,
+    /// A custom colour (e.g. a bar colour set by the user).
+    Custom(Rgba),
 }
 
 /// An 8-bit sRGB colour with alpha.
@@ -183,6 +185,7 @@ impl Theme {
             Paint::Accent => self.accent,
             Paint::Muted => self.muted,
             Paint::Warning => self.warning,
+            Paint::Custom(c) => c,
         }
     }
 }
