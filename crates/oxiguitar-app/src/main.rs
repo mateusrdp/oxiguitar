@@ -3551,12 +3551,8 @@ fn display_options_done(
     } else {
         None
     };
-    if cmd_bar.is_some() {
-        edit_at_caret(app, oxiguitar_edit::Command::SetBarColor(cmd_bar));
-    }
-    if cmd_track.is_some() {
-        edit_at_caret(app, oxiguitar_edit::Command::SetTrackBarColor(cmd_track));
-    }
+    edit_at_caret(app, oxiguitar_edit::Command::SetBarColor(cmd_bar));
+    edit_at_caret(app, oxiguitar_edit::Command::SetTrackBarColor(cmd_track));
 }
 
 /// Shows the bend editor's state.
