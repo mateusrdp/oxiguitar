@@ -145,6 +145,10 @@ pub(crate) struct Document {
     /// Why the score's sidecar (`FILE.oxg`, the tracks' plugin settings)
     /// couldn't be read when it opened, if it couldn't.
     pub(crate) sidecar_problem: Option<String>,
+    /// Whether bar colour swatches apply to all tracks (`SetBarColor`)
+    /// or the current track only (`SetTrackBarColor`): the worker reads
+    /// this to pass to the engraver so it knows which source to check.
+    pub(crate) bar_colour_global: bool,
 }
 
 /// What the Edit menu and the toolbar show about the history.
@@ -345,6 +349,7 @@ impl Document {
             check,
             untitled: false,
             sidecar_problem,
+            bar_colour_global: false,
         })
     }
 
@@ -372,6 +377,7 @@ impl Document {
             history: History::new(),
             untitled: true,
             sidecar_problem: None,
+            bar_colour_global: false,
         }
     }
 
@@ -499,6 +505,14 @@ impl Document {
         caret: Caret,
         selection: Option<Selection>,
     ) -> Option<Caret> {
+        // Track which scope the last bar colour command used, so the
+        // engraver knows which source to read.
+        if matches!(
+            command,
+            Command::SetBarColor(_) | Command::SetTrackBarColor(_)
+        ) {
+            self.bar_colour_global = matches!(command, Command::SetBarColor(_));
+        }
         let score = Arc::make_mut(&mut self.score);
         let edited = oxiguitar_edit::apply(score, &mut self.history, caret, selection, command)?;
         self.check.update(&self.score, &edited.touched);
@@ -836,9 +850,11 @@ impl Engraver {
         score: &Score,
         settings: &Settings,
         marked: BTreeSet<(usize, usize, usize)>,
+        bar_colour_global: bool,
     ) -> Engraved {
         let options = Options {
             marked,
+            bar_colour_global,
             ..settings.options()
         };
         engrave(score, &self.fonts, &self.meta, &options)
@@ -857,7 +873,9 @@ impl Engraver {
             ..settings.clone()
         };
         // A PDF shows what the file says: no marks, every voice in ink.
-        let pages = self.engrave(&doc.score, &paged, BTreeSet::new()).pages;
+        let pages = self
+            .engrave(&doc.score, &paged, BTreeSet::new(), false)
+            .pages;
         let refs: Vec<&DisplayList> = pages.iter().collect();
         let bytes = oxiguitar_render::to_pdf(&refs, &self.fonts, &Theme::PRINT, &doc.title())
             .map_err(|e| e.to_string())?;
@@ -899,7 +917,9 @@ mod tests {
                 ..Settings::default()
             };
             assert_eq!(
-                e.engrave(&doc.score, &s, BTreeSet::new()).pages.len(),
+                e.engrave(&doc.score, &s, BTreeSet::new(), false)
+                    .pages
+                    .len(),
                 1,
                 "{layout:?}"
             );

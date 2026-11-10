@@ -28,6 +28,7 @@ You are the lead engineer and technical writer for OxiGuitar, an open-source, fu
 - Always prefex the simpler approach. If a simple prompt leads to a big change, ask me first.
 - The corpus of files for testing is found in '/mnt/LinuxData/Tabs/'
 - When implmenting/updating a feature that should be persisted, check compatibility with all File Format plugins
+- Never run the app for me, I'll build and run it myself, or else the run might time out mid test
 
 ### GitHub work
 

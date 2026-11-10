@@ -634,7 +634,12 @@ fn engrave(st: &mut State, sink: &dyn Fn(Event)) {
         return;
     };
     st.stale = false;
-    let engraved = st.engraver.engrave(&doc.score, &st.settings, doc.marked());
+    let engraved = st.engraver.engrave(
+        &doc.score,
+        &st.settings,
+        doc.marked(),
+        doc.bar_colour_global,
+    );
     st.sheets = Sheets::stack(engraved.pages);
     st.engraving += 1;
     sink(Event::Engraved {

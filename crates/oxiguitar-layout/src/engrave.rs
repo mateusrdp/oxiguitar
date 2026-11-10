@@ -167,7 +167,7 @@ pub(crate) fn system(
     spec: &SystemSpec,
     p: &Painter<'_>,
     marked: &BTreeSet<(usize, usize, usize)>,
-    (active_voice, design): (Option<usize>, bool),
+    (active_voice, design, bar_colour_global): (Option<usize>, bool, bool),
 ) -> DrawnSystem {
     let sp = p.sp;
     let tg = TAB_GAP * sp;
@@ -454,8 +454,8 @@ pub(crate) fn system(
                 paint,
             );
         }
-        // Draw staff lines once at system level (before bar loop) so they
-        // span the full system width. Bar colour is applied to bars below.
+        // Draw staff lines once at system level so they span the full
+        // system width. Bar colour is applied to bar elements below.
         ctx.staff_lines(&mut list, spec.indent, right, Paint::Ink);
         for (k, bx) in bars.iter().enumerate() {
             let Some(plan) = plan_of(bx.index) else {
@@ -467,27 +467,47 @@ pub(crate) fn system(
             // Resolve this bar's colour and draw bar elements.
             // mute_from converts both Ink and Custom→Muted, so custom
             // colours can be muted. Only use Paint::Custom when the user
-            // explicitly selected a swatch (track_bar_color.is_some());
-            // otherwise keep Paint::Ink so the default bar colour doesn't
-            // change and golden images stay aligned with the theme.
-            let master_bar = score.master_bars.get(bx.index);
-            let track_bar_color = master_bar
-                .and_then(|mb| mb.track_bar_color)
-                .or_else(|| {
+            // explicitly selected a swatch; otherwise keep Paint::Ink so
+            // the default bar colour doesn't change and golden images stay
+            // aligned with the theme.
+            //
+            // `bar_colour_global` controls which source to read for the
+            // resolved colour: when true (`SetBarColor`), read
+            // `master_bar.bar_color` (all tracks); when false
+            // (`SetTrackBarColor`), read `track_bar_colors` for the
+            // current view's track only.
+            let system_colour = Color::default();
+            let has_custom = if bar_colour_global {
+                score
+                    .master_bars
+                    .get(bx.index)
+                    .is_some_and(|mb| mb.bar_color.is_some())
+            } else {
+                score
+                    .track_bar_colors
+                    .get(&v.track)
+                    .is_some_and(|t| t.get(bx.index).is_some_and(|c| c.is_some()))
+            };
+            let resolved = if has_custom {
+                if bar_colour_global {
+                    score
+                        .master_bars
+                        .get(bx.index)
+                        .and_then(|mb| mb.bar_color)
+                        .unwrap_or(system_colour)
+                } else {
                     score
                         .track_bar_colors
                         .get(&v.track)
-                        .and_then(|v| v.get(bx.index))
+                        .and_then(|t| t.get(bx.index))
                         .copied()
                         .flatten()
-                });
-            let system_colour = Color::default();
-            let resolved = master_bar
-                .map(|mb| mb.resolve_colour(track_bar_color, system_colour))
-                .unwrap_or(system_colour);
-            let paint = if track_bar_color.is_some()
-                || master_bar.is_some_and(|mb| mb.bar_color.is_some())
-            {
+                        .unwrap_or(system_colour)
+                }
+            } else {
+                system_colour
+            };
+            let paint = if has_custom {
                 Paint::Custom(oxiguitar_display::Rgba::rgb(
                     resolved.r, resolved.g, resolved.b,
                 ))

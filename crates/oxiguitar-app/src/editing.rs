@@ -735,7 +735,6 @@ impl Editing {
         self.bar_colour_global = global;
     }
 
-
     /// The score the caret is in.
     pub(crate) fn score(&self) -> Option<Arc<Score>> {
         self.score.clone()
