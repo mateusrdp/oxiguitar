@@ -80,7 +80,10 @@ impl Sidecar {
             .iter()
             .all(|t| t.plugins.is_empty() && t.effects.is_empty() && !t.chords)
             && self.bar_colors.iter().all(Option::is_none)
-            && self.track_bar_colors.values().all(|v| v.iter().all(Option::is_none))
+            && self
+                .track_bar_colors
+                .values()
+                .all(|v| v.iter().all(Option::is_none))
     }
 
     /// Reads the sidecar of the score at `score`: `Ok(None)` when it has
@@ -518,10 +521,7 @@ mod tests {
         let mut track_colors = BTreeMap::new();
         track_colors.insert(
             "Lead".into(),
-            vec![
-                None,
-                Some(serde_json::json!({"r": 0, "g": 255, "b": 128})),
-            ],
+            vec![None, Some(serde_json::json!({"r": 0, "g": 255, "b": 128}))],
         );
         let s = Sidecar {
             tracks: vec![entry("Lead", &[])],
@@ -555,7 +555,10 @@ mod tests {
             bar_colors: vec![None],
             track_bar_colors: {
                 let mut m = BTreeMap::new();
-                m.insert("Lead".into(), vec![None, Some(serde_json::json!({"r": 1, "g": 2, "b": 3}))]);
+                m.insert(
+                    "Lead".into(),
+                    vec![None, Some(serde_json::json!({"r": 1, "g": 2, "b": 3}))],
+                );
                 m
             },
         };

@@ -29,8 +29,9 @@
 //! a fret, a rest or a tie adds a beat as long as the beat before it.
 
 use oxiguitar_model::{
-    Bar, Beat, BeatKind, BeatTechnique, Clef, Color, Direction, Duration, Dynamic, KeySignature, Marker,
-    Note, NotePlace, NoteValue, Pitch, Score, Staff, TimeSignature, TripletFeel, Tuplet, Voice,
+    Bar, Beat, BeatKind, BeatTechnique, Clef, Color, Direction, Duration, Dynamic, KeySignature,
+    Marker, Note, NotePlace, NoteValue, Pitch, Score, Staff, TimeSignature, TripletFeel, Tuplet,
+    Voice,
 };
 
 use crate::{Caret, History, Region, Selection, Touched};

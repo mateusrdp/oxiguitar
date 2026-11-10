@@ -210,11 +210,7 @@ impl MasterBar {
     /// (passed as `track_bar_color`). Section colour is taken from
     /// `marker.color` when it is not `Color::default()` (0, 0, 0),
     /// which means "no section colour set".
-    pub fn resolve_colour(
-        &self,
-        track_bar_color: Option<Color>,
-        system_colour: Color,
-    ) -> Color {
+    pub fn resolve_colour(&self, track_bar_color: Option<Color>, system_colour: Color) -> Color {
         track_bar_color
             .or(self.bar_color)
             .or(self.marker.as_ref().and_then(|m| {
@@ -383,7 +379,11 @@ mod tests {
     fn resolve_colour_returns_track_bar_when_set() {
         let mut bar = MasterBar::default();
         bar.track_bar_color = Some(Color { r: 255, g: 0, b: 0 });
-        let system = Color { r: 128, g: 128, b: 128 };
+        let system = Color {
+            r: 128,
+            g: 128,
+            b: 128,
+        };
         assert_eq!(
             bar.resolve_colour(Some(Color { r: 255, g: 0, b: 0 }), system),
             Color { r: 255, g: 0, b: 0 }
@@ -394,7 +394,11 @@ mod tests {
     fn resolve_colour_falls_back_to_bar_colour() {
         let mut bar = MasterBar::default();
         bar.bar_color = Some(Color { r: 0, g: 255, b: 0 });
-        let system = Color { r: 128, g: 128, b: 128 };
+        let system = Color {
+            r: 128,
+            g: 128,
+            b: 128,
+        };
         assert_eq!(
             bar.resolve_colour(None, system),
             Color { r: 0, g: 255, b: 0 }
@@ -409,7 +413,11 @@ mod tests {
             text: String::new(),
             color: Color { r: 0, g: 0, b: 255 },
         });
-        let system = Color { r: 128, g: 128, b: 128 };
+        let system = Color {
+            r: 128,
+            g: 128,
+            b: 128,
+        };
         assert_eq!(
             bar.resolve_colour(None, system),
             Color { r: 0, g: 0, b: 255 }
@@ -424,11 +432,23 @@ mod tests {
             text: String::new(),
             color: Color { r: 0, g: 0, b: 255 },
         });
-        bar.bar_color = Some(Color { r: 255, g: 255, b: 0 });
-        let system = Color { r: 128, g: 128, b: 128 };
+        bar.bar_color = Some(Color {
+            r: 255,
+            g: 255,
+            b: 0,
+        });
+        let system = Color {
+            r: 128,
+            g: 128,
+            b: 128,
+        };
         assert_eq!(
             bar.resolve_colour(None, system),
-            Color { r: 255, g: 255, b: 0 }
+            Color {
+                r: 255,
+                g: 255,
+                b: 0
+            }
         );
     }
 
@@ -437,7 +457,11 @@ mod tests {
         let mut bar = MasterBar::default();
         bar.bar_color = Some(Color { r: 0, g: 255, b: 0 });
         let track = Color { r: 255, g: 0, b: 0 };
-        let system = Color { r: 128, g: 128, b: 128 };
+        let system = Color {
+            r: 128,
+            g: 128,
+            b: 128,
+        };
         assert_eq!(
             bar.resolve_colour(Some(track), system),
             Color { r: 255, g: 0, b: 0 }
@@ -453,21 +477,41 @@ mod tests {
             text: String::new(),
             color: Color::default(),
         });
-        bar.bar_color = Some(Color { r: 255, g: 100, b: 50 });
-        let system = Color { r: 128, g: 128, b: 128 };
+        bar.bar_color = Some(Color {
+            r: 255,
+            g: 100,
+            b: 50,
+        });
+        let system = Color {
+            r: 128,
+            g: 128,
+            b: 128,
+        };
         assert_eq!(
             bar.resolve_colour(None, system),
-            Color { r: 255, g: 100, b: 50 }
+            Color {
+                r: 255,
+                g: 100,
+                b: 50
+            }
         );
     }
 
     #[test]
     fn resolve_colour_falls_to_system_when_nothing_set() {
         let bar = MasterBar::default();
-        let system = Color { r: 42, g: 99, b: 17 };
+        let system = Color {
+            r: 42,
+            g: 99,
+            b: 17,
+        };
         assert_eq!(
             bar.resolve_colour(None, system),
-            Color { r: 42, g: 99, b: 17 }
+            Color {
+                r: 42,
+                g: 99,
+                b: 17
+            }
         );
     }
 }

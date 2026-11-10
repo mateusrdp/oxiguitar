@@ -12,7 +12,9 @@
 use std::collections::{BTreeSet, HashMap};
 
 use oxiguitar_display::{DisplayList, Item, Paint, Path, Point, Rect};
-use oxiguitar_model::{BeatKind, Clef, Color, Direction, GraceKind, NoteValue, Ratio, Score, Tuplet};
+use oxiguitar_model::{
+    BeatKind, Clef, Color, Direction, GraceKind, NoteValue, Ratio, Score, Tuplet,
+};
 
 use crate::draw::{G, Painter, accidental_glyph, glyphs};
 use crate::effects;
@@ -471,7 +473,9 @@ pub(crate) fn system(
             let resolved = master_bar
                 .map(|mb| mb.resolve_colour(track_bar_color, system_colour))
                 .unwrap_or(system_colour);
-            let paint = Paint::Custom(oxiguitar_display::Rgba::rgb(resolved.r, resolved.g, resolved.b));
+            let paint = Paint::Custom(oxiguitar_display::Rgba::rgb(
+                resolved.r, resolved.g, resolved.b,
+            ));
             // SPIKE: use spec.indent for the first bar so staff lines connect to the clef.
             let left = if k == 0 { spec.indent } else { bx.start };
             ctx.staff_lines(&mut list, left, bx.end, paint);
@@ -750,12 +754,14 @@ impl Ctx<'_> {
         let t = self.line_t();
         if let Some(top) = self.band.std_top {
             for i in 0..5 {
-                self.p.hline_with(list, left, right, top + i as f32 * sp, t, paint);
+                self.p
+                    .hline_with(list, left, right, top + i as f32 * sp, t, paint);
             }
         }
         if let Some(top) = self.band.tab_top {
             for i in 0..self.view.strings {
-                self.p.hline_with(list, left, right, top + i as f32 * self.tg, t, paint);
+                self.p
+                    .hline_with(list, left, right, top + i as f32 * self.tg, t, paint);
             }
         }
     }
@@ -827,13 +833,7 @@ impl Ctx<'_> {
                 let mut kx = x;
                 let naturals = cancelled_steps(old, new, clef);
                 for step in &naturals {
-                    p.glyph(
-                        list,
-                        glyphs::NATURAL,
-                        kx,
-                        step_y(top, sp, *step),
-                        paint,
-                    );
+                    p.glyph(list, glyphs::NATURAL, kx, step_y(top, sp, *step), paint);
                     kx += p.width(glyphs::NATURAL) + 0.15 * sp;
                 }
                 if !naturals.is_empty() {
@@ -1037,7 +1037,13 @@ impl Ctx<'_> {
 
     /// A simile sign in place of a bar's music: one bar's in its middle,
     /// two bars' across the bar line between them.
-    fn simile(&self, list: &mut DisplayList, kind: oxiguitar_model::Simile, bx: &BarX, paint: Paint) {
+    fn simile(
+        &self,
+        list: &mut DisplayList,
+        kind: oxiguitar_model::Simile,
+        bx: &BarX,
+        paint: Paint,
+    ) {
         use oxiguitar_model::Simile;
         let p = self.p;
         let sp = self.sp();
@@ -1160,7 +1166,14 @@ impl Ctx<'_> {
 
     /// Grace notes on the staff: small notes with stems up before their
     /// main note, slashed when played before the beat, slurred to it.
-    fn std_graces(&self, list: &mut DisplayList, beats: &[BeatInfo], xs: &[Option<f32>], top: f32, paint: Paint) {
+    fn std_graces(
+        &self,
+        list: &mut DisplayList,
+        beats: &[BeatInfo],
+        xs: &[Option<f32>],
+        top: f32,
+        paint: Paint,
+    ) {
         let p = self.p;
         let sp = self.sp();
         let y = |step: i32| step_y(top, sp, step);
@@ -1442,13 +1455,7 @@ impl Ctx<'_> {
             p.glyph(list, head, hx, ny, paint);
             if n.ghost {
                 let lw = p.width(glyphs::PAREN_LEFT);
-                p.glyph(
-                    list,
-                    glyphs::PAREN_LEFT,
-                    hx - lw - 0.05 * sp,
-                    ny,
-                    paint,
-                );
+                p.glyph(list, glyphs::PAREN_LEFT, hx - lw - 0.05 * sp, ny, paint);
                 p.glyph(list, glyphs::PAREN_RIGHT, hx + w + 0.2 * sp, ny, paint);
             }
             if let Some(alter) = n.accidental {
@@ -1489,7 +1496,13 @@ impl Ctx<'_> {
                     let to = hx - 0.15 * sp;
                     if to > from {
                         let height = dir * (0.35 * sp + 0.04 * (to - from)).min(1.2 * sp);
-                        p.tie_with(list, Point::new(from, ty), Point::new(to, ty), height, paint);
+                        p.tie_with(
+                            list,
+                            Point::new(from, ty),
+                            Point::new(to, ty),
+                            height,
+                            paint,
+                        );
                     }
                 }
                 ties.insert(key, (hx + w, ny));
@@ -1625,7 +1638,16 @@ impl Ctx<'_> {
             };
             let groups = plan.groups.get(vi).map_or(&[][..], Vec::as_slice);
             let start = list.len();
-            self.tab_voice(list, beats, groups, grid, bx, top, voice_stems_up(vi), paint);
+            self.tab_voice(
+                list,
+                beats,
+                groups,
+                grid,
+                bx,
+                top,
+                voice_stems_up(vi),
+                paint,
+            );
             self.dim(list, vi, start);
         }
     }
@@ -1826,7 +1848,8 @@ impl Ctx<'_> {
                 for n in &b.notes {
                     if let Some((string, label)) = &n.tab {
                         let y = top + f32::from(string.saturating_sub(1)) * self.tg;
-                        self.p.tab_number_with(list, gx, y, self.tg * GRACE_SCALE, label, paint);
+                        self.p
+                            .tab_number_with(list, gx, y, self.tg * GRACE_SCALE, label, paint);
                     }
                 }
             }
@@ -1849,7 +1872,14 @@ impl Ctx<'_> {
 
     /// Navigation marks over a bar: segno and coda signs at its start,
     /// fine, jumps (D.C., D.S.) and "To Coda" ending at its end.
-    fn directions(&self, list: &mut DisplayList, directions: &[Direction], bx: &BarX, base: f32, paint: Paint) {
+    fn directions(
+        &self,
+        list: &mut DisplayList,
+        directions: &[Direction],
+        bx: &BarX,
+        base: f32,
+        paint: Paint,
+    ) {
         let p = self.p;
         let sp = self.sp();
         let sign_height = 2.4 * sp;

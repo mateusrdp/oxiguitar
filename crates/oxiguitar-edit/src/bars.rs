@@ -54,7 +54,11 @@ pub(crate) fn apply(
         Command::Bar(to) => properties(score, history, c, selection, to, label),
         _ => {
             let track_id = c.track;
-            let MasterResult { from, bars, track_colours } = master(score, first, last, command, track_id)?;
+            let MasterResult {
+                from,
+                bars,
+                track_colours,
+            } = master(score, first, last, command, track_id)?;
             if score.master_bars.get(from..from + bars.len())? == bars.as_slice() {
                 return Some(None);
             }
@@ -66,7 +70,10 @@ pub(crate) fn apply(
                 // Apply per-track colour map (SetTrackBarColor).
                 if let Some(ref tc) = track_colours {
                     for (ti, colour_vec) in tc {
-                        s.track_bar_colors.entry(*ti).or_default().clone_from(colour_vec);
+                        s.track_bar_colors
+                            .entry(*ti)
+                            .or_default()
+                            .clone_from(colour_vec);
                     }
                 }
             });
@@ -117,7 +124,8 @@ fn master(
         }
         Command::AlternateEndings(endings) => Some(MasterResult {
             from: first,
-            bars: bars.get(first..=last)?
+            bars: bars
+                .get(first..=last)?
                 .iter()
                 .map(|b| MasterBar {
                     alternate_endings: *endings,
@@ -130,7 +138,8 @@ fn master(
             let on = !bars.get(first)?.free_time;
             Some(MasterResult {
                 from: first,
-                bars: bars.get(first..=last)?
+                bars: bars
+                    .get(first..=last)?
                     .iter()
                     .map(|b| MasterBar {
                         free_time: on,
@@ -157,7 +166,11 @@ fn master(
             one(first, &|b| b.marker.clone_from(&marker))
         }
         Command::TimeSignature(ts) => {
-            let MasterResult { from, bars: mut out, .. } = until_changed(bars, first, |b| &mut b.time_signature, *ts)?;
+            let MasterResult {
+                from,
+                bars: mut out,
+                ..
+            } = until_changed(bars, first, |b| &mut b.time_signature, *ts)?;
             for (b, old) in out.iter_mut().zip(bars.get(from..)?) {
                 rescale_tempo(b, old.time_signature);
             }
@@ -171,7 +184,8 @@ fn master(
         Command::TripletFeel(feel) => until_changed(bars, first, |b| &mut b.triplet_feel, *feel),
         Command::SetBarColor(color) => Some(MasterResult {
             from: first,
-            bars: bars.get(first..=last)?
+            bars: bars
+                .get(first..=last)?
                 .iter()
                 .map(|b| MasterBar {
                     bar_color: *color,
@@ -181,7 +195,8 @@ fn master(
             track_colours: None,
         }),
         Command::SetTrackBarColor(color) => {
-            let coloured_bars = bars.get(first..=last)?
+            let coloured_bars = bars
+                .get(first..=last)?
                 .iter()
                 .map(|b| MasterBar {
                     bar_color: None,
@@ -201,7 +216,7 @@ fn master(
                 bars: coloured_bars,
                 track_colours: Some(track_colours),
             })
-        },
+        }
         _ => None,
     }
 }
@@ -881,14 +896,7 @@ mod tests {
         assert_eq!(h.undo_label(), Some("Bar Colour"));
         assert!(!e.touched.bars.is_empty());
         // Clearing it.
-        do_it(
-            &mut s,
-            &mut h,
-            at(1),
-            None,
-            Command::SetBarColor(None),
-        )
-        .unwrap();
+        do_it(&mut s, &mut h, at(1), None, Command::SetBarColor(None)).unwrap();
         assert_eq!(s.master_bars[1].bar_color, None);
         h.undo(&mut s);
         assert_eq!(s.master_bars[1].bar_color, Some(colour));

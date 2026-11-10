@@ -322,7 +322,15 @@ impl Painter<'_> {
         list.line(Point::new(x0, y), Point::new(x1, y), width, Paint::Ink);
     }
 
-    pub(crate) fn hline_with(&self, list: &mut DisplayList, x0: f32, x1: f32, y: f32, width: f32, paint: Paint) {
+    pub(crate) fn hline_with(
+        &self,
+        list: &mut DisplayList,
+        x0: f32,
+        x1: f32,
+        y: f32,
+        width: f32,
+        paint: Paint,
+    ) {
         list.line(Point::new(x0, y), Point::new(x1, y), width, paint);
     }
 
@@ -330,7 +338,15 @@ impl Painter<'_> {
         list.line(Point::new(x, y0), Point::new(x, y1), width, Paint::Ink);
     }
 
-    pub(crate) fn vline_with(&self, list: &mut DisplayList, x: f32, y0: f32, y1: f32, width: f32, paint: Paint) {
+    pub(crate) fn vline_with(
+        &self,
+        list: &mut DisplayList,
+        x: f32,
+        y0: f32,
+        y1: f32,
+        width: f32,
+        paint: Paint,
+    ) {
         list.line(Point::new(x, y0), Point::new(x, y1), width, paint);
     }
 
@@ -347,7 +363,15 @@ impl Painter<'_> {
         list.fill(p, Paint::Ink);
     }
 
-    pub(crate) fn beam_with(&self, list: &mut DisplayList, x0: f32, y0: f32, x1: f32, y1: f32, paint: Paint) {
+    pub(crate) fn beam_with(
+        &self,
+        list: &mut DisplayList,
+        x0: f32,
+        y0: f32,
+        x1: f32,
+        y1: f32,
+        paint: Paint,
+    ) {
         let h = self.ed().beam_thickness * self.sp;
         let p = Path::new()
             .move_to(x0, y0 - h / 2.0)
@@ -450,14 +474,7 @@ impl Painter<'_> {
             Paint::Page,
         );
         // Noto Sans digits are 0.714 em tall; centre them on the line.
-        self.text(
-            list,
-            label,
-            size,
-            cx - w / 2.0,
-            y + 0.357 * size,
-            paint,
-        );
+        self.text(list, label, size, cx - w / 2.0, y + 0.357 * size, paint);
     }
 
     /// Width of a tab number, knock-out included.

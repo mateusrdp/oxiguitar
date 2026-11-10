@@ -676,13 +676,41 @@ impl Editing {
         if id == "bar-colour" {
             let colour = match usize::try_from(value).unwrap_or(0) {
                 0 => None,
-                1 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x44, b: 0x44 }),
-                2 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x8C, b: 0x00 }),
-                3 => Some(oxiguitar_model::Color { r: 0xFF, g: 0xD7, b: 0x00 }),
-                4 => Some(oxiguitar_model::Color { r: 0x44, g: 0xCC, b: 0x44 }),
-                5 => Some(oxiguitar_model::Color { r: 0x44, g: 0x88, b: 0xFF }),
-                6 => Some(oxiguitar_model::Color { r: 0xAA, g: 0x44, b: 0xFF }),
-                7 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x44, b: 0xAA }),
+                1 => Some(oxiguitar_model::Color {
+                    r: 0xFF,
+                    g: 0x44,
+                    b: 0x44,
+                }),
+                2 => Some(oxiguitar_model::Color {
+                    r: 0xFF,
+                    g: 0x8C,
+                    b: 0x00,
+                }),
+                3 => Some(oxiguitar_model::Color {
+                    r: 0xFF,
+                    g: 0xD7,
+                    b: 0x00,
+                }),
+                4 => Some(oxiguitar_model::Color {
+                    r: 0x44,
+                    g: 0xCC,
+                    b: 0x44,
+                }),
+                5 => Some(oxiguitar_model::Color {
+                    r: 0x44,
+                    g: 0x88,
+                    b: 0xFF,
+                }),
+                6 => Some(oxiguitar_model::Color {
+                    r: 0xAA,
+                    g: 0x44,
+                    b: 0xFF,
+                }),
+                7 => Some(oxiguitar_model::Color {
+                    r: 0xFF,
+                    g: 0x44,
+                    b: 0xAA,
+                }),
                 _ => None,
             };
             // Global = all tracks (SetBarColor); else current track only.
