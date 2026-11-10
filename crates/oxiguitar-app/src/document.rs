@@ -301,12 +301,38 @@ impl Document {
         let sidecar_problem = match Sidecar::read_for(path) {
             Ok(Some(mut sidecar)) => {
                 sidecar.adopt(&plugins.replaced_ids());
-                let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
-                let settled = sidecar.settle(&names);
+                let names: Vec<String> =
+                    score.tracks.iter().map(|t| t.name.clone()).collect();
+                let str_names: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
+                let settled = sidecar.settle(&str_names);
                 for (track, entry) in score.tracks.iter_mut().zip(settled) {
                     track.plugins = entry.plugins;
                     track.effects = entry.effects;
                     track.play_chords = entry.chords;
+                }
+                // Convert track_bar_colors from sidecar format (track name →
+                // Vec<Option<serde_json::Value>>) to score format (track
+                // index → Vec<Option<Color>>).
+                let name_to_index: std::collections::HashMap<&str, usize> = str_names
+                    .iter()
+                    .enumerate()
+                    .map(|(i, n)| (*n, i))
+                    .collect();
+                for (track_name, colors) in &sidecar.track_bar_colors {
+                    if let Some(&ti) = name_to_index.get(track_name.as_str()) {
+                        let parsed: Vec<Option<oxiguitar_model::Color>> = colors
+                            .iter()
+                            .map(|v| {
+                                v.as_ref().and_then(|obj| {
+                                    let r = obj.get("r").and_then(|v| v.as_u64())? as u8;
+                                    let g = obj.get("g").and_then(|v| v.as_u64())? as u8;
+                                    let b = obj.get("b").and_then(|v| v.as_u64())? as u8;
+                                    Some(oxiguitar_model::Color { r, g, b })
+                                })
+                            })
+                            .collect();
+                        score.track_bar_colors.insert(ti, parsed);
+                    }
                 }
                 None
             }
@@ -732,6 +758,33 @@ impl Document {
         }
         // The tracks' plugin settings, beside the file. The score itself is
         // saved even if this fails; the error says so.
+        let track_names: Vec<String> =
+            self.score.tracks.iter().map(|t| t.name.clone()).collect();
+        let mut track_bar_colors: std::collections::BTreeMap<String, Vec<Option<serde_json::Value>>> =
+            std::collections::BTreeMap::new();
+        for (ti, name) in track_names.iter().enumerate() {
+            if let Some(colors) = self.score.track_bar_colors.get(&ti) {
+                let json_colors: Vec<Option<serde_json::Value>> = colors
+                    .iter()
+                    .map(|c| {
+                        c.map(|col| {
+                            serde_json::json!({ "r": col.r, "g": col.g, "b": col.b })
+                        })
+                    })
+                    .collect();
+                track_bar_colors.insert(name.clone(), json_colors);
+            }
+        }
+        let bar_colors: Vec<Option<serde_json::Value>> = self
+            .score
+            .master_bars
+            .iter()
+            .map(|mb| {
+                mb.bar_color.map(|col| {
+                    serde_json::json!({ "r": col.r, "g": col.g, "b": col.b })
+                })
+            })
+            .collect();
         let sidecar = Sidecar {
             tracks: self
                 .score
@@ -744,7 +797,8 @@ impl Document {
                     chords: t.play_chords,
                 })
                 .collect(),
-            ..Default::default()
+            bar_colors,
+            track_bar_colors,
         };
         let kept = sidecar.write_for(&prepared.path);
         if prepared.path == self.path {
