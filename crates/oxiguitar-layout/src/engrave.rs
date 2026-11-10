@@ -472,7 +472,9 @@ pub(crate) fn system(
                 .map(|mb| mb.resolve_colour(track_bar_color, system_colour))
                 .unwrap_or(system_colour);
             let paint = Paint::Custom(oxiguitar_display::Rgba::rgb(resolved.r, resolved.g, resolved.b));
-            ctx.staff_lines(&mut list, bx.start, bx.end, paint);
+            // SPIKE: use spec.indent for the first bar so staff lines connect to the clef.
+            let left = if k == 0 { spec.indent } else { bx.start };
+            ctx.staff_lines(&mut list, left, bx.end, paint);
             if let Some(range) = ctx.bar_start(&mut list, bx, k == 0, plan.clef, paint) {
                 times.insert(bx.index, range);
             }
