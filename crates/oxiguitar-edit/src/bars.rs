@@ -593,6 +593,8 @@ pub struct BarState {
     pub double_bar: bool,
     /// It is in free time.
     pub free_time: bool,
+    /// Custom colour for this bar's background; `None` for auto.
+    pub bar_color: Option<oxiguitar_model::Color>,
 }
 
 impl BarState {
@@ -632,6 +634,7 @@ impl BarState {
             marker: b.marker.clone(),
             double_bar: b.double_bar,
             free_time: b.free_time,
+            bar_color: b.bar_color.or(b.track_bar_color),
         })
     }
 }

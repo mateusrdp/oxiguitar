@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BendDialog, ChordDialog, DisplayOptionsDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog, FitDialog } from "bar_dialog.slint";
+import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog, FitDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -678,13 +678,16 @@ export struct InspectorField {
     label: string,
     // 0 heading, 1 tickbox, 2 drop-down, 3 number, 4 button, 5 text,
     // 6 a row of numbered tickboxes (`value` holds one bit for each),
-    // 7 a line of small text (red when `value` is 1).
+    // 7 a line of small text (red when `value` is 1),
+    // 8 a row of colour swatches (`value` holds the selected index),
+    //    with `global` true when the checkbox is checked.
     kind: int,
     value: int,
     options: [string],
     min: int,
     max: int,
     text: string,
+    global: bool,
 }
 
 // The rows of the Bar and Note tabs, each as its kind says: label on the
@@ -700,6 +703,7 @@ component FieldRows inherits VerticalLayout {
     in property <[InspectorField]> fields;
     callback changed(string, int);
     callback edited(string, string);
+    callback global-changed(string, bool);
     spacing: 6px;
     for f in root.fields : VerticalLayout {
         if f.kind == 0 : VerticalLayout {
@@ -797,6 +801,41 @@ component FieldRows inherits VerticalLayout {
                 }
             }
         }
+        if f.kind == 8 : HorizontalLayout {
+            spacing: 6px;
+            // Colour swatches: Auto + 7 vibrant colours.
+            swatches := Rectangle {
+                property <length> sw: 32px;
+                property <length> sh: 24px;
+                height: self.sh;
+                width: 8 * (self.sw + 4px) - 4px;
+                for i in [0, 1, 2, 3, 4, 5, 6, 7] : Rectangle {
+                    x: i * (swatches.sw + 4px);
+                    width: swatches.sw;
+                    height: swatches.sh;
+                    border-radius: 3px;
+                    border-width: f.value == i ? 2px : 1px;
+                    border-color: f.value == i ? #4488FF : Palette.border;
+                    background: i == 0 ? #CCCCCC : i == 1 ? #FF4444 : i == 2 ? #FF8C00 : i == 3 ? #FFD700 : i == 4 ? #44CC44 : i == 5 ? #4488FF : i == 6 ? #AA44FF : #FF44AA;
+                    Text {
+                        visible: i == 0;
+                        text: "Auto";
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        font-size: 10px;
+                        color: #333333;
+                    }
+                    TouchArea {
+                        clicked => { root.changed(f.id, i); }
+                    }
+                }
+            }
+            CheckBox {
+                text: "Global";
+                checked <=> f.global;
+                toggled => { root.global-changed(f.id, self.checked); }
+            }
+        }
     }
 }
 
@@ -890,6 +929,7 @@ component BarTab inherits Rectangle {
     in property <[InspectorField]> fields;
     callback changed(string, int);
     callback edited(string, string);
+    callback global-changed(string, bool);
     // As wide as the panel, or wider when something in it can't be
     // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
@@ -946,6 +986,7 @@ component BarTab inherits Rectangle {
                 fields: root.fields;
                 changed(id, v) => { root.changed(id, v); }
                 edited(id, t) => { root.edited(id, t); }
+                global-changed(id, g) => { root.global-changed(id, g); }
             }
         }
     }
@@ -1519,10 +1560,6 @@ export component AppWindow inherits Window {
     in property <bool> chord-show-diagram: true;
     callback chord-changed(string, int, string);
     callback chord-dialog-done(bool);
-    in property <bool> display-options-shown: false;
-    in-out property <int> display-options-selected: 0;
-    in-out property <bool> display-options-global: true;
-    callback display-options-done(int, bool);
     in property <bool> paste-dialog-shown: false;
     in-out property <int> paste-times: 1;
     in-out property <bool> paste-replace: false;
@@ -1616,6 +1653,7 @@ export component AppWindow inherits Window {
     in property <[InspectorField]> note-fields;
     callback bar-changed(string, int);
     callback bar-edited(string, string);
+    callback bar-global-changed(string, bool);
     // The Song tab: the score's information (M3 slice 6).
     in property <[SongField]> song-fields;
     callback song-edited(string, string);
@@ -2253,7 +2291,6 @@ export component AppWindow inherits Window {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
                                 MenuItem { title: "Find Fingering"; activated => { root.page-menu("fingering"); } }
                                 MenuItem { title: "Fit Bars to Time Signature…"; activated => { root.page-menu("fit"); } }
-                                MenuItem { title: "Display Options…"; activated => { root.page-menu("display-options"); } }
                                 MenuSeparator { }
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
                                 MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
@@ -2456,6 +2493,7 @@ export component AppWindow inherits Window {
                             fields: root.bar-fields;
                             changed(id, v) => { root.bar-changed(id, v); }
                             edited(id, t) => { root.bar-edited(id, t); }
+                            global-changed(id, g) => { root.bar-global-changed(id, g); }
                         }
                         if root.right-area.active-id == "note" && !root.has-score : Placeholder { text: "Open a file or start a new one: the caret's note and beat show here."; }
                         if root.right-area.active-id == "note" && root.has-score : NoteTab {
@@ -2796,16 +2834,6 @@ export component AppWindow inherits Window {
         show-toggled(on) => { root.chord-changed("show", on ? 1 : 0, ""); }
         remove => { root.chord-changed("remove", 0, ""); }
         done(ok) => { root.chord-dialog-done(ok); }
-    }
-
-    if root.display-options-shown : DisplayOptionsDialog {
-        width: root.width;
-        height: root.height;
-        selected <=> root.display-options-selected;
-        global <=> root.display-options-global;
-        apply(idx, gbl) => {
-            root.display-options-done(idx, gbl);
-        }
     }
 
     if root.paste-dialog-shown : PasteDialog {

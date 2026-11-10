@@ -825,10 +825,6 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_chord_dialog_done(move |ok| chord_dialog_done(&a, ok));
     let a = app.clone();
-    ui.on_display_options_done(move |idx, gbl| {
-        display_options_done(&a, idx, gbl)
-    });
-    let a = app.clone();
     ui.on_text_dialog_done(move |ok| {
         let Some(ui) = a.borrow().ui.upgrade() else {
             return;
@@ -880,6 +876,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_bar_edited(move |id, text| bar_changed(&a, id.as_str(), 0, text.as_str()));
     let a = app.clone();
+    ui.on_bar_global_changed(move |id, global| bar_global_changed(&a, id.as_str(), global));
+    let a = app.clone();
     ui.on_track_changed(move |id, value| track_changed(&a, id.as_str(), value, ""));
     let a = app.clone();
     ui.on_track_edited(move |id, text| track_changed(&a, id.as_str(), 0, text.as_str()));
@@ -913,7 +911,6 @@ fn main() -> Result<(), slint::PlatformError> {
         "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
         "fingering" => find_fingering(&a, oxiguitar_edit::Scope::Selection),
         "fit" => open_fit(&a, false),
-        "display-options" => open_edit_dialog(&a, editing::Dialog::DisplayOptions),
         "design-more" => design_layout(&a, Some(true)),
         "design-less" => design_layout(&a, Some(false)),
         "design-auto" => design_layout(&a, None),
@@ -3288,39 +3285,6 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
                 show_lyric(app, &ui, text);
             }
         }
-        editing::Dialog::DisplayOptions => {
-            let (bar_color, track_bar_color) = {
-                let s = app.borrow();
-                let editing = &s.editing;
-                let Some(score) = editing.score().clone() else {
-                    return;
-                };
-                let Some(caret) = editing.caret() else {
-                    return;
-                };
-                let Some(master_bar) = score.master_bars.get(caret.bar) else {
-                    return;
-                };
-                (master_bar.bar_color, master_bar.track_bar_color)
-            };
-            // Prefer bar_color (global) when set; fall back to track_bar_color.
-            let colour = bar_color.or(track_bar_color);
-            // Map current colour to swatch index; 0 = automatic.
-            let selected = match colour {
-                Some(c) if c.r == 0xFF && c.g == 0x44 && c.b == 0x44 => 1,
-                Some(c) if c.r == 0xFF && c.g == 0x8C && c.b == 0x00 => 2,
-                Some(c) if c.r == 0xFF && c.g == 0xD7 && c.b == 0x00 => 3,
-                Some(c) if c.r == 0x44 && c.g == 0xCC && c.b == 0x44 => 4,
-                Some(c) if c.r == 0x44 && c.g == 0x88 && c.b == 0xFF => 5,
-                Some(c) if c.r == 0xAA && c.g == 0x44 && c.b == 0xFF => 6,
-                Some(c) if c.r == 0xFF && c.g == 0x44 && c.b == 0xAA => 7,
-                _ => 0,
-            };
-            // Global is true when bar_color is set (not just track_bar_color).
-            ui.set_display_options_selected(i32::from(selected));
-            ui.set_display_options_global(bar_color.is_some());
-            ui.set_display_options_shown(true);
-        }
     }
 }
 
@@ -3508,33 +3472,6 @@ fn chord_dialog_done(app: &Shared, ok: bool) {
     }
 }
 
-/// The Display Options dialog closed: on swatch click, apply bar colour.
-fn display_options_done(app: &Shared, selected: i32, global: bool) {
-    let Some(ui) = app.borrow().ui.upgrade() else {
-        return;
-    };
-    ui.set_display_options_shown(false);
-    ui.invoke_focus_page();
-    // Swatch 0 = automatic (no custom colour); 1-7 = swatch colours.
-    let colour = match selected {
-        0 => None,
-        1 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x44, b: 0x44 }),
-        2 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x8C, b: 0x00 }),
-        3 => Some(oxiguitar_model::Color { r: 0xFF, g: 0xD7, b: 0x00 }),
-        4 => Some(oxiguitar_model::Color { r: 0x44, g: 0xCC, b: 0x44 }),
-        5 => Some(oxiguitar_model::Color { r: 0x44, g: 0x88, b: 0xFF }),
-        6 => Some(oxiguitar_model::Color { r: 0xAA, g: 0x44, b: 0xFF }),
-        7 => Some(oxiguitar_model::Color { r: 0xFF, g: 0x44, b: 0xAA }),
-        _ => None,
-    };
-    // Global: store in bar_color (all tracks); else in track_bar_colors (current track).
-    if global {
-        edit_at_caret(app, oxiguitar_edit::Command::SetBarColor(colour));
-    } else {
-        edit_at_caret(app, oxiguitar_edit::Command::SetTrackBarColor(colour));
-    }
-}
-
 /// Shows the bend editor's state.
 fn sync_bend(ui: &AppWindow, f: &bend_form::BendForm) {
     let types: &[&str] = if f.whammy {
@@ -3612,6 +3549,24 @@ fn bend_dialog_done(app: &Shared, ok: bool) {
 /// index or bits; `text` a line of text.
 fn bar_changed(app: &Shared, id: &str, value: i32, text: &str) {
     let command = app.borrow().editing.bar_changed(id, value, text);
+    let Some(command) = command else {
+        return;
+    };
+    let typed = app.borrow_mut().editing.tool(command);
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// The Global checkbox for bar colour swatches was toggled.
+fn bar_global_changed(app: &Shared, id: &str, global: bool) {
+    if id != "bar-colour" {
+        return;
+    }
+    // Store the global setting and re-apply the current swatch.
+    app.borrow_mut().editing.set_bar_colour_global(global);
+    let value = app.borrow().editing.bar_colour_index();
+    let command = app.borrow().editing.bar_changed(id, value, "");
     let Some(command) = command else {
         return;
     };
@@ -3822,12 +3777,14 @@ fn show_rows(
             effect_form::Kind::Text => 5,
             effect_form::Kind::Ticks => 6,
             effect_form::Kind::Info => 7,
+            effect_form::Kind::Swatches => 8,
         },
         value: f.value,
         options: strings(f.options.clone()),
         min: f.min,
         max: f.max,
         text: f.text.as_str().into(),
+        global: f.kind == effect_form::Kind::Swatches && app.borrow().editing.bar_colour_global(),
     };
     let same_shape = shown.len() == rows.len()
         && model.row_count() == rows.len()
