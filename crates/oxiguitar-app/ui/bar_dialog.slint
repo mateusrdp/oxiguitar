@@ -16,6 +16,7 @@ component Card inherits Rectangle {
     in property <bool> takes-focus: true;
     in property <string> heading;
     in property <string> ok-text: "OK";
+    in property <bool> show-buttons: true;
     callback done(bool);
     background: #00000060;
     TouchArea { }
@@ -30,7 +31,7 @@ component Card inherits Rectangle {
                 root.done(false);
                 return accept;
             }
-            if (event.text == Key.Return) {
+            if (event.text == Key.Return && root.show-buttons) {
                 root.done(true);
                 return accept;
             }
@@ -57,7 +58,7 @@ component Card inherits Rectangle {
                     @children
                 }
             }
-            HorizontalLayout {
+            if (root.show-buttons): HorizontalLayout {
                 alignment: end;
                 spacing: 8px;
                 Button { text: root.ok-text; primary: true; clicked => { root.done(true); } }
@@ -706,7 +707,7 @@ export component ExportProgress inherits Rectangle {
                     x: 0;
                     width: parent.width * clamp(root.progress, 0, 1);
                     border-radius: 4px;
-                    background: Palette.accent-background;
+                    background: #4488FF;
                 }
             }
             HorizontalLayout {
@@ -716,3 +717,4 @@ export component ExportProgress inherits Rectangle {
         }
     }
 }
+

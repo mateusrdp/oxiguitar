@@ -93,6 +93,8 @@ pub enum Paint {
     /// What needs the user's attention, such as a bar whose beats don't
     /// add up: a translucent red laid under the notation.
     Warning,
+    /// A custom colour (e.g. a bar colour set by the user).
+    Custom(Rgba),
 }
 
 /// An 8-bit sRGB colour with alpha.
@@ -183,6 +185,7 @@ impl Theme {
             Paint::Accent => self.accent,
             Paint::Muted => self.muted,
             Paint::Warning => self.warning,
+            Paint::Custom(c) => c,
         }
     }
 }
@@ -436,10 +439,10 @@ impl DisplayList {
 
     /// Greys out the items from `start` on: their ink becomes muted (the
     /// editor greys the voices the caret isn't in). Knock-outs and
-    /// highlights keep their paint.
+    /// highlights keep their paint. Also mutes custom-coloured bars.
     pub fn mute_from(&mut self, start: usize) {
         let mute = |p: &mut Paint| {
-            if *p == Paint::Ink {
+            if *p == Paint::Ink || matches!(p, Paint::Custom(_)) {
                 *p = Paint::Muted;
             }
         };

@@ -876,6 +876,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_bar_edited(move |id, text| bar_changed(&a, id.as_str(), 0, text.as_str()));
     let a = app.clone();
+    ui.on_bar_global_changed(move |id, global| bar_global_changed(&a, id.as_str(), global));
+    let a = app.clone();
     ui.on_track_changed(move |id, value| track_changed(&a, id.as_str(), value, ""));
     let a = app.clone();
     ui.on_track_edited(move |id, text| track_changed(&a, id.as_str(), 0, text.as_str()));
@@ -3556,6 +3558,23 @@ fn bar_changed(app: &Shared, id: &str, value: i32, text: &str) {
     }
 }
 
+/// The Global checkbox for bar colour swatches was toggled.
+fn bar_global_changed(app: &Shared, id: &str, global: bool) {
+    if id != "bar-colour" {
+        return;
+    }
+    // When toggling global off while a colour is set, apply it to the
+    // current track only so the colour moves from all-tracks scope
+    // to the current track. When toggling on, just store the setting.
+    let command = app.borrow_mut().editing.set_bar_colour_global(global);
+    if let Some(command) = command {
+        let typed = app.borrow_mut().editing.tool(command);
+        if let Some(t) = typed {
+            send_typed(app, t);
+        }
+    }
+}
+
 /// Shows the right area's tab `id` ("bar", "note"), expanding the area and
 /// showing it if it was collapsed or hidden. The keys, the palette and a
 /// double-click on a time signature come here.
@@ -3757,12 +3776,14 @@ fn show_rows(
             effect_form::Kind::Text => 5,
             effect_form::Kind::Ticks => 6,
             effect_form::Kind::Info => 7,
+            effect_form::Kind::Swatches => 8,
         },
         value: f.value,
         options: strings(f.options.clone()),
         min: f.min,
         max: f.max,
         text: f.text.as_str().into(),
+        global: f.kind == effect_form::Kind::Swatches && app.borrow().editing.bar_colour_global(),
     };
     let same_shape = shown.len() == rows.len()
         && model.row_count() == rows.len()

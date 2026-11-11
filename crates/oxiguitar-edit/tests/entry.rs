@@ -354,6 +354,7 @@ fn commands() -> Vec<Command> {
             marker: None,
             double_bar: false,
             free_time: false,
+            bar_color: None,
         })),
     ]);
     all
