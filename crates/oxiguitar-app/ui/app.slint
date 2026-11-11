@@ -1642,6 +1642,10 @@ export component AppWindow inherits Window {
     callback page-double-clicked(length, length);
     // A right-click on the page, before its menu opens.
     callback page-menu-pressed(length, length);
+    // Dragging on the page to select bars.
+    callback page-drag-started(length, length);
+    callback page-dragged(length, length);
+    callback page-drag-ended(length, length);
     // The Bar tab: the caret's bar (inspector.rs) and its fields
     // (bar_form.rs); the Note tab: the note and beat (effect_form.rs).
     in property <string> inspector-heading;
@@ -2269,12 +2273,19 @@ export component AppWindow inherits Window {
                                 if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
                                     keys.focus();
                                     root.page-pressed(self.mouse-x, self.mouse-y, e.modifiers.shift);
+                                    root.page-drag-started(self.mouse-x, self.mouse-y);
                                 }
                                 if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
                                     keys.focus();
                                     root.page-menu-pressed(self.mouse-x, self.mouse-y);
                                     page-menu-area.show({ x: self.mouse-x, y: self.mouse-y });
                                 }
+                                if (e.kind == PointerEventKind.up && e.button == PointerEventButton.left) {
+                                    root.page-drag-ended(self.mouse-x, self.mouse-y);
+                                }
+                            }
+                            moved => {
+                                root.page-dragged(self.mouse-x, self.mouse-y);
                             }
                             // On a time signature: the Bar tab.
                             double-clicked => { root.page-double-clicked(self.mouse-x, self.mouse-y); }

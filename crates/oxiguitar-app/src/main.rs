@@ -1022,6 +1022,21 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_page_menu_pressed(move |x, y| page_menu_pressed(&a, x, y));
     let a = app.clone();
+    ui.on_page_dragged(move |x, y| {
+        let spot = on_sheet(&a, x, y).and_then(|(sheet, sx, sy)| {
+            let spot = a.borrow().editing.hits().hit(sheet, sx, sy, 0)?;
+            Some((sheet, spot))
+        });
+        let moved = spot.is_some_and(|(_sheet, spot)| a.borrow_mut().editing.drag_select(spot));
+        if moved {
+            caret_moved(&a);
+        }
+    });
+    let a = app.clone();
+    ui.on_page_drag_started(move |x, y| page_drag_started(&a, x, y));
+    let a = app.clone();
+    ui.on_page_drag_ended(move |x, y| page_drag_ended(&a, x, y));
+    let a = app.clone();
     ui.on_caret_key(move |name, shift, ctrl| {
         let Some(key) = editing::Key::from_name(name.as_str()) else {
             return false;
@@ -2526,6 +2541,16 @@ fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
     if moved {
         caret_moved(app);
     }
+}
+
+/// A drag-start on the page: anchors the drag at the current caret bar.
+fn page_drag_started(app: &Shared, _x: f32, _y: f32) {
+    app.borrow_mut().editing.start_drag();
+}
+
+/// A drag-end on the page: no-op (selection is already set by drag_select).
+fn page_drag_ended(_app: &Shared, _x: f32, _y: f32) {
+    // Selection is already committed by the last drag_select call.
 }
 
 /// A right-click on the page, before its menu: the caret goes there unless
