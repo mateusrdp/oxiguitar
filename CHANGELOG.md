@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-11-11
+
 ### Added
 
 - **Drag-to-select beats on the score canvas** (#262): click and drag to select a range of beats — the selection updates in real-time. Same (track, staff, voice) produces beat-level selection; crossing boundaries produces bar-level selection.
