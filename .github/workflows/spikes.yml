@@ -11,6 +11,10 @@ on:
   pull_request:
     paths:
       - "spikes/**"
+      # The Flatpak spike's former folder (the Flatpak is built by
+      # release.yml now) and the README don't start the spikes.
+      - "!spikes/flatpak/**"
+      - "!spikes/README.md"
       - "crates/oxiguitar-display/**"
       - "crates/oxiguitar-render/**"
       - ".github/workflows/spikes.yml"

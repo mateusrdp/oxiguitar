@@ -65,3 +65,7 @@ Does the chain **timed events → SoundFont synthesiser → NAM → audio device
 The spikes workflow runs both on every target and prints the measurements as notices.
 
 `amp DI.sf2 GM.sf2 MODEL.nam CAB.wav OUT-DIR NAME` (feature `nam2`: x86_64, Rust 1.99, `RUSTFLAGS="-C target-cpu=x86-64-v3"`): the song's guitar from a DI sound set through NeuralAmpModeler-rs (amp model, then the cabinet impulse response through its convolution engine) over bass and drums, as 16-bit WAV files for listening; nam-rs runs the same model to compare speed and output. The spikes workflow's `listen` job, started by hand, renders FreePats' DI guitars through four amp captures and keeps them as the artifact `listening-di`.
+
+## flatpak/ — the Flatpak (#163), no longer here
+
+The Flatpak spike (session 40, oxiguitar#260) became the release packaging: the manifest is `scripts/package/io.github.mateusrdp.OxiGuitar.yml`, the launcher `scripts/package/oxiguitar-start`, and the release workflow's "Flatpak" job builds and tests the bundles. The plugins' Flatpak extensions are made by oxiguitar-packages' plugin-release.yml. What the spike measured is in [docs/design/flatpak.md](../docs/design/flatpak.md).

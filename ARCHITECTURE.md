@@ -8,8 +8,8 @@ OxiGuitar is a small core and a set of plugins (decided 18 Oct 2026; [ADR 0008](
    oxiguitar-app (window shell, plugin  oxiguitar-cli
                  manager, Slint)
         |      |       |      \            |           formats: gp3 gp4 gp5 gpx gp
-        |      |       |       \           |                    (later musicxml abc
-        v      v       v        v           v                     mscz midi)
+        |      |       |       \           |                    musicxml midi-file
+        v      v       v        v           v                    tuxguitar
    render  oxiguitar-edit  oxiguitar-host --------------> exporters: png svg wav
    (screen, (commands,     (folders, settings,            tools (later)
     PDF)     undo/redo)     manifests, loading,           instruments: midi nam rse drums

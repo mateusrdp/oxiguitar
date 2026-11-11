@@ -36,7 +36,7 @@ Direct dependencies so far, all Rust (the desktop app also links the system's fo
 | [tiny-skia](https://github.com/linebender/tiny-skia) 0.12 | Yevhenii Reizner and contributors; a port of parts of Skia (Google) | BSD-3-Clause | Pixel output: screen, PNG |
 | [skrifa](https://github.com/googlefonts/fontations) 0.42 | Google (fontations) | MIT OR Apache-2.0 | Font outlines and metrics |
 | [serde](https://serde.rs), [serde_json](https://github.com/serde-rs/json) | David Tolnay, Erick Tryzelaar | MIT OR Apache-2.0 | Reading the SMuFL metadata file |
-| [zip](https://github.com/zip-rs/zip2) 9 | Mathijs van de Nes, Marli Frost, Ryan Levick, Chris Hennick and contributors | MIT | Guitar Pro 7/8 archives (later .mscz). No default features (they compile the zstd C library); deflate through flate2 with the pure-Rust [zlib-rs](https://github.com/trifectatechfoundation/zlib-rs) (Zlib) |
+| [zip](https://github.com/zip-rs/zip2) 9 | Mathijs van de Nes, Marli Frost, Ryan Levick, Chris Hennick and contributors | MIT | Guitar Pro 7/8 archives. No default features (they compile the zstd C library); deflate through flate2 with the pure-Rust [zlib-rs](https://github.com/trifectatechfoundation/zlib-rs) (Zlib) |
 | [postcard](https://github.com/jamesmunns/postcard) 1.1 | James Munns and contributors | MIT OR Apache-2.0 | Encoding the plugin interface's messages |
 | [rustysynth](https://github.com/sinshu/rustysynth) 1.3.8 | Nobuaki Tanaka (sinshu), a port of his MeltySynth | MIT | SoundFont synthesis: the SoundFont plugin plays every track through it, as published |
 | [lewton](https://github.com/RustAudio/lewton) 0.10 | est31 and contributors | MIT OR Apache-2.0 | Ogg Vorbis: SoundFont 3 sets' samples and SFZ instruments' |
@@ -48,7 +48,7 @@ Direct dependencies so far, all Rust (the desktop app also links the system's fo
 | [cpal](https://github.com/RustAudio/cpal) 0.18 | The RustAudio contributors | Apache-2.0 | Sound output: the audio-device plugins for PipeWire, ALSA, WASAPI and Core Audio; compatible with GPL-3.0, not GPL-2.0 |
 | [object](https://github.com/gimli-rs/object) 0.37 | The gimli-rs developers | Apache-2.0 OR MIT | Reading a plugin's manifest section without loading the plugin |
 | [libloading](https://github.com/nagisa/rust_libloading) 0.8 | Simonas Kazlauskas | ISC | Loading plugins |
-| [quick-xml](https://github.com/tafia/quick-xml) 0.42 | Johann Tuffe, Mingun and contributors | MIT | GPIF (Guitar Pro 6–8); later MusicXML and .mscx |
+| [quick-xml](https://github.com/tafia/quick-xml) 0.42 | Johann Tuffe, Mingun and contributors | MIT | GPIF (Guitar Pro 6–8) |
 | [Slint](https://slint.dev) 1.17 | SixtyFPS GmbH and contributors | GPL-3.0-only (one of its three licences; the one we use) | The desktop window (ADR 0004). Because Slint is GPL-3.0-only, the distributed app is under GPL-3.0. Its dependencies include winit, femtovg and AccessKit; we build it without its system-tray support |
 | [rfd](https://github.com/PolyMeilex/rfd) 0.17 | Bartłomiej Maryńczak (PolyMeilex) and contributors | MIT | The system's Open and Save dialogs (the XDG desktop portal on Linux, no GTK) |
 
@@ -64,7 +64,6 @@ Checked for later milestones (licences confirmed 15 October 2026, see ROADMAP.md
 | --- | --- | --- | --- |
 | [midir](https://github.com/Boddlnagg/midir) | 0.11.1 | MIT | MIDI ports (M8) |
 | [musicxml](https://github.com/hedgetechllc/musicxml) | 1.1.2 | MIT | MusicXML reader/writer or reference (M1); last release November 2024 |
-| [abc-parser](https://gitlab.com/Askaholic/rust-abc-2) | 0.4.0 | MIT | ABC 2.1 parser, incomplete (M1) |
 
 ## Fonts and assets
 

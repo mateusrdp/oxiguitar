@@ -132,6 +132,21 @@ pub(crate) fn fields(b: &BarState) -> Vec<Field> {
     let f = BarForm::of(b);
     let pick = |i: i32| usize::try_from(i).unwrap_or(0);
     let mut rows = vec![
+        // Bar colour swatches: Auto + 7 vibrant colours.
+        effect_form::heading("Bar Colour".to_owned()),
+        Field {
+            options: vec![
+                "#CCCCCC".to_owned(),
+                "#FF4444".to_owned(),
+                "#FF8C00".to_owned(),
+                "#FFD700".to_owned(),
+                "#44CC44".to_owned(),
+                "#4488FF".to_owned(),
+                "#AA44FF".to_owned(),
+                "#FF44AA".to_owned(),
+            ],
+            ..effect_form::swatches("bar-colour", "", f.bar_colour_index as i32)
+        },
         effect_form::heading("Time".to_owned()),
         effect_form::number_in("numerator", "Beats a bar", f.numerator, 1, 32),
         effect_form::choice("denominator", "Beat unit", &UNITS, pick(f.denominator)),
@@ -217,6 +232,7 @@ pub(crate) fn changed(was: &BarState, id: &str, value: i32, text: &str) -> Optio
         "letter" => f.letter = text.to_owned(),
         "section" => f.section = text.to_owned(),
         "double-bar" => f.double_bar = on,
+        "bar-colour" => f.bar_colour_index = usize::try_from(value).unwrap_or(0),
         _ => {
             let i = DIRECTION_IDS.iter().position(|d| *d == id)?;
             f.directions[i] = on;
@@ -232,7 +248,7 @@ pub(crate) struct BarForm {
     pub(crate) numerator: i32,
     /// Index in [`DENOMINATORS`].
     pub(crate) denominator: i32,
-    /// 0 for seven flats to 14 for seven sharps.
+    /// Index in key names (0 = C♭, 7 = C, 14 = C♯).
     pub(crate) key: i32,
     pub(crate) minor: bool,
     /// Index in [`CLEFS`].
@@ -251,6 +267,8 @@ pub(crate) struct BarForm {
     pub(crate) endings: Vec<bool>,
     /// One per [`DIRECTIONS`] entry.
     pub(crate) directions: Vec<bool>,
+    /// Swatch index: 0 = Auto (no custom colour), 1-7 = swatch colours.
+    pub(crate) bar_colour_index: usize,
 }
 
 impl BarForm {
@@ -261,6 +279,18 @@ impl BarForm {
             Clef::Treble8vb => Clef::Treble,
             Clef::Bass8vb => Clef::Bass,
             c => c,
+        };
+        // Map current bar colour to swatch index; 0 = Auto.
+        // Bar colour is stored in the score, not BarState. Read from score.
+        let bar_colour_index = match b.bar_color {
+            Some(c) if c.r == 0xFF && c.g == 0x44 && c.b == 0x44 => 1,
+            Some(c) if c.r == 0xFF && c.g == 0x8C && c.b == 0x00 => 2,
+            Some(c) if c.r == 0xFF && c.g == 0xD7 && c.b == 0x00 => 3,
+            Some(c) if c.r == 0x44 && c.g == 0xCC && c.b == 0x44 => 4,
+            Some(c) if c.r == 0x44 && c.g == 0x88 && c.b == 0xFF => 5,
+            Some(c) if c.r == 0xAA && c.g == 0x44 && c.b == 0xFF => 6,
+            Some(c) if c.r == 0xFF && c.g == 0x44 && c.b == 0xAA => 7,
+            _ => 0,
         };
         BarForm {
             numerator: i32::from(b.time_signature.numerator),
@@ -295,6 +325,7 @@ impl BarForm {
                 .iter()
                 .map(|(_, d)| b.directions.contains(d))
                 .collect(),
+            bar_colour_index,
         }
     }
 
@@ -375,6 +406,7 @@ impl BarForm {
             marker,
             double_bar: self.double_bar,
             free_time: self.free_time,
+            bar_color: was.bar_color,
         }
     }
 }
@@ -432,6 +464,7 @@ mod tests {
             }),
             double_bar: true,
             free_time: false,
+            bar_color: None,
         }
     }
 

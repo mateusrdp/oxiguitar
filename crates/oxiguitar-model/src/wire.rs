@@ -30,6 +30,7 @@ pub fn to_wire(score: &Score) -> w::Score {
         tracks,
         // Version 2's extension (to_wire2).
         layout: _,
+        track_bar_colors: _,
     } = score;
     w::Score {
         info: info_to(info),
@@ -66,6 +67,7 @@ pub fn from_wire(score: w::Score) -> Result<Score, String> {
             .map(|(i, t)| track_from(t).map_err(|e| format!("track {}: {e}", i + 1)))
             .collect::<Result<_, _>>()?,
         layout: Vec::new(),
+        track_bar_colors: std::collections::BTreeMap::new(),
     })
 }
 
@@ -496,6 +498,9 @@ fn master_bar_to(b: &MasterBar) -> w::MasterBar {
         // Not in version 1: extensions of version 2 (to_wire2).
         free_time: _,
         fermatas: _,
+        // Not yet in the wire format.
+        bar_color: _,
+        track_bar_color: _,
     } = b;
     w::MasterBar {
         time_signature: w::TimeSignature {
@@ -611,6 +616,8 @@ fn master_bar_from(b: w::MasterBar) -> Result<MasterBar, String> {
         // Version 2's extensions (from_wire2).
         free_time: false,
         fermatas: Vec::new(),
+        bar_color: None,
+        track_bar_color: None,
     })
 }
 

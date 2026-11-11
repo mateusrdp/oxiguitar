@@ -217,10 +217,10 @@ build_deb() {
         echo "Depends: ${linked:+$linked, }$deb_runtime"
         # The core opens and plays nothing without plugins: the essential
         # ones are recommended (apt installs them, and keeps them updated
-        # from the same repository), the NAM (#165) and equalizer (#152)
-        # ones suggested.
+        # from the same repository), the NAM (#165), equalizer (#152),
+        # MusicXML, MIDI file and TuxGuitar (#223) ones suggested.
         echo "Recommends: oxiguitar-guitarpro, oxiguitar-midi, oxiguitar-alsa, oxiguitar-pipewire, $deb_recommends"
-        echo "Suggests: oxiguitar-nam, oxiguitar-eq"
+        echo "Suggests: oxiguitar-nam, oxiguitar-eq, oxiguitar-musicxml, oxiguitar-midi-file, oxiguitar-tuxguitar"
         if [[ "$build" == x11 ]]; then
             # The same program for another display system: one or the other.
             echo "Provides: oxiguitar"
@@ -262,6 +262,9 @@ build_rpm() {
         echo "Recommends: oxiguitar-pipewire"
         echo "Suggests: oxiguitar-nam"
         echo "Suggests: oxiguitar-eq"
+        echo "Suggests: oxiguitar-musicxml"
+        echo "Suggests: oxiguitar-midi-file"
+        echo "Suggests: oxiguitar-tuxguitar"
         for r in "${rpm_recommends[@]}"; do echo "Recommends: $r"; done
         if [[ "$build" == x11 ]]; then
             echo "Provides: oxiguitar = ${version//-/.}"
