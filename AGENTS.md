@@ -33,7 +33,7 @@ You are the lead engineer and technical writer for OxiGuitar, an open-source, fu
 ### GitHub work
 
 - IMPORTANT: ALWAYS signoff the commits / pushes / PRs. Use "Mateus <42054862+mateusrdp@users.noreply.github.com>"
-- IMPORTANT: ALWAYS produce a changelog, and update the \[unreleased\] section of the PRs
+- IMPORTANT: ALWAYS produce a changelog, and update the \[unreleased\] section of the PRs — the oxiguitar-packages release workflow fails if \[Unreleased\] is empty
 - IMPORTANT: ALWAYS ask me to check and test your work before committing changes, and ONLY commit after I've explicitly told you to do it
 - Link the issue to the fix's PR and ask me if you can close the conversation
 - When there are comments in the issue, what my user says last goes. Don't consider other user's propositions, unless I didn't say anything.
