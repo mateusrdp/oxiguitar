@@ -96,6 +96,10 @@ pub(crate) struct Editing {
     multivoice: bool,
     /// Bar colour swatch: true = global (all tracks), false = current track only.
     bar_colour_global: bool,
+    /// The hit spot where a drag for beat selection began (fixed anchor).
+    drag_anchor: Option<Spot>,
+    /// The current hit spot during a drag (updated on each drag_select).
+    drag_current: Option<Spot>,
 }
 
 /// Where a syllable is being typed (Ctrl + T, as in MuseScore; Mateus,
@@ -1390,6 +1394,86 @@ impl Editing {
         }
     }
 
+    /// Start tracking a drag at the caret's position.
+    pub(crate) fn start_drag(&mut self) {
+        if let Some(c) = self.caret {
+            self.drag_anchor = Some(Spot {
+                track: c.track,
+                staff: c.staff,
+                bar: c.bar,
+                beat: Some(c.beat),
+                string: None,
+                step: None,
+            });
+        }
+    }
+
+    /// Drag-select from `drag_anchor` to `spot`. Returns true if the
+    /// selection changed. Creates a beat selection when in the same
+    /// (track, staff, voice), or a bar selection otherwise.
+    pub(crate) fn drag_select(&mut self, spot: Spot) -> bool {
+        let Some(anchor) = self.drag_anchor else {
+            return false;
+        };
+        let Some(score) = self.score.clone() else {
+            return false;
+        };
+        let Some(c) = self.caret else {
+            return false;
+        };
+        let voice = c.voice;
+        // Update current drag position.
+        self.drag_current = Some(spot);
+        // If same track, staff, and voice: beat-level selection.
+        if (anchor.track, anchor.staff, voice) == (spot.track, spot.staff, voice) {
+            let a = (anchor.bar, anchor.beat.unwrap_or(0));
+            let b = (spot.bar, spot.beat.unwrap_or(0));
+            let (from, to) = (a.min(b), a.max(b));
+            let new_sel = Selection::Beats {
+                track: spot.track,
+                staff: spot.staff,
+                voice,
+                from,
+                to,
+            };
+            let changed = self.selection != Some(new_sel);
+            self.selection = Some(new_sel);
+            // Move caret to the new bar and beat.
+            let new_caret = Caret {
+                bar: to.0,
+                beat: to.1,
+                ..c
+            }
+            .clamp(&score);
+            if let Some(nc) = new_caret {
+                self.caret = Some(nc);
+            }
+            changed
+        } else {
+            // Crosses staff/track: bar-level selection.
+            let (first, last) = (anchor.bar.min(spot.bar), anchor.bar.max(spot.bar));
+            let (t0, t1) = (anchor.track.min(spot.track), anchor.track.max(spot.track));
+            let new_sel = Selection::Bars {
+                tracks: (t0, t1),
+                bars: (first, last),
+            };
+            let changed = self.selection != Some(new_sel);
+            self.selection = Some(new_sel);
+            // Move caret to the new bar.
+            let new_caret = Caret {
+                bar: spot.bar,
+                track: spot.track,
+                staff: spot.staff,
+                ..c
+            }
+            .clamp(&score);
+            if let Some(nc) = new_caret {
+                self.caret = Some(nc);
+            }
+            changed
+        }
+    }
+
     /// A right-click at (`x`, `y`) on sheet `sheet`, before the page's
     /// menu opens: inside the selection it stays, so its commands act on
     /// it; elsewhere the caret goes there as for a press.
@@ -2184,5 +2268,70 @@ mod tests {
         assert_eq!(Key::from_name("right"), Some(Key::Right));
         assert_eq!(Key::from_name("3"), Some(Key::Voice(2)));
         assert_eq!(Key::from_name("x"), None);
+    }
+
+    #[test]
+    fn drag_select_bars() {
+        let mut e = editing(2, &[0, 1]);
+        // Move caret to bar 1, then start drag.
+        assert!(e.go_to_bar(1));
+        e.start_drag();
+        // Drag to bar 2 (same track/staff/voice): beat selection.
+        let spot = Spot {
+            track: 0,
+            staff: 0,
+            bar: 2,
+            beat: Some(0),
+            string: None,
+            step: None,
+        };
+        assert!(e.drag_select(spot));
+        assert_eq!(
+            e.selection(),
+            Some(Selection::Beats {
+                track: 0,
+                staff: 0,
+                voice: 0,
+                from: (1, 0),
+                to: (2, 0),
+            })
+        );
+        // Drag backward to bar 0: selection from anchor (bar 1) to bar 0.
+        let spot = Spot {
+            track: 0,
+            staff: 0,
+            bar: 0,
+            beat: Some(0),
+            string: None,
+            step: None,
+        };
+        assert!(e.drag_select(spot));
+        assert_eq!(
+            e.selection(),
+            Some(Selection::Beats {
+                track: 0,
+                staff: 0,
+                voice: 0,
+                from: (0, 0),
+                to: (1, 0),
+            })
+        );
+        // Drag to a different track: bar selection from anchor (bar 1) to bar 2.
+        let spot = Spot {
+            track: 1,
+            staff: 0,
+            bar: 2,
+            beat: Some(0),
+            string: None,
+            step: None,
+        };
+        assert!(e.drag_select(spot));
+        assert_eq!(
+            e.selection(),
+            Some(Selection::Bars {
+                tracks: (0, 1),
+                bars: (1, 2)
+            })
+        );
     }
 }
