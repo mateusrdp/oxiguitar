@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.19.0" date="2026-11-11" type="development">
+      <description>
+        <p>Bar colour picker now works on all bars (#272): the colour swatches in the Bar tab sidebar apply to every bar, and muting still greys out voices correctly — mutefrom now converts both Paint::Ink and Paint::Custom to Paint::Muted.</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.19.0</url>
+    </release>
     <release version="0.18.0" date="2026-11-09" type="development">
       <description>
         <p>Plugin interface 1.7: format plugins can recognise XML files by their first element (xmlroot), wherever the declaration, comments and document type leave it, and ZIP containers by their root file's first element (containerroot), as compressed MusicXML (.mxl) and MuseScore's .mscz need (#223). The ...</p>

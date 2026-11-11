@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-11
+
 ### Fixed
 
 - **Bar colour picker now works on all bars** (#272): the colour swatches in the Bar tab sidebar apply to every bar, and muting still greys out voices correctly — `mute_from` now converts both `Paint::Ink` and `Paint::Custom` to `Paint::Muted`.
