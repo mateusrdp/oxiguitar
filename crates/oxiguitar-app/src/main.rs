@@ -242,6 +242,8 @@ struct App {
     /// Fit Bars to Time Signature… is open: for the whole song (Tools) or
     /// the selected bars (the page's menu).
     fit_whole_song: Option<bool>,
+    /// Harmonize… is open: for the caret's whole track, or the selection.
+    harmonize_whole_track: Option<bool>,
     /// What to do once the score is saved (after "Save the changes…?").
     after_save: Option<Then>,
     /// The player (M4): its controls and the engine's window half, its
@@ -601,6 +603,7 @@ fn main() -> Result<(), slint::PlatformError> {
         chord_dialog: None,
         transpose_scope: None,
         fit_whole_song: None,
+        harmonize_whole_track: None,
         after_save: None,
         player: player::Player::new(control),
         sound,
@@ -775,6 +778,7 @@ fn main() -> Result<(), slint::PlatformError> {
             "fingering-selection" => return find_fingering(&a, oxiguitar_edit::Scope::Selection),
             "fingering-all" => return find_fingering(&a, oxiguitar_edit::Scope::All),
             "fit-all" => return open_fit(&a, true),
+            "harmonize-all" => return open_harmonize(&a, true),
             _ => {}
         }
         let Some(command) = editing::menu_command(name.as_str()) else {
@@ -892,6 +896,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_fit_dialog_done(move |ok| fit_dialog_done(&a, ok));
     let a = app.clone();
+    ui.on_harmonize_dialog_done(move |ok| harmonize_dialog_done(&a, ok));
+    let a = app.clone();
     ui.on_track_menu(move |i, action| {
         let i = usize::try_from(i).unwrap_or(0);
         let a = a.clone();
@@ -911,6 +917,7 @@ fn main() -> Result<(), slint::PlatformError> {
         "transpose" => open_transpose(&a, oxiguitar_edit::Scope::Selection),
         "fingering" => find_fingering(&a, oxiguitar_edit::Scope::Selection),
         "fit" => open_fit(&a, false),
+        "harmonize" => open_harmonize(&a, false),
         "design-more" => design_layout(&a, Some(true)),
         "design-less" => design_layout(&a, Some(false)),
         "design-auto" => design_layout(&a, None),
@@ -4379,6 +4386,85 @@ fn fit_dialog_done(app: &Shared, ok: bool) {
         .tool(oxiguitar_edit::Command::FitBars(fit));
     if let Some(typed) = typed {
         send_typed(app, typed);
+    }
+}
+
+/// Opens Harmonize… (#235) for the caret's whole track or the selected
+/// bars (the caret's bar when nothing is selected).
+fn open_harmonize(app: &Shared, whole_track: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() {
+        return;
+    }
+    let name = {
+        let s = app.borrow();
+        let Some(track) = s.editing.track() else {
+            return;
+        };
+        let score = s.editing.score();
+        score
+            .as_ref()
+            .and_then(|sc| sc.tracks.get(track))
+            .map_or_else(String::new, |t| t.name.clone())
+    };
+    let heading = if whole_track {
+        format!("Find chords for {name}")
+    } else if app.borrow().editing.selection().is_some() {
+        format!("Find chords for the selected bars of {name}")
+    } else {
+        format!("Find chords for this bar of {name}")
+    };
+    app.borrow_mut().harmonize_whole_track = Some(whole_track);
+    ui.set_harmonize_heading(heading.into());
+    ui.set_harmonize_dialog_shown(true);
+}
+
+/// Harmonize… closed: on OK, the chords as one change, and what was
+/// found in the footer.
+fn harmonize_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_harmonize_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(whole_track) = app.borrow_mut().harmonize_whole_track.take() else {
+        return;
+    };
+    if !ok {
+        return;
+    }
+    let harmonize = oxiguitar_edit::Harmonize {
+        sevenths: ui.get_harmonize_sevenths(),
+        inside_bars: ui.get_harmonize_inside_bars(),
+        keep: ui.get_harmonize_keep(),
+        whole_track,
+    };
+    let report = {
+        let s = app.borrow();
+        match (s.editing.score(), s.editing.caret()) {
+            (Some(score), Some(caret)) => {
+                oxiguitar_edit::harmonize_report(&score, caret, s.editing.selection(), &harmonize)
+            }
+            _ => return,
+        }
+    };
+    let Some(report) = report else {
+        message(
+            app,
+            Level::Warning,
+            "No chords found: these bars have no notes, or the track is a drum kit.",
+        );
+        return;
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Harmonize(harmonize));
+    if let Some(typed) = typed {
+        send_typed(app, typed);
+        message(app, Level::Info, report);
     }
 }
 

@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog, FitDialog } from "bar_dialog.slint";
+import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -1586,6 +1586,12 @@ export component AppWindow inherits Window {
     in property <string> fit-heading;
     in-out property <bool> fit-stretch;
     callback fit-dialog-done(bool);
+    in property <bool> harmonize-dialog-shown: false;
+    in property <string> harmonize-heading;
+    in-out property <bool> harmonize-sevenths;
+    in-out property <bool> harmonize-inside-bars;
+    in-out property <bool> harmonize-keep;
+    callback harmonize-dialog-done(bool);
     // File → Export's audio exporters (plugin interface 1.4), by name; the
     // dialog before one exports, and the export under way.
     in property <[string]> exporters;
@@ -1831,6 +1837,7 @@ export component AppWindow inherits Window {
             MenuItem { title: "Transpose…"; enabled: root.has-score; activated => { root.edit-command("transpose-all"); } }
             MenuItem { title: "Find Fingering"; enabled: root.has-score; activated => { root.edit-command("fingering-all"); } }
             MenuItem { title: "Fit Bars to Time Signature…"; enabled: root.has-score; activated => { root.edit-command("fit-all"); } }
+            MenuItem { title: "Harmonize…"; enabled: root.has-score; activated => { root.edit-command("harmonize-all"); } }
             MenuSeparator {}
             MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
         }
@@ -2302,6 +2309,7 @@ export component AppWindow inherits Window {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
                                 MenuItem { title: "Find Fingering"; activated => { root.page-menu("fingering"); } }
                                 MenuItem { title: "Fit Bars to Time Signature…"; activated => { root.page-menu("fit"); } }
+                                MenuItem { title: "Harmonize…"; activated => { root.page-menu("harmonize"); } }
                                 MenuSeparator { }
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
                                 MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
@@ -2871,6 +2879,16 @@ export component AppWindow inherits Window {
         heading: root.fit-heading;
         stretch <=> root.fit-stretch;
         done(ok) => { root.fit-dialog-done(ok); }
+    }
+
+    if root.harmonize-dialog-shown : HarmonizeDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.harmonize-heading;
+        sevenths <=> root.harmonize-sevenths;
+        inside-bars <=> root.harmonize-inside-bars;
+        keep <=> root.harmonize-keep;
+        done(ok) => { root.harmonize-dialog-done(ok); }
     }
 
     if root.question-shown : Question {

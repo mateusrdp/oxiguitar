@@ -32,6 +32,10 @@
 //!   the music re-barred across the bar lines, or each bar stretched to
 //!   fill its time signature (`docs/design/fit-bars.md`).
 //!
+//! - Chords found for a melody ([`Command::Harmonize`], #235): the
+//!   cheapest chain of chords for what every track plays, written on the
+//!   caret's track (`docs/design/harmonize.md`).
+//!
 //! See `docs/design/editor.md` for the rules and the parity checklist.
 
 mod bars;
@@ -42,6 +46,7 @@ mod effects;
 mod entry;
 mod fingering;
 mod fit;
+mod harmonize;
 pub mod harmony;
 mod history;
 mod marks;
@@ -58,6 +63,7 @@ pub use effects::{BeatChange, Effect, HarmonicKind, NoteChange};
 pub use entry::{Command, Edited, apply, new_score};
 pub use fingering::{HARD_FINGERS, HARD_SHIFT, HARD_STRETCH, finger_pitched};
 pub use fit::{Fit, FitHow};
+pub use harmonize::{Harmonize, harmonize_report};
 pub use history::{Change, History, Region, Touched};
 pub use marks::plain_spellings;
 pub use notation::{LYRIC_LINES, tidy_info};

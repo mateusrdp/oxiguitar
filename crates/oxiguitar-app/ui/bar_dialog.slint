@@ -228,6 +228,47 @@ export component FitDialog inherits Rectangle {
     }
 }
 
+// Harmonize… (#235): chords found for the notes of every track and
+// written on the caret's track. The heading names what it applies to.
+export component HarmonizeDialog inherits Rectangle {
+    in property <string> heading: "Harmonize";
+    in-out property <bool> sevenths: false;
+    in-out property <bool> inside-bars: false;
+    in-out property <bool> keep: false;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 460px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            ComboBox {
+                model: ["Major, minor and diminished chords", "Sevenths and suspended chords too"];
+                current-index: root.sevenths ? 1 : 0;
+                selected => { root.sevenths = self.current-index == 1; }
+            }
+            ComboBox {
+                model: ["One chord a bar at most", "Chords may change inside a bar"];
+                current-index: root.inside-bars ? 1 : 0;
+                selected => { root.inside-bars = self.current-index == 1; }
+            }
+            ComboBox {
+                model: ["Replace the chords already there", "Keep the chords already there"];
+                current-index: root.keep ? 1 : 0;
+                selected => { root.keep = self.current-index == 1; }
+            }
+            Text {
+                text: "The chords are found from the notes of every track but drums, in the key of the bars' key signature, and written above this track with their diagrams.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+        }
+    }
+}
+
 // A point of a bend curve on the editor's grid (`bend_form::Point`).
 export struct GridPoint {
     col: int,

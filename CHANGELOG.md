@@ -18,6 +18,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- **Harmonize…** (#235): chords found for the music and written above the caret's track with their diagrams, as one step for Undo (Tools for the whole track, or right-click on the page for the selected bars). It listens to every track but the drums: the caret's track as the melody, the others as the accompaniment, whose notes and lowest note say most. A dialog chooses plain chords or sevenths and suspended chords too, one chord a bar or changes inside bars, and whether the chords already there are replaced or kept (the new ones are then fitted around them). The chords are found in the key of the bars' key signature; the footer names it, and says so when the notes fit another key better. Our own search for the cheapest chain of chords, with numbers counted in the POP909 dataset (`docs/design/harmonize.md`, `scripts/harmony/measure.py`).
 - **A Flatpak** (#163): each release carries `OxiGuitar-VERSION-x86_64.flatpak` and `-aarch64`, the app built in the Freedesktop SDK on the org.freedesktop.Platform 26.08 runtime, with both builds and the `oxiguitar-start` launcher choosing between them as the AppImage does, in Flatpak's default sandbox. It holds no plugin: each plugin is a Flatpak extension of its own, and oxiguitar-packages serves the app and the plugins from a Flatpak repository. The manual's Linux page says how to add it, and where the Flatpak's own plugin, sound set and amp model folders are.
 
 ### Changed
