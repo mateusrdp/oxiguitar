@@ -43,6 +43,11 @@ pub struct Track {
     /// the first system on (Design Mode); empty, or past its end, for the
     /// automatic layout.
     pub layout: Vec<u8>,
+    /// Index of another track whose chord diagrams to show above this
+    /// track's staves; [`usize::MAX`] for none. Purely visual — the
+    /// referenced chords are not persisted as part of this track's
+    /// chord data.
+    pub chords_from: usize,
 }
 
 /// What a track sounds like through General MIDI.

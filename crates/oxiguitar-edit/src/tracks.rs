@@ -109,6 +109,17 @@ pub(crate) fn apply(
             }
         }
         Command::TrackProperties(to) => properties(score, history, label, c, to),
+        Command::ChordsFrom(idx) => {
+            let touched = history.record(score, label, vec![Region::Track(c.track)], |s| {
+                if let Some(track) = s.tracks.get_mut(c.track) {
+                    track.chords_from = *idx;
+                }
+            });
+            Some(Edited {
+                touched,
+                caret: c.clamp(score).unwrap_or(c),
+            })
+        }
         _ => return None,
     };
     Some(edited)

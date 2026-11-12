@@ -1995,6 +1995,20 @@ impl Ctx<'_> {
                 if let (Some(name), Some(base)) = (&b.chord, lines.chord) {
                     p.text(list, name, chord_name_size(sp), x, base, paint);
                 }
+                // Cross-referenced chords in dark green, stacked vertically above the chord baseline.
+                if let Some(base) = lines.chord {
+                    let dark_green = Paint::Custom(oxiguitar_display::Rgba {
+                        r: 0,
+                        g: 100,
+                        b: 0,
+                        a: 255,
+                    });
+                    let chord_size = chord_name_size(sp);
+                    for (i, (_source, name)) in b.cross_chords.iter().enumerate() {
+                        let y_off = (i as f32 + 1.0) * (chord_size + 0.3 * sp);
+                        p.text(list, name, chord_size, x, base - y_off, dark_green);
+                    }
+                }
                 if let (false, Some(base)) = (b.text.is_empty(), lines.text) {
                     let size = 1.8 * sp;
                     let w = p.text_width(&b.text, size);

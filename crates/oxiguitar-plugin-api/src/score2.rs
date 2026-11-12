@@ -129,12 +129,16 @@ pub enum TrackExt {
     /// Bars per system on the page when the track is shown alone, from
     /// the first system on (Design Mode). Since 1.6.
     Layout(Vec<u8>),
+    /// Index of another track whose chord diagrams to show above this
+    /// track's staves; u32::MAX for none. Since 1.7.
+    ChordsFrom(u32),
 }
 
 impl Since for TrackExt {
     fn since(&self) -> u32 {
         match self {
             TrackExt::Layout(_) => 6,
+            TrackExt::ChordsFrom(_) => 7,
         }
     }
 }
@@ -143,6 +147,7 @@ impl Named for TrackExt {
     fn what(&self) -> &'static str {
         match self {
             TrackExt::Layout(_) => "the bars set for each system",
+            TrackExt::ChordsFrom(_) => "the track whose chords are shown above this one",
         }
     }
 }

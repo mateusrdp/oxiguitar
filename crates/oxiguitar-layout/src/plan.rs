@@ -7,7 +7,7 @@
 use oxiguitar_model::{
     Bar, Barre, Beaming, BeatEffects, BeatKind, Clef, Dynamic, FermataKind, GraceKind, Hairpin,
     Harmonic, KeySignature, MasterBar, Note, NoteEffects, NotePlace, NoteValue, Ottava, Pitch,
-    Ratio, Simile, Staff, Track, Tuplet,
+    Ratio, Score, Simile, Staff, Track, Tuplet,
 };
 
 use crate::draw::{G, Painter, glyphs};
@@ -60,6 +60,8 @@ pub(crate) struct BeatInfo {
     pub(crate) group: Option<usize>,
     /// Chord name to show above the staff.
     pub(crate) chord: Option<String>,
+    /// Cross-referenced chords from another track: (source track index, name).
+    pub(crate) cross_chords: Vec<(usize, String)>,
     /// Free text above the staff.
     pub(crate) text: String,
     /// Effects on the whole beat.
@@ -223,6 +225,7 @@ pub(crate) fn duration_space(span: Ratio) -> f32 {
 
 pub(crate) struct Planner<'a> {
     pub(crate) p: &'a Painter<'a>,
+    pub(crate) score: &'a Score,
     pub(crate) track: &'a Track,
     pub(crate) staff: &'a Staff,
     pub(crate) tab_gap: f32,
@@ -236,7 +239,7 @@ impl Planner<'_> {
     }
 
     /// Plans one bar of this staff.
-    pub(crate) fn bar(&self, bar: &Bar, mb: &MasterBar) -> BarPlan {
+    pub(crate) fn bar(&self, bar: &Bar, mb: &MasterBar, bar_index: usize) -> BarPlan {
         let length = rhythm::bar_length(bar, mb.time_signature);
         let columns = rhythm::columns(bar, length);
         let clef = bar.clef;
@@ -282,6 +285,7 @@ impl Planner<'_> {
                             .and_then(|c| self.track.chords.get(c))
                             .map(|c| c.name.clone())
                             .filter(|n| !n.is_empty()),
+                        cross_chords: Vec::new(),
                         text: b.text.trim().to_owned(),
                         effects: b.effects.clone(),
                         grace: b.grace,
@@ -293,6 +297,59 @@ impl Planner<'_> {
                     .collect()
             })
             .collect();
+        // Inject cross-referenced chords from another track.
+        // Iterate over source beats with chords, match to target beats by onset.
+        // This handles different beat counts: multiple source chords can land
+        // on the same target beat, and different rhythms still align by time.
+        if self.track.chords_from != usize::MAX {
+            if let Some(ref track) = self.score.tracks.get(self.track.chords_from) {
+                if let Some(ref_other_bar) = track.staves.first().and_then(|s| s.bars.get(bar_index)) {
+                    // Compute onsets for the referenced bar's voices.
+                    let ref_onsets: Vec<Vec<Option<Ratio>>> = ref_other_bar
+                        .voices
+                        .iter()
+                        .map(|v| rhythm::onsets(v))
+                        .collect();
+                    // Collect source beats with chords: (onset, name).
+                    let mut source_chords: Vec<(Option<Ratio>, String)> = Vec::new();
+                    for (vi, voice) in ref_other_bar.voices.iter().enumerate() {
+                        for (bi, beat) in voice.beats.iter().enumerate() {
+                            if let Some(chord_idx) = beat.chord {
+                                if let Some(chord) = track.chords.get(chord_idx) {
+                                    let name = chord.name.clone();
+                                    if !name.is_empty() {
+                                        source_chords.push((ref_onsets[vi].get(bi).copied().flatten(), name));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Sort by onset so chords land in order; skip grace beats.
+                    source_chords.retain(|(onset, _)| onset.is_some());
+                    source_chords.sort_by(|a, b| a.0.cmp(&b.0));
+                    // For each source chord, find the closest target beat by onset.
+                    for beats in &mut voices {
+                        for (src_onset, name) in &source_chords {
+                            let mut best_idx: Option<usize> = None;
+                            let mut best_dist = f64::MAX;
+                            for (i, b) in beats.iter().enumerate() {
+                                if let Some(tgt) = b.onset {
+                                    let dist = (src_onset.unwrap_or_default().to_f64() - tgt.to_f64()).abs();
+                                    if dist < best_dist {
+                                        best_dist = dist;
+                                        best_idx = Some(i);
+                                    }
+                                }
+                            }
+                            if let Some(idx) = best_idx {
+                                beats[idx].cross_chords
+                                    .push((self.track.chords_from, name.clone()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
         // Grace beats belong to the main beat after them.
         for beats in &mut voices {
             let mut run = 0;
@@ -441,7 +498,7 @@ impl Planner<'_> {
         BarPlan {
             simile: bar.simile,
             lanes,
-            has_chords: voices.iter().flatten().any(|b| b.chord.is_some()),
+            has_chords: voices.iter().flatten().any(|b| b.chord.is_some() || !b.cross_chords.is_empty()),
             has_text: voices.iter().flatten().any(|b| !b.text.is_empty()),
             voices,
             groups,

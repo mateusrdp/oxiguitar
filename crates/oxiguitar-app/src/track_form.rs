@@ -174,6 +174,9 @@ pub(crate) struct TrackForm {
     pub(crate) effects: Vec<String>,
     /// Play the track's chord diagrams (#151).
     pub(crate) play_chords: bool,
+    /// Index of another track whose chords to show above this one; 0 for
+    /// "(none)".
+    pub(crate) chords_from: i32,
 }
 
 impl TrackForm {
@@ -182,6 +185,11 @@ impl TrackForm {
         let s = TrackSettings::of(track);
         let bass = s.instrument.is_bass();
         let (pattern, key) = tuning::recognise(&s.tuning, bass);
+        let chords_from = if track.chords_from == usize::MAX {
+            0
+        } else {
+            i32::try_from(track.chords_from + 1).unwrap_or(i32::MAX)
+        };
         TrackForm {
             name: s.name,
             short_name: s.short_name,
@@ -206,6 +214,7 @@ impl TrackForm {
             plugins: s.plugins,
             effects: s.effects,
             play_chords: s.play_chords,
+            chords_from,
         }
     }
 
@@ -288,7 +297,7 @@ impl TrackForm {
 /// The Track tab's rows for a track (issue #177, moved from the track
 /// dialog): `message` is what the tuning comes to, or, when `error`, why
 /// the fields can't be applied.
-pub(crate) fn fields(f: &TrackForm, message: &str, error: bool) -> Vec<Field> {
+pub(crate) fn fields(f: &TrackForm, message: &str, error: bool, current_track: usize, track_names: &[String]) -> Vec<Field> {
     let pick = |i: i32| usize::try_from(i).unwrap_or(0);
     let list = |id, label, options: Vec<String>, at| Field {
         options,
@@ -335,6 +344,19 @@ pub(crate) fn fields(f: &TrackForm, message: &str, error: bool) -> Vec<Field> {
             f.pattern,
         ),
     ];
+    // "Show chords from" dropdown: list every track except the current one.
+    // Index 0 = "(none)", 1+ = track index (+1 to skip "(none)").
+    let chords_options: Vec<String> = std::iter::once("(none)".to_owned())
+        .chain(track_names.iter().enumerate().filter_map(|(i, name)| {
+            if i != current_track {
+                Some(name.clone())
+            } else {
+                None
+            }
+        }))
+        .collect();
+    let chords_at = usize::try_from(f.chords_from).unwrap_or(0);
+    rows.push(effect_form::choice("chords-from", "Show chords from", &chords_options.iter().map(|s| s.as_str()).collect::<Vec<&str>>()[..], chords_at));
     if f.pattern == 4 {
         rows.push(effect_form::text("notes", "Notes, lowest first", &f.notes));
     }
@@ -366,6 +388,7 @@ pub(crate) fn changed(f: &mut TrackForm, id: &str, value: i32, text: &str) {
         "notes" => f.notes = text.to_owned(),
         "keep" => f.keep_pitches = value == 0,
         "chords" => f.play_chords = value != 0,
+        "chords-from" => f.chords_from = value,
         _ => {}
     }
 }

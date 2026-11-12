@@ -137,6 +137,7 @@ fn settings_of(track: &Track) -> Track {
         effects,
         play_chords,
         layout,
+        chords_from,
     } = track;
     Track {
         name: name.clone(),
@@ -156,6 +157,8 @@ fn settings_of(track: &Track) -> Track {
         play_chords: *play_chords,
         // And its systems on the page (Design Mode).
         layout: layout.clone(),
+        // Cross-referenced chords are not part of settings: keep the original.
+        chords_from: *chords_from,
     }
 }
 
