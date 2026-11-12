@@ -60,8 +60,9 @@ pub(crate) struct BeatInfo {
     pub(crate) group: Option<usize>,
     /// Chord name to show above the staff.
     pub(crate) chord: Option<String>,
-    /// Cross-referenced chords from another track: (source track index, name).
-    pub(crate) cross_chords: Vec<(usize, String)>,
+    /// Cross-referenced chords from another track: (source onset, name).
+    /// Used to position the chord at the correct column in the merged grid.
+    pub(crate) cross_chords: Vec<(Option<Ratio>, String)>,
     /// Free text above the staff.
     pub(crate) text: String,
     /// Effects on the whole beat.
@@ -298,9 +299,8 @@ impl Planner<'_> {
             })
             .collect();
         // Inject cross-referenced chords from another track.
-        // Iterate over source beats with chords, match to target beats by onset.
-        // This handles different beat counts: multiple source chords can land
-        // on the same target beat, and different rhythms still align by time.
+        // Collect source chords with their onsets; add to every target beat
+        // so they're available for bar-level rendering at the correct column.
         if self.track.chords_from != usize::MAX {
             if let Some(ref track) = self.score.tracks.get(self.track.chords_from) {
                 if let Some(ref_other_bar) = track.staves.first().and_then(|s| s.bars.get(bar_index)) {
@@ -311,15 +311,35 @@ impl Planner<'_> {
                         .map(|v| rhythm::onsets(v))
                         .collect();
                     // Collect source beats with chords: (onset, name).
+                    // Chords can come from two sources:
+                    // 1. beat.chord → index into track.chords (diagram-based)
+                    // 2. beat.text → direct chord name text (GP 7+ stores chord names as text)
                     let mut source_chords: Vec<(Option<Ratio>, String)> = Vec::new();
                     for (vi, voice) in ref_other_bar.voices.iter().enumerate() {
                         for (bi, beat) in voice.beats.iter().enumerate() {
-                            if let Some(chord_idx) = beat.chord {
-                                if let Some(chord) = track.chords.get(chord_idx) {
-                                    let name = chord.name.clone();
-                                    if !name.is_empty() {
-                                        source_chords.push((ref_onsets[vi].get(bi).copied().flatten(), name));
+                            let name = beat.chord
+                                .and_then(|idx| track.chords.get(idx).map(|c| c.name.clone()))
+                                .or_else(|| {
+                                    // Fallback: if beat.text looks like a chord name
+                                    // (contains chord characters but not lyrics/syntax)
+                                    let t = beat.text.trim();
+                                    if t.is_empty() {
+                                        return None;
                                     }
+                                    // Chord names: E, Am, D5, C#m7, etc.
+                                    // Exclude lyrics (lowercase, spaces, punctuation)
+                                    if t.chars().all(|c| c.is_alphanumeric() || c == '#' || c == 'b')
+                                        && t.len() <= 6
+                                        && t.chars().next().unwrap().is_ascii_alphabetic()
+                                    {
+                                        Some(t.to_string())
+                                    } else {
+                                        None
+                                    }
+                                });
+                            if let Some(ref name) = name {
+                                if !name.is_empty() {
+                                    source_chords.push((ref_onsets[vi].get(bi).copied().flatten(), name.clone()));
                                 }
                             }
                         }
@@ -327,23 +347,13 @@ impl Planner<'_> {
                     // Sort by onset so chords land in order; skip grace beats.
                     source_chords.retain(|(onset, _)| onset.is_some());
                     source_chords.sort_by(|a, b| a.0.cmp(&b.0));
-                    // For each source chord, find the closest target beat by onset.
+                    // Add source chords to every target beat.
+                    // Rendering happens at the bar level using the source onset
+                    // to position each chord at the correct column.
                     for beats in &mut voices {
-                        for (src_onset, name) in &source_chords {
-                            let mut best_idx: Option<usize> = None;
-                            let mut best_dist = f64::MAX;
-                            for (i, b) in beats.iter().enumerate() {
-                                if let Some(tgt) = b.onset {
-                                    let dist = (src_onset.unwrap_or_default().to_f64() - tgt.to_f64()).abs();
-                                    if dist < best_dist {
-                                        best_dist = dist;
-                                        best_idx = Some(i);
-                                    }
-                                }
-                            }
-                            if let Some(idx) = best_idx {
-                                beats[idx].cross_chords
-                                    .push((self.track.chords_from, name.clone()));
+                        for b in beats.iter_mut() {
+                            for (onset, name) in &source_chords {
+                                b.cross_chords.push((*onset, name.clone()));
                             }
                         }
                     }
