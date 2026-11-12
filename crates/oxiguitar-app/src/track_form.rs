@@ -500,7 +500,7 @@ mod tests {
     fn the_tab_shows_the_track_and_a_change_is_a_field() {
         let t = guitar();
         let mut f = TrackForm::of(&t);
-        let rows = fields(&f, &f.preview(), false);
+        let rows = fields(&f, &f.preview(), false, 0, &[]);
         let row = |id: &str| rows.iter().find(|r| r.id == id).unwrap();
         assert_eq!(row("name").text, "Lead");
         assert_eq!((row("instrument").value, row("strings").value), (25, 4));
@@ -517,7 +517,7 @@ mod tests {
         assert_eq!(row("keep").value, 0);
 
         changed(&mut f, "pattern", 4, "");
-        assert!(fields(&f, "", false).iter().any(|r| r.id == "notes"));
+        assert!(fields(&f, "", false, 0, &[]).iter().any(|r| r.id == "notes"));
         changed(&mut f, "notes", 0, "D2 A D G A D");
         changed(&mut f, "capo", 2, "");
         changed(&mut f, "name", 0, "Rhythm");

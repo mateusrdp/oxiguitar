@@ -886,13 +886,18 @@ mod tests {
             ..Staff::default()
         };
         let track = Track::default();
+        let score = Score {
+            tracks: vec![track],
+            ..Score::default()
+        };
         let planner = Planner {
             p: &p,
-            track: &track,
+            track: &score.tracks[0],
             staff: &staff,
             tab_gap: 7.5,
             show_std: true,
             show_tab: true,
+            score: &score,
         };
         let bar = Bar {
             voices: voices
@@ -910,7 +915,7 @@ mod tests {
                 .collect(),
             ..Bar::default()
         };
-        let plan = planner.bar(&bar, &MasterBar::default());
+        let plan = planner.bar(&bar, &MasterBar::default(), 0);
         plan.voices
             .iter()
             .map(|v| v.first().map(|b| b.up))

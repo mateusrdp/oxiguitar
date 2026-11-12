@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use crate::{Bar, Color, Pitch};
 
 /// One instrument part: a guitar, a bass, a drum kit, a piano.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Track {
     /// Full name, such as "Lead Guitar".
     pub name: String,
@@ -48,6 +48,11 @@ pub struct Track {
     /// referenced chords are not persisted as part of this track's
     /// chord data.
     pub chords_from: usize,
+    /// Index of the synthetic chord voice for this track's played chords;
+    /// [`usize::MAX`] when the track has no chord voice. Derived as
+    /// `score.tracks.len() + track_index` when a chord voice exists.
+    /// Persisted for round-trip compatibility with older files.
+    pub chords_voice_index: usize,
 }
 
 /// What a track sounds like through General MIDI.
@@ -57,6 +62,27 @@ pub struct Instrument {
     pub midi_program: u8,
     /// True for a drum kit (MIDI channel 10).
     pub percussion: bool,
+}
+
+impl Default for Track {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            short_name: String::new(),
+            color: Color::default(),
+            instrument: Instrument::default(),
+            mix: Mix::default(),
+            staves: Vec::new(),
+            chords: Vec::new(),
+            lyrics: Vec::new(),
+            plugins: BTreeMap::new(),
+            effects: Vec::new(),
+            play_chords: false,
+            layout: Vec::new(),
+            chords_from: usize::MAX,
+            chords_voice_index: usize::MAX,
+        }
+    }
 }
 
 impl Default for Instrument {

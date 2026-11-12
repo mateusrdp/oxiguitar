@@ -93,6 +93,9 @@ pub fn to_wire2(score: &Score) -> w2::Score2 {
         if t.chords_from != usize::MAX {
             wt.ext.push(w2::TrackExt::ChordsFrom(index_to(t.chords_from)));
         }
+        if t.chords_voice_index != usize::MAX {
+            wt.ext.push(w2::TrackExt::ChordsVoiceIndex(index_to(t.chords_voice_index)));
+        }
         for (s, ws) in t.staves.iter().zip(&mut wt.staves) {
             for (b, wb) in s.bars.iter().zip(&mut ws.bars) {
                 if let Some(simile) = b.simile {
@@ -134,6 +137,9 @@ pub fn from_wire2(score: w2::Score2) -> Result<Score, String> {
             match e {
                 w2::TrackExt::Layout(l) => t.layout.clone_from(l),
                 w2::TrackExt::ChordsFrom(i) => t.chords_from = index_from(*i),
+                w2::TrackExt::ChordsVoiceIndex(i) => {
+                    t.chords_voice_index = index_from(*i);
+                }
             }
         }
         for (s, ws) in t.staves.iter_mut().zip(&wt.staves) {
@@ -700,6 +706,8 @@ fn track_to(t: &Track) -> w::Track {
         layout: _,
         // Cross-referenced chords from another track.
         chords_from: _,
+        // Synthetic chord voice index.
+        chords_voice_index: _,
     } = t;
     let Instrument {
         midi_program,
@@ -799,6 +807,7 @@ fn track_from(t: w::Track) -> Result<Track, String> {
         play_chords: false,
         layout: Vec::new(),
         chords_from: usize::MAX,
+        chords_voice_index: usize::MAX,
     })
 }
 

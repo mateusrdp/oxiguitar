@@ -721,23 +721,108 @@ const CHORD_STRUM: f64 = 0.008;
 /// `tracks + t`, `tracks` the score's number of tracks), so they never mix
 /// with the track's own notes before its effects. Only fretted tracks with
 /// strings play them: a diagram is frets on the first staff's strings.
+///
+/// When a track has `chords_from` set, this function also generates events
+/// for the cross-referenced chords: it looks up the source track's beat/chord
+/// data, finds the closest target beat by onset time, and routes events to
+/// the target track's chord voice. This gives the cursor visual cues for
+/// every chord change point, even when the chords come from another track.
 pub fn chords(score: &Score, map: &TimeMap) -> Vec<NoteEvent> {
     let tracks = score.tracks.len();
     let mut all = Vec::new();
     for (ti, track) in score.tracks.iter().enumerate() {
-        if !track.play_chords || track.chords.is_empty() {
+        // Own chords, if any.
+        if track.play_chords && !track.chords.is_empty() {
+            let Some(staff) = track.staves.first() else {
+                continue;
+            };
+            if staff.tuning.is_empty() {
+                continue;
+            }
+            // Each diagram's start, in playing order: (time, visit, beat, diagram).
+            let mut starts: Vec<(f64, usize, usize, usize)> = Vec::new();
+            for (vi, v) in map.visits.iter().enumerate() {
+                for staff in &track.staves {
+                    let Some(bar) = staff.bars.get(v.visit.bar) else {
+                        continue;
+                    };
+                    for voice in &bar.voices {
+                        let mut pos = Ratio::ZERO;
+                        for (bi, beat) in voice.beats.iter().enumerate() {
+                            if beat.grace.is_some() {
+                                continue;
+                            }
+                            if let Some(c) = beat.chord.filter(|c| *c < track.chords.len()) {
+                                starts.push((map.time(vi, pos), vi, bi, c));
+                            }
+                            if let Some(len) = beat.duration.length() {
+                                pos = pos + len;
+                            }
+                        }
+                    }
+                }
+            }
+            starts.sort_by(|a, b| a.0.total_cmp(&b.0));
+            // One diagram an instant: several voices may show the same.
+            starts.dedup_by(|b, a| (b.0 - a.0).abs() < 1e-9);
+            let song_end = map.length();
+            for (k, &(start, visit, beat, c)) in starts.iter().enumerate() {
+                let end = starts.get(k + 1).map_or(song_end, |n| n.0);
+                if end <= start {
+                    continue;
+                }
+                let diagram = &track.chords[c];
+                // Lowest string first: a downstroke.
+                let strings: Vec<(u8, u8)> = diagram
+                    .frets
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, f)| Some((u8::try_from(i + 1).ok()?, (*f)?)))
+                    .collect();
+                for (n, &(string, fret)) in strings.iter().rev().enumerate() {
+                    let Some(key) = staff.pitch_of(string, fret) else {
+                        continue;
+                    };
+                    let at = (start + n as f64 * CHORD_STRUM).min(end);
+                    all.push(NoteEvent {
+                        track: tracks + ti,
+                        staff: 0,
+                        voice: 0,
+                        visit,
+                        beat,
+                        string: Some(string),
+                        key: key.0,
+                        start: at,
+                        end,
+                        velocity: CHORD_VELOCITY,
+                        sound: Sound::Normal,
+                        attack: Attack::Picked,
+                        ghost: false,
+                        let_ring: true,
+                        vibrato: Vibrato::None,
+                        fade_in: false,
+                        fade_out: false,
+                        grace: false,
+                        pitch: Vec::new(),
+                    });
+                }
+            }
+        }
+
+        // Cross-referenced chords: look up source track's beats/chords,
+        // find closest target beat by onset, route to target's chord voice.
+        let source_ti = track.chords_from;
+        if source_ti >= tracks {
             continue;
         }
-        let Some(staff) = track.staves.first() else {
-            continue;
-        };
-        if staff.tuning.is_empty() {
+        let source = &score.tracks[source_ti];
+        if source.chords.is_empty() {
             continue;
         }
-        // Each diagram's start, in playing order: (time, visit, beat, diagram).
-        let mut starts: Vec<(f64, usize, usize, usize)> = Vec::new();
+        // Build (onset, visit, beat, chord_index) for source beats with chords.
+        let mut source_starts: Vec<(f64, usize, usize, usize)> = Vec::new();
         for (vi, v) in map.visits.iter().enumerate() {
-            for staff in &track.staves {
+            for staff in &source.staves {
                 let Some(bar) = staff.bars.get(v.visit.bar) else {
                     continue;
                 };
@@ -747,8 +832,8 @@ pub fn chords(score: &Score, map: &TimeMap) -> Vec<NoteEvent> {
                         if beat.grace.is_some() {
                             continue;
                         }
-                        if let Some(c) = beat.chord.filter(|c| *c < track.chords.len()) {
-                            starts.push((map.time(vi, pos), vi, bi, c));
+                        if let Some(c) = beat.chord.filter(|c| *c < source.chords.len()) {
+                            source_starts.push((map.time(vi, pos), vi, bi, c));
                         }
                         if let Some(len) = beat.duration.length() {
                             pos = pos + len;
@@ -757,17 +842,54 @@ pub fn chords(score: &Score, map: &TimeMap) -> Vec<NoteEvent> {
                 }
             }
         }
-        starts.sort_by(|a, b| a.0.total_cmp(&b.0));
-        // One diagram an instant: several voices may show the same.
-        starts.dedup_by(|b, a| (b.0 - a.0).abs() < 1e-9);
+        source_starts.sort_by(|a, b| a.0.total_cmp(&b.0));
+        // For each source start, find the closest target beat by onset time.
+        let mut target_starts: Vec<(f64, usize, usize, usize)> = Vec::new();
+        for &(s_time, _s_visit, _s_beat, s_chord) in &source_starts {
+            let mut best_dist = f64::INFINITY;
+            let mut best: Option<(f64, usize, usize)> = None;
+            for (vi, v) in map.visits.iter().enumerate() {
+                for staff in &track.staves {
+                    let Some(bar) = staff.bars.get(v.visit.bar) else {
+                        continue;
+                    };
+                    for voice in &bar.voices {
+                        let mut pos = Ratio::ZERO;
+                        for (bi, beat) in voice.beats.iter().enumerate() {
+                            let t_time = map.time(vi, pos);
+                            let dist = (t_time - s_time).abs();
+                            if dist < best_dist {
+                                best_dist = dist;
+                                best = Some((t_time, vi, bi));
+                            }
+                            if let Some(len) = beat.duration.length() {
+                                pos = pos + len;
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some((t_time, t_visit, t_beat)) = best {
+                target_starts.push((t_time, t_visit, t_beat, s_chord));
+            }
+        }
+        // Sort by target onset, deduplicate.
+        target_starts.sort_by(|a, b| a.0.total_cmp(&b.0));
+        target_starts.dedup_by(|b, a| (b.0 - a.0).abs() < 1e-9);
+        // Generate events for each cross-referenced chord.
         let song_end = map.length();
-        for (k, &(start, visit, beat, c)) in starts.iter().enumerate() {
-            let end = starts.get(k + 1).map_or(song_end, |n| n.0);
-            if end <= start {
+        for (k, &(t_time, t_visit, t_beat, s_chord)) in target_starts.iter().enumerate() {
+            let end = target_starts.get(k + 1).map_or(song_end, |n| n.0);
+            if end <= t_time {
                 continue;
             }
-            let diagram = &track.chords[c];
-            // Lowest string first: a downstroke.
+            let diagram = &source.chords[s_chord];
+            let Some(staff) = track.staves.first() else {
+                continue;
+            };
+            if staff.tuning.is_empty() {
+                continue;
+            }
             let strings: Vec<(u8, u8)> = diagram
                 .frets
                 .iter()
@@ -778,13 +900,13 @@ pub fn chords(score: &Score, map: &TimeMap) -> Vec<NoteEvent> {
                 let Some(key) = staff.pitch_of(string, fret) else {
                     continue;
                 };
-                let at = (start + n as f64 * CHORD_STRUM).min(end);
+                let at = (t_time + n as f64 * CHORD_STRUM).min(end);
                 all.push(NoteEvent {
                     track: tracks + ti,
                     staff: 0,
                     voice: 0,
-                    visit,
-                    beat,
+                    visit: t_visit,
+                    beat: t_beat,
                     string: Some(string),
                     key: key.0,
                     start: at,

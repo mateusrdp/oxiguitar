@@ -132,6 +132,9 @@ pub enum TrackExt {
     /// Index of another track whose chord diagrams to show above this
     /// track's staves; u32::MAX for none. Since 1.7.
     ChordsFrom(u32),
+    /// Index of the synthetic chord voice for this track; u32::MAX for
+    /// none. Persisted for round-trip compatibility. Since 1.7.
+    ChordsVoiceIndex(u32),
 }
 
 impl Since for TrackExt {
@@ -139,6 +142,7 @@ impl Since for TrackExt {
         match self {
             TrackExt::Layout(_) => 6,
             TrackExt::ChordsFrom(_) => 7,
+            TrackExt::ChordsVoiceIndex(_) => 7,
         }
     }
 }
@@ -148,6 +152,7 @@ impl Named for TrackExt {
         match self {
             TrackExt::Layout(_) => "the bars set for each system",
             TrackExt::ChordsFrom(_) => "the track whose chords are shown above this one",
+            TrackExt::ChordsVoiceIndex(_) => "the synthetic chord voice index",
         }
     }
 }
