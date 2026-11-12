@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Removed
+
+- **Clef, Time Signature and Key Signature tools from the left palette** (#277): these tools did nothing — their functionality already lives in the Bar tab of the right inspector sidebar. Removed from the palette, shortcut map, dialog mapping, drawing functions, and tests.
+
 ## [0.19.1] - 2026-11-11
 
 ### Added
