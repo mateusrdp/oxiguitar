@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **Play Engraved Beat toggle** (#246): Edit → "Play Engraved Beat" (ticked by default) plays a 1-beat preview of the edited track when a note is added or changed — only the caret's track sounds (temporarily soloed), same instrument and effects as normal playback. Ticking it off disables the preview. Persisted in `settings.json` under the `view` key.
+
 ### Removed
 
 - **Clef, Time Signature and Key Signature tools from the left palette** (#277): these tools did nothing — their functionality already lives in the Bar tab of the right inspector sidebar. Removed from the palette, shortcut map, dialog mapping, drawing functions, and tests.

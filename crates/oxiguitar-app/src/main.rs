@@ -2266,6 +2266,7 @@ fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
     ui.set_follow_desktop(p.dark_interface.is_none());
     ui.set_dark_page(p.dark_page);
     ui.set_dynamics(p.dynamics);
+    ui.set_play_engraved_beat(p.play_engraved_beat);
     let index = |found: Option<usize>| found.unwrap_or(0) as i32;
     ui.invoke_pick_layout(index(Layout::ALL.iter().position(|l| *l == p.layout)));
     ui.invoke_pick_paper(index(Paper::ALL.iter().position(|q| *q == p.paper)));
@@ -2397,14 +2398,15 @@ fn handle(app: &Shared, event: Event) {
             caret,
             tracks,
         } => {
-            {
+            let play = {
                 let mut s = app.borrow_mut();
                 s.editing.changed(score);
                 if let Some(c) = caret {
                     s.editing.edited(c);
                 }
                 s.bad = bad;
-            }
+                s.prefs.play_engraved_beat
+            };
             if let Some((tracks, was)) = tracks {
                 track_list_changed(app, &tracks, &was);
             }
@@ -2416,6 +2418,12 @@ fn handle(app: &Shared, event: Event) {
                 sync_caret(app, false);
             }
             playing::score_changed(app, false);
+            // Play a 1-beat preview after an edit when the toggle is on (#246).
+            if play {
+                let dos = playing::play_beats(app, 1);
+                playing::act(app, dos);
+                playing::sync(app);
+            }
         }
         Event::Refused => {
             let text = "Editing waits while the score plays: pause it (Space) to edit.".to_owned();
@@ -2767,6 +2775,7 @@ fn settings_changed(app: &Shared) {
         paper: s.settings.paper,
         score_zoom: s.zoom,
         ui_zoom: s.ui_zoom,
+        play_engraved_beat: ui.get_play_engraved_beat(),
     };
     if prefs != s.prefs {
         s.prefs = prefs;
@@ -3148,6 +3157,7 @@ fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
             paper: s.prefs.paper,
             score_zoom: s.zoom,
             ui_zoom: s.ui_zoom,
+            play_engraved_beat: s.prefs.play_engraved_beat,
         };
         if prefs != s.prefs {
             s.prefs = prefs;
@@ -5062,6 +5072,7 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
             paper: s.prefs.paper,
             score_zoom: s.zoom,
             ui_zoom: s.ui_zoom,
+            play_engraved_beat: s.prefs.play_engraved_beat,
         };
         if prefs != s.prefs {
             s.prefs = prefs;

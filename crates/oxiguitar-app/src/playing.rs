@@ -398,6 +398,15 @@ fn stop(app: &Shared) -> Vec<Do> {
     dos
 }
 
+/// Play `count` beats starting at the caret as a preview (#246).
+pub(crate) fn play_beats(app: &Shared, count: usize) -> Vec<Do> {
+    let mut s = app.borrow_mut();
+    let (Some(score), Some(caret)) = (s.editing.score(), s.editing.caret()) else {
+        return Vec::new();
+    };
+    s.player.play_beats(caret, &score, count)
+}
+
 fn put_caret_at(app: &Shared, p: Place) {
     let moved = app.borrow_mut().editing.put_caret_at(p.bar, p.offset);
     if moved {
@@ -475,6 +484,8 @@ pub(crate) fn frame(app: &Shared) -> PlayFrame {
         slint::Timer::single_shot(Duration::ZERO, move || follow(&a, f));
     }
     if ended {
+        // Restore the mix if a preview solo was active (#246).
+        app.borrow_mut().player.restore_preview_solo();
         let back = app.borrow_mut().began.take();
         let a = app.clone();
         slint::Timer::single_shot(Duration::ZERO, move || {
@@ -573,14 +584,6 @@ pub(crate) fn overview_clicked(app: &Shared, fraction: f32) {
             return;
         };
         let t = f64::from(fraction.clamp(0.0, 1.0)) * tl.length();
-        let before = s.player.heard().unwrap_or(0.0);
-        eprintln!(
-            "[overview_clicked] fraction={:.3} time={:.3} state={:?} heard_before={:.3}",
-            fraction,
-            t,
-            s.player.state(),
-            before
-        );
         s.player.seek(t);
         crate::player::place_at(&tl, t.min(tl.length() - 1e-6).max(0.0))
     };
