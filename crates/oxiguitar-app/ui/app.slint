@@ -1392,6 +1392,7 @@ export component AppWindow inherits Window {
     // The plugin windows, tabs and the settings follow it.
     changed dark-interface => { root.settings-changed(); }
     in-out property <bool> dynamics: false;
+    in-out property <bool> play-engraved-beat: true;
 
     // The shell (shell.rs): the toolbar and the four areas, numbered
     // 0 top, 1 bottom, 2 left, 3 right. The View menu's ticks show or hide
@@ -1779,6 +1780,7 @@ export component AppWindow inherits Window {
             }
             MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
             MenuSeparator { }
+            MenuItem { title: "Play Engraved Beat"; checkable: true; checked <=> root.play-engraved-beat; activated => { root.settings-changed(); } }
             MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
             MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
             MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }

@@ -69,6 +69,40 @@ impl Place {
     }
 }
 
+/// The span of `count` beats starting at `caret`'s position: from the
+/// caret's beat onset to the end of the last beat, or the bar's end if
+/// there aren't enough beats left.
+pub(crate) fn beat_span(caret: Caret, score: &Score, count: usize) -> Option<(Place, Place)> {
+    let bar = score
+        .tracks
+        .get(caret.track)?
+        .staves
+        .get(caret.staff)?
+        .bars
+        .get(caret.bar)?;
+    let voice = bar.voices.get(caret.voice)?;
+    let voice_onsets = onsets(voice);
+    let bar_length = voice.length().unwrap_or(Ratio::ZERO);
+    let start = voice_onsets.get(caret.beat).copied()?;
+    // Find the end: the onset after `count` beats, or the bar's length.
+    let end_idx = caret.beat + count;
+    let end = if end_idx < voice_onsets.len() {
+        voice_onsets[end_idx]
+    } else {
+        bar_length
+    };
+    Some((
+        Place {
+            bar: caret.bar,
+            offset: start,
+        },
+        Place {
+            bar: caret.bar,
+            offset: end,
+        },
+    ))
+}
+
 /// The start and the end of what `selection` covers in `score`: from its
 /// first beat to the end of its last, or its bars whole.
 pub(crate) fn span_of(selection: Selection, score: &Score) -> Option<(Place, Place)> {
@@ -212,6 +246,9 @@ pub(crate) struct Player {
     master: f32,
     mix: Vec<TrackMix>,
     stops: u64,
+    /// Track soloed for a 1-beat preview (#246): index of the track, and
+    /// the mix before the solo, so it can be restored when the preview ends.
+    pub(crate) preview_solo: Option<(usize, Vec<Mix>)>,
 }
 
 impl Player {
@@ -234,6 +271,7 @@ impl Player {
             master: MASTER,
             mix: Vec::new(),
             stops: 0,
+            preview_solo: None,
         }
     }
 
@@ -365,6 +403,38 @@ impl Player {
         }
         out.extend(self.go());
         out
+    }
+
+    /// Play the next `count` beats starting at `caret` as a preview
+    /// (note entry, #246): from the caret's beat onset to the end of the
+    /// last beat, with the same instrument and effects as normal playback.
+    /// Only the caret's track plays (temporarily soloed); the mix is
+    /// restored when the preview ends. Opens the output if needed.
+    pub(crate) fn play_beats(&mut self, caret: Caret, score: &Score, count: usize) -> Vec<Do> {
+        if self.unplayable.is_some() {
+            return Vec::new();
+        }
+        let Some(span) = beat_span(caret, score, count) else {
+            return Vec::new();
+        };
+        // Solo the caret's track for this preview, restore when it ends.
+        let mix: Vec<_> = self.mix.iter().copied().map(track_mix_back).collect();
+        let solo = Mix {
+            solo: true,
+            ..Default::default()
+        };
+        self.preview_solo = Some((caret.track, mix));
+        if let Some(slot) = self.mix.get_mut(caret.track) {
+            *slot = track_mix(solo);
+        }
+        // The mix lives in memory; if the output is already open, send it to
+        // the engine now (otherwise `opened()` → `tell_all()` will send it).
+        if self.open {
+            for (t, m) in self.mix.clone().into_iter().enumerate() {
+                self.control.set_mix(t, m);
+            }
+        }
+        self.play(Place::of_caret(caret, score), Some(span))
     }
 
     /// The output opened.
@@ -634,6 +704,19 @@ impl Player {
             self.control.set_mix(track, m);
         }
     }
+
+    /// Restore the mix after a 1-beat preview solo ends (#246).
+    /// Returns whether a preview was active.
+    pub(crate) fn restore_preview_solo(&mut self) {
+        if let Some((_, mix)) = self.preview_solo.take() {
+            self.mix = mix.into_iter().map(track_mix).collect();
+            if self.open {
+                for (t, m) in self.mix.clone().into_iter().enumerate() {
+                    self.control.set_mix(t, m);
+                }
+            }
+        }
+    }
 }
 
 fn track_mix(m: Mix) -> TrackMix {
@@ -642,6 +725,15 @@ fn track_mix(m: Mix) -> TrackMix {
         pan: m.pan,
         mute: m.mute,
         solo: m.solo,
+    }
+}
+
+fn track_mix_back(tm: TrackMix) -> Mix {
+    Mix {
+        volume: tm.volume,
+        pan: tm.pan,
+        mute: tm.mute,
+        solo: tm.solo,
     }
 }
 
