@@ -96,8 +96,14 @@ fn locate_both(score: &Score, after: &Score, k: usize) -> String {
                             let mut out = locate(score, k);
                             for (name, sc) in [("before", score), ("after", after)] {
                                 let st = &sc.tracks[ti].staves[si];
-                                for bj in bi.saturating_sub(1)..=bi {
-                                    for (vi, v) in st.bars[bj].voices.iter().enumerate() {
+                                for (bj, bar) in st
+                                    .bars
+                                    .iter()
+                                    .enumerate()
+                                    .skip(bi.saturating_sub(1))
+                                    .take(bi - bi.saturating_sub(1) + 1)
+                                {
+                                    for (vi, v) in bar.voices.iter().enumerate() {
                                         out += &format!(
                                             "\n  {name} bar {} voice {}: {:?}",
                                             bj + 1,
