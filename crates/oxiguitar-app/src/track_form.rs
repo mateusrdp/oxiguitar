@@ -297,7 +297,13 @@ impl TrackForm {
 /// The Track tab's rows for a track (issue #177, moved from the track
 /// dialog): `message` is what the tuning comes to, or, when `error`, why
 /// the fields can't be applied.
-pub(crate) fn fields(f: &TrackForm, message: &str, error: bool, current_track: usize, track_names: &[String]) -> Vec<Field> {
+pub(crate) fn fields(
+    f: &TrackForm,
+    message: &str,
+    error: bool,
+    current_track: usize,
+    track_names: &[String],
+) -> Vec<Field> {
     let pick = |i: i32| usize::try_from(i).unwrap_or(0);
     let list = |id, label, options: Vec<String>, at| Field {
         options,
@@ -356,7 +362,15 @@ pub(crate) fn fields(f: &TrackForm, message: &str, error: bool, current_track: u
         }))
         .collect();
     let chords_at = usize::try_from(f.chords_from).unwrap_or(0);
-    rows.push(effect_form::choice("chords-from", "Show chords from", &chords_options.iter().map(|s| s.as_str()).collect::<Vec<&str>>()[..], chords_at));
+    rows.push(effect_form::choice(
+        "chords-from",
+        "Show chords from",
+        &chords_options
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<&str>>()[..],
+        chords_at,
+    ));
     if f.pattern == 4 {
         rows.push(effect_form::text("notes", "Notes, lowest first", &f.notes));
     }
@@ -517,7 +531,11 @@ mod tests {
         assert_eq!(row("keep").value, 0);
 
         changed(&mut f, "pattern", 4, "");
-        assert!(fields(&f, "", false, 0, &[]).iter().any(|r| r.id == "notes"));
+        assert!(
+            fields(&f, "", false, 0, &[])
+                .iter()
+                .any(|r| r.id == "notes")
+        );
         changed(&mut f, "notes", 0, "D2 A D G A D");
         changed(&mut f, "capo", 2, "");
         changed(&mut f, "name", 0, "Rhythm");

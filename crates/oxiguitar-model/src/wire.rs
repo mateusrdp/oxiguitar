@@ -91,10 +91,13 @@ pub fn to_wire2(score: &Score) -> w2::Score2 {
             wt.ext.push(w2::TrackExt::Layout(t.layout.clone()));
         }
         if t.chords_from != usize::MAX {
-            wt.ext.push(w2::TrackExt::ChordsFrom(index_to(t.chords_from)));
+            wt.ext
+                .push(w2::TrackExt::ChordsFrom(index_to(t.chords_from)));
         }
         if t.chords_voice_index != usize::MAX {
-            wt.ext.push(w2::TrackExt::ChordsVoiceIndex(index_to(t.chords_voice_index)));
+            wt.ext.push(w2::TrackExt::ChordsVoiceIndex(index_to(
+                t.chords_voice_index,
+            )));
         }
         for (s, ws) in t.staves.iter().zip(&mut wt.staves) {
             for (b, wb) in s.bars.iter().zip(&mut ws.bars) {

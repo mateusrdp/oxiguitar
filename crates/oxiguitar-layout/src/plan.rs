@@ -301,15 +301,17 @@ impl Planner<'_> {
         // Inject cross-referenced chords from another track.
         // Collect source chords with their onsets; add to every target beat
         // so they're available for bar-level rendering at the correct column.
-        if self.track.chords_from != usize::MAX {
-            if let Some(ref track) = self.score.tracks.get(self.track.chords_from) {
-                if let Some(ref_other_bar) = track.staves.first().and_then(|s| s.bars.get(bar_index)) {
-                    // Compute onsets for the referenced bar's voices.
-                    let ref_onsets: Vec<Vec<Option<Ratio>>> = ref_other_bar
-                        .voices
-                        .iter()
-                        .map(|v| rhythm::onsets(v))
-                        .collect();
+        if self.track.chords_from != usize::MAX
+            && let Some(track) = self.score.tracks.get(self.track.chords_from)
+            && let Some(ref_other_bar) =
+                track.staves.first().and_then(|s| s.bars.get(bar_index))
+        {
+            // Compute onsets for the referenced bar's voices.
+            let ref_onsets: Vec<Vec<Option<Ratio>>> = ref_other_bar
+                .voices
+                .iter()
+                .map(rhythm::onsets)
+                .collect();
                     // Collect source beats with chords: (onset, name).
                     // Chords can come from two sources:
                     // 1. beat.chord → index into track.chords (diagram-based)
@@ -317,7 +319,8 @@ impl Planner<'_> {
                     let mut source_chords: Vec<(Option<Ratio>, String)> = Vec::new();
                     for (vi, voice) in ref_other_bar.voices.iter().enumerate() {
                         for (bi, beat) in voice.beats.iter().enumerate() {
-                            let name = beat.chord
+                            let name = beat
+                                .chord
                                 .and_then(|idx| track.chords.get(idx).map(|c| c.name.clone()))
                                 .or_else(|| {
                                     // Fallback: if beat.text looks like a chord name
@@ -328,7 +331,8 @@ impl Planner<'_> {
                                     }
                                     // Chord names: E, Am, D5, C#m7, etc.
                                     // Exclude lyrics (lowercase, spaces, punctuation)
-                                    if t.chars().all(|c| c.is_alphanumeric() || c == '#' || c == 'b')
+                                    if t.chars()
+                                        .all(|c| c.is_alphanumeric() || c == '#' || c == 'b')
                                         && t.len() <= 6
                                         && t.chars().next().unwrap().is_ascii_alphabetic()
                                     {
@@ -337,16 +341,17 @@ impl Planner<'_> {
                                         None
                                     }
                                 });
-                            if let Some(ref name) = name {
-                                if !name.is_empty() {
-                                    source_chords.push((ref_onsets[vi].get(bi).copied().flatten(), name.clone()));
-                                }
+                            if let Some(name) = name && !name.is_empty() {
+                                source_chords.push((
+                                    ref_onsets[vi].get(bi).copied().flatten(),
+                                    name.clone(),
+                                ));
                             }
                         }
                     }
                     // Sort by onset so chords land in order; skip grace beats.
                     source_chords.retain(|(onset, _)| onset.is_some());
-                    source_chords.sort_by(|a, b| a.0.cmp(&b.0));
+                    source_chords.sort_by_key(|a| a.0);
                     // Add source chords to every target beat.
                     // Rendering happens at the bar level using the source onset
                     // to position each chord at the correct column.
@@ -357,8 +362,6 @@ impl Planner<'_> {
                             }
                         }
                     }
-                }
-            }
         }
         // Grace beats belong to the main beat after them.
         for beats in &mut voices {
@@ -508,7 +511,10 @@ impl Planner<'_> {
         BarPlan {
             simile: bar.simile,
             lanes,
-            has_chords: voices.iter().flatten().any(|b| b.chord.is_some() || !b.cross_chords.is_empty()),
+            has_chords: voices
+                .iter()
+                .flatten()
+                .any(|b| b.chord.is_some() || !b.cross_chords.is_empty()),
             has_text: voices.iter().flatten().any(|b| !b.text.is_empty()),
             voices,
             groups,

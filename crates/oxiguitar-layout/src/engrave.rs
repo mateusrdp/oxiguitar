@@ -2025,11 +2025,15 @@ impl Ctx<'_> {
                 }
             }
             // Render each unique chord at its source onset position.
+            // Compute x as a fraction of the bar width, since the source
+            // track's grid may not be merged into the target's grid
+            // (different system calls).
+            let bar_width = (bx.end - bx.notes).max(0.001);
             let mut last_x: Option<f32> = None;
             let mut last_y: f32 = 0.0;
             for (onset, name) in unique {
                 let x = match onset {
-                    Some(o) => bx.x_of(grid, o),
+                    Some(o) => bx.notes + o.to_f64() as f32 * bar_width,
                     None => bx.notes,
                 };
                 // Stack vertically if too close to the previous chord.

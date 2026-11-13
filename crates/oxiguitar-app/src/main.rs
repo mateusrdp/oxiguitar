@@ -3898,7 +3898,22 @@ fn sync_track(app: &Shared, ui: &AppWindow) {
             s.sections = Some(sections);
             s.sections_touched = false;
         }
-        (reopen, track_form::fields(&f, &message, error, t, &score.as_ref().unwrap().tracks.iter().map(|tr| tr.name.clone()).collect::<Vec<_>>()))
+        (
+            reopen,
+            track_form::fields(
+                &f,
+                &message,
+                error,
+                t,
+                &score
+                    .as_ref()
+                    .unwrap()
+                    .tracks
+                    .iter()
+                    .map(|tr| tr.name.clone())
+                    .collect::<Vec<_>>(),
+            ),
+        )
     };
     ui.set_track_heading(format!("Track {}: {}", t + 1, track.name).into());
     if reopen {

@@ -1018,9 +1018,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             one(bar, Caret { string: to, ..c })
         }
         // Not a note-entry command.
-        Command::SetBarColor(_)
-        | Command::SetTrackBarColor(_)
-        | Command::ChordsFrom(_) => None,
+        Command::SetBarColor(_) | Command::SetTrackBarColor(_) | Command::ChordsFrom(_) => None,
     }
 }
 
