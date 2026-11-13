@@ -1556,8 +1556,11 @@ mod tests {
         let frets = [24u8, 23, 24, 26, 25, 27];
         let q = NoteValue::Quarter;
         let mut s = song(&GUITAR, 0, vec![vec![pitched(&[], q), pitched(&[], q)]]);
-        for b in 0..2 {
-            let beat = &mut s.tracks[0].staves[0].bars[0].voices[0].beats[b];
+        for (b, beat) in s.tracks[0].staves[0].bars[0].voices[0]
+            .beats
+            .iter_mut()
+            .enumerate()
+        {
             beat.kind = BeatKind::Notes;
             for (i, &f) in frets.iter().enumerate() {
                 let mut n = Note::fretted(i as u8 + 1, f);
