@@ -312,6 +312,7 @@ impl Document {
                     track.plugins = entry.plugins;
                     track.effects = entry.effects;
                     track.play_chords = entry.chords;
+                    track.chords_from = entry.chords_from.unwrap_or(usize::MAX);
                 }
                 // Convert track_bar_colors from sidecar format (track name →
                 // Vec<Option<serde_json::Value>>) to score format (track
@@ -801,6 +802,7 @@ impl Document {
                     plugins: t.plugins.clone(),
                     effects: t.effects.clone(),
                     chords: t.play_chords,
+                    chords_from: if t.chords_from == usize::MAX { None } else { Some(t.chords_from) },
                 })
                 .collect(),
             bar_colors,

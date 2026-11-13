@@ -23,7 +23,8 @@
 //! the user ordered them in the track dialog, the order its effects run in
 //! by plugin id (#152; absent for the default order, and ignored by an
 //! older OxiGuitar), and `"chords": true` when its chord diagrams are
-//! played (#151). When the
+//! played (#151). `"chords_from": N` when chords from another track are
+//! shown above this track (#268; absent for none). When the
 //! score was changed elsewhere (tracks added, removed or moved in another
 //! program), a track takes the entry at its own place if the names agree,
 //! else the first unused entry of its name, else none.
@@ -60,6 +61,9 @@ pub struct TrackEntry {
     pub effects: Vec<String>,
     /// Whether the track's chord diagrams are played.
     pub chords: bool,
+    /// Index of another track whose chord diagrams to show above this
+    /// track; `None` for none.
+    pub chords_from: Option<usize>,
 }
 
 /// What a sidecar holds.
@@ -78,7 +82,7 @@ impl Sidecar {
     pub fn is_empty(&self) -> bool {
         self.tracks
             .iter()
-            .all(|t| t.plugins.is_empty() && t.effects.is_empty() && !t.chords)
+            .all(|t| t.plugins.is_empty() && t.effects.is_empty() && !t.chords && t.chords_from.is_none())
             && self.bar_colors.iter().all(Option::is_none)
             && self
                 .track_bar_colors
@@ -168,6 +172,7 @@ impl Sidecar {
                     plugins,
                     effects,
                     chords: t.get("chords").and_then(Value::as_bool) == Some(true),
+                    chords_from: t.get("chords_from").and_then(Value::as_u64).map(|v| v as usize),
                 }
             })
             .collect();
@@ -227,6 +232,9 @@ impl Sidecar {
                 }
                 if t.chords {
                     entry["chords"] = serde_json::json!(true);
+                }
+                if let Some(idx) = t.chords_from {
+                    entry["chords_from"] = serde_json::json!(idx);
                 }
                 entry
             })
@@ -324,6 +332,7 @@ mod tests {
                 .collect(),
             effects: Vec::new(),
             chords: false,
+            chords_from: None,
         }
     }
 
@@ -489,6 +498,30 @@ mod tests {
         assert_eq!(s.settle(&["Rhythm"])[0], on);
         let odd = r#"{"oxiguitar": 1, "tracks": [{"name": "A", "chords": "yes"}]}"#;
         assert!(!Sidecar::parse(odd).unwrap().tracks[0].chords);
+    }
+
+    #[test]
+    fn chords_from_round_trip() {
+        let mut track = entry("Lead", &[]);
+        track.chords_from = Some(1);
+        let s = Sidecar {
+            tracks: vec![track.clone(), entry("Rhythm", &[])],
+            ..Default::default()
+        };
+        let text = s.to_text();
+        assert!(text.contains("\"chords_from\": 1"), "{text}");
+        assert_eq!(Sidecar::parse(&text).unwrap(), s);
+        assert!(!s.is_empty());
+        // None should be omitted from output.
+        let none = Sidecar {
+            tracks: vec![entry("Lead", &[])],
+            ..Default::default()
+        };
+        let text2 = none.to_text();
+        assert!(!text2.contains("\"chords_from\""), "{text2}");
+        // Missing field should parse as None.
+        let missing = r#"{"oxiguitar": 1, "tracks": [{"name": "A"}]}"#;
+        assert_eq!(Sidecar::parse(missing).unwrap().tracks[0].chords_from, None);
     }
 
     #[test]
