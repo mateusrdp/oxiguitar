@@ -7,7 +7,7 @@
 use oxiguitar_model::{
     Bar, Barre, Beaming, BeatEffects, BeatKind, Clef, Dynamic, FermataKind, GraceKind, Hairpin,
     Harmonic, KeySignature, MasterBar, Note, NoteEffects, NotePlace, NoteValue, Ottava, Pitch,
-    Ratio, Simile, Staff, Track, Tuplet,
+    Ratio, Score, Simile, Staff, Track, Tuplet,
 };
 
 use crate::draw::{G, Painter, glyphs};
@@ -60,6 +60,9 @@ pub(crate) struct BeatInfo {
     pub(crate) group: Option<usize>,
     /// Chord name to show above the staff.
     pub(crate) chord: Option<String>,
+    /// Cross-referenced chords from another track: (source onset, name).
+    /// Used to position the chord at the correct column in the merged grid.
+    pub(crate) cross_chords: Vec<(Option<Ratio>, String)>,
     /// Free text above the staff.
     pub(crate) text: String,
     /// Effects on the whole beat.
@@ -223,6 +226,7 @@ pub(crate) fn duration_space(span: Ratio) -> f32 {
 
 pub(crate) struct Planner<'a> {
     pub(crate) p: &'a Painter<'a>,
+    pub(crate) score: &'a Score,
     pub(crate) track: &'a Track,
     pub(crate) staff: &'a Staff,
     pub(crate) tab_gap: f32,
@@ -236,7 +240,7 @@ impl Planner<'_> {
     }
 
     /// Plans one bar of this staff.
-    pub(crate) fn bar(&self, bar: &Bar, mb: &MasterBar) -> BarPlan {
+    pub(crate) fn bar(&self, bar: &Bar, mb: &MasterBar, bar_index: usize) -> BarPlan {
         let length = rhythm::bar_length(bar, mb.time_signature);
         let columns = rhythm::columns(bar, length);
         let clef = bar.clef;
@@ -282,6 +286,7 @@ impl Planner<'_> {
                             .and_then(|c| self.track.chords.get(c))
                             .map(|c| c.name.clone())
                             .filter(|n| !n.is_empty()),
+                        cross_chords: Vec::new(),
                         text: b.text.trim().to_owned(),
                         effects: b.effects.clone(),
                         grace: b.grace,
@@ -293,6 +298,67 @@ impl Planner<'_> {
                     .collect()
             })
             .collect();
+        // Inject cross-referenced chords from another track.
+        // Collect source chords with their onsets; add to every target beat
+        // so they're available for bar-level rendering at the correct column.
+        if self.track.chords_from != usize::MAX
+            && let Some(track) = self.score.tracks.get(self.track.chords_from)
+            && let Some(ref_other_bar) = track.staves.first().and_then(|s| s.bars.get(bar_index))
+        {
+            // Compute onsets for the referenced bar's voices.
+            let ref_onsets: Vec<Vec<Option<Ratio>>> =
+                ref_other_bar.voices.iter().map(rhythm::onsets).collect();
+            // Collect source beats with chords: (onset, name).
+            // Chords can come from two sources:
+            // 1. beat.chord → index into track.chords (diagram-based)
+            // 2. beat.text → direct chord name text (GP 7+ stores chord names as text)
+            let mut source_chords: Vec<(Option<Ratio>, String)> = Vec::new();
+            for (vi, voice) in ref_other_bar.voices.iter().enumerate() {
+                for (bi, beat) in voice.beats.iter().enumerate() {
+                    let name = beat
+                        .chord
+                        .and_then(|idx| track.chords.get(idx).map(|c| c.name.clone()))
+                        .or_else(|| {
+                            // Fallback: if beat.text looks like a chord name
+                            // (contains chord characters but not lyrics/syntax)
+                            let t = beat.text.trim();
+                            if t.is_empty() {
+                                return None;
+                            }
+                            // Chord names: E, Am, D5, C#m7, etc.
+                            // Exclude lyrics (lowercase, spaces, punctuation)
+                            if t.chars()
+                                .all(|c| c.is_alphanumeric() || c == '#' || c == 'b')
+                                && t.len() <= 6
+                                && t.chars().next().unwrap().is_ascii_alphabetic()
+                            {
+                                Some(t.to_string())
+                            } else {
+                                None
+                            }
+                        });
+                    if let Some(name) = name
+                        && !name.is_empty()
+                    {
+                        source_chords
+                            .push((ref_onsets[vi].get(bi).copied().flatten(), name.clone()));
+                    }
+                }
+            }
+            // Sort by onset so chords land in order; skip grace beats.
+            source_chords.retain(|(onset, _)| onset.is_some());
+            source_chords.sort_by_key(|a| a.0);
+            // Add source chords to every target beat.
+            // Rendering happens at the bar level using the source onset
+            // to position each chord at the correct column.
+            for beats in &mut voices {
+                for b in beats.iter_mut() {
+                    for (onset, name) in &source_chords {
+                        b.cross_chords.push((*onset, name.clone()));
+                    }
+                }
+            }
+        }
         // Grace beats belong to the main beat after them.
         for beats in &mut voices {
             let mut run = 0;
@@ -441,7 +507,10 @@ impl Planner<'_> {
         BarPlan {
             simile: bar.simile,
             lanes,
-            has_chords: voices.iter().flatten().any(|b| b.chord.is_some()),
+            has_chords: voices
+                .iter()
+                .flatten()
+                .any(|b| b.chord.is_some() || !b.cross_chords.is_empty()),
             has_text: voices.iter().flatten().any(|b| !b.text.is_empty()),
             voices,
             groups,
@@ -829,13 +898,18 @@ mod tests {
             ..Staff::default()
         };
         let track = Track::default();
+        let score = Score {
+            tracks: vec![track],
+            ..Score::default()
+        };
         let planner = Planner {
             p: &p,
-            track: &track,
+            track: &score.tracks[0],
             staff: &staff,
             tab_gap: 7.5,
             show_std: true,
             show_tab: true,
+            score: &score,
         };
         let bar = Bar {
             voices: voices
@@ -853,7 +927,7 @@ mod tests {
                 .collect(),
             ..Bar::default()
         };
-        let plan = planner.bar(&bar, &MasterBar::default());
+        let plan = planner.bar(&bar, &MasterBar::default(), 0);
         plan.voices
             .iter()
             .map(|v| v.first().map(|b| b.up))

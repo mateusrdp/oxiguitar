@@ -159,6 +159,9 @@ pub enum Command {
     MoveTrackDown,
     /// The caret's track's properties (the track dialog).
     TrackProperties(Box<crate::TrackSettings>),
+    /// Index of another track whose chords to show above this one;
+    /// usize::MAX for none.
+    ChordsFrom(usize),
     /// A transposition of the caret's track, the selection or every track.
     Transpose(crate::Transposition),
     /// A string and fret found again for every note of the caret's track,
@@ -295,6 +298,7 @@ impl Command {
             Command::MoveTrackUp => "Move Track Up",
             Command::MoveTrackDown => "Move Track Down",
             Command::TrackProperties(_) => "Track Properties",
+            Command::ChordsFrom(_) => "Chords From",
             Command::Transpose(_) => "Transpose",
             Command::Fingering(_) => "Find Fingering",
             Command::FitBars(_) => "Fit Bars",
@@ -1014,7 +1018,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             one(bar, Caret { string: to, ..c })
         }
         // Not a note-entry command.
-        Command::SetBarColor(_) | Command::SetTrackBarColor(_) => None,
+        Command::SetBarColor(_) | Command::SetTrackBarColor(_) | Command::ChordsFrom(_) => None,
     }
 }
 

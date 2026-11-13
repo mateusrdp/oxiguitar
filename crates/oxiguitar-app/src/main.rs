@@ -3898,7 +3898,22 @@ fn sync_track(app: &Shared, ui: &AppWindow) {
             s.sections = Some(sections);
             s.sections_touched = false;
         }
-        (reopen, track_form::fields(&f, &message, error))
+        (
+            reopen,
+            track_form::fields(
+                &f,
+                &message,
+                error,
+                t,
+                &score
+                    .as_ref()
+                    .unwrap()
+                    .tracks
+                    .iter()
+                    .map(|tr| tr.name.clone())
+                    .collect::<Vec<_>>(),
+            ),
+        )
     };
     ui.set_track_heading(format!("Track {}: {}", t + 1, track.name).into());
     if reopen {
@@ -3913,6 +3928,33 @@ fn sync_track(app: &Shared, ui: &AppWindow) {
 /// after a question when notes can't be kept. A tuning that can't be says
 /// why in the tab and changes nothing.
 fn track_changed(app: &Shared, id: &str, value: i32, text: &str) {
+    // "chords-from" is not a TrackSettings field: use a ChordsFrom command.
+    if id == "chords-from" {
+        let (score, t, ui) = {
+            let s = app.borrow();
+            (s.editing.score(), s.editing.track(), s.ui.upgrade())
+        };
+        let (Some(_score), Some(_t)) = (score, t) else {
+            return;
+        };
+        let Some(ui) = ui else {
+            return;
+        };
+        let chords_from = if value == 0 {
+            usize::MAX
+        } else {
+            usize::try_from(value - 1).unwrap_or(usize::MAX)
+        };
+        let typed = app
+            .borrow_mut()
+            .editing
+            .tool(oxiguitar_edit::Command::ChordsFrom(chords_from));
+        if let Some(typed) = typed {
+            send_typed(app, typed);
+        }
+        sync_inspector(app, &ui);
+        return;
+    }
     let (score, index, keep) = {
         let s = app.borrow();
         (s.editing.score(), s.editing.track(), s.track_keep_pitches)

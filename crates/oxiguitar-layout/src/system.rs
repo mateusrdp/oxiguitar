@@ -168,6 +168,7 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
             };
             let planner = Planner {
                 p,
+                score,
                 track,
                 staff,
                 tab_gap: TAB_GAP * p.sp,
@@ -178,7 +179,7 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
                 .master_bars
                 .iter()
                 .enumerate()
-                .map(|(i, mb)| planner.bar(staff.bars.get(i).unwrap_or(&empty), mb))
+                .map(|(i, mb)| planner.bar(staff.bars.get(i).unwrap_or(&empty), mb, i))
                 .collect();
             mark_slurs(&mut planned);
             if dynamics {

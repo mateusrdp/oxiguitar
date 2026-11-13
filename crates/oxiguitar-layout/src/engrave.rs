@@ -1995,12 +1995,60 @@ impl Ctx<'_> {
                 if let (Some(name), Some(base)) = (&b.chord, lines.chord) {
                     p.text(list, name, chord_name_size(sp), x, base, paint);
                 }
+                // Cross-referenced chords rendered at bar level (after beat loop)
+                // at their source onset positions, not stacked at the target beat.
                 if let (false, Some(base)) = (b.text.is_empty(), lines.text) {
                     let size = 1.8 * sp;
                     let w = p.text_width(&b.text, size);
                     let x = x.max(text_right + 0.4 * sp).min(self.right - w).max(0.0);
                     text_right = x + p.text(list, &b.text, size, x, base, paint);
                 }
+            }
+        }
+        // Cross-referenced chords: render at bar level using source onset
+        // to position each chord at the correct column in the merged grid.
+        if let Some(base) = lines.chord {
+            let dark_green = Paint::Custom(oxiguitar_display::Rgba {
+                r: 0,
+                g: 100,
+                b: 0,
+                a: 255,
+            });
+            let chord_size = chord_name_size(sp);
+            // Collect unique cross-chords: deduplicate by (source_onset, name).
+            let mut unique: BTreeSet<(Option<oxiguitar_model::Ratio>, &str)> = BTreeSet::new();
+            for beats in &plan.voices {
+                for b in beats {
+                    for (onset, name) in &b.cross_chords {
+                        unique.insert((*onset, name.as_str()));
+                    }
+                }
+            }
+            // Render each unique chord at its source onset position.
+            // Compute x as a fraction of the bar width, since the source
+            // track's grid may not be merged into the target's grid
+            // (different system calls).
+            let bar_width = (bx.end - bx.notes).max(0.001);
+            let mut last_x: Option<f32> = None;
+            let mut last_y: f32 = 0.0;
+            for (onset, name) in unique {
+                let x = match onset {
+                    Some(o) => bx.notes + o.to_f64() as f32 * bar_width,
+                    None => bx.notes,
+                };
+                // Stack vertically if too close to the previous chord.
+                let y = if let Some(lx) = last_x {
+                    if (x - lx).abs() < 0.5 * sp {
+                        last_y + chord_size + 0.3 * sp
+                    } else {
+                        chord_size
+                    }
+                } else {
+                    chord_size
+                };
+                p.text(list, name, chord_size, x, base - y, dark_green);
+                last_x = Some(x);
+                last_y = y;
             }
         }
         if !top_view {
