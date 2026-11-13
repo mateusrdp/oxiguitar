@@ -80,10 +80,9 @@ pub struct Sidecar {
 impl Sidecar {
     /// Whether no track keeps anything and no bar has a custom colour.
     pub fn is_empty(&self) -> bool {
-        self.tracks
-            .iter()
-            .all(|t| t.plugins.is_empty() && t.effects.is_empty() && !t.chords && t.chords_from.is_none())
-            && self.bar_colors.iter().all(Option::is_none)
+        self.tracks.iter().all(|t| {
+            t.plugins.is_empty() && t.effects.is_empty() && !t.chords && t.chords_from.is_none()
+        }) && self.bar_colors.iter().all(Option::is_none)
             && self
                 .track_bar_colors
                 .values()
@@ -172,7 +171,10 @@ impl Sidecar {
                     plugins,
                     effects,
                     chords: t.get("chords").and_then(Value::as_bool) == Some(true),
-                    chords_from: t.get("chords_from").and_then(Value::as_u64).map(|v| v as usize),
+                    chords_from: t
+                        .get("chords_from")
+                        .and_then(Value::as_u64)
+                        .map(|v| v as usize),
                 }
             })
             .collect();

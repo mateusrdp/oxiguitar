@@ -802,7 +802,11 @@ impl Document {
                     plugins: t.plugins.clone(),
                     effects: t.effects.clone(),
                     chords: t.play_chords,
-                    chords_from: if t.chords_from == usize::MAX { None } else { Some(t.chords_from) },
+                    chords_from: if t.chords_from == usize::MAX {
+                        None
+                    } else {
+                        Some(t.chords_from)
+                    },
                 })
                 .collect(),
             bar_colors,

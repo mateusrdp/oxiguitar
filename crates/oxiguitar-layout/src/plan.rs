@@ -303,65 +303,61 @@ impl Planner<'_> {
         // so they're available for bar-level rendering at the correct column.
         if self.track.chords_from != usize::MAX
             && let Some(track) = self.score.tracks.get(self.track.chords_from)
-            && let Some(ref_other_bar) =
-                track.staves.first().and_then(|s| s.bars.get(bar_index))
+            && let Some(ref_other_bar) = track.staves.first().and_then(|s| s.bars.get(bar_index))
         {
             // Compute onsets for the referenced bar's voices.
-            let ref_onsets: Vec<Vec<Option<Ratio>>> = ref_other_bar
-                .voices
-                .iter()
-                .map(rhythm::onsets)
-                .collect();
-                    // Collect source beats with chords: (onset, name).
-                    // Chords can come from two sources:
-                    // 1. beat.chord → index into track.chords (diagram-based)
-                    // 2. beat.text → direct chord name text (GP 7+ stores chord names as text)
-                    let mut source_chords: Vec<(Option<Ratio>, String)> = Vec::new();
-                    for (vi, voice) in ref_other_bar.voices.iter().enumerate() {
-                        for (bi, beat) in voice.beats.iter().enumerate() {
-                            let name = beat
-                                .chord
-                                .and_then(|idx| track.chords.get(idx).map(|c| c.name.clone()))
-                                .or_else(|| {
-                                    // Fallback: if beat.text looks like a chord name
-                                    // (contains chord characters but not lyrics/syntax)
-                                    let t = beat.text.trim();
-                                    if t.is_empty() {
-                                        return None;
-                                    }
-                                    // Chord names: E, Am, D5, C#m7, etc.
-                                    // Exclude lyrics (lowercase, spaces, punctuation)
-                                    if t.chars()
-                                        .all(|c| c.is_alphanumeric() || c == '#' || c == 'b')
-                                        && t.len() <= 6
-                                        && t.chars().next().unwrap().is_ascii_alphabetic()
-                                    {
-                                        Some(t.to_string())
-                                    } else {
-                                        None
-                                    }
-                                });
-                            if let Some(name) = name && !name.is_empty() {
-                                source_chords.push((
-                                    ref_onsets[vi].get(bi).copied().flatten(),
-                                    name.clone(),
-                                ));
+            let ref_onsets: Vec<Vec<Option<Ratio>>> =
+                ref_other_bar.voices.iter().map(rhythm::onsets).collect();
+            // Collect source beats with chords: (onset, name).
+            // Chords can come from two sources:
+            // 1. beat.chord → index into track.chords (diagram-based)
+            // 2. beat.text → direct chord name text (GP 7+ stores chord names as text)
+            let mut source_chords: Vec<(Option<Ratio>, String)> = Vec::new();
+            for (vi, voice) in ref_other_bar.voices.iter().enumerate() {
+                for (bi, beat) in voice.beats.iter().enumerate() {
+                    let name = beat
+                        .chord
+                        .and_then(|idx| track.chords.get(idx).map(|c| c.name.clone()))
+                        .or_else(|| {
+                            // Fallback: if beat.text looks like a chord name
+                            // (contains chord characters but not lyrics/syntax)
+                            let t = beat.text.trim();
+                            if t.is_empty() {
+                                return None;
                             }
-                        }
-                    }
-                    // Sort by onset so chords land in order; skip grace beats.
-                    source_chords.retain(|(onset, _)| onset.is_some());
-                    source_chords.sort_by_key(|a| a.0);
-                    // Add source chords to every target beat.
-                    // Rendering happens at the bar level using the source onset
-                    // to position each chord at the correct column.
-                    for beats in &mut voices {
-                        for b in beats.iter_mut() {
-                            for (onset, name) in &source_chords {
-                                b.cross_chords.push((*onset, name.clone()));
+                            // Chord names: E, Am, D5, C#m7, etc.
+                            // Exclude lyrics (lowercase, spaces, punctuation)
+                            if t.chars()
+                                .all(|c| c.is_alphanumeric() || c == '#' || c == 'b')
+                                && t.len() <= 6
+                                && t.chars().next().unwrap().is_ascii_alphabetic()
+                            {
+                                Some(t.to_string())
+                            } else {
+                                None
                             }
-                        }
+                        });
+                    if let Some(name) = name
+                        && !name.is_empty()
+                    {
+                        source_chords
+                            .push((ref_onsets[vi].get(bi).copied().flatten(), name.clone()));
                     }
+                }
+            }
+            // Sort by onset so chords land in order; skip grace beats.
+            source_chords.retain(|(onset, _)| onset.is_some());
+            source_chords.sort_by_key(|a| a.0);
+            // Add source chords to every target beat.
+            // Rendering happens at the bar level using the source onset
+            // to position each chord at the correct column.
+            for beats in &mut voices {
+                for b in beats.iter_mut() {
+                    for (onset, name) in &source_chords {
+                        b.cross_chords.push((*onset, name.clone()));
+                    }
+                }
+            }
         }
         // Grace beats belong to the main beat after them.
         for beats in &mut voices {
