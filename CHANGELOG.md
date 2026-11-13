@@ -11,6 +11,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 ### Fixed
 
 - **Cross-referenced chords now persist in `.oxg` files** (#268): the `chords_from` setting is now saved and loaded from the sidecar file, so "Show chords from" survives closing and reopening a score.
+- **File → Export audio now shows the dialog again** (#281): the export dialog and its progress window were removed from the window in 0.11.0 (#188), so choosing the menu item did nothing visible. Added them back.
 
 ### Removed
 

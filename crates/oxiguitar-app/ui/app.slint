@@ -2857,6 +2857,28 @@ export component AppWindow inherits Window {
         done(ok) => { root.paste-dialog-done(ok); }
     }
 
+    // File → Export of an audio exporter: what to render, then its progress
+    // (lost in #188 and restored).
+    if root.export-dialog-shown : ExportDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.export-heading;
+        plugin-name: root.export-plugin;
+        has-selection: root.export-has-selection;
+        selection <=> root.export-selection;
+        practice-speed: root.export-practice-speed;
+        at-speed <=> root.export-at-speed;
+        metronome <=> root.export-metronome;
+        done(ok) => { root.export-dialog-done(ok); }
+    }
+    if root.export-running : ExportProgress {
+        width: root.width;
+        height: root.height;
+        status: root.export-status;
+        progress: root.export-progress;
+        cancel => { root.export-cancel(); }
+    }
+
     if root.transpose-dialog-shown : TransposeDialog {
         width: root.width;
         height: root.height;
