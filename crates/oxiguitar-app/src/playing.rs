@@ -275,14 +275,18 @@ pub(crate) fn action(app: &Shared, name: &str) {
     let dos = match name {
         "play" => play(app, false),
         "play-selection" => play(app, true),
+        // The Play/Pause button, as Space does. Play's result may ask to open
+        // the output first: it must reach `act`, or nothing plays (#284).
         "play-pause" => {
             let state = app.borrow().player.state();
             if matches!(state, State::Playing | State::Starting) {
                 pause(app);
+                Vec::new()
             } else if app.borrow().player.can_play() {
-                play(app, false);
+                play(app, false)
+            } else {
+                Vec::new()
             }
-            Vec::new()
         }
         "pause" => {
             pause(app);

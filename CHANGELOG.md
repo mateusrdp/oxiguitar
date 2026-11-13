@@ -10,6 +10,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Fixed
 
+- **Play button now starts playback when a new song is loaded** (#284): the `play-pause` action handler now returns the `Vec<Do>` result from `play()` so `act()` can execute the commands (e.g. opening the audio output), instead of discarding it.
 - **Cross-referenced chords now persist in `.oxg` files** (#268): the `chords_from` setting is now saved and loaded from the sidecar file, so "Show chords from" survives closing and reopening a score.
 - **File → Export audio now shows the dialog again** (#281): the export dialog and its progress window were removed from the window in 0.11.0 (#188), so choosing the menu item did nothing visible. Added them back.
 
