@@ -146,6 +146,9 @@ pub(crate) enum Event {
         /// The tracks again, when the edit added, removed, moved, renamed
         /// or restrung any, with where each was before ([`was`]).
         tracks: Option<(Vec<TrackInfo>, Vec<Option<usize>>)>,
+        /// Whether the change was a note insertion or deletion (for the
+        /// engraved-beat preview toggle, #246).
+        note_edit: bool,
     },
     /// One tile, premultiplied RGBA, `canvas::TILE` pixels square.
     Tile {
@@ -173,7 +176,9 @@ impl std::fmt::Debug for Event {
                 write!(f, "Engraved({engraving}, {} sheets)", sheets.len())
             }
             Event::Tile { col, row, .. } => write!(f, "Tile({col}, {row})"),
-            Event::Changed { bad, .. } => write!(f, "Changed({} bad bars)", bad.len()),
+            Event::Changed { bad, note_edit, .. } => {
+                write!(f, "Changed({} bad bars, note_edit={note_edit})", bad.len())
+            }
             Event::Tools(t) => write!(f, "Tools({})", t.len()),
             Event::Message(l, s) => write!(f, "Message({l:?}, {s:?})"),
             Event::AskSave { heading, .. } => write!(f, "AskSave({heading:?})"),
@@ -402,7 +407,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 let (report, changed) = doc.apply_tool(i);
                 sink(Event::Tools(doc.tools()));
                 sink(Event::Message(Level::Info, report));
-                if changed && changed_score(&mut st, None, sink) {
+                if changed && changed_score(&mut st, None, false, sink) {
                     st.stale = true;
                 } else {
                     engrave(&mut st, sink);
@@ -417,8 +422,9 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     continue;
                 };
                 let mut wait = false;
+                let is_note = command.is_note_edit();
                 if let Some(caret) = doc.edit(command, caret, selection) {
-                    wait = changed_score(&mut st, Some(caret), sink);
+                    wait = changed_score(&mut st, Some(caret), is_note, sink);
                     st.stale = true;
                 }
                 // Typing ahead: the last edit engraves. A changed track list
@@ -439,7 +445,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 };
                 if done.is_some() {
                     sink(Event::Tools(doc.tools()));
-                    if changed_score(&mut st, None, sink) {
+                    if changed_score(&mut st, None, false, sink) {
                         st.stale = true;
                     } else {
                         engrave(&mut st, sink);
@@ -473,7 +479,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
                 doc.apply_change(&name, *score);
                 sink(Event::Tools(doc.tools()));
-                if changed_score(&mut st, None, sink) {
+                if changed_score(&mut st, None, false, sink) {
                     st.stale = true;
                 } else {
                     engrave(&mut st, sink);
@@ -688,8 +694,15 @@ fn was<T: PartialEq>(old: &[T], new: &[T]) -> Vec<Option<usize>> {
 /// The open score changed: plugins hear of it (pushing never waits), then
 /// the window. True when the track list changed: the window answers with
 /// the tracks to show (`Request::Engrave`), so engraving waits for that
-/// rather than draw the old tracks' places.
-fn changed_score(st: &mut State, caret: Option<Caret>, sink: &dyn Fn(Event)) -> bool {
+/// rather than draw the old tracks' places. `note_edit` is whether the
+/// change was a note insertion or deletion (for the engraved-beat preview,
+/// #246).
+fn changed_score(
+    st: &mut State,
+    caret: Option<Caret>,
+    note_edit: bool,
+    sink: &dyn Fn(Event),
+) -> bool {
     let Some(doc) = st.doc.as_ref() else {
         return false;
     };
@@ -706,6 +719,7 @@ fn changed_score(st: &mut State, caret: Option<Caret>, sink: &dyn Fn(Event)) -> 
         bad: doc.check.iter().collect(),
         caret,
         tracks,
+        note_edit,
     });
     let changed = shape != st.track_shape;
     st.track_shape = shape;
