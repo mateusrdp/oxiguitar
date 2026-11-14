@@ -325,6 +325,19 @@ impl Command {
             Command::SetTrackBarColor(_) => "Track Bar Colour",
         }
     }
+
+    /// Whether this command inserts or deletes a note/rest on a beat.
+    /// Used to decide whether to play the engraved-beat preview (#246).
+    pub fn is_note_edit(&self) -> bool {
+        matches!(
+            self,
+            Command::Fret { .. }
+                | Command::Pitch(_)
+                | Command::Rest
+                | Command::DeleteNote
+                | Command::DeleteBeats
+        )
+    }
 }
 
 const FRET: &str = "Type Fret";

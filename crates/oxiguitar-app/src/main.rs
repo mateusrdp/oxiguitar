@@ -2397,6 +2397,7 @@ fn handle(app: &Shared, event: Event) {
             bad,
             caret,
             tracks,
+            note_edit,
         } => {
             let play = {
                 let mut s = app.borrow_mut();
@@ -2418,8 +2419,9 @@ fn handle(app: &Shared, event: Event) {
                 sync_caret(app, false);
             }
             playing::score_changed(app, false);
-            // Play a 1-beat preview after an edit when the toggle is on (#246).
-            if play {
+            // Play a 1-beat preview after a note edit when the toggle is on
+            // and the change was a note insertion or deletion (#246).
+            if play && note_edit {
                 let dos = playing::play_beats(app, 1);
                 playing::act(app, dos);
                 playing::sync(app);
