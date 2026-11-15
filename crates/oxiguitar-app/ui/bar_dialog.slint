@@ -111,33 +111,39 @@ export component TupletDialog inherits Rectangle {
     }
 }
 
-export component PasteDialog inherits Rectangle {
-    in-out property <int> times: 1;
-    in-out property <bool> replace: false;
+// Copy Bars, Cut Bars and Paste Bars (#287): the caret's track or every
+// track, and for Paste Bars whether the new bars go before or after the
+// selected ones.
+export component BarsDialog inherits Rectangle {
+    in property <string> heading: "Copy Bars";
+    in property <bool> asks-place: false;
+    in property <string> note;
+    in-out property <bool> after: false;
+    in-out property <bool> all-tracks: false;
     callback done(bool);
     Card {
         width: root.width;
         height: root.height;
-        heading: "Special Paste";
-        card-width: 380px;
+        heading: root.heading;
+        card-width: 400px;
         done(ok) => { root.done(ok); }
         VerticalLayout {
             spacing: 8px;
-            HorizontalLayout {
-                spacing: 8px;
-                Text { text: "Paste"; vertical-alignment: center; font-size: 12px; }
-                SpinBox {
-                    minimum: 1;
-                    maximum: 99;
-                    value: root.times;
-                    edited(v) => { root.times = v; }
-                }
-                Text { text: "times"; vertical-alignment: center; font-size: 12px; }
+            if root.asks-place : ComboBox {
+                model: ["Before the selected bars", "After the selected bars"];
+                current-index: root.after ? 1 : 0;
+                selected => { root.after = self.current-index == 1; }
             }
-            CheckBox {
-                text: "Replace what is there, instead of inserting";
-                checked: root.replace;
-                toggled => { root.replace = self.checked; }
+            ComboBox {
+                model: ["Only this track", "All tracks"];
+                current-index: root.all-tracks ? 1 : 0;
+                selected => { root.all-tracks = self.current-index == 1; }
+            }
+            if root.note != "" : Text {
+                text: root.note;
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
             }
         }
     }

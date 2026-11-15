@@ -244,6 +244,8 @@ struct App {
     fit_whole_song: Option<bool>,
     /// Harmonize… is open: for the caret's whole track, or the selection.
     harmonize_whole_track: Option<bool>,
+    /// Copy, Cut or Paste Bars' dialog is open, for which.
+    bars_dialog: Option<editing::ClipKey>,
     /// What to do once the score is saved (after "Save the changes…?").
     after_save: Option<Then>,
     /// The player (M4): its controls and the engine's window half, its
@@ -604,6 +606,7 @@ fn main() -> Result<(), slint::PlatformError> {
         transpose_scope: None,
         fit_whole_song: None,
         harmonize_whole_track: None,
+        bars_dialog: None,
         after_save: None,
         player: player::Player::new(control),
         sound,
@@ -770,7 +773,9 @@ fn main() -> Result<(), slint::PlatformError> {
             "cut" => return clipboard(&a, editing::ClipKey::Cut),
             "copy" => return clipboard(&a, editing::ClipKey::Copy),
             "paste" => return clipboard(&a, editing::ClipKey::Paste),
-            "special-paste" => return clipboard(&a, editing::ClipKey::Special),
+            "copy-bars" => return clipboard(&a, editing::ClipKey::CopyBars),
+            "cut-bars" => return clipboard(&a, editing::ClipKey::CutBars),
+            "paste-bars" => return clipboard(&a, editing::ClipKey::PasteBars),
             "add-track" => return track_action(&a, "add"),
             "delete-track" => return track_action(&a, "delete"),
             "transpose-selection" => return open_transpose(&a, oxiguitar_edit::Scope::Selection),
@@ -800,7 +805,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
     let a = app.clone();
-    ui.on_paste_dialog_done(move |ok| paste_dialog_done(&a, ok));
+    ui.on_bars_dialog_done(move |ok| bars_dialog_done(&a, ok));
     ui.set_bend_amounts(strings(bend_form::amounts()));
     let a = app.clone();
     ui.on_bend_kind_picked(move |i| {
@@ -4580,7 +4585,7 @@ fn transpose_dialog_done(app: &Shared, ok: bool) {
     }
 }
 
-/// Copy, cut, paste, or Special Paste's dialog.
+/// Copy, cut or paste, or the dialog of Copy, Cut or Paste Bars.
 fn clipboard(app: &Shared, key: editing::ClipKey) {
     let typed = match key {
         editing::ClipKey::Copy => {
@@ -4588,14 +4593,9 @@ fn clipboard(app: &Shared, key: editing::ClipKey) {
             return;
         }
         editing::ClipKey::Cut => app.borrow_mut().editing.cut(),
-        editing::ClipKey::Paste => app.borrow_mut().editing.paste(1, false),
-        editing::ClipKey::Special => {
-            let Some(ui) = app.borrow().ui.upgrade() else {
-                return;
-            };
-            if app.borrow().editing.has_clip() && app.borrow().question.is_none() {
-                ui.set_paste_dialog_shown(true);
-            }
+        editing::ClipKey::Paste => app.borrow_mut().editing.paste(),
+        editing::ClipKey::CopyBars | editing::ClipKey::CutBars | editing::ClipKey::PasteBars => {
+            open_bars_dialog(app, key);
             return;
         }
     };
@@ -4605,21 +4605,68 @@ fn clipboard(app: &Shared, key: editing::ClipKey) {
     }
 }
 
-/// Special Paste closed: on OK, the clipboard pasted as asked.
-fn paste_dialog_done(app: &Shared, ok: bool) {
+/// Copy, Cut or Paste Bars' dialog (#287); Paste Bars only once bars have
+/// been copied.
+fn open_bars_dialog(app: &Shared, key: editing::ClipKey) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
-    ui.set_paste_dialog_shown(false);
+    {
+        let s = app.borrow();
+        if s.question.is_some() || s.editing.caret().is_none() {
+            return;
+        }
+    }
+    let (heading, note) = match key {
+        editing::ClipKey::CopyBars => ("Copy Bars", ""),
+        editing::ClipKey::CutBars => (
+            "Cut Bars",
+            "The whole bars the selection touches are copied, then taken out of every track.",
+        ),
+        editing::ClipKey::PasteBars if app.borrow().editing.has_bars() => ("Paste Bars", ""),
+        editing::ClipKey::PasteBars => {
+            message(
+                app,
+                Level::Warning,
+                "No bars to paste: copy some with Copy Bars (Ctrl + Shift + C) first.",
+            );
+            return;
+        }
+        _ => return,
+    };
+    app.borrow_mut().bars_dialog = Some(key);
+    ui.set_bars_heading(heading.into());
+    ui.set_bars_note(note.into());
+    ui.set_bars_asks_place(key == editing::ClipKey::PasteBars);
+    ui.set_bars_dialog_shown(true);
+}
+
+/// Copy, Cut or Paste Bars' dialog closed: on OK, done as asked.
+fn bars_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_bars_dialog_shown(false);
     ui.invoke_focus_page();
+    let Some(key) = app.borrow_mut().bars_dialog.take() else {
+        return;
+    };
     if !ok {
         return;
     }
-    let times = u8::try_from(ui.get_paste_times().clamp(1, 99)).unwrap_or(1);
-    let typed = app
-        .borrow_mut()
-        .editing
-        .paste(times, ui.get_paste_replace());
+    let all = ui.get_bars_all_tracks();
+    let typed = match key {
+        editing::ClipKey::CopyBars => {
+            app.borrow_mut().editing.copy_bars(all);
+            return;
+        }
+        editing::ClipKey::CutBars => app.borrow_mut().editing.cut_bars(all),
+        editing::ClipKey::PasteBars => app
+            .borrow_mut()
+            .editing
+            .paste_bars(ui.get_bars_after(), all),
+        _ => None,
+    };
     if let Some(t) = typed {
         send_typed(app, t);
         sync_caret(app, false);

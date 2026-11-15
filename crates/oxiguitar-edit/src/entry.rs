@@ -145,8 +145,15 @@ pub enum Command {
     /// The selection (or the caret's beat) taken out: beats deleted from
     /// their voice, bars from every track (Ctrl + X, after copying).
     Cut,
-    /// The clipboard pasted at the caret (Ctrl + V, Ctrl + Shift + V).
+    /// The clipboard pasted at the caret (Ctrl + V): beats over what the
+    /// caret's voice holds from the caret on, bars before the caret's bar.
     Paste(crate::Paste),
+    /// The bars the selection (or the caret) touches taken out of every
+    /// track (Ctrl + Shift + X, after Copy Bars).
+    CutBars,
+    /// Copied bars put in as new bars before or after the selection's bars
+    /// (Ctrl + Shift + V).
+    PasteBars(crate::PasteBars),
     /// A steel-string guitar track after the caret's.
     AddTrack,
     /// A copy of the caret's track after it.
@@ -295,6 +302,8 @@ impl Command {
             Command::Bar(_) => "Bar Properties",
             Command::Cut => "Cut",
             Command::Paste(_) => "Paste",
+            Command::CutBars => "Cut Bars",
+            Command::PasteBars(_) => "Paste Bars",
             Command::AddTrack => "Add Track",
             Command::DuplicateTrack => "Duplicate Track",
             Command::DeleteTrack => "Delete Track",
@@ -844,6 +853,8 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Bar(_)
         | Command::Cut
         | Command::Paste(_)
+        | Command::CutBars
+        | Command::PasteBars(_)
         | Command::AddTrack
         | Command::DuplicateTrack
         | Command::DeleteTrack

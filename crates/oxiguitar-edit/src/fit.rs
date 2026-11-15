@@ -163,7 +163,7 @@ fn is_pickup(score: &Score, k: usize) -> bool {
 
 /// Which tuplets a length is written in first.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Prefer {
+pub(crate) enum Prefer {
     /// The note's own tuplets (a piece of a split note stays in its
     /// tuplet).
     Own,
@@ -373,7 +373,13 @@ fn piece(beat: &Beat, duration: Duration, first: bool, last: bool) -> Beat {
 /// `beat` written as `len`, split into tied pieces where one value can't
 /// show it; `first` and `last` say whether the result starts and ends the
 /// original beat.
-fn pieces(beat: &Beat, len: Ratio, prefer: Prefer, first: bool, last: bool) -> Option<Vec<Beat>> {
+pub(crate) fn pieces(
+    beat: &Beat,
+    len: Ratio,
+    prefer: Prefer,
+    first: bool,
+    last: bool,
+) -> Option<Vec<Beat>> {
     let durations = spell(len, &beat.duration.tuplets, prefer)?;
     let n = durations.len();
     Some(
@@ -386,7 +392,7 @@ fn pieces(beat: &Beat, len: Ratio, prefer: Prefer, first: bool, last: bool) -> O
 }
 
 /// Rests filling `len`.
-fn rests(len: Ratio) -> Option<Vec<Beat>> {
+pub(crate) fn rests(len: Ratio) -> Option<Vec<Beat>> {
     let rest = Beat {
         kind: BeatKind::Rest,
         notes: Vec::new(),
