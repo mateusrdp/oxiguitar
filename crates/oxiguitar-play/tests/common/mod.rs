@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use oxiguitar_play::realtime::{PitchPoint, RtEvent, RtEventKind};
 use oxiguitar_play::{
-    Buffers, Control, Engine, Route, Schedule, Slot, Source, Sources, Timeline, engine,
+    Buffers, Control, Controls, Engine, Route, Schedule, Slot, Source, Sources, Timeline, engine,
 };
 
 // ── A source that writes down what it hears ──────────────────────────────
@@ -48,6 +48,7 @@ impl Source for Recorder {
         &mut self,
         events: &[RtEvent],
         _pitch: &[PitchPoint],
+        _controls: Controls<'_>,
         _time: f64,
         _step: f64,
         out: &mut Buffers,

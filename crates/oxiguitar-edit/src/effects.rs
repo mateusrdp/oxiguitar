@@ -29,7 +29,7 @@
 use oxiguitar_model::{
     Accent, Bar, Barre, Beaming, Beat, BeatKind, BeatTechnique, Bend, Duration, Dynamic, Fade,
     Golpe, GraceKind, Hairpin, Harmonic, Note, NotePlace, NoteValue, Ornament, Ottava, Rasgueado,
-    Score, Slide, Stroke, StrokeDirection, Trill, Vibrato, Wah,
+    Score, Slide, Stroke, StrokeDirection, Trill, Vibrato, Wah, WahShape,
 };
 
 use crate::{Caret, Command, Edited, History, Region, Selection};
@@ -475,6 +475,7 @@ pub(crate) fn apply(
         Command::Dynamic(d) => Edit::Dynamic(*d),
         Command::Bend(b) => Edit::Bend(b.clone()),
         Command::Whammy(w) => Edit::Whammy(w.clone()),
+        Command::Wah(w) => Edit::Wah(w.clone()),
         Command::Note(n) => Edit::Note(*n),
         Command::Beat(b) => Edit::Beat(*b),
         _ => return None,
@@ -482,11 +483,20 @@ pub(crate) fn apply(
     Some(run(score, history, c, selection, command.label(), &edit))
 }
 
+/// A wah mark's shape as the score keeps it: in time order within the
+/// beat, its Q in range, and `None` when it is its kind's own.
+fn wah_shape(kind: Wah, shape: Option<&WahShape>) -> Option<WahShape> {
+    let given = shape?;
+    let shape = WahShape::of_numbers(given.q, &given.numbers())?;
+    (shape != kind.shape()).then_some(shape)
+}
+
 enum Edit {
     Effect(Effect),
     Dynamic(Dynamic),
     Bend(Option<Bend>),
     Whammy(Option<Bend>),
+    Wah(Option<(Wah, Option<WahShape>)>),
     Note(NoteChange),
     Beat(BeatChange),
 }
@@ -541,6 +551,18 @@ fn run(
                 && each_beat(&mut bars, first, &targets, c, |b| {
                     (b.kind == BeatKind::Notes).then(|| b.effects.whammy = w.clone())
                 })
+        }
+        Edit::Wah(w) => {
+            let (kind, shape) = match w {
+                Some((kind, shape)) => (Some(*kind), wah_shape(*kind, shape.as_ref())),
+                None => (None, None),
+            };
+            each_beat(&mut bars, first, &targets, c, |b| {
+                (b.kind == BeatKind::Notes).then(|| {
+                    b.effects.wah = kind;
+                    b.effects.wah_shape = shape.clone();
+                })
+            })
         }
         Edit::Note(change) => {
             (strings || !change.needs_strings())
@@ -840,7 +862,11 @@ fn set_beat(b: &mut Beat, e: Effect, on: bool) {
         Effect::FadeIn => fx.fade = on.then_some(Fade::In),
         Effect::FadeOut => fx.fade = on.then_some(Fade::Out),
         Effect::VolumeSwell => fx.fade = on.then_some(Fade::Swell),
-        Effect::Wah(w) => fx.wah = on.then_some(w),
+        Effect::Wah(w) => {
+            fx.wah = on.then_some(w);
+            // The mark's own shape goes with the mark it was made for.
+            fx.wah_shape = None;
+        }
         Effect::Arpeggio(d) => {
             fx.arpeggio = on.then_some(d);
             // One way to spread the chord.
@@ -1249,6 +1275,63 @@ mod tests {
         .unwrap();
         assert_eq!(beat(&s, 1).duration.value, NoteValue::ThirtySecond);
         assert_eq!(h.undo_label(), Some("Grace Note"));
+    }
+
+    #[test]
+    fn a_wah_mark_keeps_the_shape_it_is_given_and_none_for_its_kind_s_own() {
+        use oxiguitar_model::{WahPoint, WahShape};
+        let (mut s, mut h) = song();
+        // The kind's own curve is not kept: the mark alone says it.
+        apply(
+            &mut s,
+            &mut h,
+            at(1, 3),
+            None,
+            Command::Wah(Some((Wah::Open, Some(Wah::Open.shape())))),
+        )
+        .unwrap();
+        assert_eq!(beat(&s, 1).effects.wah, Some(Wah::Open));
+        assert_eq!(beat(&s, 1).effects.wah_shape, None);
+        assert_eq!(h.undo_label(), Some("Wah-Wah"));
+        // A curve of the user's own is, in time order and in range.
+        let point = |n, position| WahPoint {
+            offset: Ratio::new(n, 4).unwrap(),
+            position,
+        };
+        let given = WahShape {
+            points: vec![point(4, 20), point(0, 250), point(9, 50)],
+            q: 900,
+        };
+        apply(
+            &mut s,
+            &mut h,
+            at(1, 3),
+            None,
+            Command::Wah(Some((Wah::Closed, Some(given)))),
+        )
+        .unwrap();
+        assert_eq!(beat(&s, 1).effects.wah, Some(Wah::Closed));
+        assert_eq!(
+            beat(&s, 1).effects.wah_shape,
+            Some(WahShape {
+                points: vec![point(0, 100), point(4, 20)],
+                q: WahShape::Q_RANGE.1,
+            })
+        );
+        // The mark's key switches the plain mark, and the shape goes.
+        apply(
+            &mut s,
+            &mut h,
+            at(1, 3),
+            None,
+            Command::Effect(Effect::Wah(Wah::Open)),
+        )
+        .unwrap();
+        assert_eq!(beat(&s, 1).effects.wah, Some(Wah::Open));
+        assert_eq!(beat(&s, 1).effects.wah_shape, None);
+        // No mark.
+        apply(&mut s, &mut h, at(1, 3), None, Command::Wah(None)).unwrap();
+        assert_eq!(beat(&s, 1).effects.wah, None);
     }
 
     #[test]

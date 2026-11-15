@@ -944,6 +944,7 @@ fn beat_to(b: &Beat) -> w::Beat {
         let_ring,
         pedal: _,
         wah: _,
+        wah_shape: _,
         arpeggio: _,
         rasgueado: _,
         golpe: _,

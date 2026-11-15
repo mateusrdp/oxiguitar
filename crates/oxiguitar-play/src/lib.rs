@@ -40,7 +40,9 @@ use oxiguitar_model::Score;
 pub use oxiguitar_plugin_api::realtime;
 
 pub use click::Click;
-pub use engine::{Buffers, Collected, Control, Engine, Slot, Source, Sources, TrackMix, engine};
+pub use engine::{
+    Buffers, Collected, Control, Controls, Engine, Slot, Source, Sources, TrackMix, engine,
+};
 pub use events::{Attack, HarmonicKind, NoteEvent, PitchPoint, Sound, Vibrato};
 pub use order::{Visit, playing_order};
 pub use schedule::{Route, Schedule};
@@ -59,6 +61,10 @@ pub struct Timeline {
     /// [`events::chords`], #151). Apart from `notes`, so the cursor and the
     /// practice tools see only the score's own notes.
     pub chords: Vec<NoteEvent>,
+    /// What the score moves on each track besides its notes (the wah
+    /// pedal, #250), for the track's effects: a list per track
+    /// ([`events::controls`]).
+    pub controls: Vec<Vec<realtime::ControlPoint>>,
     /// The metronome's clicks, from the song's start.
     pub clicks: Vec<Click>,
     /// The count-in's clicks, from the count-in's start.
@@ -74,12 +80,14 @@ impl Timeline {
         let map = TimeMap::new(score, &order);
         let notes = events::notes(score, &map);
         let chords = events::chords(score, &map);
+        let controls = events::controls(score, &map);
         let clicks = click::metronome(score, &map);
         let (count_in, count_in_length) = click::count_in(score, &map);
         Timeline {
             map,
             notes,
             chords,
+            controls,
             clicks,
             count_in,
             count_in_length,

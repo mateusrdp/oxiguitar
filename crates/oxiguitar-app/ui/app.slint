@@ -1523,6 +1523,11 @@ export component AppWindow inherits Window {
     in property <int> bend-high: 12;
     in property <[GridPoint]> bend-points;
     in property <string> bend-path;
+    // The wah-wah editor (wah_form.rs) is the same dialog with its own
+    // side labels, grid and words.
+    in property <[string]> bend-side;
+    in property <int> bend-major: 4;
+    in property <string> bend-help;
     callback bend-kind-picked(int);
     callback bend-amount-picked(int);
     callback bend-pressed(float, float);
@@ -2809,6 +2814,9 @@ export component AppWindow inherits Window {
         high: root.bend-high;
         points: root.bend-points;
         path: root.bend-path;
+        side: root.bend-side;
+        major: root.bend-major;
+        help: root.bend-help;
         kind-picked(i) => { root.bend-kind-picked(i); }
         amount-picked(i) => { root.bend-amount-picked(i); }
         pressed(c, r) => { root.bend-pressed(c, r); }

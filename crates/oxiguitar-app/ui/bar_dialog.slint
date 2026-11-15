@@ -309,6 +309,12 @@ export component BendDialog inherits Rectangle {
     in property <[GridPoint]> points;
     // The curve as SVG path data, 10 units a cell.
     in property <string> path;
+    // The side's labels from the top row to the lowest, evenly apart; with
+    // none, whole tones (a bend's rows are quarter tones).
+    in property <[string]> side;
+    // Every how many rows a line is drawn strong.
+    in property <int> major: 4;
+    in property <string> help: "Drag the points: time across the note, pitch up the side in quarter tones. Enter applies; Escape cancels.";
     callback kind-picked(int);
     callback amount-picked(int);
     callback pressed(float, float);
@@ -346,7 +352,17 @@ export component BendDialog inherits Rectangle {
                 Rectangle {
                     width: 34px;
                     height: root.grid-h;
-                    for i in (root.high - root.low) / 4 + 1 : Text {
+                    for label[i] in root.side : Text {
+                        x: 0;
+                        y: (root.side.length > 1 ? i * root.grid-h / (root.side.length - 1) : 0px) - 7px;
+                        width: 30px;
+                        horizontal-alignment: right;
+                        font-size: 11px;
+                        color: Palette.foreground;
+                        opacity: 0.7;
+                        text: label;
+                    }
+                    for i in root.side.length > 0 ? 0 : (root.high - root.low) / 4 + 1 : Text {
                         property <int> tones: (root.high - i * 4) / 4;
                         x: 0;
                         y: i * 4 * root.cell-h - 7px;
@@ -378,7 +394,7 @@ export component BendDialog inherits Rectangle {
                         width: root.grid-w;
                         height: root.high - i == 0 ? 2px : 1px;
                         background: Palette.border;
-                        opacity: mod(root.high - i, 4) == 0 ? 0.9 : 0.35;
+                        opacity: mod(root.high - i, root.major) == 0 ? 0.9 : 0.35;
                     }
                     Path {
                         x: 0;
@@ -421,7 +437,7 @@ export component BendDialog inherits Rectangle {
                 }
             }
             Text {
-                text: "Drag the points: time across the note, pitch up the side in quarter tones. Enter applies; Escape cancels.";
+                text: root.help;
                 font-size: 11px;
                 wrap: word-wrap;
                 opacity: 0.7;

@@ -123,6 +123,12 @@ fn export_file(asked: &Asked) -> Result<(), String> {
             track.plugins = entry.plugins;
             track.effects = entry.effects;
             track.play_chords = entry.chords;
+            // The wah marks' own curves (#250).
+            for mark in &entry.wah {
+                if let Some(shape) = oxiguitar_model::WahShape::of_numbers(mark.q, &mark.points) {
+                    track.shape_wah(mark.at, shape);
+                }
+            }
         }
     }
     let timeline = Timeline::new(&score);

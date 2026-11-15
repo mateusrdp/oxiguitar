@@ -338,6 +338,7 @@ fn piece(beat: &Beat, duration: Duration, first: bool, last: bool) -> Beat {
         e.whammy = None;
         e.pedal = None;
         e.wah = None;
+        e.wah_shape = None;
         e.arpeggio = None;
         e.rasgueado = None;
         e.golpe = None;

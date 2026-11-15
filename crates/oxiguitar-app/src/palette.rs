@@ -274,6 +274,8 @@ pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
         "text" => Dialog::Text,
         "lyrics" => Dialog::Lyrics,
         "whammy" => Dialog::Whammy,
+        "wah-open" => Dialog::Wah(oxiguitar_model::Wah::Open),
+        "wah-closed" => Dialog::Wah(oxiguitar_model::Wah::Closed),
         _ => return None,
     })
 }

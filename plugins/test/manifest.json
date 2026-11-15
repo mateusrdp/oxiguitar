@@ -23,7 +23,7 @@
     { "id": "no-drums", "name": "Test everything but drums", "does_not_play": ["drums"] }
   ],
   "effects": [
-    { "id": "gain", "name": "Test gain (the section's level, half by default)" }
+    { "id": "gain", "name": "Test gain (the section's level, half by default; the wah pedal as a volume pedal)" }
   ],
   "services": [
     { "interface": "test-echo", "id": "echo", "name": "Echo", "priority": 1 },

@@ -17,7 +17,9 @@
 //!                                             events start on its first
 //!                                             frame
 //!  rt.process(instance, &ProcessCall) ──────▶ an effect changes a track's
-//!                                             buffer in place
+//!                                             buffer in place, following
+//!                                             the track's control curves
+//!                                             (1.8: the wah pedal)
 //!  device plugin, in its audio callback:
 //!  host.render(stream, out, frames, …) ─────▶ the core fills the device's
 //!                                             buffer (HostTableV1::render)
@@ -195,6 +197,34 @@ pub struct RenderCall {
     pub output_count: u32,
 }
 
+/// What the score moves on a track besides its notes ([`ControlPoint::control`],
+/// interface 1.8): an effect follows the ones it knows and ignores the rest.
+pub mod control {
+    /// The wah pedal's position, from 0 (heel down, closed) to 1 (toe
+    /// down, open). Off (the pedal bypassed) wherever it has no value.
+    pub const WAH: u32 = 1;
+    /// The wah's Q with the pedal half way; it holds while
+    /// [`WAH`] has a value.
+    pub const WAH_Q: u32 = 2;
+}
+
+/// A point of one of a track's control curves (interface 1.8): at `time`
+/// seconds of the score (100 % speed), `control` is at `value`. Between
+/// two points of a control its value moves in a straight line. A point
+/// whose value is not a number ([`f32::NAN`]) ends a run: the control has
+/// no value from there to its next point, nor before its first point or
+/// after its last.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ControlPoint {
+    /// Seconds from the score's start, at 100 % speed.
+    pub time: f64,
+    /// The value there; not a number where the control's run ends.
+    pub value: f32,
+    /// [`control`].
+    pub control: u32,
+}
+
 /// One call to an effect: change a track's buffers in place.
 #[repr(C)]
 #[derive(Debug)]
@@ -207,6 +237,18 @@ pub struct ProcessCall {
     pub buffers: *const *mut f32,
     /// 2.
     pub buffer_count: u32,
+    /// The score's time at the first frame, in seconds at 100 % speed.
+    /// Since 1.8, as the three fields after it.
+    pub time: f64,
+    /// The score's seconds per frame (the speed over the sample rate); 0
+    /// while nothing plays.
+    pub step: f64,
+    /// The track's control curves, which stay the same while the song
+    /// plays: `control_count` points from `controls`, sorted by control
+    /// and then by time. None while nothing plays.
+    pub controls: *const ControlPoint,
+    /// The number of points.
+    pub control_count: u32,
 }
 
 /// The plugin's real-time functions, which its [`crate::abi::PluginTableV1`]

@@ -2235,8 +2235,9 @@ fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
 /// is that plugin's older self, whatever its version; then a plugin whose
 /// needs aren't met is set aside.
 /// The plugins whose effects run first on a track that has no order of its
-/// own, in this order: the amp, then the equalizer (#152).
-pub const DEFAULT_EFFECT_ORDER: &[&str] = &["oxiguitar.nam", "oxiguitar.eq"];
+/// own, in this order: the wah pedal (#250), the amp, then the equalizer
+/// (#152).
+pub const DEFAULT_EFFECT_ORDER: &[&str] = &["oxiguitar.wah", "oxiguitar.nam", "oxiguitar.eq"];
 
 /// `items` (a track's effects, or their plugins, in plugin order) in the
 /// order they run on a track whose effects the user ordered as `order`, by

@@ -14,7 +14,7 @@ use oxiguitar_display::{DisplayList, FontSet, Theme};
 use oxiguitar_edit::{BarCheck, Caret, Command, History, Region, Selection};
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::message::{Level as LogLevel, LogEntry};
-use oxiguitar_host::sidecar::{Sidecar, TrackEntry};
+use oxiguitar_host::sidecar::{Sidecar, TrackEntry, WahEntry};
 use oxiguitar_layout::{Engraved, Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::{Mix, Score};
 use oxiguitar_tools::Availability;
@@ -313,6 +313,7 @@ impl Document {
                     track.effects = entry.effects;
                     track.play_chords = entry.chords;
                     track.chords_from = entry.chords_from.unwrap_or(usize::MAX);
+                    place_wah(track, &entry.wah);
                 }
                 // Convert track_bar_colors from sidecar format (track name →
                 // Vec<Option<serde_json::Value>>) to score format (track
@@ -807,6 +808,7 @@ impl Document {
                     } else {
                         Some(t.chords_from)
                     },
+                    wah: kept_wah(t),
                 })
                 .collect(),
             bar_colors,
@@ -890,6 +892,29 @@ impl Engraver {
 }
 
 /// A path's file name, for messages.
+/// Gives `track`'s wah marks the shapes kept beside the score (#250); a
+/// shape whose beat has no wah mark any more is dropped.
+fn place_wah(track: &mut oxiguitar_model::Track, kept: &[WahEntry]) {
+    for mark in kept {
+        if let Some(shape) = oxiguitar_model::WahShape::of_numbers(mark.q, &mark.points) {
+            track.shape_wah(mark.at, shape);
+        }
+    }
+}
+
+/// `track`'s shaped wah marks, as the file beside the score keeps them.
+fn kept_wah(track: &oxiguitar_model::Track) -> Vec<WahEntry> {
+    track
+        .wah_shapes()
+        .into_iter()
+        .map(|(at, shape)| WahEntry {
+            at,
+            q: shape.q,
+            points: shape.numbers(),
+        })
+        .collect()
+}
+
 pub(crate) fn file_name(path: &Path) -> String {
     path.file_name().map_or_else(
         || path.display().to_string(),
@@ -1139,6 +1164,74 @@ mod tests {
         let broken = open(&path).unwrap();
         assert!(broken.score.tracks[0].plugins.is_empty());
         assert!(broken.sidecar_problem.unwrap().contains("song.gp5.oxg"));
+    }
+
+    /// #250: a wah mark's curve and Q, which no score format holds, are
+    /// kept beside the file; the file keeps the mark.
+    #[test]
+    fn a_wah_mark_s_shape_is_saved_beside_the_file() {
+        use oxiguitar_model::{BeatKind, Ratio, Wah, WahPoint, WahShape};
+
+        let dir = scratch("wah");
+        let path = dir.join("song.gp");
+        std::fs::copy(fixture("gp"), &path).unwrap();
+        let mut doc = open(&path).unwrap();
+        // The first beat with notes on the first track.
+        let mut caret = Caret::at_start(&doc.score, 0).unwrap();
+        let (bar, beat) = doc.score.tracks[0].staves[0]
+            .bars
+            .iter()
+            .enumerate()
+            .find_map(|(bi, b)| {
+                let at = b.voices[0]
+                    .beats
+                    .iter()
+                    .position(|x| x.kind == BeatKind::Notes && x.grace.is_none())?;
+                Some((bi, at))
+            })
+            .unwrap();
+        (caret.bar, caret.beat) = (bar, beat);
+        let shape = WahShape {
+            points: vec![
+                WahPoint {
+                    offset: Ratio::ZERO,
+                    position: 20,
+                },
+                WahPoint {
+                    offset: Ratio::new(1, 3).unwrap(),
+                    position: 100,
+                },
+                WahPoint {
+                    offset: Ratio::ONE,
+                    position: 40,
+                },
+            ],
+            q: 80,
+        };
+        doc.edit(
+            Command::Wah(Some((Wah::Open, Some(shape.clone())))),
+            caret,
+            None,
+        )
+        .unwrap();
+        let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
+        // The shape is no loss: the file is saved in place, unasked.
+        assert!(!prepared.ask(), "{prepared:?}");
+        doc.save(&prepared).unwrap();
+        let text = std::fs::read_to_string(dir.join("song.gp.oxg")).unwrap();
+        assert!(text.contains("\"wah\""), "{text}");
+        let again = open(&path).unwrap();
+        let fx = &again.score.tracks[0].staves[0].bars[bar].voices[0].beats[beat].effects;
+        assert_eq!(fx.wah, Some(Wah::Open));
+        assert_eq!(fx.wah_shape, Some(shape));
+        assert_eq!(again.score, doc.score);
+        // A shape whose beat has lost its mark is dropped.
+        let mut kept = Sidecar::read_for(&path).unwrap().unwrap();
+        kept.tracks[0].wah[0].at[1] = 9999;
+        kept.write_for(&path).unwrap();
+        let without = open(&path).unwrap();
+        let fx = &without.score.tracks[0].staves[0].bars[bar].voices[0].beats[beat].effects;
+        assert_eq!((fx.wah, fx.wah_shape.clone()), (Some(Wah::Open), None));
     }
 
     #[test]

@@ -5,14 +5,18 @@
 //! note's pitch (its curve followed), starting on the frame of its event
 //! with no fade in and stopping on the frame of its end, so the contract
 //! suite can find every note's first and last frame exactly. And the
-//! effect `gain`, which halves a track.
+//! effect `gain`, which halves a track, and follows the track's wah pedal
+//! as a volume pedal (interface 1.8), so the suite can see the pedal's
+//! curve in the sound.
 //!
 //! For the suite's own tests, a track whose settings hold `"misbehave":
 //! true` breaks the real-time rules on purpose (it allocates and yields its
 //! thread, a system call, on every render), and `"late": N` starts its
 //! notes N frames late.
 
-use oxiguitar_plugin::audio::{Piece, Prepare, PrepareEffect, RtEventKind, RtNote};
+use oxiguitar_plugin::audio::{
+    Controls, Piece, Prepare, PrepareEffect, RtEventKind, RtNote, control,
+};
 use oxiguitar_plugin::{Effect, Error, Instrument, Processor, Renderer, Update};
 
 /// The most notes sounding at once; more are dropped.
@@ -192,6 +196,17 @@ impl Processor for Scale {
             }
             *l *= self.gain;
             *r *= self.gain;
+        }
+    }
+
+    /// While the wah pedal has a value, the track is also scaled by it.
+    fn process_with(&mut self, left: &mut [f32], right: &mut [f32], controls: &Controls<'_>) {
+        self.process(left, right);
+        for (frame, (l, r)) in left.iter_mut().zip(right.iter_mut()).enumerate() {
+            if let Some(pedal) = controls.value_at(control::WAH, frame) {
+                *l *= pedal as f32;
+                *r *= pedal as f32;
+            }
         }
     }
 

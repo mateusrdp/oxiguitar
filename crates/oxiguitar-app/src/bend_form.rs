@@ -42,6 +42,10 @@ pub(crate) const WHAMMY_TYPES: [&str; 6] = [
     "Predive and dive",
 ];
 
+/// The words under the grid.
+pub(crate) const HELP: &str = "Drag the points: time across the note, pitch up the side in \
+     quarter tones. Enter applies; Escape cancels.";
+
 /// The pitches offered, ¼ tone to 3 tones.
 pub(crate) fn amounts() -> Vec<String> {
     (1..=ROWS)

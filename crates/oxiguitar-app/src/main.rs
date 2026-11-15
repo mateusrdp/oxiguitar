@@ -59,6 +59,7 @@ mod sound;
 mod speed;
 #[cfg(test)]
 mod test_support;
+mod wah_form;
 #[cfg(test)]
 use test_support::test_plugins;
 mod track_form;
@@ -236,6 +237,9 @@ struct App {
     advice: Option<oxiguitar_host::advice::Asked>,
     /// The bend or whammy-bar editor, while it is open.
     bend_dialog: Option<bend_form::BendForm>,
+    /// The wah-wah editor, while it is open: the bend editor's dialog with
+    /// its own state.
+    wah_dialog: Option<wah_form::WahForm>,
     /// The chord dialog, while it is open.
     chord_dialog: Option<chord_form::ChordForm>,
     /// What the open Transpose dialog applies to.
@@ -603,6 +607,7 @@ fn main() -> Result<(), slint::PlatformError> {
         question: None,
         advice: None,
         bend_dialog: None,
+        wah_dialog: None,
         chord_dialog: None,
         transpose_scope: None,
         fit_whole_song: None,
@@ -807,23 +812,42 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_bars_dialog_done(move |ok| bars_dialog_done(&a, ok));
-    ui.set_bend_amounts(strings(bend_form::amounts()));
+    // The bend editor's dialog is the wah-wah editor's too: what the
+    // window says goes to whichever is open.
     let a = app.clone();
     ui.on_bend_kind_picked(move |i| {
-        bend_edit(&a, |f| {
-            f.pick_kind(usize::try_from(i).unwrap_or(usize::MAX))
-        })
+        let i = usize::try_from(i).unwrap_or(usize::MAX);
+        bend_edit(&a, |f| f.pick_kind(i));
+        wah_edit(&a, |f| f.pick_kind(i));
     });
     let a = app.clone();
-    ui.on_bend_amount_picked(move |i| bend_edit(&a, |f| f.pick_amount(i + 1)));
+    ui.on_bend_amount_picked(move |i| {
+        bend_edit(&a, |f| f.pick_amount(i + 1));
+        wah_edit(&a, |f| f.pick_q(usize::try_from(i).unwrap_or(usize::MAX)));
+    });
     let a = app.clone();
-    ui.on_bend_pressed(move |c, r| bend_edit(&a, |f| f.press(c, r)));
+    ui.on_bend_pressed(move |c, r| {
+        bend_edit(&a, |f| f.press(c, r));
+        wah_edit(&a, |f| f.press(c, r));
+    });
     let a = app.clone();
-    ui.on_bend_dragged(move |c, r| bend_edit(&a, |f| f.drag(c, r)));
+    ui.on_bend_dragged(move |c, r| {
+        bend_edit(&a, |f| f.drag(c, r));
+        wah_edit(&a, |f| f.drag(c, r));
+    });
     let a = app.clone();
-    ui.on_bend_released(move || bend_edit(&a, bend_form::BendForm::release));
+    ui.on_bend_released(move || {
+        bend_edit(&a, bend_form::BendForm::release);
+        wah_edit(&a, wah_form::WahForm::release);
+    });
     let a = app.clone();
-    ui.on_bend_dialog_done(move |ok| bend_dialog_done(&a, ok));
+    ui.on_bend_dialog_done(move |ok| {
+        if a.borrow().wah_dialog.is_some() {
+            wah_dialog_done(&a, ok);
+        } else {
+            bend_dialog_done(&a, ok);
+        }
+    });
     let a = app.clone();
     ui.on_chord_changed(move |kind, value, text| {
         chord_changed(&a, kind.as_str(), value, text.as_str())
@@ -3305,8 +3329,34 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
             };
             let form = bend_form::BendForm::open(curve.as_ref(), whammy);
             ui.set_bend_heading(if whammy { "Whammy Bar" } else { "Bend" }.into());
+            ui.set_bend_amounts(strings(bend_form::amounts()));
+            ui.set_bend_side(strings(Vec::new()));
+            ui.set_bend_major(4);
+            ui.set_bend_help(bend_form::HELP.into());
             sync_bend(&ui, &form);
             app.borrow_mut().bend_dialog = Some(form);
+            ui.set_bend_dialog_shown(true);
+        }
+        editing::Dialog::Wah(asked) => {
+            let Some(here) = app.borrow().editing.wah_here() else {
+                return;
+            };
+            let form = wah_form::WahForm::open(
+                here.as_ref().map(|(wah, shape)| (*wah, shape.as_ref())),
+                asked,
+            );
+            ui.set_bend_heading("Wah-Wah".into());
+            ui.set_bend_types(strings(
+                wah_form::TYPES.iter().map(|t| (*t).to_owned()).collect(),
+            ));
+            ui.set_bend_amounts(strings(wah_form::qs()));
+            ui.set_bend_side(strings(vec!["Toe".to_owned(), "Heel".to_owned()]));
+            ui.set_bend_major(5);
+            ui.set_bend_help(wah_form::HELP.into());
+            ui.set_bend_low(0);
+            ui.set_bend_high(wah_form::ROWS);
+            sync_wah(&ui, &form);
+            app.borrow_mut().wah_dialog = Some(form);
             ui.set_bend_dialog_shown(true);
         }
         editing::Dialog::Chord => {
@@ -3559,7 +3609,10 @@ fn sync_bend(ui: &AppWindow, f: &bend_form::BendForm) {
     let mut names: Vec<String> = types.iter().map(|t| (*t).to_owned()).collect();
     names.push("Custom".to_owned());
     let kind = f.kind.unwrap_or(types.len());
-    if ui.get_bend_types().row_count() != names.len() {
+    // Set only when they differ, so the list doesn't change under the
+    // open box.
+    let shown = ui.get_bend_types();
+    if shown.iter().map(String::from).ne(names.iter().cloned()) {
         ui.set_bend_types(strings(names));
     }
     ui.set_bend_kind(i32::try_from(kind).unwrap_or(0));
@@ -3615,6 +3668,61 @@ fn bend_dialog_done(app: &Shared, ok: bool) {
         oxiguitar_edit::Command::Bend(form.bend())
     };
     let typed = app.borrow_mut().editing.tool(command);
+    if let Some(t) = typed {
+        send_typed(app, t);
+    }
+}
+
+/// Shows the wah-wah editor's state.
+fn sync_wah(ui: &AppWindow, f: &wah_form::WahForm) {
+    ui.set_bend_kind(i32::try_from(f.kind).unwrap_or(0));
+    ui.set_bend_amount(i32::try_from(f.q).unwrap_or(0));
+    ui.set_bend_points(ModelRc::new(VecModel::from(
+        f.points
+            .iter()
+            .map(|p| GridPoint {
+                col: p.col,
+                row: p.row,
+            })
+            .collect::<Vec<_>>(),
+    )));
+    ui.set_bend_path(f.path().into());
+}
+
+/// A change in the wah-wah editor.
+fn wah_edit(app: &Shared, edit: impl FnOnce(&mut wah_form::WahForm)) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let form = {
+        let mut s = app.borrow_mut();
+        let Some(f) = s.wah_dialog.as_mut() else {
+            return;
+        };
+        edit(f);
+        f.clone()
+    };
+    sync_wah(&ui, &form);
+}
+
+/// The wah-wah editor closed: on OK, a changed mark is one change at the
+/// caret (or on the selection).
+fn wah_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_bend_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some(form) = app.borrow_mut().wah_dialog.take() else {
+        return;
+    };
+    if !ok || !form.changed {
+        return;
+    }
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::Wah(form.mark()));
     if let Some(t) = typed {
         send_typed(app, t);
     }

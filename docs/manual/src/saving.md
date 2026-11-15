@@ -30,7 +30,7 @@ To try a file without changing it, use Save As.
 
 ## Plugins' settings for each track
 
-Some plugins add their own settings to a track's **Properties…** (the NAM plugin's amp model, for example). No score format holds them, so OxiGuitar keeps them in a small file beside the score, named after it: `song.gp3` keeps them in `song.gp3.oxg`. Saving writes it and opening reads it; keep the two files together when you copy or share a song. Without the .oxg file the score opens as usual, with those settings empty. Guitar Pro and other programs ignore it.
+Some plugins add their own settings to a track's **Properties…** (the NAM plugin's amp model, for example). No score format holds them, so OxiGuitar keeps them in a small file beside the score, named after it: `song.gp3` keeps them in `song.gp3.oxg`. The same file keeps the curve and the Q you gave a wah-wah mark ([Wah-wah](editing.md#wah-wah)); the score file itself keeps the mark only where its format has one (Guitar Pro's `.gp`). Saving writes it and opening reads it; keep the two files together when you copy or share a song. Without the .oxg file the score opens as usual, with those settings empty. Guitar Pro and other programs ignore it.
 
 ## Before closing
 

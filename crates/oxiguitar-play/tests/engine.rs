@@ -22,7 +22,10 @@ use oxiguitar_play::TrackMix;
 use oxiguitar_play::events::NoteEvent;
 
 mod common;
+use std::sync::{Arc, Mutex};
+
 use common::{RATE, frame_of, rig, run, timeline};
+use oxiguitar_play::{Route, Schedule, Slot, Sources, engine};
 
 #[test]
 fn every_note_starts_and_ends_on_its_frame_at_every_speed() {
@@ -319,6 +322,7 @@ impl oxiguitar_play::Source for Late {
         &mut self,
         _events: &[oxiguitar_play::realtime::RtEvent],
         _pitch: &[oxiguitar_play::realtime::PitchPoint],
+        _controls: oxiguitar_play::Controls<'_>,
         _time: f64,
         _step: f64,
         out: &mut oxiguitar_play::Buffers,
@@ -375,4 +379,79 @@ fn tracks_whose_effects_come_late_are_lined_up_with_the_others() {
     let loud: Vec<usize> = (0..left.len()).filter(|&i| left[i].abs() > 1e-6).collect();
     assert_eq!(loud, [110], "every track's click on the latest one's frame");
     control.collect();
+}
+
+/// Writes down, for each call with frames, the score's time and how many
+/// control points its first track came with.
+struct Pedal {
+    seen: Arc<Mutex<Vec<(f64, usize)>>>,
+}
+
+impl oxiguitar_play::Source for Pedal {
+    fn render(
+        &mut self,
+        _events: &[oxiguitar_play::realtime::RtEvent],
+        _pitch: &[oxiguitar_play::realtime::PitchPoint],
+        controls: oxiguitar_play::Controls<'_>,
+        time: f64,
+        _step: f64,
+        out: &mut oxiguitar_play::Buffers,
+    ) {
+        let mut seen = self.seen.lock().unwrap();
+        if out.frames() > 0 && seen.len() < seen.capacity() {
+            seen.push((time, controls.track(0).len()));
+        }
+        // The second track has none of its own.
+        assert!(controls.track(1).is_empty());
+    }
+}
+
+#[test]
+fn a_track_s_controls_reach_its_source_while_the_song_plays_and_only_then() {
+    use oxiguitar_play::realtime::{ControlPoint, control};
+
+    let mut timeline = timeline();
+    let point = |time, value| ControlPoint {
+        time,
+        value,
+        control: control::WAH,
+    };
+    timeline.controls = vec![
+        vec![point(0.5, 0.0), point(1.0, 1.0), point(1.0, f32::NAN)],
+        Vec::new(),
+    ];
+    let routes = [
+        Some(Route { source: 0, slot: 0 }),
+        Some(Route { source: 0, slot: 1 }),
+    ];
+    let schedule = Arc::new(Schedule::new(&timeline, &routes, 1));
+    let seen = Arc::new(Mutex::new(Vec::with_capacity(10_000)));
+    let (mut engine, mut control) = engine(RATE, 512);
+    let mut sources = Sources::new(vec![Slot::new(
+        Box::new(Pedal { seen: seen.clone() }),
+        vec![0, 1],
+        512,
+    )]);
+    sources.fit(&schedule);
+    control.set_schedule(schedule);
+    control.set_sources(sources);
+    // Stopped: the source renders, with no controls.
+    run(&mut engine, 2000, false);
+    assert!(seen.lock().unwrap().iter().all(|&(_, n)| n == 0));
+    seen.lock().unwrap().clear();
+    control.play(0.0, false);
+    run(&mut engine, RATE as usize, false);
+    {
+        let seen = seen.lock().unwrap();
+        let playing: Vec<&(f64, usize)> = seen.iter().filter(|(_, n)| *n > 0).collect();
+        assert!(playing.len() > 10, "the track's points while it plays");
+        assert!(playing.iter().all(|(_, n)| *n == 3));
+        // The score's time comes with them, moving on.
+        assert!(playing.windows(2).all(|w| w[0].0 < w[1].0));
+    }
+    control.pause();
+    run(&mut engine, 2000, false);
+    seen.lock().unwrap().clear();
+    run(&mut engine, 2000, false);
+    assert!(seen.lock().unwrap().iter().all(|&(_, n)| n == 0));
 }

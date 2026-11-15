@@ -18,6 +18,10 @@
 //! ([`Processor::apply`]). An effect that doesn't is prepared again the
 //! next time the song starts, as before 1.5.
 //!
+//! An effect may follow what the score moves on its track, too (interface
+//! 1.8): the wah pedal's marks reach it as control curves
+//! ([`Processor::process_with`], [`Controls`]).
+//!
 //! On the audio thread, never allocate, lock, wait or make a system call:
 //! a device callback is a few milliseconds, and a late one is a click the
 //! listener hears. The contract suite counts allocations and, on Linux,
@@ -25,7 +29,7 @@
 
 pub use oxiguitar_plugin_api::message::{Prepare, PrepareEffect, PreparedTrack};
 pub use oxiguitar_plugin_api::realtime::{
-    PitchPoint, RtEvent, RtEventKind, RtNote, attack, flags, harmonic, sound,
+    ControlPoint, PitchPoint, RtEvent, RtEventKind, RtNote, attack, control, flags, harmonic, sound,
 };
 
 use std::any::Any;
@@ -165,6 +169,15 @@ pub trait Processor: Send {
         0
     }
 
+    /// As [`Processor::process`], with where the score is and the track's
+    /// control curves (interface 1.8): what an effect that follows the
+    /// score's marks, such as a wah, overrides. The host calls this one;
+    /// by default it is `process`.
+    fn process_with(&mut self, left: &mut [f32], right: &mut [f32], controls: &Controls<'_>) {
+        let _ = controls;
+        self.process(left, right);
+    }
+
     /// Takes what [`Effect::update`] made of the track's new settings, on
     /// the audio thread, between two calls of [`Processor::process`]
     /// (interface 1.5). Move towards the new values over the next few
@@ -175,6 +188,69 @@ pub trait Processor: Send {
     /// `None` is never handed one).
     fn apply(&mut self, update: &mut Update) {
         let _ = update;
+    }
+}
+
+/// Where the score is during one call to an effect, and its track's
+/// control curves (interface 1.8).
+#[derive(Clone, Copy, Debug)]
+pub struct Controls<'a> {
+    points: &'a [ControlPoint],
+    time: f64,
+    step: f64,
+}
+
+impl<'a> Controls<'a> {
+    /// Controls over `points` (sorted by control, then by time), for a call
+    /// whose first frame is at `time` and whose frames are `step` seconds
+    /// of the score apart: for tests, and for the SDK's glue.
+    pub fn new(points: &'a [ControlPoint], time: f64, step: f64) -> Controls<'a> {
+        Controls { points, time, step }
+    }
+
+    /// The score's time at the first frame, seconds at 100 % speed.
+    pub fn time(&self) -> f64 {
+        self.time
+    }
+
+    /// The score's seconds per frame; 0 while nothing plays.
+    pub fn step(&self) -> f64 {
+        self.step
+    }
+
+    /// One control's points ([`control`]), by time: empty when the score
+    /// never moves it on this track, and while nothing plays. The same
+    /// array stays put while the song plays.
+    pub fn points(&self, control: u32) -> &'a [ControlPoint] {
+        let from = self.points.partition_point(|p| p.control < control);
+        let to = self.points.partition_point(|p| p.control <= control);
+        &self.points[from..to]
+    }
+
+    /// A control's value `frame` frames into the call: `None` where it has
+    /// none (for [`control::WAH`], the pedal is off).
+    pub fn value_at(&self, control: u32, frame: usize) -> Option<f64> {
+        value_at(self.points(control), self.time + frame as f64 * self.step)
+    }
+}
+
+/// The value of one control's `points` at `time`: followed in straight
+/// lines, with none before the first point, after the last, or from a
+/// point that is not a number to the next.
+pub fn value_at(points: &[ControlPoint], time: f64) -> Option<f64> {
+    let next = points.partition_point(|p| p.time <= time);
+    let a = points.get(next.checked_sub(1)?)?;
+    if a.value.is_nan() {
+        return None;
+    }
+    let from = f64::from(a.value);
+    match points.get(next) {
+        Some(b) if !b.value.is_nan() && b.time > a.time => {
+            let f = (time - a.time) / (b.time - a.time);
+            Some(from + (f64::from(b.value) - from) * f)
+        }
+        Some(_) => Some(from),
+        None => None,
     }
 }
 
@@ -284,4 +360,44 @@ pub fn cents_at(curve: &[PitchPoint], time: f64) -> f64 {
         }
     }
     curve.last().map_or(0.0, |p| f64::from(p.cents))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn point(control: u32, time: f64, value: f32) -> ControlPoint {
+        ControlPoint {
+            time,
+            value,
+            control,
+        }
+    }
+
+    #[test]
+    fn a_control_is_followed_in_straight_lines_and_has_no_value_outside_its_runs() {
+        let points = [
+            point(control::WAH, 1.0, 0.0),
+            point(control::WAH, 2.0, 1.0),
+            point(control::WAH, 3.0, f32::NAN),
+            point(control::WAH, 5.0, 0.5),
+            point(control::WAH, 6.0, f32::NAN),
+            point(control::WAH_Q, 1.0, 4.0),
+            point(control::WAH_Q, 6.0, f32::NAN),
+        ];
+        let c = Controls::new(&points, 0.0, 0.5);
+        assert_eq!(c.points(control::WAH).len(), 5);
+        assert_eq!(c.points(control::WAH_Q).len(), 2);
+        assert!(c.points(7).is_empty());
+        // Frames are half a second apart here.
+        assert_eq!(c.value_at(control::WAH, 0), None);
+        assert_eq!(c.value_at(control::WAH, 2), Some(0.0));
+        assert_eq!(c.value_at(control::WAH, 3), Some(0.5));
+        assert_eq!(c.value_at(control::WAH, 5), Some(1.0));
+        assert_eq!(c.value_at(control::WAH, 6), None);
+        assert_eq!(c.value_at(control::WAH, 8), None);
+        assert_eq!(c.value_at(control::WAH, 11), Some(0.5));
+        assert_eq!(c.value_at(control::WAH, 12), None);
+        assert_eq!(c.value_at(control::WAH_Q, 7), Some(4.0));
+    }
 }

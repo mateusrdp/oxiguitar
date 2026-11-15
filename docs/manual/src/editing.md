@@ -221,7 +221,7 @@ Every other tool of the palette works too (v0.17); they have no keys, as in Guit
 
 - **Over several beats**: **Legato** (a slur), **Crescendo** and **Decrescendo**, the **8va**, **8vb**, **15ma** and **15mb** lines, **Extended Barre** (at the lowest fret the notes use; the Note tab changes the fret and makes it a half barre), **Slash** notation, the four **beaming** tools and **Force Groups** (equal tuplets bracketed as one group). Select the beats first: a slur runs from the first selected beat to the last; at the caret it joins the caret's beat to the next.
 - **On a note**: upper and lower **mordent**, **turn** and **inverted turn**, **wide vibrato**, **String Number**. **Left-Hand Fingering** and **Right-Hand Fingering** step through the fingers, one press each (the Note tab picks one directly).
-- **On a beat**: **Fermata** (at the beat's moment, for every track; the Note tab makes it short, medium or long), **Sustain Pedal** (down, then up, then off; on a selection, down at its start and up at its end), **Fade-out** and **Volume Swell** (one fade a beat), the whammy bar's slight **vibrato**, **Closed** and **Open Wah-Wah**, **Arpeggio** up and down, **Rasgueado** (the Note tab picks one of Guitar Pro's eighteen patterns), finger and thumb **Golpe**, **Pick Scrape** up and down, **Dead Slap**.
+- **On a beat**: **Fermata** (at the beat's moment, for every track; the Note tab makes it short, medium or long), **Sustain Pedal** (down, then up, then off; on a selection, down at its start and up at its end), **Fade-out** and **Volume Swell** (one fade a beat), the whammy bar's slight **vibrato**, **Closed** and **Open Wah-Wah** (they open the [wah-wah editor](#wah-wah)), **Arpeggio** up and down, **Rasgueado** (the Note tab picks one of Guitar Pro's eighteen patterns), finger and thumb **Golpe**, **Pick Scrape** up and down, **Dead Slap**.
 - **Accidentals**: **Double Flat** to **Double Sharp** write the note with that accidental where one names it (C sharp as D flat), and **Change Accidental** steps through the ways to write it. A file's own spellings are kept where they differ from the ones OxiGuitar would choose.
 - **Single** and **Double Repeat Sign**: the bar (or the bar and the next) repeats the bar (or two bars) before it: they are copied in and the sign is drawn in their place. Pressing it again, or changing a note in the bar, takes the sign off and keeps the music.
 - **Nested N-tuplet** puts a tuplet inside the one the selected notes already have.
@@ -235,6 +235,12 @@ How each one sounds is on the [Playback](playback.md#how-the-marks-sound) page.
 ### Design Mode
 
 **Design Mode** (View → Design Mode, or its button at the top of the palette) sets how many bars each line of the Page and Parchment layouts holds. Each line shows its number of bars at its left. Right-click on a bar: **One Bar More on This System**, **One Bar Less on This System**, or **Automatic Layout from Here** (lines from there on hold as many bars as fit). The lines before it keep the bars they show. A line that can't hold the bars set for it holds as many as fit, and its count turns red. With one track shown, the layout is that track's; with several, the score's. A .gp file keeps them, as Guitar Pro does. Each change is one step to undo.
+
+### Wah-wah
+
+The palette's **Closed Wah-Wah** and **Open Wah-Wah** open the **wah-wah editor** for the caret's beat, or the selected beats. On a beat without a mark it opens on the mark you clicked, so Enter adds it; on a beat with one it shows that mark. Pick the mark (**No wah-wah** takes it away, **Open** is drawn "o", **Closed** "+") and the filter's **Q**, how sharp the wah sounds (4 is a Cry Baby's; higher is more nasal). The grid is the pedal across the beat, from **Heel** (closed, dark) at the bottom to **Toe** (open, bright) at the top: drag its points to shape how the pedal moves. Picking a mark gives its usual curve again.
+
+The score file keeps the open or closed mark; the curve and the Q are kept in the file beside the score ([Saving](saving.md)). How it sounds is under [How the marks sound](playback.md#how-the-marks-sound).
 
 ### Bends and the whammy bar
 

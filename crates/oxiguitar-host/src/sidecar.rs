@@ -24,7 +24,13 @@
 //! by plugin id (#152; absent for the default order, and ignored by an
 //! older OxiGuitar), and `"chords": true` when its chord diagrams are
 //! played (#151). `"chords_from": N` when chords from another track are
-//! shown above this track (#268; absent for none). When the
+//! shown above this track (#268; absent for none). `"wah"` lists the
+//! track's wah marks the user shaped (#250), which no score format holds
+//! either: `{ "at": [staff, bar, voice, beat], "q": 4.0, "points": [[0, 1,
+//! 0], [1, 2, 100]] }`, each point the fraction of the beat (numerator,
+//! denominator) and the pedal from 0 (heel) to 100 (toe); a mark not listed
+//! plays its kind's own curve, and an entry whose beat has no wah mark any
+//! more is ignored. When the
 //! score was changed elsewhere (tracks added, removed or moved in another
 //! program), a track takes the entry at its own place if the names agree,
 //! else the first unused entry of its name, else none.
@@ -64,6 +70,58 @@ pub struct TrackEntry {
     /// Index of another track whose chord diagrams to show above this
     /// track; `None` for none.
     pub chords_from: Option<usize>,
+    /// The wah marks the user shaped (#250).
+    pub wah: Vec<WahEntry>,
+}
+
+/// One wah mark's shape, as kept beside the score.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct WahEntry {
+    /// The mark's beat: staff, bar, voice and beat, counted from 0.
+    pub at: [usize; 4],
+    /// The filter's Q with the pedal half way, in tenths.
+    pub q: u16,
+    /// The pedal's curve: each point's place in the beat (numerator,
+    /// denominator) and the pedal from 0 to 100.
+    pub points: Vec<[i64; 3]>,
+}
+
+impl WahEntry {
+    /// The entry of a JSON value; `None` for anything else than one.
+    fn parse(v: &Value) -> Option<WahEntry> {
+        let numbers =
+            |v: &Value| -> Option<Vec<i64>> { v.as_array()?.iter().map(Value::as_i64).collect() };
+        let at = numbers(v.get("at")?)?;
+        let at: [i64; 4] = at.try_into().ok()?;
+        let mut place = [0usize; 4];
+        for (to, from) in place.iter_mut().zip(at) {
+            *to = usize::try_from(from).ok()?;
+        }
+        let q = (v.get("q")?.as_f64()? * 10.0).round();
+        let points = v
+            .get("points")?
+            .as_array()?
+            .iter()
+            .map(|p| numbers(p)?.try_into().ok())
+            .collect::<Option<Vec<[i64; 3]>>>()?;
+        Some(WahEntry {
+            at: place,
+            q: if (0.0..=f64::from(u16::MAX)).contains(&q) {
+                q as u16
+            } else {
+                return None;
+            },
+            points,
+        })
+    }
+
+    fn to_value(&self) -> Value {
+        serde_json::json!({
+            "at": self.at,
+            "q": f64::from(self.q) / 10.0,
+            "points": self.points,
+        })
+    }
 }
 
 /// What a sidecar holds.
@@ -81,7 +139,11 @@ impl Sidecar {
     /// Whether no track keeps anything and no bar has a custom colour.
     pub fn is_empty(&self) -> bool {
         self.tracks.iter().all(|t| {
-            t.plugins.is_empty() && t.effects.is_empty() && !t.chords && t.chords_from.is_none()
+            t.plugins.is_empty()
+                && t.effects.is_empty()
+                && !t.chords
+                && t.chords_from.is_none()
+                && t.wah.is_empty()
         }) && self.bar_colors.iter().all(Option::is_none)
             && self
                 .track_bar_colors
@@ -175,6 +237,12 @@ impl Sidecar {
                         .get("chords_from")
                         .and_then(Value::as_u64)
                         .map(|v| v as usize),
+                    wah: match t.get("wah") {
+                        Some(Value::Array(marks)) => {
+                            marks.iter().filter_map(WahEntry::parse).collect()
+                        }
+                        _ => Vec::new(),
+                    },
                 }
             })
             .collect();
@@ -237,6 +305,9 @@ impl Sidecar {
                 }
                 if let Some(idx) = t.chords_from {
                     entry["chords_from"] = serde_json::json!(idx);
+                }
+                if !t.wah.is_empty() {
+                    entry["wah"] = t.wah.iter().map(WahEntry::to_value).collect();
                 }
                 entry
             })
@@ -335,7 +406,35 @@ mod tests {
             effects: Vec::new(),
             chords: false,
             chords_from: None,
+            wah: Vec::new(),
         }
+    }
+
+    #[test]
+    fn shaped_wah_marks_are_kept_and_read_back() {
+        let mark = WahEntry {
+            at: [0, 3, 1, 2],
+            q: 65,
+            points: vec![[0, 1, 20], [1, 3, 100], [1, 1, 0]],
+        };
+        let sidecar = Sidecar {
+            tracks: vec![TrackEntry {
+                name: "Lead".into(),
+                wah: vec![mark.clone()],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        assert!(!sidecar.is_empty());
+        let text = sidecar.to_text();
+        assert!(text.contains("\"q\": 6.5"), "{text}");
+        assert_eq!(Sidecar::parse(&text).unwrap(), sidecar);
+        // A mark that isn't one is left out; the rest of the file is read.
+        let odd = r#"{"oxiguitar":1,"tracks":[{"name":"Lead","plugins":{},
+            "wah":[{"at":[0,1],"q":4,"points":[]},{"at":[0,0,0,0],"q":4,"points":[[0,1,50]]}]}]}"#;
+        let read = Sidecar::parse(odd).unwrap();
+        assert_eq!(read.tracks[0].wah.len(), 1);
+        assert_eq!(read.tracks[0].wah[0].q, 40);
     }
 
     #[test]

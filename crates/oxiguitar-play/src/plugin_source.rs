@@ -14,7 +14,7 @@ use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::message::{Prepare, PrepareEffect, PreparedTrack, TrackInfo};
 use oxiguitar_plugin_api::realtime::{PitchPoint, RtEvent};
 
-use crate::engine::{Buffers, Slot, Source, Sources};
+use crate::engine::{Buffers, Controls, Slot, Source, Sources};
 use crate::schedule::Route;
 
 /// One instrument and the tracks it plays, as they are prepared.
@@ -431,6 +431,7 @@ impl Source for PluginSource {
         &mut self,
         events: &[RtEvent],
         pitch: &[PitchPoint],
+        controls: Controls<'_>,
         time: f64,
         step: f64,
         out: &mut Buffers,
@@ -446,9 +447,10 @@ impl Source for PluginSource {
             return;
         }
         for (slot, chain) in self.effects.iter_mut().enumerate() {
+            let points = controls.track(slot);
             for effect in chain {
                 if let Some((l, r)) = out.track(slot) {
-                    effect.process(l, r);
+                    effect.process(l, r, time, step, points);
                 }
             }
         }

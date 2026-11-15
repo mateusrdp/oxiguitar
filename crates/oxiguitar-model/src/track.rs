@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::{Bar, Color, Pitch};
+use crate::{Bar, Color, Pitch, WahShape};
 
 /// One instrument part: a guitar, a bass, a drum kit, a piano.
 #[derive(Clone, Debug, PartialEq)]
@@ -218,6 +218,48 @@ pub struct LyricLine {
     pub start_bar: usize,
     /// The text, syllables separated by spaces or hyphens as in Guitar Pro.
     pub text: String,
+}
+
+impl Track {
+    /// The wah marks the user shaped (#250), each with its beat's place:
+    /// staff, bar, voice and beat. What the file beside the score keeps,
+    /// since no score format holds a wah's curve.
+    pub fn wah_shapes(&self) -> Vec<([usize; 4], WahShape)> {
+        let mut out = Vec::new();
+        for (si, staff) in self.staves.iter().enumerate() {
+            for (bi, bar) in staff.bars.iter().enumerate() {
+                for (vi, voice) in bar.voices.iter().enumerate() {
+                    for (ei, beat) in voice.beats.iter().enumerate() {
+                        if let (Some(_), Some(shape)) = (beat.effects.wah, &beat.effects.wah_shape)
+                        {
+                            out.push(([si, bi, vi, ei], shape.clone()));
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// Gives the wah mark of the beat at `at` (staff, bar, voice, beat)
+    /// this shape. False, and nothing changes, when that beat has no wah
+    /// mark (the score was changed elsewhere since the shape was kept).
+    pub fn shape_wah(&mut self, at: [usize; 4], shape: WahShape) -> bool {
+        let [staff, bar, voice, beat] = at;
+        let beat = self
+            .staves
+            .get_mut(staff)
+            .and_then(|s| s.bars.get_mut(bar))
+            .and_then(|b| b.voices.get_mut(voice))
+            .and_then(|v| v.beats.get_mut(beat));
+        match beat {
+            Some(b) if b.effects.wah.is_some() => {
+                b.effects.wah_shape = Some(shape);
+                true
+            }
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]

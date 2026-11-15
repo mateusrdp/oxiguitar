@@ -1355,6 +1355,73 @@ fn the_player_puts_each_track_s_effects_after_its_instrument() {
     );
 }
 
+/// Interface 1.8 (#250): an effect gets the score's time and its track's
+/// control curves with every call. The test plugin's gain follows the wah
+/// pedal as a volume pedal.
+#[test]
+fn an_effect_follows_its_track_s_control_curves() {
+    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
+    use oxiguitar_host::api::realtime::{ControlPoint, control};
+
+    let dir = folder("controls", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let effect = plugins
+        .effects_for(InstrumentClass::Fretted)
+        .into_iter()
+        .find(|e| e.spec.id == "gain")
+        .unwrap();
+    let prepare = PrepareEffect {
+        effect: "gain".into(),
+        rate: 48_000,
+        frames: 512,
+        track: PreparedTrack {
+            info: TrackInfo {
+                index: 0,
+                name: "Lead".into(),
+                class: InstrumentClass::Fretted,
+            },
+            program: 29,
+            percussion: false,
+            tuning: vec![64, 59, 55, 50, 45, 40],
+            capo: 0,
+            settings: r#"{"level":1.0}"#.into(),
+        },
+    };
+    let mut instance = plugins.prepare_effect(effect, prepare).unwrap();
+    let point = |control, time, value| ControlPoint {
+        time,
+        value,
+        control,
+    };
+    // The pedal goes from heel to toe over frames 100 to 200 of a second
+    // cut into 400 frames, then off; another control is ignored.
+    let step = 1.0 / 400.0;
+    let pedal = [
+        point(control::WAH, 100.0 * step, 0.0),
+        point(control::WAH, 200.0 * step, 1.0),
+        point(control::WAH, 200.0 * step, f32::NAN),
+        point(control::WAH_Q, 0.0, 4.0),
+        point(control::WAH_Q, 1.0, f32::NAN),
+    ];
+    let (mut l, mut r) = (vec![1.0f32; 300], vec![1.0f32; 300]);
+    assert!(instance.process(&mut l, &mut r, 0.0, step, &pedal));
+    assert!(l[..100].iter().all(|&v| v == 1.0), "off before its run");
+    assert!(l[200..].iter().all(|&v| v == 1.0), "off after it");
+    for (frame, &v) in l.iter().enumerate().take(200).skip(100) {
+        let position = (frame - 100) as f32 / 100.0;
+        assert!((v - position).abs() < 1e-5, "frame {frame}: {v}");
+    }
+    assert_eq!(l, r);
+    // A later call starts where the score is by then.
+    let (mut l, mut r) = (vec![1.0f32; 50], vec![1.0f32; 50]);
+    assert!(instance.process(&mut l, &mut r, 150.0 * step, step, &pedal));
+    assert!((l[0] - 0.5).abs() < 1e-5 && (l[49] - 0.99).abs() < 1e-5);
+    // Nothing plays: no curve, no pedal.
+    let (mut l, mut r) = (vec![1.0f32; 50], vec![1.0f32; 50]);
+    assert!(instance.process(&mut l, &mut r, 150.0 * step, 0.0, &[]));
+    assert!(l.iter().all(|&v| v == 1.0));
+}
+
 /// Interface 1.5 (#232): an effect follows its track's new settings
 /// while it runs, from its next call, ramping to them; the instance stays
 /// alive while an updater holds it.
@@ -1389,7 +1456,7 @@ fn an_effect_follows_new_settings_while_it_runs() {
     let mut instance = plugins.prepare_effect(effect, prepare(0.5)).unwrap();
     let run = |instance: &mut oxiguitar_host::realtime::Instance| {
         let (mut l, mut r) = (vec![1.0f32; 128], vec![1.0f32; 128]);
-        assert!(instance.process(&mut l, &mut r));
+        assert!(instance.process(&mut l, &mut r, 0.0, 0.0, &[]));
         l
     };
     assert!(run(&mut instance).iter().all(|&v| (v - 0.5).abs() < 1e-6));
