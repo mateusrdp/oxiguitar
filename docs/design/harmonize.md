@@ -9,7 +9,13 @@ A track has a melody; the user wants chords over it. #235 asks for a tool that r
 - **How it starts:** a small dialog, as Fit Bars has. Three choices: plain chords or sevenths too; one chord a bar or changes inside bars; **replace or keep the chords already there** (he asked for this one to be the user's choice).
 - **What it hears:** the notes of every track, not only the caret's ("make sure it considers the notes on each beat across all tracks").
 
-Taken as plain defaults by the session: it lives in the core like Find Fingering and Fit Bars (the plugin interface has no tools yet); Tools harmonizes the caret's whole track, the page's right-click menu the selected bars or the caret's bar; the key is the bars' key signature; one step for Undo.
+## Decided by Mateus (15 Nov 2026)
+
+- **Every track or this track only:** a fourth choice in the dialog, "Listen to every track but drums" (the default) or "Listen to this track only".
+- **The whole song:** a tickbox in the dialog, "Harmonize the whole song, not only the selected bars" (or "this bar"), so the page's right-click menu can harmonize every bar too. It starts ticked from Tools and unticked from the right-click menu. `Harmonize::whole_track` became `whole_song`: every bar of the song, with the chords on the caret's track as before.
+- **Chord names as they sound** on a guitar tuned down or with a capo (a C shape tuned a semitone down is written B), as the chord builder names them.
+
+Taken as plain defaults by the session: it lives in the core like Find Fingering and Fit Bars (the plugin interface has no tools yet); the key is the bars' key signature; one step for Undo.
 
 ## The three references
 
@@ -34,7 +40,7 @@ What is taken from the references is their ideas: the hidden Markov model both p
 
 **Cells.** The bars are cut into cells: a bar each, or with "changes inside a bar" two halves where the bar has two halves of a dotted quarter or more (4/4, 2/2, 6/8, 12/8; not 2/4 or 3/4).
 
-**Evidence.** The caret's track is the melody: how many quarter notes each pitch class sounds in the cell, and the notes struck where the cell starts (each for its length, a quarter note at most). Every other pitched track is the accompaniment: the share of the cell each pitch class takes of all those tracks play together (so three guitars count as much as one), and their lowest note. Drums, dead notes and grace notes don't count; tied notes count as sounding but not as struck. Pitches are as written (sounding pitch plus the staff's transposition), as Infer Key Signatures reads them.
+**Evidence.** The caret's track is the melody: how many quarter notes each pitch class sounds in the cell, and the notes struck where the cell starts (each for its length, a quarter note at most). With "every track" (the default), every other pitched track is the accompaniment: the share of the cell each pitch class takes of all those tracks play together (so three guitars count as much as one), and their lowest note. With "this track only" there is no accompaniment, and a cell where the caret's track is silent holds the chord. Drums, dead notes and grace notes don't count; tied notes count as sounding but not as struck. Pitches are as written (sounding pitch plus the staff's transposition), as Infer Key Signatures reads them.
 
 **Chords.** A chord is a kind on a root: major, minor and diminished, and with "sevenths too" also maj7, m7, 7, m7(b5), sus4 and 7sus4. Chords are counted from the tonic of the major key the key signature shows. A song in A minor is harmonized with C major's numbers, in which the chord on the sixth degree is the commonest, so the tool never has to tell a major key from its relative minor.
 
@@ -84,8 +90,8 @@ In POP909 the cheapest key, heard with the accompaniment, was the song's own in 
 
 ## Where it lives
 
-- `crates/oxiguitar-edit/src/harmonize.rs`: `Harmonize { sevenths, inside_bars, keep, whole_track }`, `Command::Harmonize`, `harmonize_report` (how many chords the command would write, and the warning about another key), the cells, the chain, the spelling and the diagrams; `harmonize/numbers.rs` (written by the script); `harmonize/tests.rs`.
-- The app: `HarmonizeDialog` in `bar_dialog.slint`; Tools → Harmonize… (the caret's whole track) and the page's right-click menu (the selected bars, or the caret's bar); `open_harmonize` and `harmonize_dialog_done` in `main.rs`. The dialog's choices stay as they were for the next time, while the window is open.
+- `crates/oxiguitar-edit/src/harmonize.rs`: `Harmonize { sevenths, inside_bars, keep, all_tracks, whole_song }`, `Command::Harmonize`, `harmonize_report` (how many chords the command would write, and the warning about another key), the cells, the chain, the spelling and the diagrams; `harmonize/numbers.rs` (written by the script); `harmonize/tests.rs`.
+- The app: `HarmonizeDialog` in `bar_dialog.slint` (four drop-downs and the whole-song tickbox); Tools → Harmonize… (the tickbox ticked) and the page's right-click menu (unticked: the selected bars, or the caret's bar); `open_harmonize` and `harmonize_dialog_done` in `main.rs`. The drop-downs' choices stay as they were for the next time, while the window is open; the tickbox follows the menu it was opened from.
 - Undo: one change, of the track's chord list and the bars' beats.
 
 ## Limits, and possible later work (not asked for)
