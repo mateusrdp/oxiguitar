@@ -272,8 +272,8 @@ fn play(asked: &Asked) -> Result<(), String> {
 fn mix(control: &mut engine::Control, score: &Score, asked: &Asked) {
     control.set_master(engine::MASTER_USUAL);
     let solo = !asked.tracks.is_empty();
-    for t in 0..score.tracks.len() {
-        let m = &score.tracks[t].mix;
+    for (t, track) in score.tracks.iter().enumerate() {
+        let m = &track.mix;
         control.set_mix(
             t,
             TrackMix {

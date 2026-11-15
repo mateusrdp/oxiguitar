@@ -29,8 +29,9 @@
 //! a fret, a rest or a tie adds a beat as long as the beat before it.
 
 use oxiguitar_model::{
-    Bar, Beat, BeatKind, BeatTechnique, Clef, Direction, Duration, Dynamic, KeySignature, Marker,
-    Note, NotePlace, NoteValue, Pitch, Score, Staff, TimeSignature, TripletFeel, Tuplet, Voice,
+    Bar, Beat, BeatKind, BeatTechnique, Clef, Color, Direction, Duration, Dynamic, KeySignature,
+    Marker, Note, NotePlace, NoteValue, Pitch, Score, Staff, TimeSignature, TripletFeel, Tuplet,
+    Voice,
 };
 
 use crate::{Caret, History, Region, Selection, Touched};
@@ -158,6 +159,9 @@ pub enum Command {
     MoveTrackDown,
     /// The caret's track's properties (the track dialog).
     TrackProperties(Box<crate::TrackSettings>),
+    /// Index of another track whose chords to show above this one;
+    /// usize::MAX for none.
+    ChordsFrom(usize),
     /// A transposition of the caret's track, the selection or every track.
     Transpose(crate::Transposition),
     /// A string and fret found again for every note of the caret's track,
@@ -237,6 +241,10 @@ pub enum Command {
         /// A hyphen follows.
         hyphen: bool,
     },
+    /// This colour for the caret's bar (global: all tracks); `None` for none.
+    SetBarColor(Option<Color>),
+    /// This colour for the caret's bar on the selected track only; `None` for none.
+    SetTrackBarColor(Option<Color>),
 }
 
 impl Command {
@@ -293,6 +301,7 @@ impl Command {
             Command::MoveTrackUp => "Move Track Up",
             Command::MoveTrackDown => "Move Track Down",
             Command::TrackProperties(_) => "Track Properties",
+            Command::ChordsFrom(_) => "Chords From",
             Command::Transpose(_) => "Transpose",
             Command::Fingering(_) => "Find Fingering",
             Command::FitBars(_) => "Fit Bars",
@@ -316,7 +325,22 @@ impl Command {
             Command::NextFinger { right: true } => "Right-Hand Fingering",
             Command::NestedTuplet(_) => "Nested Tuplet",
             Command::SystemLayout { .. } => "Bars per System",
+            Command::SetBarColor(_) => "Bar Colour",
+            Command::SetTrackBarColor(_) => "Track Bar Colour",
         }
+    }
+
+    /// Whether this command inserts or deletes a note/rest on a beat.
+    /// Used to decide whether to play the engraved-beat preview (#246).
+    pub fn is_note_edit(&self) -> bool {
+        matches!(
+            self,
+            Command::Fret { .. }
+                | Command::Pitch(_)
+                | Command::Rest
+                | Command::DeleteNote
+                | Command::DeleteBeats
+        )
     }
 }
 
@@ -1014,6 +1038,8 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             beat.notes.sort_by_key(|n| n.string());
             one(bar, Caret { string: to, ..c })
         }
+        // Not a note-entry command.
+        Command::SetBarColor(_) | Command::SetTrackBarColor(_) | Command::ChordsFrom(_) => None,
     }
 }
 

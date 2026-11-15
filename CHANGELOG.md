@@ -7,6 +7,32 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 ### Added
 
 - **Harmonize…** (#235): chords found for the music and written above the caret's track with their diagrams, as one step for Undo (Tools for the whole track, or right-click on the page for the selected bars). It listens to every track but the drums: the caret's track as the melody, the others as the accompaniment, whose notes and lowest note say most. A dialog chooses plain chords or sevenths and suspended chords too, one chord a bar or changes inside bars, and whether the chords already there are replaced or kept (the new ones are then fitted around them). The chords are found in the key of the bars' key signature; the footer names it, and says so when the notes fit another key better. Our own search for the cheapest chain of chords, with numbers counted in the POP909 dataset (`docs/design/harmonize.md`, `scripts/harmony/measure.py`).
+- **Play Engraved Beat toggle** (#246): Edit → "Play Engraved Beat" (ticked by default) plays a 1-beat preview of the edited track when a note is inserted or deleted — only the caret's track sounds (temporarily soloed), same instrument and effects as normal playback. Ticking it off disables the preview. Persisted in `settings.json` under the `view` key.
+
+### Fixed
+
+- **Play button now starts playback when a new song is loaded** (#284): the `play-pause` action handler now returns the `Vec<Do>` result from `play()` so `act()` can execute the commands (e.g. opening the audio output), instead of discarding it.
+- **Cross-referenced chords now persist in `.oxg` files** (#268): the `chords_from` setting is now saved and loaded from the sidecar file, so "Show chords from" survives closing and reopening a score.
+- **File → Export audio now shows the dialog again** (#281): the export dialog and its progress window were removed from the window in 0.11.0 (#188), so choosing the menu item did nothing visible. Added them back.
+
+### Removed
+
+- **Clef, Time Signature and Key Signature tools from the left palette** (#277): these tools did nothing — their functionality already lives in the Bar tab of the right inspector sidebar. Removed from the palette, shortcut map, dialog mapping, drawing functions, and tests.
+
+## [0.19.1] - 2026-11-11
+
+### Added
+
+- **Drag-to-select beats on the score canvas** (#262): click and drag to select a range of beats — the selection updates in real-time. Same (track, staff, voice) produces beat-level selection; crossing boundaries produces bar-level selection.
+
+## [0.19.0] - 2026-11-11
+
+### Fixed
+
+- **Bar colour picker now works on all bars** (#272): the colour swatches in the Bar tab sidebar apply to every bar, and muting still greys out voices correctly — `mute_from` now converts both `Paint::Ink` and `Paint::Custom` to `Paint::Muted`.
+
+### Added
+
 - **A Flatpak** (#163): each release carries `OxiGuitar-VERSION-x86_64.flatpak` and `-aarch64`, the app built in the Freedesktop SDK on the org.freedesktop.Platform 26.08 runtime, with both builds and the `oxiguitar-start` launcher choosing between them as the AppImage does, in Flatpak's default sandbox. It holds no plugin: each plugin is a Flatpak extension of its own, and oxiguitar-packages serves the app and the plugins from a Flatpak repository. The manual's Linux page says how to add it, and where the Flatpak's own plugin, sound set and amp model folders are.
 
 ### Changed

@@ -172,6 +172,11 @@ pub struct Options {
     /// Design Mode (v0.17): each system shows how many bars it holds, in
     /// red where it can't hold the bars set for it. Never in a print.
     pub design: bool,
+    /// Bar colour scope: `true` when swatches apply to all tracks
+    /// (`SetBarColor` → read `master_bar.bar_color`), `false` when
+    /// they apply to the current track only (`SetTrackBarColor` → read
+    /// `track_bar_colors`).
+    pub bar_colour_global: bool,
 }
 
 /// Which notations a track shows (VIEW-1).
@@ -245,6 +250,7 @@ impl Default for Options {
             marked: BTreeSet::new(),
             active_voice: None,
             design: false,
+            bar_colour_global: false,
         }
     }
 }
@@ -298,7 +304,11 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
                     s,
                     &painter,
                     &options.marked,
-                    (options.active_voice, options.design),
+                    (
+                        options.active_voice,
+                        options.design,
+                        options.bar_colour_global,
+                    ),
                 )
             })
             .collect();

@@ -38,6 +38,8 @@ pub(crate) enum Kind {
     Ticks,
     /// A line of small text; the value is 1 when it says what is wrong.
     Info,
+    /// A row of colour swatches; `value` is the selected index.
+    Swatches,
 }
 
 /// One row of the Note or Bar tab.
@@ -151,6 +153,21 @@ pub(crate) fn ticks(id: &'static str, label: &str, names: Vec<String>, bits: i32
         kind: Kind::Ticks,
         value: bits,
         options: names,
+        min: 0,
+        max: 0,
+        text: String::new(),
+    }
+}
+
+/// A row of colour swatches, `colours` as hex strings, `picked` the
+/// selected index (0 = Auto / no custom colour).
+pub(crate) fn swatches(id: &'static str, label: &str, picked: i32) -> Field {
+    Field {
+        id,
+        label: label.to_owned(),
+        kind: Kind::Swatches,
+        value: picked,
+        options: Vec::new(),
         min: 0,
         max: 0,
         text: String::new(),

@@ -880,6 +880,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_bar_edited(move |id, text| bar_changed(&a, id.as_str(), 0, text.as_str()));
     let a = app.clone();
+    ui.on_bar_global_changed(move |id, global| bar_global_changed(&a, id.as_str(), global));
+    let a = app.clone();
     ui.on_track_changed(move |id, value| track_changed(&a, id.as_str(), value, ""));
     let a = app.clone();
     ui.on_track_edited(move |id, text| track_changed(&a, id.as_str(), 0, text.as_str()));
@@ -1026,6 +1028,21 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_page_double_clicked(move |x, y| page_double_clicked(&a, x, y));
     let a = app.clone();
     ui.on_page_menu_pressed(move |x, y| page_menu_pressed(&a, x, y));
+    let a = app.clone();
+    ui.on_page_dragged(move |x, y| {
+        let spot = on_sheet(&a, x, y).and_then(|(sheet, sx, sy)| {
+            let spot = a.borrow().editing.hits().hit(sheet, sx, sy, 0)?;
+            Some((sheet, spot))
+        });
+        let moved = spot.is_some_and(|(_sheet, spot)| a.borrow_mut().editing.drag_select(spot));
+        if moved {
+            caret_moved(&a);
+        }
+    });
+    let a = app.clone();
+    ui.on_page_drag_started(move |x, y| page_drag_started(&a, x, y));
+    let a = app.clone();
+    ui.on_page_drag_ended(move |x, y| page_drag_ended(&a, x, y));
     let a = app.clone();
     ui.on_caret_key(move |name, shift, ctrl| {
         let Some(key) = editing::Key::from_name(name.as_str()) else {
@@ -2256,6 +2273,7 @@ fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
     ui.set_follow_desktop(p.dark_interface.is_none());
     ui.set_dark_page(p.dark_page);
     ui.set_dynamics(p.dynamics);
+    ui.set_play_engraved_beat(p.play_engraved_beat);
     let index = |found: Option<usize>| found.unwrap_or(0) as i32;
     ui.invoke_pick_layout(index(Layout::ALL.iter().position(|l| *l == p.layout)));
     ui.invoke_pick_paper(index(Paper::ALL.iter().position(|q| *q == p.paper)));
@@ -2386,15 +2404,17 @@ fn handle(app: &Shared, event: Event) {
             bad,
             caret,
             tracks,
+            note_edit,
         } => {
-            {
+            let play = {
                 let mut s = app.borrow_mut();
                 s.editing.changed(score);
                 if let Some(c) = caret {
                     s.editing.edited(c);
                 }
                 s.bad = bad;
-            }
+                s.prefs.play_engraved_beat
+            };
             if let Some((tracks, was)) = tracks {
                 track_list_changed(app, &tracks, &was);
             }
@@ -2406,6 +2426,13 @@ fn handle(app: &Shared, event: Event) {
                 sync_caret(app, false);
             }
             playing::score_changed(app, false);
+            // Play a 1-beat preview after a note edit when the toggle is on
+            // and the change was a note insertion or deletion (#246).
+            if play && note_edit {
+                let dos = playing::play_beats(app, 1);
+                playing::act(app, dos);
+                playing::sync(app);
+            }
         }
         Event::Refused => {
             let text = "Editing waits while the score plays: pause it (Space) to edit.".to_owned();
@@ -2531,6 +2558,16 @@ fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
     if moved {
         caret_moved(app);
     }
+}
+
+/// A drag-start on the page: anchors the drag at the current caret bar.
+fn page_drag_started(app: &Shared, _x: f32, _y: f32) {
+    app.borrow_mut().editing.start_drag();
+}
+
+/// A drag-end on the page: no-op (selection is already set by drag_select).
+fn page_drag_ended(_app: &Shared, _x: f32, _y: f32) {
+    // Selection is already committed by the last drag_select call.
 }
 
 /// A right-click on the page, before its menu: the caret goes there unless
@@ -2747,6 +2784,7 @@ fn settings_changed(app: &Shared) {
         paper: s.settings.paper,
         score_zoom: s.zoom,
         ui_zoom: s.ui_zoom,
+        play_engraved_beat: ui.get_play_engraved_beat(),
     };
     if prefs != s.prefs {
         s.prefs = prefs;
@@ -3128,6 +3166,7 @@ fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
             paper: s.prefs.paper,
             score_zoom: s.zoom,
             ui_zoom: s.ui_zoom,
+            play_engraved_beat: s.prefs.play_engraved_beat,
         };
         if prefs != s.prefs {
             s.prefs = prefs;
@@ -3563,6 +3602,23 @@ fn bar_changed(app: &Shared, id: &str, value: i32, text: &str) {
     }
 }
 
+/// The Global checkbox for bar colour swatches was toggled.
+fn bar_global_changed(app: &Shared, id: &str, global: bool) {
+    if id != "bar-colour" {
+        return;
+    }
+    // When toggling global off while a colour is set, apply it to the
+    // current track only so the colour moves from all-tracks scope
+    // to the current track. When toggling on, just store the setting.
+    let command = app.borrow_mut().editing.set_bar_colour_global(global);
+    if let Some(command) = command {
+        let typed = app.borrow_mut().editing.tool(command);
+        if let Some(t) = typed {
+            send_typed(app, t);
+        }
+    }
+}
+
 /// Shows the right area's tab `id` ("bar", "note"), expanding the area and
 /// showing it if it was collapsed or hidden. The keys, the palette and a
 /// double-click on a time signature come here.
@@ -3764,12 +3820,14 @@ fn show_rows(
             effect_form::Kind::Text => 5,
             effect_form::Kind::Ticks => 6,
             effect_form::Kind::Info => 7,
+            effect_form::Kind::Swatches => 8,
         },
         value: f.value,
         options: strings(f.options.clone()),
         min: f.min,
         max: f.max,
         text: f.text.as_str().into(),
+        global: f.kind == effect_form::Kind::Swatches && app.borrow().editing.bar_colour_global(),
     };
     let same_shape = shown.len() == rows.len()
         && model.row_count() == rows.len()
@@ -3849,7 +3907,22 @@ fn sync_track(app: &Shared, ui: &AppWindow) {
             s.sections = Some(sections);
             s.sections_touched = false;
         }
-        (reopen, track_form::fields(&f, &message, error))
+        (
+            reopen,
+            track_form::fields(
+                &f,
+                &message,
+                error,
+                t,
+                &score
+                    .as_ref()
+                    .unwrap()
+                    .tracks
+                    .iter()
+                    .map(|tr| tr.name.clone())
+                    .collect::<Vec<_>>(),
+            ),
+        )
     };
     ui.set_track_heading(format!("Track {}: {}", t + 1, track.name).into());
     if reopen {
@@ -3864,6 +3937,33 @@ fn sync_track(app: &Shared, ui: &AppWindow) {
 /// after a question when notes can't be kept. A tuning that can't be says
 /// why in the tab and changes nothing.
 fn track_changed(app: &Shared, id: &str, value: i32, text: &str) {
+    // "chords-from" is not a TrackSettings field: use a ChordsFrom command.
+    if id == "chords-from" {
+        let (score, t, ui) = {
+            let s = app.borrow();
+            (s.editing.score(), s.editing.track(), s.ui.upgrade())
+        };
+        let (Some(_score), Some(_t)) = (score, t) else {
+            return;
+        };
+        let Some(ui) = ui else {
+            return;
+        };
+        let chords_from = if value == 0 {
+            usize::MAX
+        } else {
+            usize::try_from(value - 1).unwrap_or(usize::MAX)
+        };
+        let typed = app
+            .borrow_mut()
+            .editing
+            .tool(oxiguitar_edit::Command::ChordsFrom(chords_from));
+        if let Some(typed) = typed {
+            send_typed(app, typed);
+        }
+        sync_inspector(app, &ui);
+        return;
+    }
     let (score, index, keep) = {
         let s = app.borrow();
         (s.editing.score(), s.editing.track(), s.track_keep_pitches)
@@ -5102,6 +5202,7 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
             paper: s.prefs.paper,
             score_zoom: s.zoom,
             ui_zoom: s.ui_zoom,
+            play_engraved_beat: s.prefs.play_engraved_beat,
         };
         if prefs != s.prefs {
             s.prefs = prefs;

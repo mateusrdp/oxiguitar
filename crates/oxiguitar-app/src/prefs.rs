@@ -35,6 +35,8 @@ pub(crate) struct ViewPrefs {
     /// f32. Both default to 1.0 so the user's zoom is remembered across
     /// restarts (Mateus, 31 Oct 2026).
     pub(crate) ui_zoom: f32,
+    /// Play a 1-beat preview after each note edit (#246); on by default.
+    pub(crate) play_engraved_beat: bool,
 }
 
 // f32 doesn't implement Eq (NaN != NaN), but our zoom values are never NaN.
@@ -50,6 +52,7 @@ impl Default for ViewPrefs {
             paper: Paper::A4,
             score_zoom: 1.0,
             ui_zoom: 1.0,
+            play_engraved_beat: true,
         }
     }
 }
@@ -88,6 +91,7 @@ impl ViewPrefs {
                 .and_then(Value::as_f64)
                 .map(|v| v as f32)
                 .unwrap_or(d.ui_zoom),
+            play_engraved_beat: flag("play_engraved_beat", d.play_engraved_beat),
         }
     }
 
@@ -121,6 +125,7 @@ impl ViewPrefs {
         );
         map.insert("score_zoom".into(), json!(self.score_zoom));
         map.insert("ui_zoom".into(), json!(self.ui_zoom));
+        map.insert("play_engraved_beat".into(), json!(self.play_engraved_beat));
         Value::Object(map)
     }
 }
@@ -148,6 +153,7 @@ mod tests {
             paper: Paper::Letter,
             score_zoom: 2.0,
             ui_zoom: 1.25,
+            play_engraved_beat: true,
         };
         let v = p.to_value(Some(&json!({"later": 3})));
         assert_eq!(v["layout"], json!("horizontal"));

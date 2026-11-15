@@ -94,6 +94,12 @@ pub(crate) struct Editing {
     lyric: Option<Lyric>,
     /// Multivoice (Ctrl + M): the caret walks every voice's beats.
     multivoice: bool,
+    /// Bar colour swatch: true = global (all tracks), false = current track only.
+    bar_colour_global: bool,
+    /// The hit spot where a drag for beat selection began (fixed anchor).
+    drag_anchor: Option<Spot>,
+    /// The current hit spot during a drag (updated on each drag_select).
+    drag_current: Option<Spot>,
 }
 
 /// Where a syllable is being typed (Ctrl + T, as in MuseScore; Mateus,
@@ -639,7 +645,12 @@ impl Editing {
         let c = self.caret?;
         let score = self.score.as_ref()?;
         let (first, last) = self.selection.map_or((c.bar, c.bar), |s| s.bars());
-        let state = oxiguitar_edit::BarState::at(score, Caret { bar: first, ..c })?;
+        let state = oxiguitar_edit::BarState::at(
+            score,
+            Caret { bar: first, ..c },
+            self.bar_colour_global,
+            &score.track_bar_colors,
+        )?;
         let heading = if first == last {
             format!("Bar {}", first + 1)
         } else {
@@ -670,8 +681,84 @@ impl Editing {
     /// A row of the Bar tab changed: the command that makes the bar so, on
     /// the selection's bars as the Bar dialog did.
     pub(crate) fn bar_changed(&self, id: &str, value: i32, text: &str) -> Option<Command> {
+        // Bar colour swatch: map index to colour, apply directly.
+        if id == "bar-colour" {
+            let colour = match usize::try_from(value).unwrap_or(0) {
+                0 => None,
+                1 => Some(oxiguitar_model::Color {
+                    r: 0xFF,
+                    g: 0x44,
+                    b: 0x44,
+                }),
+                2 => Some(oxiguitar_model::Color {
+                    r: 0xFF,
+                    g: 0x8C,
+                    b: 0x00,
+                }),
+                3 => Some(oxiguitar_model::Color {
+                    r: 0xFF,
+                    g: 0xD7,
+                    b: 0x00,
+                }),
+                4 => Some(oxiguitar_model::Color {
+                    r: 0x44,
+                    g: 0xCC,
+                    b: 0x44,
+                }),
+                5 => Some(oxiguitar_model::Color {
+                    r: 0x44,
+                    g: 0x88,
+                    b: 0xFF,
+                }),
+                6 => Some(oxiguitar_model::Color {
+                    r: 0xAA,
+                    g: 0x44,
+                    b: 0xFF,
+                }),
+                7 => Some(oxiguitar_model::Color {
+                    r: 0xFF,
+                    g: 0x44,
+                    b: 0xAA,
+                }),
+                _ => None,
+            };
+            // Global = all tracks (SetBarColor); else current track only.
+            if self.bar_colour_global {
+                return Some(Command::SetBarColor(colour));
+            } else {
+                return Some(Command::SetTrackBarColor(colour));
+            }
+        }
         let (was, _) = self.bar_state()?;
         crate::bar_form::changed(&was, id, value, text).map(|b| Command::Bar(Box::new(b)))
+    }
+
+    /// Whether the bar colour swatch applies globally (all tracks) or to the
+    /// current track only.
+    pub(crate) fn bar_colour_global(&self) -> bool {
+        self.bar_colour_global
+    }
+
+    /// Toggle the bar colour swatch global setting.
+    ///
+    /// When toggling global off while a colour is set, returns a
+    /// `SetTrackBarColor` command for the current track's bar(s) so
+    /// the colour moves from all-tracks scope to the current track only.
+    /// Returns `None` when toggling global on or when no colour is set.
+    pub(crate) fn set_bar_colour_global(&mut self, global: bool) -> Option<Command> {
+        if global {
+            self.bar_colour_global = true;
+            return None;
+        }
+        // Toggling off: if a colour is set, apply it to the current track
+        // only so the engraver switches to reading track_bar_colors.
+        if let Some((bar_state, _)) = self.bar_state()
+            && let Some(colour) = bar_state.bar_color
+        {
+            return Some(Command::SetTrackBarColor(Some(colour)));
+        }
+        self.bar_colour_global = false;
+        None
     }
 
     /// The score the caret is in.
@@ -1304,6 +1391,86 @@ impl Editing {
         match self.hits.hit(sheet, x, y, voice) {
             Some(spot) => self.press(spot, shift),
             None => false,
+        }
+    }
+
+    /// Start tracking a drag at the caret's position.
+    pub(crate) fn start_drag(&mut self) {
+        if let Some(c) = self.caret {
+            self.drag_anchor = Some(Spot {
+                track: c.track,
+                staff: c.staff,
+                bar: c.bar,
+                beat: Some(c.beat),
+                string: None,
+                step: None,
+            });
+        }
+    }
+
+    /// Drag-select from `drag_anchor` to `spot`. Returns true if the
+    /// selection changed. Creates a beat selection when in the same
+    /// (track, staff, voice), or a bar selection otherwise.
+    pub(crate) fn drag_select(&mut self, spot: Spot) -> bool {
+        let Some(anchor) = self.drag_anchor else {
+            return false;
+        };
+        let Some(score) = self.score.clone() else {
+            return false;
+        };
+        let Some(c) = self.caret else {
+            return false;
+        };
+        let voice = c.voice;
+        // Update current drag position.
+        self.drag_current = Some(spot);
+        // If same track, staff, and voice: beat-level selection.
+        if (anchor.track, anchor.staff, voice) == (spot.track, spot.staff, voice) {
+            let a = (anchor.bar, anchor.beat.unwrap_or(0));
+            let b = (spot.bar, spot.beat.unwrap_or(0));
+            let (from, to) = (a.min(b), a.max(b));
+            let new_sel = Selection::Beats {
+                track: spot.track,
+                staff: spot.staff,
+                voice,
+                from,
+                to,
+            };
+            let changed = self.selection != Some(new_sel);
+            self.selection = Some(new_sel);
+            // Move caret to the new bar and beat.
+            let new_caret = Caret {
+                bar: to.0,
+                beat: to.1,
+                ..c
+            }
+            .clamp(&score);
+            if let Some(nc) = new_caret {
+                self.caret = Some(nc);
+            }
+            changed
+        } else {
+            // Crosses staff/track: bar-level selection.
+            let (first, last) = (anchor.bar.min(spot.bar), anchor.bar.max(spot.bar));
+            let (t0, t1) = (anchor.track.min(spot.track), anchor.track.max(spot.track));
+            let new_sel = Selection::Bars {
+                tracks: (t0, t1),
+                bars: (first, last),
+            };
+            let changed = self.selection != Some(new_sel);
+            self.selection = Some(new_sel);
+            // Move caret to the new bar.
+            let new_caret = Caret {
+                bar: spot.bar,
+                track: spot.track,
+                staff: spot.staff,
+                ..c
+            }
+            .clamp(&score);
+            if let Some(nc) = new_caret {
+                self.caret = Some(nc);
+            }
+            changed
         }
     }
 
@@ -2101,5 +2268,70 @@ mod tests {
         assert_eq!(Key::from_name("right"), Some(Key::Right));
         assert_eq!(Key::from_name("3"), Some(Key::Voice(2)));
         assert_eq!(Key::from_name("x"), None);
+    }
+
+    #[test]
+    fn drag_select_bars() {
+        let mut e = editing(2, &[0, 1]);
+        // Move caret to bar 1, then start drag.
+        assert!(e.go_to_bar(1));
+        e.start_drag();
+        // Drag to bar 2 (same track/staff/voice): beat selection.
+        let spot = Spot {
+            track: 0,
+            staff: 0,
+            bar: 2,
+            beat: Some(0),
+            string: None,
+            step: None,
+        };
+        assert!(e.drag_select(spot));
+        assert_eq!(
+            e.selection(),
+            Some(Selection::Beats {
+                track: 0,
+                staff: 0,
+                voice: 0,
+                from: (1, 0),
+                to: (2, 0),
+            })
+        );
+        // Drag backward to bar 0: selection from anchor (bar 1) to bar 0.
+        let spot = Spot {
+            track: 0,
+            staff: 0,
+            bar: 0,
+            beat: Some(0),
+            string: None,
+            step: None,
+        };
+        assert!(e.drag_select(spot));
+        assert_eq!(
+            e.selection(),
+            Some(Selection::Beats {
+                track: 0,
+                staff: 0,
+                voice: 0,
+                from: (0, 0),
+                to: (1, 0),
+            })
+        );
+        // Drag to a different track: bar selection from anchor (bar 1) to bar 2.
+        let spot = Spot {
+            track: 1,
+            staff: 0,
+            bar: 2,
+            beat: Some(0),
+            string: None,
+            step: None,
+        };
+        assert!(e.drag_select(spot));
+        assert_eq!(
+            e.selection(),
+            Some(Selection::Bars {
+                tracks: (0, 1),
+                bars: (1, 2)
+            })
+        );
     }
 }
