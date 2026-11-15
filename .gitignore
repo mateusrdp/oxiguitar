@@ -30,3 +30,6 @@ docs/plugins/template/Cargo.lock
 .ua/intermediate/
 .ua/tmp/
 .ua/trash-*/
+
+# Python leaves these beside scripts it imports.
+__pycache__/
