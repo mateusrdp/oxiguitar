@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-11-15
+
 ### Added
 
 - **Wah-wah marks are played** (#250), by the new Wah-wah plugin (github.com/mateusrdp/oxiguitar-wah): a mark rocks a wah pedal across its beat, an open one from the heel to the toe and a closed one back, and the pedal is off on beats without a mark. The pedal is a Cry Baby (Julius O. Smith's measured model: 450 Hz to 2.2 kHz), set per track in the Track tab's Wah-wah section, and comes before the amp unless you move it.
