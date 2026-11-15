@@ -40,8 +40,7 @@ Every effect of the score is heard as written, the notation of Guitar Pro 8's pa
 - An **arpeggio** rolls the chord over the first half of its beat (at most a quarter note).
 - A **rasgueado** strikes the chord once for each finger of its pattern across the beat, short-short-long for an anapaest pattern; an index finger's second stroke (i i) comes back up.
 - A **golpe** is a muted knock (the lowest string for the thumb, the highest for a finger), a **dead slap** every string muted.
-- Ottava lines, slurs and slash notation change how the music is written, not how it sounds; pick scrapes are shown only, as in Guitar Pro.
-- A **wah-wah** mark rocks a wah pedal across its beat, with the **Wah-wah** plugin installed ([Official plugins](official-plugins.md)): an open mark from the heel to the toe ("wah"), a closed one back, each over the beat's first half, unless you drew the mark a curve of its own ([Wah-wah](editing.md#wah-wah)). The pedal is off on beats without a mark. It is a Cry Baby unless the track's **Wah-wah** section (the Track tab) says otherwise: there you switch a track's pedal off, or set where its sweep starts (**Heel**, 450 Hz) and how far it goes (**Sweep**, 2.3 octaves). The wah comes before the amp unless you move it.
+- Ottava lines, slurs and slash notation change how the music is written, not how it sounds; wah and pick scrapes are shown only, as in Guitar Pro.
 - A bar with a **repeat sign** plays the bar (or two bars) it repeats.
 
 ## The mixer

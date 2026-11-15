@@ -37,10 +37,9 @@ pub use inventory::{
 };
 pub use oxiguitar_plugin_api as api;
 pub use plugins::{
-    AudioExport, Core, DEFAULT_EFFECT_ORDER, DISABLED_KEY, ExportEnd, ExporterRef, FormatRef,
-    Found, InstrumentRef, OpenError, OpenedFile, Plugins, ReadScore, SERVICES_KEY, SectionRef,
-    ServiceRef, State, TabId, TabRef, Unheard, Unrecognised, WrittenFile, in_effect_order,
-    is_https,
+    AudioExport, Core, DISABLED_KEY, ExportEnd, ExporterRef, FormatRef, Found, InstrumentRef,
+    OpenError, OpenedFile, Plugins, ReadScore, SERVICES_KEY, SectionRef, ServiceRef, State, TabId,
+    TabRef, Unheard, Unrecognised, WrittenFile, in_effect_order, is_https,
 };
 pub use settings::{Settings, SharedSettings};
 

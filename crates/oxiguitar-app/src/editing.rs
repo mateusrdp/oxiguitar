@@ -375,9 +375,6 @@ pub(crate) enum Dialog {
     Bend,
     /// The whammy bar's editor, for the caret's beat.
     Whammy,
-    /// The wah-wah editor, for the caret's beat: on a beat without a mark
-    /// it offers this kind (#250).
-    Wah(oxiguitar_model::Wah),
     /// The chord dialog, for the caret's beat.
     Chord,
     /// Text above the caret's beat.
@@ -822,25 +819,6 @@ impl Editing {
             .filter(|b| b.kind == BeatKind::Notes);
         match beat {
             Some(b) => Some(b.effects.whammy.clone()),
-            None => self.selection.map(|_| None),
-        }
-    }
-
-    /// What the wah-wah editor opens on: the caret's beat's mark and the
-    /// shape the user gave it, or none. `None` when the beat has no notes
-    /// and nothing is selected.
-    #[allow(clippy::type_complexity)]
-    pub(crate) fn wah_here(
-        &self,
-    ) -> Option<Option<(oxiguitar_model::Wah, Option<oxiguitar_model::WahShape>)>> {
-        let c = self.caret?;
-        let score = self.score.as_ref()?;
-        let beat = c
-            .voice_in(score)
-            .and_then(|v| v.beats.get(c.beat))
-            .filter(|b| b.kind == BeatKind::Notes);
-        match beat {
-            Some(b) => Some(b.effects.wah.map(|w| (w, b.effects.wah_shape.clone()))),
             None => self.selection.map(|_| None),
         }
     }

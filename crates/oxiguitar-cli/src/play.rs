@@ -161,11 +161,10 @@ fn play(asked: &Asked) -> Result<(), String> {
             track.plugins = entry.plugins;
             track.effects = entry.effects;
             track.play_chords = entry.chords;
-            // The wah marks' own curves (#250).
-            for mark in &entry.wah {
-                if let Some(shape) = oxiguitar_model::WahShape::of_numbers(mark.q, &mark.points) {
-                    track.shape_wah(mark.at, shape);
-                }
+            // What plugins keep on beats (interface 1.8), for the effects
+            // that follow the score.
+            for beat in entry.beats {
+                track.set_beat_plugins(beat.at, beat.plugins);
             }
         }
     }

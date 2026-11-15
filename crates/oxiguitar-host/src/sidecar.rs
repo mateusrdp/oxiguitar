@@ -24,13 +24,11 @@
 //! by plugin id (#152; absent for the default order, and ignored by an
 //! older OxiGuitar), and `"chords": true` when its chord diagrams are
 //! played (#151). `"chords_from": N` when chords from another track are
-//! shown above this track (#268; absent for none). `"wah"` lists the
-//! track's wah marks the user shaped (#250), which no score format holds
-//! either: `{ "at": [staff, bar, voice, beat], "q": 4.0, "points": [[0, 1,
-//! 0], [1, 2, 100]] }`, each point the fraction of the beat (numerator,
-//! denominator) and the pedal from 0 (heel) to 100 (toe); a mark not listed
-//! plays its kind's own curve, and an entry whose beat has no wah mark any
-//! more is ignored. When the
+//! shown above this track (#268; absent for none). `"beats"` lists what
+//! plugins keep on the track's beats (plugin interface 1.8), which no
+//! score format holds either: `{ "at": [staff, bar, voice, beat],
+//! "plugins": { "oxiguitar.wah": { … } } }`, counted from 0; an entry
+//! whose beat is no longer there is ignored. When the
 //! score was changed elsewhere (tracks added, removed or moved in another
 //! program), a track takes the entry at its own place if the names agree,
 //! else the first unused entry of its name, else none.
@@ -70,57 +68,54 @@ pub struct TrackEntry {
     /// Index of another track whose chord diagrams to show above this
     /// track; `None` for none.
     pub chords_from: Option<usize>,
-    /// The wah marks the user shaped (#250).
-    pub wah: Vec<WahEntry>,
+    /// What plugins keep on the track's beats (plugin interface 1.8).
+    pub beats: Vec<BeatEntry>,
 }
 
-/// One wah mark's shape, as kept beside the score.
+/// What plugins keep on one beat, as kept beside the score.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct WahEntry {
-    /// The mark's beat: staff, bar, voice and beat, counted from 0.
+pub struct BeatEntry {
+    /// The beat: staff, bar, voice and beat, counted from 0.
     pub at: [usize; 4],
-    /// The filter's Q with the pedal half way, in tenths.
-    pub q: u16,
-    /// The pedal's curve: each point's place in the beat (numerator,
-    /// denominator) and the pedal from 0 to 100.
-    pub points: Vec<[i64; 3]>,
+    /// Each plugin's data, by its id: a JSON object as text.
+    pub plugins: BTreeMap<String, String>,
 }
 
-impl WahEntry {
-    /// The entry of a JSON value; `None` for anything else than one.
-    fn parse(v: &Value) -> Option<WahEntry> {
-        let numbers =
-            |v: &Value| -> Option<Vec<i64>> { v.as_array()?.iter().map(Value::as_i64).collect() };
-        let at = numbers(v.get("at")?)?;
-        let at: [i64; 4] = at.try_into().ok()?;
-        let mut place = [0usize; 4];
-        for (to, from) in place.iter_mut().zip(at) {
-            *to = usize::try_from(from).ok()?;
+impl BeatEntry {
+    /// The entry of a JSON value; `None` for anything else than one, or
+    /// one that keeps nothing.
+    fn parse(v: &Value) -> Option<BeatEntry> {
+        let mut at = [0usize; 4];
+        let given = v.get("at")?.as_array()?;
+        if given.len() != at.len() {
+            return None;
         }
-        let q = (v.get("q")?.as_f64()? * 10.0).round();
-        let points = v
-            .get("points")?
-            .as_array()?
+        for (to, from) in at.iter_mut().zip(given) {
+            *to = usize::try_from(from.as_u64()?).ok()?;
+        }
+        let plugins: BTreeMap<String, String> = v
+            .get("plugins")?
+            .as_object()?
             .iter()
-            .map(|p| numbers(p)?.try_into().ok())
-            .collect::<Option<Vec<[i64; 3]>>>()?;
-        Some(WahEntry {
-            at: place,
-            q: if (0.0..=f64::from(u16::MAX)).contains(&q) {
-                q as u16
-            } else {
-                return None;
-            },
-            points,
-        })
+            .filter(|(_, data)| data.is_object())
+            .map(|(id, data)| (id.clone(), data.to_string()))
+            .collect();
+        (!plugins.is_empty()).then_some(BeatEntry { at, plugins })
     }
 
-    fn to_value(&self) -> Value {
-        serde_json::json!({
-            "at": self.at,
-            "q": f64::from(self.q) / 10.0,
-            "points": self.points,
-        })
+    /// The entry as JSON; `None` when no plugin's data is a JSON object.
+    fn to_value(&self) -> Option<Value> {
+        let plugins: Map<String, Value> = self
+            .plugins
+            .iter()
+            .filter_map(|(id, json)| {
+                serde_json::from_str::<Value>(json)
+                    .ok()
+                    .filter(Value::is_object)
+                    .map(|v| (id.clone(), v))
+            })
+            .collect();
+        (!plugins.is_empty()).then(|| serde_json::json!({ "at": self.at, "plugins": plugins }))
     }
 }
 
@@ -143,7 +138,7 @@ impl Sidecar {
                 && t.effects.is_empty()
                 && !t.chords
                 && t.chords_from.is_none()
-                && t.wah.is_empty()
+                && t.beats.is_empty()
         }) && self.bar_colors.iter().all(Option::is_none)
             && self
                 .track_bar_colors
@@ -237,9 +232,9 @@ impl Sidecar {
                         .get("chords_from")
                         .and_then(Value::as_u64)
                         .map(|v| v as usize),
-                    wah: match t.get("wah") {
-                        Some(Value::Array(marks)) => {
-                            marks.iter().filter_map(WahEntry::parse).collect()
+                    beats: match t.get("beats") {
+                        Some(Value::Array(beats)) => {
+                            beats.iter().filter_map(BeatEntry::parse).collect()
                         }
                         _ => Vec::new(),
                     },
@@ -306,8 +301,9 @@ impl Sidecar {
                 if let Some(idx) = t.chords_from {
                     entry["chords_from"] = serde_json::json!(idx);
                 }
-                if !t.wah.is_empty() {
-                    entry["wah"] = t.wah.iter().map(WahEntry::to_value).collect();
+                let beats: Vec<Value> = t.beats.iter().filter_map(BeatEntry::to_value).collect();
+                if !beats.is_empty() {
+                    entry["beats"] = Value::Array(beats);
                 }
                 entry
             })
@@ -406,35 +402,35 @@ mod tests {
             effects: Vec::new(),
             chords: false,
             chords_from: None,
-            wah: Vec::new(),
+            beats: Vec::new(),
         }
     }
 
     #[test]
-    fn shaped_wah_marks_are_kept_and_read_back() {
-        let mark = WahEntry {
+    fn what_plugins_keep_on_beats_is_kept_and_read_back() {
+        let beat = BeatEntry {
             at: [0, 3, 1, 2],
-            q: 65,
-            points: vec![[0, 1, 20], [1, 3, 100], [1, 1, 0]],
+            plugins: [("me.pedal".to_owned(), r#"{"q":6.5}"#.to_owned())].into(),
         };
         let sidecar = Sidecar {
             tracks: vec![TrackEntry {
                 name: "Lead".into(),
-                wah: vec![mark.clone()],
+                beats: vec![beat],
                 ..Default::default()
             }],
             ..Default::default()
         };
         assert!(!sidecar.is_empty());
-        let text = sidecar.to_text();
-        assert!(text.contains("\"q\": 6.5"), "{text}");
-        assert_eq!(Sidecar::parse(&text).unwrap(), sidecar);
-        // A mark that isn't one is left out; the rest of the file is read.
+        assert_eq!(Sidecar::parse(&sidecar.to_text()).unwrap(), sidecar);
+        // An entry that isn't one, or keeps nothing, is left out; the rest
+        // of the file is read.
         let odd = r#"{"oxiguitar":1,"tracks":[{"name":"Lead","plugins":{},
-            "wah":[{"at":[0,1],"q":4,"points":[]},{"at":[0,0,0,0],"q":4,"points":[[0,1,50]]}]}]}"#;
+            "beats":[{"at":[0,1],"plugins":{"a.b":{}}},
+                     {"at":[0,0,0,0],"plugins":{"a.b":7}},
+                     {"at":[0,0,0,1],"plugins":{"a.b":{"x":1}}}]}]}"#;
         let read = Sidecar::parse(odd).unwrap();
-        assert_eq!(read.tracks[0].wah.len(), 1);
-        assert_eq!(read.tracks[0].wah[0].q, 40);
+        assert_eq!(read.tracks[0].beats.len(), 1);
+        assert_eq!(read.tracks[0].beats[0].at, [0, 0, 0, 1]);
     }
 
     #[test]

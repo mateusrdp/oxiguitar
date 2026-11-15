@@ -32,12 +32,11 @@
 //! drifts, however long the song. An event at time `t` happens on the first
 //! frame whose time is at or after `t`.
 
-use std::ops::Range;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-use oxiguitar_plugin_api::realtime::{ControlPoint, PitchPoint, RtEvent, RtEventKind, RtNote};
+use oxiguitar_plugin_api::realtime::{PitchPoint, RtEvent, RtEventKind, RtNote};
 use rtrb::{Consumer, Producer, RingBuffer};
 
 use crate::Click;
@@ -52,16 +51,17 @@ pub trait Source: Send {
     /// Renders `out.frames()` frames of its tracks into `out` (zeroed
     /// before the call; add into it). `events` happen on the first frame;
     /// `pitch` holds the notes' pitch curves; `time` is the score's time
-    /// at the first frame and `step` its seconds per frame; `controls` are
-    /// its tracks' control curves, for their effects (none while nothing
-    /// plays). `out` may have no frames, only events.
+    /// at the first frame and `step` its seconds per frame; `playing` is
+    /// whether the score is playing (not stopped, nor the count-in), which
+    /// the tracks' effects that follow the score need to know. `out` may
+    /// have no frames, only events.
     fn render(
         &mut self,
         events: &[RtEvent],
         pitch: &[PitchPoint],
-        controls: Controls<'_>,
         time: f64,
         step: f64,
+        playing: bool,
         out: &mut Buffers,
     );
 
@@ -81,26 +81,6 @@ pub trait Source: Send {
     fn track_latency(&self, slot: usize) -> u32 {
         let _ = slot;
         self.latency()
-    }
-}
-
-/// The control curves of one source's tracks (the wah pedal's marks, plugin
-/// interface 1.8), as the schedule keeps them: for the tracks' effects.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Controls<'a> {
-    pub(crate) points: &'a [ControlPoint],
-    /// Each slot's run of `points`.
-    pub(crate) runs: &'a [Range<usize>],
-}
-
-impl<'a> Controls<'a> {
-    /// The points of the track at `slot`, by control and then by time;
-    /// none for a track the score moves nothing on.
-    pub fn track(&self, slot: usize) -> &'a [ControlPoint] {
-        self.runs
-            .get(slot)
-            .and_then(|r| self.points.get(r.clone()))
-            .unwrap_or(&[])
     }
 }
 
@@ -789,14 +769,7 @@ impl Engine {
             // in time, on the same frame): hand these over now, in a call
             // without frames, and go on.
             let time = self.anchor.time;
-            render_slot(
-                slot,
-                &self.schedule.pitch,
-                Controls::default(),
-                0,
-                time,
-                self.anchor.step,
-            );
+            render_slot(slot, &self.schedule.pitch, 0, time, self.anchor.step, false);
             slot.events.clear();
         }
         if slot.events.capacity() > 0 {
@@ -841,16 +814,9 @@ impl Engine {
 
     fn render_sources(&mut self, frames: usize, time: f64, step: f64) {
         let pitch = &self.schedule.pitch;
-        // The score moves the tracks' controls only while it plays: a
-        // note ringing on after a stop keeps no wah.
         let playing = self.state == State::Playing;
         for (i, slot) in self.sources.slots.iter_mut().enumerate() {
-            let controls = if playing {
-                self.schedule.controls_of(i)
-            } else {
-                Controls::default()
-            };
-            if !render_slot(slot, pitch, controls, frames, time, step) {
+            if !render_slot(slot, pitch, frames, time, step, playing) {
                 let _ = self.returned.push(Returned::Failed(i));
             }
             slot.events.clear();
@@ -972,14 +938,14 @@ impl Engine {
 fn render_slot(
     slot: &mut Slot,
     pitch: &[PitchPoint],
-    controls: Controls<'_>,
     frames: usize,
     time: f64,
     step: f64,
+    playing: bool,
 ) -> bool {
     slot.buffers.clear(frames);
     slot.source
-        .render(&slot.events, pitch, controls, time, step, &mut slot.buffers);
+        .render(&slot.events, pitch, time, step, playing, &mut slot.buffers);
     for (k, [left, right]) in slot.delays.iter_mut().enumerate() {
         if let Some((l, r)) = slot.buffers.track(k) {
             left.process(l);

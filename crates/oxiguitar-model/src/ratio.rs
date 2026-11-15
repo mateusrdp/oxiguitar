@@ -42,8 +42,6 @@ impl Ratio {
     pub const ZERO: Ratio = Ratio { num: 0, den: 1 };
     /// One whole note.
     pub const ONE: Ratio = Ratio { num: 1, den: 1 };
-    /// One half.
-    pub const HALF: Ratio = Ratio { num: 1, den: 2 };
 
     /// Builds `num / den` in lowest terms. Returns `None` if `den` is zero.
     pub const fn new(num: i64, den: i64) -> Option<Ratio> {

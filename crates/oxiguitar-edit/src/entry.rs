@@ -191,12 +191,6 @@ pub enum Command {
     /// This whammy-bar curve on the caret's beat, or the selected beats;
     /// `None` for none.
     Whammy(Option<oxiguitar_model::Bend>),
-    /// This wah mark on the caret's beat, or the selected beats, played
-    /// with this shape (`None` for its kind's own, [`Wah::shape`]); `None`
-    /// for no mark (#250).
-    ///
-    /// [`Wah::shape`]: oxiguitar_model::Wah::shape
-    Wah(Option<(oxiguitar_model::Wah, Option<oxiguitar_model::WahShape>)>),
     /// A value of the caret's note, or the selected notes (the
     /// Inspector).
     Note(crate::NoteChange),
@@ -330,7 +324,6 @@ impl Command {
             Command::Dynamic(_) => "Dynamic",
             Command::Bend(_) => "Bend",
             Command::Whammy(_) => "Whammy Bar",
-            Command::Wah(_) => "Wah-Wah",
             Command::Note(n) => n.label(),
             Command::Beat(b) => b.label(),
             Command::Chord(_) => "Chord",
@@ -882,7 +875,6 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Dynamic(_)
         | Command::Bend(_)
         | Command::Whammy(_)
-        | Command::Wah(_)
         | Command::Note(_)
         | Command::Beat(_)
         | Command::Chord(_)

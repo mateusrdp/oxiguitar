@@ -77,6 +77,9 @@ pub struct TestPlugin {
     side: Side,
     mark: Mark,
     link: LinkTool,
+    stamp: Stamp,
+    ask: Ask,
+    ask_tool: AskTool,
     settings: SettingsWindow,
     fake: fake::Fake,
     raw: Raw,
@@ -340,6 +343,121 @@ impl Tool for Mark {
     }
 }
 
+/// This plugin's id, under which it keeps its data on beats.
+pub const ID: &str = "oxiguitar.test";
+
+/// What the tool `stamp` keeps on a beat (interface 1.8).
+pub const STAMP: &str = r#"{"stamped":true}"#;
+
+/// The tool `stamp`, a palette button and an entry of a menu of its own
+/// (interface 1.8): keeps the plugin's data on the first beat with notes
+/// of the first track, as one change. The effect `gain` is silent while
+/// that beat plays.
+#[derive(Debug)]
+struct Stamp {
+    host: Host,
+}
+
+impl Tool for Stamp {
+    fn run(&self) -> Result<String, Error> {
+        use oxiguitar_plugin::score2::BeatExt;
+        let Some((revision, mut score)) = self.host.score2()? else {
+            return Ok("No score is open.".into());
+        };
+        let beat = score
+            .tracks
+            .iter_mut()
+            .flat_map(|t| &mut t.staves)
+            .flat_map(|s| &mut s.bars)
+            .flat_map(|b| &mut b.voices)
+            .flat_map(|v| &mut v.beats)
+            .find(|b| !b.notes.is_empty());
+        let Some(beat) = beat else {
+            return Ok("The score has no notes.".into());
+        };
+        beat.ext
+            .retain(|e| !matches!(e, BeatExt::Plugin { plugin, .. } if plugin == ID));
+        beat.ext.push(BeatExt::Plugin {
+            plugin: ID.into(),
+            data: STAMP.into(),
+        });
+        self.host.apply(revision, "Stamp the First Beat", score)?;
+        Ok(String::new())
+    }
+}
+
+/// The tool `ask`, a palette button with a symbol and an entry of the
+/// page's right-click menu: opens the dialog `ask` and brings the tab
+/// `side` to the front (interface 1.8).
+#[derive(Debug)]
+struct AskTool {
+    host: Host,
+}
+
+impl Tool for AskTool {
+    fn run(&self) -> Result<String, Error> {
+        self.host.show_tab("side");
+        self.host.open_dialog("ask")?;
+        Ok(String::new())
+    }
+}
+
+/// The dialog `ask` (a tab whose area is `dialog`): a button that counts
+/// its clicks and a canvas; closing it says how in the footer.
+#[derive(Debug)]
+struct Ask {
+    host: Host,
+    clicks: Mutex<u32>,
+}
+
+impl Tab for Ask {
+    fn content(&self) -> TabContent {
+        let clicks = *self.clicks.lock().unwrap_or_else(PoisonError::into_inner);
+        TabContent {
+            rows: vec![
+                Row {
+                    widgets: vec![Widget::Button {
+                        id: "more".into(),
+                        text: format!("Clicked {clicks} times"),
+                        enabled: true,
+                    }],
+                },
+                Row {
+                    widgets: vec![Widget::Canvas(Canvas {
+                        id: "sketch".into(),
+                        width: CANVAS.0,
+                        height: CANVAS.1,
+                        items: vec![Item::Line {
+                            from: Point::new(0.0, CANVAS.1),
+                            to: Point::new(CANVAS.0, 0.0),
+                            width: 1.0,
+                            paint: Paint::Accent,
+                        }],
+                    })],
+                },
+            ],
+        }
+    }
+
+    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
+        if (widget, &event) == ("more", &TabEvent::Clicked) {
+            *self.clicks.lock().unwrap_or_else(PoisonError::into_inner) += 1;
+        }
+        Ok(())
+    }
+
+    fn closed(&self, ok: bool) -> Result<(), Error> {
+        let clicks =
+            std::mem::take(&mut *self.clicks.lock().unwrap_or_else(PoisonError::into_inner));
+        let how = if ok { "OK" } else { "Cancel" };
+        self.host.notify(
+            Level::Warning,
+            format!("The test dialog was closed with {how} after {clicks} clicks."),
+        );
+        Ok(())
+    }
+}
+
 /// The panel canvas's size, in its own units.
 pub const CANVAS: (f32, f32) = (100.0, 50.0);
 
@@ -353,6 +471,12 @@ impl Plugin for TestPlugin {
             side: Side,
             mark: Mark { host: host.clone() },
             link: LinkTool { host: host.clone() },
+            stamp: Stamp { host: host.clone() },
+            ask: Ask {
+                host: host.clone(),
+                clicks: Mutex::new(0),
+            },
+            ask_tool: AskTool { host: host.clone() },
             settings: SettingsWindow { host: host.clone() },
             fake: fake::Fake::new(host.clone()),
             raw: Raw::default(),
@@ -368,6 +492,8 @@ impl Plugin for TestPlugin {
         match id {
             "mark" => Some(&self.mark),
             "link" => Some(&self.link),
+            "stamp" => Some(&self.stamp),
+            "ask" => Some(&self.ask_tool),
             _ => None,
         }
     }
@@ -393,6 +519,7 @@ impl Plugin for TestPlugin {
         match id {
             "panel" => Some(&self.panel),
             "side" => Some(&self.side),
+            "ask" => Some(&self.ask),
             _ => None,
         }
     }

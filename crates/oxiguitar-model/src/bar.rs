@@ -3,6 +3,8 @@
 
 //! Bars, voices and beats.
 
+use std::collections::BTreeMap;
+
 use crate::{Duration, Note, Ratio};
 
 /// One bar of one staff.
@@ -130,6 +132,11 @@ pub struct Beat {
     pub tuplet_group: bool,
     /// Under an extended barre: a barre is a run of beats with the same one.
     pub barre: Option<Barre>,
+    /// What plugins keep on the beat, by plugin id: a JSON object as text
+    /// each, opaque to the core (plugin interface 1.8). It goes where the
+    /// beat goes (edits, copies, undo) and is saved beside the score
+    /// (`FILE.oxg`), since no score format holds it.
+    pub plugins: BTreeMap<String, String>,
 }
 
 /// A hairpin.
@@ -224,9 +231,6 @@ pub struct BeatEffects {
     pub pedal: Option<Pedal>,
     /// A wah-wah mark.
     pub wah: Option<Wah>,
-    /// How the wah mark is played, where the user shaped it (#250); `None`
-    /// for its kind's own ([`Wah::shape`]). Only with a mark.
-    pub wah_shape: Option<WahShape>,
     /// The chord played as an arpeggio, up or down.
     pub arpeggio: Option<StrokeDirection>,
     /// A rasgueado.
@@ -275,87 +279,6 @@ pub enum Wah {
     Open,
     /// Closed (+).
     Closed,
-}
-
-impl Wah {
-    /// How a mark of this kind is played when the user gave it no shape:
-    /// the pedal rocks to its place over the beat's first half and stays,
-    /// from the heel for an open mark ("wah") and from the toe for a
-    /// closed one, so marks that alternate rock the pedal without a jump.
-    pub fn shape(self) -> WahShape {
-        let (from, to) = match self {
-            Wah::Open => (0, 100),
-            Wah::Closed => (100, 0),
-        };
-        let point = |offset, position| WahPoint { offset, position };
-        WahShape {
-            points: vec![
-                point(Ratio::ZERO, from),
-                point(Ratio::HALF, to),
-                point(Ratio::ONE, to),
-            ],
-            q: WahShape::Q,
-        }
-    }
-}
-
-/// How a wah mark is played (#250): where the pedal is across the beat,
-/// and how sharp the filter is. No score format holds it; it is saved
-/// beside the score (`FILE.oxg`).
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct WahShape {
-    /// The pedal's curve, in time order.
-    pub points: Vec<WahPoint>,
-    /// The filter's Q with the pedal half way, in tenths.
-    pub q: u16,
-}
-
-impl WahShape {
-    /// The Q of a Cry Baby with its pedal half way, in tenths (J. O.
-    /// Smith's measurements: 8 at the heel, 2 at the toe).
-    pub const Q: u16 = 40;
-    /// The least and the most Q, in tenths.
-    pub const Q_RANGE: (u16, u16) = (10, 160);
-
-    /// The curve as plain numbers, as the file beside the score keeps it:
-    /// each point's offset (numerator, denominator) and position.
-    pub fn numbers(&self) -> Vec<[i64; 3]> {
-        self.points
-            .iter()
-            .map(|p| [p.offset.numer(), p.offset.denom(), i64::from(p.position)])
-            .collect()
-    }
-
-    /// The shape of such numbers and a Q in tenths: points outside the
-    /// beat are left out, the rest put in time order, positions and Q kept
-    /// in range. `None` when no point is left.
-    pub fn of_numbers(q: u16, points: &[[i64; 3]]) -> Option<WahShape> {
-        let mut points: Vec<WahPoint> = points
-            .iter()
-            .filter_map(|&[num, den, position]| {
-                let offset = Ratio::new(num, den)?;
-                (offset >= Ratio::ZERO && offset <= Ratio::ONE).then_some(WahPoint {
-                    offset,
-                    position: u8::try_from(position.clamp(0, 100)).unwrap_or(100),
-                })
-            })
-            .collect();
-        points.sort_by_key(|p| p.offset);
-        let (least, most) = WahShape::Q_RANGE;
-        (!points.is_empty()).then_some(WahShape {
-            points,
-            q: q.clamp(least, most),
-        })
-    }
-}
-
-/// One point of a wah pedal's curve.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct WahPoint {
-    /// When, as a fraction of the beat's duration, from 0 to 1.
-    pub offset: Ratio,
-    /// The pedal, from 0 (heel down, closed) to 100 (toe down, open).
-    pub position: u8,
 }
 
 /// Which part of the hand taps the body in a golpe.

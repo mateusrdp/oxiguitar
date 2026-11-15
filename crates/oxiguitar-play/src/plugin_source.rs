@@ -9,13 +9,14 @@
 
 use oxiguitar_host::Plugins;
 use oxiguitar_host::realtime::{Instance, Updater};
-use oxiguitar_model::Score;
+use oxiguitar_model::{Ratio, Score};
 use oxiguitar_plugin_api::class::InstrumentClass;
-use oxiguitar_plugin_api::message::{Prepare, PrepareEffect, PreparedTrack, TrackInfo};
+use oxiguitar_plugin_api::message::{PlayedBeat, Prepare, PrepareEffect, PreparedTrack, TrackInfo};
 use oxiguitar_plugin_api::realtime::{PitchPoint, RtEvent};
 
-use crate::engine::{Buffers, Controls, Slot, Source, Sources};
+use crate::engine::{Buffers, Slot, Source, Sources};
 use crate::schedule::Route;
+use crate::time::TimeMap;
 
 /// One instrument and the tracks it plays, as they are prepared.
 #[derive(Clone, Debug, PartialEq)]
@@ -49,6 +50,10 @@ pub struct EffectPick {
     pub effect: String,
     /// The track's settings for that plugin, a JSON object as text.
     pub settings: String,
+    /// For an effect that follows the score (interface 1.8): the track's
+    /// marked beats as they are played ([`played_beats`]), so a change of
+    /// the marks makes a new plan; empty for any other effect.
+    pub beats: Vec<PlayedBeat>,
 }
 
 /// What a score's instruments are prepared for: each track goes to the
@@ -79,6 +84,9 @@ pub fn class_of(score: &Score, track: usize) -> InstrumentClass {
 /// The plan for `score`'s tracks with the installed instruments.
 pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
     let mut out = Plan::default();
+    // When the bars are played, worked out only if an effect follows the
+    // score.
+    let mut map: Option<TimeMap> = None;
     for t in 0..score.tracks.len() {
         let Some(i) = plugins.playable(class_of(score, t)).into_iter().next() else {
             out.unplayed.push(t);
@@ -111,12 +119,24 @@ pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
                 .cloned()
                 .unwrap_or_else(|| "{}".into()),
         };
+        let mut beats: Option<Vec<PlayedBeat>> = None;
         let effects: Vec<EffectPick> = plugins
             .effects_in_order(class_of(score, t), &track.effects)
             .into_iter()
             .filter_map(|e| {
                 let plugin = e.plugin.manifest.as_ref()?.id.clone();
+                let beats = if plugins.follows_score(e) {
+                    let map = map.get_or_insert_with(|| {
+                        TimeMap::new(score, &crate::order::playing_order(&score.master_bars))
+                    });
+                    beats
+                        .get_or_insert_with(|| played_beats(track, map))
+                        .clone()
+                } else {
+                    Vec::new()
+                };
                 Some(EffectPick {
+                    beats,
                     settings: track
                         .plugins
                         .get(&plugin)
@@ -158,6 +178,48 @@ pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
             g.effects.push(effects);
         }
     }
+    out
+}
+
+/// Every beat of `track` that carries a mark (an extension of the score,
+/// version 2: the notation's marks and what plugins keep on beats), each
+/// time it is played, in time order: what an effect that follows the score
+/// is prepared with (interface 1.8).
+pub fn played_beats(track: &oxiguitar_model::Track, map: &TimeMap) -> Vec<PlayedBeat> {
+    let index = |i: usize| u32::try_from(i).unwrap_or(u32::MAX);
+    let mut out = Vec::new();
+    for (si, staff) in track.staves.iter().enumerate() {
+        for (visit, v) in map.visits.iter().enumerate() {
+            let Some(bar) = staff.bars.get(v.visit.bar) else {
+                continue;
+            };
+            for (vi, voice) in bar.voices.iter().enumerate() {
+                let mut pos = Ratio::ZERO;
+                for (bi, b) in voice.beats.iter().enumerate() {
+                    if b.grace.is_some() {
+                        continue;
+                    }
+                    let Some(len) = b.duration.length() else {
+                        continue;
+                    };
+                    let ext = oxiguitar_model::wire::beat_marks(b);
+                    if !ext.is_empty() {
+                        out.push(PlayedBeat {
+                            start: map.time(visit, pos),
+                            end: map.time(visit, pos + len),
+                            staff: index(si),
+                            bar: index(v.visit.bar),
+                            voice: index(vi),
+                            beat: index(bi),
+                            ext,
+                        });
+                    }
+                    pos = pos + len;
+                }
+            }
+        }
+    }
+    out.sort_by(|a, b| a.start.total_cmp(&b.start));
     out
 }
 
@@ -367,7 +429,7 @@ pub fn prepare(
                     frames: capacity as u32,
                     track,
                 };
-                match plugins.prepare_effect(effect, prepare.clone()) {
+                match plugins.prepare_effect_following(effect, prepare.clone(), &pick.beats) {
                     Ok(i) => {
                         live.push(LiveEffect {
                             route: t,
@@ -431,9 +493,9 @@ impl Source for PluginSource {
         &mut self,
         events: &[RtEvent],
         pitch: &[PitchPoint],
-        controls: Controls<'_>,
         time: f64,
         step: f64,
+        playing: bool,
         out: &mut Buffers,
     ) {
         let frames = out.frames();
@@ -447,10 +509,10 @@ impl Source for PluginSource {
             return;
         }
         for (slot, chain) in self.effects.iter_mut().enumerate() {
-            let points = controls.track(slot);
             for effect in chain {
                 if let Some((l, r)) = out.track(slot) {
-                    effect.process(l, r, time, step, points);
+                    // An effect follows the score only while it plays.
+                    effect.process(l, r, time, if playing { step } else { 0.0 });
                 }
             }
         }

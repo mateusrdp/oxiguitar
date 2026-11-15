@@ -269,11 +269,25 @@ pub enum BeatExt {
     PickScrape(StrokeDirection),
     /// A dead slap. Since 1.6.
     DeadSlap,
+    /// What a plugin keeps on the beat: its own data, which the core
+    /// carries with the beat (through edits, copies and undo) and saves
+    /// beside the score, since no score format holds it. A plugin changes
+    /// only the entries under its own id and leaves the others as they
+    /// are. Format plugins are never sent these. Since 1.8.
+    Plugin {
+        /// The plugin's id.
+        plugin: String,
+        /// Its data, a JSON object as text.
+        data: String,
+    },
 }
 
 impl Since for BeatExt {
     fn since(&self) -> u32 {
-        6
+        match self {
+            BeatExt::Plugin { .. } => 8,
+            _ => 6,
+        }
     }
 }
 
@@ -297,6 +311,7 @@ impl Named for BeatExt {
             BeatExt::Golpe(_) => "golpes",
             BeatExt::PickScrape(_) => "pick scrapes",
             BeatExt::DeadSlap => "dead slaps",
+            BeatExt::Plugin { .. } => "plugins' data on beats",
         }
     }
 }
@@ -869,6 +884,23 @@ impl Score2 {
         // The first bar each kind is in, whatever order they were found.
         out.sort_by_key(|o| o.1);
         out
+    }
+
+    /// Leaves out what plugins keep on beats ([`BeatExt::Plugin`]): for a
+    /// score on its way to a format plugin, which never gets it (it is
+    /// saved beside the score, so it is no loss either).
+    pub fn drop_plugin_data(&mut self) {
+        for t in &mut self.tracks {
+            for s in &mut t.staves {
+                for b in &mut s.bars {
+                    for v in &mut b.voices {
+                        for beat in &mut v.beats {
+                            beat.ext.retain(|e| !matches!(e, BeatExt::Plugin { .. }));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Leaves out every extension that interface 1.`minor` doesn't know,

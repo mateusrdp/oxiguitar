@@ -54,7 +54,7 @@ use oxiguitar_host::api::manifest::SharedFolder;
 use oxiguitar_host::api::message::{
     Answer, Error, Prepare, PrepareEffect, PreparedTrack, Request, TrackInfo,
 };
-use oxiguitar_host::api::realtime::{ControlPoint, RtEvent, RtEventKind, RtNote, control};
+use oxiguitar_host::api::realtime::{RtEvent, RtEventKind, RtNote};
 use oxiguitar_host::api::score::Score;
 use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
 use oxiguitar_host::realtime::Instance;
@@ -388,6 +388,17 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
                 },
             );
         }
+        // A dialog (interface 1.8) is told it was closed, as by Cancel.
+        if tab.spec.area == oxiguitar_host::api::tab::Area::Dialog {
+            plugins.tab_closed(&id, false);
+            report.check(
+                format!("dialog {}: closing it is no crash", id.tab),
+                match tab.plugin.failure() {
+                    None => Ok(()),
+                    Some(why) => Err(why.to_string()),
+                },
+            );
+        }
     }
     let events = [
         (EventKind::Score, Event::ScoreOpened { revision: 1 }),
@@ -509,30 +520,6 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
 /// The sample rate and the largest piece the real-time checks use.
 const RATE: u32 = 48_000;
 const FRAMES: usize = 256;
-
-/// A track's control curves over `length` seconds, for the effects'
-/// checks: the wah pedal from heel to toe over the first third, off for
-/// the second, back to the heel over the last, at two Qs.
-fn wah_script(length: f64) -> Vec<ControlPoint> {
-    let third = length / 3.0;
-    let point = |control, time, value| ControlPoint {
-        time,
-        value,
-        control,
-    };
-    vec![
-        point(control::WAH, 0.0, 0.0),
-        point(control::WAH, third, 1.0),
-        point(control::WAH, third, f32::NAN),
-        point(control::WAH, 2.0 * third, 1.0),
-        point(control::WAH, length, 0.0),
-        point(control::WAH, length, f32::NAN),
-        point(control::WAH_Q, 0.0, 4.0),
-        point(control::WAH_Q, third, f32::NAN),
-        point(control::WAH_Q, 2.0 * third, 8.0),
-        point(control::WAH_Q, length, f32::NAN),
-    ]
-}
 
 /// The real-time checks alone, of every instrument and effect `plugins`
 /// offer, prepared for tracks whose settings are `settings` (a JSON
@@ -765,14 +752,9 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                 }
             };
             let (mut l, mut r) = (vec![0.5f32; FRAMES], vec![-0.5f32; FRAMES]);
-            // Interface 1.8: the wah pedal rocks, goes off and comes back
-            // within the call, so an effect that follows it does all it
-            // ever does under the same rules.
-            let step = 1.0 / f64::from(RATE);
-            let pedal = wah_script(FRAMES as f64 * step);
-            let _ = instance.process(&mut l, &mut r, 0.0, step, &pedal);
+            let _ = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
             let before = instance.allocations();
-            let ran = instance.process(&mut l, &mut r, 0.0, step, &pedal);
+            let ran = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
             let after = instance.allocations();
             report.check(
                 format!("effect {id}: it runs"),
@@ -785,7 +767,7 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
             report.check(
                 format!("effect {id}: it makes no system call while running"),
                 watched(|| {
-                    let _ = instance.process(&mut l, &mut r, 0.0, step, &pedal);
+                    let _ = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
                 }),
             );
             // Interface 1.5: an effect that follows its track's settings
@@ -798,7 +780,7 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                 Ok(false) => {}
                 Ok(true) => {
                     let before = instance.allocations();
-                    let ran = instance.process(&mut l, &mut r, 0.0, step, &pedal);
+                    let ran = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
                     let after = instance.allocations();
                     report.check(
                         format!("effect {id}: it takes an update while running"),
@@ -814,7 +796,7 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                     report.check(
                         format!("effect {id}: it makes no system call taking an update"),
                         watched(|| {
-                            let _ = instance.process(&mut l, &mut r, 0.0, step, &pedal);
+                            let _ = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
                         }),
                     );
                 }

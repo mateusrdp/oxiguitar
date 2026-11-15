@@ -36,8 +36,6 @@ use oxiguitar_model::{
     StrokeDirection,
 };
 
-use oxiguitar_plugin_api::realtime::{ControlPoint, control};
-
 use crate::time::TimeMap;
 
 /// How a note sounds, beyond its pitch.
@@ -707,115 +705,6 @@ pub fn notes(score: &Score, map: &TimeMap) -> Vec<NoteEvent> {
             .then(a.key.cmp(&b.key))
     });
     all
-}
-
-/// A wah mark as played: its beat's start and end in seconds, the pedal's
-/// curve (seconds, position from 0 to 1) and its Q.
-struct WahMark {
-    start: f64,
-    end: f64,
-    curve: Vec<(f64, f32)>,
-    q: f32,
-}
-
-/// What the score moves on each track besides its notes, as its effects
-/// follow it (plugin interface 1.8): one list per track, by control and
-/// then by time. So far the wah pedal (#250): each wah mark's curve across
-/// its beat ([`control::WAH`], the pedal from 0 to 1) and its Q
-/// ([`control::WAH_Q`]); the pedal is off wherever no mark's beat is
-/// playing (Mateus, 15 Nov 2026).
-pub fn controls(score: &Score, map: &TimeMap) -> Vec<Vec<ControlPoint>> {
-    score
-        .tracks
-        .iter()
-        .map(|track| {
-            let mut marks: Vec<WahMark> = Vec::new();
-            for staff in &track.staves {
-                for (vi, v) in map.visits.iter().enumerate() {
-                    let Some(bar) = staff.bars.get(v.visit.bar) else {
-                        continue;
-                    };
-                    for voice in &bar.voices {
-                        let mut pos = Ratio::ZERO;
-                        for b in &voice.beats {
-                            if b.grace.is_some() {
-                                continue;
-                            }
-                            let Some(len) = b.duration.length() else {
-                                continue;
-                            };
-                            if let Some(wah) = b.effects.wah {
-                                let shape = b.effects.wah_shape.clone().unwrap_or(wah.shape());
-                                let at = |offset: Ratio| map.time(vi, pos + len * offset);
-                                let curve = shape
-                                    .points
-                                    .iter()
-                                    .map(|p| (at(p.offset), f32::from(p.position.min(100)) / 100.0))
-                                    .collect();
-                                marks.push(WahMark {
-                                    start: at(Ratio::ZERO),
-                                    end: at(Ratio::ONE),
-                                    curve,
-                                    q: f32::from(shape.q) / 10.0,
-                                });
-                            }
-                            pos = pos + len;
-                        }
-                    }
-                }
-            }
-            marks.sort_by(|a, b| a.start.total_cmp(&b.start));
-            let point = |control, time, value| ControlPoint {
-                time,
-                value,
-                control,
-            };
-            let (mut pedal, mut q) = (Vec::new(), Vec::new());
-            // Where the pedal's current run ends.
-            let mut run_end: Option<f64> = None;
-            for WahMark {
-                start,
-                end,
-                curve,
-                q: sharpness,
-            } in marks
-            {
-                let (Some(&(_, first)), Some(&(_, last))) = (curve.first(), curve.last()) else {
-                    continue;
-                };
-                match run_end {
-                    // Two voices' marks at once: the pedal follows the
-                    // first.
-                    Some(e) if start < e - 1e-9 => continue,
-                    // A gap: the pedal is off between the two.
-                    Some(e) if start > e + 1e-9 => {
-                        pedal.push(point(control::WAH, e, f32::NAN));
-                        q.push(point(control::WAH_Q, e, f32::NAN));
-                    }
-                    _ => {}
-                }
-                // A curve that starts late or ends early holds its first
-                // and last places to the beat's ends.
-                pedal.push(point(control::WAH, start, first));
-                pedal.extend(
-                    curve
-                        .iter()
-                        .map(|&(t, v)| point(control::WAH, t.clamp(start, end), v)),
-                );
-                pedal.push(point(control::WAH, end, last));
-                q.push(point(control::WAH_Q, start, sharpness));
-                q.push(point(control::WAH_Q, end, sharpness));
-                run_end = Some(end);
-            }
-            if let Some(e) = run_end {
-                pedal.push(point(control::WAH, e, f32::NAN));
-                q.push(point(control::WAH_Q, e, f32::NAN));
-            }
-            pedal.extend(q);
-            pedal.dedup();
-            pedal
-        })
-        .collect()
 }
 
 /// How soft a played chord is: mezzo-piano, under the track's own notes.
@@ -1537,13 +1426,6 @@ mod tests {
     /// two strings on the first beat), each beat changed by `mark`; its
     /// notes as played.
     fn played(mark: impl Fn(usize, &mut Beat)) -> Vec<NoteEvent> {
-        let score = marked(mark);
-        let order = crate::order::playing_order(&score.master_bars);
-        notes(&score, &TimeMap::new(&score, &order))
-    }
-
-    /// The score [`played`] plays.
-    fn marked(mark: impl Fn(usize, &mut Beat)) -> Score {
         use oxiguitar_model::{Bar, Duration, MasterBar, Track, Voice};
         let beats = (0..4)
             .map(|k| {
@@ -1559,7 +1441,7 @@ mod tests {
                 b
             })
             .collect();
-        Score {
+        let score = Score {
             master_bars: vec![MasterBar::default()],
             tracks: vec![Track {
                 staves: vec![Staff {
@@ -1573,83 +1455,9 @@ mod tests {
                 ..Track::default()
             }],
             ..Score::new()
-        }
-    }
-
-    /// The first track's points of one control, as (time, value).
-    fn curve(score: &Score, control: u32) -> Vec<(f64, f32)> {
+        };
         let order = crate::order::playing_order(&score.master_bars);
-        controls(score, &TimeMap::new(score, &order))[0]
-            .iter()
-            .filter(|p| p.control == control)
-            .map(|p| (p.time, p.value))
-            .collect()
-    }
-
-    #[test]
-    fn wah_marks_become_the_pedal_s_curve_and_it_is_off_between_them() {
-        use oxiguitar_model::{Wah, WahPoint, WahShape};
-        // At 120, a quarter lasts half a second: an open mark on beat 1, a
-        // closed one on beat 2 (the pedal rocks on without a gap), nothing
-        // on beat 3, and a mark shaped by the user on beat 4.
-        let score = marked(|k, b| match k {
-            0 => b.effects.wah = Some(Wah::Open),
-            1 => b.effects.wah = Some(Wah::Closed),
-            3 => {
-                b.effects.wah = Some(Wah::Open);
-                b.effects.wah_shape = Some(WahShape {
-                    points: vec![
-                        WahPoint {
-                            offset: Ratio::new(1, 4).unwrap(),
-                            position: 30,
-                        },
-                        WahPoint {
-                            offset: Ratio::new(3, 4).unwrap(),
-                            position: 80,
-                        },
-                    ],
-                    q: 65,
-                });
-            }
-            _ => {}
-        });
-        let pedal = curve(&score, control::WAH);
-        let shown: Vec<(f64, f32)> = pedal
-            .iter()
-            .map(|&(t, v)| (t, if v.is_nan() { -1.0 } else { v }))
-            .collect();
-        assert_eq!(
-            shown,
-            [
-                // Open: heel to toe over the beat's first half, held.
-                (0.0, 0.0),
-                (0.25, 1.0),
-                (0.5, 1.0),
-                // Closed, at once: back to the heel.
-                (0.75, 0.0),
-                (1.0, 0.0),
-                // Off until the last beat.
-                (1.0, -1.0),
-                // The user's curve holds its ends to the beat's.
-                (1.5, 0.3),
-                (1.625, 0.3),
-                (1.875, 0.8),
-                (2.0, 0.8),
-                (2.0, -1.0),
-            ]
-        );
-        let q = curve(&score, control::WAH_Q);
-        assert_eq!(q[..3], [(0.0, 4.0), (0.5, 4.0), (1.0, 4.0)][..]);
-        assert!(q[3].0 == 1.0 && q[3].1.is_nan());
-        assert_eq!(q[4..6], [(1.5, 6.5), (2.0, 6.5)][..]);
-        // By control, then by time, as the interface asks.
-        let order = crate::order::playing_order(&score.master_bars);
-        let all = &controls(&score, &TimeMap::new(&score, &order))[0];
-        assert!(all.windows(2).all(|w| {
-            w[0].control < w[1].control || (w[0].control == w[1].control && w[0].time <= w[1].time)
-        }));
-        // No mark, no points.
-        assert!(curve(&marked(|_, _| {}), control::WAH).is_empty());
+        notes(&score, &TimeMap::new(&score, &order))
     }
 
     #[test]

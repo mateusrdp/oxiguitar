@@ -51,10 +51,10 @@ use oxiguitar_plugin_api::message::{
     Error, ErrorKind, HostAnswer, HostRequest, Request, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::realtime::{
-    ControlPoint, HostRender, PitchPoint, ProcessCall, RealtimeTableV1, RenderCall, RtEvent,
+    HostRender, PitchPoint, ProcessCall, RealtimeTableV1, RenderCall, RtEvent,
 };
 
-use crate::audio::{Controls, Instance, Keeper, Piece, Update};
+use crate::audio::{Instance, Keeper, Piece, Update};
 use crate::{Host, HostServices, Plugin, dispatch_kept};
 
 /// The plugin, once the host has started it. One `.oxp` file holds one
@@ -556,8 +556,7 @@ unsafe extern "C" fn render(instance: u64, call: *const RenderCall) -> Status {
 /// # Safety
 ///
 /// As [`render`]: an effect instance of this plugin, and a call whose two
-/// buffers hold `frames` floats each, valid and apart for the call, and
-/// whose `controls` are `control_count` points.
+/// buffers hold `frames` floats each, valid and apart for the call.
 unsafe extern "C" fn process(instance: u64, call: *const ProcessCall) -> Status {
     if instance == 0 || call.is_null() {
         return Status::FAILED;
@@ -597,16 +596,12 @@ unsafe extern "C" fn process(instance: u64, call: *const ProcessCall) -> Status 
             std::slice::from_raw_parts_mut(r, frames),
         )
     };
-    // SAFETY: the control points are valid for the call (this function's
-    // contract); the slice is made only when its pointer isn't null.
-    let points: &[ControlPoint] = unsafe { parts(call.controls, call.control_count as usize) };
-    let controls = Controls::new(points, call.time, call.step);
     // An update waiting (interface 1.5) is taken between two calls: here,
     // before this one's frames.
     let ok = rendering(|| {
         catch_unwind(AssertUnwindSafe(|| {
             shared.mailbox.deliver(|u| processor.apply(u));
-            processor.process_with(left, right, &controls);
+            processor.process_at(left, right, call.time, call.step);
         }))
         .is_ok()
     });

@@ -37,7 +37,6 @@ pub mod wire;
 pub use bar::{
     Bar, Barre, Beaming, Beat, BeatEffects, BeatKind, BeatTechnique, Clef, Fade, Golpe, GraceKind,
     Hairpin, Ottava, Pedal, Rasgueado, Simile, Stroke, StrokeDirection, Vibrato, Voice, Wah,
-    WahPoint, WahShape,
 };
 pub use duration::{Duration, NoteValue, Tuplet};
 pub use note::{

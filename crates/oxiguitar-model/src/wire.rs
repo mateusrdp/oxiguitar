@@ -312,7 +312,19 @@ fn beat_ext_to(b: &Beat) -> Vec<w2::BeatExt> {
     if fx.dead_slap {
         out.push(E::DeadSlap);
     }
+    for (plugin, data) in &b.plugins {
+        out.push(E::Plugin {
+            plugin: plugin.clone(),
+            data: data.clone(),
+        });
+    }
     out
+}
+
+/// A beat's marks as plugins see them: its extensions in the score,
+/// version 2. What the player tells an effect that follows the score.
+pub fn beat_marks(b: &Beat) -> Vec<w2::BeatExt> {
+    beat_ext_to(b)
 }
 
 /// Sets what a beat's extensions hold.
@@ -372,6 +384,12 @@ fn beat_ext_from(b: &mut Beat, ext: &[w2::BeatExt]) {
             }
             E::PickScrape(d) => b.effects.pick_scrape = Some(stroke_direction_from(d)),
             E::DeadSlap => b.effects.dead_slap = true,
+            E::Plugin {
+                ref plugin,
+                ref data,
+            } => {
+                b.plugins.insert(plugin.clone(), data.clone());
+            }
         }
     }
 }
@@ -931,6 +949,7 @@ fn beat_to(b: &Beat) -> w::Beat {
         beaming: _,
         tuplet_group: _,
         barre: _,
+        plugins: _,
     } = b;
     let BeatEffects {
         stroke,
@@ -944,7 +963,6 @@ fn beat_to(b: &Beat) -> w::Beat {
         let_ring,
         pedal: _,
         wah: _,
-        wah_shape: _,
         arpeggio: _,
         rasgueado: _,
         golpe: _,

@@ -21,7 +21,7 @@ None of the rest was in the score model. The Guitar Pro readers warned and dropp
 ## Decided by Mateus (8 Nov 2026)
 
 - **The Guitar Pro plugin follows in the same session**: it reads and writes every new mark, released after the core (a plugin built on the 1.6 SDK needs v0.17).
-- **Sound: play what we can.** Rasgueado plays as fast strokes by its pattern; golpe and dead slap as muted percussive hits; wah and pick scrape are shown only (no wah filter or scrape sample in our sets; Guitar Pro plays neither pick scrape nor dead slap). Since #250 the wah is played, by the wah plugin, each mark with a curve and a Q of its own (docs/design/wah.md).
+- **Sound: play what we can.** Rasgueado plays as fast strokes by its pattern; golpe and dead slap as muted percussive hits; wah and pick scrape are shown only (no wah filter or scrape sample in our sets; Guitar Pro plays neither pick scrape nor dead slap).
 - **Spellings: keep the file's.** A note keeps the spelling its file gives where it differs from the one OxiGuitar would work out, so scores look as their authors wrote them.
 - **Multivoice and Design Mode are both in v0.17.**
 

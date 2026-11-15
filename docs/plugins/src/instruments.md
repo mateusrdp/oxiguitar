@@ -60,36 +60,6 @@ impl Processor for Scale {
 
 The update reaches the processor before its next `process` call; if the user moves a slider faster than the audio thread runs, only the newest update is taken. The SDK's glue keeps the two threads apart with no lock. The contract suite hands each effect an update and checks that taking it allocates nothing and makes no system call. Ask for interface 1.5 in the manifest (`"interface": "1.5"`).
 
-
-## Following the score
-
-Since interface 1.8, an effect can follow what the score moves on its track besides its notes: its **control curves**. So far there are two, the wah pedal's (`control::WAH`, the pedal's position from 0, heel down, to 1, toe down, with no value where the pedal is off) and its Q (`control::WAH_Q`); a wah effect follows them, and any effect is free to (a filter, a volume pedal). Override `Processor::process_with` in place of relying on `process`:
-
-```rust
-impl Processor for Pedal {
-    fn process(&mut self, left: &mut [f32], right: &mut [f32]) {
-        self.process_with(left, right, &Controls::new(&[], 0.0, 0.0));
-    }
-
-    fn process_with(&mut self, left: &mut [f32], right: &mut [f32], controls: &Controls<'_>) {
-        for frame in 0..left.len() {
-            match controls.value_at(control::WAH, frame) {
-                Some(pedal) => { /* the pedal is at `pedal`, 0 to 1 */ }
-                None => { /* the pedal is off: pass the track through */ }
-            }
-        }
-    }
-}
-```
-
-- `Controls::time()` is the score's time at the call's first frame, in seconds at 100 % speed, and `step()` the score's seconds per frame (the speed over the sample rate).
-- `Controls::points(control)` is one control's points by time, the same array for as long as the song plays; `value_at(control, frame)` follows them in straight lines. A point whose value is not a number ends a run: the control has no value from there to its next point.
-- While nothing plays (stopped, paused, the count-in) there are no points, and `step()` is 0.
-- A control your effect doesn't know is not yours: ignore it. Later versions add controls, never change these.
-- Everything here runs on the audio thread: no allocation, no lock. Working a filter's coefficients out every few frames and gliding to them keeps it cheap and free of zipper noise.
-
-The contract suite rocks a wah pedal through every effect's real-time checks, so an effect that follows it is checked while it does.
-
 ## Tracks and classes
 
 - **One instrument per track.** Each track chooses its instrument, with one default for the rest.

@@ -15,7 +15,7 @@ use oxiguitar_plugin_api::audio_device::{self, Open, Opened};
 use std::sync::Arc;
 
 use oxiguitar_plugin_api::message::{Answer, Error, ErrorKind, PrepareEffect, Request};
-use oxiguitar_plugin_api::realtime::{ControlPoint, PitchPoint, ProcessCall, RenderCall, RtEvent};
+use oxiguitar_plugin_api::realtime::{PitchPoint, ProcessCall, RenderCall, RtEvent};
 use oxiguitar_plugin_api::{decode, encode};
 
 use crate::Plugins;
@@ -137,17 +137,10 @@ impl Instance {
 
     /// Runs an effect over one track's `left` and `right`, on the audio
     /// thread: their first frame is at the score's `time`, each frame
-    /// `step` seconds of it further, and `controls` are the track's control
-    /// curves (interface 1.8; a plugin built for an older one reads none of
-    /// the three). False once the plugin has panicked.
-    pub fn process(
-        &mut self,
-        left: &mut [f32],
-        right: &mut [f32],
-        time: f64,
-        step: f64,
-        controls: &[ControlPoint],
-    ) -> bool {
+    /// `step` seconds of it further, 0 while the score isn't playing
+    /// (interface 1.8; a plugin built for an older one reads neither).
+    /// False once the plugin has panicked.
+    pub fn process(&mut self, left: &mut [f32], right: &mut [f32], time: f64, step: f64) -> bool {
         if self.failed {
             return false;
         }
@@ -160,8 +153,6 @@ impl Instance {
             buffer_count: 2,
             time,
             step,
-            controls: controls.as_ptr(),
-            control_count: controls.len() as u32,
         };
         let status = self.loaded.process(self.held.id, &call);
         if status == Status::OK {

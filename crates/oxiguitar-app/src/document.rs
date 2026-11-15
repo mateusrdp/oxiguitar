@@ -14,7 +14,7 @@ use oxiguitar_display::{DisplayList, FontSet, Theme};
 use oxiguitar_edit::{BarCheck, Caret, Command, History, Region, Selection};
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::message::{Level as LogLevel, LogEntry};
-use oxiguitar_host::sidecar::{Sidecar, TrackEntry, WahEntry};
+use oxiguitar_host::sidecar::{BeatEntry, Sidecar, TrackEntry};
 use oxiguitar_layout::{Engraved, Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::{Mix, Score};
 use oxiguitar_tools::Availability;
@@ -313,7 +313,11 @@ impl Document {
                     track.effects = entry.effects;
                     track.play_chords = entry.chords;
                     track.chords_from = entry.chords_from.unwrap_or(usize::MAX);
-                    place_wah(track, &entry.wah);
+                    // What plugins keep on beats; a beat no longer there
+                    // takes nothing.
+                    for beat in entry.beats {
+                        track.set_beat_plugins(beat.at, beat.plugins);
+                    }
                 }
                 // Convert track_bar_colors from sidecar format (track name →
                 // Vec<Option<serde_json::Value>>) to score format (track
@@ -361,11 +365,12 @@ impl Document {
         let writable = SaveFormat::writable(plugins);
         let format = writable
             .iter()
-            .find(|f| f.id == FULLEST)
+            .find(|f| f.fullest)
             .or(writable.first())
             .cloned()
             .unwrap_or_else(|| SaveFormat {
-                id: FULLEST.to_owned(),
+                fullest: true,
+                id: FULLEST_BEFORE_1_8.to_owned(),
                 name: "Guitar Pro 7–8".to_owned(),
                 extensions: vec!["gp".to_owned()],
             });
@@ -584,6 +589,10 @@ pub(crate) struct SaveFormat {
     pub(crate) id: String,
     pub(crate) name: String,
     pub(crate) extensions: Vec<String>,
+    /// The format a file is saved in when its own would lose part of the
+    /// score, or no plugin writes it: the first format whose manifest says
+    /// it holds the whole score (`"fullest": true`, interface 1.8).
+    pub(crate) fullest: bool,
 }
 
 impl SaveFormat {
@@ -592,23 +601,33 @@ impl SaveFormat {
             id: spec.id.clone(),
             name: spec.name.clone(),
             extensions: spec.extensions.clone(),
+            fullest: spec.fullest,
         }
     }
 
-    /// Every format the installed plugins write, in plugin order.
+    /// Every format the installed plugins write, in plugin order, one of
+    /// them the fullest when any can be.
     pub(crate) fn writable(plugins: &Plugins) -> Vec<SaveFormat> {
-        plugins
+        let mut formats: Vec<SaveFormat> = plugins
             .writers()
             .iter()
             .map(|f| SaveFormat::of(f.spec))
-            .collect()
+            .collect();
+        let said = formats.iter().position(|f| f.fullest);
+        // A Guitar Pro plugin released before interface 1.8 can't say so.
+        let fullest = said.or_else(|| formats.iter().position(|f| f.id == FULLEST_BEFORE_1_8));
+        for (i, f) in formats.iter_mut().enumerate() {
+            f.fullest = Some(i) == fullest;
+        }
+        formats
     }
 }
 
-/// The format a file is saved in when its own would lose part of the
-/// score, or no plugin writes it: the fullest OxiGuitar writes, Guitar Pro
-/// 7–8's .gp (Mateus, 19 Oct 2026).
-pub(crate) const FULLEST: &str = "gp";
+/// The fullest format's id in the Guitar Pro plugin released before
+/// plugin interface 1.8, whose manifest can't say `"fullest": true`: Guitar
+/// Pro 7–8's .gp (Mateus, 19 Oct 2026). To go once a Guitar Pro plugin built
+/// for 1.8 is released: the core then names no plugin's format.
+pub(crate) const FULLEST_BEFORE_1_8: &str = "gp";
 
 /// A file ready to be written: where, in which format, its bytes, and what
 /// the user should hear before it is written.
@@ -726,11 +745,11 @@ impl Document {
         let own = writable.iter().find(|f| f.id == self.format.id).cloned();
         let own_written = own.as_ref().map(write).transpose()?;
         if let (Some(own), Some(written)) = (&own, &own_written)
-            && (written.1.is_empty() || own.id == FULLEST)
+            && (written.1.is_empty() || own.fullest)
         {
             return Ok(prepared(self.path.clone(), own.clone(), written.clone()));
         }
-        let Some(fullest) = writable.iter().find(|f| f.id == FULLEST).cloned() else {
+        let Some(fullest) = writable.iter().find(|f| f.fullest).cloned() else {
             // No .gp writer: the file's own format, losses named, if any.
             return match (own, own_written) {
                 (Some(own), Some(written)) => Ok(prepared(self.path.clone(), own, written)),
@@ -808,7 +827,14 @@ impl Document {
                     } else {
                         Some(t.chords_from)
                     },
-                    wah: kept_wah(t),
+                    beats: t
+                        .beat_plugins()
+                        .into_iter()
+                        .map(|(at, plugins)| BeatEntry {
+                            at,
+                            plugins: plugins.clone(),
+                        })
+                        .collect(),
                 })
                 .collect(),
             bar_colors,
@@ -892,29 +918,6 @@ impl Engraver {
 }
 
 /// A path's file name, for messages.
-/// Gives `track`'s wah marks the shapes kept beside the score (#250); a
-/// shape whose beat has no wah mark any more is dropped.
-fn place_wah(track: &mut oxiguitar_model::Track, kept: &[WahEntry]) {
-    for mark in kept {
-        if let Some(shape) = oxiguitar_model::WahShape::of_numbers(mark.q, &mark.points) {
-            track.shape_wah(mark.at, shape);
-        }
-    }
-}
-
-/// `track`'s shaped wah marks, as the file beside the score keeps them.
-fn kept_wah(track: &oxiguitar_model::Track) -> Vec<WahEntry> {
-    track
-        .wah_shapes()
-        .into_iter()
-        .map(|(at, shape)| WahEntry {
-            at,
-            q: shape.q,
-            points: shape.numbers(),
-        })
-        .collect()
-}
-
 pub(crate) fn file_name(path: &Path) -> String {
     path.file_name().map_or_else(
         || path.display().to_string(),
@@ -1166,81 +1169,13 @@ mod tests {
         assert!(broken.sidecar_problem.unwrap().contains("song.gp5.oxg"));
     }
 
-    /// #250: a wah mark's curve and Q, which no score format holds, are
-    /// kept beside the file; the file keeps the mark.
-    #[test]
-    fn a_wah_mark_s_shape_is_saved_beside_the_file() {
-        use oxiguitar_model::{BeatKind, Ratio, Wah, WahPoint, WahShape};
-
-        let dir = scratch("wah");
-        let path = dir.join("song.gp");
-        std::fs::copy(fixture("gp"), &path).unwrap();
-        let mut doc = open(&path).unwrap();
-        // The first beat with notes on the first track.
-        let mut caret = Caret::at_start(&doc.score, 0).unwrap();
-        let (bar, beat) = doc.score.tracks[0].staves[0]
-            .bars
-            .iter()
-            .enumerate()
-            .find_map(|(bi, b)| {
-                let at = b.voices[0]
-                    .beats
-                    .iter()
-                    .position(|x| x.kind == BeatKind::Notes && x.grace.is_none())?;
-                Some((bi, at))
-            })
-            .unwrap();
-        (caret.bar, caret.beat) = (bar, beat);
-        let shape = WahShape {
-            points: vec![
-                WahPoint {
-                    offset: Ratio::ZERO,
-                    position: 20,
-                },
-                WahPoint {
-                    offset: Ratio::new(1, 3).unwrap(),
-                    position: 100,
-                },
-                WahPoint {
-                    offset: Ratio::ONE,
-                    position: 40,
-                },
-            ],
-            q: 80,
-        };
-        doc.edit(
-            Command::Wah(Some((Wah::Open, Some(shape.clone())))),
-            caret,
-            None,
-        )
-        .unwrap();
-        let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
-        // The shape is no loss: the file is saved in place, unasked.
-        assert!(!prepared.ask(), "{prepared:?}");
-        doc.save(&prepared).unwrap();
-        let text = std::fs::read_to_string(dir.join("song.gp.oxg")).unwrap();
-        assert!(text.contains("\"wah\""), "{text}");
-        let again = open(&path).unwrap();
-        let fx = &again.score.tracks[0].staves[0].bars[bar].voices[0].beats[beat].effects;
-        assert_eq!(fx.wah, Some(Wah::Open));
-        assert_eq!(fx.wah_shape, Some(shape));
-        assert_eq!(again.score, doc.score);
-        // A shape whose beat has lost its mark is dropped.
-        let mut kept = Sidecar::read_for(&path).unwrap().unwrap();
-        kept.tracks[0].wah[0].at[1] = 9999;
-        kept.write_for(&path).unwrap();
-        let without = open(&path).unwrap();
-        let fx = &without.score.tracks[0].staves[0].bars[bar].voices[0].beats[beat].effects;
-        assert_eq!((fx.wah, fx.wah_shape.clone()), (Some(Wah::Open), None));
-    }
-
     #[test]
     fn a_gp_file_is_saved_in_place() {
         let dir = scratch("save-in-place");
         let path = dir.join("song.gp");
         std::fs::copy(fixture("gp"), &path).unwrap();
         let mut doc = open(&path).unwrap();
-        assert_eq!(doc.format.id, FULLEST);
+        assert_eq!(doc.format.id, FULLEST_BEFORE_1_8);
         doc.apply_tool(0);
         let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
         assert!(!prepared.ask(), "{prepared:?}");
@@ -1263,7 +1198,7 @@ mod tests {
         let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
         assert!(prepared.ask());
         assert_eq!(prepared.path, dir.join("song.gp"));
-        assert_eq!(prepared.format.id, FULLEST);
+        assert_eq!(prepared.format.id, FULLEST_BEFORE_1_8);
         let (heading, lines) = prepared.question(&doc.path);
         assert_eq!(heading, "Save song.gp?");
         assert!(
@@ -1279,7 +1214,7 @@ mod tests {
         );
         assert_eq!(doc.path, dir.join("song.gp"));
         assert_eq!(doc.name(), "song.gp");
-        assert_eq!(doc.format.id, FULLEST);
+        assert_eq!(doc.format.id, FULLEST_BEFORE_1_8);
         // From then on, Save writes the .gp in place.
         let next = doc.prepare_save(crate::test_plugins(), None).unwrap();
         assert_eq!(next.path, dir.join("song.gp"));
@@ -1292,7 +1227,7 @@ mod tests {
         let mut doc = open(&fixture("gp")).unwrap();
         let gp = SaveFormat::writable(crate::test_plugins())
             .into_iter()
-            .find(|f| f.id == FULLEST)
+            .find(|f| f.id == FULLEST_BEFORE_1_8)
             .unwrap();
         // A section colour, which a .gp file can't hold.
         Arc::make_mut(&mut doc.score).master_bars[0].marker = Some(oxiguitar_model::Marker {

@@ -228,6 +228,89 @@ pub struct ToolSpec {
     /// room (`oxiguitar-cli tools`).
     #[serde(default)]
     pub description: String,
+    /// Where the tool is in the editing palette, when it is a palette
+    /// button. Since interface 1.8.
+    #[serde(default)]
+    pub palette: Option<PaletteSpec>,
+    /// The menu the tool is an entry of (letter case aside): one of the
+    /// menu bar's own (`File`, `Edit`, `View`, `Tools`, `Help`), where it
+    /// comes after the core's entries; `Page` or `Track`, the right-click
+    /// menus of the page and of a track's row; or any other name, which
+    /// makes a menu of that name in the menu bar, before Help. Absent, a
+    /// tool that is no palette button is in Tools, and a palette button is
+    /// in no menu. Since interface 1.8.
+    #[serde(default)]
+    pub menu: Option<String>,
+}
+
+/// The most characters a menu's name may have.
+pub const MENU_NAME_MAX: usize = 24;
+
+impl ToolSpec {
+    /// The menu the tool is an entry of, in lower case: `tools` when the
+    /// manifest names none and the tool is no palette button; `None` for a
+    /// palette button without a menu.
+    pub fn menu_key(&self) -> Option<String> {
+        match &self.menu {
+            Some(menu) => Some(menu.trim().to_lowercase()),
+            None => self.palette.is_none().then(|| "tools".to_owned()),
+        }
+    }
+}
+
+/// A tool's place and face in the editing palette (interface 1.8). The
+/// button's tooltip is the tool's name; clicking it runs the tool, as the
+/// Tools menu would.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PaletteSpec {
+    /// The palette group it joins, by its heading ("Effects", "Notation";
+    /// letter case aside). A heading the palette doesn't have makes a
+    /// group of that name after the core's.
+    pub section: String,
+    /// What the button shows: one symbol of the music font (SMuFL), by
+    /// its code point as `U+E5E7`. Exactly one of `symbol` and `text`.
+    #[serde(default)]
+    pub symbol: Option<String>,
+    /// What the button shows: a few letters ("P.M."), at most
+    /// [`PALETTE_TEXT_MAX`].
+    #[serde(default)]
+    pub text: Option<String>,
+}
+
+/// The most characters a palette button's text may have.
+pub const PALETTE_TEXT_MAX: usize = 5;
+/// The most characters a palette section's heading may have.
+pub const PALETTE_SECTION_MAX: usize = 24;
+
+impl PaletteSpec {
+    /// The symbol's character, when `symbol` is a code point of the
+    /// music font's own range (SMuFL's, U+E000 to U+F8FF).
+    pub fn symbol_char(&self) -> Option<char> {
+        let hex = self.symbol.as_deref()?.strip_prefix("U+")?;
+        let c = char::from_u32(u32::from_str_radix(hex, 16).ok()?)?;
+        ('\u{E000}'..='\u{F8FF}').contains(&c).then_some(c)
+    }
+
+    /// What is wrong with it, as a sentence for the plugin's author.
+    pub fn problem(&self) -> Option<String> {
+        let section = self.section.trim();
+        if section.is_empty() || section.chars().count() > PALETTE_SECTION_MAX {
+            return Some(format!(
+                "the palette section must be 1 to {PALETTE_SECTION_MAX} characters"
+            ));
+        }
+        match (&self.symbol, &self.text) {
+            (Some(_), None) => self.symbol_char().is_none().then(|| {
+                "the palette symbol must be a code point of the music font, as U+E5E7".to_owned()
+            }),
+            (None, Some(t)) => {
+                let n = t.trim().chars().count();
+                (n == 0 || n > PALETTE_TEXT_MAX)
+                    .then(|| format!("the palette text must be 1 to {PALETTE_TEXT_MAX} characters"))
+            }
+            _ => Some("a palette tool shows either a symbol or a text".to_owned()),
+        }
+    }
 }
 
 impl Manifest {
@@ -347,6 +430,18 @@ impl Manifest {
             tools.push(&t.id);
             if t.name.trim().is_empty() {
                 out.push(format!("tool {:?}: the name is empty", t.id));
+            }
+            if let Some(problem) = t.palette.as_ref().and_then(PaletteSpec::problem) {
+                out.push(format!("tool {:?}: {problem}", t.id));
+            }
+            if let Some(menu) = &t.menu {
+                let n = menu.trim().chars().count();
+                if n == 0 || n > MENU_NAME_MAX {
+                    out.push(format!(
+                        "tool {:?}: the menu's name must be 1 to {MENU_NAME_MAX} characters",
+                        t.id
+                    ));
+                }
             }
         }
         let mut effects: Vec<&str> = Vec::new();
@@ -469,6 +564,34 @@ impl Manifest {
                 self.interface
             ));
         }
+        let since_1_8 = InterfaceVersion { major: 1, minor: 8 };
+        if self.interface < since_1_8 {
+            if self
+                .tools
+                .iter()
+                .any(|t| t.palette.is_some() || t.menu.is_some())
+            {
+                out.push(format!(
+                    "a tool's palette and menu need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.tabs.iter().any(|t| t.area == crate::tab::Area::Dialog) {
+                out.push(format!(
+                    "dialogs need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.effects.iter().any(|e| e.follows_score) {
+                out.push(format!(
+                    "effects that follow the score need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+        }
+        if self.instruments.iter().any(|i| i.follows_score) {
+            out.push("only an effect can follow the score (follows_score)".into());
+        }
         let since_1_1 = InterfaceVersion { major: 1, minor: 1 };
         if self.interface < since_1_1 {
             if !self.tabs.is_empty() {
@@ -544,6 +667,12 @@ pub struct FormatSpec {
     /// when any signature matches.
     #[serde(default)]
     pub signatures: Vec<Signature>,
+    /// The format holds all of OxiGuitar's score that a score file can:
+    /// a file is saved in it when its own format would lose part of the
+    /// score, or no plugin writes its own. The first installed format
+    /// that says so is used. Since interface 1.8.
+    #[serde(default)]
+    pub fullest: bool,
 }
 
 /// An instrument a plugin offers the player.
@@ -559,6 +688,19 @@ pub struct InstrumentSpec {
     /// Classes taken out of `plays`.
     #[serde(default)]
     pub does_not_play: Vec<InstrumentClass>,
+    /// For an effect: it follows the score, so it is prepared with its
+    /// track's marked beats as they will be played
+    /// ([`crate::message::PrepareFollowing`]) and prepared again when they
+    /// change. Since interface 1.8.
+    #[serde(default)]
+    pub follows_score: bool,
+    /// For an effect: where it runs on a track whose effects the user
+    /// hasn't ordered, lower first (a pedal before the amp: 100; an amp:
+    /// 200; what shapes the amp's sound, such as an equalizer: 300).
+    /// Effects without one run after those with one, as found. Since
+    /// interface 1.8.
+    #[serde(default)]
+    pub order: Option<i32>,
 }
 
 impl InstrumentSpec {
@@ -988,6 +1130,8 @@ mod tests {
     fn instruments_play_classes() {
         let spec =
             |plays: Option<Vec<InstrumentClass>>, not: Vec<InstrumentClass>| InstrumentSpec {
+                follows_score: false,
+                order: None,
                 id: "i".into(),
                 name: "I".into(),
                 plays,

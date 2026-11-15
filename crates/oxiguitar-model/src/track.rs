@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::{Bar, Color, Pitch, WahShape};
+use crate::{Bar, Color, Pitch};
 
 /// One instrument part: a guitar, a bass, a drum kit, a piano.
 #[derive(Clone, Debug, PartialEq)]
@@ -221,18 +221,17 @@ pub struct LyricLine {
 }
 
 impl Track {
-    /// The wah marks the user shaped (#250), each with its beat's place:
-    /// staff, bar, voice and beat. What the file beside the score keeps,
-    /// since no score format holds a wah's curve.
-    pub fn wah_shapes(&self) -> Vec<([usize; 4], WahShape)> {
+    /// What plugins keep on this track's beats (plugin interface 1.8),
+    /// each with its beat's place: staff, bar, voice and beat. What the
+    /// file beside the score keeps, since no score format holds it.
+    pub fn beat_plugins(&self) -> Vec<([usize; 4], &BTreeMap<String, String>)> {
         let mut out = Vec::new();
         for (si, staff) in self.staves.iter().enumerate() {
             for (bi, bar) in staff.bars.iter().enumerate() {
                 for (vi, voice) in bar.voices.iter().enumerate() {
                     for (ei, beat) in voice.beats.iter().enumerate() {
-                        if let (Some(_), Some(shape)) = (beat.effects.wah, &beat.effects.wah_shape)
-                        {
-                            out.push(([si, bi, vi, ei], shape.clone()));
+                        if !beat.plugins.is_empty() {
+                            out.push(([si, bi, vi, ei], &beat.plugins));
                         }
                     }
                 }
@@ -241,10 +240,10 @@ impl Track {
         out
     }
 
-    /// Gives the wah mark of the beat at `at` (staff, bar, voice, beat)
-    /// this shape. False, and nothing changes, when that beat has no wah
-    /// mark (the score was changed elsewhere since the shape was kept).
-    pub fn shape_wah(&mut self, at: [usize; 4], shape: WahShape) -> bool {
+    /// Gives the beat at `at` (staff, bar, voice, beat) what plugins kept
+    /// on it. False, and nothing changes, when there is no such beat (the
+    /// score was changed elsewhere since it was kept).
+    pub fn set_beat_plugins(&mut self, at: [usize; 4], plugins: BTreeMap<String, String>) -> bool {
         let [staff, bar, voice, beat] = at;
         let beat = self
             .staves
@@ -253,11 +252,11 @@ impl Track {
             .and_then(|b| b.voices.get_mut(voice))
             .and_then(|v| v.beats.get_mut(beat));
         match beat {
-            Some(b) if b.effects.wah.is_some() => {
-                b.effects.wah_shape = Some(shape);
+            Some(b) => {
+                b.plugins = plugins;
                 true
             }
-            _ => false,
+            None => false,
         }
     }
 }

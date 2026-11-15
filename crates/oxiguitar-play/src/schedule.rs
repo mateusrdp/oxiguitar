@@ -8,13 +8,8 @@
 //! file opens or after edits (never while playing: Mateus, 25 Oct 2026),
 //! and handed to the engine whole; the audio thread only reads it.
 
-use std::ops::Range;
+use oxiguitar_plugin_api::realtime::{PitchPoint, RtNote, attack, flags, harmonic, sound};
 
-use oxiguitar_plugin_api::realtime::{
-    ControlPoint, PitchPoint, RtNote, attack, flags, harmonic, sound,
-};
-
-use crate::engine::Controls;
 use crate::events::{Attack, HarmonicKind, Sound, Vibrato};
 use crate::{Click, Timeline};
 
@@ -45,11 +40,6 @@ pub struct Schedule {
     /// Every note's pitch curve, one after another; a note's points are
     /// `pitch[pitch_start..pitch_start + pitch_len]`.
     pub(crate) pitch: Vec<PitchPoint>,
-    /// Every routed track's control curves, one after another (the wah
-    /// pedal, #250), and each source's slots' runs of them
-    /// (`control_runs[source][slot]`).
-    pub(crate) controls: Vec<ControlPoint>,
-    pub(crate) control_runs: Vec<Vec<Range<usize>>>,
     /// The metronome's clicks from the song's start.
     pub(crate) clicks: Vec<Click>,
     /// The count-in's clicks from the count-in's start, and its length.
@@ -152,34 +142,10 @@ impl Schedule {
             a.end.total_cmp(&b.end).then(a.id.cmp(&b.id))
         });
         let most_at_once = most_at_once(&notes, &ends, sources);
-        // A track's controls reach its own effects and its chord voice's
-        // copy of them (route `tracks + t`): one pedal for both.
-        let mut controls = Vec::new();
-        let mut control_runs: Vec<Vec<Range<usize>>> = vec![Vec::new(); sources];
-        let tracks = timeline.controls.len();
-        for (r, route) in routes.iter().enumerate() {
-            let (Some(route), Some(points)) = (route, timeline.controls.get(r % tracks.max(1)))
-            else {
-                continue;
-            };
-            let Some(runs) = control_runs.get_mut(route.source) else {
-                continue;
-            };
-            if points.is_empty() {
-                continue;
-            }
-            if runs.len() <= route.slot {
-                runs.resize(route.slot + 1, 0..0);
-            }
-            runs[route.slot] = controls.len()..controls.len() + points.len();
-            controls.extend_from_slice(points);
-        }
         Schedule {
             notes,
             ends,
             pitch,
-            controls,
-            control_runs,
             clicks: timeline.clicks.clone(),
             count_in: timeline.count_in.clone(),
             count_in_length: timeline.count_in_length,
@@ -191,14 +157,6 @@ impl Schedule {
     /// How long the song plays, in seconds at 100 % speed.
     pub fn length(&self) -> f64 {
         self.length
-    }
-
-    /// The control curves of the tracks `source` plays.
-    pub(crate) fn controls_of(&self, source: usize) -> Controls<'_> {
-        Controls {
-            points: &self.controls,
-            runs: self.control_runs.get(source).map_or(&[], Vec::as_slice),
-        }
     }
 
     /// The number of notes routed to a source.

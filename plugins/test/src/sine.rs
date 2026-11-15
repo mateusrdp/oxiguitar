@@ -5,18 +5,16 @@
 //! note's pitch (its curve followed), starting on the frame of its event
 //! with no fade in and stopping on the frame of its end, so the contract
 //! suite can find every note's first and last frame exactly. And the
-//! effect `gain`, which halves a track, and follows the track's wah pedal
-//! as a volume pedal (interface 1.8), so the suite can see the pedal's
-//! curve in the sound.
+//! effect `gain`, which halves a track, and follows the score (interface
+//! 1.8): it is silent while a beat the tool `stamp` marked plays.
 //!
 //! For the suite's own tests, a track whose settings hold `"misbehave":
 //! true` breaks the real-time rules on purpose (it allocates and yields its
 //! thread, a system call, on every render), and `"late": N` starts its
 //! notes N frames late.
 
-use oxiguitar_plugin::audio::{
-    Controls, Piece, Prepare, PrepareEffect, RtEventKind, RtNote, control,
-};
+use oxiguitar_plugin::audio::{Piece, PlayedBeat, Prepare, PrepareEffect, RtEventKind, RtNote};
+use oxiguitar_plugin::score2::BeatExt;
 use oxiguitar_plugin::{Effect, Error, Instrument, Processor, Renderer, Update};
 
 /// The most notes sounding at once; more are dropped.
@@ -164,15 +162,32 @@ struct Scale {
     target: f32,
     /// What the gain changes by a frame until it reaches the target.
     step: f32,
+    /// When the stamped beats play, in the score's seconds (interface
+    /// 1.8): the track is silent then.
+    stamped: Vec<(f64, f64)>,
 }
 
 impl Effect for Gain {
     fn prepare(&self, prepare: &PrepareEffect) -> Result<Box<dyn Processor>, Error> {
+        self.prepare_following(prepare, &[])
+    }
+
+    fn prepare_following(
+        &self,
+        prepare: &PrepareEffect,
+        beats: &[PlayedBeat],
+    ) -> Result<Box<dyn Processor>, Error> {
         let gain = level(prepare);
+        let ours = |e: &BeatExt| matches!(e, BeatExt::Plugin { plugin, .. } if plugin == crate::ID);
         Ok(Box::new(Scale {
             gain,
             target: gain,
             step: 0.0,
+            stamped: beats
+                .iter()
+                .filter(|b| b.ext.iter().any(ours))
+                .map(|b| (b.start, b.end))
+                .collect(),
         }))
     }
 
@@ -199,13 +214,17 @@ impl Processor for Scale {
         }
     }
 
-    /// While the wah pedal has a value, the track is also scaled by it.
-    fn process_with(&mut self, left: &mut [f32], right: &mut [f32], controls: &Controls<'_>) {
+    fn process_at(&mut self, left: &mut [f32], right: &mut [f32], time: f64, step: f64) {
         self.process(left, right);
+        // The score isn't playing, or nothing is stamped.
+        if step == 0.0 || self.stamped.is_empty() {
+            return;
+        }
         for (frame, (l, r)) in left.iter_mut().zip(right.iter_mut()).enumerate() {
-            if let Some(pedal) = controls.value_at(control::WAH, frame) {
-                *l *= pedal as f32;
-                *r *= pedal as f32;
+            let at = time + frame as f64 * step;
+            if self.stamped.iter().any(|&(a, b)| at >= a && at < b) {
+                *l = 0.0;
+                *r = 0.0;
             }
         }
     }

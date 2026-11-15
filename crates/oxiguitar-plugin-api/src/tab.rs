@@ -36,6 +36,11 @@ pub enum Area {
     Left,
     /// Right of the page (Inspector).
     Right,
+    /// None of the areas: the tab is a dialog, shown over the window with
+    /// OK and Cancel when the plugin opens it
+    /// ([`crate::message::HostRequest::OpenDialog`]) and closed by the
+    /// user ([`crate::message::Request::TabClosed`]). Since interface 1.8.
+    Dialog,
 }
 
 /// A tab, as the manifest declares it.

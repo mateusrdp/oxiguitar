@@ -308,6 +308,54 @@ pub enum Request<'a> {
         /// The track's settings it follows now, a JSON object as text.
         previous: String,
     },
+    /// Prepare an effect whose manifest entry says it follows the score
+    /// (`"follows_score": true`): as [`Request::PrepareEffect`], with the
+    /// track's marked beats as they will be played. Answered with
+    /// [`Answer::Prepared`]. Since interface 1.8.
+    PrepareFollowing(Box<PrepareFollowing>),
+    /// The user closed the dialog `tab` (a tab whose area is `dialog`),
+    /// with OK (`ok`) or with Cancel or Escape. Answered with
+    /// [`Answer::Done`]. Since interface 1.8.
+    TabClosed {
+        /// The tab's id.
+        tab: String,
+        /// Closed with OK.
+        ok: bool,
+    },
+}
+
+/// What an effect that follows the score is prepared for. Since interface
+/// 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PrepareFollowing {
+    /// What every effect is prepared for.
+    pub prepare: PrepareEffect,
+    /// Every beat of the track that carries a mark (a beat extension of the
+    /// score, version 2: the notation's marks and plugins' own data), each
+    /// time it is played, in time order. A beat a repeat plays twice is
+    /// here twice.
+    pub beats: Vec<PlayedBeat>,
+}
+
+/// A marked beat of a track as the player plays it. Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PlayedBeat {
+    /// When it starts, in seconds of the score at 100 % speed: the clock
+    /// of [`crate::realtime::ProcessCall::time`].
+    pub start: f64,
+    /// When it ends.
+    pub end: f64,
+    /// Its staff in the track, from 0.
+    pub staff: u32,
+    /// Its bar, from 0.
+    pub bar: u32,
+    /// Its voice in the bar, from 0.
+    pub voice: u32,
+    /// Its place in the voice, from 0.
+    pub beat: u32,
+    /// Its marks: the beat's extensions, as the plugin's interface version
+    /// knows them. Never empty.
+    pub ext: Vec<crate::score2::BeatExt>,
 }
 
 /// What an instrument is prepared for. Since interface 1.3.
@@ -670,6 +718,24 @@ pub enum HostRequest<'a> {
     /// not: a plugin can't tell, and asks again whenever its reason holds.
     /// Since interface 1.4.
     Advise(Advice),
+    /// Bring the tab `tab` (an id from the manifest) to the front of its
+    /// area, opening the area if it is closed: for a tool whose controls
+    /// are in a tab. Answered with [`HostAnswer::Done`]; a program without
+    /// a window does nothing. Since interface 1.8.
+    ShowTab {
+        /// The tab's id.
+        tab: String,
+    },
+    /// Open the dialog `tab` (an id of a tab whose area is `dialog`) over
+    /// the window: the host asks for its contents as for any tab, and
+    /// tells the plugin when the user closes it ([`Request::TabClosed`]).
+    /// One dialog at a time: a request while another is open is refused.
+    /// Answered with [`HostAnswer::Done`]; a program without a window
+    /// refuses. Since interface 1.8.
+    OpenDialog {
+        /// The tab's id.
+        tab: String,
+    },
 }
 
 /// The longest an [`Advice`]'s id may be, in characters.

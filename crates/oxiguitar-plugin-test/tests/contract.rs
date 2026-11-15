@@ -114,22 +114,34 @@ fn discover(folders: &[PathBuf], settings: SharedSettings) -> (Plugins, Arc<Hear
 fn the_test_plugin_passes_the_contract() {
     let report = oxiguitar_plugin_test::check(test_oxp());
     assert!(report.ok(), "failed: {:#?}", report.failed);
-    // 12 for formats and services; 2 tabs; 10 uses of the panel's widgets
-    // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
-    // of event, the selection in both its forms; 2 tools; the settings
-    // window and its 2 widgets; the track section and its 2 widgets; 2
-    // instruments and an effect, 4 real-time checks each; the effect's 3
-    // checks of an update (interface 1.5); the exporter's 3 checks.
+    // 12 for formats and services; 3 tabs; 10 uses of the panel's widgets
+    // (2 buttons, 5 other widgets, 3 pointer events on its canvas) and 4
+    // of the dialog's (its button, 3 pointer events), which is then closed
+    // (interface 1.8); 3 kinds of event, the selection in both its forms; 4
+    // tools; the settings window and its 2 widgets; the track section and
+    // its 2 widgets; 2 instruments and an effect, 4 real-time checks each;
+    // the effect's 3 checks of an update (interface 1.5); the exporter's 3
+    // checks.
     assert_eq!(
         report.passed.len(),
-        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4 + 3 + 3,
+        12 + 3 + 10 + 4 + 1 + 4 + 4 + 3 + 3 + 3 * 4 + 3 + 3,
         "{:#?}",
         report.passed
     );
-    // The tool `link` says something on purpose.
-    assert_eq!(report.messages.len(), 1, "{:?}", report.messages);
+    // The tool `link` and the closed dialog say something on purpose.
     assert!(
-        report.messages[0].contains("A footer message with a link"),
+        report
+            .messages
+            .iter()
+            .any(|m| m.contains("A footer message with a link")),
+        "{:?}",
+        report.messages
+    );
+    assert!(
+        report
+            .messages
+            .iter()
+            .any(|m| m.contains("The test dialog was closed with Cancel")),
         "{:?}",
         report.messages
     );
@@ -392,6 +404,7 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
         [
             ("panel".into(), "Test".into(), Area::Bottom),
             ("side".into(), "Test side".into(), Area::Right),
+            ("ask".into(), "Test Dialog".into(), Area::Dialog),
         ]
     );
     assert!(!plugins.found()[0].is_loaded());
@@ -548,7 +561,7 @@ fn a_plugin_that_fails_is_withdrawn_as_if_it_were_not_installed() {
     let opened = plugins.open(file, Some("oxgtest")).unwrap();
     assert_eq!(opened.format.plugin.name(), "Test plugin");
     assert_eq!(opened.read.score.info.title, "Tarde em Itapuã");
-    assert_eq!(plugins.tabs().len(), 2);
+    assert_eq!(plugins.tabs().len(), 3);
     assert!(plugins.wants(EventKind::Score));
 
     // An ordinary error is an answer, not a failure.
@@ -825,7 +838,7 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
     // The test plugin's tool, from its manifest; the second plugin (1.1)
     // has none.
     let tools = plugins.tools();
-    assert_eq!(tools.len(), 2);
+    assert_eq!(tools.len(), 4);
     assert_eq!(tools[0].spec.name, "Mark the Title");
     assert_eq!(plugins.run_tool(tools[0]).unwrap(), "No score is open.");
 
@@ -1355,21 +1368,159 @@ fn the_player_puts_each_track_s_effects_after_its_instrument() {
     );
 }
 
-/// Interface 1.8 (#250): an effect gets the score's time and its track's
-/// control curves with every call. The test plugin's gain follows the wah
-/// pedal as a volume pedal.
-#[test]
-fn an_effect_follows_its_track_s_control_curves() {
-    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
-    use oxiguitar_host::api::realtime::{ControlPoint, control};
+/// The window, for interface 1.8: a score plugins change, and what they ask
+/// the window to show.
+#[derive(Default)]
+struct Window {
+    score: Mutex<Option<(u64, oxiguitar_host::api::score2::Score2)>>,
+    said: Mutex<Vec<String>>,
+    dialogs: Mutex<Vec<(TabId, String)>>,
+    shown: Mutex<Vec<TabId>>,
+}
 
-    let dir = folder("controls", &["test.oxp"]);
-    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
-    let effect = plugins
+impl Core for Window {
+    fn notify(&self, _level: Level, text: String) {
+        self.said.lock().unwrap().push(text);
+    }
+
+    fn score2(&self) -> Option<(u64, oxiguitar_host::api::score2::Score2)> {
+        self.score.lock().unwrap().clone()
+    }
+
+    fn apply(
+        &self,
+        _plugin: &str,
+        revision: u64,
+        _name: String,
+        score: oxiguitar_host::api::score2::Score2,
+    ) -> Result<(), String> {
+        *self.score.lock().unwrap() = Some((revision + 1, score));
+        Ok(())
+    }
+
+    fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
+        self.dialogs
+            .lock()
+            .unwrap()
+            .push((tab.clone(), title.to_owned()));
+        Ok(())
+    }
+
+    fn show_tab(&self, tab: &TabId) {
+        self.shown.lock().unwrap().push(tab.clone());
+    }
+}
+
+/// Interface 1.8 (#250, #293): tools in the palette and in any menu,
+/// dialogs, a tab brought to the front, what a plugin keeps on a beat, and
+/// an effect that follows the score.
+#[test]
+fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
+    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
+    use oxiguitar_host::api::score2::BeatExt;
+    use oxiguitar_play::plugin_source::plan;
+
+    let dir = folder("one-eight", &["test.oxp"]);
+    let core = Arc::new(Window::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        core.clone(),
+    );
+
+    // Where each tool goes comes from the manifest alone.
+    let palette: Vec<(String, Option<char>, Option<String>)> = plugins
+        .palette_tools()
+        .iter()
+        .map(|t| {
+            let at = t.spec.palette.as_ref().unwrap();
+            (at.section.clone(), at.symbol_char(), at.text.clone())
+        })
+        .collect();
+    assert_eq!(
+        palette,
+        [
+            ("Effects".to_owned(), None, Some("T!".to_owned())),
+            ("Test tools".to_owned(), Some('\u{E4A0}'), None),
+        ]
+    );
+    let menus: Vec<(String, String)> = plugins
+        .menu_tools()
+        .iter()
+        .map(|(menu, t)| (menu.clone(), t.spec.id.clone()))
+        .collect();
+    assert_eq!(
+        menus,
+        [
+            ("tools".to_owned(), "mark".to_owned()),
+            ("tools".to_owned(), "link".to_owned()),
+            ("test".to_owned(), "stamp".to_owned()),
+            ("page".to_owned(), "ask".to_owned()),
+        ]
+    );
+    let tool = |id: &str| {
+        plugins
+            .tools()
+            .into_iter()
+            .find(|t| t.spec.id == id)
+            .unwrap()
+    };
+
+    // The palette's tool keeps the plugin's data on a beat of the score.
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let score = oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
+        .unwrap()
+        .score;
+    *core.score.lock().unwrap() = Some((1, oxiguitar_model::wire::to_wire2(&score)));
+    assert_eq!(plugins.run_tool(tool("stamp")).unwrap(), "");
+    let (revision, stamped) = core.score.lock().unwrap().clone().unwrap();
+    assert_eq!(revision, 2);
+    let ours = |e: &BeatExt| matches!(e, BeatExt::Plugin { plugin, data } if plugin == "oxiguitar.test" && data == r#"{"stamped":true}"#);
+    // The core's score carries it with the beat.
+    let score = oxiguitar_model::wire::from_wire2(stamped.clone()).unwrap();
+    let kept: Vec<_> = score.tracks[0].beat_plugins();
+    assert_eq!(kept.len(), 1);
+    assert_eq!(
+        kept[0].1.get("oxiguitar.test").map(String::as_str),
+        Some(r#"{"stamped":true}"#)
+    );
+    // No format is sent it, and it is no loss: it is saved beside the score.
+    let format = plugins
+        .writers()
+        .into_iter()
+        .find(|f| f.spec.id == "oxgtest")
+        .unwrap();
+    let written = plugins.write(format, &stamped).unwrap();
+    assert!(
+        written
+            .losses
+            .iter()
+            .all(|l| !l.message.contains("plugins")),
+        "{:?}",
+        written.losses
+    );
+
+    // An effect that follows the score is planned with its track's marked
+    // beats as played, and prepared with them: the test plugin's gain is
+    // silent while the stamped beat plays.
+    let planned = plan(&plugins, &score);
+    let pick = &planned.groups[0].effects[0][0];
+    assert_eq!(pick.effect, "gain");
+    let beat = pick
+        .beats
+        .iter()
+        .find(|b| b.ext.iter().any(ours))
+        .expect("the stamped beat is among the track's played beats");
+    assert!(beat.end > beat.start);
+    assert!(pick.beats.windows(2).all(|w| w[0].start <= w[1].start));
+    let gain = plugins
         .effects_for(InstrumentClass::Fretted)
         .into_iter()
         .find(|e| e.spec.id == "gain")
         .unwrap();
+    assert!(plugins.follows_score(gain));
     let prepare = PrepareEffect {
         effect: "gain".into(),
         rate: 48_000,
@@ -1387,39 +1538,63 @@ fn an_effect_follows_its_track_s_control_curves() {
             settings: r#"{"level":1.0}"#.into(),
         },
     };
-    let mut instance = plugins.prepare_effect(effect, prepare).unwrap();
-    let point = |control, time, value| ControlPoint {
-        time,
-        value,
-        control,
+    let mut instance = plugins
+        .prepare_effect_following(gain, prepare, &pick.beats)
+        .unwrap();
+    let step = 1.0 / 48_000.0;
+    let mut run = |time: f64, step: f64| {
+        let (mut l, mut r) = (vec![1.0f32; 64], vec![1.0f32; 64]);
+        assert!(instance.process(&mut l, &mut r, time, step));
+        assert_eq!(l, r);
+        l
     };
-    // The pedal goes from heel to toe over frames 100 to 200 of a second
-    // cut into 400 frames, then off; another control is ignored.
-    let step = 1.0 / 400.0;
-    let pedal = [
-        point(control::WAH, 100.0 * step, 0.0),
-        point(control::WAH, 200.0 * step, 1.0),
-        point(control::WAH, 200.0 * step, f32::NAN),
-        point(control::WAH_Q, 0.0, 4.0),
-        point(control::WAH_Q, 1.0, f32::NAN),
-    ];
-    let (mut l, mut r) = (vec![1.0f32; 300], vec![1.0f32; 300]);
-    assert!(instance.process(&mut l, &mut r, 0.0, step, &pedal));
-    assert!(l[..100].iter().all(|&v| v == 1.0), "off before its run");
-    assert!(l[200..].iter().all(|&v| v == 1.0), "off after it");
-    for (frame, &v) in l.iter().enumerate().take(200).skip(100) {
-        let position = (frame - 100) as f32 / 100.0;
-        assert!((v - position).abs() < 1e-5, "frame {frame}: {v}");
-    }
-    assert_eq!(l, r);
-    // A later call starts where the score is by then.
-    let (mut l, mut r) = (vec![1.0f32; 50], vec![1.0f32; 50]);
-    assert!(instance.process(&mut l, &mut r, 150.0 * step, step, &pedal));
-    assert!((l[0] - 0.5).abs() < 1e-5 && (l[49] - 0.99).abs() < 1e-5);
-    // Nothing plays: no curve, no pedal.
-    let (mut l, mut r) = (vec![1.0f32; 50], vec![1.0f32; 50]);
-    assert!(instance.process(&mut l, &mut r, 150.0 * step, 0.0, &[]));
-    assert!(l.iter().all(|&v| v == 1.0));
+    let middle = (beat.start + beat.end) / 2.0;
+    assert!(
+        run(middle, step).iter().all(|&v| v == 0.0),
+        "silent under it"
+    );
+    assert!(run(beat.end + 0.01, step).iter().all(|&v| v == 1.0));
+    // The score isn't playing: nothing is followed.
+    assert!(run(middle, 0.0).iter().all(|&v| v == 1.0));
+    // The beat's last frames: silent up to its end, then back.
+    let across = run(beat.end - 32.0 * step, step);
+    assert!(across[0] == 0.0 && across[63] == 1.0, "{across:?}");
+
+    // The other tool brings a tab to the front and opens its dialog, a tab
+    // in no area; the dialog is told how the user closed it.
+    assert_eq!(plugins.run_tool(tool("ask")).unwrap(), "");
+    let side = TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: "side".into(),
+    };
+    let ask = TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: "ask".into(),
+    };
+    assert_eq!(*core.shown.lock().unwrap(), [side]);
+    assert_eq!(
+        *core.dialogs.lock().unwrap(),
+        [(ask.clone(), "Test Dialog".to_owned())]
+    );
+    let content = plugins.tab_content(&ask).unwrap();
+    assert!(
+        matches!(&content.rows[0].widgets[0], Widget::Button { text, .. } if text == "Clicked 0 times")
+    );
+    assert!(matches!(&content.rows[1].widgets[0], Widget::Canvas(_)));
+    let content = plugins.tab_event(&ask, "more", TabEvent::Clicked).unwrap();
+    assert!(
+        matches!(&content.rows[0].widgets[0], Widget::Button { text, .. } if text == "Clicked 1 times")
+    );
+    plugins.tab_closed(&ask, true);
+    assert!(
+        core.said
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|s| s.contains("closed with OK after 1 clicks")),
+        "{:?}",
+        core.said.lock().unwrap()
+    );
 }
 
 /// Interface 1.5 (#232): an effect follows its track's new settings
@@ -1456,7 +1631,7 @@ fn an_effect_follows_new_settings_while_it_runs() {
     let mut instance = plugins.prepare_effect(effect, prepare(0.5)).unwrap();
     let run = |instance: &mut oxiguitar_host::realtime::Instance| {
         let (mut l, mut r) = (vec![1.0f32; 128], vec![1.0f32; 128]);
-        assert!(instance.process(&mut l, &mut r, 0.0, 0.0, &[]));
+        assert!(instance.process(&mut l, &mut r, 0.0, 0.0));
         l
     };
     assert!(run(&mut instance).iter().all(|&v| (v - 0.5).abs() < 1e-6));

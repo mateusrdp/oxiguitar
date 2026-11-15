@@ -322,6 +322,15 @@ pub trait Tab: Send + Sync {
         let _ = (widget, event);
         Ok(())
     }
+
+    /// For a dialog (a tab whose area is `dialog`, interface 1.8): the
+    /// user closed it, with OK (`ok`) or with Cancel or Escape. What the
+    /// dialog changes, it changes now ([`Host::apply`] for the score). An
+    /// error is shown in the footer. The default does nothing.
+    fn closed(&self, ok: bool) -> Result<(), Error> {
+        let _ = ok;
+        Ok(())
+    }
 }
 
 /// Reads one file format into a score.
@@ -478,6 +487,10 @@ pub fn dispatch_kept(
             tab.on(&widget, event)?;
             Ok(Answer::Tab(Box::new(tab.content())))
         }
+        Request::TabClosed { tab, ok } => {
+            find_tab(plugin, &tab)?.closed(ok)?;
+            Ok(Answer::Done)
+        }
         Request::Event(event) => {
             plugin.event(&event);
             Ok(Answer::Done)
@@ -527,6 +540,15 @@ pub fn dispatch_kept(
                 Error::not_found(format!("this plugin has no effect {:?}", p.effect))
             })?;
             prepared(keeper, audio::Instance::Effect(effect.prepare(&p)?))
+        }
+        Request::PrepareFollowing(p) => {
+            let effect = plugin.effect(&p.prepare.effect).ok_or_else(|| {
+                Error::not_found(format!("this plugin has no effect {:?}", p.prepare.effect))
+            })?;
+            prepared(
+                keeper,
+                audio::Instance::Effect(effect.prepare_following(&p.prepare, &p.beats)?),
+            )
         }
         Request::Release { instance } => {
             if keeper.release(instance) {
@@ -807,6 +829,29 @@ impl Host {
         let _ = self.0.request(HostRequest::Redraw { tab: tab.into() });
     }
 
+    /// Asks the core to open the dialog `tab` (the id of a tab whose area
+    /// is `dialog`) over the window (interface 1.8): it asks for the
+    /// dialog's [`Tab::content`], sends its widgets' events to [`Tab::on`]
+    /// and tells [`Tab::closed`] how the user closed it. An error when it
+    /// can't be opened: another dialog is open, or there is no window.
+    pub fn open_dialog(&self, tab: &str) -> Result<(), Error> {
+        match self
+            .0
+            .request(HostRequest::OpenDialog { tab: tab.into() })?
+        {
+            HostAnswer::Done => Ok(()),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Asks the core to bring the tab `tab` (an id from the manifest) to
+    /// the front of its area, opening the area if it is closed (interface
+    /// 1.8): for a tool whose controls are in a tab. A request that can't
+    /// be made is dropped.
+    pub fn show_tab(&self, tab: &str) {
+        let _ = self.0.request(HostRequest::ShowTab { tab: tab.into() });
+    }
+
     /// The open score, or `None` when none is open: what a plugin asks for
     /// after [`Event::ScoreOpened`] or [`Event::ScoreChanged`].
     pub fn score(&self) -> Result<Option<score::Score>, Error> {
@@ -860,7 +905,12 @@ impl HostServices for Detached {
             | HostRequest::Notify2 { .. }
             | HostRequest::SetSettings { .. }
             | HostRequest::Redraw { .. }
+            | HostRequest::ShowTab { .. }
             | HostRequest::Advise(_) => Ok(HostAnswer::Done),
+            HostRequest::OpenDialog { .. } => Err(Error::new(
+                ErrorKind::Failed,
+                "a detached host has no window to show a dialog in",
+            )),
             HostRequest::Settings => Ok(HostAnswer::Settings("{}".into())),
             HostRequest::Score => Ok(HostAnswer::Score(None)),
             HostRequest::Score2 => Ok(HostAnswer::Score2 {

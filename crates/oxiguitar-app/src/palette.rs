@@ -81,6 +81,9 @@ const fn dynamic(id: &'static str, name: &'static str, g: Glyph) -> Tool {
 /// they have one: the voice buttons, which pick the caret's voice (M3
 /// slice 1), and note entry's (slice 3).
 pub(crate) fn working(id: &str) -> Option<Option<&'static str>> {
+    if plugin_tool_of(id).is_some() {
+        return Some(None);
+    }
     Some(Some(match id {
         "voice-1" => "Ctrl + 1",
         "voice-2" => "Ctrl + 2",
@@ -189,8 +192,7 @@ pub(crate) fn command_of(id: &str) -> Option<Command> {
 pub(crate) fn effect_of(id: &str) -> Option<Effect> {
     use oxiguitar_edit::HarmonicKind as H;
     use oxiguitar_model::{
-        Beaming, BeatTechnique, Golpe, GraceKind, Hairpin, Ornament, Ottava, Slide,
-        StrokeDirection, Wah,
+        Beaming, BeatTechnique, Golpe, GraceKind, Hairpin, Ornament, Ottava, Slide, StrokeDirection,
     };
     Some(match id {
         "ghost" => Effect::Ghost,
@@ -233,8 +235,6 @@ pub(crate) fn effect_of(id: &str) -> Option<Effect> {
         "string-number" => Effect::StringNumber,
         "fade-out" => Effect::FadeOut,
         "volume-swell" => Effect::VolumeSwell,
-        "wah-open" => Effect::Wah(Wah::Open),
-        "wah-closed" => Effect::Wah(Wah::Closed),
         "arpeggio-down" => Effect::Arpeggio(StrokeDirection::Down),
         "arpeggio-up" => Effect::Arpeggio(StrokeDirection::Up),
         "rasgueado" => Effect::Rasgueado,
@@ -274,8 +274,6 @@ pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
         "text" => Dialog::Text,
         "lyrics" => Dialog::Lyrics,
         "whammy" => Dialog::Whammy,
-        "wah-open" => Dialog::Wah(oxiguitar_model::Wah::Open),
-        "wah-closed" => Dialog::Wah(oxiguitar_model::Wah::Closed),
         _ => return None,
     })
 }
@@ -354,6 +352,10 @@ impl Default for Palette {
 impl Palette {
     /// A click on group `i`'s heading collapses or expands it.
     pub(crate) fn toggle(&mut self, i: usize) {
+        // A plugin's own group comes after the core's.
+        if i >= self.collapsed.len() {
+            self.collapsed.resize(i + 1, false);
+        }
         if let Some(c) = self.collapsed.get_mut(i) {
             *c = !*c;
         }
@@ -364,7 +366,116 @@ impl Palette {
     }
 }
 
-/// Every tool, in order, with its group's index.
+/// A tool a plugin adds to the palette (plugin interface 1.8): its
+/// manifest says where it goes and what its button shows, and a click runs
+/// the plugin's tool.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct PluginTool {
+    /// The plugin's id.
+    pub(crate) plugin: String,
+    /// The tool's id in the plugin.
+    pub(crate) tool: String,
+    /// The tool's name: the button's tooltip.
+    pub(crate) name: String,
+    /// The heading of the group it joins.
+    pub(crate) section: String,
+    /// What the button shows: a symbol of the music font, or else `text`.
+    pub(crate) symbol: Option<char>,
+    pub(crate) text: String,
+}
+
+/// The palette's id of a plugin's tool: plugin ids and tool ids hold no
+/// colon, and no tool of the core's starts so.
+pub(crate) fn plugin_tool_id(plugin: &str, tool: &str) -> String {
+    format!("plugin:{plugin}:{tool}")
+}
+
+/// The plugin and tool a palette id names, when it is a plugin's.
+pub(crate) fn plugin_tool_of(id: &str) -> Option<(&str, &str)> {
+    id.strip_prefix("plugin:")?.split_once(':')
+}
+
+/// A tool as the window shows it: the core's, or a plugin's.
+#[derive(Clone, Debug)]
+pub(crate) struct ShownTool {
+    pub(crate) id: String,
+    pub(crate) name: String,
+    pub(crate) face: Face,
+    pub(crate) fit: Fit,
+}
+
+/// A group as the window shows it.
+#[derive(Clone, Debug)]
+pub(crate) struct ShownGroup {
+    pub(crate) title: String,
+    pub(crate) tools: Vec<ShownTool>,
+}
+
+/// A plugin button's text as a face keeps it. Faces are `Copy` and hold
+/// `&'static str`, as the core's own are constants; a plugin's label is
+/// kept for the rest of the session, once per distinct label (the
+/// installed plugins' few palette tools, read once at start).
+fn kept(text: &str) -> &'static str {
+    static KEPT: std::sync::Mutex<Vec<&'static str>> = std::sync::Mutex::new(Vec::new());
+    let mut kept = KEPT
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(found) = kept.iter().find(|k| **k == text) {
+        return found;
+    }
+    let leaked: &'static str = Box::leak(text.to_owned().into_boxed_str());
+    kept.push(leaked);
+    leaked
+}
+
+/// The palette with the plugins' tools: each after the core's tools of
+/// the group whose heading its section names (letter case aside), or in a
+/// group of its own after the core's groups, in the order given.
+pub(crate) fn shown(plugin_tools: &[PluginTool]) -> Vec<ShownGroup> {
+    let mut groups: Vec<ShownGroup> = GROUPS
+        .iter()
+        .map(|g| ShownGroup {
+            title: g.title.to_owned(),
+            tools: g
+                .tools
+                .iter()
+                .map(|t| ShownTool {
+                    id: t.id.to_owned(),
+                    name: t.name.to_owned(),
+                    face: t.face,
+                    fit: t.fit,
+                })
+                .collect(),
+        })
+        .collect();
+    for t in plugin_tools {
+        let (face, fit) = match t.symbol {
+            Some(cp) => (Face::Symbol(glyph("plugin", cp)), Fit::Own),
+            None => (Face::Text(kept(t.text.trim())), Fit::Text),
+        };
+        let tool = ShownTool {
+            id: plugin_tool_id(&t.plugin, &t.tool),
+            name: t.name.clone(),
+            face,
+            fit,
+        };
+        let section = t.section.trim();
+        match groups
+            .iter_mut()
+            .find(|g| g.title.eq_ignore_ascii_case(section))
+        {
+            Some(g) => g.tools.push(tool),
+            None => groups.push(ShownGroup {
+                title: section.to_owned(),
+                tools: vec![tool],
+            }),
+        }
+    }
+    groups
+}
+
+/// Every tool of the core's, in order, with its group's index.
+#[cfg(test)]
 pub(crate) fn tools() -> impl Iterator<Item = (usize, &'static Tool)> {
     GROUPS
         .iter()
@@ -426,8 +537,6 @@ const TURN_INVERTED: Glyph = glyph("ornamentTurnInverted", '\u{E568}');
 const TRILL: Glyph = glyph("ornamentTrill", '\u{E566}');
 const VIBRATO: Glyph = glyph("guitarVibratoStroke", '\u{EAB2}');
 const VIBRATO_WIDE: Glyph = glyph("guitarWideVibratoStroke", '\u{EAB3}');
-const MUTE_CLOSED: Glyph = glyph("brassMuteClosed", '\u{E5E5}');
-const MUTE_OPEN: Glyph = glyph("brassMuteOpen", '\u{E5E7}');
 const DOWN_BOW: Glyph = glyph("stringsDownBow", '\u{E610}');
 const UP_BOW: Glyph = glyph("stringsUpBow", '\u{E612}');
 
@@ -637,8 +746,6 @@ pub(crate) const GROUPS: &[Group] = &[
                 "Wide Bridge Vibrato",
                 Face::Drawn(wide_bridge_vibrato),
             ),
-            tool("wah-closed", "Closed Wah-Wah", Face::Symbol(MUTE_CLOSED)),
-            tool("wah-open", "Open Wah-Wah", Face::Symbol(MUTE_OPEN)),
             tool(
                 "arpeggio-down",
                 "Downward Arpeggio",
@@ -1385,6 +1492,51 @@ mod tests {
     }
 
     #[test]
+    fn plugins_tools_join_their_group_or_make_one() {
+        let plugin_tool =
+            |tool: &str, section: &str, symbol: Option<char>, text: &str| PluginTool {
+                plugin: "me.pedal".into(),
+                tool: tool.into(),
+                name: format!("Tool {tool}"),
+                section: section.into(),
+                symbol,
+                text: text.into(),
+            };
+        let shown = shown(&[
+            plugin_tool("open", "effects", Some('\u{E5E7}'), ""),
+            plugin_tool("loop", "Practice", None, " A-B "),
+            plugin_tool("count", "practice", None, "1 2"),
+        ]);
+        let titles: Vec<&str> = shown.iter().map(|g| g.title.as_str()).collect();
+        assert_eq!(
+            titles,
+            [
+                "Voices and modes",
+                "Bar",
+                "Note",
+                "Effects",
+                "Notation",
+                "Practice"
+            ]
+        );
+        // After the core's own tools of the group.
+        let effects = &shown[3].tools;
+        assert_eq!(effects.len(), GROUPS[3].tools.len() + 1);
+        let last = effects.last().unwrap();
+        assert_eq!(last.id, "plugin:me.pedal:open");
+        assert_eq!(plugin_tool_of(&last.id), Some(("me.pedal", "open")));
+        assert_eq!(plugin_tool_of("bend"), None);
+        assert!(matches!(last.face, Face::Symbol(g) if g.cp == '\u{E5E7}'));
+        assert!(matches!(shown[5].tools[0].face, Face::Text("A-B")));
+        assert_eq!(shown[5].tools.len(), 2);
+        // A plugin's tool works with a score open and has no shortcut.
+        assert_eq!(working(&last.id), Some(None));
+        assert_eq!(tool_tip(&last.id, &last.name), "Tool open");
+        // Without plugins the palette is the core's.
+        assert_eq!(super::shown(&[]).len(), GROUPS.len());
+    }
+
+    #[test]
     fn guitar_pro_8s_groups_and_counts() {
         let titles: Vec<&str> = GROUPS.iter().map(|g| g.title).collect();
         assert_eq!(
@@ -1394,7 +1546,7 @@ mod tests {
         // As many tools as the GP8 guide lists for each group, less the
         // automation group, Timer and both stem-direction tools.
         let counts: Vec<usize> = GROUPS.iter().map(|g| g.tools.len()).collect();
-        assert_eq!(counts, [8, 13, 34, 56, 10]);
+        assert_eq!(counts, [8, 13, 34, 54, 10]);
         let mut ids: Vec<&str> = tools().map(|(_, t)| t.id).collect();
         ids.sort_unstable();
         ids.dedup();
@@ -1511,8 +1663,10 @@ mod tests {
         assert!(p.collapsed(2) && !p.collapsed(1));
         p.toggle(2);
         assert!(!p.collapsed(2));
-        p.toggle(99);
-        assert!(!p.collapsed(99));
+        // A plugin's own group, after the core's.
+        assert!(!p.collapsed(7));
+        p.toggle(7);
+        assert!(p.collapsed(7) && !p.collapsed(6));
     }
 
     /// Writes every icon at 32 and 64 px into one picture, to look at:

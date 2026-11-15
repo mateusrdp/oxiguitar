@@ -59,7 +59,6 @@ mod sound;
 mod speed;
 #[cfg(test)]
 mod test_support;
-mod wah_form;
 #[cfg(test)]
 use test_support::test_plugins;
 mod track_form;
@@ -90,7 +89,7 @@ use slint::{
 };
 
 use crate::canvas::{Sheets, TILE};
-use crate::document::{FULLEST, OpenScore, SaveFormat, Settings, ToolEntry, TrackInfo};
+use crate::document::{OpenScore, SaveFormat, Settings, ToolEntry, TrackInfo};
 use crate::footer::{Footer, level_code};
 use crate::plugin_tabs::TabThread;
 use crate::prefs::ViewPrefs;
@@ -106,8 +105,8 @@ mod ui {
 use ui::{
     AdviceLink, AppWindow, AreaState, BoxItem, FooterRow, GridPoint, InspectorField,
     InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow,
-    PluginRow, PluginSection, PluginSettingsWindow, PluginWidget, ShortcutLine, SongField,
-    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    PluginMenu, PluginMenuItem, PluginRow, PluginSection, PluginSettingsWindow, PluginWidget,
+    ShortcutLine, SongField, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -144,6 +143,9 @@ struct App {
     /// The palette's icons, measured on a thread of their own at start so
     /// the window never waits for them; `None` until they are.
     palette_icons: Option<Arc<icons::IconSet>>,
+    /// The palette as shown: the core's groups with the plugins' tools
+    /// (interface 1.8).
+    palette_shown: Arc<Vec<palette::ShownGroup>>,
     /// Which palette groups are collapsed.
     palette: palette::Palette,
     /// The scale the icons were drawn for.
@@ -194,7 +196,10 @@ struct App {
     /// canvases; what it last answered for each tab; what each area shows.
     tab_thread: Option<TabThread>,
     plugin_tabs: HashMap<TabId, PluginTabState>,
-    plugin_views: [PluginView; 4],
+    plugin_views: [PluginView; 5],
+    /// The plugin dialog that is open (a tab whose area is `dialog`,
+    /// interface 1.8).
+    plugin_dialog: Option<TabId>,
     /// Every plugin file found, for the plugin manager, and its window
     /// once opened (hidden, not dropped, when closed).
     plugins: oxiguitar_host::Plugins,
@@ -237,9 +242,6 @@ struct App {
     advice: Option<oxiguitar_host::advice::Asked>,
     /// The bend or whammy-bar editor, while it is open.
     bend_dialog: Option<bend_form::BendForm>,
-    /// The wah-wah editor, while it is open: the bend editor's dialog with
-    /// its own state.
-    wah_dialog: Option<wah_form::WahForm>,
     /// The chord dialog, while it is open.
     chord_dialog: Option<chord_form::ChordForm>,
     /// What the open Transpose dialog applies to.
@@ -402,6 +404,33 @@ impl oxiguitar_host::Core for WindowCore {
         });
     }
 
+    fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
+        // Asked from any thread: whether one is open is known here, and
+        // the window shows it when its turn comes.
+        if DIALOG_OPEN.swap(true, std::sync::atomic::Ordering::SeqCst) {
+            return Err("another dialog is open".to_owned());
+        }
+        let (tab, title) = (tab.clone(), title.to_owned());
+        let queued =
+            slint::invoke_from_event_loop(move || match APP.with(|a| a.borrow().clone()) {
+                Some(app) => open_plugin_dialog(&app, tab, &title),
+                None => DIALOG_OPEN.store(false, std::sync::atomic::Ordering::SeqCst),
+            });
+        queued.map_err(|_| {
+            DIALOG_OPEN.store(false, std::sync::atomic::Ordering::SeqCst);
+            "the window is closing".to_owned()
+        })
+    }
+
+    fn show_tab(&self, tab: &TabId) {
+        let tab = tab.clone();
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                plugin_tab_wanted(&app, &tab);
+            }
+        });
+    }
+
     fn score(&self) -> Option<oxiguitar_host::api::score::Score> {
         self.open.wire()
     }
@@ -559,6 +588,7 @@ fn main() -> Result<(), slint::PlatformError> {
         mixer: Mixer::default(),
         toggles: icons::IconSet::new(&icons::toggles(), icons::Fill::TOGGLES),
         palette_icons: None,
+        palette_shown: Arc::new(palette::shown(&plugin_palette_tools(&startup.plugins))),
         palette: palette::Palette::default(),
         icons_scale: 0.0,
         engraving: 0,
@@ -588,6 +618,7 @@ fn main() -> Result<(), slint::PlatformError> {
         tab_thread,
         plugin_tabs: HashMap::new(),
         plugin_views: Default::default(),
+        plugin_dialog: None,
         plugins: startup.plugins.clone(),
         manager: None,
         settings_window: None,
@@ -607,7 +638,6 @@ fn main() -> Result<(), slint::PlatformError> {
         question: None,
         advice: None,
         bend_dialog: None,
-        wah_dialog: None,
         chord_dialog: None,
         transpose_scope: None,
         fit_whole_song: None,
@@ -632,7 +662,7 @@ fn main() -> Result<(), slint::PlatformError> {
         export_cancel: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
-    measure_palette();
+    measure_palette(app.borrow().palette_shown.clone());
 
     let shortcuts = ShortcutData {
         navigation: vec![
@@ -719,16 +749,34 @@ fn main() -> Result<(), slint::PlatformError> {
     ];
     about.extend(about_folders(&startup.inventory.folders, args.safe_mode));
     ui.set_about_lines(lines(&about.iter().map(String::as_str).collect::<Vec<_>>()));
-    PLUGIN_TOOLS.with(|t| {
-        *t.borrow_mut() = startup
-            .plugins
-            .tools()
-            .iter()
-            .filter_map(|t| {
-                let plugin = t.plugin.manifest.as_ref()?.id.clone();
-                Some((plugin, t.spec.id.clone(), t.spec.name.clone()))
-            })
-            .collect();
+    // The plugins' menu entries (interface 1.8): the Tools menu's after
+    // the core's tools, the others in the menus their manifests name.
+    let mut menus = PluginMenus::default();
+    let mut tools_menu = Vec::new();
+    for (menu, t) in startup.plugins.menu_tools() {
+        let Some(plugin) = t.plugin.manifest.as_ref().map(|m| m.id.clone()) else {
+            continue;
+        };
+        if menu == "tools" {
+            tools_menu.push((plugin, t.spec.id.clone(), t.spec.name.clone()));
+            continue;
+        }
+        let item = PluginMenuItem {
+            id: palette::plugin_tool_id(&plugin, &t.spec.id).into(),
+            title: t.spec.name.as_str().into(),
+        };
+        let own = t.spec.menu.as_deref().unwrap_or_default().trim();
+        menus.add(&menu, own, item);
+    }
+    PLUGIN_TOOLS.with(|t| *t.borrow_mut() = tools_menu);
+    menus.show(&ui);
+    let a = app.clone();
+    ui.on_plugin_tool_picked(move |id| {
+        if let Some((plugin, tool)) = palette::plugin_tool_of(id.as_str()) {
+            a.borrow()
+                .worker
+                .send(Request::PluginTool(plugin.to_owned(), tool.to_owned()));
+        }
     });
     set_tools(&ui, &tool_rows(&default_tools()));
 
@@ -812,42 +860,23 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_tuplet_dialog_done(move |ok| tuplet_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_bars_dialog_done(move |ok| bars_dialog_done(&a, ok));
-    // The bend editor's dialog is the wah-wah editor's too: what the
-    // window says goes to whichever is open.
+    ui.set_bend_amounts(strings(bend_form::amounts()));
     let a = app.clone();
     ui.on_bend_kind_picked(move |i| {
-        let i = usize::try_from(i).unwrap_or(usize::MAX);
-        bend_edit(&a, |f| f.pick_kind(i));
-        wah_edit(&a, |f| f.pick_kind(i));
+        bend_edit(&a, |f| {
+            f.pick_kind(usize::try_from(i).unwrap_or(usize::MAX))
+        })
     });
     let a = app.clone();
-    ui.on_bend_amount_picked(move |i| {
-        bend_edit(&a, |f| f.pick_amount(i + 1));
-        wah_edit(&a, |f| f.pick_q(usize::try_from(i).unwrap_or(usize::MAX)));
-    });
+    ui.on_bend_amount_picked(move |i| bend_edit(&a, |f| f.pick_amount(i + 1)));
     let a = app.clone();
-    ui.on_bend_pressed(move |c, r| {
-        bend_edit(&a, |f| f.press(c, r));
-        wah_edit(&a, |f| f.press(c, r));
-    });
+    ui.on_bend_pressed(move |c, r| bend_edit(&a, |f| f.press(c, r)));
     let a = app.clone();
-    ui.on_bend_dragged(move |c, r| {
-        bend_edit(&a, |f| f.drag(c, r));
-        wah_edit(&a, |f| f.drag(c, r));
-    });
+    ui.on_bend_dragged(move |c, r| bend_edit(&a, |f| f.drag(c, r)));
     let a = app.clone();
-    ui.on_bend_released(move || {
-        bend_edit(&a, bend_form::BendForm::release);
-        wah_edit(&a, wah_form::WahForm::release);
-    });
+    ui.on_bend_released(move || bend_edit(&a, bend_form::BendForm::release));
     let a = app.clone();
-    ui.on_bend_dialog_done(move |ok| {
-        if a.borrow().wah_dialog.is_some() {
-            wah_dialog_done(&a, ok);
-        } else {
-            bend_dialog_done(&a, ok);
-        }
-    });
+    ui.on_bend_dialog_done(move |ok| bend_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_chord_changed(move |kind, value, text| {
         chord_changed(&a, kind.as_str(), value, text.as_str())
@@ -1234,6 +1263,13 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             _ => {}
         }
+        // A plugin's tool (interface 1.8) runs as from the Tools menu.
+        if let Some((plugin, tool)) = palette::plugin_tool_of(id.as_str()) {
+            a.borrow()
+                .worker
+                .send(Request::PluginTool(plugin.to_owned(), tool.to_owned()));
+            return;
+        }
         if let Some(d) = palette::dialog_of(id.as_str()) {
             open_edit_dialog(&a, d);
             return;
@@ -1495,6 +1531,68 @@ fn reason_phrase(why: &str) -> String {
     }
 }
 
+/// The entries plugins add to menus other than Tools (interface 1.8).
+#[derive(Default)]
+struct PluginMenus {
+    file: Vec<PluginMenuItem>,
+    edit: Vec<PluginMenuItem>,
+    view: Vec<PluginMenuItem>,
+    help: Vec<PluginMenuItem>,
+    page: Vec<PluginMenuItem>,
+    track: Vec<PluginMenuItem>,
+    /// Menus of the plugins' own, by the name the first tool gave each.
+    own: Vec<(String, Vec<PluginMenuItem>)>,
+}
+
+impl PluginMenus {
+    /// Adds `item` to the menu `key` names (lower case), or to the
+    /// plugins' own menu called `name`, as its manifest wrote it.
+    fn add(&mut self, key: &str, name: &str, item: PluginMenuItem) {
+        let list = match key {
+            "file" => &mut self.file,
+            "edit" => &mut self.edit,
+            "view" => &mut self.view,
+            "help" => &mut self.help,
+            "page" => &mut self.page,
+            "track" => &mut self.track,
+            _ => {
+                let at = match self
+                    .own
+                    .iter()
+                    .position(|(title, _)| title.to_lowercase() == key)
+                {
+                    Some(at) => at,
+                    None => {
+                        self.own.push((name.to_owned(), Vec::new()));
+                        self.own.len() - 1
+                    }
+                };
+                &mut self.own[at].1
+            }
+        };
+        list.push(item);
+    }
+
+    fn show(self, ui: &AppWindow) {
+        let model = |items: Vec<PluginMenuItem>| ModelRc::new(VecModel::from(items));
+        ui.set_plugin_items_file(model(self.file));
+        ui.set_plugin_items_edit(model(self.edit));
+        ui.set_plugin_items_view(model(self.view));
+        ui.set_plugin_items_help(model(self.help));
+        ui.set_plugin_items_page(model(self.page));
+        ui.set_plugin_items_track(model(self.track));
+        ui.set_plugin_menus(ModelRc::new(VecModel::from(
+            self.own
+                .into_iter()
+                .map(|(title, items)| PluginMenu {
+                    title: title.into(),
+                    items: model(items),
+                })
+                .collect::<Vec<_>>(),
+        )));
+    }
+}
+
 /// The Tools menu: the core's tools, then the plugins' (interface 1.2).
 fn set_tools(ui: &AppWindow, rows: &[ToolRow]) {
     let mut rows = rows.to_vec();
@@ -1665,6 +1763,44 @@ fn plugin_tab_on_screen(s: &App, side: Side) -> Option<TabId> {
     plugin_tabs::tab_of(area.active_id())
 }
 
+/// Where a plugin's tab shows: one of the window's areas, or the plugin
+/// dialog over the window (interface 1.8).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum View {
+    Area(Side),
+    Dialog,
+}
+
+impl View {
+    const ALL: [View; 5] = [
+        View::Area(Side::Top),
+        View::Area(Side::Bottom),
+        View::Area(Side::Left),
+        View::Area(Side::Right),
+        View::Dialog,
+    ];
+
+    /// The view for the window's number: an area's, or 4 for the dialog.
+    fn from_index(i: i32) -> Option<View> {
+        View::ALL.get(usize::try_from(i).ok()?).copied()
+    }
+
+    fn index(self) -> usize {
+        match self {
+            View::Area(side) => side.index(),
+            View::Dialog => 4,
+        }
+    }
+}
+
+/// The plugin tab `view` shows now.
+fn plugin_tab_at(s: &App, view: View) -> Option<TabId> {
+    match view {
+        View::Area(side) => plugin_tab_on_screen(s, side),
+        View::Dialog => s.plugin_dialog.clone(),
+    }
+}
+
 /// Shows area `side`'s plugin tab, asking its plugin for the contents when
 /// there are none yet or the plugin asked for a redraw while it was hidden.
 fn show_plugin_tab(app: &Shared, side: Side) {
@@ -1684,14 +1820,14 @@ fn show_plugin_tab(app: &Shared, side: Side) {
             thread.send(plugin_tabs::Request::Content(tab.clone()));
         }
     }
-    refresh_plugin_view(app, side, &tab);
+    refresh_plugin_view(app, View::Area(side), &tab);
 }
 
 /// The plugin asked for its tab to be shown again.
 fn plugin_tab_changed(app: &Shared, tab: TabId) {
-    let on_screen = Side::ALL
+    let on_screen = View::ALL
         .iter()
-        .any(|&side| plugin_tab_on_screen(&app.borrow(), side).as_ref() == Some(&tab));
+        .any(|&view| plugin_tab_at(&app.borrow(), view).as_ref() == Some(&tab));
     let mut s = app.borrow_mut();
     if on_screen {
         if let Some(thread) = &s.tab_thread {
@@ -1700,6 +1836,73 @@ fn plugin_tab_changed(app: &Shared, tab: TabId) {
     } else {
         s.plugin_tabs.entry(tab).or_default().stale = true;
     }
+}
+
+/// Whether a plugin dialog is open: asked from the plugins' threads.
+static DIALOG_OPEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Opens a plugin's dialog (a tab whose area is `dialog`, interface 1.8)
+/// over the window and asks the plugin what it shows.
+fn open_plugin_dialog(app: &Shared, tab: TabId, title: &str) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        DIALOG_OPEN.store(false, std::sync::atomic::Ordering::SeqCst);
+        return;
+    };
+    {
+        let mut s = app.borrow_mut();
+        // What an earlier opening showed is not what this one shows.
+        s.plugin_tabs.remove(&tab);
+        s.plugin_dialog = Some(tab.clone());
+        if let Some(thread) = &s.tab_thread {
+            thread.send(plugin_tabs::Request::Content(tab.clone()));
+        }
+    }
+    ui.set_plugin_dialog_title(title.into());
+    refresh_plugin_view(app, View::Dialog, &tab);
+    ui.set_plugin_dialog_shown(true);
+}
+
+/// The user closed the plugin dialog, with OK or not: its plugin is told.
+fn plugin_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_plugin_dialog_shown(false);
+    ui.invoke_focus_page();
+    let mut s = app.borrow_mut();
+    let view = &mut s.plugin_views[View::Dialog.index()];
+    view.tab = None;
+    view.content = None;
+    if let Some(tab) = s.plugin_dialog.take() {
+        s.plugin_tabs.remove(&tab);
+        if let Some(thread) = &s.tab_thread {
+            thread.send(plugin_tabs::Request::Closed { tab, ok });
+        }
+    }
+    DIALOG_OPEN.store(false, std::sync::atomic::Ordering::SeqCst);
+}
+
+/// A plugin asks for its tab at the front of its area (interface 1.8): the
+/// area opens if it was closed.
+fn plugin_tab_wanted(app: &Shared, tab: &TabId) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let id = plugin_tabs::shell_id(tab);
+    let Some(side) = Side::ALL
+        .iter()
+        .copied()
+        .find(|&side| app.borrow_mut().shell.area_mut(side).open(&id))
+    else {
+        return;
+    };
+    match side {
+        Side::Top => ui.set_top_shown(true),
+        Side::Bottom => ui.set_bottom_shown(true),
+        Side::Left => ui.set_left_shown(true),
+        Side::Right => ui.set_right_shown(true),
+    }
+    sync_areas(app);
 }
 
 /// What the tab thread answered.
@@ -1770,9 +1973,9 @@ fn plugin_answer(app: &Shared, answer: plugin_tabs::Answer) {
             return;
         }
     };
-    for side in Side::ALL {
-        if plugin_tab_on_screen(&app.borrow(), side).as_ref() == Some(&tab) {
-            refresh_plugin_view(app, side, &tab);
+    for view in View::ALL {
+        if plugin_tab_at(&app.borrow(), view).as_ref() == Some(&tab) {
+            refresh_plugin_view(app, view, &tab);
         }
     }
 }
@@ -1911,7 +2114,7 @@ fn row_shape(
 /// before are changed in place (a row holding a canvas widget by widget,
 /// so a drag on it carries on); other rows are made anew, so every widget
 /// shows exactly what the plugin says.
-fn refresh_plugin_view(app: &Shared, side: Side, tab: &TabId) {
+fn refresh_plugin_view(app: &Shared, side: View, tab: &TabId) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
@@ -2003,10 +2206,18 @@ fn refresh_plugin_view(app: &Shared, side: Side, tab: &TabId) {
     view.content = Some(content.clone());
 }
 
-/// Area `side`'s plugin tab: its rows, or a message instead.
-fn set_plugin_area(ui: &AppWindow, side: Side, rows: Option<ModelRc<PluginRow>>, message: &str) {
+/// View `side`'s plugin tab: its rows, or a message instead.
+fn set_plugin_area(ui: &AppWindow, side: View, rows: Option<ModelRc<PluginRow>>, message: &str) {
     let rows = rows.unwrap_or_default();
     let message = SharedString::from(message);
+    let side = match side {
+        View::Area(side) => side,
+        View::Dialog => {
+            ui.set_dialog_plugin_rows(rows);
+            ui.set_dialog_plugin_message(message);
+            return;
+        }
+    };
     match side {
         Side::Top => {
             ui.set_top_plugin_rows(rows);
@@ -2031,7 +2242,7 @@ fn set_plugin_area(ui: &AppWindow, side: Side, rows: Option<ModelRc<PluginRow>>,
 /// area number) shows.
 fn plugin_event(app: &Shared, area: i32, widget: &str, event: TabEvent) {
     let s = app.borrow();
-    let Some(tab) = Side::from_index(area).and_then(|side| plugin_tab_on_screen(&s, side)) else {
+    let Some(tab) = View::from_index(area).and_then(|view| plugin_tab_at(&s, view)) else {
         return;
     };
     if let Some(thread) = &s.tab_thread {
@@ -2051,7 +2262,7 @@ fn canvas_room(app: &Shared, area: i32, widget: &str, width: f32, height: f32) {
     };
     let scale = ui.window().scale_factor();
     let mut s = app.borrow_mut();
-    let Some(tab) = Side::from_index(area).and_then(|side| plugin_tab_on_screen(&s, side)) else {
+    let Some(tab) = View::from_index(area).and_then(|view| plugin_tab_at(&s, view)) else {
         return;
     };
     s.plugin_tabs
@@ -2132,6 +2343,8 @@ fn install_plugin_tab_callbacks(ui: &AppWindow, app: &Shared) {
     });
     let a = app.clone();
     ui.on_plugin_canvas_room(move |area, id, w, h| canvas_room(&a, area, &id, w, h));
+    let a = app.clone();
+    ui.on_plugin_dialog_done(move |ok| plugin_dialog_done(&a, ok));
 }
 
 /// The command line: `oxiguitar [--safe-mode] [FILE]`.
@@ -2904,14 +3117,35 @@ fn refresh_icons(app: &Shared, ui: &AppWindow) {
     set_palette(app, ui, true);
 }
 
+/// The tools the installed plugins add to the palette (interface 1.8).
+fn plugin_palette_tools(plugins: &oxiguitar_host::Plugins) -> Vec<palette::PluginTool> {
+    plugins
+        .palette_tools()
+        .iter()
+        .filter_map(|t| {
+            let at = t.spec.palette.as_ref()?;
+            Some(palette::PluginTool {
+                plugin: t.plugin.manifest.as_ref()?.id.clone(),
+                tool: t.spec.id.clone(),
+                name: t.spec.name.clone(),
+                section: at.section.clone(),
+                symbol: at.symbol_char(),
+                text: at.text.clone().unwrap_or_default(),
+            })
+        })
+        .collect()
+}
+
 /// Measures the palette's icons on a thread of their own, so the window
 /// never waits for them, and shows the palette once they are ready.
-fn measure_palette() {
+fn measure_palette(shown: Arc<Vec<palette::ShownGroup>>) {
     let spawned = std::thread::Builder::new()
         .name("palette icons".to_owned())
-        .spawn(|| {
-            let faces: Vec<(icons::Face, icons::Fit)> =
-                palette::tools().map(|(_, t)| (t.face, t.fit)).collect();
+        .spawn(move || {
+            let faces: Vec<(icons::Face, icons::Fit)> = shown
+                .iter()
+                .flat_map(|g| g.tools.iter().map(|t| (t.face, t.fit)))
+                .collect();
             let set = Arc::new(icons::IconSet::new(&faces, icons::Fill::PALETTE));
             let _ = slint::invoke_from_event_loop(move || {
                 let Some(app) = APP.with(|a| a.borrow().clone()) else {
@@ -2943,7 +3177,8 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
         return;
     };
     let model = ui.get_palette_groups();
-    let fresh = redraw || model.row_count() != palette::GROUPS.len();
+    let shown = s.palette_shown.clone();
+    let fresh = redraw || model.row_count() != shown.len();
     let images: Vec<Image> = if fresh {
         let px = (PALETTE_BUTTON * ui.window().scale_factor())
             .round()
@@ -2953,7 +3188,7 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
         Vec::new()
     };
     let mut images = images.into_iter();
-    let groups: Vec<PaletteGroupRow> = palette::GROUPS
+    let groups: Vec<PaletteGroupRow> = shown
         .iter()
         .enumerate()
         .map(|(g, group)| {
@@ -2962,9 +3197,10 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
                     .tools
                     .iter()
                     .map(|t| PaletteToolRow {
-                        id: t.id.into(),
+                        id: t.id.as_str().into(),
+                        name: t.name.as_str().into(),
                         icon: images.next().unwrap_or_default(),
-                        tip: palette::tool_tip(t.id, t.name).into(),
+                        tip: palette::tool_tip(&t.id, &t.name).into(),
                         enabled: false,
                         checked: false,
                     })
@@ -2974,7 +3210,7 @@ fn set_palette(app: &Shared, ui: &AppWindow, redraw: bool) {
                 model.row_data(g).map(|r| r.tools).unwrap_or_default()
             };
             PaletteGroupRow {
-                title: group.title.into(),
+                title: group.title.as_str().into(),
                 collapsed: s.palette.collapsed(g),
                 tools,
             }
@@ -3329,34 +3565,8 @@ fn open_edit_dialog(app: &Shared, dialog: editing::Dialog) {
             };
             let form = bend_form::BendForm::open(curve.as_ref(), whammy);
             ui.set_bend_heading(if whammy { "Whammy Bar" } else { "Bend" }.into());
-            ui.set_bend_amounts(strings(bend_form::amounts()));
-            ui.set_bend_side(strings(Vec::new()));
-            ui.set_bend_major(4);
-            ui.set_bend_help(bend_form::HELP.into());
             sync_bend(&ui, &form);
             app.borrow_mut().bend_dialog = Some(form);
-            ui.set_bend_dialog_shown(true);
-        }
-        editing::Dialog::Wah(asked) => {
-            let Some(here) = app.borrow().editing.wah_here() else {
-                return;
-            };
-            let form = wah_form::WahForm::open(
-                here.as_ref().map(|(wah, shape)| (*wah, shape.as_ref())),
-                asked,
-            );
-            ui.set_bend_heading("Wah-Wah".into());
-            ui.set_bend_types(strings(
-                wah_form::TYPES.iter().map(|t| (*t).to_owned()).collect(),
-            ));
-            ui.set_bend_amounts(strings(wah_form::qs()));
-            ui.set_bend_side(strings(vec!["Toe".to_owned(), "Heel".to_owned()]));
-            ui.set_bend_major(5);
-            ui.set_bend_help(wah_form::HELP.into());
-            ui.set_bend_low(0);
-            ui.set_bend_high(wah_form::ROWS);
-            sync_wah(&ui, &form);
-            app.borrow_mut().wah_dialog = Some(form);
             ui.set_bend_dialog_shown(true);
         }
         editing::Dialog::Chord => {
@@ -3609,10 +3819,7 @@ fn sync_bend(ui: &AppWindow, f: &bend_form::BendForm) {
     let mut names: Vec<String> = types.iter().map(|t| (*t).to_owned()).collect();
     names.push("Custom".to_owned());
     let kind = f.kind.unwrap_or(types.len());
-    // Set only when they differ, so the list doesn't change under the
-    // open box.
-    let shown = ui.get_bend_types();
-    if shown.iter().map(String::from).ne(names.iter().cloned()) {
+    if ui.get_bend_types().row_count() != names.len() {
         ui.set_bend_types(strings(names));
     }
     ui.set_bend_kind(i32::try_from(kind).unwrap_or(0));
@@ -3668,61 +3875,6 @@ fn bend_dialog_done(app: &Shared, ok: bool) {
         oxiguitar_edit::Command::Bend(form.bend())
     };
     let typed = app.borrow_mut().editing.tool(command);
-    if let Some(t) = typed {
-        send_typed(app, t);
-    }
-}
-
-/// Shows the wah-wah editor's state.
-fn sync_wah(ui: &AppWindow, f: &wah_form::WahForm) {
-    ui.set_bend_kind(i32::try_from(f.kind).unwrap_or(0));
-    ui.set_bend_amount(i32::try_from(f.q).unwrap_or(0));
-    ui.set_bend_points(ModelRc::new(VecModel::from(
-        f.points
-            .iter()
-            .map(|p| GridPoint {
-                col: p.col,
-                row: p.row,
-            })
-            .collect::<Vec<_>>(),
-    )));
-    ui.set_bend_path(f.path().into());
-}
-
-/// A change in the wah-wah editor.
-fn wah_edit(app: &Shared, edit: impl FnOnce(&mut wah_form::WahForm)) {
-    let Some(ui) = app.borrow().ui.upgrade() else {
-        return;
-    };
-    let form = {
-        let mut s = app.borrow_mut();
-        let Some(f) = s.wah_dialog.as_mut() else {
-            return;
-        };
-        edit(f);
-        f.clone()
-    };
-    sync_wah(&ui, &form);
-}
-
-/// The wah-wah editor closed: on OK, a changed mark is one change at the
-/// caret (or on the selection).
-fn wah_dialog_done(app: &Shared, ok: bool) {
-    let Some(ui) = app.borrow().ui.upgrade() else {
-        return;
-    };
-    ui.set_bend_dialog_shown(false);
-    ui.invoke_focus_page();
-    let Some(form) = app.borrow_mut().wah_dialog.take() else {
-        return;
-    };
-    if !ok || !form.changed {
-        return;
-    }
-    let typed = app
-        .borrow_mut()
-        .editing
-        .tool(oxiguitar_edit::Command::Wah(form.mark()));
     if let Some(t) = typed {
         send_typed(app, t);
     }
@@ -3872,13 +4024,13 @@ fn sync_found(ui: &AppWindow) {
     }
     let groups = ui.get_palette_groups();
     let mut found = Vec::new();
-    for (g, group) in palette::GROUPS.iter().enumerate() {
+    for g in 0..groups.row_count() {
         let Some(row) = groups.row_data(g) else {
             continue;
         };
-        for (i, t) in group.tools.iter().enumerate() {
-            if palette::matches(t.name, &query)
-                && let Some(tool) = row.tools.row_data(i)
+        for i in 0..row.tools.row_count() {
+            if let Some(tool) = row.tools.row_data(i)
+                && palette::matches(tool.name.as_str(), &query)
             {
                 found.push(tool);
             }
@@ -4969,7 +5121,7 @@ fn save_as_dialog(app: &Shared) {
     }
     // The fullest format first, as the default.
     let mut formats = formats;
-    formats.sort_by_key(|f| f.id != FULLEST);
+    formats.sort_by_key(|f| !f.fullest);
     let pick = move || {
         let first = formats.first().and_then(|f| f.extensions.first()).cloned();
         let mut dialog = rfd::FileDialog::new()

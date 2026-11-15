@@ -65,13 +65,14 @@ use oxiguitar_plugin_api::manifest::{
     SharedFolder, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
-    Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry, PluginFolders,
-    Prepare, PrepareEffect, Request, TrackInfo, decode, encode, outcome,
+    Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry, PlayedBeat,
+    PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode,
+    outcome,
 };
 use oxiguitar_plugin_api::score::Score;
-use oxiguitar_plugin_api::score2::Score2;
+use oxiguitar_plugin_api::score2::{Score2, Since};
 use oxiguitar_plugin_api::signature::Sniff;
-use oxiguitar_plugin_api::tab::{TabContent, TabEvent, TabSpec};
+use oxiguitar_plugin_api::tab::{Area, TabContent, TabEvent, TabSpec};
 use serde_json::Value;
 
 use crate::advice;
@@ -108,6 +109,23 @@ pub trait Core: Send + Sync {
     /// ([`Plugins::tab_content`]) when it is next on screen. The default
     /// does nothing, for programs without a window.
     fn redraw(&self, tab: &TabId) {
+        let _ = tab;
+    }
+
+    /// A plugin asks for its dialog `tab` (a tab whose area is `dialog`,
+    /// interface 1.8), titled `title`, to be opened over the window. The
+    /// window asks for its contents ([`Plugins::tab_content`]) and says
+    /// how the user closed it ([`Plugins::tab_closed`]). The error is a
+    /// sentence for the plugin. The default has no window.
+    fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
+        let _ = (tab, title);
+        Err("there is no window to show a dialog in".to_owned())
+    }
+
+    /// A plugin asks for its tab `tab` to be brought to the front of its
+    /// area (interface 1.8). The default does nothing, for programs
+    /// without a window.
+    fn show_tab(&self, tab: &TabId) {
         let _ = tab;
     }
 
@@ -986,6 +1004,11 @@ impl Plugins {
     /// its version doesn't know; an older one gets version 1. What the
     /// plugin's version can't hold is added to the losses.
     pub fn write(&self, format: FormatRef<'_>, score: &Score2) -> Result<WrittenFile, Error> {
+        // What plugins keep on beats (interface 1.8) is saved beside the
+        // score: no format is sent it, and it is no loss.
+        let mut score = score.clone();
+        score.drop_plugin_data();
+        let score = &score;
         let minor = format
             .plugin
             .manifest
@@ -1087,9 +1110,12 @@ impl Plugins {
         class: InstrumentClass,
         order: &[String],
     ) -> Vec<InstrumentRef<'_>> {
-        in_effect_order(self.effects_for(class), order, |e| {
-            e.plugin.manifest.as_ref().map_or("", |m| m.id.as_str())
-        })
+        in_effect_order(
+            self.effects_for(class),
+            order,
+            |e| e.plugin.manifest.as_ref().map_or("", |m| m.id.as_str()),
+            |e| e.spec.order,
+        )
     }
 
     /// Prepares `instrument` (one of [`Plugins::playable`]) for
@@ -1118,11 +1144,57 @@ impl Plugins {
         effect: InstrumentRef<'_>,
         prepare: PrepareEffect,
     ) -> Result<crate::realtime::Instance, Error> {
+        self.prepare_effect_following(effect, prepare, &[])
+    }
+
+    /// Whether `effect` follows the score (interface 1.8): it is prepared
+    /// with its track's marked beats ([`Plugins::prepare_effect_following`]).
+    pub fn follows_score(&self, effect: InstrumentRef<'_>) -> bool {
+        effect.spec.follows_score
+            && effect
+                .plugin
+                .manifest
+                .as_ref()
+                .is_some_and(|m| m.knows_minor(8))
+    }
+
+    /// Prepares `effect` for one track whose marked beats are played as
+    /// `beats`. An effect that follows the score is told them, with the
+    /// marks its interface version knows; any other is prepared as by
+    /// [`Plugins::prepare_effect`].
+    pub fn prepare_effect_following(
+        &self,
+        effect: InstrumentRef<'_>,
+        prepare: PrepareEffect,
+        beats: &[PlayedBeat],
+    ) -> Result<crate::realtime::Instance, Error> {
         let prepare = PrepareEffect {
             effect: effect.spec.id.clone(),
             ..prepare
         };
-        self.prepared(effect.plugin, &Request::PrepareEffect(Box::new(prepare)), 2)
+        let request = if self.follows_score(effect) {
+            let minor = effect
+                .plugin
+                .manifest
+                .as_ref()
+                .map_or(0, |m| m.interface.minor);
+            let beats = beats
+                .iter()
+                .filter_map(|b| {
+                    let ext: Vec<_> = b
+                        .ext
+                        .iter()
+                        .filter(|e| Since::since(*e) <= minor)
+                        .cloned()
+                        .collect();
+                    (!ext.is_empty()).then(|| PlayedBeat { ext, ..b.clone() })
+                })
+                .collect();
+            Request::PrepareFollowing(Box::new(PrepareFollowing { prepare, beats }))
+        } else {
+            Request::PrepareEffect(Box::new(prepare))
+        };
+        self.prepared(effect.plugin, &request, 2)
     }
 
     fn prepared(
@@ -1272,6 +1344,38 @@ impl Plugins {
         self.request(index, request)
     }
 
+    /// The tools the ready plugins add to menus, in plugin order, each with
+    /// its menu ([`ToolSpec::menu_key`]: `tools` unless its manifest names
+    /// another, interface 1.8). Palette buttons without a menu are left
+    /// out ([`Plugins::palette_tools`]).
+    pub fn menu_tools(&self) -> Vec<(String, ToolRef<'_>)> {
+        self.tools()
+            .into_iter()
+            .filter_map(|t| {
+                let newer = t.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(8));
+                let menu = if newer {
+                    t.spec.menu_key()?
+                } else {
+                    "tools".to_owned()
+                };
+                Some((menu, t))
+            })
+            .collect()
+    }
+
+    /// The tools the ready plugins add to the editing palette (interface
+    /// 1.8), in plugin order: buttons that run their tool
+    /// ([`Plugins::run_tool`]).
+    pub fn palette_tools(&self) -> Vec<ToolRef<'_>> {
+        self.tools()
+            .into_iter()
+            .filter(|t| {
+                t.spec.palette.is_some()
+                    && t.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(8))
+            })
+            .collect()
+    }
+
     /// Every tool the ready plugins add, in plugin order. Only plugins
     /// built for interface 1.2 or later have tools.
     pub fn tools(&self) -> Vec<ToolRef<'_>> {
@@ -1414,6 +1518,27 @@ impl Plugins {
                 self.tab_content(id)
             }
             answer => answer,
+        }
+    }
+
+    /// Tells the dialog's plugin that the user closed it (interface 1.8),
+    /// with OK or not. An error the plugin answers is said in the footer.
+    pub fn tab_closed(&self, id: &TabId, ok: bool) {
+        let Ok(tab) = self.find_tab(id) else {
+            return;
+        };
+        let answered = self.request(
+            tab.index,
+            &Request::TabClosed {
+                tab: id.tab.clone(),
+                ok,
+            },
+        );
+        if let Err(e) = answered
+            && tab.plugin.failure().is_none()
+        {
+            let name = tab.plugin.name();
+            self.0.core.notify(Level::Warning, format!("{name}: {e}"));
         }
     }
 
@@ -2013,6 +2138,50 @@ impl Plugins {
                     )))
                 }
             }
+            HostRequest::OpenDialog { tab } => {
+                let dialog = manifest
+                    .tabs
+                    .iter()
+                    .find(|t| t.id == tab && t.area == Area::Dialog)
+                    .filter(|_| manifest.knows_minor(8));
+                match dialog {
+                    Some(spec) => self
+                        .0
+                        .core
+                        .open_dialog(
+                            &TabId {
+                                plugin: manifest.id.clone(),
+                                tab,
+                            },
+                            &spec.title,
+                        )
+                        .map(|()| HostAnswer::Done)
+                        .map_err(|why| Error::new(ErrorKind::Failed, why)),
+                    None => Err(Error::not_found(format!(
+                        "{} has no dialog {tab:?} in its manifest",
+                        manifest.name
+                    ))),
+                }
+            }
+            HostRequest::ShowTab { tab } => {
+                if manifest.knows_minor(8)
+                    && manifest
+                        .tabs
+                        .iter()
+                        .any(|t| t.id == tab && t.area != Area::Dialog)
+                {
+                    self.0.core.show_tab(&TabId {
+                        plugin: manifest.id.clone(),
+                        tab,
+                    });
+                    Ok(HostAnswer::Done)
+                } else {
+                    Err(Error::not_found(format!(
+                        "{} has no tab {tab:?} in its manifest",
+                        manifest.name
+                    )))
+                }
+            }
             HostRequest::Score => Ok(HostAnswer::Score(self.0.core.score().map(Box::new))),
             HostRequest::Score2 => {
                 let (revision, score) = match self.0.core.score2() {
@@ -2234,27 +2403,25 @@ fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
 /// ready once each id has its file: a plugin whose id another one replaces
 /// is that plugin's older self, whatever its version; then a plugin whose
 /// needs aren't met is set aside.
-/// The plugins whose effects run first on a track that has no order of its
-/// own, in this order: the wah pedal (#250), the amp, then the equalizer
-/// (#152).
-pub const DEFAULT_EFFECT_ORDER: &[&str] = &["oxiguitar.wah", "oxiguitar.nam", "oxiguitar.eq"];
-
-/// `items` (a track's effects, or their plugins, in plugin order) in the
-/// order they run on a track whose effects the user ordered as `order`, by
-/// plugin id (`plugin` gives an item's): first the plugins `order` names,
-/// as it names them; then those of [`DEFAULT_EFFECT_ORDER`]; then the rest
-/// as found. A plugin's own effects keep their order.
+/// `items` (a track's effects, in plugin order) in the order they run on
+/// a track whose effects the user ordered as `order`, by plugin id
+/// (`plugin` gives an item's): first the plugins `order` names, as it
+/// names them; then the effects whose manifest gives them a place
+/// (`stage`, interface 1.8: lower first, a pedal before the amp before the
+/// equalizer); then the rest as found. A plugin's own effects keep their
+/// order.
 pub fn in_effect_order<T>(
     mut items: Vec<T>,
     order: &[String],
     plugin: impl Fn(&T) -> &str,
+    stage: impl Fn(&T) -> Option<i32>,
 ) -> Vec<T> {
     let rank = |item: &T| {
         let id = plugin(item);
         if let Some(at) = order.iter().position(|o| o == id) {
-            (0, at)
-        } else if let Some(at) = DEFAULT_EFFECT_ORDER.iter().position(|o| *o == id) {
-            (1, at)
+            (0, i64::try_from(at).unwrap_or(i64::MAX))
+        } else if let Some(stage) = stage(item) {
+            (1, i64::from(stage))
         } else {
             (2, 0)
         }
@@ -2402,34 +2569,39 @@ mod tests {
     use crate::folders::tests::scratch;
 
     #[test]
-    fn a_track_s_effects_run_in_its_own_order_then_the_default_then_as_found() {
+    fn a_track_s_effects_run_in_its_own_order_then_by_their_manifests_then_as_found() {
+        // An effect here is "plugin:effect", with the place its manifest
+        // gives it after an @ when it gives one.
         fn order(found: &[&'static str], saved: &[&str]) -> Vec<&'static str> {
             let saved: Vec<String> = saved.iter().map(|s| (*s).to_owned()).collect();
-            in_effect_order(found.to_vec(), &saved, |id: &&'static str| {
-                id.split(':').next().unwrap_or("")
-            })
+            in_effect_order(
+                found.to_vec(),
+                &saved,
+                |id: &&'static str| id.split([':', '@']).next().unwrap_or(""),
+                |id: &&'static str| id.split_once('@').and_then(|(_, n)| n.parse().ok()),
+            )
         }
-        // Without an order of the track's own: the amp, the equalizer,
-        // then the rest as found.
+        // Without an order of the track's own: the pedal, the amp, the
+        // equalizer, as their manifests place them, then the rest as found.
         assert_eq!(
             order(
-                &["me.echo", "oxiguitar.eq", "you.verb", "oxiguitar.nam"],
+                &["me.echo", "a.eq@300", "you.verb", "a.amp@200", "a.wah@100"],
                 &[]
             ),
-            ["oxiguitar.nam", "oxiguitar.eq", "me.echo", "you.verb"]
+            ["a.wah@100", "a.amp@200", "a.eq@300", "me.echo", "you.verb"]
         );
         // The track's order first; what it doesn't name after, as above.
         assert_eq!(
             order(
-                &["me.echo", "oxiguitar.eq", "you.verb", "oxiguitar.nam"],
-                &["you.verb", "oxiguitar.eq", "gone.plugin"]
+                &["me.echo", "a.eq@300", "you.verb", "a.amp@200"],
+                &["you.verb", "a.eq", "gone.plugin"]
             ),
-            ["you.verb", "oxiguitar.eq", "oxiguitar.nam", "me.echo"]
+            ["you.verb", "a.eq@300", "a.amp@200", "me.echo"]
         );
         // A plugin's own effects stay together, in their order.
         assert_eq!(
-            order(&["a:1", "oxiguitar.eq", "a:2"], &["a"]),
-            ["a:1", "a:2", "oxiguitar.eq"]
+            order(&["a:1", "b.eq@300", "a:2"], &["a"]),
+            ["a:1", "a:2", "b.eq@300"]
         );
     }
 
