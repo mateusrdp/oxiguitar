@@ -31,16 +31,26 @@ impl Rng {
     }
 }
 
-/// A paste; the run puts in what it last copied.
-fn paste(times: u8, replace: bool) -> Command {
-    Command::Paste(oxiguitar_edit::Paste {
-        clip: Arc::new(oxiguitar_edit::Clip::Beats {
-            beats: Vec::new(),
-            drums: false,
-            chords: Vec::new(),
-        }),
-        times,
-        replace,
+/// Nothing copied yet: the run puts in what it last copied.
+fn nothing() -> Arc<oxiguitar_edit::Clip> {
+    Arc::new(oxiguitar_edit::Clip::Beats {
+        beats: Vec::new(),
+        drums: false,
+        chords: Vec::new(),
+    })
+}
+
+/// A paste at the caret.
+fn paste() -> Command {
+    Command::Paste(oxiguitar_edit::Paste { clip: nothing() })
+}
+
+/// A Paste Bars.
+fn paste_bars(after: bool, all_tracks: bool) -> Command {
+    Command::PasteBars(oxiguitar_edit::PasteBars {
+        clip: nothing(),
+        after,
+        all_tracks,
     })
 }
 
@@ -334,10 +344,10 @@ fn commands() -> Vec<Command> {
             scope: oxiguitar_edit::Scope::All,
         }),
         Command::Cut,
-        paste(1, false),
-        paste(1, true),
-        paste(3, false),
-        paste(2, true),
+        paste(),
+        Command::CutBars,
+        paste_bars(false, true),
+        paste_bars(true, false),
         Command::Bar(Box::new(oxiguitar_edit::BarState {
             time_signature: oxiguitar_model::TimeSignature {
                 numerator: 5,
@@ -440,9 +450,11 @@ fn random_edits(
             _ => None,
         };
         if rng.below(8) == 0 {
-            clip = oxiguitar_edit::copy(score, caret, selection)
-                .map(Arc::new)
-                .or(clip);
+            let copied = match rng.below(3) {
+                0 => oxiguitar_edit::copy_bars(score, caret, selection, rng.below(2) == 0),
+                _ => oxiguitar_edit::copy(score, caret, selection),
+            };
+            clip = copied.map(Arc::new).or(clip);
         }
         let mut command = all[rng.below(all.len())].clone();
         // A syllable at the caret's beat, on one of the first lines.
@@ -474,9 +486,14 @@ fn random_edits(
                 })
                 .collect();
         }
-        if let Command::Paste(p) = &mut command {
+        let pasted = match &mut command {
+            Command::Paste(p) => Some(&mut p.clip),
+            Command::PasteBars(p) => Some(&mut p.clip),
+            _ => None,
+        };
+        if let Some(to) = pasted {
             match &clip {
-                Some(c) => p.clip = c.clone(),
+                Some(c) => *to = c.clone(),
                 None => continue,
             }
         }

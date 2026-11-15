@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog } from "bar_dialog.slint";
+import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -1561,10 +1561,14 @@ export component AppWindow inherits Window {
     in property <bool> chord-show-diagram: true;
     callback chord-changed(string, int, string);
     callback chord-dialog-done(bool);
-    in property <bool> paste-dialog-shown: false;
-    in-out property <int> paste-times: 1;
-    in-out property <bool> paste-replace: false;
-    callback paste-dialog-done(bool);
+    // Copy, Cut and Paste Bars' dialog (#287).
+    in property <bool> bars-dialog-shown: false;
+    in property <string> bars-heading;
+    in property <bool> bars-asks-place: false;
+    in property <string> bars-note;
+    in-out property <bool> bars-after: false;
+    in-out property <bool> bars-all-tracks: false;
+    callback bars-dialog-done(bool);
     // The Track tab (track_form.rs): its heading and rows.
     in property <string> track-heading;
     in property <[InspectorField]> track-fields;
@@ -1761,7 +1765,9 @@ export component AppWindow inherits Window {
             MenuItem { title: "Cut (Ctrl + X)"; enabled: root.has-score; activated => { root.edit-command("cut"); } }
             MenuItem { title: "Copy (Ctrl + C)"; enabled: root.has-score; activated => { root.edit-command("copy"); } }
             MenuItem { title: "Paste (Ctrl + V)"; enabled: root.has-score; activated => { root.edit-command("paste"); } }
-            MenuItem { title: "Special Paste… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("special-paste"); } }
+            MenuItem { title: "Cut Bars… (Ctrl + Shift + X)"; enabled: root.has-score; activated => { root.edit-command("cut-bars"); } }
+            MenuItem { title: "Copy Bars… (Ctrl + Shift + C)"; enabled: root.has-score; activated => { root.edit-command("copy-bars"); } }
+            MenuItem { title: "Paste Bars… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("paste-bars"); } }
             MenuSeparator { }
             Menu {
                 title: "Go to Section";
@@ -2857,12 +2863,15 @@ export component AppWindow inherits Window {
         done(ok) => { root.chord-dialog-done(ok); }
     }
 
-    if root.paste-dialog-shown : PasteDialog {
+    if root.bars-dialog-shown : BarsDialog {
         width: root.width;
         height: root.height;
-        times <=> root.paste-times;
-        replace <=> root.paste-replace;
-        done(ok) => { root.paste-dialog-done(ok); }
+        heading: root.bars-heading;
+        asks-place: root.bars-asks-place;
+        note: root.bars-note;
+        after <=> root.bars-after;
+        all-tracks <=> root.bars-all-tracks;
+        done(ok) => { root.bars-dialog-done(ok); }
     }
 
     // File → Export of an audio exporter: what to render, then its progress

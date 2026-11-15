@@ -58,7 +58,7 @@ mod transpose;
 pub use bars::BarState;
 pub use caret::{Caret, StaffBar, VOICES, beat_at, onsets};
 pub use check::{BarCheck, adds_up};
-pub use clip::{Clip, ClipTrack, Paste, copy};
+pub use clip::{Clip, ClipTrack, Paste, PasteBars, copy, copy_bars};
 pub use effects::{BeatChange, Effect, HarmonicKind, NoteChange};
 pub use entry::{Command, Edited, apply, new_score};
 pub use fingering::{HARD_FINGERS, HARD_SHIFT, HARD_STRETCH, finger_pitched};

@@ -7,11 +7,20 @@
 //! As in Guitar Pro 8: a run of beats in one voice copies as beats, which
 //! paste into any voice of any track; a selection across tracks copies
 //! whole bars of every selected track, with what the bars share (time and
-//! key signatures, repeats, sections, tempo), and pastes as bars. Paste
-//! inserts at the caret; Special Paste can paste several times, or replace
-//! what is there instead. Between a drum track and a pitched one only the
-//! rhythm carries over, as rests; notes on strings the track hasn't are
-//! left out.
+//! key signatures, repeats, sections, tempo), and pastes as bars. Between a
+//! drum track and a pitched one only the rhythm carries over, as rests;
+//! notes on strings the track hasn't are left out.
+//!
+//! Pasted beats take the place of what the caret's voice holds from the
+//! caret on, flowing over bar lines as each bar's time signature allows (a
+//! beat a bar line cuts goes on as tied pieces); bars are added at the end
+//! as needed (#267; Mateus, 15 Nov 2026). Pasted bars go in as new bars.
+//!
+//! Copy, Cut and Paste Bars (#287) work on whole bars whatever the
+//! selection covers of them: the bars it touches, of the caret's track or
+//! of every track. Each copied track remembers where it came from, and
+//! Paste Bars puts it back into that track, with rests in the tracks the
+//! clipboard doesn't hold.
 
 use std::sync::Arc;
 
@@ -19,7 +28,8 @@ use oxiguitar_model::{
     Bar, Beat, BeatKind, ChordDiagram, MasterBar, NotePlace, Ratio, Score, Voice,
 };
 
-use crate::entry::{grow_voices, rests_for, retie, tidy};
+use crate::entry::{grow_voices, retie, tidy};
+use crate::fit::{Prefer, pieces, rests};
 use crate::{Caret, Command, Edited, History, Region, Selection};
 
 /// What was copied.
@@ -56,18 +66,25 @@ pub struct ClipTrack {
     pub staves: Vec<Vec<Bar>>,
 }
 
-/// A paste: what, how many times, and whether it replaces what is there
-/// instead of going in before it.
+/// A paste at the caret (Ctrl + V).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Paste {
     /// The clipboard.
     pub clip: Arc<Clip>,
-    /// How many times, from 1.
-    pub times: u8,
-    /// Beats: the pasted beats take the place of as much music from the
-    /// caret on as they last. Bars: they take the place of the bars from
-    /// the caret's on (bars are added at the end as needed).
-    pub replace: bool,
+}
+
+/// Paste Bars (Ctrl + Shift + V): copied bars as new bars.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PasteBars {
+    /// The clipboard; only [`Clip::Bars`] pastes.
+    pub clip: Arc<Clip>,
+    /// After the last bar the selection (or the caret) touches, instead of
+    /// before the first.
+    pub after: bool,
+    /// Every copied track into the track it came from, instead of only the
+    /// caret's track (which takes the copy of itself, else the first
+    /// copied track).
+    pub all_tracks: bool,
 }
 
 /// What `selection` (or, without one, the caret's beat) holds; `None` when
@@ -144,7 +161,24 @@ pub fn copy(score: &Score, c: Caret, selection: Option<Selection>) -> Option<Cli
     }
 }
 
-/// Runs Cut or Paste; `None` for another command.
+/// Copy Bars (Ctrl + Shift + C): every bar the selection (or, without one,
+/// the caret) touches, whole, of the caret's track or of every track.
+pub fn copy_bars(
+    score: &Score,
+    c: Caret,
+    selection: Option<Selection>,
+    all_tracks: bool,
+) -> Option<Clip> {
+    let bars = selection.map_or((c.bar, c.bar), |s| s.bars());
+    let tracks = if all_tracks {
+        (0, score.tracks.len().checked_sub(1)?)
+    } else {
+        (c.track, c.track)
+    };
+    copy(score, c, Some(Selection::Bars { tracks, bars }))
+}
+
+/// Runs Cut, Cut Bars, Paste or Paste Bars; `None` for another command.
 pub(crate) fn apply(
     score: &mut Score,
     history: &mut History,
@@ -153,9 +187,9 @@ pub(crate) fn apply(
     command: &Command,
 ) -> Option<Option<Edited>> {
     match command {
-        Command::Cut => {
-            let delete = match selection {
-                Some(Selection::Bars { .. }) => Command::DeleteBars,
+        Command::Cut | Command::CutBars => {
+            let delete = match (command, selection) {
+                (Command::CutBars, _) | (_, Some(Selection::Bars { .. })) => Command::DeleteBars,
                 _ => Command::DeleteBeats,
             };
             let edited = crate::apply(score, history, c, selection, delete);
@@ -169,18 +203,16 @@ pub(crate) fn apply(
                 beats,
                 drums,
                 chords,
-            } => paste_beats(
-                score,
-                history,
-                c,
-                (beats, *drums, chords),
-                p,
-                command.label(),
-            ),
+            } => paste_beats(score, history, c, (beats, *drums, chords), command.label()),
             Clip::Bars { masters, tracks } => {
-                paste_bars(score, history, c, masters, tracks, p, command.label())
+                // From the caret's track down, as they were copied.
+                let into = (0..score.tracks.len())
+                    .map(|ti| ti.checked_sub(c.track).and_then(|k| tracks.get(k)))
+                    .collect();
+                insert_bars(score, history, c, c.bar, masters, into, command.label())
             }
         }),
+        Command::PasteBars(p) => Some(paste_bars(score, history, c, selection, p, command.label())),
         _ => None,
     }
 }
@@ -241,24 +273,192 @@ fn length(b: &Beat) -> Ratio {
     b.duration.length().unwrap_or(Ratio::ZERO)
 }
 
+/// How long beats last together.
+fn total(beats: &[Beat]) -> Option<Ratio> {
+    beats
+        .iter()
+        .map(length)
+        .try_fold(Ratio::ZERO, Ratio::checked_add)
+}
+
+/// Pasted beats poured into one voice of a staff, bar by bar from the
+/// caret's: each bar filled to its time signature, a beat a bar line cuts
+/// going on as tied pieces.
+struct Flow<'a> {
+    score: &'a Score,
+    track: usize,
+    staff: usize,
+    voice: usize,
+    /// The caret's bar.
+    first: usize,
+    /// The bars filled, from the caret's.
+    done: Vec<Bar>,
+    /// The bar being filled, its other voices as they were.
+    bar: Bar,
+    /// The voice's beats in it so far, and how long they last.
+    beats: Vec<Beat>,
+    pos: Ratio,
+    /// How long the bar lasts.
+    cap: Ratio,
+    /// Where in the bar the pasted music started, and what the voice held
+    /// from there on.
+    start: Ratio,
+    old: Vec<Beat>,
+}
+
+impl<'a> Flow<'a> {
+    /// Ready to pour at the caret.
+    fn at(score: &'a Score, c: Caret) -> Option<Flow<'a>> {
+        let mut f = Flow {
+            score,
+            track: c.track,
+            staff: c.staff,
+            voice: c.voice,
+            first: c.bar,
+            done: Vec::new(),
+            bar: empty(Default::default()),
+            beats: Vec::new(),
+            pos: Ratio::ZERO,
+            cap: Ratio::ZERO,
+            start: Ratio::ZERO,
+            old: Vec::new(),
+        };
+        f.bar = f.load(c.bar)?;
+        f.cap = f.capacity(c.bar)?;
+        let v = f.bar.voices.get_mut(c.voice)?;
+        if !v.is_empty() {
+            f.old = v.beats.split_off(c.beat.min(v.beats.len()));
+            f.beats = std::mem::take(&mut v.beats);
+        }
+        v.beats.clear();
+        f.pos = total(&f.beats)?;
+        f.start = f.pos;
+        Some(f)
+    }
+
+    /// How long bar `k` lasts: as its time signature says, or the last
+    /// bar's past the end of the song.
+    fn capacity(&self, k: usize) -> Option<Ratio> {
+        let m = self
+            .score
+            .master_bars
+            .get(k)
+            .or(self.score.master_bars.last())?;
+        m.time_signature
+            .bar_length()
+            .filter(|len| *len > Ratio::ZERO)
+    }
+
+    /// Bar `k` of the staff (an empty one past the end), with the voice.
+    fn load(&self, k: usize) -> Option<Bar> {
+        let st = self.score.tracks.get(self.track)?.staves.get(self.staff)?;
+        let mut bar = match st.bars.get(k) {
+            Some(b) => b.clone(),
+            None => empty(st.bars.last().map_or_else(Default::default, |b| b.clef)),
+        };
+        grow_voices(&mut bar, self.voice);
+        Some(bar)
+    }
+
+    /// The bar being filled done; the next one started, its voice wholly
+    /// replaced.
+    fn next(&mut self) -> Option<()> {
+        let k = self.first + self.done.len() + 1;
+        let mut bar = self.load(k)?;
+        let v = bar.voices.get_mut(self.voice)?;
+        let old = if v.is_empty() {
+            Vec::new()
+        } else {
+            std::mem::take(&mut v.beats)
+        };
+        v.beats.clear();
+        let mut full = std::mem::replace(&mut self.bar, bar);
+        full.voices.get_mut(self.voice)?.beats = std::mem::take(&mut self.beats);
+        self.done.push(full);
+        self.cap = self.capacity(k)?;
+        self.pos = Ratio::ZERO;
+        self.start = Ratio::ZERO;
+        self.old = old;
+        Some(())
+    }
+
+    /// One pasted beat in, cut into tied pieces where bar lines fall in it.
+    fn pour(&mut self, b: &Beat) -> Option<()> {
+        let len = length(b);
+        if len == Ratio::ZERO {
+            // A grace beat goes with the beat after it.
+            if self.pos >= self.cap {
+                self.next()?;
+            }
+            self.beats.push(b.clone());
+            return Some(());
+        }
+        let mut left = len;
+        let mut whole = true;
+        loop {
+            if self.pos >= self.cap {
+                self.next()?;
+            }
+            let room = self.cap.checked_sub(self.pos)?;
+            if left <= room {
+                if whole {
+                    self.beats.push(b.clone());
+                } else {
+                    self.beats
+                        .extend(pieces(b, left, Prefer::Own, false, true)?);
+                }
+                self.pos = self.pos.checked_add(left)?;
+                return Some(());
+            }
+            self.beats
+                .extend(pieces(b, room, Prefer::Own, whole, false)?);
+            self.pos = self.cap;
+            left = left.checked_sub(room)?;
+            whole = false;
+        }
+    }
+
+    /// The last bar closed: what the voice held after the pasted music
+    /// stays, less as much as the paste took the place of (what of a beat
+    /// it cuts into becomes rests). The bars, and the caret's place after
+    /// the pasted beats: in the last bar, or at the start of the bar after
+    /// when they fill it (`None`).
+    fn finish(mut self) -> Option<(Vec<Bar>, Option<usize>)> {
+        let beat = (self.pos < self.cap).then_some(self.beats.len());
+        let wanted = self.pos.checked_sub(self.start)?;
+        let mut removed = Ratio::ZERO;
+        let mut taken = 0;
+        while removed < wanted && taken < self.old.len() {
+            removed = removed.checked_add(length(self.old.get(taken)?))?;
+            taken += 1;
+        }
+        self.old.drain(..taken);
+        if removed > wanted {
+            self.beats
+                .extend(rests(removed.checked_sub(wanted)?).unwrap_or_default());
+        }
+        self.beats.append(&mut self.old);
+        self.bar.voices.get_mut(self.voice)?.beats = self.beats;
+        self.done.push(self.bar);
+        self.done.iter_mut().for_each(tidy);
+        Some((self.done, beat))
+    }
+}
+
+/// Beats pasted over the caret's voice from the caret on (#267).
 fn paste_beats(
     score: &mut Score,
     history: &mut History,
     c: Caret,
     (beats, from_drums, from_chords): (&[Beat], bool, &[ChordDiagram]),
-    p: &Paste,
     label: &'static str,
 ) -> Option<Edited> {
     let track = score.tracks.get(c.track)?;
     let to_drums = track.instrument.percussion;
-    let staff = track.staves.get(c.staff)?;
-    let strings = staff.string_count();
-    let one: Vec<Beat> = beats
+    let strings = track.staves.get(c.staff)?.string_count();
+    let mut pasted: Vec<Beat> = beats
         .iter()
         .filter_map(|b| fit(b, from_drums, to_drums, strings))
-        .collect();
-    let mut pasted: Vec<Beat> = (0..p.times.max(1))
-        .flat_map(|_| one.iter().cloned())
         .collect();
     if pasted.is_empty() {
         return None;
@@ -266,114 +466,139 @@ fn paste_beats(
     let mut chords = track.chords.clone();
     map_chords(pasted.iter_mut(), from_chords, &mut chords);
     let new_chords = (chords != track.chords).then_some(chords);
-    let mut bar = staff.bars.get(c.bar)?.clone();
-    grow_voices(&mut bar, c.voice);
-    let v: &mut Voice = bar.voices.get_mut(c.voice)?;
-    if v.is_empty() {
-        v.beats.clear();
+    let mut flow = Flow::at(score, c)?;
+    for b in &pasted {
+        flow.pour(b)?;
     }
-    let at = c.beat.min(v.beats.len());
-    let mut tail = v.beats.split_off(at);
-    if p.replace {
-        // Out goes as much as the pasted beats last; what of the last
-        // beat out they don't cover becomes rests.
-        let wanted = pasted
-            .iter()
-            .map(length)
-            .try_fold(Ratio::ZERO, Ratio::checked_add)?;
-        let mut removed = Ratio::ZERO;
-        let mut taken = 0;
-        while removed < wanted && taken < tail.len() {
-            removed = removed.checked_add(length(tail.get(taken)?))?;
-            taken += 1;
-        }
-        tail.drain(..taken);
-        if removed > wanted {
-            let rests = rests_for(removed.checked_sub(wanted)?).unwrap_or_default();
-            for (i, d) in rests.into_iter().enumerate() {
-                tail.insert(
-                    i,
-                    Beat {
-                        kind: BeatKind::Rest,
-                        duration: d,
-                        ..Beat::default()
-                    },
-                );
-            }
-        }
-    }
-    let count = pasted.len();
-    v.beats.extend(pasted);
-    v.beats.extend(tail);
-    tidy(&mut bar);
+    let (mut bars, beat) = flow.finish()?;
     let (t, s, first) = (c.track, c.staff, c.bar);
-    let end = score.bar_count();
-    let mut regions = vec![Region::Bars {
-        track: t,
-        staff: s,
-        bars: first..end,
-    }];
-    if new_chords.is_some() {
-        regions.push(Region::Track(t));
+    let end = first + bars.len();
+    let count = score.bar_count();
+    if let Some(old) = score
+        .tracks
+        .get(t)
+        .and_then(|tr| tr.staves.get(s))
+        .and_then(|st| st.bars.get(first..end.min(count)))
+    {
+        crate::effects::unmark_similes(old, &mut bars);
     }
+    let regions = if end > count {
+        vec![Region::Whole]
+    } else {
+        let mut r = vec![Region::Bars {
+            track: t,
+            staff: s,
+            bars: first..count,
+        }];
+        if new_chords.is_some() {
+            r.push(Region::Track(t));
+        }
+        r
+    };
     let touched = history.record(score, label, regions, |score| {
+        grow(score, end);
         if let (Some(tr), Some(chords)) = (score.tracks.get_mut(t), new_chords) {
             tr.chords = chords;
         }
         if let Some(st) = score.tracks.get_mut(t).and_then(|t| t.staves.get_mut(s)) {
-            if let Some(b) = st.bars.get_mut(first) {
-                *b = bar;
+            if let Some(dst) = st.bars.get_mut(first..end) {
+                dst.clone_from_slice(&bars);
             }
             retie(st, first);
         }
     });
-    let caret = Caret {
-        beat: at + count,
-        ..c
+    let (bar, beat) = match beat {
+        Some(beat) => (end - 1, beat),
+        None if end < score.bar_count() => (end, 0),
+        None => (end - 1, usize::MAX),
     };
+    let caret = Caret { bar, beat, ..c };
     Some(Edited {
         touched,
         caret: caret.clamp(score).unwrap_or(c),
     })
 }
 
+/// Bars added at the end until the score has `n`, in the last bar's time
+/// and key, empty in every staff.
+fn grow(s: &mut Score, n: usize) {
+    while s.master_bars.len() < n {
+        let last = s.master_bars.last().cloned().unwrap_or_default();
+        s.master_bars.push(MasterBar {
+            time_signature: last.time_signature,
+            key_signature: last.key_signature,
+            ..MasterBar::default()
+        });
+        for st in s.tracks.iter_mut().flat_map(|t| &mut t.staves) {
+            let clef = st.bars.last().map_or_else(Default::default, |b| b.clef);
+            st.bars.push(empty(clef));
+        }
+    }
+}
+
+/// Paste Bars (#287): the copied bars as new bars before or after the
+/// bars the selection (or the caret) touches.
 fn paste_bars(
     score: &mut Score,
     history: &mut History,
     c: Caret,
-    masters: &[MasterBar],
-    tracks: &[ClipTrack],
-    p: &Paste,
+    selection: Option<Selection>,
+    p: &PasteBars,
     label: &'static str,
 ) -> Option<Edited> {
-    let times = usize::from(p.times.max(1));
-    let n = masters.len().checked_mul(times)?;
-    if n == 0 {
+    let Clip::Bars { masters, tracks } = &*p.clip else {
+        return None;
+    };
+    let (first, last) = selection.map_or((c.bar, c.bar), |s| s.bars());
+    let at = if p.after { last + 1 } else { first };
+    let own = |ti: usize| tracks.iter().find(|k| k.from == ti);
+    let into = (0..score.tracks.len())
+        .map(|ti| match (p.all_tracks, ti == c.track) {
+            (true, _) => own(ti),
+            (false, true) => own(ti).or(tracks.first()),
+            (false, false) => None,
+        })
+        .collect();
+    insert_bars(score, history, c, at, masters, into, label)
+}
+
+/// `masters` put in as new bars before bar `at` (the end, at the bar
+/// count): each track gets the copied bars `into` gives it, the others
+/// bars of rests. The caret goes to the bar after them.
+fn insert_bars(
+    score: &mut Score,
+    history: &mut History,
+    c: Caret,
+    at: usize,
+    masters: &[MasterBar],
+    into: Vec<Option<&ClipTrack>>,
+    label: &'static str,
+) -> Option<Edited> {
+    let n = masters.len();
+    if n == 0 || at > score.bar_count() {
         return None;
     }
-    let first = c.bar;
-    let new_masters: Vec<MasterBar> = (0..times).flat_map(|_| masters.iter().cloned()).collect();
-    // Each track's new bars, staff by staff: `None` for a track the clip
-    // doesn't reach.
-    let mut new_bars: Vec<Option<Vec<Vec<Bar>>>> = Vec::with_capacity(score.tracks.len());
+    // Each track's new bars, staff by staff, and its chord diagrams.
+    let mut new_bars: Vec<Vec<Vec<Bar>>> = Vec::with_capacity(score.tracks.len());
     let mut new_chords: Vec<Vec<ChordDiagram>> = Vec::with_capacity(score.tracks.len());
     for (ti, t) in score.tracks.iter().enumerate() {
-        let clip = ti.checked_sub(c.track).and_then(|k| tracks.get(k));
+        let clip = into.get(ti).copied().flatten();
+        let to_drums = t.instrument.percussion;
         let mut chords = t.chords.clone();
-        new_bars.push(clip.map(|clip| {
-            let to_drums = t.instrument.percussion;
-            t.staves
-                .iter()
-                .enumerate()
-                .map(|(si, st)| {
-                    let clef = st
-                        .bars
-                        .get(first)
-                        .or(st.bars.last())
-                        .map_or_else(Default::default, |b| b.clef);
-                    let strings = st.string_count();
-                    let one: Vec<Bar> = match clip.staves.get(si) {
-                        Some(bars) => bars
+        let staves = t
+            .staves
+            .iter()
+            .enumerate()
+            .map(|(si, st)| {
+                let clef = st
+                    .bars
+                    .get(at)
+                    .or(st.bars.last())
+                    .map_or_else(Default::default, |b| b.clef);
+                let strings = st.string_count();
+                match clip.and_then(|k| Some((k, k.staves.get(si)?))) {
+                    Some((clip, bars)) => {
+                        let mut bars: Vec<Bar> = bars
                             .iter()
                             .map(|b| Bar {
                                 // A pasted bar holds its music: no longer
@@ -403,76 +628,35 @@ fn paste_bars(
                                     })
                                     .collect(),
                             })
-                            .collect(),
-                        None => (0..masters.len()).map(|_| empty(clef)).collect(),
-                    };
-                    let mut all: Vec<Bar> = (0..times).flat_map(|_| one.iter().cloned()).collect();
-                    map_chords(
-                        all.iter_mut()
-                            .flat_map(|b| &mut b.voices)
-                            .flat_map(|v| &mut v.beats),
-                        &clip.chords,
-                        &mut chords,
-                    );
-                    all
-                })
-                .collect()
-        }));
+                            .collect();
+                        map_chords(
+                            bars.iter_mut()
+                                .flat_map(|b| &mut b.voices)
+                                .flat_map(|v| &mut v.beats),
+                            &clip.chords,
+                            &mut chords,
+                        );
+                        bars
+                    }
+                    None => masters.iter().map(|m| resting(m, clef)).collect(),
+                }
+            })
+            .collect();
+        new_bars.push(staves);
         new_chords.push(chords);
     }
     let touched = history.record(score, label, vec![Region::Whole], |s| {
-        if p.replace {
-            // Bars at the end for what goes past it, as the last.
-            while s.master_bars.len() < first + n {
-                let last = s.master_bars.last().cloned().unwrap_or_default();
-                s.master_bars.push(MasterBar {
-                    time_signature: last.time_signature,
-                    key_signature: last.key_signature,
-                    ..MasterBar::default()
-                });
-                for st in s.tracks.iter_mut().flat_map(|t| &mut t.staves) {
-                    let clef = st.bars.last().map_or_else(Default::default, |b| b.clef);
-                    st.bars.push(empty(clef));
-                }
-            }
-            if let Some(dst) = s.master_bars.get_mut(first..first + n) {
-                dst.clone_from_slice(&new_masters);
-            }
-        } else {
-            s.master_bars
-                .splice(first..first, new_masters.iter().cloned());
-        }
-        for (t, chords) in s.tracks.iter_mut().zip(&new_chords) {
-            t.chords.clone_from(chords);
-        }
-        for (t, bars) in s.tracks.iter_mut().zip(&new_bars) {
-            for (si, st) in t.staves.iter_mut().enumerate() {
-                let clef = st
-                    .bars
-                    .get(first)
-                    .or(st.bars.last())
-                    .map_or_else(Default::default, |b| b.clef);
-                let mine = bars.as_ref().and_then(|b| b.get(si));
-                match (p.replace, mine) {
-                    (true, Some(mine)) => {
-                        if let Some(dst) = st.bars.get_mut(first..first + n) {
-                            dst.clone_from_slice(mine);
-                        }
-                    }
-                    (true, None) => {}
-                    (false, Some(mine)) => {
-                        st.bars.splice(first..first, mine.iter().cloned());
-                    }
-                    (false, None) => {
-                        st.bars.splice(first..first, (0..n).map(|_| empty(clef)));
-                    }
-                }
-                retie(st, first);
+        s.master_bars.splice(at..at, masters.iter().cloned());
+        for ((t, chords), bars) in s.tracks.iter_mut().zip(new_chords).zip(new_bars) {
+            t.chords = chords;
+            for (st, mine) in t.staves.iter_mut().zip(bars) {
+                st.bars.splice(at..at, mine);
+                retie(st, at);
             }
         }
     });
     let caret = Caret {
-        bar: (first + n).min(score.bar_count().saturating_sub(1)),
+        bar: (at + n).min(score.bar_count().saturating_sub(1)),
         beat: 0,
         ..c
     };
@@ -496,6 +680,21 @@ fn empty(clef: oxiguitar_model::Clef) -> Bar {
         clef,
         voices: vec![Voice::default()],
         simile: None,
+    }
+}
+
+/// A bar of rests as long as `m`'s time signature, in `clef` (an empty
+/// bar where no rests fill it).
+fn resting(m: &MasterBar, clef: oxiguitar_model::Clef) -> Bar {
+    Bar {
+        voices: vec![Voice {
+            beats: m
+                .time_signature
+                .bar_length()
+                .and_then(rests)
+                .unwrap_or_default(),
+        }],
+        ..empty(clef)
     }
 }
 
@@ -523,7 +722,7 @@ mod tests {
                 run(&mut s, &mut h, at(bar - 1, 4), None, Command::AppendBar).unwrap();
             }
             for i in 0..4 {
-                let fret = (bar * 4 + i) as u8;
+                let fret = ((bar * 4 + i) % 24) as u8;
                 run(
                     &mut s,
                     &mut h,
@@ -534,6 +733,20 @@ mod tests {
                 .unwrap();
             }
         }
+        s
+    }
+
+    /// `s` with a drum track after the guitar, holding the same bars.
+    fn with_drums(mut s: Score) -> Score {
+        let mut drums = s.tracks[0].clone();
+        drums.instrument = Instrument {
+            midi_program: 0,
+            percussion: true,
+        };
+        s.tracks.push(Track {
+            name: "Drums".into(),
+            ..drums
+        });
         s
     }
 
@@ -548,59 +761,95 @@ mod tests {
             .collect()
     }
 
-    fn paste(clip: Clip, times: u8, replace: bool) -> Command {
+    fn paste(clip: Clip) -> Command {
         Command::Paste(Paste {
             clip: Arc::new(clip),
-            times,
-            replace,
         })
     }
 
-    #[test]
-    fn beats_insert_and_replace() {
-        let mut s = score(2);
-        let mut h = History::new();
-        let sel = Selection::between(at(0, 1), at(0, 2));
-        let clip = copy(&s, at(0, 2), Some(sel)).unwrap();
-        let e = run(
-            &mut s,
-            &mut h,
-            at(1, 1),
-            None,
-            paste(clip.clone(), 2, false),
-        )
-        .unwrap();
-        assert_eq!(frets(&s, 0, 1), [4, 1, 2, 1, 2, 5, 6, 7].map(Some));
-        assert_eq!(e.caret.beat, 5);
-        h.undo(&mut s);
-        // Replacing two quarters by an eighth: the rest of the second
-        // quarter stays, as a rest.
-        let mut short = clip.clone();
-        if let Clip::Beats { beats, .. } = &mut short {
-            beats.truncate(1);
-            beats[0].duration.value = NoteValue::Eighth;
-        }
-        run(&mut s, &mut h, at(1, 1), None, paste(short, 1, true)).unwrap();
-        assert_eq!(frets(&s, 0, 1), [Some(4), Some(1), None, Some(6), Some(7)]);
-        assert_eq!(
-            crate::BarCheck::of(&s).iter().count(),
-            0,
-            "every bar adds up"
-        );
+    fn paste_bars(clip: Clip, after: bool, all_tracks: bool) -> Command {
+        Command::PasteBars(PasteBars {
+            clip: Arc::new(clip),
+            after,
+            all_tracks,
+        })
+    }
+
+    fn adds_up(s: &Score) -> bool {
+        crate::BarCheck::of(s).iter().count() == 0
     }
 
     #[test]
-    fn bars_across_tracks_insert_and_replace() {
+    fn beats_flow_over_bar_lines_and_replace() {
         let mut s = score(3);
-        let mut drums = s.tracks[0].clone();
-        drums.instrument = Instrument {
-            midi_program: 0,
-            percussion: true,
-        };
-        s.tracks.push(Track {
-            name: "Drums".into(),
-            ..drums
-        });
+        let mut h = History::new();
+        // Six beats from bar 1's second to bar 2's third.
+        let sel = Selection::between(at(0, 1), at(1, 2));
+        let clip = copy(&s, at(0, 0), Some(sel)).unwrap();
+        let e = run(&mut s, &mut h, at(1, 2), None, paste(clip.clone())).unwrap();
+        assert_eq!(frets(&s, 0, 1), [4, 5, 1, 2].map(Some));
+        assert_eq!(frets(&s, 0, 2), [3, 4, 5, 6].map(Some));
+        assert_eq!((e.caret.bar, e.caret.beat), (2, 3), "the last bar's end");
+        assert_eq!(s.bar_count(), 3);
+        assert!(adds_up(&s));
+        assert_eq!(h.undo_label(), Some("Paste"));
+        h.undo(&mut s);
+        // Past the end of the song: a bar is added for what is left.
+        run(&mut s, &mut h, at(2, 1), None, paste(clip.clone())).unwrap();
+        assert_eq!(s.bar_count(), 4);
+        s.check_structure().unwrap();
+        assert_eq!(frets(&s, 0, 2), [8, 1, 2, 3].map(Some));
+        assert_eq!(frets(&s, 0, 3), [4, 5, 6].map(Some));
+        h.undo(&mut s);
+        assert_eq!(s.bar_count(), 3);
+        // Inside one bar it replaces as much as it lasts.
+        let one = copy(&s, at(0, 2), None).unwrap();
+        run(&mut s, &mut h, at(1, 1), None, paste(one)).unwrap();
+        assert_eq!(frets(&s, 0, 1), [4, 2, 6, 7].map(Some));
+    }
+
+    #[test]
+    fn whole_bars_of_beats_land_bar_for_bar() {
+        // #267: eight bars copied into eight empty ones.
+        let mut s = score(8);
+        let mut h = History::new();
+        for _ in 0..8 {
+            let last = s.bar_count() - 1;
+            run(&mut s, &mut h, at(last, 4), None, Command::AppendBar).unwrap();
+        }
+        let sel = Selection::between(at(0, 0), at(7, 3));
+        let clip = copy(&s, at(0, 0), Some(sel)).unwrap();
+        run(&mut s, &mut h, at(8, 0), None, paste(clip)).unwrap();
+        assert_eq!(s.bar_count(), 16);
+        for bar in 0..8 {
+            assert_eq!(frets(&s, 0, bar + 8), frets(&s, 0, bar), "bar {bar}");
+        }
+        assert!(adds_up(&s));
+    }
+
+    #[test]
+    fn a_beat_a_bar_line_cuts_goes_on_tied() {
+        let mut s = score(2);
+        let mut h = History::new();
+        let mut half = copy(&s, at(0, 0), None).unwrap();
+        if let Clip::Beats { beats, .. } = &mut half {
+            beats[0].duration.value = NoteValue::Half;
+        }
+        run(&mut s, &mut h, at(0, 3), None, paste(half)).unwrap();
+        let first = &s.tracks[0].staves[0].bars[0].voices[0].beats;
+        let next = &s.tracks[0].staves[0].bars[1].voices[0].beats;
+        assert_eq!(first.len(), 4);
+        assert_eq!(first[3].duration.value, NoteValue::Quarter);
+        assert!(!first[3].notes[0].tie);
+        assert_eq!(next[0].duration.value, NoteValue::Quarter);
+        assert!(next[0].notes[0].tie, "the second piece is tied");
+        assert_eq!(frets(&s, 0, 1), [0, 5, 6, 7].map(Some));
+        assert!(adds_up(&s));
+    }
+
+    #[test]
+    fn bars_pasted_with_ctrl_v_go_in_before_the_caret() {
+        let mut s = with_drums(score(3));
         s.master_bars[1].repeat_start = true;
         let mut h = History::new();
         let all = Selection::Bars {
@@ -608,45 +857,99 @@ mod tests {
             bars: (1, 1),
         };
         let clip = copy(&s, at(1, 0), Some(all)).unwrap();
+        run(&mut s, &mut h, at(0, 0), None, paste(clip)).unwrap();
+        assert_eq!(s.bar_count(), 4);
+        s.check_structure().unwrap();
+        assert!(s.master_bars[0].repeat_start && s.master_bars[2].repeat_start);
+        assert_eq!(frets(&s, 0, 0), [4, 5, 6, 7].map(Some));
+        assert_eq!(frets(&s, 0, 1), [0, 1, 2, 3].map(Some));
+    }
+
+    #[test]
+    fn copy_bars_takes_every_bar_the_selection_touches() {
+        let s = with_drums(score(3));
+        // From bar 1's third beat to bar 2's second: bars 1 and 2, whole.
+        let sel = Selection::between(at(0, 2), at(1, 1));
+        let Some(Clip::Bars { masters, tracks }) = copy_bars(&s, at(1, 1), Some(sel), false) else {
+            panic!("bars")
+        };
+        assert_eq!(masters.len(), 2);
+        assert_eq!(tracks.len(), 1);
+        assert_eq!(tracks[0].from, 0);
+        assert_eq!(tracks[0].staves[0][0].voices[0].beats.len(), 4);
+        let Some(Clip::Bars { tracks, .. }) = copy_bars(&s, at(2, 0), None, true) else {
+            panic!("bars")
+        };
+        assert_eq!(tracks.iter().map(|t| t.from).collect::<Vec<_>>(), [0, 1]);
+    }
+
+    #[test]
+    fn paste_bars_before_and_after_into_their_own_tracks() {
+        let mut s = with_drums(score(3));
+        let mut h = History::new();
+        let drums = Caret {
+            track: 1,
+            ..at(2, 0)
+        };
+        // The drums' bar 3 only, pasted into every track from the guitar:
+        // it goes back to the drums; the guitar gets a bar of rests.
+        let clip = copy_bars(&s, drums, None, false).unwrap();
+        let sel = Selection::between(at(0, 1), at(1, 0));
+        let e = run(
+            &mut s,
+            &mut h,
+            at(1, 0),
+            Some(sel),
+            paste_bars(clip.clone(), true, true),
+        )
+        .unwrap();
+        assert_eq!(h.undo_label(), Some("Paste Bars"));
+        assert_eq!(s.bar_count(), 4);
+        s.check_structure().unwrap();
+        assert_eq!(frets(&s, 1, 2), [8, 9, 10, 11].map(Some), "after bar 2");
+        let rests = &s.tracks[0].staves[0].bars[2].voices[0].beats;
+        assert_eq!(rests.len(), 1);
+        assert_eq!(rests[0].kind, BeatKind::Rest);
+        assert_eq!(rests[0].duration.value, NoteValue::Whole);
+        assert_eq!(frets(&s, 0, 3), [8, 9, 10, 11].map(Some));
+        assert_eq!(e.caret.bar, 3);
+        assert!(adds_up(&s));
+        h.undo(&mut s);
+        // Both tracks' bar 3 into only the caret's track, before its bar:
+        // the guitar takes its own copy, the drums get rests.
+        let both = copy_bars(&s, at(2, 0), None, true).unwrap();
+        assert_ne!(both, clip);
         run(
             &mut s,
             &mut h,
             at(0, 0),
             None,
-            paste(clip.clone(), 2, false),
+            paste_bars(both, false, false),
         )
         .unwrap();
-        assert_eq!(s.bar_count(), 5);
-        s.check_structure().unwrap();
-        assert!(s.master_bars[0].repeat_start && s.master_bars[1].repeat_start);
-        assert_eq!(frets(&s, 0, 0), [4, 5, 6, 7].map(Some));
-        assert_eq!(frets(&s, 0, 2), [0, 1, 2, 3].map(Some));
-        h.undo(&mut s);
-        // One track's bars into the drums: only the rhythm, as rests.
-        let one = Selection::Bars {
-            tracks: (0, 0),
-            bars: (0, 0),
-        };
-        let clip = copy(&s, at(0, 0), Some(one)).unwrap();
-        let at = Caret {
-            track: 1,
-            ..at(2, 0)
-        };
-        run(&mut s, &mut h, at, None, paste(clip, 2, true)).unwrap();
-        assert_eq!(s.bar_count(), 4, "a bar added at the end");
-        s.check_structure().unwrap();
-        let bar = &s.tracks[1].staves[0].bars[3];
-        assert!(bar.voices[0].beats.iter().all(|b| b.kind == BeatKind::Rest));
+        assert_eq!(frets(&s, 0, 0), [8, 9, 10, 11].map(Some));
         assert_eq!(
-            frets(&s, 0, 2),
-            [8, 9, 10, 11].map(Some),
-            "the guitar is untouched"
+            s.tracks[1].staves[0].bars[0].voices[0].beats[0].kind,
+            BeatKind::Rest
+        );
+        assert_eq!(frets(&s, 0, 1), [0, 1, 2, 3].map(Some));
+        // Beats don't paste as bars.
+        let beats = copy(&s, at(1, 0), None).unwrap();
+        assert!(
+            run(
+                &mut s,
+                &mut h,
+                at(0, 0),
+                None,
+                paste_bars(beats, false, true)
+            )
+            .is_none()
         );
     }
 
     #[test]
-    fn cut_is_named_and_undone() {
-        let mut s = score(2);
+    fn cuts_are_named_and_undone() {
+        let mut s = with_drums(score(3));
         let before = s.clone();
         let mut h = History::new();
         let sel = Selection::Bars {
@@ -654,15 +957,104 @@ mod tests {
             bars: (0, 0),
         };
         run(&mut s, &mut h, at(0, 0), Some(sel), Command::Cut).unwrap();
-        assert_eq!(s.bar_count(), 1);
+        assert_eq!(s.bar_count(), 2);
         assert_eq!(h.undo_label(), Some("Cut"));
         run(&mut s, &mut h, at(0, 0), None, Command::Cut).unwrap();
         assert_eq!(frets(&s, 0, 0), [5, 6, 7].map(Some));
+        // Cut Bars: the bars a run of beats touches, from every track.
+        let sel = Selection::between(at(0, 2), at(1, 0));
+        h.undo(&mut s);
+        h.undo(&mut s);
+        run(&mut s, &mut h, at(1, 0), Some(sel), Command::CutBars).unwrap();
+        assert_eq!(h.undo_label(), Some("Cut Bars"));
+        assert_eq!(s.bar_count(), 1);
+        assert_eq!(frets(&s, 1, 0), [8, 9, 10, 11].map(Some));
         while h.undo(&mut s).is_some() {}
         assert_eq!(s, before);
         assert!(
             copy(&s, at(0, 4), None).is_none(),
             "the place after the last beat"
         );
+    }
+
+    #[test]
+    fn random_clipboard_edits_keep_the_score_whole_and_undo() {
+        let mut s = with_drums(score(6));
+        s.master_bars[3].time_signature = oxiguitar_model::TimeSignature {
+            numerator: 3,
+            denominator: 4,
+        };
+        let before = s.clone();
+        let mut h = History::new();
+        let mut seed = 0x9e37_79b9_7f4a_7c15_u64;
+        let mut below = |n: usize| {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            (seed % n.max(1) as u64) as usize
+        };
+        let mut clip = None;
+        let mut done = [0usize; 3];
+        for _ in 0..600 {
+            let track = below(2);
+            let bar = below(s.bar_count());
+            let c = Caret {
+                track,
+                bar,
+                beat: below(5),
+                ..at(0, 0)
+            }
+            .clamp(&s)
+            .unwrap();
+            let head = Caret {
+                bar: (bar + below(3)).min(s.bar_count() - 1),
+                beat: below(5),
+                ..c
+            }
+            .clamp(&s)
+            .unwrap();
+            let sel = match below(3) {
+                0 => None,
+                1 => Some(Selection::between(c, head)),
+                _ => Some(Selection::between(
+                    c,
+                    Caret {
+                        track: 1 - track,
+                        ..head
+                    },
+                )),
+            };
+            match below(6) {
+                0 => clip = copy(&s, c, sel).or(clip),
+                1 => clip = copy_bars(&s, c, sel, below(2) == 0).or(clip),
+                2 => {
+                    done[0] += usize::from(run(&mut s, &mut h, c, sel, Command::CutBars).is_some());
+                }
+                3 => {
+                    if let Some(k) = clip.clone() {
+                        done[1] += usize::from(run(&mut s, &mut h, c, sel, paste(k)).is_some());
+                    }
+                }
+                4 => {
+                    if let Some(k) = clip.clone() {
+                        let p = paste_bars(k, below(2) == 0, below(2) == 0);
+                        done[2] += usize::from(run(&mut s, &mut h, c, sel, p).is_some());
+                    }
+                }
+                _ => {
+                    h.undo(&mut s);
+                }
+            }
+            s.check_structure().unwrap();
+            if s.bar_count() > 40 {
+                while s.bar_count() > 20 && h.undo(&mut s).is_some() {}
+            }
+        }
+        assert!(
+            done.iter().all(|&n| n > 20),
+            "cut, paste, paste bars: {done:?}"
+        );
+        while h.undo(&mut s).is_some() {}
+        assert_eq!(s, before);
     }
 }

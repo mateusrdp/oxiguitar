@@ -7,7 +7,12 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 ### Added
 
 - **Harmonize…** (#235): chords found for the music and written above the caret's track with their diagrams, as one step for Undo (Tools for the whole track, or right-click on the page for the selected bars). It listens to every track but the drums: the caret's track as the melody, the others as the accompaniment, whose notes and lowest note say most. A dialog chooses plain chords or sevenths and suspended chords too, one chord a bar or changes inside bars, and whether the chords already there are replaced or kept (the new ones are then fitted around them). The chords are found in the key of the bars' key signature; the footer names it, and says so when the notes fit another key better. Our own search for the cheapest chain of chords, with numbers counted in the POP909 dataset (`docs/design/harmonize.md`, `scripts/harmony/measure.py`).
+- **Copy Bars, Cut Bars and Paste Bars** (#287): Ctrl + Shift + C, Ctrl + Shift + X and Ctrl + Shift + V, also in the Edit menu. They work on every bar the selection touches, whole, from the caret's track or from all tracks, as a small dialog asks. Cut Bars then takes those bars out of the song. Paste Bars puts them in as new bars before or after the selected bars: with all tracks each track gets back the bars copied from it and the others get bars of rests; with only this track it takes its own copied bars.
 - **Play Engraved Beat toggle** (#246): Edit → "Play Engraved Beat" (ticked by default) plays a 1-beat preview of the edited track when a note is inserted or deleted — only the caret's track sounds (temporarily soloed), same instrument and effects as normal playback. Ticking it off disables the preview. Persisted in `settings.json` under the `view` key.
+
+### Changed
+
+- **Paste no longer squeezes several bars into one** (#267): pasted beats take the place of what the caret's voice holds from the caret on and run on over bar lines, each bar filled to its time signature (a note a bar line cuts goes on tied), with bars added at the end when needed. Eight bars copied and pasted at the start of a bar land bar for bar. Bars copied across tracks and pasted with Ctrl + V give bars of rests, not empty bars, to the tracks that weren't copied.
 
 ### Fixed
 
@@ -17,6 +22,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Removed
 
+- **Special Paste** (#287): its keys, Ctrl + Shift + V, now paste bars, and Paste always replaces what is there, so pasting several times or inserting beats is no longer offered.
 - **Clef, Time Signature and Key Signature tools from the left palette** (#277): these tools did nothing — their functionality already lives in the Bar tab of the right inspector sidebar. Removed from the palette, shortcut map, dialog mapping, drawing functions, and tests.
 
 ## [0.19.1] - 2026-11-11
