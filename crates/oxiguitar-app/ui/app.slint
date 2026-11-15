@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, GridPoint, PasteDialog, TextDialog, TupletDialog, TransposeDialog, FitDialog } from "bar_dialog.slint";
+import { BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -1392,6 +1392,7 @@ export component AppWindow inherits Window {
     // The plugin windows, tabs and the settings follow it.
     changed dark-interface => { root.settings-changed(); }
     in-out property <bool> dynamics: false;
+    in-out property <bool> play-engraved-beat: true;
 
     // The shell (shell.rs): the toolbar and the four areas, numbered
     // 0 top, 1 bottom, 2 left, 3 right. The View menu's ticks show or hide
@@ -1542,28 +1543,26 @@ export component AppWindow inherits Window {
     callback lyric-key(string, string);
     in property <bool> chord-dialog-shown: false;
     in-out property <string> chord-name;
-    in property <[string]> chord-library;
-    in property <[string]> chord-roots;
-    in-out property <int> chord-root;
-    in property <[string]> chord-triads;
-    in-out property <int> chord-triad;
-    in property <[string]> chord-extensions;
-    in-out property <int> chord-extension;
-    in property <[string]> chord-basses;
-    in-out property <int> chord-bass;
-    in property <[AltBox]> chord-alterations;
+    in property <[string]> chord-names;
+    in-out property <string> chord-voicing;
+    in property <[string]> chord-voicings;
+    in property <[string]> chord-styles;
+    in-out property <int> chord-style;
     in property <int> chord-strings: 6;
     in property <[int]> chord-dots;
     in-out property <int> chord-first-fret: 1;
     in property <int> chord-last-fret: 24;
-    in property <[string]> chord-voicings;
-    in property <bool> chord-show-diagram: true;
+    in property <bool> chord-add-diagram: true;
     callback chord-changed(string, int, string);
     callback chord-dialog-done(bool);
-    in property <bool> paste-dialog-shown: false;
-    in-out property <int> paste-times: 1;
-    in-out property <bool> paste-replace: false;
-    callback paste-dialog-done(bool);
+    // Copy, Cut and Paste Bars' dialog (#287).
+    in property <bool> bars-dialog-shown: false;
+    in property <string> bars-heading;
+    in property <bool> bars-asks-place: false;
+    in property <string> bars-note;
+    in-out property <bool> bars-after: false;
+    in-out property <bool> bars-all-tracks: false;
+    callback bars-dialog-done(bool);
     // The Track tab (track_form.rs): its heading and rows.
     in property <string> track-heading;
     in property <[InspectorField]> track-fields;
@@ -1586,6 +1585,15 @@ export component AppWindow inherits Window {
     in property <string> fit-heading;
     in-out property <bool> fit-stretch;
     callback fit-dialog-done(bool);
+    in property <bool> harmonize-dialog-shown: false;
+    in property <string> harmonize-heading;
+    in property <string> harmonize-part;
+    in-out property <bool> harmonize-sevenths;
+    in-out property <bool> harmonize-inside-bars;
+    in-out property <bool> harmonize-keep;
+    in-out property <bool> harmonize-all-tracks: true;
+    in-out property <bool> harmonize-whole-song;
+    callback harmonize-dialog-done(bool);
     // File → Export's audio exporters (plugin interface 1.4), by name; the
     // dialog before one exports, and the export under way.
     in property <[string]> exporters;
@@ -1754,7 +1762,9 @@ export component AppWindow inherits Window {
             MenuItem { title: "Cut (Ctrl + X)"; enabled: root.has-score; activated => { root.edit-command("cut"); } }
             MenuItem { title: "Copy (Ctrl + C)"; enabled: root.has-score; activated => { root.edit-command("copy"); } }
             MenuItem { title: "Paste (Ctrl + V)"; enabled: root.has-score; activated => { root.edit-command("paste"); } }
-            MenuItem { title: "Special Paste… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("special-paste"); } }
+            MenuItem { title: "Cut Bars… (Ctrl + Shift + X)"; enabled: root.has-score; activated => { root.edit-command("cut-bars"); } }
+            MenuItem { title: "Copy Bars… (Ctrl + Shift + C)"; enabled: root.has-score; activated => { root.edit-command("copy-bars"); } }
+            MenuItem { title: "Paste Bars… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("paste-bars"); } }
             MenuSeparator { }
             Menu {
                 title: "Go to Section";
@@ -1779,6 +1789,7 @@ export component AppWindow inherits Window {
             }
             MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
             MenuSeparator { }
+            MenuItem { title: "Play Engraved Beat"; checkable: true; checked <=> root.play-engraved-beat; activated => { root.settings-changed(); } }
             MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
             MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
             MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
@@ -1831,6 +1842,7 @@ export component AppWindow inherits Window {
             MenuItem { title: "Transpose…"; enabled: root.has-score; activated => { root.edit-command("transpose-all"); } }
             MenuItem { title: "Find Fingering"; enabled: root.has-score; activated => { root.edit-command("fingering-all"); } }
             MenuItem { title: "Fit Bars to Time Signature…"; enabled: root.has-score; activated => { root.edit-command("fit-all"); } }
+            MenuItem { title: "Harmonize…"; enabled: root.has-score; activated => { root.edit-command("harmonize-all"); } }
             MenuSeparator {}
             MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
         }
@@ -2302,6 +2314,7 @@ export component AppWindow inherits Window {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
                                 MenuItem { title: "Find Fingering"; activated => { root.page-menu("fingering"); } }
                                 MenuItem { title: "Fit Bars to Time Signature…"; activated => { root.page-menu("fit"); } }
+                                MenuItem { title: "Harmonize…"; activated => { root.page-menu("harmonize"); } }
                                 MenuSeparator { }
                                 MenuItem { title: "Cut"; activated => { root.page-menu("cut"); } }
                                 MenuItem { title: "Copy"; activated => { root.page-menu("copy"); } }
@@ -2815,44 +2828,60 @@ export component AppWindow inherits Window {
         width: root.width;
         height: root.height;
         name <=> root.chord-name;
-        library: root.chord-library;
-        roots: root.chord-roots;
-        root-index <=> root.chord-root;
-        triads: root.chord-triads;
-        triad-index <=> root.chord-triad;
-        extensions: root.chord-extensions;
-        extension-index <=> root.chord-extension;
-        basses: root.chord-basses;
-        bass-index <=> root.chord-bass;
-        alterations: root.chord-alterations;
+        names: root.chord-names;
+        voicing <=> root.chord-voicing;
+        voicings: root.chord-voicings;
+        styles: root.chord-styles;
+        style-index <=> root.chord-style;
         strings: root.chord-strings;
         dots: root.chord-dots;
         first-fret <=> root.chord-first-fret;
         last-fret: root.chord-last-fret;
-        voicings: root.chord-voicings;
-        show-diagram: root.chord-show-diagram;
+        add-diagram: root.chord-add-diagram;
         name-typed(t) => { root.chord-changed("name", 0, t); }
-        library-picked(i) => { root.chord-changed("library", i, ""); }
-        root-picked(i) => { root.chord-changed("root", i, ""); }
-        triad-picked(i) => { root.chord-changed("triad", i, ""); }
-        extension-picked(i) => { root.chord-changed("extension", i, ""); }
-        bass-picked(i) => { root.chord-changed("bass", i, ""); }
-        alteration-toggled(i, on) => { root.chord-changed(on ? "alt-on" : "alt-off", i, ""); }
+        name-picked(i) => { root.chord-changed("name-picked", i, ""); }
+        voicing-typed(t) => { root.chord-changed("voicing", 0, t); }
+        voicing-picked(i) => { root.chord-changed("voicing-picked", i, ""); }
+        style-picked(i) => { root.chord-changed("style", i, ""); }
+        apply-style => { root.chord-changed("apply", 0, ""); }
         grid-clicked(string, row) => { root.chord-changed("grid", string * 100 + row, ""); }
         head-clicked(i) => { root.chord-changed("head", i, ""); }
         scrolled(v) => { root.chord-changed("first", v, ""); }
-        voicing-picked(i) => { root.chord-changed("voicing", i, ""); }
-        show-toggled(on) => { root.chord-changed("show", on ? 1 : 0, ""); }
-        remove => { root.chord-changed("remove", 0, ""); }
+        add-toggled(on) => { root.chord-changed("diagram", on ? 1 : 0, ""); }
         done(ok) => { root.chord-dialog-done(ok); }
     }
 
-    if root.paste-dialog-shown : PasteDialog {
+    if root.bars-dialog-shown : BarsDialog {
         width: root.width;
         height: root.height;
-        times <=> root.paste-times;
-        replace <=> root.paste-replace;
-        done(ok) => { root.paste-dialog-done(ok); }
+        heading: root.bars-heading;
+        asks-place: root.bars-asks-place;
+        note: root.bars-note;
+        after <=> root.bars-after;
+        all-tracks <=> root.bars-all-tracks;
+        done(ok) => { root.bars-dialog-done(ok); }
+    }
+
+    // File → Export of an audio exporter: what to render, then its progress
+    // (lost in #188 and restored).
+    if root.export-dialog-shown : ExportDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.export-heading;
+        plugin-name: root.export-plugin;
+        has-selection: root.export-has-selection;
+        selection <=> root.export-selection;
+        practice-speed: root.export-practice-speed;
+        at-speed <=> root.export-at-speed;
+        metronome <=> root.export-metronome;
+        done(ok) => { root.export-dialog-done(ok); }
+    }
+    if root.export-running : ExportProgress {
+        width: root.width;
+        height: root.height;
+        status: root.export-status;
+        progress: root.export-progress;
+        cancel => { root.export-cancel(); }
     }
 
     if root.transpose-dialog-shown : TransposeDialog {
@@ -2871,6 +2900,19 @@ export component AppWindow inherits Window {
         heading: root.fit-heading;
         stretch <=> root.fit-stretch;
         done(ok) => { root.fit-dialog-done(ok); }
+    }
+
+    if root.harmonize-dialog-shown : HarmonizeDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.harmonize-heading;
+        part: root.harmonize-part;
+        sevenths <=> root.harmonize-sevenths;
+        inside-bars <=> root.harmonize-inside-bars;
+        keep <=> root.harmonize-keep;
+        all-tracks <=> root.harmonize-all-tracks;
+        whole-song <=> root.harmonize-whole-song;
+        done(ok) => { root.harmonize-dialog-done(ok); }
     }
 
     if root.question-shown : Question {

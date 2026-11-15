@@ -4,6 +4,34 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-11-15
+
+### Added
+
+- **Harmonize…** (#235): chords found for the music and written above the caret's track with their diagrams, as one step for Undo (Tools → Harmonize…, or right-click on the page). The caret's track is the melody; by default the other tracks but drums are heard too, as the accompaniment, whose notes and lowest note say most. A dialog chooses plain chords or sevenths and suspended chords too, one chord a bar or changes inside bars, whether the chords already there are replaced or kept (the new ones are then fitted around them), and whether it listens to every track or to this track only; a tickbox harmonizes the whole song rather than the selected bars (ticked from Tools, unticked from the right-click menu). The chords are found in the key of the bars' key signature, and the footer warns when the notes fit another key better. Our own search for the cheapest chain of chords, with numbers counted in the POP909 dataset (`docs/design/harmonize.md`, `scripts/harmony/measure.py`).
+- **Copy Bars, Cut Bars and Paste Bars** (#287): Ctrl + Shift + C, Ctrl + Shift + X and Ctrl + Shift + V, also in the Edit menu. They work on every bar the selection touches, whole, from the caret's track or from all tracks, as a small dialog asks. Cut Bars then takes those bars out of the song. Paste Bars puts them in as new bars before or after the selected bars: with all tracks each track gets back the bars copied from it and the others get bars of rests; with only this track it takes its own copied bars.
+- **Play Engraved Beat toggle** (#246): Edit → "Play Engraved Beat" (ticked by default) plays a 1-beat preview of the edited track when a note is inserted or deleted — only the caret's track sounds (temporarily soloed), same instrument and effects as normal playback. Ticking it off disables the preview. Persisted in `settings.json` under the `view` key.
+
+### Changed
+
+- **The chord dialog is redesigned** (#278, with #263 and #264): a name, a voicing and a diagram that follow one another, and nothing else on a small card. **Name** takes a chord written in any convention (Em7b5, Em7-5, Eø, C△7, CM7, F-, G°7, D+) and lists every name the diagram's notes can take, one for each note as the root; **Voicing** takes the frets in inline notation, low string first (`x 0 2 2 1 0`, or `x02210`), and lists the ways to play the name on the track's strings, easiest first; a click on the diagram rewrites the voicing and the name at once. Typing a name sets the easiest way to play it unless the diagram already plays it; changing the notes keeps the name if it still fits and takes the first that does otherwise. A name OxiGuitar can't read is kept as typed. Guitar Pro 8's chord builder, the list of the track's chords and "Remove the chord" are gone: the track's chords are in Name's list while the diagram is empty, and OK with Name and Voicing empty takes the chord off the beat. Names are read and notes are named by the [chordparser](https://github.com/PauSala/chordparser) crate (Pau Sala, MIT).
+- **Chord notation styles** (#264): the dialog's **Style** shows chord names as Popular (Em7b5, Cmaj7, Gdim7, Daug), Jazz (Eø7, C△7, G°7, D+), Compact (Eø, CM7) or Custom (as typed), and **Apply** rewrites every chord of the song in the style, as one step for Undo. The styles are read from `chord-styles` in settings.json, where they can be changed and added to (the manual's Editing page, "Chord styles"); a settings.json without them is given these four. A chord the style has no entry for stays as written.
+- **The chord dialog remembers** the style and whether "Add diagram" was ticked (#263), in settings.json under `chord`, and uses them for the next chord.
+- Harmonize, keeping the chords already there, now reads chords named in other conventions (C△7, F-, Bø).
+- **Paste no longer squeezes several bars into one** (#267): pasted beats take the place of what the caret's voice holds from the caret on and run on over bar lines, each bar filled to its time signature (a note a bar line cuts goes on tied), with bars added at the end when needed. Eight bars copied and pasted at the start of a bar land bar for bar. Bars copied across tracks and pasted with Ctrl + V give bars of rests, not empty bars, to the tracks that weren't copied.
+
+### Fixed
+
+- **CI's Speed budget job passes the workflow's token** when it downloads the released Guitar Pro plugins, like the test job: anonymously, the GitHub API's limit shared by the runners answered 403 and failed the job.
+- **Play button now starts playback when a new song is loaded** (#284): the `play-pause` action handler now returns the `Vec<Do>` result from `play()` so `act()` can execute the commands (e.g. opening the audio output), instead of discarding it.
+- **Cross-referenced chords now persist in `.oxg` files** (#268): the `chords_from` setting is now saved and loaded from the sidecar file, so "Show chords from" survives closing and reopening a score.
+- **File → Export audio now shows the dialog again** (#281): the export dialog and its progress window were removed from the window in 0.11.0 (#188), so choosing the menu item did nothing visible. Added them back.
+
+### Removed
+
+- **Special Paste** (#287): its keys, Ctrl + Shift + V, now paste bars, and Paste always replaces what is there, so pasting several times or inserting beats is no longer offered.
+- **Clef, Time Signature and Key Signature tools from the left palette** (#277): these tools did nothing — their functionality already lives in the Bar tab of the right inspector sidebar. Removed from the palette, shortcut map, dialog mapping, drawing functions, and tests.
+
 ## [0.19.1] - 2026-11-11
 
 ### Added

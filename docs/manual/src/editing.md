@@ -103,14 +103,40 @@ Either way it works on every track, and only on bars that don't add up: the rest
 
 Re-barring keeps a bar line wherever the song's structure needs one: at a repeat sign, an alternate ending, a section, a direction (segno, coda, fine and the jumps), a double bar line, and a change of time or key signature. Each passage between them is re-barred on its own; when its music doesn't fill its last bar, that bar is left short and stays red, so you see where the phrase didn't fit (8 bars of 4/4 are 10⅔ bars of 3/4). Tempo changes keep their moment in the music; lyrics stay on their notes (tied notes aren't sung). A first bar shorter than its time signature and than the bar after it is a pickup, and stays as it is.
 
+## Finding chords for a melody
+
+**Harmonize…** finds chords for the music and writes them above the caret's track, each with its diagram, as if you had entered them with the chord builder. You can then change any of them, and hear them by ticking **Play its chords** in the **Track** tab ([Playback](playback.md)).
+
+- **Tools → Harmonize…**: the whole song.
+- **Right-click on the page → Harmonize…**: the selected bars, or the caret's bar when nothing is selected.
+
+The caret's track is taken as the melody. A small dialog asks four things, and has a tickbox:
+
+- **Which chords:** major, minor and diminished chords only, or sevenths and suspended chords too (maj7, m7, 7, m7(b5), sus4, 7sus4). Sevenths come only where the notes spell them out.
+- **How often:** one chord a bar at most, or changes in the middle of a bar where the notes ask for one (in 4/4, 2/2, 6/8 and 12/8).
+- **The chords already there:** replaced, or kept. Kept chords stay exactly as they are and the new ones are fitted around them, so you can write the chords you are sure of and let OxiGuitar fill in the rest.
+- **What it listens to:** every track but the drums, or this track only. What the other tracks play (a bass line, a rhythm guitar) tells it far more surely which chord belongs where: chords found for a melody alone are a suggestion, and chords found for a full arrangement are mostly the ones the band plays. Choose this track only when the other tracks would mislead it, such as a part that isn't meant to go with this one.
+- **Harmonize the whole song:** ticked, every bar of the song gets chords, whatever is selected; unticked, only the selected bars (or the caret's bar). It starts ticked from the Tools menu and unticked from the right-click menu.
+
+A chord is written where the harmony changes, on a beat that starts there. Rests before the music starts and after it ends get no chord. On a guitar, bass or any track with strings each chord gets the easiest shape for the track's tuning and capo; other tracks get the name alone. Chords are named as they sound: on a guitar tuned a semitone down, a C shape is written B. It is one step for Undo.
+
+The chords are found **in the key of the bars' key signature**, and their names are spelled as that key spells them. Most tabs leave the key signature at C whatever the music: if the footer says the notes fit another key better, run **Tools → Infer Key Signatures** first ([Tools](tools.md)) and harmonize again.
+
+OxiGuitar learned which chords follow which, and which notes sound over which chord, from 909 pop songs (the POP909 dataset), so its taste is pop's: expect the chords a songbook would give, not a jazz reharmonization.
+
 ## Copy, cut and paste
 
 OxiGuitar keeps its own clipboard: copying and pasting work inside OxiGuitar, not with other programs.
 
 - **Copy** (Ctrl + C) copies the selected beats or, with nothing selected, the beat at the caret. A selection across tracks copies whole bars of each selected track, with what the bars carry (time and key signatures, repeats, sections, tempo changes).
 - **Cut** (Ctrl + X) copies, then takes the beats out of their voice, or the bars out of every track.
-- **Paste** (Ctrl + V) puts what was copied in at the caret, or at the start of the selection. Beats go into the caret's voice before its beat; a bar that then holds more than its time signature is marked red. Bars go in before the caret's bar, in every track: the tracks that were copied, from the caret's track down, get their bars, and the others get empty bars.
-- **Special Paste** (Ctrl + Shift + V) pastes several times, or replaces what is there instead of inserting. Beats then take the place of as much music as they last, and what they don't cover of the last beat they replace stays as rests. Bars then take the place of the bars from the caret's on, and bars are added at the end when needed.
+- **Paste** (Ctrl + V) puts what was copied in at the caret, or at the start of the selection. Beats take the place of what the caret's voice holds from there on, as long as they last, and run on over bar lines: each bar is filled to its time signature and the rest goes into the next bars, a note that a bar line cuts going on as a tied note. Eight bars of beats pasted at the start of a bar land bar for bar. Bars are added at the end of the song when needed, and what the pasted beats don't cover of the last beat they replace stays as rests. Other voices and tracks don't change. Bars copied with Ctrl + C go in as new bars before the caret's bar, in every track: the tracks that were copied, from the caret's track down, get their bars, and the others get bars of rests.
+
+### Whole bars
+
+- **Copy Bars…** (Ctrl + Shift + C) copies every bar the selection touches, whole, even where the selection covers only part of a bar: from half of bar 2 to the second beat of bar 3 copies bars 2 and 3. Without a selection it copies the caret's bar. A small dialog asks whether to copy them from only this track or from all tracks. The bars keep what they carry (time and key signatures, repeats, sections, tempo changes), and each track's bars remember which track they came from.
+- **Cut Bars…** (Ctrl + Shift + X) copies the same way, then takes those bars out of the song. Bars belong to every track at once, so they go from every track, even when only this track's were copied.
+- **Paste Bars…** (Ctrl + Shift + V) puts the copied bars in as new bars, before or after the selected bars (or the caret's bar), for only this track or for all tracks. With all tracks, each track gets back the bars copied from it, and a track that wasn't copied gets bars of rests. With only this track, it gets its own copied bars (or the first copied track's) and the other tracks get bars of rests.
 
 Beats and bars paste into any track. Between a drum track and a pitched one only the rhythm carries over, as rests. Notes on strings the track hasn't got are left out. Chord names go with their diagrams.
 
@@ -222,7 +248,30 @@ A .gp file keeps trills in sixteenths only: saving a faster trill as .gp names i
 
 ## Chords, text and lyrics
 
-**A** (or the palette's **Chord**, or **Edit → Chord…**) opens the **chord dialog** for the caret's beat. Build the chord: its root, its type (major, minor, augmented, diminished, suspended second or fourth, power chord), a sixth, seventh or extension (6, 6/9, 7, maj7, 9, maj9, 11, 13, add9), alterations (♭5, ♯5, ♭9, ♯9, ♯11, ♭13) and a bass note. The name follows ("C7(b9)/E"), and the list beside the diagram gives the ways to play it on the track's strings, easiest first; click one to make it the diagram. Or click on the diagram: on the grid to place or take away a note, above a string to make it open (o) or not played (×), with **First fret** to move up the neck; the chord your notes make is named, as Guitar Pro suggests one. A name you type is kept as you typed it. **The track's chords** picks one the track already has. **Show the diagram** off keeps the name alone. The first time, the diagram starts from the beat's notes. On a rest, or after the voice's last beat, a chord with a diagram puts its notes in the beat. **Remove the chord** takes it off the beat. The palette's **Chords** opens the same dialog. To hear a track's chords as you play, tick **Play its chords** in its Track tab ([Playing a score](playback.md#playing-the-chords)).
+**A** (or the palette's **Chord**, or **Edit → Chord…**) opens the **chord dialog** for the caret's beat. It shows one chord three ways, and each follows the others as you change it:
+
+- **Name**: type the chord's name in whatever way you write chords (`Em7b5`, `Em7-5`, `Eø`, `Cmaj7`, `C△7`, `CM7`, `F-`, `Fmin`, `G°7`, `D+`, `C7(b9)/E`). The arrow beside it lists every name the diagram's notes can take, one for each note taken as the root ("x 2 3 2 3 x" is Bm7b5, F6(b5)/B, Dm6/B and so on). While the diagram is empty it lists the track's chords instead, to use one again.
+- **Voicing**: the frets in inline notation, low string first, **x** for a string that isn't played: `x 0 2 2 1 0`, or `x02210` when no fret has two digits. You can type it from the low string up; strings you haven't reached are not played. The arrow lists the ways to play the name on the track's strings, with its tuning and capo, easiest first.
+- **The diagram**: click on the grid to place or take away a note, above a string to make it open (a circle) or not played (×). The number beside it is the grid's first fret; raise it to work higher up the neck.
+
+When you type a name, the diagram becomes the easiest way to play it, unless it already plays that chord. When you change the diagram or the voicing, the name stays if it is one of the names for those notes, and becomes the first of them otherwise. A name OxiGuitar can't read as a chord ("Am7 (my way)") is kept as typed, with whatever the diagram holds.
+
+**Style** chooses how chord names are written: **Popular** (Am, Cmaj7, Em7b5, Gdim7, Daug), **Jazz** (A-, C△7, Eø7, G°7, D+), **Compact** (Am, CM7, Eø, G°7, D+) or **Custom**, which changes nothing and keeps names as you type them. Names in the dialog are shown in the style, and **Apply** rewrites every chord of the song in it, as one step for Undo. Only what follows the root is rewritten, and a chord the style has no entry for stays as it is. The styles are yours to change: see [chord styles](#chord-styles) below.
+
+**Add diagram** off keeps the name alone, without its frets. OxiGuitar remembers the style and this tickbox for the next chord. On a rest, or after the voice's last beat, a chord with a diagram puts its notes in the beat. To take a chord off a beat, clear both Name and Voicing and press OK. Enter is OK, Escape cancels. The palette's **Chords** opens the same dialog. To hear a track's chords as you play, tick **Play its chords** in its Track tab ([Playing a score](playback.md#playing-the-chords)).
+
+### Chord styles
+
+The styles live in `settings.json` ([where it is](plugins.md)), under `chord-styles`, and OxiGuitar always reads them from there (change the file while OxiGuitar is closed, as it is read at start). Each style is a name and a list of entries: on the left a kind of chord, on the right what the style writes for it.
+
+```json
+"chord-styles": {
+  "Compact": { "m7b5": "ø", "aug": "+", "maj7": "M7" },
+  "Custom": {}
+}
+```
+
+The left side can be written in any way OxiGuitar reads chords, with or without parentheses: `m7b5`, `m7(b5)`, `-7b5` and `ø` are the same entry. It is compared with everything after a chord's root (and before a bass note) as a whole, so `maj7` does not change `Cmaj7#11`; give that chord an entry of its own. Add a style by adding a name; delete `chord-styles` to get OxiGuitar's four back. The style and the tickbox you last used are kept under `chord`.
 
 **Shift + T** (or the palette's **Text**, or **Edit → Text…**) sets the text above the caret's beat; empty takes it away. Text another voice holds is drawn above the staff the same way: if the caret's beat has no text of its own, the dialog shows and changes the text of another voice that starts while the caret's beat lasts, so a text Guitar Pro saved on voice 2 is changed or removed from voice 1 too.
 

@@ -32,16 +32,27 @@
 //!   the music re-barred across the bar lines, or each bar stretched to
 //!   fill its time signature (`docs/design/fit-bars.md`).
 //!
+//! - Chords found for a melody ([`Command::Harmonize`], #235): the
+//!   cheapest chain of chords for what every track plays, written on the
+//!   caret's track (`docs/design/harmonize.md`).
+//!
+//! - Chord names ([`chord_names`], #278): a name in any convention read
+//!   into its notes, the names a diagram's notes can take, the ways to play
+//!   a name, and names rewritten in a chord notation style, with the
+//!   chordparser crate; [`Command::RenameChords`] restyles a whole song.
+//!
 //! See `docs/design/editor.md` for the rules and the parity checklist.
 
 mod bars;
 mod caret;
 mod check;
+pub mod chord_names;
 mod clip;
 mod effects;
 mod entry;
 mod fingering;
 mod fit;
+mod harmonize;
 pub mod harmony;
 mod history;
 mod marks;
@@ -53,11 +64,12 @@ mod transpose;
 pub use bars::BarState;
 pub use caret::{Caret, StaffBar, VOICES, beat_at, onsets};
 pub use check::{BarCheck, adds_up};
-pub use clip::{Clip, ClipTrack, Paste, copy};
+pub use clip::{Clip, ClipTrack, Paste, PasteBars, copy, copy_bars};
 pub use effects::{BeatChange, Effect, HarmonicKind, NoteChange};
 pub use entry::{Command, Edited, apply, new_score};
 pub use fingering::{HARD_FINGERS, HARD_SHIFT, HARD_STRETCH, finger_pitched};
 pub use fit::{Fit, FitHow};
+pub use harmonize::{Harmonize, HarmonizeReport, harmonize_report};
 pub use history::{Change, History, Region, Touched};
 pub use marks::plain_spellings;
 pub use notation::{LYRIC_LINES, tidy_info};

@@ -146,6 +146,9 @@ pub(crate) enum Event {
         /// The tracks again, when the edit added, removed, moved, renamed
         /// or restrung any, with where each was before ([`was`]).
         tracks: Option<(Vec<TrackInfo>, Vec<Option<usize>>)>,
+        /// Whether the change was a note insertion or deletion (for the
+        /// engraved-beat preview toggle, #246).
+        note_edit: bool,
     },
     /// One tile, premultiplied RGBA, `canvas::TILE` pixels square.
     Tile {
@@ -173,7 +176,9 @@ impl std::fmt::Debug for Event {
                 write!(f, "Engraved({engraving}, {} sheets)", sheets.len())
             }
             Event::Tile { col, row, .. } => write!(f, "Tile({col}, {row})"),
-            Event::Changed { bad, .. } => write!(f, "Changed({} bad bars)", bad.len()),
+            Event::Changed { bad, note_edit, .. } => {
+                write!(f, "Changed({} bad bars, note_edit={note_edit})", bad.len())
+            }
             Event::Tools(t) => write!(f, "Tools({})", t.len()),
             Event::Message(l, s) => write!(f, "Message({l:?}, {s:?})"),
             Event::AskSave { heading, .. } => write!(f, "AskSave({heading:?})"),
@@ -402,7 +407,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 let (report, changed) = doc.apply_tool(i);
                 sink(Event::Tools(doc.tools()));
                 sink(Event::Message(Level::Info, report));
-                if changed && changed_score(&mut st, None, sink) {
+                if changed && changed_score(&mut st, None, false, sink) {
                     st.stale = true;
                 } else {
                     engrave(&mut st, sink);
@@ -417,8 +422,9 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     continue;
                 };
                 let mut wait = false;
+                let is_note = command.is_note_edit();
                 if let Some(caret) = doc.edit(command, caret, selection) {
-                    wait = changed_score(&mut st, Some(caret), sink);
+                    wait = changed_score(&mut st, Some(caret), is_note, sink);
                     st.stale = true;
                 }
                 // Typing ahead: the last edit engraves. A changed track list
@@ -439,7 +445,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 };
                 if done.is_some() {
                     sink(Event::Tools(doc.tools()));
-                    if changed_score(&mut st, None, sink) {
+                    if changed_score(&mut st, None, false, sink) {
                         st.stale = true;
                     } else {
                         engrave(&mut st, sink);
@@ -473,7 +479,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
                 doc.apply_change(&name, *score);
                 sink(Event::Tools(doc.tools()));
-                if changed_score(&mut st, None, sink) {
+                if changed_score(&mut st, None, false, sink) {
                     st.stale = true;
                 } else {
                     engrave(&mut st, sink);
@@ -688,8 +694,15 @@ fn was<T: PartialEq>(old: &[T], new: &[T]) -> Vec<Option<usize>> {
 /// The open score changed: plugins hear of it (pushing never waits), then
 /// the window. True when the track list changed: the window answers with
 /// the tracks to show (`Request::Engrave`), so engraving waits for that
-/// rather than draw the old tracks' places.
-fn changed_score(st: &mut State, caret: Option<Caret>, sink: &dyn Fn(Event)) -> bool {
+/// rather than draw the old tracks' places. `note_edit` is whether the
+/// change was a note insertion or deletion (for the engraved-beat preview,
+/// #246).
+fn changed_score(
+    st: &mut State,
+    caret: Option<Caret>,
+    note_edit: bool,
+    sink: &dyn Fn(Event),
+) -> bool {
     let Some(doc) = st.doc.as_ref() else {
         return false;
     };
@@ -706,6 +719,7 @@ fn changed_score(st: &mut State, caret: Option<Caret>, sink: &dyn Fn(Event)) -> 
         bad: doc.check.iter().collect(),
         caret,
         tracks,
+        note_edit,
     });
     let changed = shape != st.track_shape;
     st.track_shape = shape;
@@ -1136,6 +1150,61 @@ mod tests {
                 let beat = &score.tracks[0].staves[0].bars[0].voices[0].beats[0];
                 assert_eq!(beat.text, oxiguitar_edit::HARD_STRETCH);
                 assert_eq!(beat.notes.len(), 2);
+                break;
+            }
+        }
+    }
+
+    #[test]
+    fn harmonize_writes_chords_as_one_change() {
+        let (tx, rx) = channel();
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
+        worker.send(Request::New);
+        let score = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        let top = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        // A C on the fifth string.
+        worker.send(Request::Edit {
+            command: Command::Fret {
+                fret: 3,
+                again: false,
+            },
+            caret: oxiguitar_edit::Caret { string: 5, ..top },
+            selection: None,
+        });
+        loop {
+            if let Event::Changed { caret: Some(_), .. } = next(&rx) {
+                break;
+            }
+        }
+        worker.send(Request::Edit {
+            command: Command::Harmonize(oxiguitar_edit::Harmonize {
+                sevenths: false,
+                inside_bars: false,
+                keep: false,
+                all_tracks: true,
+                whole_song: true,
+            }),
+            caret: top,
+            selection: None,
+        });
+        loop {
+            if let Event::Changed { score, edit, .. } = next(&rx) {
+                assert_eq!(edit.undo.as_deref(), Some("Harmonize"));
+                let track = &score.tracks[0];
+                let chord = track.staves[0].bars[0].voices[0].beats[0].chord;
+                let diagram = &track.chords[chord.expect("a chord on the first beat")];
+                assert!(!diagram.name.is_empty());
+                assert_eq!(diagram.frets.len(), 6);
                 break;
             }
         }

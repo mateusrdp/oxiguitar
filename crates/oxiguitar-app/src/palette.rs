@@ -96,7 +96,6 @@ pub(crate) fn working(id: &str) -> Option<Option<&'static str>> {
         "repeat-start" => "[",
         "repeat-close" => "]",
         "free-time" => "|",
-        "key-signature" => "Ctrl + K",
         "rhythmic-interpretation" => "Ctrl + /",
         "directions" => "D",
         "bend" => "B",
@@ -267,13 +266,7 @@ pub(crate) fn effect_of(id: &str) -> Option<Effect> {
 pub(crate) fn dialog_of(id: &str) -> Option<crate::editing::Dialog> {
     use crate::editing::Dialog;
     Some(match id {
-        "clef"
-        | "key-signature"
-        | "time-signature"
-        | "rhythmic-interpretation"
-        | "alternate-endings"
-        | "directions"
-        | "section" => Dialog::Bar,
+        "rhythmic-interpretation" | "alternate-endings" | "directions" | "section" => Dialog::Bar,
         "tuplet" => Dialog::Tuplet,
         "nested-tuplet" => Dialog::NestedTuplet,
         "bend" => Dialog::Bend,
@@ -395,7 +388,6 @@ const NOTE_64TH: Glyph = glyph("note64thUp", '\u{E1DD}');
 const DOT: Glyph = glyph("augmentationDot", '\u{E1E7}');
 const REST_QUARTER: Glyph = glyph("restQuarter", '\u{E4E5}');
 const TUPLET_3: Glyph = glyph("tuplet3", '\u{E883}');
-const G_CLEF: Glyph = glyph("gClef", '\u{E050}');
 const SHARP: Glyph = glyph("accidentalSharp", '\u{E262}');
 const FLAT: Glyph = glyph("accidentalFlat", '\u{E260}');
 const NATURAL: Glyph = glyph("accidentalNatural", '\u{E261}');
@@ -458,13 +450,6 @@ pub(crate) const GROUPS: &[Group] = &[
     Group {
         title: "Bar",
         tools: &[
-            tool("clef", "Clef", Face::Symbol(G_CLEF)),
-            tool("key-signature", "Key Signature", Face::Drawn(key_signature)),
-            tool(
-                "time-signature",
-                "Time Signature",
-                Face::Drawn(time_signature),
-            ),
             tool(
                 "rhythmic-interpretation",
                 "Rhythmic Interpretation (Triplet Feel)",
@@ -900,24 +885,10 @@ fn chord_library(p: &mut Pen<'_>) {
 
 // Bar.
 
-fn key_signature(p: &mut Pen<'_>) {
-    staff(p, -0.4 * S, 2.8 * S);
-    p.sym(SHARP, 0.2 * S, -4.0 * S);
-    p.sym(SHARP, 1.3 * S, -2.5 * S);
-}
-
-fn four_four(p: &mut Pen<'_>, x: f32) {
-    p.sym(TIME_SIG_4, x, -3.0 * S);
-    p.sym(TIME_SIG_4, x, -S);
-}
-
-fn time_signature(p: &mut Pen<'_>) {
-    staff(p, -0.4 * S, 2.4 * S);
-    four_four(p, 0.2 * S);
-}
-
 fn free_time(p: &mut Pen<'_>) {
-    time_signature(p);
+    staff(p, -0.4 * S, 2.4 * S);
+    p.sym(TIME_SIG_4, 0.2 * S, -3.0 * S);
+    p.sym(TIME_SIG_4, 0.2 * S, -S);
     p.line(-0.2 * S, 0.4 * S, 2.2 * S, -4.4 * S, 1.5 * LINE);
 }
 
@@ -1421,7 +1392,7 @@ mod tests {
         // As many tools as the GP8 guide lists for each group, less the
         // automation group, Timer and both stem-direction tools.
         let counts: Vec<usize> = GROUPS.iter().map(|g| g.tools.len()).collect();
-        assert_eq!(counts, [8, 16, 34, 56, 10]);
+        assert_eq!(counts, [8, 13, 34, 56, 10]);
         let mut ids: Vec<&str> = tools().map(|(_, t)| t.id).collect();
         ids.sort_unstable();
         ids.dedup();
@@ -1504,9 +1475,6 @@ mod tests {
             "repeat-close",
             "free-time",
             "double-bar",
-            "clef",
-            "key-signature",
-            "time-signature",
             "rhythmic-interpretation",
             "alternate-endings",
             "directions",

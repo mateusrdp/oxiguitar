@@ -111,33 +111,39 @@ export component TupletDialog inherits Rectangle {
     }
 }
 
-export component PasteDialog inherits Rectangle {
-    in-out property <int> times: 1;
-    in-out property <bool> replace: false;
+// Copy Bars, Cut Bars and Paste Bars (#287): the caret's track or every
+// track, and for Paste Bars whether the new bars go before or after the
+// selected ones.
+export component BarsDialog inherits Rectangle {
+    in property <string> heading: "Copy Bars";
+    in property <bool> asks-place: false;
+    in property <string> note;
+    in-out property <bool> after: false;
+    in-out property <bool> all-tracks: false;
     callback done(bool);
     Card {
         width: root.width;
         height: root.height;
-        heading: "Special Paste";
-        card-width: 380px;
+        heading: root.heading;
+        card-width: 400px;
         done(ok) => { root.done(ok); }
         VerticalLayout {
             spacing: 8px;
-            HorizontalLayout {
-                spacing: 8px;
-                Text { text: "Paste"; vertical-alignment: center; font-size: 12px; }
-                SpinBox {
-                    minimum: 1;
-                    maximum: 99;
-                    value: root.times;
-                    edited(v) => { root.times = v; }
-                }
-                Text { text: "times"; vertical-alignment: center; font-size: 12px; }
+            if root.asks-place : ComboBox {
+                model: ["Before the selected bars", "After the selected bars"];
+                current-index: root.after ? 1 : 0;
+                selected => { root.after = self.current-index == 1; }
             }
-            CheckBox {
-                text: "Replace what is there, instead of inserting";
-                checked: root.replace;
-                toggled => { root.replace = self.checked; }
+            ComboBox {
+                model: ["Only this track", "All tracks"];
+                current-index: root.all-tracks ? 1 : 0;
+                selected => { root.all-tracks = self.current-index == 1; }
+            }
+            if root.note != "" : Text {
+                text: root.note;
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
             }
         }
     }
@@ -220,6 +226,60 @@ export component FitDialog inherits Rectangle {
             }
             Text {
                 text: "Only bars that don't add up change, in every track.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+        }
+    }
+}
+
+// Harmonize… (#235): chords found for the notes of every track, or of
+// the caret's alone, and written on the caret's track. `part` names what
+// is harmonized when the whole song isn't ("the selected bars").
+export component HarmonizeDialog inherits Rectangle {
+    in property <string> heading: "Harmonize";
+    in property <string> part: "this bar";
+    in-out property <bool> sevenths: false;
+    in-out property <bool> inside-bars: false;
+    in-out property <bool> keep: false;
+    in-out property <bool> all-tracks: true;
+    in-out property <bool> whole-song: false;
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 460px;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            ComboBox {
+                model: ["Major, minor and diminished chords", "Sevenths and suspended chords too"];
+                current-index: root.sevenths ? 1 : 0;
+                selected => { root.sevenths = self.current-index == 1; }
+            }
+            ComboBox {
+                model: ["One chord a bar at most", "Chords may change inside a bar"];
+                current-index: root.inside-bars ? 1 : 0;
+                selected => { root.inside-bars = self.current-index == 1; }
+            }
+            ComboBox {
+                model: ["Replace the chords already there", "Keep the chords already there"];
+                current-index: root.keep ? 1 : 0;
+                selected => { root.keep = self.current-index == 1; }
+            }
+            ComboBox {
+                model: ["Listen to every track but drums", "Listen to this track only"];
+                current-index: root.all-tracks ? 0 : 1;
+                selected => { root.all-tracks = self.current-index == 0; }
+            }
+            CheckBox {
+                text: "Harmonize the whole song, not only " + root.part;
+                checked <=> root.whole-song;
+            }
+            Text {
+                text: "The chords are found in the key of the bars' key signature and written above this track with their diagrams.";
                 font-size: 11px;
                 wrap: word-wrap;
                 color: Palette.foreground.transparentize(0.4);
@@ -400,47 +460,110 @@ export component TextDialog inherits Rectangle {
     }
 }
 
-// An alteration's tickbox in the chord dialog.
-export struct AltBox {
-    label: string,
-    on: bool,
+// A field with a list to pick from: what an editable ComboBox would be
+// (Slint 1.17's takes no typing). The list opens under the field.
+component EditCombo inherits Rectangle {
+    in-out property <string> text;
+    in property <[string]> model;
+    // Whether the field takes the keyboard when it appears.
+    in property <bool> first: false;
+    callback edited(string);
+    callback picked(int);
+    callback accepted();
+    HorizontalLayout {
+        spacing: 2px;
+        LineEdit {
+            horizontal-stretch: 1;
+            text <=> root.text;
+            init => {
+                if (root.first) {
+                    self.focus();
+                }
+            }
+            edited(t) => { root.edited(t); }
+            accepted => { root.accepted(); }
+        }
+        Rectangle {
+            width: 26px;
+            border-radius: 4px;
+            background: arrow.has-hover ? Palette.control-background : transparent;
+            opacity: root.model.length > 0 ? 1 : 0.3;
+            Path {
+                width: 10px;
+                height: 6px;
+                commands: "M 0 0 L 5 6 L 10 0";
+                stroke: Palette.foreground;
+                stroke-width: 1.5px;
+            }
+            arrow := TouchArea {
+                enabled: root.model.length > 0;
+                clicked => { list.show(); }
+            }
+        }
+    }
+    list := PopupWindow {
+        x: 0;
+        y: root.height + 2px;
+        width: root.width;
+        Rectangle {
+            background: Palette.alternate-background;
+            border-color: Palette.border;
+            border-width: 1px;
+            border-radius: 4px;
+        }
+        VerticalLayout {
+            padding: 4px;
+            for item[i] in root.model : Rectangle {
+                height: 24px;
+                border-radius: 3px;
+                background: row.has-hover ? Palette.control-background : transparent;
+                Text {
+                    x: 8px;
+                    height: parent.height;
+                    text: item;
+                    font-size: 13px;
+                    vertical-alignment: center;
+                }
+                row := TouchArea { clicked => { root.picked(i); } }
+            }
+        }
+    }
 }
 
-// The chord dialog (M3 slice 6; `chord_form.rs`): Guitar Pro 8's Chord
-// window, with its builder.
+// A label of the chord dialog's narrow first column.
+component ChordLabel inherits Text {
+    font-size: 12px;
+    vertical-alignment: center;
+    width: 52px;
+}
+
+// The chord dialog (#278; `chord_form.rs`): a name, a voicing in inline
+// notation and a diagram that follow one another, and the chord notation
+// style names are shown in.
 export component ChordDialog inherits Rectangle {
     in-out property <string> name;
-    in property <[string]> library;
-    in property <[string]> roots;
-    in-out property <int> root-index;
-    in property <[string]> triads;
-    in-out property <int> triad-index;
-    in property <[string]> extensions;
-    in-out property <int> extension-index;
-    in property <[string]> basses;
-    in-out property <int> bass-index;
-    in property <[AltBox]> alterations;
+    in property <[string]> names;
+    in-out property <string> voicing;
+    in property <[string]> voicings;
+    in property <[string]> styles;
+    in-out property <int> style-index;
     // Strings, and each string's dot, low to high: the row (0 the first
     // fret shown), -1 open, -2 not played, -3 off the grid.
     in property <int> strings: 6;
     in property <[int]> dots;
     in-out property <int> first-fret: 1;
     in property <int> last-fret: 24;
-    in property <[string]> voicings;
-    in property <bool> show-diagram: true;
+    in property <bool> add-diagram: true;
     callback name-typed(string);
-    callback library-picked(int);
-    callback root-picked(int);
-    callback triad-picked(int);
-    callback extension-picked(int);
-    callback bass-picked(int);
-    callback alteration-toggled(int, bool);
+    callback name-picked(int);
+    callback voicing-typed(string);
+    callback voicing-picked(int);
+    callback style-picked(int);
+    callback apply-style();
     callback grid-clicked(int, int);
     callback head-clicked(int);
     callback scrolled(int);
-    callback voicing-picked(int);
-    callback show-toggled(bool);
-    callback remove();
+    callback add-toggled(bool);
     callback done(bool);
     property <length> cell-w: 28px;
     property <length> cell-h: 30px;
@@ -449,106 +572,94 @@ export component ChordDialog inherits Rectangle {
         width: root.width;
         height: root.height;
         heading: "Chord";
-        card-width: 720px;
+        card-width: 350px;
+        takes-focus: false;
         done(ok) => { root.done(ok); }
-        VerticalLayout {
-            spacing: 10px;
-            HorizontalLayout {
+        // Escape cancels from the fields too.
+        FocusScope {
+            key-pressed(event) => {
+                if (event.text == Key.Escape) {
+                    root.done(false);
+                    return accept;
+                }
+                reject
+            }
+            VerticalLayout {
                 spacing: 8px;
-                Text { text: "Name"; font-size: 12px; vertical-alignment: center; }
-                LineEdit {
-                    text <=> root.name;
-                    edited(t) => { root.name-typed(t); }
-                    accepted => { root.done(true); }
-                }
-                if root.library.length > 0 : ComboBox {
-                    min-width: 150px;
-                    model: root.library;
-                    current-index: -1;
-                    current-value: "The track's chords";
-                    selected => { root.library-picked(self.current-index); }
-                }
-            }
-            HorizontalLayout {
-                spacing: 6px;
-                ComboBox { model: root.roots; current-index <=> root.root-index; selected => { root.root-picked(self.current-index); } }
-                ComboBox { model: root.triads; current-index <=> root.triad-index; selected => { root.triad-picked(self.current-index); } }
-                ComboBox { model: root.extensions; current-index <=> root.extension-index; selected => { root.extension-picked(self.current-index); } }
                 HorizontalLayout {
-                    spacing: 4px;
-                    Text { text: "Bass"; font-size: 12px; vertical-alignment: center; }
-                    ComboBox { model: root.basses; current-index <=> root.bass-index; selected => { root.bass-picked(self.current-index); } }
-                }
-            }
-            HorizontalLayout {
-                spacing: 4px;
-                for a[i] in root.alterations : CheckBox {
-                    text: a.label;
-                    checked: a.on;
-                    toggled => { root.alteration-toggled(i, self.checked); }
-                }
-            }
-            HorizontalLayout {
-                spacing: 16px;
-                alignment: start;
-                if root.strings > 1 : VerticalLayout {
-                    spacing: 4px;
-                    alignment: start;
-                    HorizontalLayout {
-                        spacing: 6px;
-                        CheckBox {
-                            text: "Show the diagram";
-                            checked: root.show-diagram;
-                            toggled => { root.show-toggled(self.checked); }
-                        }
+                    spacing: 8px;
+                    ChordLabel { text: "Name"; }
+                    EditCombo {
+                        first: true;
+                        text <=> root.name;
+                        model: root.names;
+                        edited(t) => { root.name-typed(t); }
+                        picked(i) => { root.name-picked(i); }
+                        accepted => { root.done(true); }
                     }
-                    HorizontalLayout {
-                        spacing: 6px;
-                        Text { text: "First fret"; font-size: 12px; vertical-alignment: center; }
-                        SpinBox {
-                            width: 80px;
-                            minimum: 1;
-                            maximum: root.last-fret;
-                            value <=> root.first-fret;
-                            edited(v) => { root.scrolled(v); }
-                        }
+                }
+                if root.strings > 1 : HorizontalLayout {
+                    spacing: 8px;
+                    ChordLabel { text: "Voicing"; }
+                    EditCombo {
+                        text <=> root.voicing;
+                        model: root.voicings;
+                        edited(t) => { root.voicing-typed(t); }
+                        picked(i) => { root.voicing-picked(i); }
+                        accepted => { root.done(true); }
                     }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    ChordLabel { text: "Style"; }
+                    ComboBox {
+                        horizontal-stretch: 1;
+                        model: root.styles;
+                        current-index <=> root.style-index;
+                        selected => { root.style-picked(self.current-index); }
+                    }
+                    Button { text: "Apply"; clicked => { root.apply-style(); } }
+                }
+                if root.strings > 1 : HorizontalLayout {
+                    alignment: center;
+                    spacing: 10px;
                     Rectangle {
-                        width: root.grid-w + 2 * root.cell-w;
+                        width: root.grid-w + root.cell-w;
                         height: 5 * root.cell-h + 26px;
-                        opacity: root.show-diagram ? 1 : 0.4;
-                        // Open and not-played marks above the strings.
+                        opacity: root.add-diagram ? 1 : 0.5;
+                        // Above the strings: an open circle for an open
+                        // string, a cross for one not played.
                         for d[i] in root.dots : Rectangle {
-                            x: root.cell-w + i * root.cell-w - 10px;
+                            x: root.cell-w / 2 + i * root.cell-w - 10px;
                             y: 0;
                             width: 20px;
                             height: 20px;
-                            Text {
-                                text: d == -1 ? "o" : d == -2 ? "×" : "";
+                            if d == -1 : Rectangle {
+                                width: 12px;
+                                height: 12px;
+                                border-radius: 6px;
+                                border-width: 1.5px;
+                                border-color: Palette.foreground;
+                            }
+                            if d == -2 : Text {
+                                text: "×";
                                 font-size: 14px;
+                                opacity: 0.6;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                             }
                             TouchArea { clicked => { root.head-clicked(i); } }
                         }
                         Rectangle {
-                            x: root.cell-w;
+                            x: root.cell-w / 2;
                             y: 24px;
                             width: root.grid-w;
                             height: 5 * root.cell-h;
-                            // The nut, or the first fret's number.
+                            // The nut, thick at the first fret.
                             Rectangle {
                                 y: 0;
                                 height: root.first-fret == 1 ? 4px : 1px;
                                 background: Palette.foreground;
-                            }
-                            if root.first-fret > 1 : Text {
-                                x: -root.cell-w;
-                                y: root.cell-h / 2 - 8px;
-                                width: root.cell-w - 4px;
-                                horizontal-alignment: right;
-                                text: root.first-fret;
-                                font-size: 11px;
                             }
                             for i in 6 : Rectangle {
                                 y: i * root.cell-h;
@@ -582,29 +693,27 @@ export component ChordDialog inherits Rectangle {
                             }
                         }
                     }
-                }
-                VerticalLayout {
-                    spacing: 4px;
-                    alignment: start;
-                    if root.voicings.length > 0 : Text { text: "Ways to play it, low string first"; font-size: 12px; }
-                    for v[i] in root.voicings : Rectangle {
-                        height: 24px;
-                        width: 170px;
-                        border-radius: 4px;
-                        background: touch.has-hover ? Palette.control-background : transparent;
-                        Text {
-                            x: 6px;
-                            text: v;
-                            font-size: 13px;
-                            vertical-alignment: center;
+                    // The diagram's first fret.
+                    VerticalLayout {
+                        alignment: start;
+                        padding-top: 24px;
+                        SpinBox {
+                            width: 76px;
+                            minimum: 1;
+                            maximum: root.last-fret;
+                            value <=> root.first-fret;
+                            edited(v) => { root.scrolled(v); }
                         }
-                        touch := TouchArea { clicked => { root.voicing-picked(i); } }
                     }
                 }
-            }
-            HorizontalLayout {
-                alignment: start;
-                Button { text: "Remove the chord"; clicked => { root.remove(); } }
+                if root.strings > 1 : HorizontalLayout {
+                    alignment: start;
+                    CheckBox {
+                        text: "Add diagram";
+                        checked: root.add-diagram;
+                        toggled => { root.add-toggled(self.checked); }
+                    }
+                }
             }
         }
     }

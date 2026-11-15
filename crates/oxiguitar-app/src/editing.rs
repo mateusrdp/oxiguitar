@@ -139,8 +139,12 @@ pub(crate) enum ClipKey {
     Cut,
     /// Ctrl + V.
     Paste,
-    /// Ctrl + Shift + V: Special Paste.
-    Special,
+    /// Ctrl + Shift + C: Copy Bars (#287).
+    CopyBars,
+    /// Ctrl + Shift + X: Cut Bars.
+    CutBars,
+    /// Ctrl + Shift + V: Paste Bars.
+    PasteBars,
 }
 
 /// The clipboard key `name` with these modifiers is, if any.
@@ -152,9 +156,16 @@ pub(crate) fn clip_key(name: &str, shift: bool, ctrl: bool, alt: bool) -> Option
         ("c" | "C", false) => Some(ClipKey::Copy),
         ("x" | "X", false) => Some(ClipKey::Cut),
         ("v" | "V", false) => Some(ClipKey::Paste),
-        ("v" | "V", true) => Some(ClipKey::Special),
+        ("c" | "C", true) => Some(ClipKey::CopyBars),
+        ("x" | "X", true) => Some(ClipKey::CutBars),
+        ("v" | "V", true) => Some(ClipKey::PasteBars),
         _ => None,
     }
+}
+
+/// The clipboard holds whole bars.
+fn is_bars(clip: &oxiguitar_edit::Clip) -> bool {
+    matches!(clip, oxiguitar_edit::Clip::Bars { .. })
 }
 
 /// The commands of the Edit menu's note items, by the name the menu
@@ -987,9 +998,21 @@ impl Editing {
         self.hits.lyric_spot(l.track, l.at.0, l.at.1, l.line)
     }
 
-    /// The chord dialog for the caret's beat.
-    pub(crate) fn chord_form(&self) -> Option<crate::chord_form::ChordForm> {
-        crate::chord_form::ChordForm::open(self.score.as_ref()?, self.caret?)
+    /// The chord dialog for the caret's beat, with the chord notation
+    /// styles, the one picked last and whether a new chord gets a diagram.
+    pub(crate) fn chord_form(
+        &self,
+        styles: oxiguitar_edit::chord_names::Styles,
+        style: usize,
+        add_diagram: bool,
+    ) -> Option<crate::chord_form::ChordForm> {
+        crate::chord_form::ChordForm::open(
+            self.score.as_ref()?,
+            self.caret?,
+            styles,
+            style,
+            add_diagram,
+        )
     }
 
     /// The text above the caret's beat, whichever voice holds it (#153);
@@ -1079,15 +1102,55 @@ impl Editing {
         typed
     }
 
-    /// The clipboard pasted `times` times, replacing what is there or not,
-    /// at the selection's start or else the caret.
-    pub(crate) fn paste(&mut self, times: u8, replace: bool) -> Option<Typed> {
-        let clip = self.clipboard.clone()?;
-        let mut typed = self.tool(Command::Paste(oxiguitar_edit::Paste {
+    /// Copies every bar the selection (or the caret) touches, of the
+    /// caret's track or of every track. Whether there was anything.
+    pub(crate) fn copy_bars(&mut self, all_tracks: bool) -> bool {
+        let (Some(score), Some(c)) = (self.score.as_ref(), self.caret) else {
+            return false;
+        };
+        match oxiguitar_edit::copy_bars(score, c, self.selection, all_tracks) {
+            Some(clip) => {
+                self.clipboard = Some(Arc::new(clip));
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Copies bars, then takes them out of every track.
+    pub(crate) fn cut_bars(&mut self, all_tracks: bool) -> Option<Typed> {
+        if !self.copy_bars(all_tracks) {
+            return None;
+        }
+        let typed = self.tool(Command::CutBars);
+        self.selection = None;
+        self.anchor = None;
+        typed
+    }
+
+    /// The copied bars as new bars before or after the selected bars (or
+    /// the caret's), into their own tracks or only the caret's.
+    pub(crate) fn paste_bars(&mut self, after: bool, all_tracks: bool) -> Option<Typed> {
+        let clip = self.clipboard.clone().filter(|c| is_bars(c))?;
+        let typed = self.tool(Command::PasteBars(oxiguitar_edit::PasteBars {
             clip,
-            times,
-            replace,
-        }))?;
+            after,
+            all_tracks,
+        }));
+        self.selection = None;
+        self.anchor = None;
+        typed
+    }
+
+    /// Bars have been copied (Paste Bars has something to paste).
+    pub(crate) fn has_bars(&self) -> bool {
+        self.clipboard.as_deref().is_some_and(is_bars)
+    }
+
+    /// The clipboard pasted at the selection's start or else the caret.
+    pub(crate) fn paste(&mut self) -> Option<Typed> {
+        let clip = self.clipboard.clone()?;
+        let mut typed = self.tool(Command::Paste(oxiguitar_edit::Paste { clip }))?;
         match self.selection.take() {
             Some(Selection::Beats { from, .. }) => {
                 typed.caret = Caret {
@@ -1143,11 +1206,6 @@ impl Editing {
             staff: c.staff,
             bar,
         })
-    }
-
-    /// Something has been copied.
-    pub(crate) fn has_clip(&self) -> bool {
-        self.clipboard.is_some()
     }
 
     /// The caret's beat as the palette shows it.
@@ -2078,19 +2136,18 @@ mod tests {
     #[test]
     fn copy_cut_and_paste() {
         let mut e = editing(1, &[0]);
-        assert!(e.paste(1, false).is_none(), "nothing copied yet");
+        assert!(e.paste().is_none(), "nothing copied yet");
         assert!(e.copy());
-        let t = e.paste(2, true).unwrap();
-        assert!(matches!(
-            &t.command,
-            Command::Paste(p) if p.times == 2 && p.replace
-        ));
+        let t = e.paste().unwrap();
+        assert!(matches!(&t.command, Command::Paste(_)));
+        assert!(!e.has_bars());
+        assert!(e.paste_bars(false, true).is_none(), "beats aren't bars");
         // With a selection, the paste goes to its start and the selection
         // goes.
         e.key(Key::Right, false, false);
         e.key(Key::Right, true, false);
         e.key(Key::Right, true, false);
-        let t = e.paste(1, false).unwrap();
+        let t = e.paste().unwrap();
         assert_eq!((t.caret.bar, t.caret.beat), (0, 1));
         assert!(e.selection().is_none());
         e.key(Key::Right, true, false);
@@ -2098,7 +2155,25 @@ mod tests {
         assert_eq!(t.command, Command::Cut);
         assert!(t.selection.is_some(), "the cut takes the selection");
         assert!(e.selection().is_none());
-        assert_eq!(clip_key("v", true, true, false), Some(ClipKey::Special));
+        // Bars: what the selection touches, then pasted after it.
+        e.key(Key::Right, true, false);
+        assert!(e.copy_bars(false));
+        assert!(e.has_bars());
+        e.key(Key::Right, true, false);
+        let t = e.paste_bars(true, false).unwrap();
+        assert!(matches!(
+            &t.command,
+            Command::PasteBars(p) if p.after && !p.all_tracks
+        ));
+        assert!(t.selection.is_some(), "Paste Bars goes by the selection");
+        assert!(e.selection().is_none());
+        e.key(Key::Right, true, false);
+        let t = e.cut_bars(true).unwrap();
+        assert_eq!(t.command, Command::CutBars);
+        assert!(e.selection().is_none());
+        assert_eq!(clip_key("v", true, true, false), Some(ClipKey::PasteBars));
+        assert_eq!(clip_key("c", true, true, false), Some(ClipKey::CopyBars));
+        assert_eq!(clip_key("X", true, true, false), Some(ClipKey::CutBars));
         assert_eq!(clip_key("c", false, false, false), None);
     }
 

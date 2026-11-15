@@ -8,7 +8,7 @@ members = ["crates/*", "plugins/*"]
 exclude = ["spikes", "fuzz", "docs/plugins/template"]
 
 [workspace.package]
-version = "0.19.1"
+version = "0.19.2"
 edition = "2024"
 # Rust from rustup, raised only when something needs it, so Debian unstable
 # can catch up before an upload (CONTRIBUTING.md, "Minimum Rust version").
@@ -45,6 +45,9 @@ object = { version = "0.37", default-features = false, features = ["read_core", 
 libloading = "0.8"
 # Fonts: skrifa reads outlines and metrics; keep it on the version krilla uses.
 skrifa = "0.42"
+# Chord names read in any convention and notes named as chords (the chord
+# dialog, #278; oxiguitar-edit's `chord_names`).
+chordparser = "4.0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # The audio thread's queues (the player's engine, oxiguitar-play): lock-free,
