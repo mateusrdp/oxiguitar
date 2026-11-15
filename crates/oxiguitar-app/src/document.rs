@@ -795,11 +795,12 @@ impl Document {
             return Ok(prepared(self.path.clone(), own.clone(), written.clone()));
         }
         let Some(fullest) = writable.iter().find(|f| f.fullest).cloned() else {
-            // No .gp writer: the file's own format, losses named, if any.
+            // No plugin writes a format that keeps the whole score: the
+            // file's own format, losses named, if any.
             return match (own, own_written) {
                 (Some(own), Some(written)) => Ok(prepared(self.path.clone(), own, written)),
                 _ => Err(format!(
-                    "No installed plugin writes {} files, nor Guitar Pro 7–8 files: choose a format with Save As.",
+                    "No installed plugin writes {} files, nor a format that keeps the whole score: choose a format with Save As.",
                     self.format.name
                 )),
             };
