@@ -9,6 +9,8 @@
 //! gap; the other layouts give one sheet. A tile is [`TILE`] device pixels
 //! square at the current zoom, so its size in points depends on the scale.
 
+use std::sync::Arc;
+
 use oxiguitar_display::{DisplayList, FontSet, Rect, Theme};
 use oxiguitar_render::{Raster, View};
 use tiny_skia::{Color, Paint, Pixmap, Transform};
@@ -21,7 +23,8 @@ pub(crate) const PAGE_GAP: f32 = 18.0;
 /// The engraved sheets and where each sits in canvas space.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Sheets {
-    pub(crate) lists: Vec<DisplayList>,
+    /// Shared with what plugins read of the engraving (interface 1.8).
+    pub(crate) lists: Arc<Vec<DisplayList>>,
     pub(crate) rects: Vec<Rect>,
 }
 
@@ -34,7 +37,10 @@ impl Sheets {
             rects.push(Rect::new(0.0, y, l.width, l.height));
             y += l.height + PAGE_GAP;
         }
-        Sheets { lists, rects }
+        Sheets {
+            lists: Arc::new(lists),
+            rects,
+        }
     }
 
     /// Size of the whole canvas in points.

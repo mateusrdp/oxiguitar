@@ -27,7 +27,9 @@
 //! shown above this track (#268; absent for none). `"beats"` lists what
 //! plugins keep on the track's beats (plugin interface 1.8), which no
 //! score format holds either: `{ "at": [staff, bar, voice, beat],
-//! "plugins": { "oxiguitar.wah": { … } } }`, counted from 0; an entry
+//! "plugins": { "oxiguitar.wah": { … } }, "marks": { "me.plugin": "sim." }
+//! }`, counted from 0, `plugins` their data and `marks` what they draw at
+//! the beat; an entry
 //! whose beat is no longer there is ignored. When the
 //! score was changed elsewhere (tracks added, removed or moved in another
 //! program), a track takes the entry at its own place if the names agree,
@@ -79,6 +81,8 @@ pub struct BeatEntry {
     pub at: [usize; 4],
     /// Each plugin's data, by its id: a JSON object as text.
     pub plugins: BTreeMap<String, String>,
+    /// Each plugin's mark drawn at the beat, by its id.
+    pub marks: BTreeMap<String, String>,
 }
 
 impl BeatEntry {
@@ -93,14 +97,19 @@ impl BeatEntry {
         for (to, from) in at.iter_mut().zip(given) {
             *to = usize::try_from(from.as_u64()?).ok()?;
         }
-        let plugins: BTreeMap<String, String> = v
-            .get("plugins")?
-            .as_object()?
-            .iter()
+        let object = |key: &str| v.get(key).and_then(Value::as_object);
+        let plugins: BTreeMap<String, String> = object("plugins")
+            .into_iter()
+            .flatten()
             .filter(|(_, data)| data.is_object())
             .map(|(id, data)| (id.clone(), data.to_string()))
             .collect();
-        (!plugins.is_empty()).then_some(BeatEntry { at, plugins })
+        let marks: BTreeMap<String, String> = object("marks")
+            .into_iter()
+            .flatten()
+            .filter_map(|(id, text)| Some((id.clone(), text.as_str()?.to_owned())))
+            .collect();
+        (!plugins.is_empty() || !marks.is_empty()).then_some(BeatEntry { at, plugins, marks })
     }
 
     /// The entry as JSON; `None` when no plugin's data is a JSON object.
@@ -115,7 +124,17 @@ impl BeatEntry {
                     .map(|v| (id.clone(), v))
             })
             .collect();
-        (!plugins.is_empty()).then(|| serde_json::json!({ "at": self.at, "plugins": plugins }))
+        if plugins.is_empty() && self.marks.is_empty() {
+            return None;
+        }
+        let mut entry = serde_json::json!({ "at": self.at });
+        if !plugins.is_empty() {
+            entry["plugins"] = Value::Object(plugins);
+        }
+        if !self.marks.is_empty() {
+            entry["marks"] = serde_json::json!(self.marks);
+        }
+        Some(entry)
     }
 }
 
@@ -411,6 +430,7 @@ mod tests {
         let beat = BeatEntry {
             at: [0, 3, 1, 2],
             plugins: [("me.pedal".to_owned(), r#"{"q":6.5}"#.to_owned())].into(),
+            marks: [("me.pedal".to_owned(), "wah".to_owned())].into(),
         };
         let sidecar = Sidecar {
             tracks: vec![TrackEntry {

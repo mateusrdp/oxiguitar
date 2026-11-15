@@ -231,6 +231,11 @@ pub struct BeatEffects {
     pub pedal: Option<Pedal>,
     /// A wah-wah mark.
     pub wah: Option<Wah>,
+    /// Marks plugins draw at the beat, by plugin id (plugin interface
+    /// 1.8): a few characters each, set over the beat with the playing
+    /// techniques. Carried and saved as what plugins keep on the beat
+    /// ([`Beat::plugins`]).
+    pub marks: BTreeMap<String, String>,
     /// The chord played as an arpeggio, up or down.
     pub arpeggio: Option<StrokeDirection>,
     /// A rasgueado.

@@ -318,6 +318,12 @@ fn beat_ext_to(b: &Beat) -> Vec<w2::BeatExt> {
             data: data.clone(),
         });
     }
+    for (plugin, text) in &fx.marks {
+        out.push(E::Mark {
+            plugin: plugin.clone(),
+            text: text.clone(),
+        });
+    }
     out
 }
 
@@ -389,6 +395,16 @@ fn beat_ext_from(b: &mut Beat, ext: &[w2::BeatExt]) {
                 ref data,
             } => {
                 b.plugins.insert(plugin.clone(), data.clone());
+            }
+            E::Mark {
+                ref plugin,
+                ref text,
+            } => {
+                // No more than the engraver draws.
+                let text: String = text.chars().take(w2::MARK_MAX).collect();
+                if !text.trim().is_empty() {
+                    b.effects.marks.insert(plugin.clone(), text);
+                }
             }
         }
     }
@@ -968,6 +984,7 @@ fn beat_to(b: &Beat) -> w::Beat {
         golpe: _,
         pick_scrape: _,
         dead_slap: _,
+        marks: _,
     } = effects;
     w::Beat {
         kind: match kind {
@@ -1442,6 +1459,53 @@ mod tests {
         let bytes = oxiguitar_plugin_api::encode(&wire).unwrap();
         let back: w2::Score2 = oxiguitar_plugin_api::decode(&bytes).unwrap();
         assert_eq!(from_wire2(back).unwrap(), score);
+    }
+
+    #[test]
+    fn what_plugins_keep_on_a_beat_goes_through_version_2() {
+        let mut score = marked();
+        let beat = &mut score.tracks[0].staves[0].bars[0].voices[0].beats[0];
+        beat.plugins.insert("me.pedal".into(), r#"{"q":6}"#.into());
+        beat.effects.marks.insert("me.pedal".into(), "wah".into());
+        let wire = to_wire2(&score);
+        let ext = &wire.tracks[0].staves[0].bars[0].voices[0].beats[0].ext;
+        assert!(ext.contains(&w2::BeatExt::Plugin {
+            plugin: "me.pedal".into(),
+            data: r#"{"q":6}"#.into(),
+        }));
+        assert!(ext.contains(&w2::BeatExt::Mark {
+            plugin: "me.pedal".into(),
+            text: "wah".into(),
+        }));
+        assert_eq!(from_wire2(wire.clone()).unwrap(), score);
+        // A mark longer than the engraver draws is cut; an empty one is
+        // none.
+        let mut long = wire.clone();
+        let ext = &mut long.tracks[0].staves[0].bars[0].voices[0].beats[0].ext;
+        ext.retain(|e| !matches!(e, w2::BeatExt::Mark { .. }));
+        ext.push(w2::BeatExt::Mark {
+            plugin: "me.pedal".into(),
+            text: "x".repeat(w2::MARK_MAX + 5),
+        });
+        ext.push(w2::BeatExt::Mark {
+            plugin: "me.other".into(),
+            text: "  ".into(),
+        });
+        let read = from_wire2(long).unwrap();
+        let marks = &read.tracks[0].staves[0].bars[0].voices[0].beats[0]
+            .effects
+            .marks;
+        assert_eq!(marks.len(), 1);
+        assert_eq!(marks["me.pedal"].chars().count(), w2::MARK_MAX);
+        // Formats are sent neither.
+        let mut sent = wire;
+        sent.drop_plugin_data();
+        assert!(
+            sent.tracks[0].staves[0].bars[0].voices[0].beats[0]
+                .ext
+                .iter()
+                .all(|e| !matches!(e, w2::BeatExt::Plugin { .. } | w2::BeatExt::Mark { .. }))
+        );
     }
 
     #[test]

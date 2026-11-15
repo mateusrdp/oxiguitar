@@ -4,6 +4,26 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **Plugins own their tools: plugin interface 1.8** (#293, #250). A plugin can now, with no change to OxiGuitar:
+  - put **buttons on the palette**, in one of its sections or a section of its own, with a music symbol or a short text (`palette` on a tool of the manifest);
+  - put **entries in any menu**: File, Edit, View, Tools, Help, the right-click menus of the page and of a track, or a menu of its own between Tools and Help (`menu`);
+  - open **dialogs**, tabs whose area is `dialog`, with the same widgets and canvas as a tab and OxiGuitar's OK and Cancel (`Host::open_dialog`, `Tab::closed`), and bring one of its tabs to the front (`Host::show_tab`);
+  - ask for the **selection** as it is now (`Host::selection`) and read the **engraved page**: every page's drawing and where each beat is on it (`Host::engraving`);
+  - keep **its own data and marks on beats** (`BeatExt::Plugin`, `BeatExt::Mark`): they follow the beat through every edit, the marks are engraved over the beat, and both are saved in the `.oxg` file beside the score, since no score format holds them;
+  - **follow the score as it plays** in an effect (`follows_score`: every beat the track plays, with its marks and the plugin's data, and the score's time with each block of sound), and say where the effect goes in a track's chain by default (`order`);
+  - say which of its formats keeps the most of a score (`fullest`).
+
+  The plugin guide has a section for each (Tools, Tabs, Instruments, Formats, Interface versions); the design is in `docs/design/plugins.md`, "Interface 1.8". The SDK crates are at 1.8.0. Released plugins keep working.
+- **Wah-wah marks can be played** (#250), by the new Wah-wah plugin (`oxiguitar-wah`): it adds Closed and Open Wah-Wah to the palette, with an editor for each mark's curve (the pedal across the beat) and Q, and a wah pedal on any track that the marks rock, a Cry Baby by default. The pedal is off on beats without a mark.
+
+### Changed
+
+- **Closed and Open Wah-Wah left OxiGuitar's own palette**: the Wah-wah plugin adds them. Wah marks of a file are still read, drawn and written without it.
+- A track's effects without an order of the user's run by each effect's `order` in its manifest (pedals, then amp models, then equalizers) instead of a list of plugin ids in OxiGuitar.
+- The window tells plugins where the caret is when a score opens, not only when it first moves.
+
 ## [0.19.2] - 2026-11-15
 
 ### Added

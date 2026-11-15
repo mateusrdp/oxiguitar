@@ -15,7 +15,7 @@ use oxiguitar_edit::{BarCheck, Caret, Command, History, Region, Selection};
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::message::{Level as LogLevel, LogEntry};
 use oxiguitar_host::sidecar::{BeatEntry, Sidecar, TrackEntry};
-use oxiguitar_layout::{Engraved, Layout, Notation, Options, Paper, engrave};
+use oxiguitar_layout::{Engraved, Hits, Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::{Mix, Score};
 use oxiguitar_tools::Availability;
 
@@ -177,6 +177,13 @@ struct Shared {
     edits: Option<std::sync::mpsc::Sender<crate::worker::Request>>,
     /// The sound runs: no editing while playing (Mateus, 25 Oct 2026).
     playing: bool,
+    /// The score as last engraved for the window, for the plugins that
+    /// read it (interface 1.8): the revision it is of, its pages and the
+    /// map of where everything is.
+    engraved: Option<(u64, Arc<Vec<DisplayList>>, Arc<Hits>)>,
+    /// The caret or the selection as the window last told it, for the
+    /// plugins that ask (interface 1.8).
+    selection: Option<oxiguitar_host::api::event::Selection2>,
 }
 
 impl OpenScore {
@@ -197,8 +204,40 @@ impl OpenScore {
     /// The open score, and its revision.
     pub(crate) fn set(&self, score: Option<Arc<Score>>, revision: u64) {
         let mut s = self.lock();
+        if score.is_none() {
+            s.engraved = None;
+            s.selection = None;
+        }
         s.score = score;
         s.revision = revision;
+    }
+
+    /// The score was engraved for the window: what plugins read of it.
+    pub(crate) fn set_engraved(
+        &self,
+        revision: u64,
+        pages: Arc<Vec<DisplayList>>,
+        hits: Arc<Hits>,
+    ) {
+        self.lock().engraved = Some((revision, pages, hits));
+    }
+
+    /// The caret or the selection moved.
+    pub(crate) fn set_selection(&self, selection: Option<oxiguitar_host::api::event::Selection2>) {
+        self.lock().selection = selection;
+    }
+
+    /// The caret or the selection, as plugins ask for it (interface 1.8).
+    pub(crate) fn selection(&self) -> Option<oxiguitar_host::api::event::Selection2> {
+        self.lock().selection
+    }
+
+    /// The open score as engraved (interface 1.8); `None` when no score is
+    /// open or it isn't engraved yet.
+    pub(crate) fn engraving(&self) -> Option<oxiguitar_host::api::message::Engraving> {
+        // Converted outside the lock: the pages are shared, not copied.
+        let (revision, pages, hits) = self.lock().engraved.clone()?;
+        Some(crate::engraving::of(revision, &pages, &hits))
     }
 
     /// The open score as it is now, shared.
@@ -316,7 +355,13 @@ impl Document {
                     // What plugins keep on beats; a beat no longer there
                     // takes nothing.
                     for beat in entry.beats {
-                        track.set_beat_plugins(beat.at, beat.plugins);
+                        track.set_beat_plugins(
+                            beat.at,
+                            oxiguitar_model::BeatKept {
+                                plugins: beat.plugins,
+                                marks: beat.marks,
+                            },
+                        );
                     }
                 }
                 // Convert track_bar_colors from sidecar format (track name →
@@ -830,9 +875,10 @@ impl Document {
                     beats: t
                         .beat_plugins()
                         .into_iter()
-                        .map(|(at, plugins)| BeatEntry {
+                        .map(|(at, kept)| BeatEntry {
                             at,
-                            plugins: plugins.clone(),
+                            plugins: kept.plugins,
+                            marks: kept.marks,
                         })
                         .collect(),
                 })

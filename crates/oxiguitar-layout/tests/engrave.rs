@@ -488,6 +488,40 @@ fn tune_in_g(bars: usize) -> Score {
     score
 }
 
+#[test]
+fn a_plugin_s_mark_is_drawn_at_its_beat() {
+    let (fonts, meta) = setup();
+    let mut score = tune_in_g(2);
+    let plain = engrave(&score, &fonts, &meta, &Options::default());
+    assert!(!plain.pages.iter().flat_map(texts).any(|t| t == "T!"));
+    score.tracks[0].staves[0].bars[1].voices[0].beats[2]
+        .effects
+        .marks
+        .insert("oxiguitar.test".into(), "T!".into());
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("mark", &e, &fonts);
+    let drawn: Vec<_> = e
+        .pages
+        .iter()
+        .flat_map(|p| &p.items)
+        .filter_map(|i| match i {
+            Item::Glyphs(run) if run.text == "T!" => Some(run.origin),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(drawn.len(), 1, "the mark, once");
+    // Over its own beat: the third of the second bar.
+    let beats = &e.hits.systems[0].staves[0].bars[1].beats;
+    let (here, next) = (beats[2].x, beats[3].x);
+    assert!(
+        drawn[0].x >= here - 4.0 && drawn[0].x < next,
+        "{} in {here}..{next}",
+        drawn[0].x
+    );
+    // And above the staff.
+    assert!(drawn[0].y < e.hits.systems[0].staves[0].top);
+}
+
 /// How many times `c` is drawn on every page.
 fn count_char(e: &Engraved, c: char) -> usize {
     e.pages

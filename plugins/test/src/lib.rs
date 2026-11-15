@@ -57,8 +57,8 @@ use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{Score, ScoreInfo};
 use oxiguitar_plugin::{
     Availability, Canvas, Error, ErrorKind, Event, FormatReader, FormatWriter, Host, Level,
-    LogEntry, Plugin, PointerKind, Read, Row, Service, SharedFolder, Tab, TabContent, TabEvent,
-    Tool, TrackInfo, TrackSection, Widget, Written,
+    LogEntry, Plugin, PointerKind, Read, Row, Selection2, Service, SharedFolder, Tab, TabContent,
+    TabEvent, Tool, TrackInfo, TrackSection, Widget, Written,
 };
 
 use oxiguitar_plugin::serde_json;
@@ -349,6 +349,9 @@ pub const ID: &str = "oxiguitar.test";
 /// What the tool `stamp` keeps on a beat (interface 1.8).
 pub const STAMP: &str = r#"{"stamped":true}"#;
 
+/// The mark the tool `stamp` has the core draw at that beat.
+pub const MARK: &str = "T!";
+
 /// The tool `stamp`, a palette button and an entry of a menu of its own
 /// (interface 1.8): keeps the plugin's data on the first beat with notes
 /// of the first track, as one change. The effect `gain` is silent while
@@ -375,12 +378,36 @@ impl Tool for Stamp {
         let Some(beat) = beat else {
             return Ok("The score has no notes.".into());
         };
-        beat.ext
-            .retain(|e| !matches!(e, BeatExt::Plugin { plugin, .. } if plugin == ID));
+        beat.ext.retain(|e| {
+            !matches!(e, BeatExt::Plugin { plugin, .. } | BeatExt::Mark { plugin, .. } if plugin == ID)
+        });
         beat.ext.push(BeatExt::Plugin {
             plugin: ID.into(),
             data: STAMP.into(),
         });
+        // Drawn on the page at the beat.
+        beat.ext.push(BeatExt::Mark {
+            plugin: ID.into(),
+            text: MARK.into(),
+        });
+        // What the page shows now, read before it changes.
+        if let Some(engraving) = self.host.engraving()? {
+            self.host.notify(
+                Level::Info,
+                format!(
+                    "Engraved: {} pages, {} beats.",
+                    engraving.pages.len(),
+                    engraving.beats.len()
+                ),
+            );
+        }
+        // Where the caret is, asked for rather than heard of.
+        if let Some(Selection2::Caret { bar, beat, .. }) = self.host.selection()? {
+            self.host.notify(
+                Level::Info,
+                format!("The caret is at bar {}, beat {}.", bar + 1, beat + 1),
+            );
+        }
         self.host.apply(revision, "Stamp the First Beat", score)?;
         Ok(String::new())
     }

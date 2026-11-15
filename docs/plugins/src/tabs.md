@@ -16,6 +16,18 @@ A tab sits in one of the window's four areas, beside the core's own (Player, Tra
 
 The window shows the tab's title from the manifest alone. The plugin is loaded when the user first opens the tab.
 
+`host.show_tab("statistics")` (interface 1.8) brings a tab of yours to the front of its area, opening the area if it is closed: for a tool whose result the tab shows.
+
+## Dialogs
+
+A tab whose `area` is `dialog` (interface 1.8) is a dialog: it is on no tab strip, and opens over the window when the plugin asks.
+
+```json
+"tabs": [{ "id": "editor", "title": "Wah-Wah", "area": "dialog" }]
+```
+
+`host.open_dialog("editor")` opens it, from a tool or a tab's button. Its title is the manifest's; its contents are the tab's `content`, widgets and canvas as in any tab, with `on` for their events; the core adds **OK** and **Cancel** under them. When the user closes it, the core calls `Tab::closed(ok)`: `true` for OK, `false` for Cancel. Change the score there, with `host.apply`, so the dialog is one step for Undo. One dialog is open at a time: `open_dialog` answers with an error while another is, and in a program without a window.
+
 ## Contents
 
 ```rust,ignore

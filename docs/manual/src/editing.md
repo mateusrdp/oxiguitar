@@ -221,12 +221,22 @@ Every other tool of the palette works too (v0.17); they have no keys, as in Guit
 
 - **Over several beats**: **Legato** (a slur), **Crescendo** and **Decrescendo**, the **8va**, **8vb**, **15ma** and **15mb** lines, **Extended Barre** (at the lowest fret the notes use; the Note tab changes the fret and makes it a half barre), **Slash** notation, the four **beaming** tools and **Force Groups** (equal tuplets bracketed as one group). Select the beats first: a slur runs from the first selected beat to the last; at the caret it joins the caret's beat to the next.
 - **On a note**: upper and lower **mordent**, **turn** and **inverted turn**, **wide vibrato**, **String Number**. **Left-Hand Fingering** and **Right-Hand Fingering** step through the fingers, one press each (the Note tab picks one directly).
-- **On a beat**: **Fermata** (at the beat's moment, for every track; the Note tab makes it short, medium or long), **Sustain Pedal** (down, then up, then off; on a selection, down at its start and up at its end), **Fade-out** and **Volume Swell** (one fade a beat), the whammy bar's slight **vibrato**, **Closed** and **Open Wah-Wah**, **Arpeggio** up and down, **Rasgueado** (the Note tab picks one of Guitar Pro's eighteen patterns), finger and thumb **Golpe**, **Pick Scrape** up and down, **Dead Slap**.
+- **On a beat**: **Fermata** (at the beat's moment, for every track; the Note tab makes it short, medium or long), **Sustain Pedal** (down, then up, then off; on a selection, down at its start and up at its end), **Fade-out** and **Volume Swell** (one fade a beat), the whammy bar's slight **vibrato**, **Arpeggio** up and down, **Rasgueado** (the Note tab picks one of Guitar Pro's eighteen patterns), finger and thumb **Golpe**, **Pick Scrape** up and down, **Dead Slap**.
 - **Accidentals**: **Double Flat** to **Double Sharp** write the note with that accidental where one names it (C sharp as D flat), and **Change Accidental** steps through the ways to write it. A file's own spellings are kept where they differ from the ones OxiGuitar would choose.
 - **Single** and **Double Repeat Sign**: the bar (or the bar and the next) repeats the bar (or two bars) before it: they are copied in and the sign is drawn in their place. Pressing it again, or changing a note in the bar, takes the sign off and keeps the music.
 - **Nested N-tuplet** puts a tuplet inside the one the selected notes already have.
 
 How each one sounds is on the [Playback](playback.md#how-the-marks-sound) page.
+
+### Wah-wah
+
+Wah-wah marks are written and played by the **Wah-wah** plugin ([Official plugins](official-plugins.md)), which adds **Closed Wah-Wah** and **Open Wah-Wah** to the palette's Effects. Each opens the **wah-wah editor** for the caret's beat, or the selected beats. On a beat without a mark it opens on the mark you clicked, so OK adds it; on a beat with one it shows that mark. Pick the mark (**No wah-wah** takes it away, **Open** is drawn "o", **Closed** "+") and how sharp the wah sounds (**Q**: 4 is a Cry Baby's; higher is more nasal). The grid is the pedal across the beat, from **Heel** (closed, dark) at the bottom to **Toe** (open, bright) at the top: drag its points to shape how the pedal moves. Picking a mark gives its usual curve again.
+
+The score file keeps the open or closed mark where its format has one (Guitar Pro's do); the curve and the Q are kept in the file beside the score ([Saving](saving.md)). A wah mark of a file you open is drawn without the plugin too; the tools and the sound need it. How it sounds is under [How the marks sound](playback.md#how-the-marks-sound).
+
+### Tools that plugins add
+
+A plugin can add buttons to the palette, in one of its sections or in a section of its own after OxiGuitar's, and entries to any menu, the right-click menus of the page and of a track included, or a menu of its own between Tools and Help. A palette button of a plugin does its work at a click, as a menu entry does, and may open a dialog of the plugin's. Its tooltip names it and the palette's search finds it. What such a tool changes in the score is one step for **Undo**. A plugin can also keep marks and data of its own on beats; they follow the beat when you copy or move it, and are saved beside the score ([Saving](saving.md)).
 
 ### Multivoice
 

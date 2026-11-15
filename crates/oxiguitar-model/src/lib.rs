@@ -48,4 +48,4 @@ pub use score::{
     Color, Direction, Fermata, FermataKind, KeyMode, KeySignature, Marker, MasterBar, Score,
     ScoreInfo, TempoChange, TimeSignature, TripletFeel,
 };
-pub use track::{ChordDiagram, Instrument, LyricLine, Mix, Staff, Track};
+pub use track::{BeatKept, ChordDiagram, Instrument, LyricLine, Mix, Staff, Track};

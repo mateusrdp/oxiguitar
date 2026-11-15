@@ -126,7 +126,13 @@ fn export_file(asked: &Asked) -> Result<(), String> {
             // What plugins keep on beats (interface 1.8), for the effects
             // that follow the score.
             for beat in entry.beats {
-                track.set_beat_plugins(beat.at, beat.plugins);
+                track.set_beat_plugins(
+                    beat.at,
+                    oxiguitar_model::BeatKept {
+                        plugins: beat.plugins,
+                        marks: beat.marks,
+                    },
+                );
             }
         }
     }

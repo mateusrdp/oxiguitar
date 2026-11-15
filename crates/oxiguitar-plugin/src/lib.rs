@@ -829,6 +829,29 @@ impl Host {
         let _ = self.0.request(HostRequest::Redraw { tab: tab.into() });
     }
 
+    /// The open score as it is engraved in the window now (interface 1.8):
+    /// every page's drawing, and where each beat is on it. `None` when no
+    /// score is open. To put something on the page, give a beat a mark
+    /// ([`score2::BeatExt::Mark`]) and hand the score back
+    /// ([`Host::apply`]).
+    pub fn engraving(&self) -> Result<Option<api::message::Engraving>, Error> {
+        match self.0.request(HostRequest::Engraving)? {
+            HostAnswer::Engraving(engraving) => Ok(engraving.map(|e| *e)),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// The caret or the selection in the open score as it is now (interface
+    /// 1.8); `None` when no score is open. What [`Event::Selection2`] tells
+    /// as it changes, for when the plugin needs it at once: a tool run
+    /// before the caret ever moved.
+    pub fn selection(&self) -> Result<Option<Selection2>, Error> {
+        match self.0.request(HostRequest::Selection)? {
+            HostAnswer::Selection(selection) => Ok(selection),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// Asks the core to open the dialog `tab` (the id of a tab whose area
     /// is `dialog`) over the window (interface 1.8): it asks for the
     /// dialog's [`Tab::content`], sends its widgets' events to [`Tab::on`]
@@ -907,6 +930,8 @@ impl HostServices for Detached {
             | HostRequest::Redraw { .. }
             | HostRequest::ShowTab { .. }
             | HostRequest::Advise(_) => Ok(HostAnswer::Done),
+            HostRequest::Engraving => Ok(HostAnswer::Engraving(None)),
+            HostRequest::Selection => Ok(HostAnswer::Selection(None)),
             HostRequest::OpenDialog { .. } => Err(Error::new(
                 ErrorKind::Failed,
                 "a detached host has no window to show a dialog in",

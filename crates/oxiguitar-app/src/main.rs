@@ -42,6 +42,7 @@ mod cursor;
 mod document;
 mod editing;
 mod effect_form;
+mod engraving;
 mod footer;
 mod icons;
 mod inspector;
@@ -402,6 +403,14 @@ impl oxiguitar_host::Core for WindowCore {
                 plugin_tab_changed(&app, tab);
             }
         });
+    }
+
+    fn engraving(&self) -> Option<oxiguitar_host::api::message::Engraving> {
+        self.open.engraving()
+    }
+
+    fn selection(&self) -> Option<oxiguitar_host::api::event::Selection2> {
+        self.open.selection()
     }
 
     fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
@@ -2566,6 +2575,12 @@ fn handle(app: &Shared, event: Event) {
                 s.mixer = Mixer::new(tracks.iter().map(|t| t.mix).collect());
                 let first = s.tracks.shown().first().copied().unwrap_or(0);
                 s.editing.opened(score, first);
+                // Plugins hear where the caret starts, as they do when it
+                // moves.
+                s.worker.send(Request::Selection(
+                    s.editing.for_plugins(),
+                    s.editing.for_plugins2(),
+                ));
                 ui.set_lyric_shown(false);
                 s.bad = bad;
                 s.settings.tracks = s.tracks.shown();
@@ -2689,7 +2704,7 @@ fn handle(app: &Shared, event: Event) {
                 let mut s = app.borrow_mut();
                 s.engraving = engraving;
                 s.sheets = Sheets {
-                    lists: Vec::new(),
+                    lists: Arc::default(),
                     rects: sheets,
                 };
                 s.editing.engraved(hits);

@@ -26,6 +26,7 @@ A format plugin turns a file into a score, a score into a file, or both. OxiGuit
 | `media_types` | Optional, such as `application/x-gtp` |
 | `read`, `write` | What the plugin does with it; at least one |
 | `signatures` | How to recognise its files; a format that reads needs at least one |
+| `fullest` | `true` on the one format, of those the plugin writes, that keeps the most of a score (interface 1.8): a new score's format, and the one OxiGuitar saves in when a file's own format would lose part of the score or no plugin writes it. Of several formats that say so, the first in plugin order |
 
 ### Signatures
 

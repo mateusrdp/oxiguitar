@@ -153,6 +153,7 @@ impl Lanes {
             || e.fade.is_some()
             || e.pick_stroke.is_some()
             || e.wah.is_some()
+            || !e.marks.is_empty()
             || e.rasgueado.is_some()
             || e.golpe.is_some()
             || e.pick_scrape.is_some()
@@ -717,6 +718,9 @@ fn technique_width(p: &Painter<'_>, b: &BeatInfo) -> f32 {
     }
     if fx.wah.is_some() {
         w += p.width(glyphs::WAH_OPEN) + 0.4 * sp;
+    }
+    for mark in fx.marks.values() {
+        w += text(mark);
     }
     if fx.golpe.is_some() {
         w += p.width(glyphs::GOLPE) + text("p");

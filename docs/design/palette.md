@@ -11,7 +11,7 @@ Forty-nine of the palette's 124 tools did nothing:
 | Voices and modes | Multivoice, Design Mode |
 | Bar | Single and Double Repeat Sign (simile), 8va, 8vb, 15ma, 15mb |
 | Note | Nested N-tuplet, Fermata, Double Flat, Flat, Natural, Sharp, Double Sharp, Change Accidental, Crescendo, Decrescendo |
-| Effects | Legato (slur), Sustain Pedal, Fade-out, Volume Swell, Upper and Lower Mordent, Turn, Inverted Turn, Wide Left-Hand Vibrato, Slight Bridge Vibrato, Closed and Open Wah-Wah, Downward and Upward Arpeggio, Rasgueado, Left- and Right-Hand Fingering, String Number, Finger and Thumb Golpe, Upward and Downward Pick Scrape, Dead Slap |
+| Effects | Legato (slur), Sustain Pedal, Fade-out, Volume Swell, Upper and Lower Mordent, Turn, Inverted Turn, Wide Left-Hand Vibrato, Slight Bridge Vibrato, Downward and Upward Arpeggio, Rasgueado, Left- and Right-Hand Fingering, String Number, Finger and Thumb Golpe, Upward and Downward Pick Scrape, Dead Slap |
 | Notation | Slash, Extended Barre, Automatic / Force / Break / Break Secondary Beaming, Force Groups |
 
 Also open from M1 (engraving.md, "Not yet"): whammy-bar curves on the tab (drawn as "w/bar" only), fingering numbers, courtesy signatures before a change, and a second overlap pass. Left- and right-hand fingers were already in the model, read from files and set from the Inspector, but never drawn.
@@ -21,7 +21,7 @@ None of the rest was in the score model. The Guitar Pro readers warned and dropp
 ## Decided by Mateus (8 Nov 2026)
 
 - **The Guitar Pro plugin follows in the same session**: it reads and writes every new mark, released after the core (a plugin built on the 1.6 SDK needs v0.17).
-- **Sound: play what we can.** Rasgueado plays as fast strokes by its pattern; golpe and dead slap as muted percussive hits; wah and pick scrape are shown only (no wah filter or scrape sample in our sets; Guitar Pro plays neither pick scrape nor dead slap).
+- **Sound: play what we can.** Rasgueado plays as fast strokes by its pattern; golpe and dead slap as muted percussive hits; wah and pick scrape are shown only (no wah filter or scrape sample in our sets; Guitar Pro plays neither pick scrape nor dead slap). Since #250 the wah is the wah plugin's (mateusrdp/oxiguitar-wah): it puts the Closed and Open Wah-Wah tools on the palette, which the core no longer has, edits each mark's curve and Q, and plays them (docs/design/plugins.md, "Interface 1.8"). The core still holds, reads, writes and draws the mark.
 - **Spellings: keep the file's.** A note keeps the spelling its file gives where it differs from the one OxiGuitar would work out, so scores look as their authors wrote them.
 - **Multivoice and Design Mode are both in v0.17.**
 

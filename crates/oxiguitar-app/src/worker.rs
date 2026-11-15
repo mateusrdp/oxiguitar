@@ -502,6 +502,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
             }
             Request::Selection(selection, selection2) => {
+                st.open.set_selection(selection2);
                 st.plugins.push(PluginEvent::Selection(selection));
                 st.plugins.push(PluginEvent::Selection2(selection2));
             }
@@ -648,10 +649,14 @@ fn engrave(st: &mut State, sink: &dyn Fn(Event)) {
     );
     st.sheets = Sheets::stack(engraved.pages);
     st.engraving += 1;
+    let hits = Arc::new(engraved.hits);
+    // Plugins read the engraving too (interface 1.8).
+    st.open
+        .set_engraved(st.revision, st.sheets.lists.clone(), hits.clone());
     sink(Event::Engraved {
         engraving: st.engraving,
         sheets: st.sheets.rects.clone(),
-        hits: Arc::new(engraved.hits),
+        hits,
     });
 }
 
@@ -796,27 +801,60 @@ mod tests {
     #[test]
     fn open_engrave_draw_and_export() {
         let (tx, rx) = channel();
-        let worker = Worker::start(
-            crate::test_plugins().clone(),
-            OpenScore::default(),
-            move |e| {
-                let _ = tx.send(e);
-            },
-        );
+        let open = OpenScore::default();
+        let worker = Worker::start(crate::test_plugins().clone(), open.clone(), move |e| {
+            let _ = tx.send(e);
+        });
         worker.send(Request::Open(fixture()));
         let Event::Opened { tracks, tools, .. } = next(&rx) else {
             panic!("expected Opened")
         };
         assert!(!tracks.is_empty() && !tools.is_empty());
+        // Nothing for plugins to read of the page until it is engraved.
+        assert!(open.engraving().is_none());
 
         worker.send(Request::Engrave(Settings::default()));
         let Event::Engraved {
-            engraving, sheets, ..
+            engraving,
+            sheets,
+            hits,
         } = next(&rx)
         else {
             panic!("expected Engraved")
         };
         assert_eq!(sheets.len(), 1);
+
+        // Plugins read the same page (interface 1.8): its drawing, in the
+        // text and the music font, and every beat's place on it.
+        {
+            use oxiguitar_host::api::display::{Font, Item};
+            let read = open.engraving().expect("the engraving");
+            assert_eq!(read.revision, open.wire2().expect("a score").0);
+            assert_eq!(read.pages.len(), 1);
+            let page = &read.pages[0];
+            assert!(page.width > 0.0 && page.height > 0.0);
+            let font = |f: Font| {
+                page.items
+                    .iter()
+                    .any(|i| matches!(i, Item::Text { font, .. } if *font == f))
+            };
+            assert!(font(Font::Music) && font(Font::Sans));
+            assert!(page.items.iter().any(|i| matches!(i, Item::Line { .. })));
+            let beats: usize = hits
+                .systems
+                .iter()
+                .flat_map(|s| &s.staves)
+                .flat_map(|s| &s.bars)
+                .map(|b| b.beats.len())
+                .sum();
+            assert!(beats > 0);
+            assert_eq!(read.beats.len(), beats);
+            assert!(read.beats.iter().all(|b| b.page == 0
+                && b.width > 0.0
+                && b.height > 0.0
+                && b.x < page.width
+                && b.y < page.height));
+        }
 
         worker.send(Request::Tiles {
             engraving,

@@ -703,6 +703,10 @@ fn single(p: &Painter<'_>, list: &mut DisplayList, m: &Mark<'_>, g: &Geometry<'_
             p.glyph(list, gl, x, lane.base - 0.2 * sp, Paint::Ink);
             x += p.width(gl) + 0.4 * sp;
         }
+        // What plugins draw at the beat (plugin interface 1.8).
+        for mark in b.effects.marks.values() {
+            put(mark, &mut x, list);
+        }
         if let Some(golpe) = b.effects.golpe {
             p.glyph(list, glyphs::GOLPE, x, lane.base, Paint::Ink);
             x += p.width(glyphs::GOLPE) + 0.2 * sp;

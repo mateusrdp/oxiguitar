@@ -65,9 +65,9 @@ use oxiguitar_plugin_api::manifest::{
     SharedFolder, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
-    Answer, Availability, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry, PlayedBeat,
-    PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode,
-    outcome,
+    Answer, Availability, Engraving, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry,
+    PlayedBeat, PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo,
+    decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
@@ -110,6 +110,19 @@ pub trait Core: Send + Sync {
     /// does nothing, for programs without a window.
     fn redraw(&self, tab: &TabId) {
         let _ = tab;
+    }
+
+    /// The open score as engraved in the window (interface 1.8), or `None`
+    /// when none is. The default, for programs without a window, has none.
+    fn engraving(&self) -> Option<Engraving> {
+        None
+    }
+
+    /// The caret or the selection in the open score (interface 1.8), or
+    /// `None` when there is none. The default, for programs without a
+    /// window, has none.
+    fn selection(&self) -> Option<crate::api::event::Selection2> {
+        None
     }
 
     /// A plugin asks for its dialog `tab` (a tab whose area is `dialog`,
@@ -2180,6 +2193,26 @@ impl Plugins {
                         "{} has no tab {tab:?} in its manifest",
                         manifest.name
                     )))
+                }
+            }
+            HostRequest::Engraving => {
+                if manifest.knows_minor(8) {
+                    Ok(HostAnswer::Engraving(self.0.core.engraving().map(Box::new)))
+                } else {
+                    Err(Error::new(
+                        ErrorKind::Unsupported,
+                        "the engraving needs interface 1.8",
+                    ))
+                }
+            }
+            HostRequest::Selection => {
+                if manifest.knows_minor(8) {
+                    Ok(HostAnswer::Selection(self.0.core.selection()))
+                } else {
+                    Err(Error::new(
+                        ErrorKind::Unsupported,
+                        "asking for the selection needs interface 1.8",
+                    ))
                 }
             }
             HostRequest::Score => Ok(HostAnswer::Score(self.0.core.score().map(Box::new))),

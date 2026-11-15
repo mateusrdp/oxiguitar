@@ -220,18 +220,35 @@ pub struct LyricLine {
     pub text: String,
 }
 
+/// What plugins keep on one beat, by plugin id: their data
+/// ([`Beat::plugins`](crate::Beat)) and the marks they draw there
+/// ([`BeatEffects::marks`](crate::BeatEffects)).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct BeatKept {
+    /// Each plugin's data, a JSON object as text.
+    pub plugins: BTreeMap<String, String>,
+    /// Each plugin's mark.
+    pub marks: BTreeMap<String, String>,
+}
+
 impl Track {
     /// What plugins keep on this track's beats (plugin interface 1.8),
     /// each with its beat's place: staff, bar, voice and beat. What the
     /// file beside the score keeps, since no score format holds it.
-    pub fn beat_plugins(&self) -> Vec<([usize; 4], &BTreeMap<String, String>)> {
+    pub fn beat_plugins(&self) -> Vec<([usize; 4], BeatKept)> {
         let mut out = Vec::new();
         for (si, staff) in self.staves.iter().enumerate() {
             for (bi, bar) in staff.bars.iter().enumerate() {
                 for (vi, voice) in bar.voices.iter().enumerate() {
                     for (ei, beat) in voice.beats.iter().enumerate() {
-                        if !beat.plugins.is_empty() {
-                            out.push(([si, bi, vi, ei], &beat.plugins));
+                        if !beat.plugins.is_empty() || !beat.effects.marks.is_empty() {
+                            out.push((
+                                [si, bi, vi, ei],
+                                BeatKept {
+                                    plugins: beat.plugins.clone(),
+                                    marks: beat.effects.marks.clone(),
+                                },
+                            ));
                         }
                     }
                 }
@@ -243,7 +260,7 @@ impl Track {
     /// Gives the beat at `at` (staff, bar, voice, beat) what plugins kept
     /// on it. False, and nothing changes, when there is no such beat (the
     /// score was changed elsewhere since it was kept).
-    pub fn set_beat_plugins(&mut self, at: [usize; 4], plugins: BTreeMap<String, String>) -> bool {
+    pub fn set_beat_plugins(&mut self, at: [usize; 4], kept: BeatKept) -> bool {
         let [staff, bar, voice, beat] = at;
         let beat = self
             .staves
@@ -253,7 +270,8 @@ impl Track {
             .and_then(|v| v.beats.get_mut(beat));
         match beat {
             Some(b) => {
-                b.plugins = plugins;
+                b.plugins = kept.plugins;
+                b.effects.marks = kept.marks;
                 true
             }
             None => false,

@@ -280,12 +280,26 @@ pub enum BeatExt {
         /// Its data, a JSON object as text.
         data: String,
     },
+    /// A mark a plugin draws on the page at the beat: a few characters
+    /// (at most [`MARK_MAX`]) the engraver sets over the beat with the
+    /// playing techniques, in the text font. One a plugin and beat; the
+    /// core carries and saves it as it does [`BeatExt::Plugin`]. Since 1.8.
+    Mark {
+        /// The plugin's id.
+        plugin: String,
+        /// What is drawn.
+        text: String,
+    },
 }
+
+/// The most characters a plugin's mark on a beat may have
+/// ([`BeatExt::Mark`]); the core draws no more.
+pub const MARK_MAX: usize = 16;
 
 impl Since for BeatExt {
     fn since(&self) -> u32 {
         match self {
-            BeatExt::Plugin { .. } => 8,
+            BeatExt::Plugin { .. } | BeatExt::Mark { .. } => 8,
             _ => 6,
         }
     }
@@ -312,6 +326,7 @@ impl Named for BeatExt {
             BeatExt::PickScrape(_) => "pick scrapes",
             BeatExt::DeadSlap => "dead slaps",
             BeatExt::Plugin { .. } => "plugins' data on beats",
+            BeatExt::Mark { .. } => "plugins' marks on beats",
         }
     }
 }
@@ -886,7 +901,8 @@ impl Score2 {
         out
     }
 
-    /// Leaves out what plugins keep on beats ([`BeatExt::Plugin`]): for a
+    /// Leaves out what plugins keep on beats ([`BeatExt::Plugin`],
+    /// [`BeatExt::Mark`]): for a
     /// score on its way to a format plugin, which never gets it (it is
     /// saved beside the score, so it is no loss either).
     pub fn drop_plugin_data(&mut self) {
@@ -895,7 +911,9 @@ impl Score2 {
                 for b in &mut s.bars {
                     for v in &mut b.voices {
                         for beat in &mut v.beats {
-                            beat.ext.retain(|e| !matches!(e, BeatExt::Plugin { .. }));
+                            beat.ext.retain(|e| {
+                                !matches!(e, BeatExt::Plugin { .. } | BeatExt::Mark { .. })
+                            });
                         }
                     }
                 }

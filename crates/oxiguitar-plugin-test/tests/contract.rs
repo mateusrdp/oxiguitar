@@ -1376,6 +1376,8 @@ struct Window {
     said: Mutex<Vec<String>>,
     dialogs: Mutex<Vec<(TabId, String)>>,
     shown: Mutex<Vec<TabId>>,
+    engraving: Mutex<Option<oxiguitar_host::api::message::Engraving>>,
+    selection: Mutex<Option<Selection2>>,
 }
 
 impl Core for Window {
@@ -1404,6 +1406,14 @@ impl Core for Window {
             .unwrap()
             .push((tab.clone(), title.to_owned()));
         Ok(())
+    }
+
+    fn engraving(&self) -> Option<oxiguitar_host::api::message::Engraving> {
+        self.engraving.lock().unwrap().clone()
+    }
+
+    fn selection(&self) -> Option<Selection2> {
+        *self.selection.lock().unwrap()
     }
 
     fn show_tab(&self, tab: &TabId) {
@@ -1474,7 +1484,55 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
         .unwrap()
         .score;
     *core.score.lock().unwrap() = Some((1, oxiguitar_model::wire::to_wire2(&score)));
+    // It reads the page as engraved, when there is one: here two pages
+    // with a line on the first and one beat's place.
+    {
+        use oxiguitar_host::api::display::{Item, Paint, Point};
+        use oxiguitar_host::api::message::{EngravedBeat, EngravedPage, Engraving};
+        *core.engraving.lock().unwrap() = Some(Engraving {
+            revision: 1,
+            pages: vec![
+                EngravedPage {
+                    width: 595.0,
+                    height: 842.0,
+                    items: vec![Item::Line {
+                        from: Point::new(40.0, 100.0),
+                        to: Point::new(555.0, 100.0),
+                        width: 0.5,
+                        paint: Paint::Ink,
+                    }],
+                },
+                EngravedPage::default(),
+            ],
+            beats: vec![EngravedBeat {
+                x: 60.0,
+                y: 100.0,
+                width: 20.0,
+                height: 30.0,
+                ..EngravedBeat::default()
+            }],
+        });
+    }
+    // And asks where the caret is.
+    *core.selection.lock().unwrap() = Some(Selection2::Caret {
+        track: 0,
+        staff: 0,
+        voice: 0,
+        bar: 2,
+        beat: 1,
+        string: 3,
+    });
     assert_eq!(plugins.run_tool(tool("stamp")).unwrap(), "");
+    for said in [
+        "Engraved: 2 pages, 1 beats.",
+        "The caret is at bar 3, beat 2.",
+    ] {
+        assert!(
+            core.said.lock().unwrap().iter().any(|s| s.ends_with(said)),
+            "{:?}",
+            core.said.lock().unwrap()
+        );
+    }
     let (revision, stamped) = core.score.lock().unwrap().clone().unwrap();
     assert_eq!(revision, 2);
     let ours = |e: &BeatExt| matches!(e, BeatExt::Plugin { plugin, data } if plugin == "oxiguitar.test" && data == r#"{"stamped":true}"#);
@@ -1483,8 +1541,13 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
     let kept: Vec<_> = score.tracks[0].beat_plugins();
     assert_eq!(kept.len(), 1);
     assert_eq!(
-        kept[0].1.get("oxiguitar.test").map(String::as_str),
+        kept[0].1.plugins.get("oxiguitar.test").map(String::as_str),
         Some(r#"{"stamped":true}"#)
+    );
+    // So is the mark it has the core draw there.
+    assert_eq!(
+        kept[0].1.marks.get("oxiguitar.test").map(String::as_str),
+        Some("T!")
     );
     // No format is sent it, and it is no loss: it is saved beside the score.
     let format = plugins

@@ -736,6 +736,67 @@ pub enum HostRequest<'a> {
         /// The tab's id.
         tab: String,
     },
+    /// The open score as it is engraved in the window now: every page's
+    /// drawing and where each beat is on it. Answered with
+    /// [`HostAnswer::Engraving`]. Since interface 1.8.
+    Engraving,
+    /// The caret or the selection in the open score as it is now, for a
+    /// plugin that didn't hear of it as an event (it listens to none, or
+    /// was loaded since). Answered with [`HostAnswer::Selection`]. Since
+    /// interface 1.8.
+    Selection,
+}
+
+/// The open score as engraved (interface 1.8): what the window shows, in
+/// the layout and with the tracks the user chose. Lengths are points
+/// (1/72 inch) from each page's top-left corner, y down.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Engraving {
+    /// The score's revision the engraving is of.
+    pub revision: u64,
+    /// The pages (or the one long sheet of a layout without pages).
+    pub pages: Vec<EngravedPage>,
+    /// Where every beat is, in the order drawn: systems down the pages,
+    /// staves down a system, bars and beats across.
+    pub beats: Vec<EngravedBeat>,
+}
+
+/// One engraved page.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct EngravedPage {
+    /// Its width.
+    pub width: f32,
+    /// Its height.
+    pub height: f32,
+    /// What is drawn on it, in order, as a canvas's items are
+    /// ([`crate::display`]): colours as roles, text in the text font or
+    /// the music font.
+    pub items: Vec<crate::display::Item>,
+}
+
+/// Where a beat is engraved.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct EngravedBeat {
+    /// Its track.
+    pub track: u32,
+    /// Its staff in the track.
+    pub staff: u32,
+    /// Its bar.
+    pub bar: u32,
+    /// Its voice in the bar.
+    pub voice: u32,
+    /// Its place in the voice.
+    pub beat: u32,
+    /// The page it is on, from 0.
+    pub page: u32,
+    /// The left of its column.
+    pub x: f32,
+    /// The top of its staff (standard notation and tablature together).
+    pub y: f32,
+    /// Its column's width.
+    pub width: f32,
+    /// Its staff's height.
+    pub height: f32,
 }
 
 /// The longest an [`Advice`]'s id may be, in characters.
@@ -875,6 +936,12 @@ pub enum HostAnswer<'a> {
     },
     /// The plugin's folders. Since interface 1.3.
     Folders(PluginFolders),
+    /// The open score as engraved; `None` when none is open or nothing is
+    /// engraved yet. Since interface 1.8.
+    Engraving(Option<Box<Engraving>>),
+    /// The caret or the selection; `None` when no score is open. Since
+    /// interface 1.8.
+    Selection(Option<crate::event::Selection2>),
 }
 
 impl HostAnswer<'_> {
@@ -887,6 +954,8 @@ impl HostAnswer<'_> {
             HostAnswer::Score(s) => HostAnswer::Score(s),
             HostAnswer::Score2 { revision, score } => HostAnswer::Score2 { revision, score },
             HostAnswer::Folders(f) => HostAnswer::Folders(f),
+            HostAnswer::Engraving(e) => HostAnswer::Engraving(e),
+            HostAnswer::Selection(s) => HostAnswer::Selection(s),
         }
     }
 }

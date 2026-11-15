@@ -52,7 +52,7 @@ use oxiguitar_host::api::display::Point;
 use oxiguitar_host::api::event::{Event, EventKind, Playback, Position};
 use oxiguitar_host::api::manifest::SharedFolder;
 use oxiguitar_host::api::message::{
-    Answer, Error, Prepare, PrepareEffect, PreparedTrack, Request, TrackInfo,
+    Answer, Error, PlayedBeat, Prepare, PrepareEffect, PreparedTrack, Request, TrackInfo,
 };
 use oxiguitar_host::api::realtime::{RtEvent, RtEventKind, RtNote};
 use oxiguitar_host::api::score::Score;
@@ -521,6 +521,36 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
 const RATE: u32 = 48_000;
 const FRAMES: usize = 256;
 
+/// A track's marked beats over `length` seconds, for the checks of an
+/// effect that follows the score: the notation's marks an effect may play
+/// (wah-wah open and closed, the pedal, a fade-out, a volume swell, a
+/// hairpin), a quarter of the time each with the last quarter unmarked.
+fn marked_beats(length: f64) -> Vec<PlayedBeat> {
+    use oxiguitar_host::api::score2::{BeatExt, Hairpin, Pedal, Wah};
+    let quarter = length / 4.0;
+    [
+        vec![BeatExt::Wah(Wah::Open), BeatExt::Pedal(Pedal::Down)],
+        vec![BeatExt::Wah(Wah::Closed), BeatExt::FadeOut],
+        vec![
+            BeatExt::VolumeSwell,
+            BeatExt::Hairpin(Hairpin::Crescendo),
+            BeatExt::Pedal(Pedal::Up),
+        ],
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(i, ext)| PlayedBeat {
+        start: i as f64 * quarter,
+        end: (i + 1) as f64 * quarter,
+        staff: 0,
+        bar: 0,
+        voice: 0,
+        beat: i as u32,
+        ext,
+    })
+    .collect()
+}
+
 /// The real-time checks alone, of every instrument and effect `plugins`
 /// offer, prepared for tracks whose settings are `settings` (a JSON
 /// object): for tests of the checks themselves.
@@ -741,16 +771,21 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                 frames: FRAMES as u32,
                 track: checked_track(0, class, settings),
             };
-            let mut instance = match plugins.prepare_effect(effect, prepare.clone()) {
-                Ok(i) => {
-                    report.check(format!("effect {id}: it prepares"), Ok(()));
-                    i
-                }
-                Err(e) => {
-                    report.check(format!("effect {id}: it prepares"), Err(e.message));
-                    continue;
-                }
-            };
+            // An effect that follows the score (interface 1.8) is prepared
+            // with marked beats that play during the calls below, so what
+            // it does under a mark runs under the same rules.
+            let beats = marked_beats(FRAMES as f64 / f64::from(RATE));
+            let mut instance =
+                match plugins.prepare_effect_following(effect, prepare.clone(), &beats) {
+                    Ok(i) => {
+                        report.check(format!("effect {id}: it prepares"), Ok(()));
+                        i
+                    }
+                    Err(e) => {
+                        report.check(format!("effect {id}: it prepares"), Err(e.message));
+                        continue;
+                    }
+                };
             let (mut l, mut r) = (vec![0.5f32; FRAMES], vec![-0.5f32; FRAMES]);
             let _ = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
             let before = instance.allocations();
