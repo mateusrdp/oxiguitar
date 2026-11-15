@@ -19,7 +19,7 @@ pub const NOTE_NAMES: [&str; 17] = [
 const NOTE_CLASSES: [u8; 17] = [0, 1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11];
 
 /// The name a pitch class takes by default when a chord is recognised.
-const DEFAULT_NAME: [usize; 12] = [0, 1, 3, 5, 6, 7, 8, 10, 12, 13, 15, 16];
+pub(crate) const DEFAULT_NAME: [usize; 12] = [0, 1, 3, 5, 6, 7, 8, 10, 12, 13, 15, 16];
 
 /// The triad, or what stands for it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

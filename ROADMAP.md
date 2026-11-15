@@ -223,6 +223,7 @@ v0.13 is released. The order from here, each step in a session of its own:
 
 Also to do on the way, outside the order:
 
+- **#235, Harmonize…**: chords found for a melody. Built (10 Nov 2026): Tools → Harmonize… and the page's right-click menu, from the notes of every track, with numbers counted in the POP909 dataset (`docs/design/harmonize.md`).
 - Closing what the human checks find: **Mateus's ear** on the reference songs against their written effects, with the recommended sets (the one gate no test can pass), and #143 and the Track tab's sections in a real window on Debian sid.
 - **Homebrew and dnf** install paths: tested by CI (the casks are installed and the packages are installed and removed on every release), not yet by a person; the apt path is tested by Mateus.
 - **#146, the rest**: Help names the manual; the MIDI settings window's drop-downs widen with the window; picking a set plays a short sample of it.

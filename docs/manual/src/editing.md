@@ -103,6 +103,25 @@ Either way it works on every track, and only on bars that don't add up: the rest
 
 Re-barring keeps a bar line wherever the song's structure needs one: at a repeat sign, an alternate ending, a section, a direction (segno, coda, fine and the jumps), a double bar line, and a change of time or key signature. Each passage between them is re-barred on its own; when its music doesn't fill its last bar, that bar is left short and stays red, so you see where the phrase didn't fit (8 bars of 4/4 are 10⅔ bars of 3/4). Tempo changes keep their moment in the music; lyrics stay on their notes (tied notes aren't sung). A first bar shorter than its time signature and than the bar after it is a pickup, and stays as it is.
 
+## Finding chords for a melody
+
+**Harmonize…** finds chords for the music and writes them above the caret's track, each with its diagram, as if you had entered them with the chord builder. You can then change any of them, and hear them by ticking **Play its chords** in the **Track** tab ([Playback](playback.md)).
+
+- **Tools → Harmonize…**: the caret's whole track.
+- **Right-click on the page → Harmonize…**: the selected bars, or the caret's bar when nothing is selected.
+
+It listens to every track but the drums. The caret's track is taken as the melody; what the other tracks play (a bass line, a rhythm guitar) tells it far more surely which chord belongs where, so chords found for a melody alone are a suggestion, and chords found for a full arrangement are mostly the ones the band plays. A small dialog asks three things:
+
+- **Which chords:** major, minor and diminished chords only, or sevenths and suspended chords too (maj7, m7, 7, m7(b5), sus4, 7sus4). Sevenths come only where the notes spell them out.
+- **How often:** one chord a bar at most, or changes in the middle of a bar where the notes ask for one (in 4/4, 2/2, 6/8 and 12/8).
+- **The chords already there:** replaced, or kept. Kept chords stay exactly as they are and the new ones are fitted around them, so you can write the chords you are sure of and let OxiGuitar fill in the rest.
+
+A chord is written where the harmony changes, on a beat that starts there. Rests before the music starts and after it ends get no chord. On a guitar, bass or any track with strings each chord gets the easiest shape for the track's tuning and capo; other tracks get the name alone. It is one step for Undo.
+
+The chords are found **in the key of the bars' key signature**, and their names are spelled as that key spells them. Most tabs leave the key signature at C whatever the music: if the footer says the notes fit another key better, run **Tools → Infer Key Signatures** first ([Tools](tools.md)) and harmonize again.
+
+OxiGuitar learned which chords follow which, and which notes sound over which chord, from 909 pop songs (the POP909 dataset), so its taste is pop's: expect the chords a songbook would give, not a jazz reharmonization.
+
 ## Copy, cut and paste
 
 OxiGuitar keeps its own clipboard: copying and pasting work inside OxiGuitar, not with other programs.
