@@ -998,9 +998,21 @@ impl Editing {
         self.hits.lyric_spot(l.track, l.at.0, l.at.1, l.line)
     }
 
-    /// The chord dialog for the caret's beat.
-    pub(crate) fn chord_form(&self) -> Option<crate::chord_form::ChordForm> {
-        crate::chord_form::ChordForm::open(self.score.as_ref()?, self.caret?)
+    /// The chord dialog for the caret's beat, with the chord notation
+    /// styles, the one picked last and whether a new chord gets a diagram.
+    pub(crate) fn chord_form(
+        &self,
+        styles: oxiguitar_edit::chord_names::Styles,
+        style: usize,
+        add_diagram: bool,
+    ) -> Option<crate::chord_form::ChordForm> {
+        crate::chord_form::ChordForm::open(
+            self.score.as_ref()?,
+            self.caret?,
+            styles,
+            style,
+            add_diagram,
+        )
     }
 
     /// The text above the caret's beat, whichever voice holds it (#153);

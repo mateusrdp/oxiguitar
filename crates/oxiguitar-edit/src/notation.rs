@@ -8,6 +8,8 @@
 //!   one list, each once: a diagram the track has already is used again.
 //!   On a rest, a diagram with frets puts its notes in the beat, as Guitar
 //!   Pro 8 does when the beat is empty.
+//! - [`Command::RenameChords`] renames every track's chord diagrams at
+//!   once, as one step: a chord notation style applied to the song (#278).
 //! - [`Command::Text`] sets the free text above the caret's beat: the one
 //!   shown there, even when another voice holds it ([`Caret::text_beat`]).
 //! - [`Command::Syllable`] types one syllable of a line of the caret's
@@ -31,6 +33,7 @@ pub(crate) fn apply(
     let label = command.label();
     let done = match command {
         Command::Chord(d) => chord(score, history, c, d.as_ref(), label),
+        Command::RenameChords(names) => rename_chords(score, history, names, label),
         Command::Text(t) => text(score, history, c, t, label),
         Command::Info(i) => info(score, history, i, label),
         Command::Syllable {
@@ -44,6 +47,39 @@ pub(crate) fn apply(
     Some(done.map(|touched| Edited {
         touched,
         caret: c.clamp(score).unwrap_or(c),
+    }))
+}
+
+/// [`Command::RenameChords`]: `None` when no name changes.
+fn rename_chords(
+    score: &mut Score,
+    history: &mut History,
+    names: &[Vec<String>],
+    label: &str,
+) -> Option<crate::Touched> {
+    // The tracks with a name that changes.
+    let changed: Vec<usize> = score
+        .tracks
+        .iter()
+        .zip(names)
+        .enumerate()
+        .filter(|(_, (t, n))| {
+            t.chords.len() == n.len() && t.chords.iter().zip(*n).any(|(d, n)| d.name != *n)
+        })
+        .map(|(i, _)| i)
+        .collect();
+    if changed.is_empty() {
+        return None;
+    }
+    let regions = changed.iter().map(|t| Region::Track(*t)).collect();
+    Some(history.record(score, label, regions, |s| {
+        for t in &changed {
+            if let (Some(track), Some(names)) = (s.tracks.get_mut(*t), names.get(*t)) {
+                for (d, name) in track.chords.iter_mut().zip(names) {
+                    d.name.clone_from(name);
+                }
+            }
+        }
     }))
 }
 
@@ -297,6 +333,25 @@ mod tests {
             first_fret: 1,
             frets: vec![Some(0), Some(1), Some(2), Some(2), Some(0), None],
         }
+    }
+
+    #[test]
+    fn every_chord_is_renamed_as_one_step() {
+        let mut s = new_score();
+        let mut h = History::new();
+        apply(&mut s, &mut h, at(0), None, Command::Chord(Some(am()))).unwrap();
+        let rename = |names: &[&str]| {
+            Command::RenameChords(vec![names.iter().map(|n| (*n).to_owned()).collect()])
+        };
+        apply(&mut s, &mut h, at(0), None, rename(&["A-"])).unwrap();
+        assert_eq!(s.tracks[0].chords[0].name, "A-");
+        assert_eq!(s.tracks[0].chords[0].frets, am().frets);
+        assert_eq!(h.undo_label(), Some("Chord Style"));
+        // The same names again, or a list of another length: no change.
+        assert!(apply(&mut s, &mut h, at(0), None, rename(&["A-"])).is_none());
+        assert!(apply(&mut s, &mut h, at(0), None, rename(&["Am", "C"])).is_none());
+        h.undo(&mut s).unwrap();
+        assert_eq!(s.tracks[0].chords, [am()]);
     }
 
     #[test]

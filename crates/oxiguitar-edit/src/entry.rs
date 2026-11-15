@@ -199,6 +199,11 @@ pub enum Command {
     Beat(crate::BeatChange),
     /// This chord diagram on the caret's beat, or none.
     Chord(Option<oxiguitar_model::ChordDiagram>),
+    /// These names for every track's chord diagrams, one list a track in
+    /// the order the track keeps them: a chord notation style applied to
+    /// the whole song (#278). A track whose list is not as long as its
+    /// chords keeps its names.
+    RenameChords(Vec<Vec<String>>),
     /// This free text above the caret's beat; empty for none.
     Text(String),
     /// The score's information: title, artist and the rest.
@@ -322,6 +327,7 @@ impl Command {
             Command::Note(n) => n.label(),
             Command::Beat(b) => b.label(),
             Command::Chord(_) => "Chord",
+            Command::RenameChords(_) => "Chord Style",
             Command::Text(_) => "Text",
             Command::Info(_) => "Score Information",
             Command::Syllable { .. } => "Lyrics",
@@ -872,6 +878,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::Note(_)
         | Command::Beat(_)
         | Command::Chord(_)
+        | Command::RenameChords(_)
         | Command::Text(_)
         | Command::Info(_)
         | Command::Syllable { .. }
