@@ -396,23 +396,27 @@ fn nothing_to_harmonize() {
 }
 
 #[test]
-fn the_report_names_the_key_and_a_better_one() {
+fn the_report_warns_of_a_key_the_notes_fit_better() {
     let s = song(0, &TUNE);
     assert_eq!(
         harmonize_report(&s, caret(), None, &WHOLE).unwrap(),
-        "4 chords found for bars 1–4 of Melody, in C major or A minor (the key signature)."
+        HarmonizeReport {
+            chords: 4,
+            other_key: None
+        }
     );
     // The same tune in E, left under no sharps as tabs often are.
     let mut bars: Vec<[u8; 4]> = TUNE.iter().map(|b| b.map(|p| p + 4)).collect();
     bars.extend(bars.clone());
     let s = song(0, &bars);
     let report = harmonize_report(&s, caret(), None, &WHOLE).unwrap();
-    assert!(
-        report.ends_with(
-            "The notes fit E major or C# minor better: if the key signature is wrong, \
-             run Infer Key Signatures and harmonize again."
-        ),
-        "{report}"
+    assert_eq!(
+        report.other_key.as_deref(),
+        Some(
+            "The chords were found in C major or A minor, the key of the key signature, but \
+             the notes fit E major or C# minor better. If the key signature is wrong, run \
+             Tools → Infer Key Signatures and harmonize again."
+        )
     );
 }
 

@@ -63,7 +63,7 @@ pub use effects::{BeatChange, Effect, HarmonicKind, NoteChange};
 pub use entry::{Command, Edited, apply, new_score};
 pub use fingering::{HARD_FINGERS, HARD_SHIFT, HARD_STRETCH, finger_pitched};
 pub use fit::{Fit, FitHow};
-pub use harmonize::{Harmonize, harmonize_report};
+pub use harmonize::{Harmonize, HarmonizeReport, harmonize_report};
 pub use history::{Change, History, Region, Touched};
 pub use marks::plain_spellings;
 pub use notation::{LYRIC_LINES, tidy_info};

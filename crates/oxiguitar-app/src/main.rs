@@ -4475,8 +4475,9 @@ fn open_harmonize(app: &Shared, whole_track: bool) {
     ui.set_harmonize_dialog_shown(true);
 }
 
-/// Harmonize… closed: on OK, the chords as one change, and what was
-/// found in the footer.
+/// Harmonize… closed: on OK, the chords as one change. The footer says
+/// when nothing was found, and when the notes fit another key better
+/// than the key signature's.
 fn harmonize_dialog_done(app: &Shared, ok: bool) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -4516,9 +4517,18 @@ fn harmonize_dialog_done(app: &Shared, ok: bool) {
         .borrow_mut()
         .editing
         .tool(oxiguitar_edit::Command::Harmonize(harmonize));
-    if let Some(typed) = typed {
-        send_typed(app, typed);
-        message(app, Level::Info, report);
+    match typed {
+        Some(typed) => {
+            send_typed(app, typed);
+            if let Some(other_key) = report.other_key {
+                message(app, Level::Warning, other_key);
+            }
+        }
+        None => message(
+            app,
+            Level::Warning,
+            "No new chords: the chords already there are the ones Harmonize finds, or cover every bar.",
+        ),
     }
 }
 

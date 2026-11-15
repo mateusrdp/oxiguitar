@@ -51,7 +51,7 @@ What is taken from the references is their ideas: the hidden Markov model both p
 
 **Writing.** A chord is written at the first cell and wherever it changes. Its root is spelled as the key spells it; roots between the key's degrees are flats (the flat third, sixth and seventh) or the raised fourth, and sharps under a diminished chord (a leading tone); a name the builder lacks (C flat) falls back to its plain one. The diagram is the easiest shape `Chord::voicings` gives on the staff's tuning and capo; a staff without strings gets the name alone.
 
-**The key.** The bars' key signatures are trusted: the user sets them, and Infer Key Signatures finds them from every track. But most tabs leave C major whatever the music, so the footer's report names the key that was used, and when one key signature covers the bars and another key makes the chain clearly cheaper (by 0.15 a cell; see the measurements) it says so: "The notes fit E major or C# minor better: if the key signature is wrong, run Infer Key Signatures and harmonize again." The tool never changes a key signature.
+**The key.** The bars' key signatures are trusted: the user sets them, and Infer Key Signatures finds them from every track. But most tabs leave C major whatever the music, so when one key signature covers the bars and another key makes the chain clearly cheaper (by 0.15 a cell; see the measurements) the footer warns: "The chords were found in C major or A minor, the key of the key signature, but the notes fit E major or C# minor better. If the key signature is wrong, run Tools → Infer Key Signatures and harmonize again." The tool never changes a key signature. (The footer keeps warnings and errors only, so a run that needs no warning says nothing: the chords are on the page.)
 
 ## The numbers
 
@@ -72,9 +72,19 @@ The key the model hears from the melody alone (the cheapest of the twelve) is th
 
 POP909's sevenths are sparse (most of its labels are triads), so "sevenths too" still writes mostly triads, with a seventh where the notes spell one.
 
+## On the private corpus
+
+`cargo test --release -p oxiguitar-edit --test harmonize_corpus -- --nocapture` (with the corpus in `corpus/files/` and the Guitar Pro plugins in `OXIGUITAR_PLUGINS_DIR`) harmonizes every pitched track of every file four ways and asserts what must hold: the score stays sound, only the caret's track changes and of it only its chords, every chord written is one the builder reads back, kept chords stay on their beats, Undo gives the file back. 104 files, 494 pitched tracks, 33,502 chords written with the plainest choices; the slowest run took 0.25 s (a debug build is slower).
+
+Thirty-eight tracks have eight or more chords of their own. With plain chords, one a bar, **36 % of 3,939 bars get the file's chord and 47 % its root** (the file's roots moved by the tuning and the capo first, since tabs name shapes). That is far from POP909's 87 %, and the reasons are the limits below: power-chord riffs, more than one chord a bar in the file, and music that isn't pop.
+
+**The key matters less than expected.** 78 of the 104 files draw the warning: tabs leave the key signature at C. Harmonizing those in the key the notes fit instead was tried: 38 % of bars and 48 % of roots, against 36 % and 47 %. With an accompaniment the notes carry the chord whatever key the numbers are read in; the key signature mostly decides how roots are spelled (A flat minor under no sharps, G sharp minor under four). So the tool keeps to the key signature, as decided, and warns.
+
+In POP909 the cheapest key, heard with the accompaniment, was the song's own in every song kept aside, by 0.5 a cell or more; so the warning's 0.15 doesn't fire on a right key signature there.
+
 ## Where it lives
 
-- `crates/oxiguitar-edit/src/harmonize.rs`: `Harmonize { sevenths, inside_bars, keep, whole_track }`, `Command::Harmonize`, `harmonize_report` (what the command would say, for the footer), the cells, the chain, the spelling and the diagrams; `harmonize/numbers.rs` (written by the script); `harmonize/tests.rs`.
+- `crates/oxiguitar-edit/src/harmonize.rs`: `Harmonize { sevenths, inside_bars, keep, whole_track }`, `Command::Harmonize`, `harmonize_report` (how many chords the command would write, and the warning about another key), the cells, the chain, the spelling and the diagrams; `harmonize/numbers.rs` (written by the script); `harmonize/tests.rs`.
 - The app: `HarmonizeDialog` in `bar_dialog.slint`; Tools → Harmonize… (the caret's whole track) and the page's right-click menu (the selected bars, or the caret's bar); `open_harmonize` and `harmonize_dialog_done` in `main.rs`. The dialog's choices stay as they were for the next time, while the window is open.
 - Undo: one change, of the track's chord list and the bars' beats.
 
@@ -86,4 +96,5 @@ POP909's sevenths are sparse (most of its labels are triads), so "sevenths too" 
 - **The melody is the caret's track.** A track that plays its own chords under its melody is read as melody throughout.
 - **The key is never guessed**, only hinted at in the report.
 - **Repeats and sections** aren't used: a verse that comes twice with the same notes gets the same chords only because the notes are the same.
-- **The corpus** (Mateus's tabs with their own chord diagrams) would show how the chords compare on real tabs; it needs the Guitar Pro plugins, which this session could not build (see the session's notes).
+- **Power chords.** Rock and metal tabs write A5; the tool writes A or Am, whichever the other notes suggest, and chromatic riffs get diminished chords nobody would write. POP909 has no power chords to count.
+- **Chords are named as they sound.** On a guitar tuned a semitone down, a C shape is written B, as the chord builder names it; many tabs name the shape instead. The same goes for a capo.

@@ -678,34 +678,13 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, h: &Harmonize) ->
     let n = Numbers::of(h.sevenths);
     let density = usize::from(h.inside_bars);
     let start = cells.first().is_some_and(|c| c.bar == 0);
-    let (path, _) = chain(cells, &n, density, start, None);
-    let fifths = |bar: usize| {
+    let signed = |bar: usize| {
         score
             .master_bars
             .get(bar)
             .map_or(0, |m| m.key_signature.fifths)
     };
-    let mut chords = Vec::new();
-    let mut shown: Option<usize> = None;
-    let mut made: BTreeMap<(usize, i8), ChordDiagram> = BTreeMap::new();
-    for (cell, state) in cells.iter().zip(&path) {
-        match cell.kept {
-            Some(kept) => shown = kept,
-            None => {
-                if let Some((voice, beat)) = cell.anchor
-                    && shown != Some(*state)
-                {
-                    let key = fifths(cell.bar);
-                    let d = made
-                        .entry((*state, key))
-                        .or_insert_with(|| diagram(&chord_of(*state, key), staff));
-                    chords.push((cell.bar, voice, beat, d.clone()));
-                    shown = Some(*state);
-                }
-            }
-        }
-    }
-    let mut keys: Vec<i8> = cells.iter().map(|c| fifths(c.bar)).collect();
+    let mut keys: Vec<i8> = cells.iter().map(|c| signed(c.bar)).collect();
     keys.dedup();
     // Whether another key fits the notes clearly better, heard with the
     // plain chords (enough to tell, and quick).
@@ -721,6 +700,27 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, h: &Harmonize) ->
             // From six flats to five sharps, as Infer Key Signatures.
             let sharps = (i32::from(best) * 7).rem_euclid(12);
             better = i8::try_from(if sharps > 5 { sharps - 12 } else { sharps }).ok();
+        }
+    }
+    let (path, _) = chain(cells, &n, density, start, None);
+    let mut chords = Vec::new();
+    let mut shown: Option<usize> = None;
+    let mut made: BTreeMap<(usize, i8), ChordDiagram> = BTreeMap::new();
+    for (cell, state) in cells.iter().zip(&path) {
+        match cell.kept {
+            Some(kept) => shown = kept,
+            None => {
+                if let Some((voice, beat)) = cell.anchor
+                    && shown != Some(*state)
+                {
+                    let key = signed(cell.bar);
+                    let d = made
+                        .entry((*state, key))
+                        .or_insert_with(|| diagram(&chord_of(*state, key), staff));
+                    chords.push((cell.bar, voice, beat, d.clone()));
+                    shown = Some(*state);
+                }
+            }
         }
     }
     Some(Plan {
@@ -748,38 +748,37 @@ fn key_name(fifths: i8) -> String {
     )
 }
 
-/// What [`Command::Harmonize`] would say it did at `c`, for the footer;
-/// `None` when it would do nothing (no notes in the bars, a drum track).
+/// What [`Command::Harmonize`] would find.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HarmonizeReport {
+    /// How many chords it would write.
+    pub chords: usize,
+    /// A warning for the user: the notes clearly fit another key than the
+    /// key signature the chords were found in.
+    pub other_key: Option<String>,
+}
+
+/// What [`Command::Harmonize`] would find at `c`; `None` when there is
+/// nothing to harmonize (no notes in the bars, a drum track).
 pub fn harmonize_report(
     score: &Score,
     c: Caret,
     selection: Option<Selection>,
     h: &Harmonize,
-) -> Option<String> {
+) -> Option<HarmonizeReport> {
     let plan = plan(score, c, selection, h)?;
-    let track = score.tracks.get(c.track)?;
-    let bars = if plan.first == plan.last {
-        format!("bar {}", plan.first + 1)
-    } else {
-        format!("bars {}–{}", plan.first + 1, plan.last + 1)
-    };
-    let count = match plan.chords.len() {
-        0 => "No new chords".to_owned(),
-        1 => "1 chord found".to_owned(),
-        n => format!("{n} chords found"),
-    };
-    let key = match plan.keys.as_slice() {
-        [only] => format!("in {} (the key signature)", key_name(*only)),
-        _ => "in the keys of the bars' key signatures".to_owned(),
-    };
-    let mut text = format!("{count} for {bars} of {}, {key}.", track.name);
-    if let Some(better) = plan.better {
-        text.push_str(&format!(
-            " The notes fit {} better: if the key signature is wrong, run Infer Key Signatures and harmonize again.",
+    let other_key = match (plan.keys.as_slice(), plan.better) {
+        ([signed], Some(better)) => Some(format!(
+            "The chords were found in {}, the key of the key signature, but the notes fit {} better. If the key signature is wrong, run Tools → Infer Key Signatures and harmonize again.",
+            key_name(*signed),
             key_name(better)
-        ));
-    }
-    Some(text)
+        )),
+        _ => None,
+    };
+    Some(HarmonizeReport {
+        chords: plan.chords.len(),
+        other_key,
+    })
 }
 
 /// Runs [`Command::Harmonize`]; `None` for another command.
