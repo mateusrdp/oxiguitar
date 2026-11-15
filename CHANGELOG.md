@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-11-15
+
 ### Added
 
 - **Harmonize…** (#235): chords found for the music and written above the caret's track with their diagrams, as one step for Undo (Tools → Harmonize…, or right-click on the page). The caret's track is the melody; by default the other tracks but drums are heard too, as the accompaniment, whose notes and lowest note say most. A dialog chooses plain chords or sevenths and suspended chords too, one chord a bar or changes inside bars, whether the chords already there are replaced or kept (the new ones are then fitted around them), and whether it listens to every track or to this track only; a tickbox harmonizes the whole song rather than the selected bars (ticked from Tools, unticked from the right-click menu). The chords are found in the key of the bars' key signature, and the footer warns when the notes fit another key better. Our own search for the cheapest chain of chords, with numbers counted in the POP909 dataset (`docs/design/harmonize.md`, `scripts/harmony/measure.py`).
