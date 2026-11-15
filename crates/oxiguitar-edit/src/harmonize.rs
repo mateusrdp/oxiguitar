@@ -6,9 +6,11 @@
 //! The bars to harmonize are cut into cells, a bar or half a bar each. A
 //! cell's evidence is what sounds in it. The caret's track is the melody:
 //! how long each pitch class sounds, and which notes are struck where the
-//! cell starts. Every other pitched track is the accompaniment (Mateus, 10
-//! Nov 2026: the notes of all tracks count): the share of the cell each
-//! pitch class takes of all they play, and their lowest note. Each chord
+//! cell starts. Unless the user asks for the caret's track alone, every
+//! other pitched track is the accompaniment (Mateus, 10 Nov 2026: the notes
+//! of all tracks count; 15 Nov 2026: or of this track only, the user's
+//! choice): the share of the cell each pitch class takes of all they play,
+//! and their lowest note. Each chord
 //! has a cost in each cell (how seldom such notes sound over it), each
 //! pair of chords a cost for following one another, and holding or
 //! changing the chord a cost at a bar line and inside a bar. The cheapest
@@ -44,9 +46,13 @@ pub struct Harmonize {
     /// Chords already there stay, and the new ones are fitted around
     /// them, rather than being replaced.
     pub keep: bool,
-    /// The caret's whole track (Tools), rather than the selected bars or
-    /// the caret's bar (the page's right-click menu).
-    pub whole_track: bool,
+    /// The notes of every pitched track count, rather than the caret's
+    /// track's alone.
+    pub all_tracks: bool,
+    /// Every bar of the song, rather than the selected bars (the caret's
+    /// bar when nothing is selected). The chords go on the caret's track
+    /// either way.
+    pub whole_song: bool,
 }
 
 /// A kind of chord, in the order of [`numbers`]: the first three are the
@@ -314,12 +320,12 @@ fn cells(score: &Score, c: Caret, first: usize, last: usize, h: &Harmonize) -> V
         let Some(these) = out.get_mut(from..) else {
             continue;
         };
-        // What sounds, in every pitched track.
+        // What sounds: in every pitched track, or in the caret's alone.
         for (t, track) in score.tracks.iter().enumerate() {
-            if track.instrument.percussion {
+            let melody = t == c.track;
+            if track.instrument.percussion || !(melody || h.all_tracks) {
                 continue;
             }
-            let melody = t == c.track;
             for staff in &track.staves {
                 let Some(b) = staff.bars.get(bar) else {
                     continue;
@@ -649,7 +655,7 @@ fn bars(
     h: &Harmonize,
 ) -> Option<(usize, usize)> {
     let count = score.bar_count();
-    let (first, last) = if h.whole_track {
+    let (first, last) = if h.whole_song {
         (0, count.checked_sub(1)?)
     } else {
         selection.map_or((c.bar, c.bar), |s| s.bars())

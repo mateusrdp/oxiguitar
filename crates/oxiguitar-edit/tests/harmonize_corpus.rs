@@ -5,8 +5,8 @@
 //! `corpus/files/` exists (skipped quietly otherwise):
 //! `cargo test --release -p oxiguitar-edit --test harmonize_corpus -- --nocapture`
 //!
-//! Every pitched track of every file is harmonized, each way the dialog
-//! offers:
+//! Every pitched track of every file is harmonized four ways, which take
+//! each of the dialog's choices both ways:
 //!
 //! - the score stays sound, only the caret's track changes, and of it only
 //!   its chords;
@@ -165,7 +165,8 @@ fn harmonizing_runs_on_the_corpus() {
                     sevenths: false,
                     inside_bars: false,
                     keep: false,
-                    whole_track: true,
+                    all_tracks: true,
+                    whole_song: true,
                 };
                 assert!(!run(&mut s, &mut History::new(), t, h), "{name}: drums");
                 assert_eq!(s, score, "{name}: drums");
@@ -173,17 +174,18 @@ fn harmonizing_runs_on_the_corpus() {
             }
             tracks += 1;
             let own = chords(&score.tracks[t]);
-            for (sevenths, inside_bars, keep) in [
-                (false, false, false),
-                (true, true, false),
-                (false, true, true),
-                (true, false, true),
+            for (sevenths, inside_bars, keep, all_tracks) in [
+                (false, false, false, true),
+                (true, true, false, false),
+                (false, true, true, true),
+                (true, false, true, false),
             ] {
                 let h = Harmonize {
                     sevenths,
                     inside_bars,
                     keep,
-                    whole_track: true,
+                    all_tracks,
+                    whole_song: true,
                 };
                 let mut s = score.clone();
                 let mut history = History::new();
@@ -216,7 +218,7 @@ fn harmonizing_runs_on_the_corpus() {
                     history.undo(&mut s);
                     assert_eq!(s, score, "{name}: track {t}, Undo");
                 }
-                if !sevenths && !inside_bars && !keep {
+                if !sevenths && !inside_bars && !keep && all_tracks {
                     written += now.len();
                     if let Some(caret) = Caret::at_start(&score, t)
                         && let Some(report) = harmonize_report(&score, caret, None, &h)

@@ -107,16 +107,18 @@ Re-barring keeps a bar line wherever the song's structure needs one: at a repeat
 
 **Harmonize…** finds chords for the music and writes them above the caret's track, each with its diagram, as if you had entered them with the chord builder. You can then change any of them, and hear them by ticking **Play its chords** in the **Track** tab ([Playback](playback.md)).
 
-- **Tools → Harmonize…**: the caret's whole track.
+- **Tools → Harmonize…**: the whole song.
 - **Right-click on the page → Harmonize…**: the selected bars, or the caret's bar when nothing is selected.
 
-It listens to every track but the drums. The caret's track is taken as the melody; what the other tracks play (a bass line, a rhythm guitar) tells it far more surely which chord belongs where, so chords found for a melody alone are a suggestion, and chords found for a full arrangement are mostly the ones the band plays. A small dialog asks three things:
+The caret's track is taken as the melody. A small dialog asks four things, and has a tickbox:
 
 - **Which chords:** major, minor and diminished chords only, or sevenths and suspended chords too (maj7, m7, 7, m7(b5), sus4, 7sus4). Sevenths come only where the notes spell them out.
 - **How often:** one chord a bar at most, or changes in the middle of a bar where the notes ask for one (in 4/4, 2/2, 6/8 and 12/8).
 - **The chords already there:** replaced, or kept. Kept chords stay exactly as they are and the new ones are fitted around them, so you can write the chords you are sure of and let OxiGuitar fill in the rest.
+- **What it listens to:** every track but the drums, or this track only. What the other tracks play (a bass line, a rhythm guitar) tells it far more surely which chord belongs where: chords found for a melody alone are a suggestion, and chords found for a full arrangement are mostly the ones the band plays. Choose this track only when the other tracks would mislead it, such as a part that isn't meant to go with this one.
+- **Harmonize the whole song:** ticked, every bar of the song gets chords, whatever is selected; unticked, only the selected bars (or the caret's bar). It starts ticked from the Tools menu and unticked from the right-click menu.
 
-A chord is written where the harmony changes, on a beat that starts there. Rests before the music starts and after it ends get no chord. On a guitar, bass or any track with strings each chord gets the easiest shape for the track's tuning and capo; other tracks get the name alone. It is one step for Undo.
+A chord is written where the harmony changes, on a beat that starts there. Rests before the music starts and after it ends get no chord. On a guitar, bass or any track with strings each chord gets the easiest shape for the track's tuning and capo; other tracks get the name alone. Chords are named as they sound: on a guitar tuned a semitone down, a C shape is written B. It is one step for Undo.
 
 The chords are found **in the key of the bars' key signature**, and their names are spelled as that key spells them. Most tabs leave the key signature at C whatever the music: if the footer says the notes fit another key better, run **Tools → Infer Key Signatures** first ([Tools](tools.md)) and harmonize again.
 

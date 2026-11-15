@@ -234,13 +234,17 @@ export component FitDialog inherits Rectangle {
     }
 }
 
-// Harmonize… (#235): chords found for the notes of every track and
-// written on the caret's track. The heading names what it applies to.
+// Harmonize… (#235): chords found for the notes of every track, or of
+// the caret's alone, and written on the caret's track. `part` names what
+// is harmonized when the whole song isn't ("the selected bars").
 export component HarmonizeDialog inherits Rectangle {
     in property <string> heading: "Harmonize";
+    in property <string> part: "this bar";
     in-out property <bool> sevenths: false;
     in-out property <bool> inside-bars: false;
     in-out property <bool> keep: false;
+    in-out property <bool> all-tracks: true;
+    in-out property <bool> whole-song: false;
     callback done(bool);
     Card {
         width: root.width;
@@ -265,8 +269,17 @@ export component HarmonizeDialog inherits Rectangle {
                 current-index: root.keep ? 1 : 0;
                 selected => { root.keep = self.current-index == 1; }
             }
+            ComboBox {
+                model: ["Listen to every track but drums", "Listen to this track only"];
+                current-index: root.all-tracks ? 0 : 1;
+                selected => { root.all-tracks = self.current-index == 0; }
+            }
+            CheckBox {
+                text: "Harmonize the whole song, not only " + root.part;
+                checked <=> root.whole-song;
+            }
             Text {
-                text: "The chords are found from the notes of every track but drums, in the key of the bars' key signature, and written above this track with their diagrams.";
+                text: "The chords are found in the key of the bars' key signature and written above this track with their diagrams.";
                 font-size: 11px;
                 wrap: word-wrap;
                 color: Palette.foreground.transparentize(0.4);

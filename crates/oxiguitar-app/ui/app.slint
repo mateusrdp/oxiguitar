@@ -1593,9 +1593,12 @@ export component AppWindow inherits Window {
     callback fit-dialog-done(bool);
     in property <bool> harmonize-dialog-shown: false;
     in property <string> harmonize-heading;
+    in property <string> harmonize-part;
     in-out property <bool> harmonize-sevenths;
     in-out property <bool> harmonize-inside-bars;
     in-out property <bool> harmonize-keep;
+    in-out property <bool> harmonize-all-tracks: true;
+    in-out property <bool> harmonize-whole-song;
     callback harmonize-dialog-done(bool);
     // File → Export's audio exporters (plugin interface 1.4), by name; the
     // dialog before one exports, and the export under way.
@@ -2918,9 +2921,12 @@ export component AppWindow inherits Window {
         width: root.width;
         height: root.height;
         heading: root.harmonize-heading;
+        part: root.harmonize-part;
         sevenths <=> root.harmonize-sevenths;
         inside-bars <=> root.harmonize-inside-bars;
         keep <=> root.harmonize-keep;
+        all-tracks <=> root.harmonize-all-tracks;
+        whole-song <=> root.harmonize-whole-song;
         done(ok) => { root.harmonize-dialog-done(ok); }
     }
 

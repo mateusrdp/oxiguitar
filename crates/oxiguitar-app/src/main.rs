@@ -242,8 +242,8 @@ struct App {
     /// Fit Bars to Time Signature… is open: for the whole song (Tools) or
     /// the selected bars (the page's menu).
     fit_whole_song: Option<bool>,
-    /// Harmonize… is open: for the caret's whole track, or the selection.
-    harmonize_whole_track: Option<bool>,
+    /// Harmonize… is open.
+    harmonize_shown: bool,
     /// Copy, Cut or Paste Bars' dialog is open, for which.
     bars_dialog: Option<editing::ClipKey>,
     /// What to do once the score is saved (after "Save the changes…?").
@@ -605,7 +605,7 @@ fn main() -> Result<(), slint::PlatformError> {
         chord_dialog: None,
         transpose_scope: None,
         fit_whole_song: None,
-        harmonize_whole_track: None,
+        harmonize_shown: false,
         bars_dialog: None,
         after_save: None,
         player: player::Player::new(control),
@@ -4448,9 +4448,10 @@ fn fit_dialog_done(app: &Shared, ok: bool) {
     }
 }
 
-/// Opens Harmonize… (#235) for the caret's whole track or the selected
-/// bars (the caret's bar when nothing is selected).
-fn open_harmonize(app: &Shared, whole_track: bool) {
+/// Opens Harmonize… (#235). Its tickbox starts on the whole song from
+/// Tools and on the selected bars (the caret's bar when nothing is
+/// selected) from the page's right-click menu; the user can change it.
+fn open_harmonize(app: &Shared, whole_song: bool) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
@@ -4468,15 +4469,15 @@ fn open_harmonize(app: &Shared, whole_track: bool) {
             .and_then(|sc| sc.tracks.get(track))
             .map_or_else(String::new, |t| t.name.clone())
     };
-    let heading = if whole_track {
-        format!("Find chords for {name}")
-    } else if app.borrow().editing.selection().is_some() {
-        format!("Find chords for the selected bars of {name}")
+    let part = if app.borrow().editing.selection().is_some() {
+        "the selected bars"
     } else {
-        format!("Find chords for this bar of {name}")
+        "this bar"
     };
-    app.borrow_mut().harmonize_whole_track = Some(whole_track);
-    ui.set_harmonize_heading(heading.into());
+    app.borrow_mut().harmonize_shown = true;
+    ui.set_harmonize_heading(format!("Find chords for {name}").into());
+    ui.set_harmonize_part(part.into());
+    ui.set_harmonize_whole_song(whole_song);
     ui.set_harmonize_dialog_shown(true);
 }
 
@@ -4489,17 +4490,15 @@ fn harmonize_dialog_done(app: &Shared, ok: bool) {
     };
     ui.set_harmonize_dialog_shown(false);
     ui.invoke_focus_page();
-    let Some(whole_track) = app.borrow_mut().harmonize_whole_track.take() else {
-        return;
-    };
-    if !ok {
+    if !std::mem::take(&mut app.borrow_mut().harmonize_shown) || !ok {
         return;
     }
     let harmonize = oxiguitar_edit::Harmonize {
         sevenths: ui.get_harmonize_sevenths(),
         inside_bars: ui.get_harmonize_inside_bars(),
         keep: ui.get_harmonize_keep(),
-        whole_track,
+        all_tracks: ui.get_harmonize_all_tracks(),
+        whole_song: ui.get_harmonize_whole_song(),
     };
     let report = {
         let s = app.borrow();
@@ -4514,7 +4513,11 @@ fn harmonize_dialog_done(app: &Shared, ok: bool) {
         message(
             app,
             Level::Warning,
-            "No chords found: these bars have no notes, or the track is a drum kit.",
+            if harmonize.all_tracks {
+                "No chords found: these bars have no notes, or the track is a drum kit."
+            } else {
+                "No chords found: this track has no notes in these bars, or it is a drum kit."
+            },
         );
         return;
     };

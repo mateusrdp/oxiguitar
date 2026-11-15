@@ -87,7 +87,8 @@ const WHOLE: Harmonize = Harmonize {
     sevenths: false,
     inside_bars: false,
     keep: false,
-    whole_track: true,
+    all_tracks: true,
+    whole_song: true,
 };
 
 /// The chord names over a track's first staff, as (bar, beat, name).
@@ -258,6 +259,54 @@ fn every_pitched_track_is_heard() {
 }
 
 #[test]
+fn the_caret_s_track_alone_when_asked() {
+    // The tune spells C, F, G, C; a second track plays other chords.
+    let mut s = song(0, &TUNE);
+    let other = [[52, 55, 59], [50, 53, 57], [52, 55, 59], [50, 53, 57]];
+    s.tracks.push(track(
+        "Rhythm",
+        other.iter().map(|c| bar(vec![beat(Whole, c)])).collect(),
+    ));
+    let alone = Harmonize {
+        all_tracks: false,
+        ..WHOLE
+    };
+    let mut heard = s.clone();
+    run(&mut heard, WHOLE).unwrap();
+    let mut own = s.clone();
+    run(&mut own, alone).unwrap();
+    let names_of = |s: &Score| names(s, 0).into_iter().map(|n| n.2).collect::<Vec<_>>();
+    assert_ne!(names_of(&heard), ["C", "F", "G", "C"]);
+    assert_eq!(names_of(&own), ["C", "F", "G", "C"]);
+    // Alone, a track with no notes gets no chords, whatever the others play.
+    for b in &mut s.tracks[0].staves[0].bars {
+        *b = bar(vec![beat(Whole, &[])]);
+    }
+    assert!(run(&mut s.clone(), alone).is_none());
+    assert!(harmonize_report(&s, caret(), None, &alone).is_none());
+    assert!(run(&mut s, WHOLE).is_some());
+}
+
+#[test]
+fn the_whole_song_whatever_the_selection() {
+    let mut s = song(0, &TUNE);
+    let selection = Selection::Bars {
+        tracks: (0, 0),
+        bars: (1, 2),
+    };
+    crate::apply(
+        &mut s,
+        &mut History::default(),
+        caret(),
+        Some(selection),
+        Command::Harmonize(WHOLE),
+    )
+    .unwrap();
+    let bars: Vec<usize> = names(&s, 0).into_iter().map(|n| n.0).collect();
+    assert_eq!(bars, [0, 1, 2, 3]);
+}
+
+#[test]
 fn sevenths_come_only_when_asked() {
     // A second guitar plays G7 in the third bar.
     let band = || {
@@ -351,7 +400,7 @@ fn it_is_one_change_and_only_in_the_bars_asked_for() {
         bars: (1, 2),
     };
     let h = Harmonize {
-        whole_track: false,
+        whole_song: false,
         ..WHOLE
     };
     crate::apply(
