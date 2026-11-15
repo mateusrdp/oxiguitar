@@ -786,6 +786,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "chordparser"
+version = "4.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb7f1d5bd49aff511cbb4b36c4df76b67d5b633484bbd6e78476f7daddf6f9a8"
+dependencies = [
+ "enum-bitset",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1239,6 +1250,27 @@ name = "endi"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66b7e2430c6dff6a955451e2cfc438f09cea1965a9d6f87f7e3b90decc014099"
+
+[[package]]
+name = "enum-bitset"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abdaff91f545696874328e674f9a80a94b760df34b966d02c295856ba9dad586"
+dependencies = [
+ "enum-bitset-derive",
+]
+
+[[package]]
+name = "enum-bitset-derive"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d8be094039de36b87c447af23de1f44996ac9319e51a072714ea3269362a79f"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
 
 [[package]]
 name = "enumflags2"
@@ -3637,6 +3669,7 @@ dependencies = [
 name = "oxiguitar-edit"
 version = "0.19.1"
 dependencies = [
+ "chordparser",
  "oxiguitar-model",
  "oxiguitar-plugin-test",
 ]

@@ -248,7 +248,30 @@ A .gp file keeps trills in sixteenths only: saving a faster trill as .gp names i
 
 ## Chords, text and lyrics
 
-**A** (or the palette's **Chord**, or **Edit → Chord…**) opens the **chord dialog** for the caret's beat. Build the chord: its root, its type (major, minor, augmented, diminished, suspended second or fourth, power chord), a sixth, seventh or extension (6, 6/9, 7, maj7, 9, maj9, 11, 13, add9), alterations (♭5, ♯5, ♭9, ♯9, ♯11, ♭13) and a bass note. The name follows ("C7(b9)/E"), and the list beside the diagram gives the ways to play it on the track's strings, easiest first; click one to make it the diagram. Or click on the diagram: on the grid to place or take away a note, above a string to make it open (o) or not played (×), with **First fret** to move up the neck; the chord your notes make is named, as Guitar Pro suggests one. A name you type is kept as you typed it. **The track's chords** picks one the track already has. **Show the diagram** off keeps the name alone. The first time, the diagram starts from the beat's notes. On a rest, or after the voice's last beat, a chord with a diagram puts its notes in the beat. **Remove the chord** takes it off the beat. The palette's **Chords** opens the same dialog. To hear a track's chords as you play, tick **Play its chords** in its Track tab ([Playing a score](playback.md#playing-the-chords)).
+**A** (or the palette's **Chord**, or **Edit → Chord…**) opens the **chord dialog** for the caret's beat. It shows one chord three ways, and each follows the others as you change it:
+
+- **Name**: type the chord's name in whatever way you write chords (`Em7b5`, `Em7-5`, `Eø`, `Cmaj7`, `C△7`, `CM7`, `F-`, `Fmin`, `G°7`, `D+`, `C7(b9)/E`). The arrow beside it lists every name the diagram's notes can take, one for each note taken as the root ("x 2 3 2 3 x" is Bm7b5, F6(b5)/B, Dm6/B and so on). While the diagram is empty it lists the track's chords instead, to use one again.
+- **Voicing**: the frets in inline notation, low string first, **x** for a string that isn't played: `x 0 2 2 1 0`, or `x02210` when no fret has two digits. You can type it from the low string up; strings you haven't reached are not played. The arrow lists the ways to play the name on the track's strings, with its tuning and capo, easiest first.
+- **The diagram**: click on the grid to place or take away a note, above a string to make it open (a circle) or not played (×). The number beside it is the grid's first fret; raise it to work higher up the neck.
+
+When you type a name, the diagram becomes the easiest way to play it, unless it already plays that chord. When you change the diagram or the voicing, the name stays if it is one of the names for those notes, and becomes the first of them otherwise. A name OxiGuitar can't read as a chord ("Am7 (my way)") is kept as typed, with whatever the diagram holds.
+
+**Style** chooses how chord names are written: **Popular** (Am, Cmaj7, Em7b5, Gdim7, Daug), **Jazz** (A-, C△7, Eø7, G°7, D+), **Compact** (Am, CM7, Eø, G°7, D+) or **Custom**, which changes nothing and keeps names as you type them. Names in the dialog are shown in the style, and **Apply** rewrites every chord of the song in it, as one step for Undo. Only what follows the root is rewritten, and a chord the style has no entry for stays as it is. The styles are yours to change: see [chord styles](#chord-styles) below.
+
+**Add diagram** off keeps the name alone, without its frets. OxiGuitar remembers the style and this tickbox for the next chord. On a rest, or after the voice's last beat, a chord with a diagram puts its notes in the beat. To take a chord off a beat, clear both Name and Voicing and press OK. Enter is OK, Escape cancels. The palette's **Chords** opens the same dialog. To hear a track's chords as you play, tick **Play its chords** in its Track tab ([Playing a score](playback.md#playing-the-chords)).
+
+### Chord styles
+
+The styles live in `settings.json` ([where it is](plugins.md)), under `chord-styles`, and OxiGuitar always reads them from there (change the file while OxiGuitar is closed, as it is read at start). Each style is a name and a list of entries: on the left a kind of chord, on the right what the style writes for it.
+
+```json
+"chord-styles": {
+  "Compact": { "m7b5": "ø", "aug": "+", "maj7": "M7" },
+  "Custom": {}
+}
+```
+
+The left side can be written in any way OxiGuitar reads chords, with or without parentheses: `m7b5`, `m7(b5)`, `-7b5` and `ø` are the same entry. It is compared with everything after a chord's root (and before a bass note) as a whole, so `maj7` does not change `Cmaj7#11`; give that chord an entry of its own. Add a style by adding a name; delete `chord-styles` to get OxiGuitar's four back. The style and the tickbox you last used are kept under `chord`.
 
 **Shift + T** (or the palette's **Text**, or **Edit → Text…**) sets the text above the caret's beat; empty takes it away. Text another voice holds is drawn above the staff the same way: if the caret's beat has no text of its own, the dialog shows and changes the text of another voice that starts while the caret's beat lasts, so a text Guitar Pro saved on voice 2 is changed or removed from voice 1 too.
 

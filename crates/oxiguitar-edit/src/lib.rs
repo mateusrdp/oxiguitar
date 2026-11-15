@@ -36,11 +36,17 @@
 //!   cheapest chain of chords for what every track plays, written on the
 //!   caret's track (`docs/design/harmonize.md`).
 //!
+//! - Chord names ([`chord_names`], #278): a name in any convention read
+//!   into its notes, the names a diagram's notes can take, the ways to play
+//!   a name, and names rewritten in a chord notation style, with the
+//!   chordparser crate; [`Command::RenameChords`] restyles a whole song.
+//!
 //! See `docs/design/editor.md` for the rules and the parity checklist.
 
 mod bars;
 mod caret;
 mod check;
+pub mod chord_names;
 mod clip;
 mod effects;
 mod entry;

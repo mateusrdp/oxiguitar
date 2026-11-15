@@ -53,7 +53,7 @@ What is taken from the references is their ideas: the hidden Markov model both p
 
 **The search.** The cheapest chain of chords through the cells, exactly (Viterbi): at most 108 chords and a few hundred cells, a few milliseconds. A chord may change only where the caret's staff has a beat starting with the cell (a chord sits on a beat) and something sounds; silent cells hold the chord. The chain runs from the first cell where something sounds to the last, so rests before and after the music get no chord.
 
-**Chords kept.** With "keep", a cell that already has a chord is fixed to it (to the nearest chord of the vocabulary: C9 counts as C7, and as C with plain chords), and the chain passes through it. A name the builder can't read breaks the chain there. Kept chords are never rewritten; with "replace", every chord in the bars goes first.
+**Chords kept.** With "keep", a cell that already has a chord is fixed to it (to the nearest chord of the vocabulary: C9 counts as C7, and as C with plain chords), and the chain passes through it. A name in another convention (`C△7`, `F-`, since #278) is read as the builder's chord of the same notes; a name that is no chord of the builder's breaks the chain there. Kept chords are never rewritten; with "replace", every chord in the bars goes first.
 
 **Writing.** A chord is written at the first cell and wherever it changes. Its root is spelled as the key spells it; roots between the key's degrees are flats (the flat third, sixth and seventh) or the raised fourth, and sharps under a diminished chord (a leading tone); a name the builder lacks (C flat) falls back to its plain one. The diagram is the easiest shape `Chord::voicings` gives on the staff's tuning and capo; a staff without strings gets the name alone.
 

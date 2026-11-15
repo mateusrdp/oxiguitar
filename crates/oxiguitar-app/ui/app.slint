@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { AltBox, BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog } from "bar_dialog.slint";
+import { BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -1543,22 +1543,16 @@ export component AppWindow inherits Window {
     callback lyric-key(string, string);
     in property <bool> chord-dialog-shown: false;
     in-out property <string> chord-name;
-    in property <[string]> chord-library;
-    in property <[string]> chord-roots;
-    in-out property <int> chord-root;
-    in property <[string]> chord-triads;
-    in-out property <int> chord-triad;
-    in property <[string]> chord-extensions;
-    in-out property <int> chord-extension;
-    in property <[string]> chord-basses;
-    in-out property <int> chord-bass;
-    in property <[AltBox]> chord-alterations;
+    in property <[string]> chord-names;
+    in-out property <string> chord-voicing;
+    in property <[string]> chord-voicings;
+    in property <[string]> chord-styles;
+    in-out property <int> chord-style;
     in property <int> chord-strings: 6;
     in property <[int]> chord-dots;
     in-out property <int> chord-first-fret: 1;
     in property <int> chord-last-fret: 24;
-    in property <[string]> chord-voicings;
-    in property <bool> chord-show-diagram: true;
+    in property <bool> chord-add-diagram: true;
     callback chord-changed(string, int, string);
     callback chord-dialog-done(bool);
     // Copy, Cut and Paste Bars' dialog (#287).
@@ -2834,35 +2828,26 @@ export component AppWindow inherits Window {
         width: root.width;
         height: root.height;
         name <=> root.chord-name;
-        library: root.chord-library;
-        roots: root.chord-roots;
-        root-index <=> root.chord-root;
-        triads: root.chord-triads;
-        triad-index <=> root.chord-triad;
-        extensions: root.chord-extensions;
-        extension-index <=> root.chord-extension;
-        basses: root.chord-basses;
-        bass-index <=> root.chord-bass;
-        alterations: root.chord-alterations;
+        names: root.chord-names;
+        voicing <=> root.chord-voicing;
+        voicings: root.chord-voicings;
+        styles: root.chord-styles;
+        style-index <=> root.chord-style;
         strings: root.chord-strings;
         dots: root.chord-dots;
         first-fret <=> root.chord-first-fret;
         last-fret: root.chord-last-fret;
-        voicings: root.chord-voicings;
-        show-diagram: root.chord-show-diagram;
+        add-diagram: root.chord-add-diagram;
         name-typed(t) => { root.chord-changed("name", 0, t); }
-        library-picked(i) => { root.chord-changed("library", i, ""); }
-        root-picked(i) => { root.chord-changed("root", i, ""); }
-        triad-picked(i) => { root.chord-changed("triad", i, ""); }
-        extension-picked(i) => { root.chord-changed("extension", i, ""); }
-        bass-picked(i) => { root.chord-changed("bass", i, ""); }
-        alteration-toggled(i, on) => { root.chord-changed(on ? "alt-on" : "alt-off", i, ""); }
+        name-picked(i) => { root.chord-changed("name-picked", i, ""); }
+        voicing-typed(t) => { root.chord-changed("voicing", 0, t); }
+        voicing-picked(i) => { root.chord-changed("voicing-picked", i, ""); }
+        style-picked(i) => { root.chord-changed("style", i, ""); }
+        apply-style => { root.chord-changed("apply", 0, ""); }
         grid-clicked(string, row) => { root.chord-changed("grid", string * 100 + row, ""); }
         head-clicked(i) => { root.chord-changed("head", i, ""); }
         scrolled(v) => { root.chord-changed("first", v, ""); }
-        voicing-picked(i) => { root.chord-changed("voicing", i, ""); }
-        show-toggled(on) => { root.chord-changed("show", on ? 1 : 0, ""); }
-        remove => { root.chord-changed("remove", 0, ""); }
+        add-toggled(on) => { root.chord-changed("diagram", on ? 1 : 0, ""); }
         done(ok) => { root.chord-dialog-done(ok); }
     }
 

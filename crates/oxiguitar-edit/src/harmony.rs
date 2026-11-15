@@ -4,9 +4,9 @@
 //! Chords as Guitar Pro 8's chord builder makes them (M3 slice 6; Mateus,
 //! 20 Oct 2026: the builder too): a root, a type, a seventh or extension,
 //! alterations and a bass note, and from them the chord's name, its notes,
-//! and the ways to play it on a track's strings. The other way round, a
-//! diagram's frets give a name, as Guitar Pro suggests one once notes are
-//! placed. Names are written as tabs write them, in ASCII (`F#m7`,
+//! and the ways to play it on a track's strings. Harmonize builds its
+//! chords this way; the chord dialog reads and writes names with
+//! [`crate::chord_names`]. Names are written as tabs write them, in ASCII (`F#m7`,
 //! `Bb(add9)`, `C7(b9)/E`), which the .gp writer spells out for Guitar Pro.
 
 /// Note names a root or a bass can take, in the order the builder lists
@@ -369,6 +369,12 @@ impl Chord {
         v
     }
 
+    /// The order among chords of the same notes: the less unusual first,
+    /// then the one with fewer alterations (`Caug` before `C(#5)`).
+    fn rank(&self) -> (u32, u32) {
+        (self.weight(), self.alterations.count_ones())
+    }
+
     /// How unusual the chord is, for choosing among names.
     fn weight(&self) -> u32 {
         let triad = match self.triad {
@@ -383,8 +389,10 @@ impl Chord {
             + if self.bass.is_some() { 4 } else { 0 }
     }
 
-    /// The chord named `name`, if the builder makes that name; `None` for
-    /// one it doesn't (kept as typed).
+    /// The chord named `name`: the builder's own name for it, or a name in
+    /// another convention (`C△7`, `F-`, `Bø`) for a chord the builder
+    /// makes, read with [`crate::chord_names::read`]. `None` for a name
+    /// that is no chord of the builder's.
     pub fn parse(name: &str) -> Option<Chord> {
         let name = name.trim();
         let (body, bass) = match name.rsplit_once('/') {
@@ -395,148 +403,124 @@ impl Chord {
         let root = (0..NOTE_NAMES.len())
             .filter(|i| NOTE_NAMES.get(*i).is_some_and(|n| body.starts_with(n)))
             .max_by_key(|i| NOTE_NAMES.get(*i).map_or(0, |n| n.len()))?;
-        let mut alterations = Vec::new();
-        for a in 0u8..64 {
-            alterations.push(a);
-        }
-        for triad in Triad::ALL {
-            for extension in Extension::ALL {
-                for &alterations in &alterations {
-                    let c = Chord {
-                        root,
-                        triad,
-                        extension,
-                        alterations,
-                        bass: None,
-                    };
-                    if c.name() == body {
-                        return Some(Chord { bass, ..c });
-                    }
-                }
-            }
-        }
-        None
-    }
-
-    /// The chord a diagram's notes make (MIDI pitches), as Guitar Pro
-    /// suggests once two notes are placed: the simplest name whose notes
-    /// are exactly these, the lowest note its root if it can be, its bass
-    /// otherwise. `None` for fewer than two pitch classes or none that
-    /// fits.
-    pub fn recognise(pitches: &[u8]) -> Option<Chord> {
-        let lowest = *pitches.iter().min()? % 12;
-        let mut classes: Vec<u8> = pitches.iter().map(|p| p % 12).collect();
-        classes.sort_unstable();
-        classes.dedup();
-        if classes.len() < 2 {
-            return None;
-        }
-        let mut best: Option<(u32, Chord)> = None;
-        for &root in &classes {
-            let root_name = *DEFAULT_NAME.get(usize::from(root))?;
+        let builds = |fits: &dyn Fn(&Chord) -> bool| {
+            let mut best: Option<Chord> = None;
             for triad in Triad::ALL {
                 for extension in Extension::ALL {
-                    if triad == Triad::Power && extension != Extension::None {
-                        continue;
-                    }
-                    for a in [0u8, 1, 2, 4, 8, 16, 32] {
-                        let mut c = Chord {
-                            root: root_name,
+                    for alterations in 0u8..64 {
+                        let c = Chord {
+                            root,
                             triad,
                             extension,
-                            alterations: a,
+                            alterations,
                             bass: None,
                         };
-                        if lowest != root {
-                            c.bass = DEFAULT_NAME.get(usize::from(lowest)).copied();
-                        }
-                        let mut need = c.classes();
-                        need.sort_unstable();
-                        need.dedup();
-                        let optional = c.optional();
-                        let fits = classes.iter().all(|x| need.contains(x))
-                            && need
-                                .iter()
-                                .all(|x| classes.contains(x) || optional.contains(x));
-                        if !fits {
-                            continue;
-                        }
-                        // Leaving notes out costs a little.
-                        let missing = need.iter().filter(|x| !classes.contains(x)).count();
-                        let w = c.weight() * 2 + u32::try_from(missing).unwrap_or(9);
-                        if best.as_ref().is_none_or(|(bw, _)| w < *bw) {
-                            best = Some((w, c));
+                        if fits(&c) && best.is_none_or(|b| c.rank() < b.rank()) {
+                            best = Some(c);
                         }
                     }
                 }
             }
-        }
-        best.map(|(_, c)| c)
+            best
+        };
+        let own = builds(&|c| c.name() == body);
+        let found = own.or_else(|| {
+            // Another convention: the simplest chord of the same notes.
+            let read = crate::chord_names::read(body)?;
+            let mut wanted = read.classes().to_vec();
+            wanted.sort_unstable();
+            builds(&|c| {
+                let mut have = c.classes();
+                have.sort_unstable();
+                have == wanted
+            })
+        })?;
+        Some(Chord { bass, ..found })
     }
 
     /// Ways to play the chord on strings tuned `tuning` (MIDI pitches,
-    /// highest string first) within `frets` frets: frets per string
-    /// (highest first; `None` not played), easiest first, at most
-    /// `limit`. Each has every note the chord needs, its bass lowest, the
-    /// fretted notes within four frets, and at least three strings played
-    /// (two for a power chord).
+    /// highest string first) within `frets` frets (`shapes`).
     pub fn voicings(&self, tuning: &[u8], frets: u8, limit: usize) -> Vec<Vec<Option<u8>>> {
-        let strings = tuning.len();
-        if strings < 2 {
-            return Vec::new();
-        }
-        let classes = self.classes();
-        let optional = self.optional();
-        let bass = self.bass_class();
-        let least = if self.triad == Triad::Power { 2 } else { 3 }.min(strings);
-        let mut found: Vec<(u32, Vec<Option<u8>>)> = Vec::new();
-        let top = frets.min(15);
-        for low in 0..=top.saturating_sub(1) {
-            let high = low.saturating_add(3).min(frets);
-            // Each string's choices: not played, open, or a chord note in
-            // the window.
-            let options: Vec<Vec<Option<u8>>> = tuning
+        let least = if self.triad == Triad::Power { 2 } else { 3 };
+        shapes(
+            &self.classes(),
+            &self.optional(),
+            self.bass_class(),
+            least,
+            tuning,
+            frets,
+            limit,
+        )
+    }
+}
+
+/// Ways to play a chord of pitch classes `classes` over `bass` on strings
+/// tuned `tuning` (MIDI pitches, highest string first) within `frets`
+/// frets: frets per string (highest first; `None` not played), easiest
+/// first, at most `limit`. Each has every note the chord needs (all but
+/// `optional`), its bass lowest, the fretted notes within four frets, and
+/// at least `least` strings played.
+pub(crate) fn shapes(
+    classes: &[u8],
+    optional: &[u8],
+    bass: u8,
+    least: usize,
+    tuning: &[u8],
+    frets: u8,
+    limit: usize,
+) -> Vec<Vec<Option<u8>>> {
+    let strings = tuning.len();
+    if strings < 2 {
+        return Vec::new();
+    }
+    let least = least.min(strings);
+    let mut found: Vec<(u32, Vec<Option<u8>>)> = Vec::new();
+    let top = frets.min(15);
+    for low in 0..=top.saturating_sub(1) {
+        let high = low.saturating_add(3).min(frets);
+        // Each string's choices: not played, open, or a chord note in
+        // the window.
+        let options: Vec<Vec<Option<u8>>> = tuning
+            .iter()
+            .map(|open| {
+                let mut o = vec![None];
+                for f in std::iter::once(0).chain(low.max(1)..=high) {
+                    if classes.contains(&((open + f) % 12)) {
+                        o.push(Some(f));
+                    }
+                }
+                o
+            })
+            .collect();
+        let mut pick = vec![0usize; strings];
+        loop {
+            let shape: Vec<Option<u8>> = pick
                 .iter()
-                .map(|open| {
-                    let mut o = vec![None];
-                    for f in std::iter::once(0).chain(low.max(1)..=high) {
-                        if classes.contains(&((open + f) % 12)) {
-                            o.push(Some(f));
-                        }
-                    }
-                    o
-                })
+                .zip(&options)
+                .map(|(i, o)| o.get(*i).copied().flatten())
                 .collect();
-            let mut pick = vec![0usize; strings];
-            loop {
-                let shape: Vec<Option<u8>> = pick
-                    .iter()
-                    .zip(&options)
-                    .map(|(i, o)| o.get(*i).copied().flatten())
-                    .collect();
-                if let Some(score) = judge(&shape, tuning, &classes, &optional, bass, least)
-                    && !found.iter().any(|(_, f)| *f == shape)
-                {
-                    found.push((score, shape));
-                }
-                // The next combination.
-                let mut i = 0;
-                while let Some(p) = pick.get_mut(i) {
-                    *p += 1;
-                    if *p < options.get(i).map_or(0, Vec::len) {
-                        break;
-                    }
-                    *p = 0;
-                    i += 1;
-                }
-                if i == strings {
+            if let Some(score) = judge(&shape, tuning, classes, optional, bass, least)
+                && !found.iter().any(|(_, f)| *f == shape)
+            {
+                found.push((score, shape));
+            }
+            // The next combination.
+            let mut i = 0;
+            while let Some(p) = pick.get_mut(i) {
+                *p += 1;
+                if *p < options.get(i).map_or(0, Vec::len) {
                     break;
                 }
+                *p = 0;
+                i += 1;
+            }
+            if i == strings {
+                break;
             }
         }
-        found.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-        found.into_iter().take(limit).map(|(_, f)| f).collect()
     }
+    found.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+    found.into_iter().take(limit).map(|(_, f)| f).collect()
 }
 
 /// How hard a shape is to play, or `None` if it isn't the chord: the
@@ -674,7 +658,8 @@ mod tests {
             assert_eq!(named(name).name(), name);
         }
         assert_eq!(Chord::parse("H7"), None);
-        assert_eq!(Chord::parse("C7alt"), None);
+        // A name the builder doesn't write, for notes it can make.
+        assert!(named("C7alt").classes().contains(&1));
     }
 
     #[test]
@@ -689,30 +674,21 @@ mod tests {
     }
 
     #[test]
-    fn diagrams_are_recognised() {
-        let pitches = |frets: [Option<u8>; 6]| -> Vec<u8> {
-            frets
-                .iter()
-                .zip(E)
-                .filter_map(|(f, o)| f.map(|f| o + f))
-                .collect()
-        };
-        // x 0 2 2 1 0, low to high: A minor.
-        let am = [Some(0), Some(1), Some(2), Some(2), Some(0), None];
-        assert_eq!(Chord::recognise(&pitches(am)).unwrap().name(), "Am");
-        // 3 2 0 0 0 3: G.
-        let g = [Some(3), Some(0), Some(0), Some(0), Some(2), Some(3)];
-        assert_eq!(Chord::recognise(&pitches(g)).unwrap().name(), "G");
-        // x x 0 2 1 2: D7.
-        let d7 = [Some(2), Some(1), Some(2), Some(0), None, None];
-        assert_eq!(Chord::recognise(&pitches(d7)).unwrap().name(), "D7");
-        // A power chord: 5 7 on the two lowest strings.
-        let a5 = [None, None, None, None, Some(7), Some(5)];
-        assert_eq!(Chord::recognise(&pitches(a5)).unwrap().name(), "A5");
-        // C over its fifth: 3 3 2 0 1 0.
-        let cg = [Some(0), Some(1), Some(0), Some(2), Some(3), Some(3)];
-        assert_eq!(Chord::recognise(&pitches(cg)).unwrap().name(), "C/G");
-        assert_eq!(Chord::recognise(&[60]), None);
+    fn names_in_other_conventions_are_read() {
+        for (written, builder) in [
+            ("C△7", "Cmaj7"),
+            ("F-", "Fm"),
+            ("Bø", "Bm7(b5)"),
+            ("Em7-5", "Em7(b5)"),
+            ("G°7", "Gdim7"),
+            ("D+", "Daug"),
+            ("Am7b5/C", "Am7(b5)/C"),
+            ("Cadd9", "C(add9)"),
+            ("Gsus", "Gsus4"),
+        ] {
+            assert_eq!(named(written).name(), builder, "{written}");
+        }
+        assert_eq!(Chord::parse("G7 (my way)"), None);
     }
 
     #[test]
