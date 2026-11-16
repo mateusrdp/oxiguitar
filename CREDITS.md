@@ -1,6 +1,6 @@
 # Credits
 
-OxiGuitar stands on the work of many people. This file lists every project we port code from, learn from or depend on, with its authors and license. The app's About window shows the same list.
+OxiGuitar stands on the work of many people. This file lists every project we port code from, learn from or depend on, with its authors and license. The app's **Help → About** links here.
 
 Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors. Contributors keep the copyright on what they contribute.
 

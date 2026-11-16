@@ -774,7 +774,6 @@ fn main() -> Result<(), slint::PlatformError> {
             env!("CARGO_PKG_VERSION")
         ),
         "Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors. Licensed under the GNU GPL, version 3 or later.".to_owned(),
-        "Music font: Bravura (Steinberg, SIL OFL 1.1). Text font: Noto Sans (SIL OFL 1.1). GUI: Slint (GPL-3.0).".to_owned(),
         "OxiGuitar never connects to the internet on its own and sends nothing anywhere.".to_owned(),
     ];
     about.extend(about_folders(&startup.inventory.folders, args.safe_mode));
@@ -1403,6 +1402,12 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_open_link(move |url| {
         if let Err(e) = links::open(&url) {
+            message(&a, Level::Error, e);
+        }
+    });
+    let a = app.clone();
+    ui.on_open_credits(move || {
+        if let Err(e) = links::open(links::CREDITS) {
             message(&a, Level::Error, e);
         }
     });

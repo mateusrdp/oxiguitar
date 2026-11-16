@@ -27,6 +27,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
+- **Help → About links to the credits** (CREDITS.md, in the browser) instead of naming some of them itself; CREDITS.md names the projects without their versions (Mateus, 16 Nov 2026).
 - **The footer shows what a tool did**: the sentence a tool gives about its run ("Moved 312 notes up an octave."), and what a plugin says after a click on its drawing (Mateus, 16 Nov 2026). Other information still isn't kept: the footer holds warnings and errors.
 - **Saving a score in a format that can't hold all of it** (Mateus, 16 Nov 2026). Save always writes the file's own format; OxiGuitar no longer saves a .gp file beside it instead, and names no format as the fullest. When the format can't hold something, the question lists what and offers **Keep Them in the .oxg File**, **Save Without Them** or Cancel. Kept, the whole score goes into the file beside the score (`song.gp5.oxg`): OxiGuitar opens it from there, with nothing lost, for as long as the score file is the one it saved; other programs see what the format holds. If another program changes the score file, OxiGuitar shows the file as it is and says so. The choice holds for later saves of that file. A file whose format no installed plugin writes (Guitar Pro 3 and 4, .gpx) asks for Save As. `oxiguitar-cli` reads a kept score the same way.
 

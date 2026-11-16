@@ -2,14 +2,19 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Opening a web address in the system's browser, only when the user clicks
-//! a link (Help → About's donation button; the player's link to better
-//! sounds, M4). OxiGuitar itself never connects anywhere: the browser does,
+//! a link (Help → About's credits link and donation button; the player's
+//! link to better sounds, M4). OxiGuitar itself never connects anywhere: the browser does,
 //! as a program of its own.
 
 use std::process::{Command, Stdio};
 
 /// Where donations go: Mateus's PayPal page (the README's button).
 pub(crate) const DONATE: &str = "https://www.paypal.com/donate/?business=4QYDZY4RP8V8L&no_recurring=0&item_name=Thanks+heaps!+You+rock!&currency_code=AUD";
+
+/// Every project OxiGuitar builds on, with its authors and licence
+/// (Mateus, 16 Nov 2026: Help → About links to CREDITS.md and lists none
+/// itself). The packages also install the file beside the program.
+pub(crate) const CREDITS: &str = "https://github.com/mateusrdp/oxiguitar/blob/main/CREDITS.md";
 
 /// The system's command that opens an address in the default browser.
 fn opener(url: &str) -> Command {
@@ -70,5 +75,12 @@ mod tests {
     fn the_donation_address_is_paypal_over_https() {
         assert!(DONATE.starts_with("https://www.paypal.com/donate/"));
         assert!(!DONATE.contains(' '));
+    }
+
+    #[test]
+    fn the_credits_are_the_repositorys_credits_file_over_https() {
+        assert!(oxiguitar_host::is_https(CREDITS));
+        assert!(CREDITS.starts_with("https://github.com/mateusrdp/oxiguitar/"));
+        assert!(CREDITS.ends_with("/CREDITS.md"));
     }
 }
