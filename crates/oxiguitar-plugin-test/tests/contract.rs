@@ -358,19 +358,10 @@ fn speed_budget_thirty_manifests() {
     let dir = linked("thirty", &names);
     // Once to warm the system's file cache, as a real start finds it.
     let _ = discover(std::slice::from_ref(&dir), SharedSettings::default());
-    // The quickest of five: the suite's other tests run beside this one
-    // (the real-time checks keep every core busy), and the budget is for
-    // what reading costs, not for what the scheduler gives it.
-    let took = (0..5)
-        .map(|_| {
-            let started = Instant::now();
-            let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
-            let took = started.elapsed();
-            assert_eq!(plugins.found().len(), 30);
-            took
-        })
-        .min()
-        .expect("five runs");
+    let started = Instant::now();
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let took = started.elapsed();
+    assert_eq!(plugins.found().len(), 30);
     // The budget (docs/design/plugins.md) is for an optimised build, which
     // CI's speed-budget job runs; a debug build gets ten times as long.
     let budget = if cfg!(debug_assertions) { 100.0 } else { 10.0 };

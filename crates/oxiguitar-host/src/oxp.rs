@@ -16,9 +16,13 @@
 use std::fs::File;
 use std::path::Path;
 
+use object::elf;
 use object::read::ReadCache;
+use object::read::elf::{FileHeader, ProgramHeader, SectionHeader};
 use object::read::macho::{FatArch, MachOFatFile32, MachOFatFile64};
-use object::{Architecture, BinaryFormat, FileKind, Object, ObjectSection, ObjectSegment, ReadRef};
+use object::{
+    Architecture, BinaryFormat, Endianness, FileKind, Object, ObjectSection, ObjectSegment, ReadRef,
+};
 use oxiguitar_plugin_api::manifest::Manifest;
 use oxiguitar_plugin_api::{MANIFEST_SECTION, MAX_MANIFEST_LEN, PE_MANIFEST_SECTION};
 
@@ -49,6 +53,9 @@ pub(crate) fn read_manifest(path: &Path) -> Result<ManifestFile, String> {
             let fat = MachOFatFile64::parse(&cache).map_err(damaged)?;
             from_fat(&cache, fat.arches())?
         }
+        // An ELF library is read by its headers alone (see `elf_section`).
+        FileKind::Elf64 => elf_section::<elf::FileHeader64<Endianness>, _>(&cache)?,
+        FileKind::Elf32 => elf_section::<elf::FileHeader32<Endianness>, _>(&cache)?,
         _ => section(&cache)?,
     };
     let end = bytes.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
@@ -125,6 +132,78 @@ fn section<'a, R: ReadRef<'a>>(data: R) -> Result<Vec<u8>, String> {
     }
     section
         .data()
+        .map(<[u8]>::to_vec)
+        .map_err(|_| "its manifest can't be read (the file is damaged)".to_owned())
+}
+
+/// The manifest section of an ELF library, after the same checks as
+/// [`section`], from the file's headers alone: its program headers, its
+/// section headers and the section names. `object::File::parse` also reads
+/// an ELF file's symbol table and its strings, megabytes in a plugin that
+/// isn't stripped, which finding a manifest never needs and which made
+/// reading a folder of plugins cost in proportion to their code.
+fn elf_section<'a, Elf, R>(data: R) -> Result<Vec<u8>, String>
+where
+    Elf: FileHeader<Endian = Endianness>,
+    R: ReadRef<'a>,
+{
+    let length = data.len().unwrap_or(0);
+    let header = Elf::parse(data).map_err(damaged)?;
+    let endian = header.endian().map_err(damaged)?;
+    let end = header
+        .program_headers(endian, data)
+        .map_err(damaged)?
+        .iter()
+        .filter(|p| p.p_type(endian) == elf::PT_LOAD)
+        .map(|p| {
+            let (offset, size) = p.file_range(endian);
+            offset.saturating_add(size)
+        })
+        .max()
+        .unwrap_or(0);
+    if end > length {
+        return Err(format!(
+            "it is cut short ({length} bytes of {end}): the file is damaged"
+        ));
+    }
+    if this_format() != BinaryFormat::Elf {
+        return Err(format!(
+            "it is a Linux or Android library, and this is {}",
+            std::env::consts::OS
+        ));
+    }
+    let built = match (header.e_machine(endian), header.is_class_64()) {
+        (elf::EM_X86_64, true) => Architecture::X86_64,
+        (elf::EM_AARCH64, true) => Architecture::Aarch64,
+        (elf::EM_386, false) => Architecture::I386,
+        (elf::EM_ARM, false) => Architecture::Arm,
+        (elf::EM_RISCV, true) => Architecture::Riscv64,
+        (elf::EM_RISCV, false) => Architecture::Riscv32,
+        _ => Architecture::Unknown,
+    };
+    if let Some(here) = this_architecture()
+        && built != here
+    {
+        return Err(format!(
+            "it is built for {}, and this computer is {}",
+            name(built),
+            std::env::consts::ARCH
+        ));
+    }
+    let sections = header.sections(endian, data).map_err(damaged)?;
+    let Some((_, section)) = sections.section_by_name(endian, MANIFEST_SECTION.as_bytes()) else {
+        return Err(format!(
+            "it has no manifest (no {MANIFEST_SECTION} section): it is not an OxiGuitar plugin"
+        ));
+    };
+    let size: u64 = section.sh_size(endian).into();
+    if size > MAX_MANIFEST_LEN as u64 {
+        return Err(format!(
+            "its manifest is {size} bytes, more than the {MAX_MANIFEST_LEN} a manifest may have"
+        ));
+    }
+    section
+        .data(endian, data)
         .map(<[u8]>::to_vec)
         .map_err(|_| "its manifest can't be read (the file is damaged)".to_owned())
 }
