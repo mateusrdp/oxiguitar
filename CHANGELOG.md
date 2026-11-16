@@ -8,6 +8,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- **The wah-wah plugin in OxiGuitar's packages:** the `.deb` and `.rpm` suggest `oxiguitar-wah`, as they suggest the amp models and the equalizer, and the README's and manual's install instructions include it (its first release, 0.1.0, needs OxiGuitar 0.20.0).
 - **Plugins own their tools: plugin interface 1.8** (#293, #250). A plugin can now, with no change to OxiGuitar:
   - put **buttons on the palette**, in one of its sections or a section of its own, with a music symbol or a short text (`palette` on a tool of the manifest);
   - put **entries in any menu**: File, Edit, View, Tools, Help, the right-click menus of the page and of a track, or a menu of its own between Tools and Help (`menu`);
