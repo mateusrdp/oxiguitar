@@ -47,7 +47,7 @@ A drawing larger than the limits, or at a place the plugin wasn't given, leaves 
 
 ## Clicks
 
-A click on what a plugin drew goes to the plugin, after the caret has moved there: `Request::Clicked`, with the place as the score has it now, the point in the drawing's box in staff spaces from its top left corner, and whether it was a double click (its first click came before, as a click). The drawer's `clicked` answers as a tool does: a sentence about what it did, or nothing, and it can change the score as a tool can. Doing nothing is the default, so a drawer that ignores clicks needs no code for them.
+A click on what a plugin drew goes to the plugin, after the caret has moved there: `Request::Clicked`, with the place as the score has it now, the point in the drawing's box in staff spaces from its top left corner, and whether it was a double click (its first click came before, as a click). The drawer's `clicked` answers as a tool does: a sentence about what it did, which the footer shows with the plugin's name, or nothing, and it can change the score as a tool can. Doing nothing is the default, so a drawer that ignores clicks needs no code for them.
 
 ```rust
 impl Drawer for MyDrawer {

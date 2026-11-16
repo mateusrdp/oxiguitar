@@ -1505,7 +1505,9 @@ export component AppWindow inherits Window {
     in property <length> shortcut-right-column-width;
     in property <length> shortcut-popup-width;
     in property <[string]> about-lines;
-    // Help → About's donation button (links.rs opens the page in the browser).
+    // Help → About's credits link and donation button (links.rs opens the
+    // page in the browser).
+    callback open-credits();
     callback open-donation();
 
     callback open-file();
@@ -1916,6 +1918,15 @@ export component AppWindow inherits Window {
         lines: root.about-lines;
         // A click on the button must reach it; a click outside closes.
         close-policy: PopupClosePolicy.close-on-click-outside;
+        // Every project OxiGuitar builds on is in CREDITS.md, not here
+        // (Mateus, 16 Nov 2026).
+        FooterLink {
+            text: "Credits";
+            clicked => {
+                root.open-credits();
+                about-popup.close();
+            }
+        }
         // Donations (Mateus, 25 Oct 2026; the README's "Buy me a drink").
         Rectangle { height: 1px; background: Palette.border; }
         Text {

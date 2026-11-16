@@ -12,7 +12,7 @@ List each tool under `tools` in the manifest, with an `id`, the menu entry's `na
 ]
 ```
 
-Your `Plugin` hands out each one from `tool(id)`, as something implementing `Tool`. When the user picks the entry, the core calls its `run`, on a thread of the core's: return a sentence for the footer about what it did ("Moved 312 notes up an octave."), or an empty one to say nothing, or an error saying why it couldn't run. A tool runs with no score open too (the contract suite tries it), so check.
+Your `Plugin` hands out each one from `tool(id)`, as something implementing `Tool`. When the user picks the entry, the core calls its `run`, on a thread of the core's: return a sentence about what it did ("Moved 312 notes up an octave."), which the footer shows with your tool's name, or an empty one to say nothing, or an error saying why it couldn't run. A tool runs with no score open too (the contract suite tries it), so check.
 
 ## On the palette and in other menus
 
