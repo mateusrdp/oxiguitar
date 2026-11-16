@@ -132,6 +132,8 @@ const PX_PER_PT: f32 = 96.0 / 72.0;
 const CANVAS_PAD: f32 = 48.0;
 
 struct App {
+    /// The plugins' tools' keys (interface 1.8): keys, plugin and tool.
+    plugin_keys: Vec<(oxiguitar_host::api::manifest::Shortcut, String, String)>,
     ui: Weak<AppWindow>,
     worker: Worker,
     settings: Settings,
@@ -560,6 +562,20 @@ fn main() -> Result<(), slint::PlatformError> {
     let mut shell = Shell::default();
     plugin_tabs::add_to(&mut shell, &startup.plugins);
     let (toolbar_tools, toolbar_icons) = plugin_toolbar_tools(&startup.plugins);
+    let (plugin_keys, key_lines, key_clashes) = {
+        let (tools, clashes) = startup.plugins.shortcut_tools();
+        let lines: Vec<(String, String)> = tools
+            .iter()
+            .map(|(k, t)| (k.label(), t.spec.name.clone()))
+            .collect();
+        let keys: Vec<(oxiguitar_host::api::manifest::Shortcut, String, String)> = tools
+            .into_iter()
+            .filter_map(|(k, t)| {
+                Some((k, t.plugin.manifest.as_ref()?.id.clone(), t.spec.id.clone()))
+            })
+            .collect();
+        (keys, lines, clashes)
+    };
     shell.set_plugin_tools(&toolbar_tools);
     // Only when a plugin has tabs, a settings window or track sections.
     let uses_tab_thread = !startup.plugins.tabs().is_empty()
@@ -622,6 +638,7 @@ fn main() -> Result<(), slint::PlatformError> {
         open_extensions,
         shell,
         icons: toolbar_icons,
+        plugin_keys: plugin_keys.clone(),
         footer: Footer::default(),
         stored: oxiguitar_host::SharedSettings::default(),
         prefs: ViewPrefs::default(),
@@ -738,6 +755,7 @@ fn main() -> Result<(), slint::PlatformError> {
             ("Shift + U".into(), "pick stroke up".into()),
             ("Ctrl + Alt + W".into(), "wide vibrato".into()),
         ],
+        plugins: key_lines,
     };
     let (left, left_w, center, center_w, right, right_w) = shortcuts_to_columns(&shortcuts);
     ui.set_shortcut_left_column(left);
@@ -807,6 +825,9 @@ fn main() -> Result<(), slint::PlatformError> {
     {
         let mut s = app.borrow_mut();
         s.footer.extend(startup.notices);
+        for clash in &key_clashes {
+            s.footer.push(Level::Warning, clash.clone());
+        }
         // What the core can't do, as advice for the window's first moments
         // (the host left out what the user silenced, and all of it in safe
         // mode).
@@ -1189,7 +1210,23 @@ fn main() -> Result<(), slint::PlatformError> {
                 send_typed(&a, t);
                 true
             }
-            None => false,
+            // Last, plugins' tools' keys (interface 1.8): OxiGuitar's own
+            // keys come first.
+            None => {
+                let tool = a
+                    .borrow()
+                    .plugin_keys
+                    .iter()
+                    .find(|(k, _, _)| k.is(name.as_str(), shift, ctrl, alt))
+                    .map(|(_, plugin, tool)| (plugin.clone(), tool.clone()));
+                match tool {
+                    Some((plugin, tool)) => {
+                        a.borrow().worker.send(Request::PluginTool(plugin, tool));
+                        true
+                    }
+                    None => false,
+                }
+            }
         }
     });
     let a = app.clone();
@@ -1440,6 +1477,8 @@ struct ShortcutData {
     editing: Vec<(String, String)>,
     note_entry: Vec<(String, String)>,
     effects: Vec<(String, String)>,
+    /// Plugins' tools' keys (interface 1.8).
+    plugins: Vec<(String, String)>,
 }
 
 fn shortcuts_to_columns(
@@ -1460,6 +1499,7 @@ fn shortcuts_to_columns(
         &data.editing,
         &data.note_entry,
         &data.effects,
+        &data.plugins,
     ] {
         for (key, desc) in entries.iter() {
             all.push(ShortcutLine {
@@ -3188,10 +3228,19 @@ fn plugin_palette_tools(plugins: &oxiguitar_host::Plugins) -> Vec<palette::Plugi
         .iter()
         .filter_map(|t| {
             let at = t.spec.palette.as_ref()?;
+            // The tooltip names its keys too, when it has some.
+            let keys = t
+                .spec
+                .shortcut
+                .as_deref()
+                .and_then(oxiguitar_host::api::manifest::Shortcut::parse);
             Some(palette::PluginTool {
                 plugin: t.plugin.manifest.as_ref()?.id.clone(),
                 tool: t.spec.id.clone(),
-                name: t.spec.name.clone(),
+                name: match keys {
+                    Some(k) => format!("{} ({})", t.spec.name, k.label()),
+                    None => t.spec.name.clone(),
+                },
                 section: at.section.clone(),
                 symbol: at.symbol_char(),
                 text: at.text.clone().unwrap_or_default(),

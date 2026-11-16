@@ -1629,6 +1629,14 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
         })
         .collect();
     assert_eq!(toolbar, [("ask", Some("Ask"))]);
+    // One has keys, and none clash.
+    let (keyed, clashes) = plugins.shortcut_tools();
+    let keyed: Vec<(String, &str)> = keyed
+        .iter()
+        .map(|(k, t)| (k.label(), t.spec.id.as_str()))
+        .collect();
+    assert_eq!(keyed, [("Ctrl + Alt + J".to_owned(), "stamp")]);
+    assert!(clashes.is_empty());
     let palette: Vec<(String, Option<char>, Option<String>)> = plugins
         .palette_tools()
         .iter()

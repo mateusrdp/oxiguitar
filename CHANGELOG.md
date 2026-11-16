@@ -14,6 +14,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
   - keep **its own data on the score, a bar, a staff's bar, a beat or a note**, and **marks on beats** (`BeatExt::Plugin`, `BeatExt::Mark`): they follow the beat through every edit, the marks are engraved over the beat, and both are saved in the `.oxg` file beside the score, since no score format holds them;
   - **follow the score as it plays** in an effect (`follows_score`: every beat the track plays, with its marks and the plugin's data, and the score's time with each block of sound), and say where the effect goes in a track's chain by default (`order`);
   - **draw anything on the page** where it keeps data (`draws`, a `Drawer`): boxes of lines, shapes and text in staff spaces, engraved in a lane of their own above the staff, printed and exported with the rest; asked only about its own places, and not asked again while they don't change;
+  - give its tools **keys** (`shortcut`, with Ctrl or Alt), which run them after OxiGuitar's own keys and are listed in Help's shortcuts;
   - put **buttons in the toolbar**, in a Plugins section all plugins share (`toolbar` on a tool);
   - have **shared folders of its own name** beside `plugins`, in the user's folder, the system's and the program's (`folders` in the manifest takes any name; `Host::folder`);
   - be anything a file format's own plugin makes of it: OxiGuitar no longer treats one format as the fullest (see Changed).

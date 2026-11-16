@@ -62,7 +62,7 @@ use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::event::{Event, EventKind};
 use oxiguitar_plugin_api::manifest::{
     Environment, ExportKind, ExporterSpec, FormatSpec, InstrumentSpec, Manifest, ServiceSpec,
-    SharedFolder, ToolSpec, TrackSectionSpec,
+    SharedFolder, Shortcut, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
     Answer, Availability, DrawPlace, Drawn, Engraving, Error, ErrorKind, FolderPlaces, HostAnswer,
@@ -1436,6 +1436,39 @@ impl Plugins {
                 })
             })
             .collect()
+    }
+
+    /// The tools of the ready plugins that have keys (interface 1.8), each
+    /// with its keys, the first in plugin order for each; and, for each
+    /// tool whose keys an earlier tool has, a sentence for the footer.
+    pub fn shortcut_tools(&self) -> (Vec<(Shortcut, ToolRef<'_>)>, Vec<String>) {
+        let mut out: Vec<(Shortcut, ToolRef<'_>)> = Vec::new();
+        let mut clashes = Vec::new();
+        for tool in self.tools() {
+            if !tool
+                .plugin
+                .manifest
+                .as_ref()
+                .is_some_and(|m| m.knows_minor(8))
+            {
+                continue;
+            }
+            let Some(keys) = tool.spec.shortcut.as_deref().and_then(Shortcut::parse) else {
+                continue;
+            };
+            match out.iter().find(|(k, _)| *k == keys) {
+                Some((_, first)) => clashes.push(format!(
+                    "{}: {} has no keys: {} are {}'s {}.",
+                    tool.plugin.name(),
+                    tool.spec.name,
+                    keys.label(),
+                    first.plugin.name(),
+                    first.spec.name
+                )),
+                None => out.push((keys, tool)),
+            }
+        }
+        (out, clashes)
     }
 
     /// The ids of the ready plugins that draw on the page (interface 1.8),

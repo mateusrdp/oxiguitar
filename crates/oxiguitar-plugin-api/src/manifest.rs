@@ -275,6 +275,87 @@ pub struct ToolSpec {
     /// Since interface 1.8.
     #[serde(default)]
     pub toolbar: Option<ButtonFace>,
+    /// The keys that run the tool, as `Ctrl+Shift+W` ([`Shortcut`]): with
+    /// Ctrl or Alt, so it never takes a key that enters notes. OxiGuitar's
+    /// own keys come first, then the plugins' in plugin order. Since
+    /// interface 1.8.
+    #[serde(default)]
+    pub shortcut: Option<String>,
+}
+
+/// A tool's keys ([`ToolSpec::shortcut`]): Ctrl, Shift and Alt as held, and
+/// one character key, a letter, a digit or a punctuation mark. Since
+/// interface 1.8.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Shortcut {
+    /// Ctrl (Command on macOS) is held.
+    pub ctrl: bool,
+    /// Shift is held.
+    pub shift: bool,
+    /// Alt (Option on macOS) is held.
+    pub alt: bool,
+    /// The key, lowercase for a letter.
+    pub key: char,
+}
+
+impl Shortcut {
+    /// Reads `Ctrl+Shift+W`: modifiers in any order (`Ctrl`, `Shift`,
+    /// `Alt`, case aside), then one key, joined by `+`. `None` for anything
+    /// else, or without Ctrl or Alt.
+    pub fn parse(text: &str) -> Option<Shortcut> {
+        let parts: Vec<&str> = text.split('+').map(str::trim).collect();
+        let (key, mods) = parts.split_last()?;
+        let mut keys = key.chars();
+        let (Some(key), None) = (keys.next(), keys.next()) else {
+            return None;
+        };
+        if !(key.is_ascii_alphanumeric() || key.is_ascii_punctuation()) {
+            return None;
+        }
+        let mut s = Shortcut {
+            ctrl: false,
+            shift: false,
+            alt: false,
+            key: key.to_ascii_lowercase(),
+        };
+        for m in mods {
+            let held = match m.to_ascii_lowercase().as_str() {
+                "ctrl" | "control" => &mut s.ctrl,
+                "shift" => &mut s.shift,
+                "alt" => &mut s.alt,
+                _ => return None,
+            };
+            if *held {
+                return None;
+            }
+            *held = true;
+        }
+        (s.ctrl || s.alt).then_some(s)
+    }
+
+    /// Whether the key `text` the window names, with these modifiers held,
+    /// is this shortcut.
+    pub fn is(&self, text: &str, shift: bool, ctrl: bool, alt: bool) -> bool {
+        let mut chars = text.chars();
+        matches!((chars.next(), chars.next()), (Some(c), None) if c.to_ascii_lowercase() == self.key)
+            && (shift, ctrl, alt) == (self.shift, self.ctrl, self.alt)
+    }
+
+    /// As people read it: `Ctrl + Shift + W`.
+    pub fn label(&self) -> String {
+        let mut parts = Vec::new();
+        if self.ctrl {
+            parts.push("Ctrl".to_owned());
+        }
+        if self.alt {
+            parts.push("Alt".to_owned());
+        }
+        if self.shift {
+            parts.push("Shift".to_owned());
+        }
+        parts.push(self.key.to_ascii_uppercase().to_string());
+        parts.join(" + ")
+    }
 }
 
 /// What a plugin's toolbar button shows (interface 1.8): a symbol of the
@@ -520,6 +601,14 @@ impl Manifest {
             if let Some(problem) = t.toolbar.as_ref().and_then(ButtonFace::problem) {
                 out.push(format!("tool {:?}: {problem}", t.id));
             }
+            if let Some(keys) = &t.shortcut
+                && Shortcut::parse(keys).is_none()
+            {
+                out.push(format!(
+                    "tool {:?}: the shortcut {keys:?} isn't one: Ctrl, Alt or both (and Shift if wanted), then a letter, a digit or a punctuation mark, joined by +",
+                    t.id
+                ));
+            }
             if let Some(menu) = &t.menu {
                 let n = menu.trim().chars().count();
                 if n == 0 || n > MENU_NAME_MAX {
@@ -657,11 +746,12 @@ impl Manifest {
         }
         let since_1_8 = InterfaceVersion { major: 1, minor: 8 };
         if self.interface < since_1_8 {
-            if self
-                .tools
-                .iter()
-                .any(|t| t.palette.is_some() || t.menu.is_some() || t.toolbar.is_some())
-            {
+            if self.tools.iter().any(|t| {
+                t.palette.is_some()
+                    || t.menu.is_some()
+                    || t.toolbar.is_some()
+                    || t.shortcut.is_some()
+            }) {
                 out.push(format!(
                     "a tool's palette, toolbar and menu need interface {since_1_8}, and the manifest asks for {}",
                     self.interface
@@ -1101,6 +1191,29 @@ mod tests {
         }],
         "a_key_from_a_later_version": { "ignored": true }
     }"#;
+
+    #[test]
+    fn a_shortcut_needs_ctrl_or_alt_and_one_key() {
+        let s = Shortcut::parse("Ctrl+Shift+W").unwrap();
+        assert_eq!((s.ctrl, s.shift, s.alt, s.key), (true, true, false, 'w'));
+        assert_eq!(s.label(), "Ctrl + Shift + W");
+        assert!(s.is("W", true, true, false) && s.is("w", true, true, false));
+        assert!(!s.is("w", false, true, false) && !s.is("q", true, true, false));
+        assert_eq!(Shortcut::parse(" alt + 7 ").unwrap().label(), "Alt + 7");
+        assert_eq!(Shortcut::parse("Control+Alt+.").unwrap().key, '.');
+        for bad in [
+            "W",
+            "Shift+W",
+            "Ctrl+",
+            "Ctrl+Ctrl+W",
+            "Hyper+W",
+            "Ctrl+WW",
+            "Ctrl+é",
+            "",
+        ] {
+            assert_eq!(Shortcut::parse(bad), None, "{bad}");
+        }
+    }
 
     #[test]
     fn a_manifest_reads_with_padding_and_unknown_keys() {
