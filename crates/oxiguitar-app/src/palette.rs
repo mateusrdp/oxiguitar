@@ -395,6 +395,15 @@ pub(crate) fn plugin_tool_of(id: &str) -> Option<(&str, &str)> {
     id.strip_prefix("plugin:")?.split_once(':')
 }
 
+/// The face of a plugin's button: its symbol of the music font, or its
+/// short text.
+pub(crate) fn plugin_face(symbol: Option<char>, text: &str) -> (Face, Fit) {
+    match symbol {
+        Some(cp) => (Face::Symbol(glyph("plugin", cp)), Fit::Own),
+        None => (Face::Text(kept(text.trim())), Fit::Text),
+    }
+}
+
 /// A tool as the window shows it: the core's, or a plugin's.
 #[derive(Clone, Debug)]
 pub(crate) struct ShownTool {
@@ -449,10 +458,7 @@ pub(crate) fn shown(plugin_tools: &[PluginTool]) -> Vec<ShownGroup> {
         })
         .collect();
     for t in plugin_tools {
-        let (face, fit) = match t.symbol {
-            Some(cp) => (Face::Symbol(glyph("plugin", cp)), Fit::Own),
-            None => (Face::Text(kept(t.text.trim())), Fit::Text),
-        };
+        let (face, fit) = plugin_face(t.symbol, &t.text);
         let tool = ShownTool {
             id: plugin_tool_id(&t.plugin, &t.tool),
             name: t.name.clone(),

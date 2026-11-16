@@ -2020,7 +2020,8 @@ export component AppWindow inherits Window {
         }
 
         VerticalLayout {
-            // The toolbar: the core's sections, then plugins' sections.
+            // The toolbar: the core's sections, then the one the plugins'
+            // buttons share.
             if root.toolbar-shown : Rectangle {
                 height: 36px;
                 background: Palette.alternate-background;

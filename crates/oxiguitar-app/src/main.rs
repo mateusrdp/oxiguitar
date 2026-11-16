@@ -558,6 +558,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let save_formats = SaveFormat::writable(&startup.plugins);
     let mut shell = Shell::default();
     plugin_tabs::add_to(&mut shell, &startup.plugins);
+    let (toolbar_tools, toolbar_icons) = plugin_toolbar_tools(&startup.plugins);
+    shell.set_plugin_tools(&toolbar_tools);
     // Only when a plugin has tabs, a settings window or track sections.
     let uses_tab_thread = !startup.plugins.tabs().is_empty()
         || !startup.plugins.with_settings_window().is_empty()
@@ -618,7 +620,7 @@ fn main() -> Result<(), slint::PlatformError> {
         folder: None,
         open_extensions,
         shell,
-        icons: HashMap::new(),
+        icons: toolbar_icons,
         footer: Footer::default(),
         stored: oxiguitar_host::SharedSettings::default(),
         prefs: ViewPrefs::default(),
@@ -2541,7 +2543,14 @@ fn toolbar_activated(app: &Shared, id: &str) {
         item::EXPORT_PDF => export_dialog(app),
         item::UNDO => app.borrow().worker.send(Request::Undo),
         item::REDO => app.borrow().worker.send(Request::Redo),
-        _ => {}
+        // A plugin's button in the Plugins section runs its tool.
+        _ => {
+            if let Some((plugin, tool)) = palette::plugin_tool_of(id) {
+                app.borrow()
+                    .worker
+                    .send(Request::PluginTool(plugin.to_owned(), tool.to_owned()));
+            }
+        }
     }
 }
 
@@ -3130,6 +3139,40 @@ fn refresh_icons(app: &Shared, ui: &AppWindow) {
     }
     app.borrow_mut().icons_scale = scale;
     set_palette(app, ui, true);
+}
+
+/// The buttons the installed plugins add to the toolbar's Plugins section
+/// (interface 1.8): each one's id and name, and its icon under that id.
+/// Drawn once, larger than shown, so any scale stays sharp.
+fn plugin_toolbar_tools(
+    plugins: &oxiguitar_host::Plugins,
+) -> (Vec<(String, String)>, HashMap<String, Image>) {
+    let mut tools = Vec::new();
+    let mut faces = Vec::new();
+    for t in plugins.toolbar_tools() {
+        let (Some(face), Some(manifest)) = (&t.spec.toolbar, &t.plugin.manifest) else {
+            continue;
+        };
+        tools.push((
+            palette::plugin_tool_id(&manifest.id, &t.spec.id),
+            t.spec.name.clone(),
+        ));
+        faces.push(palette::plugin_face(
+            face.symbol_char(),
+            face.text.as_deref().unwrap_or_default(),
+        ));
+    }
+    let icons = if faces.is_empty() {
+        HashMap::new()
+    } else {
+        icons::IconSet::new(&faces, icons::Fill::TOGGLES)
+            .draw(54)
+            .iter()
+            .zip(&tools)
+            .map(|(icon, (id, _))| (id.clone(), image_of(icon)))
+            .collect()
+    };
+    (tools, icons)
 }
 
 /// The tools the installed plugins add to the palette (interface 1.8).

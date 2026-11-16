@@ -65,9 +65,9 @@ use oxiguitar_plugin_api::manifest::{
     SharedFolder, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
-    Answer, Availability, Engraving, Error, ErrorKind, HostAnswer, HostRequest, Link, LogEntry,
-    PlayedBeat, PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo,
-    decode, encode, outcome,
+    Answer, Availability, Engraving, Error, ErrorKind, FolderPlaces, HostAnswer, HostRequest, Link,
+    LogEntry, PlayedBeat, PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request,
+    TrackInfo, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
@@ -830,11 +830,11 @@ impl Plugins {
 
     /// The shared folders the ready plugins list in their manifests, each
     /// once, so the host can create them at start (interface 1.3).
-    pub fn shared_folders(&self) -> Vec<SharedFolder> {
-        let mut out: Vec<SharedFolder> = self
+    pub fn shared_folders(&self) -> Vec<String> {
+        let mut out: Vec<String> = self
             .ready()
             .filter(|(_, _, m)| m.knows_minor(3))
-            .flat_map(|(_, _, m)| m.folders.iter().copied())
+            .flat_map(|(_, _, m)| m.folders.iter().cloned())
             .collect();
         out.sort();
         out.dedup();
@@ -1384,6 +1384,19 @@ impl Plugins {
             .into_iter()
             .filter(|t| {
                 t.spec.palette.is_some()
+                    && t.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(8))
+            })
+            .collect()
+    }
+
+    /// The tools the ready plugins add to the toolbar's Plugins section
+    /// (interface 1.8), in plugin order: buttons that run their tool
+    /// ([`Plugins::run_tool`]).
+    pub fn toolbar_tools(&self) -> Vec<ToolRef<'_>> {
+        self.tools()
+            .into_iter()
+            .filter(|t| {
+                t.spec.toolbar.is_some()
                     && t.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(8))
             })
             .collect()
@@ -2274,6 +2287,9 @@ impl Plugins {
                 }
             }
             HostRequest::Folders => self.plugin_folders(manifest).map(HostAnswer::Folders),
+            HostRequest::Folder { name } => {
+                self.folder_places(manifest, &name).map(HostAnswer::Folder)
+            }
             HostRequest::Advise(given) => {
                 if !manifest.knows_minor(4) {
                     Err(Error::new(
@@ -2318,6 +2334,53 @@ impl Plugins {
 }
 
 impl Plugins {
+    /// Where the shared folder `name` of the plugin with `manifest` is
+    /// (interface 1.8): the user's, created on the way, and the ones that
+    /// exist beside the system's plugin folders.
+    fn folder_places(&self, manifest: &Manifest, name: &str) -> Result<FolderPlaces, Error> {
+        if !manifest.knows_minor(8) {
+            return Err(Error::new(
+                ErrorKind::Unsupported,
+                "asking for a folder by name needs interface 1.8",
+            ));
+        }
+        if !manifest.folders.iter().any(|f| f == name) {
+            return Err(Error::not_found(format!(
+                "the manifest lists no folder {name:?}"
+            )));
+        }
+        let Some(folders) = self.0.folders.get() else {
+            return Err(Error::not_found(
+                "this program keeps no folders for plugins",
+            ));
+        };
+        let text = |path: &Path| {
+            path.to_str().map(str::to_owned).ok_or_else(|| {
+                Error::new(
+                    ErrorKind::Unsupported,
+                    format!("the folder {} is not UTF-8 text", path.display()),
+                )
+            })
+        };
+        let user = folders.named(name);
+        if !self.0.read_only.load(std::sync::atomic::Ordering::Relaxed) {
+            std::fs::create_dir_all(&user).map_err(|e| {
+                Error::new(
+                    ErrorKind::Failed,
+                    format!("cannot create {}: {e}", user.display()),
+                )
+            })?;
+        }
+        Ok(FolderPlaces {
+            user: text(&user)?,
+            others: folders
+                .named_elsewhere(name)
+                .iter()
+                .map(|p| text(p))
+                .collect::<Result<_, _>>()?,
+        })
+    }
+
     /// The folders of the plugin with `manifest`, its own two created on
     /// the way.
     fn plugin_folders(&self, manifest: &Manifest) -> Result<PluginFolders, Error> {
@@ -2349,7 +2412,10 @@ impl Plugins {
             manifest
                 .folders
                 .iter()
-                .map(|&f| Ok((f, text(&folders.shared(f))?)))
+                // The folders interface 1.3 names; a plugin asks for the
+                // others one at a time (`HostRequest::Folder`).
+                .filter_map(|f| SharedFolder::of(f))
+                .map(|f| Ok((f, text(&folders.shared(f))?)))
                 .collect::<Result<Vec<_>, Error>>()?
         } else {
             Vec::new()

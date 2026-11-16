@@ -233,7 +233,7 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
     ) {
         let shared = plugins.shared_folders();
         let _ = folders.ensure_shared(&shared);
-        if shared.contains(&SharedFolder::Soundfonts) {
+        if shared.iter().any(|f| f == SharedFolder::Soundfonts.name()) {
             // A sound set for instruments that play from one: a looped sine,
             // starting on its frame (TEST_SET).
             let _ = std::fs::write(

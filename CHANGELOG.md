@@ -13,6 +13,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
   - ask for the **selection** as it is now (`Host::selection`) and read the **engraved page**: every page's drawing and where each beat is on it (`Host::engraving`);
   - keep **its own data and marks on beats** (`BeatExt::Plugin`, `BeatExt::Mark`): they follow the beat through every edit, the marks are engraved over the beat, and both are saved in the `.oxg` file beside the score, since no score format holds them;
   - **follow the score as it plays** in an effect (`follows_score`: every beat the track plays, with its marks and the plugin's data, and the score's time with each block of sound), and say where the effect goes in a track's chain by default (`order`);
+  - put **buttons in the toolbar**, in a Plugins section all plugins share (`toolbar` on a tool);
+  - have **shared folders of its own name** beside `plugins`, in the user's folder, the system's and the program's (`folders` in the manifest takes any name; `Host::folder`);
   - say which of its formats keeps the most of a score (`fullest`).
 
   The plugin guide has a section for each (Tools, Tabs, Instruments, Formats, Interface versions); the design is in `docs/design/plugins.md`, "Interface 1.8". The SDK crates are at 1.8.0. Released plugins keep working.
@@ -23,6 +25,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 - **Closed and Open Wah-Wah left OxiGuitar's own palette**: the Wah-wah plugin adds them. Wah marks of a file are still read, drawn and written without it.
 - A track's effects without an order of the user's run by each effect's `order` in its manifest (pedals, then amp models, then equalizers) instead of a list of plugin ids in OxiGuitar.
 - The window tells plugins where the caret is when a score opens, not only when it first moves.
+- The advice shown when no plugin opens files, plays or sends sound out names no particular plugin; it points at the page of official plugins.
 
 ## [0.19.2] - 2026-11-15
 

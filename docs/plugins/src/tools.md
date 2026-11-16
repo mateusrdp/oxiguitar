@@ -32,7 +32,9 @@ Since interface 1.8 a tool says where else it shows, and a contributor's tool ne
 | `palette` | A button on the palette: `section` is one of the palette's own sections (`"Effects"`) or a new one of yours, at most 24 characters, which comes after the core's; the button shows `symbol`, a glyph of the music font by its SMuFL code point (`"U+E5E7"`), or `text`, at most 5 characters. One of the two. The tool's `name` is the button's tooltip, and the palette's search finds it |
 | `menu` | The menu its entry goes in: `file`, `edit`, `view`, `tools` or `help`; `page`, the right-click menu of the page; `track`, the right-click menu of a track's row; or any other name, at most 24 characters, for a menu of your own on the menu bar, between Tools and Help. Plugins that name the same menu share it |
 
-A palette tool is a button, not a mode: a click runs it, as a menu entry does. A tool with `palette` and no `menu` is on the palette only; give it both to have both. A tool with neither is in Tools. A manifest whose palette section or menu name is too long, or whose button has neither or both of `symbol` and `text`, is refused.
+| `toolbar` | A button in the toolbar's **Plugins** section, the one section all plugins' buttons share, after OxiGuitar's own: `symbol` or `text`, as for the palette. The button is small (an 18-pixel icon), so a symbol or one or two letters read best. For what users click often |
+
+A palette tool is a button, not a mode: a click runs it, as a menu entry does. The same goes for a toolbar button. A tool with `palette` or `toolbar` and no `menu` is a button only; give it a `menu` too to have both. A tool with none of the three is in Tools. A manifest whose palette section or menu name is too long, or whose button has neither or both of `symbol` and `text`, is refused.
 
 ## Changing the score
 

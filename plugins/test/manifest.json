@@ -42,13 +42,13 @@
     { "id": "mark", "name": "Mark the Title", "description": "Adds an exclamation mark to the score's title, as one change." },
     { "id": "link", "name": "Show a Footer Link", "description": "Shows a warning in the footer with a link to the plugin guide." },
     { "id": "stamp", "name": "Stamp the First Beat", "description": "Keeps the test plugin's data on the first beat with notes, which its gain then silences.", "palette": { "section": "Effects", "text": "T!" }, "menu": "Test" },
-    { "id": "ask", "name": "Open the Test Dialog", "description": "Opens the test plugin's dialog and shows its side tab.", "palette": { "section": "Test tools", "symbol": "U+E4A0" }, "menu": "Page" }
+    { "id": "ask", "name": "Open the Test Dialog", "description": "Opens the test plugin's dialog and shows its side tab.", "palette": { "section": "Test tools", "symbol": "U+E4A0" }, "menu": "Page", "toolbar": { "text": "Ask" } }
   ],
   "settings_window": true,
   "track_sections": [
     { "id": "test", "title": "Test section", "does_not_play": ["drums"] }
   ],
-  "folders": ["soundfonts"],
+  "folders": ["soundfonts", "test-files"],
   "exporters": [
     { "id": "raw", "name": "Raw Test Audio", "extension": "oxgraw", "kind": "audio" }
   ]

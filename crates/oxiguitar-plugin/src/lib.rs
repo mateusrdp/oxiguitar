@@ -277,6 +277,25 @@ impl Folders {
     }
 }
 
+/// Where a shared folder of the plugin's is (interface 1.8;
+/// [`Host::folder`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FolderPlaces {
+    /// The one in the user's OxiGuitar folder, beside `plugins`: where the
+    /// user puts files, and the plugin may write.
+    pub user: std::path::PathBuf,
+    /// The same name where it exists beside a system plugin folder or the
+    /// program: a package's files, read only.
+    pub others: Vec<std::path::PathBuf>,
+}
+
+impl FolderPlaces {
+    /// Every place, the user's first.
+    pub fn all(&self) -> impl Iterator<Item = &std::path::Path> {
+        std::iter::once(self.user.as_path()).chain(self.others.iter().map(|p| p.as_path()))
+    }
+}
+
 /// Reads one file format into the score version 2 (interface 1.2).
 pub trait FormatReader2: Send + Sync {
     /// Reads `data`, a whole file. Treat it as untrusted: a damaged file
@@ -841,6 +860,22 @@ impl Host {
         }
     }
 
+    /// Where the shared folder `name` of the manifest's `folders` is
+    /// (interface 1.8): a folder of the plugin's own choosing beside
+    /// `plugins`, as `soundfonts` and `nam` are. The user's is created if
+    /// it is missing.
+    pub fn folder(&self, name: &str) -> Result<FolderPlaces, Error> {
+        match self.0.request(HostRequest::Folder {
+            name: name.to_owned(),
+        })? {
+            HostAnswer::Folder(f) => Ok(FolderPlaces {
+                user: f.user.into(),
+                others: f.others.into_iter().map(Into::into).collect(),
+            }),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// The caret or the selection in the open score as it is now (interface
     /// 1.8); `None` when no score is open. What [`Event::Selection2`] tells
     /// as it changes, for when the plugin needs it at once: a tool run
@@ -949,7 +984,9 @@ impl HostServices for Detached {
             HostRequest::Service { interface, .. } => Err(Error::not_found(format!(
                 "no service of {interface:?} (a detached host has none)"
             ))),
-            HostRequest::Folders => Err(Error::not_found("a detached host has no folders")),
+            HostRequest::Folders | HostRequest::Folder { .. } => {
+                Err(Error::not_found("a detached host has no folders"))
+            }
         }
     }
 }

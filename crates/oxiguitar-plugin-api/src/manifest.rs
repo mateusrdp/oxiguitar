@@ -104,11 +104,15 @@ pub struct Manifest {
     /// The sections it adds to the track dialog. Since interface 1.3.
     #[serde(default)]
     pub track_sections: Vec<TrackSectionSpec>,
-    /// The folders it shares with the user and other plugins, which the
-    /// host creates at start and hands over (`HostRequest::Folders`).
-    /// Since interface 1.3.
+    /// The folders it shares with the user and other plugins, by name:
+    /// each sits beside `plugins` in the user's OxiGuitar folder, where the
+    /// host creates it at start, and may also sit beside a system plugin
+    /// folder or the program. Since interface 1.3 for `soundfonts` and
+    /// `nam` (`HostRequest::Folders`); since interface 1.8 any name
+    /// ([`is_folder_name`], `HostRequest::Folder`), so a plugin has folders
+    /// of its own with no change to the core.
     #[serde(default)]
-    pub folders: Vec<SharedFolder>,
+    pub folders: Vec<String>,
     /// The effects it offers a track's sound, after its instrument. Since
     /// interface 1.3.
     #[serde(default)]
@@ -204,8 +208,13 @@ pub enum SharedFolder {
 }
 
 impl SharedFolder {
-    /// Every shared folder.
+    /// Every shared folder interface 1.3 names.
     pub const ALL: [SharedFolder; 2] = [SharedFolder::Soundfonts, SharedFolder::Nam];
+
+    /// The folder of interface 1.3 with this name, if it is one.
+    pub fn of(name: &str) -> Option<SharedFolder> {
+        SharedFolder::ALL.into_iter().find(|f| f.name() == name)
+    }
 
     /// The folder's name in the user's OxiGuitar folder.
     pub fn name(self) -> &'static str {
@@ -214,6 +223,20 @@ impl SharedFolder {
             SharedFolder::Nam => "nam",
         }
     }
+}
+
+/// The most characters a shared folder's name may have.
+pub const FOLDER_NAME_MAX: usize = 24;
+
+/// The names OxiGuitar's own folders have beside `plugins`, which no
+/// plugin's folder may take.
+pub const FOLDER_NAMES_TAKEN: [&str; 3] = ["plugins", "data", "cache"];
+
+/// Whether `s` can name a plugin's shared folder: 1 to 24 characters,
+/// lowercase ASCII letters and digits in parts joined by single `-`, and
+/// none of OxiGuitar's own folders' names.
+pub fn is_folder_name(s: &str) -> bool {
+    s.len() <= FOLDER_NAME_MAX && !s.contains('.') && is_id(s) && !FOLDER_NAMES_TAKEN.contains(&s)
 }
 
 /// A tool, as the manifest declares it: an entry of the Tools menu that
@@ -241,6 +264,59 @@ pub struct ToolSpec {
     /// in no menu. Since interface 1.8.
     #[serde(default)]
     pub menu: Option<String>,
+    /// The tool's button in the toolbar's Plugins section, the one
+    /// section every plugin's toolbar buttons share, after the core's.
+    /// Since interface 1.8.
+    #[serde(default)]
+    pub toolbar: Option<ButtonFace>,
+}
+
+/// What a plugin's toolbar button shows (interface 1.8): a symbol of the
+/// music font or a short text, one of the two. Its tooltip is the tool's
+/// name.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ButtonFace {
+    /// A SMuFL code point of the music font, as `U+E5E7`.
+    #[serde(default)]
+    pub symbol: Option<String>,
+    /// At most [`PALETTE_TEXT_MAX`] characters.
+    #[serde(default)]
+    pub text: Option<String>,
+}
+
+impl ButtonFace {
+    /// The symbol's character, when the face is a valid one.
+    pub fn symbol_char(&self) -> Option<char> {
+        symbol_char(self.symbol.as_deref()?)
+    }
+
+    /// What is wrong with the face, if anything.
+    pub fn problem(&self) -> Option<String> {
+        face_problem("toolbar", self.symbol.as_deref(), self.text.as_deref())
+    }
+}
+
+/// The character of a music-font code point written as `U+E5E7`.
+fn symbol_char(symbol: &str) -> Option<char> {
+    let hex = symbol.strip_prefix("U+")?;
+    let c = char::from_u32(u32::from_str_radix(hex, 16).ok()?)?;
+    ('\u{E000}'..='\u{F8FF}').contains(&c).then_some(c)
+}
+
+/// What is wrong with a button's symbol or text, `place` being "palette"
+/// or "toolbar".
+fn face_problem(place: &str, symbol: Option<&str>, text: Option<&str>) -> Option<String> {
+    match (symbol, text) {
+        (Some(s), None) => symbol_char(s).is_none().then(|| {
+            format!("the {place} symbol must be a code point of the music font, as U+E5E7")
+        }),
+        (None, Some(t)) => {
+            let n = t.trim().chars().count();
+            (n == 0 || n > PALETTE_TEXT_MAX)
+                .then(|| format!("the {place} text must be 1 to {PALETTE_TEXT_MAX} characters"))
+        }
+        _ => Some(format!("a {place} tool shows either a symbol or a text")),
+    }
 }
 
 /// The most characters a menu's name may have.
@@ -248,12 +324,12 @@ pub const MENU_NAME_MAX: usize = 24;
 
 impl ToolSpec {
     /// The menu the tool is an entry of, in lower case: `tools` when the
-    /// manifest names none and the tool is no palette button; `None` for a
-    /// palette button without a menu.
+    /// manifest names none and the tool is no palette or toolbar button;
+    /// `None` for such a button without a menu.
     pub fn menu_key(&self) -> Option<String> {
         match &self.menu {
             Some(menu) => Some(menu.trim().to_lowercase()),
-            None => self.palette.is_none().then(|| "tools".to_owned()),
+            None => (self.palette.is_none() && self.toolbar.is_none()).then(|| "tools".to_owned()),
         }
     }
 }
@@ -286,9 +362,7 @@ impl PaletteSpec {
     /// The symbol's character, when `symbol` is a code point of the
     /// music font's own range (SMuFL's, U+E000 to U+F8FF).
     pub fn symbol_char(&self) -> Option<char> {
-        let hex = self.symbol.as_deref()?.strip_prefix("U+")?;
-        let c = char::from_u32(u32::from_str_radix(hex, 16).ok()?)?;
-        ('\u{E000}'..='\u{F8FF}').contains(&c).then_some(c)
+        symbol_char(self.symbol.as_deref()?)
     }
 
     /// What is wrong with it, as a sentence for the plugin's author.
@@ -299,17 +373,7 @@ impl PaletteSpec {
                 "the palette section must be 1 to {PALETTE_SECTION_MAX} characters"
             ));
         }
-        match (&self.symbol, &self.text) {
-            (Some(_), None) => self.symbol_char().is_none().then(|| {
-                "the palette symbol must be a code point of the music font, as U+E5E7".to_owned()
-            }),
-            (None, Some(t)) => {
-                let n = t.trim().chars().count();
-                (n == 0 || n > PALETTE_TEXT_MAX)
-                    .then(|| format!("the palette text must be 1 to {PALETTE_TEXT_MAX} characters"))
-            }
-            _ => Some("a palette tool shows either a symbol or a text".to_owned()),
-        }
+        face_problem("palette", self.symbol.as_deref(), self.text.as_deref())
     }
 }
 
@@ -434,6 +498,9 @@ impl Manifest {
             if let Some(problem) = t.palette.as_ref().and_then(PaletteSpec::problem) {
                 out.push(format!("tool {:?}: {problem}", t.id));
             }
+            if let Some(problem) = t.toolbar.as_ref().and_then(ButtonFace::problem) {
+                out.push(format!("tool {:?}: {problem}", t.id));
+            }
             if let Some(menu) = &t.menu {
                 let n = menu.trim().chars().count();
                 if n == 0 || n > MENU_NAME_MAX {
@@ -472,7 +539,12 @@ impl Manifest {
         }
         for (i, f) in self.folders.iter().enumerate() {
             if self.folders[..i].contains(f) {
-                out.push(format!("folder {:?}: listed twice", f.name()));
+                out.push(format!("folder {f:?}: listed twice"));
+            }
+            if !is_folder_name(f) {
+                out.push(format!(
+                    "folder {f:?}: a folder's name is 1 to {FOLDER_NAME_MAX} lowercase letters, digits and single hyphens, and not one of OxiGuitar's own"
+                ));
             }
         }
         let mut exporters: Vec<&str> = Vec::new();
@@ -569,10 +641,16 @@ impl Manifest {
             if self
                 .tools
                 .iter()
-                .any(|t| t.palette.is_some() || t.menu.is_some())
+                .any(|t| t.palette.is_some() || t.menu.is_some() || t.toolbar.is_some())
             {
                 out.push(format!(
-                    "a tool's palette and menu need interface {since_1_8}, and the manifest asks for {}",
+                    "a tool's palette, toolbar and menu need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.folders.iter().any(|f| SharedFolder::of(f).is_none()) {
+                out.push(format!(
+                    "folders other than \"soundfonts\" and \"nam\" need interface {since_1_8}, and the manifest asks for {}",
                     self.interface
                 ));
             }
@@ -1106,7 +1184,31 @@ mod tests {
             "conditions": {"arch": ["x86_64"], "cpu": ["avx2", "fma"]}"#;
         let m: Manifest = serde_json::from_str(&json("1.3", keys)).unwrap();
         assert!(m.problems().is_empty(), "{:?}", m.problems());
-        assert_eq!(m.folders, [SharedFolder::Nam, SharedFolder::Soundfonts]);
+        assert_eq!(m.folders, ["nam", "soundfonts"]);
+        // A folder of the plugin's own needs interface 1.8 and a name
+        // that is no path and none of OxiGuitar's.
+        let own = |interface: &str, name: &str| -> Vec<String> {
+            let m: Manifest =
+                serde_json::from_str(&json(interface, &format!(r#", "folders": ["{name}"]"#)))
+                    .unwrap();
+            m.problems()
+        };
+        assert!(own("1.8", "impulses").is_empty());
+        assert!(own("1.8", "my-captures2").is_empty());
+        assert!(own("1.3", "impulses")[0].contains("interface 1.8"));
+        for bad in [
+            "plugins", "data", "cache", "a.b", "../x", "Up", "", "a/b", "a--b",
+        ] {
+            assert!(
+                own("1.8", bad)
+                    .iter()
+                    .any(|p| p.contains("a folder's name")),
+                "{bad}"
+            );
+        }
+        assert!(!is_folder_name(&"a".repeat(FOLDER_NAME_MAX + 1)));
+        assert_eq!(SharedFolder::of("nam"), Some(SharedFolder::Nam));
+        assert_eq!(SharedFolder::of("impulses"), None);
         assert!(m.track_sections[0].shows_for(InstrumentClass::Fretted));
         assert!(!m.track_sections[0].shows_for(InstrumentClass::Drums));
         let old: Manifest = serde_json::from_str(&json("1.2", keys)).unwrap();

@@ -745,6 +745,14 @@ pub enum HostRequest<'a> {
     /// was loaded since). Answered with [`HostAnswer::Selection`]. Since
     /// interface 1.8.
     Selection,
+    /// Where the shared folder `name` of the plugin's manifest is: every
+    /// OxiGuitar folder that holds one. Answered with
+    /// [`HostAnswer::Folder`]; an error when the manifest doesn't list the
+    /// name. Since interface 1.8.
+    Folder {
+        /// The folder's name, as the manifest lists it.
+        name: String,
+    },
 }
 
 /// The open score as engraved (interface 1.8): what the window shows, in
@@ -915,6 +923,20 @@ pub struct PluginFolders {
     pub shared: Vec<(SharedFolder, String)>,
 }
 
+/// Where a shared folder of a plugin's is (paths as UTF-8 text). Since
+/// interface 1.8.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FolderPlaces {
+    /// The one in the user's OxiGuitar folder, beside `plugins`: where
+    /// the user puts files, and the plugin may write. The host creates it
+    /// at start.
+    pub user: String,
+    /// The same name where it exists beside a system plugin folder or
+    /// beside the program (a package's or a portable copy's files): read
+    /// only, in the order plugins are looked for.
+    pub others: Vec<String>,
+}
+
 /// The host's answer to a [`HostRequest`].
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum HostAnswer<'a> {
@@ -942,6 +964,8 @@ pub enum HostAnswer<'a> {
     /// The caret or the selection; `None` when no score is open. Since
     /// interface 1.8.
     Selection(Option<crate::event::Selection2>),
+    /// Where a shared folder is. Since interface 1.8.
+    Folder(FolderPlaces),
 }
 
 impl HostAnswer<'_> {
@@ -956,6 +980,7 @@ impl HostAnswer<'_> {
             HostAnswer::Folders(f) => HostAnswer::Folders(f),
             HostAnswer::Engraving(e) => HostAnswer::Engraving(e),
             HostAnswer::Selection(s) => HostAnswer::Selection(s),
+            HostAnswer::Folder(f) => HostAnswer::Folder(f),
         }
     }
 }

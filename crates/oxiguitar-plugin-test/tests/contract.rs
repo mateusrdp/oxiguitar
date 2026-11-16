@@ -1017,7 +1017,7 @@ fn interface_1_3_settings_windows_track_sections_links_and_folders() {
     );
 
     // The shared folders come from the manifest alone.
-    assert_eq!(plugins.shared_folders(), [SharedFolder::Soundfonts]);
+    assert_eq!(plugins.shared_folders(), ["soundfonts", "test-files"]);
     assert!(!plugins.found()[0].is_loaded());
 
     // The settings window: its widgets change the plugin's own settings.
@@ -1132,7 +1132,33 @@ fn interface_1_3_settings_windows_track_sections_links_and_folders() {
         None,
     )
     .unwrap();
+    // A folder of the plugin's own name (interface 1.8) is beside
+    // `plugins` wherever OxiGuitar has folders: here a system place holds
+    // one too, as a package's files would.
+    let mut folders = folders;
+    let system = home.join("system");
+    std::fs::create_dir_all(system.join("test-files")).unwrap();
+    folders.system_plugins = vec![system.join("plugins"), home.join("nowhere/plugins")];
     plugins.use_folders(folders.clone());
+    let answer = plugins
+        .call_service("test-echo", "folder", b"test-files")
+        .unwrap();
+    assert_eq!(
+        String::from_utf8(answer)
+            .unwrap()
+            .lines()
+            .collect::<Vec<_>>(),
+        [
+            folders.named("test-files").to_str().unwrap(),
+            system.join("test-files").to_str().unwrap(),
+        ]
+    );
+    assert!(folders.named("test-files").is_dir(), "made on asking");
+    // Only the folders its manifest lists.
+    let e = plugins
+        .call_service("test-echo", "folder", b"nam")
+        .unwrap_err();
+    assert!(e.message.contains("lists no folder"), "{e}");
     let answer = plugins.call_service("test-echo", "folders", b"").unwrap();
     let answer = String::from_utf8(answer).unwrap();
     let lines: Vec<&str> = answer.lines().collect();
@@ -1448,7 +1474,19 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
         core.clone(),
     );
 
-    // Where each tool goes comes from the manifest alone.
+    // Where each tool goes comes from the manifest alone: one has a button
+    // in the toolbar's Plugins section.
+    let toolbar: Vec<(&str, Option<&str>)> = plugins
+        .toolbar_tools()
+        .iter()
+        .map(|t| {
+            (
+                t.spec.id.as_str(),
+                t.spec.toolbar.as_ref().unwrap().text.as_deref(),
+            )
+        })
+        .collect();
+    assert_eq!(toolbar, [("ask", Some("Ask"))]);
     let palette: Vec<(String, Option<char>, Option<String>)> = plugins
         .palette_tools()
         .iter()

@@ -690,6 +690,19 @@ impl Service for TestPlugin {
                 )
                 .into_bytes())
             }
+            // A folder of the plugin's own, by its name in the manifest
+            // (interface 1.8): every place it is, the user's first.
+            "folder" => {
+                let name = std::str::from_utf8(input)
+                    .map_err(|e| Error::new(ErrorKind::Invalid, e.to_string()))?;
+                let places = self.host.folder(name)?;
+                Ok(places
+                    .all()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .into_bytes())
+            }
             _ => Err(Error::not_found(format!("no method {method:?}"))),
         }
     }
