@@ -322,6 +322,78 @@ pub enum Request<'a> {
         /// Closed with OK.
         ok: bool,
     },
+    /// Draw at these places of the open score, each a staff's bar or a beat
+    /// that carries the plugin's data or marks (on the beat or on one of
+    /// its notes). Sent each time the score is engraved, when the places
+    /// changed since the last time, to plugins whose manifest `draws`.
+    /// Answered with [`Answer::Drawn`]. Since interface 1.8.
+    Draw {
+        /// The places.
+        places: Vec<DrawPlace>,
+    },
+}
+
+/// A place a plugin draws at ([`Request::Draw`]). Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum DrawPlace {
+    /// A staff's bar with the plugin's data: drawn at its first beat.
+    Bar {
+        /// The track, staff and bar, from 0.
+        at: [u32; 3],
+        /// The plugin's data on it, a JSON object as text.
+        data: String,
+    },
+    /// A beat with the plugin's data or mark, on it or on one of its notes.
+    Beat {
+        /// The track, staff, bar, voice and beat, from 0.
+        at: [u32; 5],
+        /// The whole beat, its notes and every extension included.
+        beat: Box<crate::score2::Beat2>,
+    },
+}
+
+/// What a plugin draws at one place ([`Answer::Drawn`]): a box, measured in
+/// staff spaces (the distance between two lines of a five-line staff),
+/// with its items from the box's top left corner, y downwards. The core
+/// stands it above the staff, in a lane of its own, from the place's
+/// column rightwards, and scales it with the page. Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Drawn {
+    /// Which of the request's places, by its index.
+    pub place: u32,
+    /// The box's width, at most [`DRAWN_MAX`].
+    pub width: f32,
+    /// Its height, at most [`DRAWN_MAX`].
+    pub height: f32,
+    /// What is in it (a [`crate::display::Item::Text`]'s size is in staff
+    /// spaces too), at most [`DRAWN_ITEMS_MAX`].
+    pub items: Vec<crate::display::Item>,
+}
+
+/// The most staff spaces a drawing may be wide or tall.
+pub const DRAWN_MAX: f32 = 40.0;
+
+/// The most items one drawing may have.
+pub const DRAWN_ITEMS_MAX: usize = 2000;
+
+impl Drawn {
+    /// What is wrong with it, if anything.
+    pub fn problem(&self) -> Option<String> {
+        let size = |v: f32| v.is_finite() && (0.0..=DRAWN_MAX).contains(&v);
+        if !size(self.width) || !size(self.height) {
+            return Some(format!(
+                "a drawing is {} by {} staff spaces; at most {DRAWN_MAX} by {DRAWN_MAX}",
+                self.width, self.height
+            ));
+        }
+        if self.items.len() > DRAWN_ITEMS_MAX {
+            return Some(format!(
+                "a drawing has {} items; at most {DRAWN_ITEMS_MAX}",
+                self.items.len()
+            ));
+        }
+        None
+    }
 }
 
 /// What an effect that follows the score is prepared for. Since interface
@@ -499,6 +571,9 @@ pub enum Answer<'a> {
     /// will follow the new settings (from its next `process` call), false
     /// when it can't while it runs. Since interface 1.5.
     Updated(bool),
+    /// What the plugin draws, for [`Request::Draw`]: at most one drawing a
+    /// place, none where it draws nothing. Since interface 1.8.
+    Drawn(Vec<Drawn>),
 }
 
 impl Answer<'_> {
@@ -538,6 +613,7 @@ impl Answer<'_> {
                 start: start.map(Blob::into_owned),
             },
             Answer::Updated(applied) => Answer::Updated(applied),
+            Answer::Drawn(d) => Answer::Drawn(d),
         }
     }
 }

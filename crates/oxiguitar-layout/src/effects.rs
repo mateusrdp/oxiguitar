@@ -91,6 +91,12 @@ pub(crate) fn draw(p: &Painter<'_>, list: &mut DisplayList, marks: &[Mark<'_>], 
     for m in marks {
         single(p, list, m, g);
     }
+    // Others' drawings, standing on their lane, from the beat's column.
+    if let Some(lane) = g.band.lane(crate::engrave::Lane::Drawn) {
+        for m in marks.iter().filter(|m| !m.beat.drawings.is_empty()) {
+            crate::drawing::draw(p, list, &m.beat.drawings, m.x - 0.5 * p.sp, lane.base);
+        }
+    }
 }
 
 /// Runs of consecutive marks of one voice that `same` says belong

@@ -667,17 +667,10 @@ pub struct Note2 {
     pub ext: Vec<NoteExt>,
 }
 
-impl Score2 {
-    /// Version 2 of a version-1 score, with no extensions.
-    pub fn from_v1(score: Score) -> Score2 {
+impl Beat2 {
+    /// A version-1 beat, with no extensions.
+    pub fn from_v1(b: crate::score::Beat) -> Beat2 {
         use crate::score as v1;
-        let Score {
-            info,
-            initial_tempo,
-            tempo_label,
-            master_bars,
-            tracks,
-        } = score;
         let note = |n: v1::Note| {
             let v1::Note {
                 place,
@@ -693,27 +686,40 @@ impl Score2 {
                 ext: Vec::new(),
             }
         };
-        let beat = |b: v1::Beat| {
-            let v1::Beat {
-                kind,
-                duration,
-                notes,
-                grace,
-                effects,
-                chord,
-                text,
-            } = b;
-            Beat2 {
-                kind,
-                duration,
-                notes: notes.into_iter().map(note).collect(),
-                grace,
-                effects,
-                chord,
-                text,
-                ext: Vec::new(),
-            }
-        };
+        let v1::Beat {
+            kind,
+            duration,
+            notes,
+            grace,
+            effects,
+            chord,
+            text,
+        } = b;
+        Beat2 {
+            kind,
+            duration,
+            notes: notes.into_iter().map(note).collect(),
+            grace,
+            effects,
+            chord,
+            text,
+            ext: Vec::new(),
+        }
+    }
+}
+
+impl Score2 {
+    /// Version 2 of a version-1 score, with no extensions.
+    pub fn from_v1(score: Score) -> Score2 {
+        use crate::score as v1;
+        let Score {
+            info,
+            initial_tempo,
+            tempo_label,
+            master_bars,
+            tracks,
+        } = score;
+        let beat = Beat2::from_v1;
         let bar = |b: v1::Bar| {
             let v1::Bar { clef, voices } = b;
             Bar2 {

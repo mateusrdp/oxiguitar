@@ -40,6 +40,7 @@ mod chord_form;
 mod chord_prefs;
 mod cursor;
 mod document;
+mod drawings;
 mod editing;
 mod effect_form;
 mod engraving;

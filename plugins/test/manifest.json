@@ -45,6 +45,7 @@
     { "id": "ask", "name": "Open the Test Dialog", "description": "Opens the test plugin's dialog and shows its side tab.", "palette": { "section": "Test tools", "symbol": "U+E4A0" }, "menu": "Page", "toolbar": { "text": "Ask" } }
   ],
   "settings_window": true,
+  "draws": true,
   "track_sections": [
     { "id": "test", "title": "Test section", "does_not_play": ["drums"] }
   ],

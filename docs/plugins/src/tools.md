@@ -86,7 +86,7 @@ Put them on your copy of the score and hand it back with `host.apply`; take them
 - `pages`: each page's `width` and `height` in points, and its drawing as the canvas's own items ([Tabs](tabs.md#the-canvas)): text in the text or the music font, lines, rectangles and paths, in the four colour roles;
 - `beats`: where each beat is: its `track`, `staff`, `bar`, `voice` and `beat`, the `page` it is on, and its box on that page (`x`, `y`, `width`, `height`, in points; the box spans its staff's height).
 
-Read it to place something of your own in a canvas, to measure the page, or to find what is drawn where. To put something on the page itself, give a beat a mark (above) and hand the score back: the core engraves it, so it prints, exports and scrolls as the rest does. A plugin never draws on the page directly.
+Read it to place something of your own in a canvas, to measure the page, or to find what is drawn where. To put something on the page itself, draw it ([Drawing on the page](drawing.md)), or for a few characters give a beat a mark (above).
 
 ## The score, version 2
 

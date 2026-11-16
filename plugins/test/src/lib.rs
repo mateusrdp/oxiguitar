@@ -83,6 +83,7 @@ pub struct TestPlugin {
     settings: SettingsWindow,
     fake: fake::Fake,
     raw: Raw,
+    drawer: StampDrawer,
 }
 
 /// The first bytes of a file the exporter `raw` writes: then the rate
@@ -485,6 +486,67 @@ impl Tab for Ask {
     }
 }
 
+/// Draws a stamp over each stamped beat (interface 1.8): a box with an S in
+/// it, 2.4 by 1.6 staff spaces. Counts the requests, for the contract
+/// suite's test that the same places aren't asked about twice.
+#[derive(Debug, Default)]
+struct StampDrawer {
+    asked: std::sync::atomic::AtomicU32,
+}
+
+/// How wide and tall the stamp is, in staff spaces.
+pub const STAMP_BOX: (f32, f32) = (2.4, 1.6);
+
+impl oxiguitar_plugin::Drawer for StampDrawer {
+    fn draw(
+        &self,
+        places: &[oxiguitar_plugin::DrawPlace],
+    ) -> Result<Vec<oxiguitar_plugin::Drawn>, Error> {
+        use oxiguitar_plugin::display::PathCmd;
+        use oxiguitar_plugin::score2::BeatExt;
+        self.asked
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let (w, h) = STAMP_BOX;
+        let p = Point::new;
+        Ok(places
+            .iter()
+            .enumerate()
+            .filter(|(_, place)| match place {
+                oxiguitar_plugin::DrawPlace::Beat { beat, .. } => beat.ext.iter().any(
+                    |e| matches!(e, BeatExt::Plugin { plugin, data } if plugin == ID && data == STAMP),
+                ),
+                oxiguitar_plugin::DrawPlace::Bar { .. } => false,
+            })
+            .map(|(i, _)| oxiguitar_plugin::Drawn {
+                place: i as u32,
+                width: w,
+                height: h,
+                items: vec![
+                    Item::Path {
+                        cmds: vec![
+                            PathCmd::MoveTo(p(0.1, 0.1)),
+                            PathCmd::LineTo(p(w - 0.1, 0.1)),
+                            PathCmd::LineTo(p(w - 0.1, h - 0.1)),
+                            PathCmd::LineTo(p(0.1, h - 0.1)),
+                            PathCmd::Close,
+                        ],
+                        fill: None,
+                        stroke: Some((0.12, Paint::Accent)),
+                    },
+                    Item::Text {
+                        text: "S".into(),
+                        at: p(w / 2.0, h - 0.4),
+                        size: 1.2,
+                        font: Font::Sans,
+                        anchor: Anchor::Middle,
+                        paint: Paint::Accent,
+                    },
+                ],
+            })
+            .collect())
+    }
+}
+
 /// The panel canvas's size, in its own units.
 pub const CANVAS: (f32, f32) = (100.0, 50.0);
 
@@ -507,8 +569,13 @@ impl Plugin for TestPlugin {
             settings: SettingsWindow { host: host.clone() },
             fake: fake::Fake::new(host.clone()),
             raw: Raw::default(),
+            drawer: StampDrawer::default(),
             host,
         })
+    }
+
+    fn drawer(&self) -> Option<&dyn oxiguitar_plugin::Drawer> {
+        Some(&self.drawer)
     }
 
     fn audio_exporter(&self, id: &str) -> Option<&dyn oxiguitar_plugin::AudioExporter> {
@@ -637,6 +704,13 @@ impl Service for TestPlugin {
     fn call(&self, method: &str, input: &[u8]) -> Result<Vec<u8>, Error> {
         match method {
             "echo" => Ok(input.to_vec()),
+            // How many times it was asked to draw (interface 1.8).
+            "drawn" => Ok(self
+                .drawer
+                .asked
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .to_string()
+                .into_bytes()),
             // Crashes OxiGuitar, as a plugin with a bug would: in its code
             // on the calling thread, or on a thread of its own. For the
             // contract suite's test of crash reports, run in a process of

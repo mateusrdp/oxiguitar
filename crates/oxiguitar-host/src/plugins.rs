@@ -65,9 +65,9 @@ use oxiguitar_plugin_api::manifest::{
     SharedFolder, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
-    Answer, Availability, Engraving, Error, ErrorKind, FolderPlaces, HostAnswer, HostRequest, Link,
-    LogEntry, PlayedBeat, PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request,
-    TrackInfo, decode, encode, outcome,
+    Answer, Availability, DrawPlace, Drawn, Engraving, Error, ErrorKind, FolderPlaces, HostAnswer,
+    HostRequest, Link, LogEntry, PlayedBeat, PluginFolders, Prepare, PrepareEffect,
+    PrepareFollowing, Request, TrackInfo, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
@@ -226,7 +226,13 @@ struct Inner {
     /// The folders are only read (`oxiguitar-cli`): a plugin's own folders
     /// are named but not created.
     read_only: std::sync::atomic::AtomicBool,
+    /// Each drawing plugin's last request (encoded) and what it drew then
+    /// (interface 1.8): the same places aren't asked about twice.
+    drawn: Mutex<HashMap<usize, LastDrawn>>,
 }
+
+/// A drawing plugin's last request, encoded, and its answer.
+type LastDrawn = (Vec<u8>, Vec<Drawn>);
 
 impl Drop for Inner {
     fn drop(&mut self) {
@@ -765,6 +771,7 @@ impl Plugins {
             advised: Mutex::new(HashSet::new()),
             folders: OnceLock::new(),
             read_only: std::sync::atomic::AtomicBool::new(false),
+            drawn: Mutex::new(HashMap::new()),
         }))
     }
 
@@ -1429,6 +1436,112 @@ impl Plugins {
                 })
             })
             .collect()
+    }
+
+    /// The ids of the ready plugins that draw on the page (interface 1.8),
+    /// in plugin order.
+    pub fn drawers(&self) -> Vec<String> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(8) && m.draws)
+            .map(|(_, _, m)| m.id.clone())
+            .collect()
+    }
+
+    /// What the plugin `plugin` draws at `places` (interface 1.8): its
+    /// answer to [`Request::Draw`], or the last one when the places are the
+    /// same as last time. No places, no request: nothing is drawn. A
+    /// plugin that can't draw, or answers with a drawing that breaks the
+    /// interface's limits, draws nothing, and the footer says why.
+    pub fn draw(&self, plugin: &str, places: Vec<DrawPlace>) -> Vec<Drawn> {
+        let Some((index, found, _)) = self
+            .ready()
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.draws)
+        else {
+            return Vec::new();
+        };
+        if places.is_empty() {
+            self.0
+                .drawn
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .remove(&index);
+            return Vec::new();
+        }
+        let count = places.len();
+        let request = Request::Draw { places };
+        let Ok(bytes) = encode(&request) else {
+            return Vec::new();
+        };
+        if let Some((last, drawn)) = self
+            .0
+            .drawn
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .get(&index)
+            && *last == bytes
+        {
+            return drawn.clone();
+        }
+        let drawn = match self.drawn_by(index, &request, count) {
+            Ok(drawn) => drawn,
+            Err(e) => {
+                if found.failure().is_none() {
+                    let name = found.name();
+                    self.0
+                        .core
+                        .notify(Level::Warning, format!("{name} couldn't draw: {e}"));
+                }
+                Vec::new()
+            }
+        };
+        self.0
+            .drawn
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .insert(index, (bytes, drawn.clone()));
+        drawn
+    }
+
+    /// Asks the plugin `plugin` to draw at `places` (interface 1.8), as
+    /// [`Plugins::draw`] does but each time, with what goes wrong as an
+    /// error: a drawing that breaks the interface's limits, or one at a
+    /// place it wasn't given. For the contract suite.
+    pub fn try_draw(&self, plugin: &str, places: Vec<DrawPlace>) -> Result<Vec<Drawn>, Error> {
+        let Some((index, _, _)) = self
+            .ready()
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.draws)
+        else {
+            return Err(Error::not_found(format!(
+                "no usable plugin {plugin:?} draws"
+            )));
+        };
+        let count = places.len();
+        self.drawn_by(index, &Request::Draw { places }, count)
+    }
+
+    fn drawn_by(
+        &self,
+        index: usize,
+        request: &Request<'_>,
+        count: usize,
+    ) -> Result<Vec<Drawn>, Error> {
+        match self.request(index, request)? {
+            Answer::Drawn(drawn) => {
+                for d in &drawn {
+                    if let Some(why) = d.problem() {
+                        return Err(Error::new(ErrorKind::Invalid, why));
+                    }
+                    if d.place as usize >= count {
+                        return Err(Error::new(
+                            ErrorKind::Invalid,
+                            format!("it drew at place {}, and was given {count}", d.place),
+                        ));
+                    }
+                }
+                Ok(drawn)
+            }
+            other => Err(self.unexpected(index, &other)),
+        }
     }
 
     /// Runs a plugin's tool, loading the plugin if needed; returns what it
@@ -2107,6 +2220,7 @@ impl Plugins {
                 "an export's bytes"
             }
             Answer::Updated(_) => "an update's answer",
+            Answer::Drawn(_) => "drawings",
         };
         self.fail(
             index,
@@ -2926,6 +3040,7 @@ mod tests {
             advised: Mutex::new(HashSet::new()),
             folders: OnceLock::new(),
             read_only: std::sync::atomic::AtomicBool::new(false),
+            drawn: Mutex::new(HashMap::new()),
         }));
         assert_eq!(
             plugins.replaced_ids(),

@@ -97,6 +97,11 @@ pub struct Manifest {
     /// The tools it adds to the Tools menu. Since interface 1.2.
     #[serde(default)]
     pub tools: Vec<ToolSpec>,
+    /// Whether it draws on the page at the bars and beats that carry its
+    /// data or marks (`Request::Draw`), each time the score is engraved.
+    /// Since interface 1.8.
+    #[serde(default)]
+    pub draws: bool,
     /// Whether it has a settings window, opened from the plugin manager's
     /// Settings… (`Request::SettingsWindow`). Since interface 1.3.
     #[serde(default)]
@@ -665,6 +670,12 @@ impl Manifest {
             if self.folders.iter().any(|f| SharedFolder::of(f).is_none()) {
                 out.push(format!(
                     "folders other than \"soundfonts\" and \"nam\" need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.draws {
+                out.push(format!(
+                    "drawing on the page needs interface {since_1_8}, and the manifest asks for {}",
                     self.interface
                 ));
             }

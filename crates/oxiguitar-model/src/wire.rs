@@ -138,6 +138,17 @@ pub fn to_wire2(score: &Score) -> w2::Score2 {
     out
 }
 
+/// One beat in the score version 2, with every extension: what a plugin
+/// that draws at it is given (interface 1.8), without the whole score.
+pub fn beat_to_wire2(beat: &Beat) -> w2::Beat2 {
+    let mut out = w2::Beat2::from_v1(beat_to(beat));
+    out.ext = beat_ext_to(beat);
+    for (n, wn) in beat.notes.iter().zip(&mut out.notes) {
+        wn.ext = note_ext_to(n);
+    }
+    out
+}
+
 /// The model form of a score, version 2, a plugin sent: as [`from_wire`],
 /// with the extensions.
 pub fn from_wire2(score: w2::Score2) -> Result<Score, String> {

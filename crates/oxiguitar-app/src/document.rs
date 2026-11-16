@@ -976,10 +976,12 @@ impl Engraver {
         settings: &Settings,
         marked: BTreeSet<(usize, usize, usize)>,
         bar_colour_global: bool,
+        drawings: oxiguitar_layout::Drawings,
     ) -> Engraved {
         let options = Options {
             marked,
             bar_colour_global,
+            drawings,
             ..settings.options()
         };
         engrave(score, &self.fonts, &self.meta, &options)
@@ -991,15 +993,17 @@ impl Engraver {
         &self,
         doc: &Document,
         settings: &Settings,
+        drawings: oxiguitar_layout::Drawings,
     ) -> Result<(Vec<u8>, usize), String> {
         let paged = Settings {
             layout: Layout::Page,
             active_voice: None,
             ..settings.clone()
         };
-        // A PDF shows what the file says: no marks, every voice in ink.
+        // A PDF shows what the file says: no marks, every voice in ink;
+        // what plugins draw is printed as it is shown.
         let pages = self
-            .engrave(&doc.score, &paged, BTreeSet::new(), false)
+            .engrave(&doc.score, &paged, BTreeSet::new(), false, drawings)
             .pages;
         let refs: Vec<&DisplayList> = pages.iter().collect();
         let bytes = oxiguitar_render::to_pdf(&refs, &self.fonts, &Theme::PRINT, &doc.title())
@@ -1042,7 +1046,7 @@ mod tests {
                 ..Settings::default()
             };
             assert_eq!(
-                e.engrave(&doc.score, &s, BTreeSet::new(), false)
+                e.engrave(&doc.score, &s, BTreeSet::new(), false, Default::default())
                     .pages
                     .len(),
                 1,
@@ -1057,6 +1061,7 @@ mod tests {
                     paper: Paper::Letter,
                     ..Settings::default()
                 },
+                Default::default(),
             )
             .unwrap();
         assert!(pdf.starts_with(b"%PDF"));

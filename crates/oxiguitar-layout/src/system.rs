@@ -130,7 +130,13 @@ pub(crate) struct Plans {
     pub(crate) grids: Vec<BarGrid>,
 }
 
-pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics: bool) -> Plans {
+pub(crate) fn plan_all(
+    score: &Score,
+    views: &[View],
+    p: &Painter<'_>,
+    dynamics: bool,
+    drawings: &crate::drawing::Drawings,
+) -> Plans {
     let empty = Bar::default();
     // Grand staves, split once per track and staff.
     let mut hands: HashMap<(usize, usize), (Staff, Staff, Staff)> = HashMap::new();
@@ -174,6 +180,7 @@ pub(crate) fn plan_all(score: &Score, views: &[View], p: &Painter<'_>, dynamics:
                 tab_gap: TAB_GAP * p.sp,
                 show_std: v.show_std,
                 show_tab: v.show_tab,
+                drawn: matches!(v.part, Part::Whole).then_some(((v.track, v.staff), drawings)),
             };
             let mut planned: Vec<BarPlan> = score
                 .master_bars

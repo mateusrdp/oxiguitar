@@ -121,10 +121,10 @@ fn the_test_plugin_passes_the_contract() {
     // tools; the settings window and its 2 widgets; the track section and
     // its 2 widgets; 2 instruments and an effect, 4 real-time checks each;
     // the effect's 3 checks of an update (interface 1.5); the exporter's 3
-    // checks.
+    // checks; its drawing (interface 1.8).
     assert_eq!(
         report.passed.len(),
-        12 + 3 + 10 + 4 + 1 + 4 + 4 + 3 + 3 + 3 * 4 + 3 + 3,
+        12 + 3 + 10 + 4 + 1 + 4 + 4 + 3 + 3 + 3 * 4 + 3 + 3 + 1,
         "{:#?}",
         report.passed
     );
@@ -214,6 +214,72 @@ fn crashing_child() {
     );
     let _ = plugins.call_service("test-echo", &how, b"");
     unreachable!("the plugin crashes");
+}
+
+#[test]
+fn a_plugin_draws_at_its_places_and_isnt_asked_twice_about_the_same() {
+    use oxiguitar_host::api::message::DrawPlace;
+    use oxiguitar_host::api::score2::{Beat2, BeatExt};
+    let dir = folder("draws", &["test.oxp"]);
+    let (plugins, heard) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    assert_eq!(plugins.drawers(), ["oxiguitar.test"]);
+    let asked = || {
+        String::from_utf8(plugins.call_service("test-echo", "drawn", b"").unwrap())
+            .unwrap()
+            .parse::<u32>()
+            .unwrap()
+    };
+    let beat = |stamped: bool| {
+        let mut b = Beat2::from_v1(oxiguitar_host::api::score::Beat {
+            kind: oxiguitar_host::api::score::BeatKind::Rest,
+            duration: oxiguitar_host::api::score::Duration {
+                value: oxiguitar_host::api::score::NoteValue::Quarter,
+                dots: 0,
+                tuplets: Vec::new(),
+            },
+            notes: Vec::new(),
+            grace: None,
+            effects: Default::default(),
+            chord: None,
+            text: String::new(),
+        });
+        if stamped {
+            b.ext.push(BeatExt::Plugin {
+                plugin: "oxiguitar.test".into(),
+                data: r#"{"stamped":true}"#.into(),
+            });
+        }
+        DrawPlace::Beat {
+            at: [0, 0, 0, 0, 0],
+            beat: Box::new(b),
+        }
+    };
+    let before = asked();
+    // A stamped beat gets the stamp; one that isn't, nothing.
+    let drawn = plugins.draw("oxiguitar.test", vec![beat(false), beat(true)]);
+    assert_eq!(drawn.len(), 1);
+    assert_eq!(drawn[0].place, 1);
+    assert_eq!((drawn[0].width, drawn[0].height), (2.4, 1.6));
+    assert_eq!(asked(), before + 1);
+    // The same places again: the last answer, not a new request.
+    assert_eq!(
+        plugins.draw("oxiguitar.test", vec![beat(false), beat(true)]),
+        drawn
+    );
+    assert_eq!(asked(), before + 1);
+    // Other places: asked again.
+    assert!(plugins.draw("oxiguitar.test", vec![beat(false)]).is_empty());
+    assert_eq!(asked(), before + 2);
+    // None: nothing drawn, nothing asked.
+    assert!(plugins.draw("oxiguitar.test", Vec::new()).is_empty());
+    assert_eq!(asked(), before + 2);
+    // A plugin that doesn't draw is never asked.
+    assert!(plugins.draw("someone.else", vec![beat(true)]).is_empty());
+    assert!(
+        heard.0.lock().unwrap().is_empty(),
+        "{:?}",
+        heard.0.lock().unwrap()
+    );
 }
 
 #[test]

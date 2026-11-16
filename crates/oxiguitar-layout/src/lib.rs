@@ -25,10 +25,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use oxiguitar_model::{Score, Track};
 
+pub use drawing::{Anchor, Drawing, Drawings, DrawnAt, Shape};
 pub use hits::{BarHits, BeatHit, Found, Hits, Spot, StaffHits, SystemHits};
 pub use pitch::pitch_at_step;
 
 mod draw;
+mod drawing;
 mod effects;
 mod engrave;
 mod grid;
@@ -177,6 +179,9 @@ pub struct Options {
     /// they apply to the current track only (`SetTrackBarColor` → read
     /// `track_bar_colors`).
     pub bar_colour_global: bool,
+    /// What plugins draw at bars and beats (interface 1.8), in staff
+    /// spaces: drawn in a lane of their own above the staff.
+    pub drawings: Drawings,
 }
 
 /// Which notations a track shows (VIEW-1).
@@ -251,6 +256,7 @@ impl Default for Options {
             active_voice: None,
             design: false,
             bar_colour_global: false,
+            drawings: Drawings::new(),
         }
     }
 }
@@ -291,7 +297,7 @@ pub fn engrave(score: &Score, fonts: &FontSet, meta: &Metadata, options: &Option
             Layout::Horizontal => f32::INFINITY,
             _ => (sheet_width - 2.0 * options.margin).max(10.0 * sp),
         };
-        let plans = system::plan_all(score, &views, &painter, options.dynamics);
+        let plans = system::plan_all(score, &views, &painter, options.dynamics, &options.drawings);
         let stored = system::stored_layout(score, &views, layout);
         let systems = system::break_systems(score, &views, &plans, &painter, (width, stored));
         let drawn: Vec<engrave::DrawnSystem> = systems

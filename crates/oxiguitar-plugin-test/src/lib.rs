@@ -448,6 +448,51 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
             },
         );
     }
+    // Drawing on the page (interface 1.8): a bar and a beat that carry the
+    // plugin's data (an empty object, since the suite can't know what it
+    // keeps) get drawings within the interface's limits, or none.
+    for plugin in plugins.drawers() {
+        use oxiguitar_host::api::message::DrawPlace;
+        use oxiguitar_host::api::score::{Beat, BeatKind, Duration, NoteValue};
+        use oxiguitar_host::api::score2::{Beat2, BeatExt};
+        let mut beat = Beat2::from_v1(Beat {
+            kind: BeatKind::Rest,
+            duration: Duration {
+                value: NoteValue::Quarter,
+                dots: 0,
+                tuplets: Vec::new(),
+            },
+            notes: Vec::new(),
+            grace: None,
+            effects: Default::default(),
+            chord: None,
+            text: String::new(),
+        });
+        beat.ext.push(BeatExt::Plugin {
+            plugin: plugin.clone(),
+            data: "{}".into(),
+        });
+        let places = vec![
+            DrawPlace::Bar {
+                at: [0, 0, 0],
+                data: "{}".into(),
+            },
+            DrawPlace::Beat {
+                at: [0, 0, 0, 0, 0],
+                beat: Box::new(beat),
+            },
+        ];
+        report.check(
+            "it draws within the interface's limits",
+            match plugins.try_draw(&plugin, places) {
+                Ok(_) => Ok(()),
+                Err(e) if e.kind == oxiguitar_host::api::message::ErrorKind::Invalid => {
+                    Err(e.message)
+                }
+                Err(e) => not_a_crash(&e),
+            },
+        );
+    }
     // The settings window and the track dialog's sections (interface 1.3).
     if let Some(found) = plugins.with_settings_window().first() {
         let content = plugins.settings_window(found);

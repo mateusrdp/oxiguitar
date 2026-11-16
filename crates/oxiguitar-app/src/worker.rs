@@ -512,7 +512,8 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     continue;
                 };
                 let name = file_name(&path);
-                let message = match st.engraver.pdf(doc, &settings) {
+                let drawings = crate::drawings::of(&st.plugins, &doc.score);
+                let message = match st.engraver.pdf(doc, &settings, drawings) {
                     Ok((bytes, pages)) => match std::fs::write(&path, bytes) {
                         Ok(()) => (
                             Level::Info,
@@ -645,11 +646,14 @@ fn engrave(st: &mut State, sink: &dyn Fn(Event)) {
         return;
     };
     st.stale = false;
+    // What plugins draw, asked of them first (interface 1.8).
+    let drawings = crate::drawings::of(&st.plugins, &doc.score);
     let engraved = st.engraver.engrave(
         &doc.score,
         &st.settings,
         doc.marked(),
         doc.bar_colour_global,
+        drawings,
     );
     st.sheets = Sheets::stack(engraved.pages);
     st.engraving += 1;

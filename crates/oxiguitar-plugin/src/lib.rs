@@ -61,7 +61,7 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::manifest::SharedFolder;
 pub use oxiguitar_plugin_api::message::{
-    Advice, Availability, Error, ErrorKind, Level, LogEntry, TrackInfo,
+    Advice, Availability, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -146,6 +146,12 @@ pub trait Plugin: Send + Sync + 'static {
     /// The tool `id` (an id from the manifest's `tools`; interface 1.2).
     fn tool(&self, id: &str) -> Option<&dyn Tool> {
         let _ = id;
+        None
+    }
+
+    /// What draws on the page, for a manifest with `draws` (interface
+    /// 1.8).
+    fn drawer(&self) -> Option<&dyn Drawer> {
         None
     }
 
@@ -327,6 +333,17 @@ pub trait Tool: Send + Sync {
     fn run(&self) -> Result<String, Error>;
 }
 
+/// Draws on the page (interface 1.8), at the bars and beats that carry the
+/// plugin's data or marks: [`Request::Draw`]'s places. Asked each time the
+/// score is engraved and those places changed, so keep it quick and pure:
+/// the same places, the same drawings.
+pub trait Drawer: Send + Sync {
+    /// What to draw at each place: at most one [`Drawn`] a place (its
+    /// `place` the index in `places`), in staff spaces, from the box's top
+    /// left corner; none where nothing is drawn.
+    fn draw(&self, places: &[DrawPlace]) -> Result<Vec<Drawn>, Error>;
+}
+
 /// A tab in one of the window's areas (docs/design/plugins.md, "What
 /// plugins contribute"): standard widgets the core draws, and a canvas the
 /// plugin draws.
@@ -478,6 +495,12 @@ pub fn dispatch_kept(
                 data: Blob::owned(data),
                 losses,
             })
+        }
+        Request::Draw { places } => {
+            let drawer = plugin
+                .drawer()
+                .ok_or_else(|| Error::not_found("this plugin draws nothing"))?;
+            Ok(Answer::Drawn(drawer.draw(&places)?))
         }
         Request::Tool { tool } => {
             let tool = plugin
