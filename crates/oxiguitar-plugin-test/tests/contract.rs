@@ -121,10 +121,10 @@ fn the_test_plugin_passes_the_contract() {
     // tools; the settings window and its 2 widgets; the track section and
     // its 2 widgets; 2 instruments and an effect, 4 real-time checks each;
     // the effect's 3 checks of an update (interface 1.5); the exporter's 3
-    // checks; its drawing (interface 1.8).
+    // checks; its drawing and its playing of a track (interface 1.8).
     assert_eq!(
         report.passed.len(),
-        12 + 3 + 10 + 4 + 1 + 4 + 4 + 3 + 3 + 3 * 4 + 3 + 3 + 1,
+        12 + 3 + 10 + 4 + 1 + 4 + 4 + 3 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
         "{:#?}",
         report.passed
     );
@@ -1488,6 +1488,87 @@ fn peak_of(
     engine.render(&mut out, 2, 0);
     control.collect();
     peak
+}
+
+#[test]
+fn a_plugin_plays_the_notes_its_own_way_and_isnt_asked_twice_about_the_same() {
+    use oxiguitar_play::Timeline;
+    use oxiguitar_play::plugin_source::perform;
+
+    let dir = folder("performs", &["test.oxp"]);
+    let (plugins, heard) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    assert_eq!(plugins.performers(), ["oxiguitar.test"]);
+    let asked = || {
+        String::from_utf8(plugins.call_service("test-echo", "performed", b"").unwrap())
+            .unwrap()
+            .parse::<u32>()
+            .unwrap()
+    };
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let mut score =
+        oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
+            .unwrap()
+            .score;
+    let tracks = score.tracks.len() as u32;
+    // Unstamped, every note plays as written, and each track is asked once.
+    let written = Timeline::new(&score);
+    let before = asked();
+    let mut played = Timeline::new(&score);
+    perform(&plugins, &score, &mut played);
+    assert_eq!(asked(), before + tracks);
+    let keys = |t: &Timeline| {
+        let mut k: Vec<_> = t
+            .notes
+            .iter()
+            .map(|n| (n.track, n.visit, n.beat, n.string, n.key))
+            .collect();
+        k.sort();
+        k
+    };
+    assert_eq!(keys(&played), keys(&written));
+    // The same notes again: the last answers, no new requests.
+    let mut again = Timeline::new(&score);
+    perform(&plugins, &score, &mut again);
+    assert_eq!(asked(), before + tracks);
+    // The first beat with notes stamped: its notes play an octave up.
+    let first = written.notes.iter().find(|n| n.track == 0).unwrap().clone();
+    let bar = written.map.visits[first.visit].visit.bar;
+    score.tracks[0].staves[first.staff].bars[bar].voices[first.voice].beats[first.beat]
+        .plugins
+        .insert("oxiguitar.test".into(), r#"{"stamped":true}"#.into());
+    let mut stamped = Timeline::new(&score);
+    perform(&plugins, &score, &mut stamped);
+    let up = |n: &oxiguitar_play::NoteEvent| {
+        n.track == 0
+            && n.staff == first.staff
+            && written.map.visits[n.visit].visit.bar == bar
+            && n.voice == first.voice
+            && n.beat == first.beat
+    };
+    let mut expected: Vec<_> = written
+        .notes
+        .iter()
+        .map(|n| {
+            (
+                n.track,
+                n.visit,
+                n.beat,
+                n.string,
+                if up(n) { n.key + 12 } else { n.key },
+            )
+        })
+        .collect();
+    expected.sort();
+    assert_eq!(keys(&stamped), expected);
+    assert!(stamped.notes.iter().filter(|n| up(n)).count() > 0);
+    // Only the changed track was asked again.
+    assert_eq!(asked(), before + tracks + 1);
+    assert!(
+        heard.0.lock().unwrap().is_empty(),
+        "{:?}",
+        heard.0.lock().unwrap()
+    );
 }
 
 #[test]

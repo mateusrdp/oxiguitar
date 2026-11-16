@@ -46,6 +46,7 @@
   ],
   "settings_window": true,
   "draws": true,
+  "performs": true,
   "track_sections": [
     { "id": "test", "title": "Test section", "does_not_play": ["drums"] }
   ],

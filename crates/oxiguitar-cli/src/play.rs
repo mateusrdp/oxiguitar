@@ -154,7 +154,9 @@ fn play(asked: &Asked) -> Result<(), String> {
     // amp, say) and what plugins keep in the score, for the effects that
     // follow it.
     crate::plugins::apply_sidecar(&asked.path, &mut score)?;
-    let timeline = Timeline::new(&score);
+    let mut timeline = Timeline::new(&score);
+    // As the plugins that play notes their own way play them.
+    plugin_source::perform(plugins(), &score, &mut timeline);
     let visits = timeline.visits();
     let start_of = |bar: usize| -> Result<f64, String> {
         visits

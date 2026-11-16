@@ -84,6 +84,7 @@ pub struct TestPlugin {
     fake: fake::Fake,
     raw: Raw,
     drawer: StampDrawer,
+    performer: StampPerformer,
 }
 
 /// The first bytes of a file the exporter `raw` writes: then the rate
@@ -494,6 +495,50 @@ struct StampDrawer {
     asked: std::sync::atomic::AtomicU32,
 }
 
+/// Plays the notes of stamped beats an octave up (interface 1.8), as a
+/// plugin that plays the notes its own way would; others as they are.
+#[derive(Debug, Default)]
+struct StampPerformer {
+    asked: std::sync::atomic::AtomicU32,
+}
+
+impl oxiguitar_plugin::Performer for StampPerformer {
+    fn perform(
+        &self,
+        track: &oxiguitar_plugin::Perform,
+    ) -> Result<Vec<oxiguitar_plugin::PlayedNote>, Error> {
+        use oxiguitar_plugin::score2::BeatExt;
+        self.asked
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let stamped: Vec<(u32, u32, u32, u32)> = track
+            .beats
+            .iter()
+            .filter(|b| {
+                b.ext.iter().any(
+                    |e| matches!(e, BeatExt::Plugin { plugin, data } if plugin == ID && data == STAMP),
+                )
+            })
+            .map(|b| (b.staff, b.bar, b.voice, b.beat))
+            .collect();
+        Ok(track
+            .notes
+            .iter()
+            .cloned()
+            .map(|mut n| {
+                let bar = track
+                    .visits
+                    .get(n.visit as usize)
+                    .copied()
+                    .unwrap_or(u32::MAX);
+                if stamped.contains(&(n.staff, bar, n.voice, n.beat)) {
+                    n.key = n.key.saturating_add(12).min(127);
+                }
+                n
+            })
+            .collect())
+    }
+}
+
 /// How wide and tall the stamp is, in staff spaces.
 pub const STAMP_BOX: (f32, f32) = (2.4, 1.6);
 
@@ -570,12 +615,17 @@ impl Plugin for TestPlugin {
             fake: fake::Fake::new(host.clone()),
             raw: Raw::default(),
             drawer: StampDrawer::default(),
+            performer: StampPerformer::default(),
             host,
         })
     }
 
     fn drawer(&self) -> Option<&dyn oxiguitar_plugin::Drawer> {
         Some(&self.drawer)
+    }
+
+    fn performer(&self) -> Option<&dyn oxiguitar_plugin::Performer> {
+        Some(&self.performer)
     }
 
     fn audio_exporter(&self, id: &str) -> Option<&dyn oxiguitar_plugin::AudioExporter> {
@@ -705,6 +755,13 @@ impl Service for TestPlugin {
         match method {
             "echo" => Ok(input.to_vec()),
             // How many times it was asked to draw (interface 1.8).
+            // How many times it was asked to play a track (interface 1.8).
+            "performed" => Ok(self
+                .performer
+                .asked
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .to_string()
+                .into_bytes()),
             "drawn" => Ok(self
                 .drawer
                 .asked

@@ -331,6 +331,99 @@ pub enum Request<'a> {
         /// The places.
         places: Vec<DrawPlace>,
     },
+    /// How one track is to be played: its notes as the score gives them,
+    /// for a plugin whose manifest `performs` to give back as they should
+    /// sound. Sent when the song is got ready to play or export, when the
+    /// notes changed since the last time. Answered with
+    /// [`Answer::Performed`]. Since interface 1.8.
+    Perform(Box<Perform>),
+}
+
+/// One track's notes as played ([`Request::Perform`]). Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Perform {
+    /// The track, from 0.
+    pub track: u32,
+    /// Its class of instrument.
+    pub class: crate::class::InstrumentClass,
+    /// The bar each visit plays, in playing order (repeats unrolled): a
+    /// note's `visit` indexes it.
+    pub visits: Vec<u32>,
+    /// Its notes, by start time, as the score gives them (or as the
+    /// performing plugins before this one gave them back).
+    pub notes: Vec<PlayedNote>,
+    /// Its beats that carry marks or plugins' data, as effects that follow
+    /// the score get them ([`PlayedBeat`]): where a plugin finds its own.
+    pub beats: Vec<PlayedBeat>,
+}
+
+/// A note as played, in the form instruments get it
+/// ([`crate::realtime::RtNote`]) with its place in the score. Since
+/// interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PlayedNote {
+    /// Its staff in the track, from 0.
+    pub staff: u32,
+    /// Its voice.
+    pub voice: u32,
+    /// The visit of its bar ([`Perform::visits`]).
+    pub visit: u32,
+    /// Its beat in the voice.
+    pub beat: u32,
+    /// Its string, 1 for the highest; 0 for none.
+    pub string: u8,
+    /// The sounding MIDI key at its start, 0 to 127.
+    pub key: u8,
+    /// When it starts, in seconds of the score at 100 % speed.
+    pub start: f64,
+    /// When it ends; not before it starts.
+    pub end: f64,
+    /// MIDI velocity, 1 to 127.
+    pub velocity: u8,
+    /// [`crate::realtime::sound`].
+    pub sound: u8,
+    /// [`crate::realtime::harmonic`], for a harmonic.
+    pub harmonic: u8,
+    /// [`crate::realtime::attack`].
+    pub attack: u8,
+    /// [`crate::realtime::flags`].
+    pub flags: u16,
+    /// Its pitch curve: (seconds, cents from its key), in time order; none
+    /// for a steady pitch.
+    pub pitch: Vec<(f64, i32)>,
+}
+
+/// The most notes a performing plugin may give back for one track.
+pub const PERFORMED_MAX: usize = 1_000_000;
+
+impl PlayedNote {
+    /// What is wrong with it, if anything, for a track with `visits`
+    /// visits.
+    pub fn problem(&self, visits: usize) -> Option<String> {
+        if self.key > 127 || !(1..=127).contains(&self.velocity) {
+            return Some(format!(
+                "a note has key {} and velocity {}; keys are 0 to 127, velocities 1 to 127",
+                self.key, self.velocity
+            ));
+        }
+        if !self.start.is_finite()
+            || !self.end.is_finite()
+            || self.end < self.start
+            || self.start < 0.0
+        {
+            return Some(format!(
+                "a note starts at {} and ends at {} seconds",
+                self.start, self.end
+            ));
+        }
+        if self.visit as usize >= visits {
+            return Some(format!("a note is in visit {}, of {visits}", self.visit));
+        }
+        if self.pitch.iter().any(|(t, _)| !t.is_finite()) {
+            return Some("a note's pitch curve has a time that isn't a number".to_owned());
+        }
+        None
+    }
 }
 
 /// A place a plugin draws at ([`Request::Draw`]). Since interface 1.8.
@@ -574,6 +667,10 @@ pub enum Answer<'a> {
     /// What the plugin draws, for [`Request::Draw`]: at most one drawing a
     /// place, none where it draws nothing. Since interface 1.8.
     Drawn(Vec<Drawn>),
+    /// The track's notes as they should sound, for [`Request::Perform`]:
+    /// changed, added or left out as the plugin plays them. Since
+    /// interface 1.8.
+    Performed(Vec<PlayedNote>),
 }
 
 impl Answer<'_> {
@@ -614,6 +711,7 @@ impl Answer<'_> {
             },
             Answer::Updated(applied) => Answer::Updated(applied),
             Answer::Drawn(d) => Answer::Drawn(d),
+            Answer::Performed(n) => Answer::Performed(n),
         }
     }
 }

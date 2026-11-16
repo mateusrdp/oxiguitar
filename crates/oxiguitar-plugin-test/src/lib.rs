@@ -493,6 +493,57 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
             },
         );
     }
+    // Playing the notes its own way (interface 1.8): a track of two notes,
+    // the second on a beat with the plugin's data, comes back within the
+    // interface's limits.
+    for plugin in plugins.performers() {
+        use oxiguitar_host::api::message::{Perform, PlayedBeat, PlayedNote};
+        use oxiguitar_host::api::score2::BeatExt;
+        let note = |beat: u32, start: f64| PlayedNote {
+            staff: 0,
+            voice: 0,
+            visit: 0,
+            beat,
+            string: 1,
+            key: 64,
+            start,
+            end: start + 0.5,
+            velocity: 95,
+            sound: 0,
+            harmonic: 0,
+            attack: 0,
+            flags: 0,
+            pitch: Vec::new(),
+        };
+        let track = Perform {
+            track: 0,
+            class: InstrumentClass::Fretted,
+            visits: vec![0],
+            notes: vec![note(0, 0.0), note(1, 0.5)],
+            beats: vec![PlayedBeat {
+                start: 0.5,
+                end: 1.0,
+                staff: 0,
+                bar: 0,
+                voice: 0,
+                beat: 1,
+                ext: vec![BeatExt::Plugin {
+                    plugin: plugin.clone(),
+                    data: "{}".into(),
+                }],
+            }],
+        };
+        report.check(
+            "it plays a track's notes within the interface's limits",
+            match plugins.try_perform(&plugin, track) {
+                Ok(_) => Ok(()),
+                Err(e) if e.kind == oxiguitar_host::api::message::ErrorKind::Invalid => {
+                    Err(e.message)
+                }
+                Err(e) => not_a_crash(&e),
+            },
+        );
+    }
     // The settings window and the track dialog's sections (interface 1.3).
     if let Some(found) = plugins.with_settings_window().first() {
         let content = plugins.settings_window(found);

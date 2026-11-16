@@ -66,8 +66,8 @@ use oxiguitar_plugin_api::manifest::{
 };
 use oxiguitar_plugin_api::message::{
     Answer, Availability, DrawPlace, Drawn, Engraving, Error, ErrorKind, FolderPlaces, HostAnswer,
-    HostRequest, Link, LogEntry, PlayedBeat, PluginFolders, Prepare, PrepareEffect,
-    PrepareFollowing, Request, TrackInfo, decode, encode, outcome,
+    HostRequest, Link, LogEntry, PERFORMED_MAX, Perform, PlayedBeat, PlayedNote, PluginFolders,
+    Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
@@ -229,10 +229,16 @@ struct Inner {
     /// Each drawing plugin's last request (encoded) and what it drew then
     /// (interface 1.8): the same places aren't asked about twice.
     drawn: Mutex<HashMap<usize, LastDrawn>>,
+    /// Each performing plugin's last request and answer by track
+    /// (interface 1.8).
+    performed: Mutex<HashMap<(usize, u32), LastPerformed>>,
 }
 
 /// A drawing plugin's last request, encoded, and its answer.
 type LastDrawn = (Vec<u8>, Vec<Drawn>);
+
+/// A performing plugin's last request for a track, encoded, and its answer.
+type LastPerformed = (Vec<u8>, Vec<PlayedNote>);
 
 impl Drop for Inner {
     fn drop(&mut self) {
@@ -772,6 +778,7 @@ impl Plugins {
             folders: OnceLock::new(),
             read_only: std::sync::atomic::AtomicBool::new(false),
             drawn: Mutex::new(HashMap::new()),
+            performed: Mutex::new(HashMap::new()),
         }))
     }
 
@@ -1469,6 +1476,83 @@ impl Plugins {
             }
         }
         (out, clashes)
+    }
+
+    /// The ids of the ready plugins that play the notes their own way
+    /// (interface 1.8), in plugin order: the order they take turns in.
+    pub fn performers(&self) -> Vec<String> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(8) && m.performs)
+            .map(|(_, _, m)| m.id.clone())
+            .collect()
+    }
+
+    /// How the plugin `plugin` plays a track (interface 1.8): its answer to
+    /// [`Request::Perform`], or the last one when it is given the same as
+    /// last time. `None` leaves the notes as they are: a plugin that
+    /// doesn't perform, can't, or answers notes outside the interface's
+    /// limits (the footer says why).
+    pub fn perform(&self, plugin: &str, track: Perform) -> Option<Vec<PlayedNote>> {
+        let (_, found, _) = self
+            .ready()
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.performs)?;
+        match self.try_perform(plugin, track) {
+            Ok(notes) => Some(notes),
+            Err(e) => {
+                if found.failure().is_none() {
+                    let name = found.name();
+                    self.0.core.notify(
+                        Level::Warning,
+                        format!("{name} couldn't play a track, so it plays as written: {e}"),
+                    );
+                }
+                None
+            }
+        }
+    }
+
+    /// [`Plugins::perform`], with why it can't: notes outside the
+    /// interface's limits are an [`ErrorKind::Invalid`] error.
+    pub fn try_perform(&self, plugin: &str, track: Perform) -> Result<Vec<PlayedNote>, Error> {
+        let (index, _, _) = self
+            .ready()
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.performs)
+            .ok_or_else(|| Error::not_found(format!("no ready plugin {plugin} plays notes")))?;
+        let key = (index, track.track);
+        let visits = track.visits.len();
+        let request = Request::Perform(Box::new(track));
+        let bytes = encode(&request).map_err(|e| Error::new(ErrorKind::Invalid, e.to_string()))?;
+        if let Some((last, notes)) = self
+            .0
+            .performed
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .get(&key)
+            && *last == bytes
+        {
+            return Ok(notes.clone());
+        }
+        let notes = match self.request(index, &request)? {
+            Answer::Performed(notes) => notes,
+            other => return Err(self.unexpected(index, &other)),
+        };
+        let wrong = if notes.len() > PERFORMED_MAX {
+            Some(format!(
+                "it gave back {} notes; at most {PERFORMED_MAX}",
+                notes.len()
+            ))
+        } else {
+            notes.iter().find_map(|n| n.problem(visits))
+        };
+        if let Some(why) = wrong {
+            return Err(Error::new(ErrorKind::Invalid, why));
+        }
+        self.0
+            .performed
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .insert(key, (bytes, notes.clone()));
+        Ok(notes)
     }
 
     /// The ids of the ready plugins that draw on the page (interface 1.8),
@@ -2254,6 +2338,7 @@ impl Plugins {
             }
             Answer::Updated(_) => "an update's answer",
             Answer::Drawn(_) => "drawings",
+            Answer::Performed(_) => "notes",
         };
         self.fail(
             index,
@@ -3074,6 +3159,7 @@ mod tests {
             folders: OnceLock::new(),
             read_only: std::sync::atomic::AtomicBool::new(false),
             drawn: Mutex::new(HashMap::new()),
+            performed: Mutex::new(HashMap::new()),
         }));
         assert_eq!(
             plugins.replaced_ids(),

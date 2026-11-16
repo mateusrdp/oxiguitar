@@ -11,7 +11,9 @@ use oxiguitar_host::Plugins;
 use oxiguitar_host::realtime::{Instance, Updater};
 use oxiguitar_model::{Ratio, Score};
 use oxiguitar_plugin_api::class::InstrumentClass;
-use oxiguitar_plugin_api::message::{PlayedBeat, Prepare, PrepareEffect, PreparedTrack, TrackInfo};
+use oxiguitar_plugin_api::message::{
+    Perform, PlayedBeat, PlayedNote, Prepare, PrepareEffect, PreparedTrack, TrackInfo,
+};
 use oxiguitar_plugin_api::realtime::{PitchPoint, RtEvent};
 
 use crate::engine::{Buffers, Slot, Source, Sources};
@@ -531,5 +533,166 @@ impl Source for PluginSource {
             .get(slot)
             .map_or(0, |c| c.iter().map(Instance::latency).sum::<u32>());
         self.instrument.latency() + effects
+    }
+}
+
+/// The timeline of `score` as the performing plugins play it (interface
+/// 1.8): each track's notes given to each plugin whose manifest `performs`,
+/// in plugin order, and replaced with what it gives back. A plugin that
+/// can't leaves the notes as they were. Chord diagrams' notes aren't given.
+pub fn perform(plugins: &Plugins, score: &Score, timeline: &mut crate::Timeline) {
+    let performers = plugins.performers();
+    if performers.is_empty() {
+        return;
+    }
+    let visits: Vec<u32> = timeline
+        .map
+        .visits
+        .iter()
+        .map(|v| u32::try_from(v.visit.bar).unwrap_or(u32::MAX))
+        .collect();
+    let mut by_track: Vec<Vec<crate::events::NoteEvent>> = vec![Vec::new(); score.tracks.len()];
+    for n in timeline.notes.drain(..) {
+        if let Some(t) = by_track.get_mut(n.track) {
+            t.push(n);
+        }
+    }
+    for (ti, notes) in by_track.iter_mut().enumerate() {
+        let Some(track) = score.tracks.get(ti) else {
+            continue;
+        };
+        let beats = played_beats(track, &timeline.map);
+        for plugin in &performers {
+            let request = Perform {
+                track: u32::try_from(ti).unwrap_or(u32::MAX),
+                class: class_of(score, ti),
+                visits: visits.clone(),
+                notes: notes.iter().map(to_played).collect(),
+                beats: beats.clone(),
+            };
+            if let Some(back) = plugins.perform(plugin, request) {
+                *notes = back.iter().map(|n| from_played(ti, n)).collect();
+            }
+        }
+    }
+    timeline.notes = by_track.into_iter().flatten().collect();
+    timeline.notes.sort_by(|a, b| {
+        a.start
+            .total_cmp(&b.start)
+            .then(a.track.cmp(&b.track))
+            .then(a.key.cmp(&b.key))
+    });
+}
+
+fn to_played(n: &crate::events::NoteEvent) -> PlayedNote {
+    use crate::events::{Attack, HarmonicKind, Sound, Vibrato};
+    use oxiguitar_plugin_api::realtime::{attack, flags, harmonic, sound};
+    let index = |i: usize| u32::try_from(i).unwrap_or(u32::MAX);
+    let (sound, harmonic) = match n.sound {
+        Sound::Normal => (sound::NORMAL, 0),
+        Sound::Dead => (sound::DEAD, 0),
+        Sound::PalmMute => (sound::PALM_MUTE, 0),
+        Sound::Harmonic(k) => (
+            sound::HARMONIC,
+            match k {
+                HarmonicKind::Natural => harmonic::NATURAL,
+                HarmonicKind::Artificial => harmonic::ARTIFICIAL,
+                HarmonicKind::Tapped => harmonic::TAPPED,
+                HarmonicKind::Pinch => harmonic::PINCH,
+                HarmonicKind::Semi => harmonic::SEMI,
+                HarmonicKind::Feedback => harmonic::FEEDBACK,
+            },
+        ),
+    };
+    let mut f = 0;
+    for (on, bit) in [
+        (n.ghost, flags::GHOST),
+        (n.let_ring, flags::LET_RING),
+        (n.fade_in, flags::FADE_IN),
+        (n.fade_out, flags::FADE_OUT),
+        (n.grace, flags::GRACE),
+        (n.vibrato == Vibrato::Normal, flags::VIBRATO),
+        (n.vibrato == Vibrato::Wide, flags::WIDE_VIBRATO),
+    ] {
+        if on {
+            f |= bit;
+        }
+    }
+    PlayedNote {
+        staff: index(n.staff),
+        voice: index(n.voice),
+        visit: index(n.visit),
+        beat: index(n.beat),
+        string: n.string.unwrap_or(0),
+        key: n.key,
+        start: n.start,
+        end: n.end.max(n.start),
+        velocity: n.velocity,
+        sound,
+        harmonic,
+        attack: match n.attack {
+            Attack::Picked => attack::PICKED,
+            Attack::Legato => attack::LEGATO,
+            Attack::Tapped => attack::TAPPED,
+            Attack::Slapped => attack::SLAPPED,
+            Attack::Popped => attack::POPPED,
+        },
+        flags: f,
+        pitch: n.pitch.iter().map(|p| (p.time, p.cents)).collect(),
+    }
+}
+
+fn from_played(track: usize, n: &PlayedNote) -> crate::events::NoteEvent {
+    use crate::events::{Attack, HarmonicKind, NoteEvent, PitchPoint, Sound, Vibrato};
+    use oxiguitar_plugin_api::realtime::{attack, flags, harmonic, sound};
+    let on = |bit: u16| n.flags & bit != 0;
+    NoteEvent {
+        track,
+        staff: n.staff as usize,
+        voice: n.voice as usize,
+        visit: n.visit as usize,
+        beat: n.beat as usize,
+        string: (n.string != 0).then_some(n.string),
+        key: n.key,
+        start: n.start,
+        end: n.end,
+        velocity: n.velocity,
+        sound: match n.sound {
+            sound::DEAD => Sound::Dead,
+            sound::PALM_MUTE => Sound::PalmMute,
+            sound::HARMONIC => Sound::Harmonic(match n.harmonic {
+                harmonic::ARTIFICIAL => HarmonicKind::Artificial,
+                harmonic::TAPPED => HarmonicKind::Tapped,
+                harmonic::PINCH => HarmonicKind::Pinch,
+                harmonic::SEMI => HarmonicKind::Semi,
+                harmonic::FEEDBACK => HarmonicKind::Feedback,
+                _ => HarmonicKind::Natural,
+            }),
+            _ => Sound::Normal,
+        },
+        attack: match n.attack {
+            attack::LEGATO => Attack::Legato,
+            attack::TAPPED => Attack::Tapped,
+            attack::SLAPPED => Attack::Slapped,
+            attack::POPPED => Attack::Popped,
+            _ => Attack::Picked,
+        },
+        ghost: on(flags::GHOST),
+        let_ring: on(flags::LET_RING),
+        vibrato: if on(flags::WIDE_VIBRATO) {
+            Vibrato::Wide
+        } else if on(flags::VIBRATO) {
+            Vibrato::Normal
+        } else {
+            Vibrato::None
+        },
+        fade_in: on(flags::FADE_IN),
+        fade_out: on(flags::FADE_OUT),
+        grace: on(flags::GRACE),
+        pitch: n
+            .pitch
+            .iter()
+            .map(|&(time, cents)| PitchPoint { time, cents })
+            .collect(),
     }
 }

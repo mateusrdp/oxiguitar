@@ -61,7 +61,8 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::manifest::SharedFolder;
 pub use oxiguitar_plugin_api::message::{
-    Advice, Availability, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, TrackInfo,
+    Advice, Availability, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, Perform, PlayedNote,
+    TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -152,6 +153,12 @@ pub trait Plugin: Send + Sync + 'static {
     /// What draws on the page, for a manifest with `draws` (interface
     /// 1.8).
     fn drawer(&self) -> Option<&dyn Drawer> {
+        None
+    }
+
+    /// What plays the notes its own way, for a manifest with `performs`
+    /// (interface 1.8).
+    fn performer(&self) -> Option<&dyn Performer> {
         None
     }
 
@@ -344,6 +351,16 @@ pub trait Drawer: Send + Sync {
     fn draw(&self, places: &[DrawPlace]) -> Result<Vec<Drawn>, Error>;
 }
 
+/// Plays the notes its own way (interface 1.8): given a track's notes as
+/// the score gives them, gives them back as they should sound, changed,
+/// added or left out. Asked when the song is got ready to play or export
+/// and the notes changed, off the audio thread; keep it a pure function of
+/// what it is given.
+pub trait Performer: Send + Sync {
+    /// The track's notes as they should sound.
+    fn perform(&self, track: &Perform) -> Result<Vec<PlayedNote>, Error>;
+}
+
 /// A tab in one of the window's areas (docs/design/plugins.md, "What
 /// plugins contribute"): standard widgets the core draws, and a canvas the
 /// plugin draws.
@@ -495,6 +512,12 @@ pub fn dispatch_kept(
                 data: Blob::owned(data),
                 losses,
             })
+        }
+        Request::Perform(track) => {
+            let performer = plugin
+                .performer()
+                .ok_or_else(|| Error::not_found("this plugin doesn't play notes"))?;
+            Ok(Answer::Performed(performer.perform(&track)?))
         }
         Request::Draw { places } => {
             let drawer = plugin

@@ -102,6 +102,12 @@ pub struct Manifest {
     /// Since interface 1.8.
     #[serde(default)]
     pub draws: bool,
+    /// Whether it plays the notes its own way (`Request::Perform`): it is
+    /// given each track's notes as played and gives them back as they
+    /// should sound. Performing plugins take turns in plugin order. Since
+    /// interface 1.8.
+    #[serde(default)]
+    pub performs: bool,
     /// Whether it has a settings window, opened from the plugin manager's
     /// Settings… (`Request::SettingsWindow`). Since interface 1.3.
     #[serde(default)]
@@ -760,6 +766,12 @@ impl Manifest {
             if self.folders.iter().any(|f| SharedFolder::of(f).is_none()) {
                 out.push(format!(
                     "folders other than \"soundfonts\" and \"nam\" need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.performs {
+                out.push(format!(
+                    "playing the notes its own way needs interface {since_1_8}, and the manifest asks for {}",
                     self.interface
                 ));
             }
