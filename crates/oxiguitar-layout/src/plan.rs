@@ -151,9 +151,12 @@ impl Lanes {
     }
 
     fn of_beat(b: &BeatInfo, std: bool) -> Lanes {
-        let mut l = Lanes::default();
-        l.drawn =
-            crate::drawing::lane_tenths(b.drawings.iter().map(|d| d.height).fold(0.0, f32::max));
+        let mut l = Lanes {
+            drawn: crate::drawing::lane_tenths(
+                b.drawings.iter().map(|d| d.height).fold(0.0, f32::max),
+            ),
+            ..Lanes::default()
+        };
         let e = &b.effects;
         l.vibrato = e.bridge_vibrato.is_some();
         l.let_ring = e.let_ring;
