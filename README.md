@@ -87,6 +87,24 @@ The last package downloads the recorded sound sets as it installs, which takes a
 
 **Update** with `sudo dnf upgrade`.
 
+### Any Linux (Flatpak)
+
+**Once**, add Flathub (for the runtime OxiGuitar runs on; nothing changes if you have it already) and our repository:
+
+```sh
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --if-not-exists oxiguitar https://mateusrdp.github.io/oxiguitar-packages/flatpak/oxiguitar.flatpakrepo
+```
+
+**Install** the program and its plugins, each a Flatpak add-on of its own (GNOME Software and KDE Discover list them under OxiGuitar):
+
+```sh
+flatpak install oxiguitar io.github.mateusrdp.OxiGuitar
+flatpak install oxiguitar io.github.mateusrdp.OxiGuitar.Plugin.guitarpro io.github.mateusrdp.OxiGuitar.Plugin.midi io.github.mateusrdp.OxiGuitar.Plugin.pipewire io.github.mateusrdp.OxiGuitar.Plugin.wav io.github.mateusrdp.OxiGuitar.Plugin.nam io.github.mateusrdp.OxiGuitar.Plugin.eq io.github.mateusrdp.OxiGuitar.Plugin.wah
+```
+
+The Flatpak runs in Flatpak's sandbox, which doesn't see your system's sound sets: download `install.sh` from the [sound-set installer's latest release](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases/latest) and run `bash install.sh`, which fills the Flatpak's own folder. **Update** with `flatpak update`. The manual's [Linux page](https://mateusrdp.github.io/oxiguitar/install-linux.html#flatpak-any-linux) lists every plugin and the Flatpak's folders.
+
 ### Any Linux (AppImage)
 
 The AppImage is the program alone, with no repository to add and no automatic updates:

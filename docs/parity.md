@@ -151,23 +151,25 @@ The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then
 | **Instrument views** (fretboard, keyboard, drums) | Yes | Yes (fretboard, piano, matrix) | No | **No** |
 | Panels, palette, inspector | Yes | Yes | n/a | Yes |
 | Platforms | Windows, macOS | Windows, macOS, Linux, FreeBSD, Android | Web, .NET, Android | Linux (Wayland, X11), Windows, macOS; mobile is M10 |
-| Packages | Installers | Installers, Flathub | Libraries | AppImage, apt, dnf, Flatpak (repository not live yet), installers |
+| Packages | Installers | Installers, Flathub | Libraries | AppImage, apt, dnf, Flatpak (our own repository), installers |
 | Free and open source | No | Yes | Yes | Yes |
 
 ## Gaps worth deciding before the beta
 
-Ranked by how often a user switching from Guitar Pro 8 or TuxGuitar would miss each one. Each is a question for Mateus: before the beta, after v1.0, or never.
+Ranked by how often a user switching from Guitar Pro 8 or TuxGuitar would miss each one. Each was a question for Mateus: before the beta, after v1.0, or never.
 
-1. **Drum entry.** Both editors have it, and drum tracks are in most files people open: today they can be played, transposed around and copied as rhythm, but not written. Guitar Pro 8's way is a drum staff with a kit map, and TuxGuitar's is a matrix editor. Size: an editor slice (the model already holds drum notes as General MIDI pitches).
-2. **The mixer saved into the file.** Guitar Pro and TuxGuitar keep each track's volume and pan. OxiGuitar reads them from the file, then forgets the user's changes at closing. Size: small (the model holds them; the formats that carry them, Guitar Pro's among them, would write the user's).
-3. **Volume, pan and instrument automations.** Guitar Pro files carry them, and OxiGuitar's model holds only tempo changes, so the rest is lost when such a file opens and the song plays differently from Guitar Pro. Size: the model, the timeline, the Guitar Pro plugin. The palette's automation tools were left out on 19 Oct 2026, so this asks to reopen that.
-4. **Image export from the window** (PNG, SVG). Both editors have it, and the renderer already writes PNG for the CLI. Size: small, as an exporter plugin or in File → Export.
-5. **A speed trainer**: loop and raise the speed a step each time. Guitar Pro 8 has it, and OxiGuitar has the loop and speed already. Size: small.
-6. **Instrument views** (a fretboard and a keyboard showing what plays). Both editors have them, and they matter for learning. Size: a panel tab, which a plugin could add since interface 1.8.
-7. **Stylesheet**: fonts, spacing, header and footer, page format. Guitar Pro 8 has it for publishing. Size: medium.
-8. **Multi-bar rests**, for parts that rest for long. Guitar Pro and alphaTab draw them. Size: engraving only.
-9. **Numbered notation**, slash staves, tenuto: rare among guitarists. After v1.0.
-10. **Formats**: PowerTab, TablEdit and ASCII tab reading (both editors), ASCII and LilyPond writing, Guitar Pro 3 and 4 writing. After v1.0 (#223), as Mateus said on 16 Nov 2026.
-11. **Scales tool, tuner, MIDI devices, customisable shortcuts.** The tuner and MIDI devices are M9 (they need audio and MIDI input). The others are small, and after v1.0.
+**Decided (Mateus, 17 Nov 2026): gaps 1 and 2 go into v1.0,, the mixer built first; gaps 3 to 11 stay out of v1.0.** Notes on the ones he gave a reason or a hint for: volume, pan and instrument automations (3) may come back later, perhaps as a plugin; the stylesheet (7) is out; multi-bar rests (8) are rarely needed, as ties and the present rests do. The list below is kept as it was ranked.
 
-Not counted as gaps: audio tracks and line-in (M9, #240), Guitar Pro's song store, MuseScore and ABC (out), and the Flatpak repository, which is built and waits on its first plugin releases (#163).
+1. **Drum entry.** In v1.0 (17 Nov 2026). Both editors have it, and drum tracks are in most files people open: today they can be played, transposed around and copied as rhythm, but not written. Guitar Pro 8's way is a drum staff with a kit map, and TuxGuitar's is a matrix editor. Size: an editor slice (the model already holds drum notes as General MIDI pitches).
+2. **The mixer saved into the file.** In v1.0 (17 Nov 2026). Guitar Pro and TuxGuitar keep each track's volume and pan. OxiGuitar reads them from the file, then forgets the user's changes at closing. Size: small (the model holds them; the formats that carry them, Guitar Pro's among them, would write the user's).
+3. **Volume, pan and instrument automations.** Out of v1.0 (17 Nov 2026; maybe a plugin later). Guitar Pro files carry them, and OxiGuitar's model holds only tempo changes, so the rest is lost when such a file opens and the song plays differently from Guitar Pro. Size: the model, the timeline, the Guitar Pro plugin. The palette's automation tools were left out on 19 Oct 2026, so this asks to reopen that.
+4. **Image export from the window** (PNG, SVG). Out of v1.0 (17 Nov 2026). Both editors have it, and the renderer already writes PNG for the CLI. Size: small, as an exporter plugin or in File → Export.
+5. **A speed trainer** (out of v1.0, 17 Nov 2026): loop and raise the speed a step each time. Guitar Pro 8 has it, and OxiGuitar has the loop and speed already. Size: small.
+6. **Instrument views** (a fretboard and a keyboard showing what plays). Out of v1.0 (17 Nov 2026). Both editors have them, and they matter for learning. Size: a panel tab, which a plugin could add since interface 1.8.
+7. **Stylesheet** (out of v1.0, 17 Nov 2026): fonts, spacing, header and footer, page format. Guitar Pro 8 has it for publishing. Size: medium.
+8. **Multi-bar rests**, for parts that rest for long. Out of v1.0 (17 Nov 2026): rarely needed, ties and the present rests do. Guitar Pro and alphaTab draw them. Size: engraving only.
+9. **Numbered notation**, slash staves, tenuto: rare among guitarists. Out of v1.0 (17 Nov 2026).
+10. **Formats**: PowerTab, TablEdit and ASCII tab reading (both editors), ASCII and LilyPond writing, Guitar Pro 3 and 4 writing. After v1.0 (#223), as Mateus said on 16 Nov 2026, and out of v1.0 (17 Nov 2026).
+11. **Scales tool, tuner, MIDI devices, customisable shortcuts.** The tuner and MIDI devices are M9 (they need audio and MIDI input). The others are small. Out of v1.0 (17 Nov 2026).
+
+Not counted as gaps: audio tracks and line-in (M9, #240), Guitar Pro's song store, MuseScore and ABC (out), and the Flatpak repository, which is live since 16 Nov 2026 and fills as each plugin's release with a Flatpak extension is published (#163).
