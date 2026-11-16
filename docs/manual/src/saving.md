@@ -2,11 +2,17 @@
 
 Choose **File → Save** (Ctrl + S) to write the score back to its file, or **File → Save As…** (Ctrl + Shift + S) to write it under another name. The window's title shows the file's name, with a dot before it while the score has changes not yet saved.
 
-OxiGuitar saves through its format plugins, as it opens files. Ours write Guitar Pro 7 and 8 files (.gp), which Guitar Pro 7 and later open, and Guitar Pro 5 files (.gp5), which Guitar Pro 5 and every later version open, and TuxGuitar too; with [their plugins](official-plugins.md), MusicXML, MIDI and TuxGuitar 2 files (.tg) as well. Choose the format in Save As… by the name's extension. Save keeps a file's own format unless that format can't hold everything in the score, or no installed plugin writes it (Guitar Pro 3 and 4 files and .gpx are only read): then the score is saved beside the file, under the same name, as a .gp file, the fullest format OxiGuitar writes, and the original file stays as it was. OxiGuitar asks before doing so, and offers Save As… to choose another name.
+OxiGuitar saves through its format plugins, as it opens files. Ours write Guitar Pro 7 and 8 files (.gp), which Guitar Pro 7 and later open, and Guitar Pro 5 files (.gp5), which Guitar Pro 5 and every later version open, and TuxGuitar too; with [their plugins](official-plugins.md), MusicXML, MIDI and TuxGuitar 2 files (.tg) as well. Choose the format in Save As… by the name's extension. Save always writes a file in its own format. When no installed plugin writes that format (Guitar Pro 3 and 4 files and .gpx are only read), Save says so: use Save As… and choose a format.
 
 ## What a file can't hold
 
-No format holds everything. Before writing a file that would lose something, OxiGuitar lists what, with the first bar and track where it happens, and asks whether to save. For a .gp file the list is usually short, such as:
+No format holds everything, and OxiGuitar treats none as the complete one. Before writing a file that would lose something, it lists what, with the first bar and track where it happens, and asks:
+
+- **Keep Them in the .oxg File**: the file is written in its format, and the whole score also goes into the file beside it (`song.gp5.oxg` beside `song.gp5`). OxiGuitar then opens the score whole, with nothing lost, while other programs see what the format holds. Later saves of that file go on keeping it there without asking. Keep the two files together.
+- **Save Without Them**: only the file is written, and what it can't hold is gone the next time it is opened.
+- **Cancel**.
+
+If another program changes the score file afterwards, OxiGuitar opens the file as it is now, tells you, and leaves out what the .oxg file kept beyond it; the next save starts afresh. For a .gp file the list is usually short, such as:
 
 - different dynamics on the notes of one beat (Guitar Pro 7 has one dynamic per beat);
 - the colours of sections;
@@ -30,7 +36,7 @@ To try a file without changing it, use Save As.
 
 ## Plugins' settings for each track
 
-Some plugins add their own settings to a track's **Properties…** (the NAM plugin's amp model, for example). No score format holds them, so OxiGuitar keeps them in a small file beside the score, named after it: `song.gp3` keeps them in `song.gp3.oxg`. Saving writes it and opening reads it; keep the two files together when you copy or share a song. Without the .oxg file the score opens as usual, with those settings empty. Guitar Pro and other programs ignore it.
+Some plugins add their own settings to a track's **Properties…** (the NAM plugin's amp model, for example). No score format holds them, so OxiGuitar keeps them in a small file beside the score, named after it: `song.gp3` keeps them in `song.gp3.oxg`. The same file keeps what plugins put on beats: the curve and the Q of a wah-wah mark ([Wah-wah](editing.md#wah-wah)), and any plugin's own marks. Saving writes it and opening reads it; keep the two files together when you copy or share a song. Without the .oxg file the score opens as usual, with those settings empty. Guitar Pro and other programs ignore it.
 
 ## Before closing
 

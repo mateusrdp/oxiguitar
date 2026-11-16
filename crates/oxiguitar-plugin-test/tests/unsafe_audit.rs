@@ -17,6 +17,12 @@ use std::path::{Path, PathBuf};
 /// The only places our own source may allow `unsafe` code.
 const ALLOWED: &[&str] = &[
     "crates/oxiguitar-host/src/loader.rs",
+    // Crash reports: the signal handler (Linux, macOS), the unhandled-
+    // exception filter (Windows) and where plugins' code is (Linux).
+    "crates/oxiguitar-host/src/crash.rs",
+    // The test plugin's crash on purpose, for the crash reports' test.
+    // Test code, never shipped.
+    "plugins/test/src/lib.rs",
     "crates/oxiguitar-plugin/src/glue.rs",
     // export_plugin!: the manifest section and the entry symbol.
     "crates/oxiguitar-plugin/src/lib.rs",

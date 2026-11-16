@@ -298,6 +298,7 @@ fn insert(
                     clef,
                     voices: vec![Voice::default()],
                     simile: None,
+                    plugins: Default::default(),
                 },
             );
         }

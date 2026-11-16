@@ -1821,6 +1821,7 @@ mod tests {
                 top: 90.0,
                 bottom: 600.0,
                 staves,
+                drawn: Vec::new(),
             }],
         })
     }

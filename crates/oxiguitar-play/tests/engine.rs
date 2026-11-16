@@ -321,6 +321,7 @@ impl oxiguitar_play::Source for Late {
         _pitch: &[oxiguitar_play::realtime::PitchPoint],
         _time: f64,
         _step: f64,
+        _playing: bool,
         out: &mut oxiguitar_play::Buffers,
     ) {
         let n = out.frames() as u64;

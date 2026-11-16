@@ -232,7 +232,28 @@ impl Default for Shell {
     }
 }
 
+/// The id of the toolbar section every plugin's buttons share.
+pub(crate) const PLUGINS_SECTION: &str = "plugins";
+
 impl Shell {
+    /// Puts the plugins' toolbar buttons (interface 1.8) in the Plugins
+    /// section, the toolbar's last: each `(id, name)` a button whose icon
+    /// the window draws under its id. Without buttons there is no section.
+    pub(crate) fn set_plugin_tools(&mut self, tools: &[(String, String)]) {
+        self.toolbar.retain(|s| s.id != PLUGINS_SECTION);
+        if tools.is_empty() {
+            return;
+        }
+        self.toolbar.push(ToolbarSection {
+            id: PLUGINS_SECTION.to_owned(),
+            title: "Plugins".to_owned(),
+            items: tools
+                .iter()
+                .map(|(id, name)| ToolbarItem::new(id, id, name, true))
+                .collect(),
+        });
+    }
+
     pub(crate) fn area(&self, side: Side) -> &Area {
         &self.areas[side.index()]
     }
@@ -285,6 +306,23 @@ mod tests {
         );
         let ids: Vec<&str> = shell.toolbar.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(ids, ["file", "edit"]);
+        // Plugins' buttons share one section, the last; none, no section.
+        let mut shell = shell;
+        let tools = [
+            ("plugin:me.a:one".to_owned(), "One".to_owned()),
+            ("plugin:me.b:two".to_owned(), "Two".to_owned()),
+        ];
+        shell.set_plugin_tools(&tools);
+        shell.set_plugin_tools(&tools);
+        let ids: Vec<&str> = shell.toolbar.iter().map(|s| s.id.as_str()).collect();
+        assert_eq!(ids, ["file", "edit", "plugins"]);
+        let last = shell.toolbar.last().unwrap();
+        assert_eq!(last.title, "Plugins");
+        let tips: Vec<&str> = last.items.iter().map(|i| i.tip.as_str()).collect();
+        assert_eq!(tips, ["One", "Two"]);
+        assert!(last.items.iter().all(|i| i.enabled && i.icon == i.id));
+        shell.set_plugin_tools(&[]);
+        assert_eq!(shell.toolbar.len(), 2);
         assert_eq!(Side::from_index(3), Some(Side::Right));
         assert_eq!(Side::from_index(4), None);
         assert_eq!(Side::from_index(-1), None);

@@ -87,12 +87,23 @@ pub(crate) fn open(path: &str, data: &[u8]) -> Result<Opened, String> {
     // Pitches on strings get a string and fret, as the app does (#157).
     oxiguitar_edit::finger_pitched(&mut score);
     oxiguitar_edit::plain_spellings(&mut score);
+    // The whole score, when the user had what the format can't hold kept
+    // beside the file (FILE.oxg) and the file is still the one saved: as
+    // the app opens it, with nothing left out.
+    let mut log = read.log;
+    if let Ok(Some(sidecar)) = oxiguitar_host::sidecar::Sidecar::read_for(Path::new(path))
+        && let oxiguitar_host::sidecar::Kept::Score(kept) = sidecar.kept_score(data)
+        && let Ok(whole) = oxiguitar_model::wire::from_wire2(*kept)
+    {
+        score = whole;
+        log.clear();
+    }
     Ok(Opened {
         format: name,
         extensions,
         plugin,
         score,
-        log: read.log,
+        log,
     })
 }
 
@@ -113,4 +124,42 @@ pub(crate) fn level_word(level: PluginLevel) -> &'static str {
         PluginLevel::Warning => "warning",
         PluginLevel::Error => "error",
     }
+}
+
+/// Gives `score` what the file beside `path` keeps (FILE.oxg): the tracks'
+/// plugin settings and effect order, played chords, and what plugins keep
+/// on the score, its bars, beats and notes (interface 1.8), as the window
+/// reads them. The error is a sentence.
+pub(crate) fn apply_sidecar(path: &str, score: &mut Score) -> Result<(), String> {
+    let Some(mut sidecar) = oxiguitar_host::sidecar::Sidecar::read_for(Path::new(path))? else {
+        return Ok(());
+    };
+    sidecar.adopt(&plugins().replaced_ids());
+    let names: Vec<String> = score.tracks.iter().map(|t| t.name.clone()).collect();
+    let names: Vec<&str> = names.iter().map(String::as_str).collect();
+    for (track, entry) in score.tracks.iter_mut().zip(sidecar.settle(&names)) {
+        track.plugins = entry.plugins;
+        track.effects = entry.effects;
+        track.play_chords = entry.chords;
+        for kept in entry.kept {
+            track.keep(
+                &kept.at,
+                oxiguitar_model::Kept {
+                    plugins: kept.plugins,
+                    marks: kept.marks,
+                },
+            );
+        }
+    }
+    if !sidecar.plugins.is_empty() {
+        score.plugins = sidecar.plugins;
+    }
+    for kept in sidecar.bars {
+        if let [bar] = kept.at[..]
+            && let Some(m) = score.master_bars.get_mut(bar)
+        {
+            m.plugins = kept.plugins;
+        }
+    }
+    Ok(())
 }

@@ -7,6 +7,7 @@
 // fields are the Bar tab's (issue #177, `bar_form.rs`).
 
 import { Button, CheckBox, ComboBox, LineEdit, SpinBox, ScrollView, Palette } from "std-widgets.slint";
+import { PluginTab, PluginRow } from "plugin_tab.slint";
 
 // A dimmed backdrop and a card, with Enter for OK and Escape for Cancel.
 component Card inherits Rectangle {
@@ -292,6 +293,42 @@ export component HarmonizeDialog inherits Rectangle {
 export struct GridPoint {
     col: int,
     row: int,
+}
+
+// A plugin's dialog (plugin interface 1.8): the plugin's own widgets and
+// canvas, as its tabs have them, on a card with OK and Cancel.
+export component PluginDialog inherits Rectangle {
+    in property <string> heading;
+    in property <[PluginRow]> rows;
+    in property <string> message;
+    callback clicked(string);
+    callback toggled(string, bool);
+    callback slid(string, float);
+    callback edited(string, string);
+    callback chosen(string, int);
+    callback pointer(string, int, float, float, int);
+    callback canvas-room(string, length, length);
+    callback done(bool);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 520px;
+        done(ok) => { root.done(ok); }
+        PluginTab {
+            min-height: 120px;
+            preferred-height: 420px;
+            rows: root.rows;
+            message: root.message;
+            clicked(id) => { root.clicked(id); }
+            toggled(id, on) => { root.toggled(id, on); }
+            slid(id, v) => { root.slid(id, v); }
+            edited(id, text) => { root.edited(id, text); }
+            chosen(id, i) => { root.chosen(id, i); }
+            pointer(id, k, x, y, b) => { root.pointer(id, k, x, y, b); }
+            canvas-room(id, w, h) => { root.canvas-room(id, w, h); }
+        }
+    }
 }
 
 // The bend and whammy-bar editor (M3 slice 6; `bend_form.rs`): a type, a

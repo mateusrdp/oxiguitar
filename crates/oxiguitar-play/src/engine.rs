@@ -51,14 +51,17 @@ pub trait Source: Send {
     /// Renders `out.frames()` frames of its tracks into `out` (zeroed
     /// before the call; add into it). `events` happen on the first frame;
     /// `pitch` holds the notes' pitch curves; `time` is the score's time
-    /// at the first frame and `step` its seconds per frame. `out` may have
-    /// no frames, only events.
+    /// at the first frame and `step` its seconds per frame; `playing` is
+    /// whether the score is playing (not stopped, nor the count-in), which
+    /// the tracks' effects that follow the score need to know. `out` may
+    /// have no frames, only events.
     fn render(
         &mut self,
         events: &[RtEvent],
         pitch: &[PitchPoint],
         time: f64,
         step: f64,
+        playing: bool,
         out: &mut Buffers,
     );
 
@@ -766,7 +769,7 @@ impl Engine {
             // in time, on the same frame): hand these over now, in a call
             // without frames, and go on.
             let time = self.anchor.time;
-            render_slot(slot, &self.schedule.pitch, 0, time, self.anchor.step);
+            render_slot(slot, &self.schedule.pitch, 0, time, self.anchor.step, false);
             slot.events.clear();
         }
         if slot.events.capacity() > 0 {
@@ -811,8 +814,9 @@ impl Engine {
 
     fn render_sources(&mut self, frames: usize, time: f64, step: f64) {
         let pitch = &self.schedule.pitch;
+        let playing = self.state == State::Playing;
         for (i, slot) in self.sources.slots.iter_mut().enumerate() {
-            if !render_slot(slot, pitch, frames, time, step) {
+            if !render_slot(slot, pitch, frames, time, step, playing) {
                 let _ = self.returned.push(Returned::Failed(i));
             }
             slot.events.clear();
@@ -931,10 +935,17 @@ impl Engine {
 }
 
 /// Renders one source; false once it has failed.
-fn render_slot(slot: &mut Slot, pitch: &[PitchPoint], frames: usize, time: f64, step: f64) -> bool {
+fn render_slot(
+    slot: &mut Slot,
+    pitch: &[PitchPoint],
+    frames: usize,
+    time: f64,
+    step: f64,
+    playing: bool,
+) -> bool {
     slot.buffers.clear(frames);
     slot.source
-        .render(&slot.events, pitch, time, step, &mut slot.buffers);
+        .render(&slot.events, pitch, time, step, playing, &mut slot.buffers);
     for (k, [left, right]) in slot.delays.iter_mut().enumerate() {
         if let Some((l, r)) = slot.buffers.track(k) {
             left.process(l);

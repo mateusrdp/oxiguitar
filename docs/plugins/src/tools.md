@@ -1,6 +1,6 @@
 # Tools and changes to the score
 
-Since interface 1.2, a plugin can add entries to the Tools menu and change the open score. Every change goes through the core, as one step the user can undo and redo: a plugin never changes the score behind the editor's back.
+Since interface 1.2, a plugin can add menu entries and change the open score. Every change goes through the core, as one step the user can undo and redo: a plugin never changes the score behind the editor's back.
 
 ## Tools
 
@@ -13,6 +13,31 @@ List each tool under `tools` in the manifest, with an `id`, the menu entry's `na
 ```
 
 Your `Plugin` hands out each one from `tool(id)`, as something implementing `Tool`. When the user picks the entry, the core calls its `run`, on a thread of the core's: return a sentence for the footer about what it did ("Moved 312 notes up an octave."), or an empty one to say nothing, or an error saying why it couldn't run. A tool runs with no score open too (the contract suite tries it), so check.
+
+## On the palette and in other menus
+
+Since interface 1.8 a tool says where else it shows, and a contributor's tool needs no change to OxiGuitar to be on the palette:
+
+```json
+"tools": [
+  { "id": "open", "name": "Open Wah-Wah", "description": "Puts an open wah-wah mark on the caret's beat.",
+    "palette": { "section": "Effects", "symbol": "U+E5E7" } },
+  { "id": "count", "name": "Count the Notes", "description": "Says how many notes the selection holds.",
+    "menu": "page" }
+]
+```
+
+| Key | What it is |
+| --- | --- |
+| `palette` | A button on the palette: `section` is one of the palette's own sections (`"Effects"`), a new one of yours, at most 24 characters, which comes after the core's, or absent for the **Plugins** section, which all plugins share; the button shows `symbol`, a glyph of the music font by its SMuFL code point (`"U+E5E7"`), or `text`, at most 5 characters. One of the two. The tool's `name` is the button's tooltip, and the palette's search finds it |
+| `menu` | The menu its entry goes in: `file`, `edit`, `view`, `tools` or `help`; `page`, the right-click menu of the page; `track`, the right-click menu of a track's row; or any other name, at most 24 characters, for a menu of your own on the menu bar, between Tools and Help. Plugins that name the same menu share it |
+
+| `shortcut` | The keys that run it, as `"Ctrl+Shift+W"`: Ctrl, Alt or both, Shift if wanted, and one letter, digit or punctuation mark. A shortcut needs Ctrl or Alt, so it never takes a key that enters notes. OxiGuitar's own keys come first; between plugins, the first in plugin order keeps the keys and the footer names the others at start. Help → Keyboard Shortcuts lists them, and a palette button's tooltip names its keys |
+| `toolbar` | A button in the toolbar's **Plugins** section, the one section all plugins' buttons share, after OxiGuitar's own: `symbol` or `text`, as for the palette. The button is small (an 18-pixel icon), so a symbol or one or two letters read best. For what users click often |
+
+A palette tool is a button, not a mode: a click runs it, as a menu entry does. The same goes for a toolbar button. A tool with `palette` or `toolbar` and no `menu` is a button only; give it a `menu` too to have both. A tool with none of the three is in the **Plugins** menu, between Tools and Help, which all plugins share.
+
+The rule is the same everywhere a plugin adds something (Mateus, 16 Nov 2026): name a place of OxiGuitar's own, name a new one of yours, or name none and land in Plugins. OxiGuitar puts nothing of its own in the Plugins menu or the palette's Plugins section, so what plugins add stays apart from the core's unless its author chose otherwise. A manifest whose palette section or menu name is too long, or whose button has neither or both of `symbol` and `text`, is refused.
 
 ## Changing the score
 
@@ -33,6 +58,36 @@ Built for 1.2, a plugin that lists `selection` under `events` hears `Event::Sele
 - `Bars { first_track, last_track, first_bar, last_bar }`: whole bars across tracks;
 
 and `None` when no score is open. Everything counts from 0 but the string.
+
+A tool that only needs the selection when it runs asks for it instead (interface 1.8): `host.selection()` answers with the same `Selection2` as it is now, and the plugin needs no `selection` event. The events are for what follows the caret as it moves.
+
+## Your own data, and marks on beats
+
+Since interface 1.8 a plugin can keep data of its own anywhere in the score: on the score itself, a bar (of every track), one staff's bar, a beat or a note. Each is an extension of that level, a JSON object as text under your plugin's id, one a plugin and place:
+
+| Where | Extension |
+| --- | --- |
+| The score | `ScoreExt::Plugin { plugin, data }` |
+| A bar, for every track | `MasterBarExt::Plugin { plugin, data }` |
+| One staff's bar | `BarExt::Plugin { plugin, data }` |
+| A beat | `BeatExt::Plugin { plugin, data }` |
+| A note | `NoteExt::Plugin { plugin, data }` |
+
+A beat can also carry a mark:
+
+- `BeatExt::Mark { plugin, text }`: a few characters (at most 16) that the engraver sets over the beat, with the playing techniques, in the text font. One a plugin and beat.
+
+Put them on your copy of the score and hand it back with `host.apply`; take them off the same way. They travel with their place when the user copies, cuts or moves it, and undo takes them back; a bar the user clears keeps its own data, and bars made anew (an inserted bar, re-barring) start with none. Every plugin reads every note's pitch, string, fret, value and marks from the same score; the data is only for what OxiGuitar has no field for. No score format holds them, so OxiGuitar saves them in the file it keeps beside the score (`song.gp.oxg`) and never sends them to a format plugin, nor names them as a loss. Leave other plugins' entries as they are. An effect of yours that follows the score gets each beat's with the beat ([Instruments](instruments.md#following-the-score)).
+
+## Reading the engraved page
+
+`host.engraving()` (interface 1.8) gives the open score as the window shows it now, in the layout and with the tracks the user chose; `None` when no score is open or in a program without a window:
+
+- `revision`: the score's revision it was engraved from;
+- `pages`: each page's `width` and `height` in points, and its drawing as the canvas's own items ([Tabs](tabs.md#the-canvas)): text in the text or the music font, lines, rectangles and paths, in the four colour roles;
+- `beats`: where each beat is: its `track`, `staff`, `bar`, `voice` and `beat`, the `page` it is on, and its box on that page (`x`, `y`, `width`, `height`, in points; the box spans its staff's height).
+
+Read it to place something of your own in a canvas, to measure the page, or to find what is drawn where. To put something on the page itself, draw it ([Drawing on the page](drawing.md)), or for a few characters give a beat a mark (above).
 
 ## The score, version 2
 

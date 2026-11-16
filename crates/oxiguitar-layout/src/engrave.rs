@@ -116,6 +116,8 @@ pub(crate) enum Lane {
     Harmonic,
     Technique,
     Whammy,
+    /// Others' drawings (plugins'), outermost.
+    Drawn,
 }
 
 /// One effect lane: its kind, its top and its baseline.
@@ -146,6 +148,7 @@ fn lane_list(l: Lanes, tab: bool) -> Vec<(Lane, f32)> {
         (Lane::LetRing, l.let_ring, 1.8),
         (Lane::Harmonic, l.harmonic, 1.8),
         (Lane::Technique, l.technique, 2.0),
+        (Lane::Drawn, l.drawn > 0, f32::from(l.drawn) / 10.0),
     ]
     .into_iter()
     .filter(|(_, present, _)| *present)
@@ -566,7 +569,7 @@ pub(crate) fn system(
             }
         }
         let geometry = effects::Geometry { band, tg, right };
-        effects::draw(p, &mut list, &marks, &geometry);
+        effects::draw(p, &mut list, &marks, &geometry, &mut hits.drawn);
     }
     // The line joining every staff at the start of the system.
     if let (Some(first), Some(last)) = (bands.first(), bands.last())
@@ -735,6 +738,7 @@ fn system_hits(
         top: 0.0,
         bottom: height,
         staves,
+        drawn: Vec::new(),
     }
 }
 

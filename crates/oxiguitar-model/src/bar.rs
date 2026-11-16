@@ -3,6 +3,8 @@
 
 //! Bars, voices and beats.
 
+use std::collections::BTreeMap;
+
 use crate::{Duration, Note, Ratio};
 
 /// One bar of one staff.
@@ -15,6 +17,11 @@ pub struct Bar {
     /// A simile (repeat) sign drawn in place of the bar's music, which is a
     /// copy of the bar or bars it repeats (docs/design/palette.md).
     pub simile: Option<Simile>,
+    /// What plugins keep on it, by plugin id: a JSON object as text each,
+    /// opaque to the core (plugin interface 1.8). It goes where the bar goes
+    /// (edits, copies, undo) and is saved beside the score (`FILE.oxg`),
+    /// since no score format holds it.
+    pub plugins: std::collections::BTreeMap<String, String>,
 }
 
 impl Default for Bar {
@@ -23,6 +30,7 @@ impl Default for Bar {
             clef: Clef::Treble8vb,
             voices: vec![Voice::default()],
             simile: None,
+            plugins: BTreeMap::new(),
         }
     }
 }
@@ -130,6 +138,11 @@ pub struct Beat {
     pub tuplet_group: bool,
     /// Under an extended barre: a barre is a run of beats with the same one.
     pub barre: Option<Barre>,
+    /// What plugins keep on the beat, by plugin id: a JSON object as text
+    /// each, opaque to the core (plugin interface 1.8). It goes where the
+    /// beat goes (edits, copies, undo) and is saved beside the score
+    /// (`FILE.oxg`), since no score format holds it.
+    pub plugins: BTreeMap<String, String>,
 }
 
 /// A hairpin.
@@ -224,6 +237,11 @@ pub struct BeatEffects {
     pub pedal: Option<Pedal>,
     /// A wah-wah mark.
     pub wah: Option<Wah>,
+    /// Marks plugins draw at the beat, by plugin id (plugin interface
+    /// 1.8): a few characters each, set over the beat with the playing
+    /// techniques. Carried and saved as what plugins keep on the beat
+    /// ([`Beat::plugins`]).
+    pub marks: BTreeMap<String, String>,
     /// The chord played as an arpeggio, up or down.
     pub arpeggio: Option<StrokeDirection>,
     /// A rasgueado.

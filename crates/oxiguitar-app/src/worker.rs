@@ -74,8 +74,9 @@ pub(crate) enum Request {
     /// file, in the format with this id. Asks first ([`Event::AskSave`])
     /// when something would be lost or the file changes.
     Save(Option<(PathBuf, String)>),
-    /// The user agreed to the save asked about.
-    ConfirmSave,
+    /// The user agreed to the save asked about; with `keep`, what the
+    /// format can't hold goes in the file beside the score (FILE.oxg).
+    ConfirmSave { keep: bool },
     /// The user declined it.
     CancelSave,
     /// A plugin handed back the score changed, made from `revision`
@@ -89,6 +90,16 @@ pub(crate) enum Request {
     /// Run a plugin's tool from the Tools menu: the plugin's id, the
     /// tool's id.
     PluginTool(String, String),
+    /// A click on what a plugin drew on the page (interface 1.8): the
+    /// drawing's tag and place, where in its box (staff spaces) and
+    /// whether it was a double click.
+    DrawingClicked {
+        tag: u32,
+        at: oxiguitar_layout::DrawnAt,
+        x: f32,
+        y: f32,
+        double: bool,
+    },
     /// End the worker.
     Stop,
 }
@@ -116,9 +127,9 @@ pub(crate) enum Event {
     AskSave {
         heading: String,
         lines: Vec<String>,
-        /// The score would go to another file than it came from: the
-        /// question also offers Save As.
-        elsewhere: bool,
+        /// The format can't hold everything: the question also offers to
+        /// keep the rest in the file beside the score.
+        can_keep: bool,
     },
     /// The score was saved, perhaps under another name.
     Saved {
@@ -321,10 +332,12 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 Request::Selection(..) => false,
                 Request::Stop => true,
                 Request::Tiles { .. } => tiles,
-                Request::PluginEdit { .. } | Request::PluginTool(..) => true,
+                Request::PluginEdit { .. }
+                | Request::PluginTool(..)
+                | Request::DrawingClicked { .. } => true,
                 Request::ExportPdf(..)
                 | Request::Save(_)
-                | Request::ConfirmSave
+                | Request::ConfirmSave { .. }
                 | Request::CancelSave => false,
             })
         };
@@ -340,6 +353,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 | Request::Redo
                 | Request::PluginEdit { .. }
                 | Request::PluginTool(..)
+                | Request::DrawingClicked { .. }
         );
         let settings_only = match &request {
             Request::Edit { command, caret, .. } => st
@@ -453,9 +467,9 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
             }
             Request::Save(to) => save(&mut st, to, sink),
-            Request::ConfirmSave => {
+            Request::ConfirmSave { keep } => {
                 if let Some(prepared) = st.pending_save.take() {
-                    write_save(&mut st, &prepared, sink);
+                    write_save(&mut st, &prepared, keep || prepared.keeps, sink);
                 }
             }
             Request::CancelSave => st.pending_save = None,
@@ -501,7 +515,42 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     Err(e) => sink(Event::Message(Level::Error, format!("{name}: {e}"))),
                 }
             }
+            Request::DrawingClicked {
+                tag,
+                at,
+                x,
+                y,
+                double,
+            } => {
+                let Some(doc) = st.doc.as_ref() else {
+                    continue;
+                };
+                let Some((plugin, place)) =
+                    crate::drawings::clicked(&st.plugins, &doc.score, tag, at)
+                else {
+                    continue;
+                };
+                let click = oxiguitar_host::api::message::Clicked {
+                    place,
+                    at: oxiguitar_host::api::display::Point { x, y },
+                    double,
+                };
+                let name = st
+                    .plugins
+                    .found()
+                    .iter()
+                    .find(|f| f.manifest.as_ref().is_some_and(|m| m.id == plugin))
+                    .map_or_else(|| plugin.clone(), |f| f.name());
+                match st.plugins.drawing_clicked(&plugin, click) {
+                    Ok(report) if !report.trim().is_empty() => {
+                        sink(Event::Message(Level::Info, format!("{name}: {report}")));
+                    }
+                    Ok(_) => {}
+                    Err(e) => sink(Event::Message(Level::Error, format!("{name}: {e}"))),
+                }
+            }
             Request::Selection(selection, selection2) => {
+                st.open.set_selection(selection2);
                 st.plugins.push(PluginEvent::Selection(selection));
                 st.plugins.push(PluginEvent::Selection2(selection2));
             }
@@ -510,7 +559,8 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     continue;
                 };
                 let name = file_name(&path);
-                let message = match st.engraver.pdf(doc, &settings) {
+                let drawings = crate::drawings::of(&st.plugins, &doc.score);
+                let message = match st.engraver.pdf(doc, &settings, drawings) {
                     Ok((bytes, pages)) => match std::fs::write(&path, bytes) {
                         Ok(()) => (
                             Level::Info,
@@ -592,16 +642,19 @@ fn save(st: &mut State, to: Option<(PathBuf, String)>, sink: &dyn Fn(Event)) {
     };
     match doc.prepare_save(&st.plugins, to) {
         Ok(prepared) if prepared.ask() => {
-            let (heading, lines) = prepared.question(&doc.path);
-            let elsewhere = prepared.instead.is_some();
+            let (heading, lines) = prepared.question();
+            let can_keep = prepared.can_keep() && !prepared.keeps;
             st.pending_save = Some(prepared);
             sink(Event::AskSave {
                 heading,
                 lines,
-                elsewhere,
+                can_keep,
             });
         }
-        Ok(prepared) => write_save(st, &prepared, sink),
+        Ok(prepared) => {
+            let keep = prepared.keeps;
+            write_save(st, &prepared, keep, sink);
+        }
         Err(e) => {
             sink(Event::Message(Level::Error, e));
             sink(Event::SaveFailed);
@@ -609,12 +662,12 @@ fn save(st: &mut State, to: Option<(PathBuf, String)>, sink: &dyn Fn(Event)) {
     }
 }
 
-fn write_save(st: &mut State, prepared: &Prepared, sink: &dyn Fn(Event)) {
+fn write_save(st: &mut State, prepared: &Prepared, keep: bool, sink: &dyn Fn(Event)) {
     let Some(doc) = st.doc.as_mut() else {
         sink(Event::SaveFailed);
         return;
     };
-    match doc.save(prepared) {
+    match doc.save(prepared, keep) {
         Ok(warning) => {
             if let Some(warning) = warning {
                 sink(Event::Message(Level::Error, warning));
@@ -640,18 +693,25 @@ fn engrave(st: &mut State, sink: &dyn Fn(Event)) {
         return;
     };
     st.stale = false;
+    // What plugins draw, asked of them first (interface 1.8).
+    let drawings = crate::drawings::of(&st.plugins, &doc.score);
     let engraved = st.engraver.engrave(
         &doc.score,
         &st.settings,
         doc.marked(),
         doc.bar_colour_global,
+        drawings,
     );
     st.sheets = Sheets::stack(engraved.pages);
     st.engraving += 1;
+    let hits = Arc::new(engraved.hits);
+    // Plugins read the engraving too (interface 1.8).
+    st.open
+        .set_engraved(st.revision, st.sheets.lists.clone(), hits.clone());
     sink(Event::Engraved {
         engraving: st.engraving,
         sheets: st.sheets.rects.clone(),
-        hits: Arc::new(engraved.hits),
+        hits,
     });
 }
 
@@ -796,27 +856,60 @@ mod tests {
     #[test]
     fn open_engrave_draw_and_export() {
         let (tx, rx) = channel();
-        let worker = Worker::start(
-            crate::test_plugins().clone(),
-            OpenScore::default(),
-            move |e| {
-                let _ = tx.send(e);
-            },
-        );
+        let open = OpenScore::default();
+        let worker = Worker::start(crate::test_plugins().clone(), open.clone(), move |e| {
+            let _ = tx.send(e);
+        });
         worker.send(Request::Open(fixture()));
         let Event::Opened { tracks, tools, .. } = next(&rx) else {
             panic!("expected Opened")
         };
         assert!(!tracks.is_empty() && !tools.is_empty());
+        // Nothing for plugins to read of the page until it is engraved.
+        assert!(open.engraving().is_none());
 
         worker.send(Request::Engrave(Settings::default()));
         let Event::Engraved {
-            engraving, sheets, ..
+            engraving,
+            sheets,
+            hits,
         } = next(&rx)
         else {
             panic!("expected Engraved")
         };
         assert_eq!(sheets.len(), 1);
+
+        // Plugins read the same page (interface 1.8): its drawing, in the
+        // text and the music font, and every beat's place on it.
+        {
+            use oxiguitar_host::api::display::{Font, Item};
+            let read = open.engraving().expect("the engraving");
+            assert_eq!(read.revision, open.wire2().expect("a score").0);
+            assert_eq!(read.pages.len(), 1);
+            let page = &read.pages[0];
+            assert!(page.width > 0.0 && page.height > 0.0);
+            let font = |f: Font| {
+                page.items
+                    .iter()
+                    .any(|i| matches!(i, Item::Text { font, .. } if *font == f))
+            };
+            assert!(font(Font::Music) && font(Font::Sans));
+            assert!(page.items.iter().any(|i| matches!(i, Item::Line { .. })));
+            let beats: usize = hits
+                .systems
+                .iter()
+                .flat_map(|s| &s.staves)
+                .flat_map(|s| &s.bars)
+                .map(|b| b.beats.len())
+                .sum();
+            assert!(beats > 0);
+            assert_eq!(read.beats.len(), beats);
+            assert!(read.beats.iter().all(|b| b.page == 0
+                && b.width > 0.0
+                && b.height > 0.0
+                && b.x < page.width
+                && b.y < page.height));
+        }
 
         worker.send(Request::Tiles {
             engraving,
@@ -917,30 +1010,36 @@ mod tests {
         worker.send(Request::Open(gp4));
         while !matches!(next(&rx), Event::Opened { .. }) {}
 
-        // No plugin writes .gp4: Save asks before writing song.gp.
+        // No plugin writes .gp4, and OxiGuitar picks no other format for
+        // the user: Save says so and writes nothing.
         worker.send(Request::Save(None));
-        let Event::AskSave { heading, .. } = next(&rx) else {
-            panic!("expected a question")
-        };
-        assert_eq!(heading, "Save song.gp?");
-        worker.send(Request::CancelSave);
-        worker.send(Request::ConfirmSave);
         assert!(matches!(
-            rx.recv_timeout(Duration::from_millis(300)),
-            Err(RecvTimeoutError::Timeout)
+            next(&rx),
+            Event::Message(Level::Error, s) if s.ends_with("choose a format with Save As.")
         ));
+        assert!(matches!(next(&rx), Event::SaveFailed));
         assert!(!dir.join("song.gp").exists());
 
-        worker.send(Request::Save(None));
-        assert!(matches!(next(&rx), Event::AskSave { .. }));
-        worker.send(Request::ConfirmSave);
-        assert!(matches!(next(&rx), Event::Message(Level::Info, s) if s == "Saved song.gp."));
-        let Event::Saved { name, edit, .. } = next(&rx) else {
-            panic!("expected Saved")
-        };
-        assert_eq!(name, "song.gp");
-        assert!(!edit.modified);
-        assert!(dir.join("song.gp").exists());
+        // Save As, in a format a plugin writes. A question answered with
+        // Cancel writes nothing; answered, the file is written.
+        let to = dir.join("song.gp");
+        worker.send(Request::Save(Some((to.clone(), "gp".to_owned()))));
+        loop {
+            match next(&rx) {
+                Event::AskSave { heading, .. } => {
+                    assert_eq!(heading, "Save song.gp?");
+                    worker.send(Request::ConfirmSave { keep: true });
+                }
+                Event::Message(Level::Info, s) => assert_eq!(s, "Saved song.gp."),
+                Event::Saved { name, edit, .. } => {
+                    assert_eq!(name, "song.gp");
+                    assert!(!edit.modified);
+                    break;
+                }
+                other => panic!("{other:?}"),
+            }
+        }
+        assert!(to.exists());
 
         // Now a .gp file with nothing lost: written at once.
         worker.send(Request::Save(None));
@@ -1369,7 +1468,7 @@ mod tests {
                     assert!(!edit.modified);
                     break;
                 }
-                Event::AskSave { .. } => worker.send(Request::ConfirmSave),
+                Event::AskSave { .. } => worker.send(Request::ConfirmSave { keep: false }),
                 Event::SaveFailed => panic!("the save failed"),
                 _ => {}
             }

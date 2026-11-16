@@ -32,6 +32,35 @@ pub struct SystemHits {
     pub bottom: f32,
     /// Its staves, top to bottom.
     pub staves: Vec<StaffHits>,
+    /// The boxes of what others drew on it ([`crate::Drawing`]), in
+    /// drawing order.
+    pub drawn: Vec<DrawnHit>,
+}
+
+/// Where a drawing is on the sheet.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DrawnHit {
+    /// Its place in the score.
+    pub at: crate::drawing::DrawnAt,
+    /// Its [`crate::Drawing::tag`].
+    pub tag: u32,
+    /// Its box.
+    pub rect: Rect,
+    /// The staff space it was drawn with, in points.
+    pub sp: f32,
+}
+
+/// A click on a drawing ([`Hits::drawn_at`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DrawnSpot {
+    /// The drawing's place in the score.
+    pub at: crate::drawing::DrawnAt,
+    /// Its tag.
+    pub tag: u32,
+    /// Where in its box, in staff spaces from its top left corner.
+    pub x: f32,
+    /// See `x`.
+    pub y: f32,
 }
 
 /// One staff of one track as shown in a system. A keyboard's grand staff
@@ -177,6 +206,25 @@ impl StaffHits {
 }
 
 impl Hits {
+    /// The drawing under the point (`x`, `y`) of sheet `sheet`, if any: the
+    /// last drawn of those there.
+    pub fn drawn_at(&self, sheet: usize, x: f32, y: f32) -> Option<DrawnSpot> {
+        self.systems
+            .iter()
+            .filter(|s| s.sheet == sheet)
+            .flat_map(|s| s.drawn.iter().rev())
+            .find(|d| {
+                let r = d.rect;
+                x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height
+            })
+            .map(|d| DrawnSpot {
+                at: d.at,
+                tag: d.tag,
+                x: (x - d.rect.x) / d.sp,
+                y: (y - d.rect.y) / d.sp,
+            })
+    }
+
     /// The place under the point (`x`, `y`) of sheet `sheet`: the nearest
     /// staff of the system there, the bar there, the beat of `voice`
     /// nearest `x` and the string nearest `y`. `None` off the music (in the
@@ -455,6 +503,10 @@ impl SystemHits {
     /// The same map moved by (`dx`, `dy`) onto sheet `sheet`.
     pub(crate) fn placed(mut self, sheet: usize, dx: f32, dy: f32) -> SystemHits {
         self.sheet = sheet;
+        for d in &mut self.drawn {
+            d.rect.x += dx;
+            d.rect.y += dy;
+        }
         self.top += dy;
         self.bottom += dy;
         for s in &mut self.staves {
@@ -510,6 +562,7 @@ mod tests {
                 sheet: 0,
                 top: 100.0,
                 bottom: 200.0,
+                drawn: Vec::new(),
                 staves: vec![StaffHits {
                     track: 2,
                     staff: 0,

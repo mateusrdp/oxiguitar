@@ -97,6 +97,17 @@ pub struct Manifest {
     /// The tools it adds to the Tools menu. Since interface 1.2.
     #[serde(default)]
     pub tools: Vec<ToolSpec>,
+    /// Whether it draws on the page at the bars and beats that carry its
+    /// data or marks (`Request::Draw`), each time the score is engraved.
+    /// Since interface 1.8.
+    #[serde(default)]
+    pub draws: bool,
+    /// Whether it plays the notes its own way (`Request::Perform`): it is
+    /// given each track's notes as played and gives them back as they
+    /// should sound. Performing plugins take turns in plugin order. Since
+    /// interface 1.8.
+    #[serde(default)]
+    pub performs: bool,
     /// Whether it has a settings window, opened from the plugin manager's
     /// Settings… (`Request::SettingsWindow`). Since interface 1.3.
     #[serde(default)]
@@ -104,11 +115,15 @@ pub struct Manifest {
     /// The sections it adds to the track dialog. Since interface 1.3.
     #[serde(default)]
     pub track_sections: Vec<TrackSectionSpec>,
-    /// The folders it shares with the user and other plugins, which the
-    /// host creates at start and hands over (`HostRequest::Folders`).
-    /// Since interface 1.3.
+    /// The folders it shares with the user and other plugins, by name:
+    /// each sits beside `plugins` in the user's OxiGuitar folder, where the
+    /// host creates it at start, and may also sit beside a system plugin
+    /// folder or the program. Since interface 1.3 for `soundfonts` and
+    /// `nam` (`HostRequest::Folders`); since interface 1.8 any name
+    /// ([`is_folder_name`], `HostRequest::Folder`), so a plugin has folders
+    /// of its own with no change to the core.
     #[serde(default)]
-    pub folders: Vec<SharedFolder>,
+    pub folders: Vec<String>,
     /// The effects it offers a track's sound, after its instrument. Since
     /// interface 1.3.
     #[serde(default)]
@@ -204,8 +219,13 @@ pub enum SharedFolder {
 }
 
 impl SharedFolder {
-    /// Every shared folder.
+    /// Every shared folder interface 1.3 names.
     pub const ALL: [SharedFolder; 2] = [SharedFolder::Soundfonts, SharedFolder::Nam];
+
+    /// The folder of interface 1.3 with this name, if it is one.
+    pub fn of(name: &str) -> Option<SharedFolder> {
+        SharedFolder::ALL.into_iter().find(|f| f.name() == name)
+    }
 
     /// The folder's name in the user's OxiGuitar folder.
     pub fn name(self) -> &'static str {
@@ -214,6 +234,20 @@ impl SharedFolder {
             SharedFolder::Nam => "nam",
         }
     }
+}
+
+/// The most characters a shared folder's name may have.
+pub const FOLDER_NAME_MAX: usize = 24;
+
+/// The names OxiGuitar's own folders have beside `plugins`, which no
+/// plugin's folder may take.
+pub const FOLDER_NAMES_TAKEN: [&str; 3] = ["plugins", "data", "cache"];
+
+/// Whether `s` can name a plugin's shared folder: 1 to 24 characters,
+/// lowercase ASCII letters and digits in parts joined by single `-`, and
+/// none of OxiGuitar's own folders' names.
+pub fn is_folder_name(s: &str) -> bool {
+    s.len() <= FOLDER_NAME_MAX && !s.contains('.') && is_id(s) && !FOLDER_NAMES_TAKEN.contains(&s)
 }
 
 /// A tool, as the manifest declares it: an entry of the Tools menu that
@@ -228,6 +262,225 @@ pub struct ToolSpec {
     /// room (`oxiguitar-cli tools`).
     #[serde(default)]
     pub description: String,
+    /// Where the tool is in the editing palette, when it is a palette
+    /// button. Since interface 1.8.
+    #[serde(default)]
+    pub palette: Option<PaletteSpec>,
+    /// The menu the tool is an entry of (letter case aside): one of the
+    /// menu bar's own (`File`, `Edit`, `View`, `Tools`, `Help`), where it
+    /// comes after the core's entries; `Page` or `Track`, the right-click
+    /// menus of the page and of a track's row; or any other name, which
+    /// makes a menu of that name in the menu bar, before Help. Absent, a
+    /// tool that is no palette or toolbar button is in the Plugins menu,
+    /// the menu the plugins share, and a button is in no menu. Since
+    /// interface 1.8.
+    #[serde(default)]
+    pub menu: Option<String>,
+    /// The tool's button in the toolbar's Plugins section, the one
+    /// section every plugin's toolbar buttons share, after the core's.
+    /// Since interface 1.8.
+    #[serde(default)]
+    pub toolbar: Option<ButtonFace>,
+    /// The keys that run the tool, as `Ctrl+Shift+W` ([`Shortcut`]): with
+    /// Ctrl or Alt, so it never takes a key that enters notes. OxiGuitar's
+    /// own keys come first, then the plugins' in plugin order. Since
+    /// interface 1.8.
+    #[serde(default)]
+    pub shortcut: Option<String>,
+}
+
+/// A tool's keys ([`ToolSpec::shortcut`]): Ctrl, Shift and Alt as held, and
+/// one character key, a letter, a digit or a punctuation mark. Since
+/// interface 1.8.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Shortcut {
+    /// Ctrl (Command on macOS) is held.
+    pub ctrl: bool,
+    /// Shift is held.
+    pub shift: bool,
+    /// Alt (Option on macOS) is held.
+    pub alt: bool,
+    /// The key, lowercase for a letter.
+    pub key: char,
+}
+
+impl Shortcut {
+    /// Reads `Ctrl+Shift+W`: modifiers in any order (`Ctrl`, `Shift`,
+    /// `Alt`, case aside), then one key, joined by `+`. `None` for anything
+    /// else, or without Ctrl or Alt.
+    pub fn parse(text: &str) -> Option<Shortcut> {
+        let parts: Vec<&str> = text.split('+').map(str::trim).collect();
+        let (key, mods) = parts.split_last()?;
+        let mut keys = key.chars();
+        let (Some(key), None) = (keys.next(), keys.next()) else {
+            return None;
+        };
+        if !(key.is_ascii_alphanumeric() || key.is_ascii_punctuation()) {
+            return None;
+        }
+        let mut s = Shortcut {
+            ctrl: false,
+            shift: false,
+            alt: false,
+            key: key.to_ascii_lowercase(),
+        };
+        for m in mods {
+            let held = match m.to_ascii_lowercase().as_str() {
+                "ctrl" | "control" => &mut s.ctrl,
+                "shift" => &mut s.shift,
+                "alt" => &mut s.alt,
+                _ => return None,
+            };
+            if *held {
+                return None;
+            }
+            *held = true;
+        }
+        (s.ctrl || s.alt).then_some(s)
+    }
+
+    /// Whether the key `text` the window names, with these modifiers held,
+    /// is this shortcut.
+    pub fn is(&self, text: &str, shift: bool, ctrl: bool, alt: bool) -> bool {
+        let mut chars = text.chars();
+        matches!((chars.next(), chars.next()), (Some(c), None) if c.to_ascii_lowercase() == self.key)
+            && (shift, ctrl, alt) == (self.shift, self.ctrl, self.alt)
+    }
+
+    /// As people read it: `Ctrl + Shift + W`.
+    pub fn label(&self) -> String {
+        let mut parts = Vec::new();
+        if self.ctrl {
+            parts.push("Ctrl".to_owned());
+        }
+        if self.alt {
+            parts.push("Alt".to_owned());
+        }
+        if self.shift {
+            parts.push("Shift".to_owned());
+        }
+        parts.push(self.key.to_ascii_uppercase().to_string());
+        parts.join(" + ")
+    }
+}
+
+/// What a plugin's toolbar button shows (interface 1.8): a symbol of the
+/// music font or a short text, one of the two. Its tooltip is the tool's
+/// name.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ButtonFace {
+    /// A SMuFL code point of the music font, as `U+E5E7`.
+    #[serde(default)]
+    pub symbol: Option<String>,
+    /// At most [`PALETTE_TEXT_MAX`] characters.
+    #[serde(default)]
+    pub text: Option<String>,
+}
+
+impl ButtonFace {
+    /// The symbol's character, when the face is a valid one.
+    pub fn symbol_char(&self) -> Option<char> {
+        symbol_char(self.symbol.as_deref()?)
+    }
+
+    /// What is wrong with the face, if anything.
+    pub fn problem(&self) -> Option<String> {
+        face_problem("toolbar", self.symbol.as_deref(), self.text.as_deref())
+    }
+}
+
+/// The character of a music-font code point written as `U+E5E7`.
+fn symbol_char(symbol: &str) -> Option<char> {
+    let hex = symbol.strip_prefix("U+")?;
+    let c = char::from_u32(u32::from_str_radix(hex, 16).ok()?)?;
+    ('\u{E000}'..='\u{F8FF}').contains(&c).then_some(c)
+}
+
+/// What is wrong with a button's symbol or text, `place` being "palette"
+/// or "toolbar".
+fn face_problem(place: &str, symbol: Option<&str>, text: Option<&str>) -> Option<String> {
+    match (symbol, text) {
+        (Some(s), None) => symbol_char(s).is_none().then(|| {
+            format!("the {place} symbol must be a code point of the music font, as U+E5E7")
+        }),
+        (None, Some(t)) => {
+            let n = t.trim().chars().count();
+            (n == 0 || n > PALETTE_TEXT_MAX)
+                .then(|| format!("the {place} text must be 1 to {PALETTE_TEXT_MAX} characters"))
+        }
+        _ => Some(format!("a {place} tool shows either a symbol or a text")),
+    }
+}
+
+/// Where what a plugin adds goes when its manifest names no place: the
+/// Plugins menu and the palette's Plugins section, which all plugins
+/// share and the core puts nothing of its own in (Mateus, 16 Nov 2026).
+/// A plugin may instead name a place of the core's, or one of its own.
+pub const PLUGINS_PLACE: &str = "Plugins";
+
+/// The most characters a menu's name may have.
+pub const MENU_NAME_MAX: usize = 24;
+
+impl ToolSpec {
+    /// The menu the tool is an entry of, in lower case: [`PLUGINS_PLACE`]'s
+    /// when the manifest names none and the tool is no palette or toolbar
+    /// button; `None` for such a button without a menu.
+    pub fn menu_key(&self) -> Option<String> {
+        match &self.menu {
+            Some(menu) => Some(menu.trim().to_lowercase()),
+            None => (self.palette.is_none() && self.toolbar.is_none())
+                .then(|| PLUGINS_PLACE.to_lowercase()),
+        }
+    }
+}
+
+/// A tool's place and face in the editing palette (interface 1.8). The
+/// button's tooltip is the tool's name; clicking it runs the tool, as the
+/// Tools menu would.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PaletteSpec {
+    /// The palette group it joins, by its heading ("Effects", "Notation";
+    /// letter case aside). A heading the palette doesn't have makes a
+    /// group of that name after the core's. Absent, the Plugins group
+    /// ([`PLUGINS_PLACE`]), which all plugins share.
+    #[serde(default = "plugins_place")]
+    pub section: String,
+    /// What the button shows: one symbol of the music font (SMuFL), by
+    /// its code point as `U+E5E7`. Exactly one of `symbol` and `text`.
+    #[serde(default)]
+    pub symbol: Option<String>,
+    /// What the button shows: a few letters ("P.M."), at most
+    /// [`PALETTE_TEXT_MAX`].
+    #[serde(default)]
+    pub text: Option<String>,
+}
+
+fn plugins_place() -> String {
+    PLUGINS_PLACE.to_owned()
+}
+
+/// The most characters a palette button's text may have.
+pub const PALETTE_TEXT_MAX: usize = 5;
+/// The most characters a palette section's heading may have.
+pub const PALETTE_SECTION_MAX: usize = 24;
+
+impl PaletteSpec {
+    /// The symbol's character, when `symbol` is a code point of the
+    /// music font's own range (SMuFL's, U+E000 to U+F8FF).
+    pub fn symbol_char(&self) -> Option<char> {
+        symbol_char(self.symbol.as_deref()?)
+    }
+
+    /// What is wrong with it, as a sentence for the plugin's author.
+    pub fn problem(&self) -> Option<String> {
+        let section = self.section.trim();
+        if section.is_empty() || section.chars().count() > PALETTE_SECTION_MAX {
+            return Some(format!(
+                "the palette section must be 1 to {PALETTE_SECTION_MAX} characters"
+            ));
+        }
+        face_problem("palette", self.symbol.as_deref(), self.text.as_deref())
+    }
 }
 
 impl Manifest {
@@ -348,6 +601,29 @@ impl Manifest {
             if t.name.trim().is_empty() {
                 out.push(format!("tool {:?}: the name is empty", t.id));
             }
+            if let Some(problem) = t.palette.as_ref().and_then(PaletteSpec::problem) {
+                out.push(format!("tool {:?}: {problem}", t.id));
+            }
+            if let Some(problem) = t.toolbar.as_ref().and_then(ButtonFace::problem) {
+                out.push(format!("tool {:?}: {problem}", t.id));
+            }
+            if let Some(keys) = &t.shortcut
+                && Shortcut::parse(keys).is_none()
+            {
+                out.push(format!(
+                    "tool {:?}: the shortcut {keys:?} isn't one: Ctrl, Alt or both (and Shift if wanted), then a letter, a digit or a punctuation mark, joined by +",
+                    t.id
+                ));
+            }
+            if let Some(menu) = &t.menu {
+                let n = menu.trim().chars().count();
+                if n == 0 || n > MENU_NAME_MAX {
+                    out.push(format!(
+                        "tool {:?}: the menu's name must be 1 to {MENU_NAME_MAX} characters",
+                        t.id
+                    ));
+                }
+            }
         }
         let mut effects: Vec<&str> = Vec::new();
         for e in &self.effects {
@@ -377,7 +653,12 @@ impl Manifest {
         }
         for (i, f) in self.folders.iter().enumerate() {
             if self.folders[..i].contains(f) {
-                out.push(format!("folder {:?}: listed twice", f.name()));
+                out.push(format!("folder {f:?}: listed twice"));
+            }
+            if !is_folder_name(f) {
+                out.push(format!(
+                    "folder {f:?}: a folder's name is 1 to {FOLDER_NAME_MAX} lowercase letters, digits and single hyphens, and not one of OxiGuitar's own"
+                ));
             }
         }
         let mut exporters: Vec<&str> = Vec::new();
@@ -469,6 +750,53 @@ impl Manifest {
                 self.interface
             ));
         }
+        let since_1_8 = InterfaceVersion { major: 1, minor: 8 };
+        if self.interface < since_1_8 {
+            if self.tools.iter().any(|t| {
+                t.palette.is_some()
+                    || t.menu.is_some()
+                    || t.toolbar.is_some()
+                    || t.shortcut.is_some()
+            }) {
+                out.push(format!(
+                    "a tool's palette, toolbar and menu need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.folders.iter().any(|f| SharedFolder::of(f).is_none()) {
+                out.push(format!(
+                    "folders other than \"soundfonts\" and \"nam\" need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.performs {
+                out.push(format!(
+                    "playing the notes its own way needs interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.draws {
+                out.push(format!(
+                    "drawing on the page needs interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.tabs.iter().any(|t| t.area == crate::tab::Area::Dialog) {
+                out.push(format!(
+                    "dialogs need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.effects.iter().any(|e| e.follows_score) {
+                out.push(format!(
+                    "effects that follow the score need interface {since_1_8}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+        }
+        if self.instruments.iter().any(|i| i.follows_score) {
+            out.push("only an effect can follow the score (follows_score)".into());
+        }
         let since_1_1 = InterfaceVersion { major: 1, minor: 1 };
         if self.interface < since_1_1 {
             if !self.tabs.is_empty() {
@@ -559,6 +887,19 @@ pub struct InstrumentSpec {
     /// Classes taken out of `plays`.
     #[serde(default)]
     pub does_not_play: Vec<InstrumentClass>,
+    /// For an effect: it follows the score, so it is prepared with its
+    /// track's marked beats as they will be played
+    /// ([`crate::message::PrepareFollowing`]) and prepared again when they
+    /// change. Since interface 1.8.
+    #[serde(default)]
+    pub follows_score: bool,
+    /// For an effect: where it runs on a track whose effects the user
+    /// hasn't ordered, lower first (a pedal before the amp: 100; an amp:
+    /// 200; what shapes the amp's sound, such as an equalizer: 300).
+    /// Effects without one run after those with one, as found. Since
+    /// interface 1.8.
+    #[serde(default)]
+    pub order: Option<i32>,
 }
 
 impl InstrumentSpec {
@@ -864,6 +1205,29 @@ mod tests {
     }"#;
 
     #[test]
+    fn a_shortcut_needs_ctrl_or_alt_and_one_key() {
+        let s = Shortcut::parse("Ctrl+Shift+W").unwrap();
+        assert_eq!((s.ctrl, s.shift, s.alt, s.key), (true, true, false, 'w'));
+        assert_eq!(s.label(), "Ctrl + Shift + W");
+        assert!(s.is("W", true, true, false) && s.is("w", true, true, false));
+        assert!(!s.is("w", false, true, false) && !s.is("q", true, true, false));
+        assert_eq!(Shortcut::parse(" alt + 7 ").unwrap().label(), "Alt + 7");
+        assert_eq!(Shortcut::parse("Control+Alt+.").unwrap().key, '.');
+        for bad in [
+            "W",
+            "Shift+W",
+            "Ctrl+",
+            "Ctrl+Ctrl+W",
+            "Hyper+W",
+            "Ctrl+WW",
+            "Ctrl+é",
+            "",
+        ] {
+            assert_eq!(Shortcut::parse(bad), None, "{bad}");
+        }
+    }
+
+    #[test]
     fn a_manifest_reads_with_padding_and_unknown_keys() {
         let mut bytes = GP5.as_bytes().to_vec();
         bytes.extend([0; 300]);
@@ -964,7 +1328,31 @@ mod tests {
             "conditions": {"arch": ["x86_64"], "cpu": ["avx2", "fma"]}"#;
         let m: Manifest = serde_json::from_str(&json("1.3", keys)).unwrap();
         assert!(m.problems().is_empty(), "{:?}", m.problems());
-        assert_eq!(m.folders, [SharedFolder::Nam, SharedFolder::Soundfonts]);
+        assert_eq!(m.folders, ["nam", "soundfonts"]);
+        // A folder of the plugin's own needs interface 1.8 and a name
+        // that is no path and none of OxiGuitar's.
+        let own = |interface: &str, name: &str| -> Vec<String> {
+            let m: Manifest =
+                serde_json::from_str(&json(interface, &format!(r#", "folders": ["{name}"]"#)))
+                    .unwrap();
+            m.problems()
+        };
+        assert!(own("1.8", "impulses").is_empty());
+        assert!(own("1.8", "my-captures2").is_empty());
+        assert!(own("1.3", "impulses")[0].contains("interface 1.8"));
+        for bad in [
+            "plugins", "data", "cache", "a.b", "../x", "Up", "", "a/b", "a--b",
+        ] {
+            assert!(
+                own("1.8", bad)
+                    .iter()
+                    .any(|p| p.contains("a folder's name")),
+                "{bad}"
+            );
+        }
+        assert!(!is_folder_name(&"a".repeat(FOLDER_NAME_MAX + 1)));
+        assert_eq!(SharedFolder::of("nam"), Some(SharedFolder::Nam));
+        assert_eq!(SharedFolder::of("impulses"), None);
         assert!(m.track_sections[0].shows_for(InstrumentClass::Fretted));
         assert!(!m.track_sections[0].shows_for(InstrumentClass::Drums));
         let old: Manifest = serde_json::from_str(&json("1.2", keys)).unwrap();
@@ -988,6 +1376,8 @@ mod tests {
     fn instruments_play_classes() {
         let spec =
             |plays: Option<Vec<InstrumentClass>>, not: Vec<InstrumentClass>| InstrumentSpec {
+                follows_score: false,
+                order: None,
                 id: "i".into(),
                 name: "I".into(),
                 plays,

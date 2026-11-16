@@ -194,12 +194,35 @@ impl Folders {
         self.data.join(folder.name())
     }
 
-    /// Makes sure the shared folders `wanted` exist, creating what is
-    /// missing; returns what was created.
-    pub fn ensure_shared(&self, wanted: &[SharedFolder]) -> std::io::Result<Vec<PathBuf>> {
+    /// A plugin's shared folder by name, beside `plugins` in the data
+    /// folder (interface 1.8; `soundfonts` and `nam` are two such names).
+    pub fn named(&self, name: &str) -> PathBuf {
+        self.data.join(name)
+    }
+
+    /// The folders called `name` that exist beside a system plugin folder
+    /// (so in a package's files, or beside the program in a portable
+    /// copy), in the order plugins are looked for; never the user's own.
+    pub fn named_elsewhere(&self, name: &str) -> Vec<PathBuf> {
+        let user = self.named(name);
+        let mut out: Vec<PathBuf> = Vec::new();
+        for plugins in &self.system_plugins {
+            let Some(dir) = plugins.parent().map(|p| p.join(name)) else {
+                continue;
+            };
+            if dir != user && !out.contains(&dir) && dir.is_dir() {
+                out.push(dir);
+            }
+        }
+        out
+    }
+
+    /// Makes sure the shared folders `wanted` exist in the user's folder,
+    /// creating what is missing; returns what was created.
+    pub fn ensure_shared(&self, wanted: &[String]) -> std::io::Result<Vec<PathBuf>> {
         let mut created = Vec::new();
-        for &folder in wanted {
-            let dir = self.shared(folder);
+        for folder in wanted {
+            let dir = self.named(folder);
             if !dir.is_dir() {
                 std::fs::create_dir_all(&dir)?;
                 created.push(dir);
@@ -501,11 +524,12 @@ pub(crate) mod tests {
             std::fs::read_to_string(f.settings()).unwrap(),
             "{\"mine\": 1}"
         );
-        let wanted = [SharedFolder::Soundfonts];
+        let wanted = ["soundfonts".to_owned(), "impulses".to_owned()];
         assert_eq!(
             f.ensure_shared(&wanted).unwrap(),
-            vec![root.join("soundfonts")]
+            vec![root.join("soundfonts"), root.join("impulses")]
         );
+        assert_eq!(f.named("impulses"), root.join("impulses"));
         assert!(f.ensure_shared(&wanted).unwrap().is_empty());
         let _ = std::fs::remove_dir_all(&root);
     }

@@ -157,7 +157,8 @@ fn write(
         .start_audio_export(exporter)
         .map_err(|e| format!("{name} couldn't start: {}", e.message))?;
     let rate = export.rate;
-    let timeline = Timeline::new(score);
+    let mut timeline = Timeline::new(score);
+    plugin_source::perform(plugins, score, &mut timeline);
     let found = plugin_source::plan(plugins, score);
     let prepared = plugin_source::prepare(plugins, score, &found, rate, BLOCK)?;
 

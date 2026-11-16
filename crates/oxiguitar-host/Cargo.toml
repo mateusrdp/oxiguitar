@@ -15,6 +15,11 @@ serde_json.workspace = true
 object.workspace = true
 libloading.workspace = true
 
+# Crash reports (src/crash.rs): the signal handler and, on Linux, where each
+# plugin's code is in memory.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 # The loader (src/loader.rs) is the one module with `unsafe` code, so the
 # crate denies it (which a module can allow) rather than forbidding it.
 [lints.rust]

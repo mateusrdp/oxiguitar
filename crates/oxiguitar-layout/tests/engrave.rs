@@ -488,6 +488,148 @@ fn tune_in_g(bars: usize) -> Score {
     score
 }
 
+#[test]
+fn a_plugin_s_mark_is_drawn_at_its_beat() {
+    let (fonts, meta) = setup();
+    let mut score = tune_in_g(2);
+    let plain = engrave(&score, &fonts, &meta, &Options::default());
+    assert!(!plain.pages.iter().flat_map(texts).any(|t| t == "T!"));
+    score.tracks[0].staves[0].bars[1].voices[0].beats[2]
+        .effects
+        .marks
+        .insert("oxiguitar.test".into(), "T!".into());
+    let e = engrave(&score, &fonts, &meta, &Options::default());
+    check("mark", &e, &fonts);
+    let drawn: Vec<_> = e
+        .pages
+        .iter()
+        .flat_map(|p| &p.items)
+        .filter_map(|i| match i {
+            Item::Glyphs(run) if run.text == "T!" => Some(run.origin),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(drawn.len(), 1, "the mark, once");
+    // Over its own beat: the third of the second bar.
+    let beats = &e.hits.systems[0].staves[0].bars[1].beats;
+    let (here, next) = (beats[2].x, beats[3].x);
+    assert!(
+        drawn[0].x >= here - 4.0 && drawn[0].x < next,
+        "{} in {here}..{next}",
+        drawn[0].x
+    );
+    // And above the staff.
+    assert!(drawn[0].y < e.hits.systems[0].staves[0].top);
+}
+
+#[test]
+fn others_drawings_stand_in_a_lane_of_their_own_over_their_beat() {
+    use oxiguitar_display::{Paint, Point};
+    use oxiguitar_layout::{Anchor, Drawing, DrawnAt, Shape};
+    let (fonts, meta) = setup();
+    let score = tune_in_g(2);
+    let plain = engrave(&score, &fonts, &meta, &Options::default());
+    // A box 3 by 2 staff spaces: a line across its bottom and a word.
+    let drawing = Drawing {
+        tag: 7,
+        width: 3.0,
+        height: 2.0,
+        shapes: vec![
+            Shape::Line {
+                from: Point::new(0.0, 2.0),
+                to: Point::new(3.0, 2.0),
+                width: 0.1,
+                paint: Paint::Accent,
+            },
+            Shape::Text {
+                text: "Hey".into(),
+                at: Point::new(1.5, 1.5),
+                size: 1.6,
+                music: false,
+                anchor: Anchor::Middle,
+                paint: Paint::Ink,
+            },
+        ],
+    };
+    let mut options = Options::default();
+    options.drawings.insert(
+        DrawnAt {
+            track: 0,
+            staff: 0,
+            bar: 1,
+            beat: Some((0, 2)),
+        },
+        vec![drawing],
+    );
+    let e = engrave(&score, &fonts, &meta, &options);
+    check("drawing", &e, &fonts);
+    let sp = options.staff_space;
+    let lines: Vec<(Point, Point)> = e
+        .pages
+        .iter()
+        .flat_map(|p| &p.items)
+        .filter_map(|i| match i {
+            Item::Line {
+                from,
+                to,
+                paint: Paint::Accent,
+                ..
+            } => Some((*from, *to)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(lines.len(), 1, "the line, once");
+    let (from, to) = lines[0];
+    assert!(
+        (to.x - from.x - 3.0 * sp).abs() < 0.01,
+        "3 staff spaces wide"
+    );
+    // Over its beat, above the staff.
+    let staff = &e.hits.systems[0].staves[0];
+    let beats = &staff.bars[1].beats;
+    assert!(
+        from.x >= beats[2].x - sp && from.x < beats[3].x,
+        "{} vs {}",
+        from.x,
+        beats[2].x
+    );
+    assert!(to.y < staff.top);
+    assert!(e.pages.iter().flat_map(texts).any(|t| t == "Hey"));
+    // The system makes room for it: the staff is lower than without.
+    assert!(staff.top > plain.hits.systems[0].staves[0].top + 1.5 * sp);
+    // A click on it finds it, its tag and where in its box; one beside it
+    // doesn't.
+    let found = e
+        .hits
+        .drawn_at(0, from.x + 1.5 * sp, to.y - 0.5 * sp)
+        .expect("the drawing is there");
+    assert_eq!(found.tag, 7);
+    assert_eq!(
+        found.at,
+        DrawnAt {
+            track: 0,
+            staff: 0,
+            bar: 1,
+            beat: Some((0, 2)),
+        }
+    );
+    assert!(
+        (found.x - 1.5).abs() < 0.01 && (found.y - 1.5).abs() < 0.01,
+        "{found:?}"
+    );
+    assert!(
+        e.hits
+            .drawn_at(0, from.x + 1.5 * sp, staff.bottom + sp)
+            .is_none()
+    );
+    assert!(
+        plain
+            .hits
+            .drawn_at(0, from.x + 1.5 * sp, to.y - 0.5 * sp)
+            .is_none()
+    );
+}
+
 /// How many times `c` is drawn on every page.
 fn count_char(e: &Engraved, c: char) -> usize {
     e.pages
