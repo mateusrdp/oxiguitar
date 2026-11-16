@@ -17,11 +17,13 @@ use oxiguitar_model::Score;
 /// Every plugin's drawings for `score`.
 pub(crate) fn of(plugins: &Plugins, score: &Score) -> Drawings {
     let mut out = Drawings::new();
-    for plugin in plugins.drawers() {
-        let (places, at) = places(score, &plugin);
-        for drawn in plugins.draw(&plugin, places) {
+    for (tag, plugin) in plugins.drawers().iter().enumerate() {
+        let (places, at) = places(score, plugin);
+        for drawn in plugins.draw(plugin, places) {
             if let Some(&at) = at.get(drawn.place as usize) {
                 out.entry(at).or_default().push(Drawing {
+                    // Whose: its place among the drawers, for a click on it.
+                    tag: u32::try_from(tag).unwrap_or(u32::MAX),
                     width: drawn.width,
                     height: drawn.height,
                     shapes: drawn.items.iter().map(shape).collect(),
@@ -34,6 +36,21 @@ pub(crate) fn of(plugins: &Plugins, score: &Score) -> Drawings {
 
 /// The places of `score` that carry `plugin`'s data or marks, and where
 /// each is.
+/// The plugin that drew what has the tag `tag` ([`of`]), and the place
+/// it drew it at as the score has it now, for a click on it.
+pub(crate) fn clicked(
+    plugins: &Plugins,
+    score: &Score,
+    tag: u32,
+    at: DrawnAt,
+) -> Option<(String, DrawPlace)> {
+    let plugin = plugins.drawers().into_iter().nth(tag as usize)?;
+    let (places, ats) = places(score, &plugin);
+    let i = ats.iter().position(|a| *a == at)?;
+    let place = places.into_iter().nth(i)?;
+    Some((plugin, place))
+}
+
 fn places(score: &Score, plugin: &str) -> (Vec<DrawPlace>, Vec<DrawnAt>) {
     let n = |i: usize| u32::try_from(i).unwrap_or(u32::MAX);
     let mut places = Vec::new();

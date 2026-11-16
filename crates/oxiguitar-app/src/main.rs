@@ -2867,6 +2867,29 @@ fn page_pressed(app: &Shared, x: f32, y: f32, shift: bool) {
     if moved {
         caret_moved(app);
     }
+    // On what a plugin drew: the plugin is told, after the caret moved.
+    if !shift {
+        drawing_clicked(app, x, y, false);
+    }
+}
+
+/// Tells a plugin the user clicked what it drew at (`x`, `y`) of the page
+/// view, if anything (interface 1.8). Returns whether there was a drawing.
+fn drawing_clicked(app: &Shared, x: f32, y: f32, double: bool) -> bool {
+    let Some((sheet, sx, sy)) = on_sheet(app, x, y) else {
+        return false;
+    };
+    let Some(spot) = app.borrow().editing.hits().drawn_at(sheet, sx, sy) else {
+        return false;
+    };
+    app.borrow().worker.send(Request::DrawingClicked {
+        tag: spot.tag,
+        at: spot.at,
+        x: spot.x,
+        y: spot.y,
+        double,
+    });
+    true
 }
 
 /// A drag-start on the page: anchors the drag at the current caret bar.
@@ -2893,6 +2916,9 @@ fn page_menu_pressed(app: &Shared, x: f32, y: f32) {
 /// bar and the Bar tab shows (Mateus, 20 Oct 2026; the dialog became the
 /// tab in issue #177).
 fn page_double_clicked(app: &Shared, x: f32, y: f32) {
+    if drawing_clicked(app, x, y, true) {
+        return;
+    }
     let on_time = on_sheet(app, x, y)
         .is_some_and(|(i, sx, sy)| app.borrow_mut().editing.time_signature_at(i, sx, sy));
     if on_time {

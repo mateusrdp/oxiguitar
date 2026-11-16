@@ -273,6 +273,29 @@ fn a_plugin_draws_at_its_places_and_isnt_asked_twice_about_the_same() {
     // None: nothing drawn, nothing asked.
     assert!(plugins.draw("oxiguitar.test", Vec::new()).is_empty());
     assert_eq!(asked(), before + 2);
+    // A click on what it drew goes to it, with the place and the point.
+    let click = |double| oxiguitar_host::api::message::Clicked {
+        place: beat(true),
+        at: oxiguitar_host::api::display::Point { x: 1.0, y: 0.5 },
+        double,
+    };
+    assert_eq!(
+        plugins
+            .drawing_clicked("oxiguitar.test", click(false))
+            .unwrap(),
+        "clicked at [0, 0, 0, 0, 0], 1.0 by 0.5 in"
+    );
+    assert_eq!(
+        plugins
+            .drawing_clicked("oxiguitar.test", click(true))
+            .unwrap(),
+        "double-clicked at [0, 0, 0, 0, 0], 1.0 by 0.5 in"
+    );
+    assert!(
+        plugins
+            .drawing_clicked("someone.else", click(false))
+            .is_err()
+    );
     // A plugin that doesn't draw is never asked.
     assert!(plugins.draw("someone.else", vec![beat(true)]).is_empty());
     assert!(

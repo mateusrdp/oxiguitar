@@ -569,7 +569,7 @@ pub(crate) fn system(
             }
         }
         let geometry = effects::Geometry { band, tg, right };
-        effects::draw(p, &mut list, &marks, &geometry);
+        effects::draw(p, &mut list, &marks, &geometry, &mut hits.drawn);
     }
     // The line joining every staff at the start of the system.
     if let (Some(first), Some(last)) = (bands.first(), bands.last())
@@ -738,6 +738,7 @@ fn system_hits(
         top: 0.0,
         bottom: height,
         staves,
+        drawn: Vec::new(),
     }
 }
 

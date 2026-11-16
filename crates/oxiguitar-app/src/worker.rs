@@ -90,6 +90,16 @@ pub(crate) enum Request {
     /// Run a plugin's tool from the Tools menu: the plugin's id, the
     /// tool's id.
     PluginTool(String, String),
+    /// A click on what a plugin drew on the page (interface 1.8): the
+    /// drawing's tag and place, where in its box (staff spaces) and
+    /// whether it was a double click.
+    DrawingClicked {
+        tag: u32,
+        at: oxiguitar_layout::DrawnAt,
+        x: f32,
+        y: f32,
+        double: bool,
+    },
     /// End the worker.
     Stop,
 }
@@ -322,7 +332,9 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 Request::Selection(..) => false,
                 Request::Stop => true,
                 Request::Tiles { .. } => tiles,
-                Request::PluginEdit { .. } | Request::PluginTool(..) => true,
+                Request::PluginEdit { .. }
+                | Request::PluginTool(..)
+                | Request::DrawingClicked { .. } => true,
                 Request::ExportPdf(..)
                 | Request::Save(_)
                 | Request::ConfirmSave { .. }
@@ -341,6 +353,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 | Request::Redo
                 | Request::PluginEdit { .. }
                 | Request::PluginTool(..)
+                | Request::DrawingClicked { .. }
         );
         let settings_only = match &request {
             Request::Edit { command, caret, .. } => st
@@ -495,6 +508,40 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 };
                 let name = t.spec.name.clone();
                 match st.plugins.run_tool(*t) {
+                    Ok(report) if !report.trim().is_empty() => {
+                        sink(Event::Message(Level::Info, format!("{name}: {report}")));
+                    }
+                    Ok(_) => {}
+                    Err(e) => sink(Event::Message(Level::Error, format!("{name}: {e}"))),
+                }
+            }
+            Request::DrawingClicked {
+                tag,
+                at,
+                x,
+                y,
+                double,
+            } => {
+                let Some(doc) = st.doc.as_ref() else {
+                    continue;
+                };
+                let Some((plugin, place)) =
+                    crate::drawings::clicked(&st.plugins, &doc.score, tag, at)
+                else {
+                    continue;
+                };
+                let click = oxiguitar_host::api::message::Clicked {
+                    place,
+                    at: oxiguitar_host::api::display::Point { x, y },
+                    double,
+                };
+                let name = st
+                    .plugins
+                    .found()
+                    .iter()
+                    .find(|f| f.manifest.as_ref().is_some_and(|m| m.id == plugin))
+                    .map_or_else(|| plugin.clone(), |f| f.name());
+                match st.plugins.drawing_clicked(&plugin, click) {
                     Ok(report) if !report.trim().is_empty() => {
                         sink(Event::Message(Level::Info, format!("{name}: {report}")));
                     }

@@ -45,6 +45,21 @@ OxiGuitar stands every box on the baseline of a lane of its own above the staff 
 
 A drawing larger than the limits, or at a place the plugin wasn't given, leaves all of that answer out, and the footer says why. The contract suite asks every plugin that draws to draw at a bar and a beat that carry an empty object as its data, and checks the answer keeps the limits.
 
+## Clicks
+
+A click on what a plugin drew goes to the plugin, after the caret has moved there: `Request::Clicked`, with the place as the score has it now, the point in the drawing's box in staff spaces from its top left corner, and whether it was a double click (its first click came before, as a click). The drawer's `clicked` answers as a tool does: a sentence about what it did, or nothing, and it can change the score as a tool can. Doing nothing is the default, so a drawer that ignores clicks needs no code for them.
+
+```rust
+impl Drawer for MyDrawer {
+    fn clicked(&self, place: &DrawPlace, at: Point, double: bool) -> Result<String, Error> {
+        // Toggle what the drawing shows, open a dialog, edit the beat...
+        Ok(String::new())
+    }
+}
+```
+
+A shift-click only selects, and a click while the song plays moves the playing position, as anywhere on the page.
+
 ## What it isn't
 
 A drawing is the plugin's view of its data, made anew when the data changes; it isn't kept anywhere. To keep something, keep data ([Tools](tools.md#your-own-data-and-marks-on-beats)). A plugin draws nothing at places without its data: data on the score itself or on a bar of every track has no place on the page yet.

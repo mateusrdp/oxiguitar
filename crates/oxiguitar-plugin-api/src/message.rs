@@ -337,6 +337,23 @@ pub enum Request<'a> {
     /// notes changed since the last time. Answered with
     /// [`Answer::Performed`]. Since interface 1.8.
     Perform(Box<Perform>),
+    /// The user clicked what the plugin drew ([`Request::Draw`]). Answered
+    /// with [`Answer::Report`], a sentence for the footer or nothing, as a
+    /// tool is. The caret is already at the click, so [`HostRequest::Selection`]
+    /// names the beat. Since interface 1.8.
+    Clicked(Box<Clicked>),
+}
+
+/// A click on a drawing ([`Request::Clicked`]). Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Clicked {
+    /// The place the drawing was drawn at, as it is now.
+    pub place: DrawPlace,
+    /// Where in the drawing's box, in staff spaces from its top left
+    /// corner.
+    pub at: crate::display::Point,
+    /// A double click (the first click of it came before, as a click).
+    pub double: bool,
 }
 
 /// One track's notes as played ([`Request::Perform`]). Since interface 1.8.

@@ -61,8 +61,8 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::manifest::SharedFolder;
 pub use oxiguitar_plugin_api::message::{
-    Advice, Availability, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, Perform, PlayedNote,
-    TrackInfo,
+    Advice, Availability, Clicked, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, Perform,
+    PlayedNote, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -349,6 +349,21 @@ pub trait Drawer: Send + Sync {
     /// `place` the index in `places`), in staff spaces, from the box's top
     /// left corner; none where nothing is drawn.
     fn draw(&self, places: &[DrawPlace]) -> Result<Vec<Drawn>, Error>;
+
+    /// The user clicked what it drew at `place`, at `at` in the drawing's
+    /// box (staff spaces from its top left corner); `double` for a double
+    /// click. The caret is already there. Returns a sentence for the footer
+    /// (or an empty one), as a tool does; it may change the score as a tool
+    /// does. Doing nothing is the default.
+    fn clicked(
+        &self,
+        place: &DrawPlace,
+        at: display::Point,
+        double: bool,
+    ) -> Result<String, Error> {
+        let _ = (place, at, double);
+        Ok(String::new())
+    }
 }
 
 /// Plays the notes its own way (interface 1.8): given a track's notes as
@@ -512,6 +527,16 @@ pub fn dispatch_kept(
                 data: Blob::owned(data),
                 losses,
             })
+        }
+        Request::Clicked(click) => {
+            let drawer = plugin
+                .drawer()
+                .ok_or_else(|| Error::not_found("this plugin doesn't draw"))?;
+            Ok(Answer::Report(drawer.clicked(
+                &click.place,
+                click.at,
+                click.double,
+            )?))
         }
         Request::Perform(track) => {
             let performer = plugin

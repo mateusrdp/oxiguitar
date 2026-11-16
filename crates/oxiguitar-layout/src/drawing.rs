@@ -39,6 +39,9 @@ pub type Drawings = BTreeMap<DrawnAt, Vec<Drawing>>;
 /// corner, y downwards.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Drawing {
+    /// Whose it is: a number the caller chooses, opaque to the engraver,
+    /// given back with the box in the hit map ([`crate::hits::DrawnHit`]).
+    pub tag: u32,
     /// How wide the box is.
     pub width: f32,
     /// How tall.
@@ -121,25 +124,28 @@ pub(crate) fn lane_tenths(height: f32) -> u16 {
 }
 
 /// How wide a beat's drawings are laid side by side, in points.
-pub(crate) fn width(drawings: &[Drawing], sp: f32) -> f32 {
-    drawings.iter().map(|d| (d.width + GAP) * sp).sum()
+pub(crate) fn width(drawings: &[(DrawnAt, Drawing)], sp: f32) -> f32 {
+    drawings.iter().map(|(_, d)| (d.width + GAP) * sp).sum()
 }
 
 /// Staff spaces between two drawings at one beat.
 const GAP: f32 = 0.3;
 
-/// Draws `drawings` side by side from `x`, standing on `base`.
+/// Draws `drawings` side by side from `x`, standing on `base`, and gives
+/// each one's box.
 pub(crate) fn draw(
     p: &Painter<'_>,
     list: &mut DisplayList,
-    drawings: &[Drawing],
+    drawings: &[(DrawnAt, Drawing)],
     x: f32,
     base: f32,
-) {
+) -> Vec<Rect> {
     let sp = p.sp;
     let mut left = x;
-    for d in drawings {
+    let mut boxes = Vec::with_capacity(drawings.len());
+    for (_, d) in drawings {
         let top = base - d.height * sp;
+        boxes.push(Rect::new(left, top, d.width * sp, d.height * sp));
         let at = |q: Point| Point::new(left + q.x * sp, top + q.y * sp);
         for shape in &d.shapes {
             match shape {
@@ -206,6 +212,7 @@ pub(crate) fn draw(
         }
         left += (d.width + GAP) * sp;
     }
+    boxes
 }
 
 /// How far left of its point a text of width `w` starts.

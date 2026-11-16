@@ -65,9 +65,10 @@ use oxiguitar_plugin_api::manifest::{
     SharedFolder, Shortcut, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
-    Answer, Availability, DrawPlace, Drawn, Engraving, Error, ErrorKind, FolderPlaces, HostAnswer,
-    HostRequest, Link, LogEntry, PERFORMED_MAX, Perform, PlayedBeat, PlayedNote, PluginFolders,
-    Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode, outcome,
+    Answer, Availability, Clicked, DrawPlace, Drawn, Engraving, Error, ErrorKind, FolderPlaces,
+    HostAnswer, HostRequest, Link, LogEntry, PERFORMED_MAX, Perform, PlayedBeat, PlayedNote,
+    PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode,
+    outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
@@ -1553,6 +1554,20 @@ impl Plugins {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .insert(key, (bytes, notes.clone()));
         Ok(notes)
+    }
+
+    /// Tells the plugin `plugin` the user clicked what it drew (interface
+    /// 1.8), loading it if needed; returns what it says it did, a sentence
+    /// for the footer (or nothing), as a tool does.
+    pub fn drawing_clicked(&self, plugin: &str, click: Clicked) -> Result<String, Error> {
+        let (index, _, _) = self
+            .ready()
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.draws)
+            .ok_or_else(|| Error::not_found(format!("no ready plugin {plugin} draws")))?;
+        match self.request(index, &Request::Clicked(Box::new(click)))? {
+            Answer::Report(report) => Ok(report),
+            other => Err(self.unexpected(index, &other)),
+        }
     }
 
     /// The ids of the ready plugins that draw on the page (interface 1.8),

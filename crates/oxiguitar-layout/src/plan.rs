@@ -48,7 +48,7 @@ pub(crate) struct NoteInfo {
 pub(crate) struct BeatInfo {
     /// What others draw at the beat (and, at a bar's first beat, at the
     /// bar), in drawing order.
-    pub(crate) drawings: Vec<crate::drawing::Drawing>,
+    pub(crate) drawings: Vec<(crate::drawing::DrawnAt, crate::drawing::Drawing)>,
     /// Start within the bar; `None` for grace beats.
     pub(crate) onset: Option<Ratio>,
     pub(crate) kind: BeatKind,
@@ -153,7 +153,7 @@ impl Lanes {
     fn of_beat(b: &BeatInfo, std: bool) -> Lanes {
         let mut l = Lanes {
             drawn: crate::drawing::lane_tenths(
-                b.drawings.iter().map(|d| d.height).fold(0.0, f32::max),
+                b.drawings.iter().map(|(_, d)| d.height).fold(0.0, f32::max),
             ),
             ..Lanes::default()
         };
@@ -254,7 +254,12 @@ pub(crate) struct Planner<'a> {
 impl Planner<'_> {
     /// What is drawn at bar `bar`'s beat `beat` of voice `voice`: at its
     /// first beat, the bar's own drawings first.
-    fn drawings_at(&self, bar: usize, voice: usize, beat: usize) -> Vec<crate::drawing::Drawing> {
+    fn drawings_at(
+        &self,
+        bar: usize,
+        voice: usize,
+        beat: usize,
+    ) -> Vec<(crate::drawing::DrawnAt, crate::drawing::Drawing)> {
         let Some(((track, staff), all)) = self.drawn else {
             return Vec::new();
         };
@@ -265,15 +270,18 @@ impl Planner<'_> {
             beat,
         };
         let mut out = Vec::new();
+        let mut take = |place: crate::drawing::DrawnAt| {
+            out.extend(
+                all.get(&place)
+                    .into_iter()
+                    .flatten()
+                    .map(|d| (place, d.clone())),
+            );
+        };
         if voice == 0 && beat == 0 {
-            out.extend(all.get(&at(None)).into_iter().flatten().cloned());
+            take(at(None));
         }
-        out.extend(
-            all.get(&at(Some((voice, beat))))
-                .into_iter()
-                .flatten()
-                .cloned(),
-        );
+        take(at(Some((voice, beat))));
         out
     }
 

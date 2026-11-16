@@ -543,6 +543,24 @@ impl oxiguitar_plugin::Performer for StampPerformer {
 pub const STAMP_BOX: (f32, f32) = (2.4, 1.6);
 
 impl oxiguitar_plugin::Drawer for StampDrawer {
+    fn clicked(
+        &self,
+        place: &oxiguitar_plugin::DrawPlace,
+        at: Point,
+        double: bool,
+    ) -> Result<String, Error> {
+        let at_ = match place {
+            oxiguitar_plugin::DrawPlace::Bar { at, .. } => at.to_vec(),
+            oxiguitar_plugin::DrawPlace::Beat { at, .. } => at.to_vec(),
+        };
+        Ok(format!(
+            "{} at {at_:?}, {:.1} by {:.1} in",
+            if double { "double-clicked" } else { "clicked" },
+            at.x,
+            at.y
+        ))
+    }
+
     fn draw(
         &self,
         places: &[oxiguitar_plugin::DrawPlace],

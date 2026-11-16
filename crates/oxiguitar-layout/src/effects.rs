@@ -55,7 +55,13 @@ impl Geometry<'_> {
 
 /// Draws every effect of one view in one system. `marks` are in time order
 /// within each voice.
-pub(crate) fn draw(p: &Painter<'_>, list: &mut DisplayList, marks: &[Mark<'_>], g: &Geometry<'_>) {
+pub(crate) fn draw(
+    p: &Painter<'_>,
+    list: &mut DisplayList,
+    marks: &[Mark<'_>],
+    g: &Geometry<'_>,
+    drawn: &mut Vec<crate::hits::DrawnHit>,
+) {
     let voices: Vec<usize> = {
         let mut v: Vec<usize> = marks.iter().map(|m| m.voice).collect();
         v.sort_unstable();
@@ -94,7 +100,16 @@ pub(crate) fn draw(p: &Painter<'_>, list: &mut DisplayList, marks: &[Mark<'_>], 
     // Others' drawings, standing on their lane, from the beat's column.
     if let Some(lane) = g.band.lane(crate::engrave::Lane::Drawn) {
         for m in marks.iter().filter(|m| !m.beat.drawings.is_empty()) {
-            crate::drawing::draw(p, list, &m.beat.drawings, m.x - 0.5 * p.sp, lane.base);
+            let boxes =
+                crate::drawing::draw(p, list, &m.beat.drawings, m.x - 0.5 * p.sp, lane.base);
+            for ((at, d), rect) in m.beat.drawings.iter().zip(boxes) {
+                drawn.push(crate::hits::DrawnHit {
+                    at: *at,
+                    tag: d.tag,
+                    rect,
+                    sp: p.sp,
+                });
+            }
         }
     }
 }

@@ -531,6 +531,7 @@ fn others_drawings_stand_in_a_lane_of_their_own_over_their_beat() {
     let plain = engrave(&score, &fonts, &meta, &Options::default());
     // A box 3 by 2 staff spaces: a line across its bottom and a word.
     let drawing = Drawing {
+        tag: 7,
         width: 3.0,
         height: 2.0,
         shapes: vec![
@@ -596,6 +597,37 @@ fn others_drawings_stand_in_a_lane_of_their_own_over_their_beat() {
     assert!(e.pages.iter().flat_map(texts).any(|t| t == "Hey"));
     // The system makes room for it: the staff is lower than without.
     assert!(staff.top > plain.hits.systems[0].staves[0].top + 1.5 * sp);
+    // A click on it finds it, its tag and where in its box; one beside it
+    // doesn't.
+    let found = e
+        .hits
+        .drawn_at(0, from.x + 1.5 * sp, to.y - 0.5 * sp)
+        .expect("the drawing is there");
+    assert_eq!(found.tag, 7);
+    assert_eq!(
+        found.at,
+        DrawnAt {
+            track: 0,
+            staff: 0,
+            bar: 1,
+            beat: Some((0, 2)),
+        }
+    );
+    assert!(
+        (found.x - 1.5).abs() < 0.01 && (found.y - 1.5).abs() < 0.01,
+        "{found:?}"
+    );
+    assert!(
+        e.hits
+            .drawn_at(0, from.x + 1.5 * sp, staff.bottom + sp)
+            .is_none()
+    );
+    assert!(
+        plain
+            .hits
+            .drawn_at(0, from.x + 1.5 * sp, to.y - 0.5 * sp)
+            .is_none()
+    );
 }
 
 /// How many times `c` is drawn on every page.
