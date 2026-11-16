@@ -15,7 +15,6 @@ The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then
 - **OxiGuitar is ahead** in amp modelling with users' own NAM captures, SFZ instruments, Harmonize, key inference, the `.oxg` sidecar (nothing lost in any format), reading and writing MusicXML, MIDI files and TuxGuitar files, plugins anyone can write, and being free and offline.
 - **The largest gaps** are in editing and practice:
   - drum entry (both editors have it; OxiGuitar's manual says "entering them comes later");
-  - the mixer not saved into the file;
   - volume, pan and instrument automations;
   - instrument views (fretboard, keyboard);
   - image export from the window;
@@ -104,7 +103,7 @@ The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then
 | Equalizer a track | Yes | No | No | Yes (Plugin) |
 | Plays out of the box with the system's sounds | Yes (its own) | Yes (bundled set) | Needs a SoundFont | Yes (the system's set; none bundled, by decision) |
 | Mixer: mute, solo, volume, pan | Yes | Yes | Yes | Yes |
-| **Mixer saved in the file** | Yes | Yes | n/a | **No** (lasts until OxiGuitar closes) |
+| Mixer saved in the file | Yes | Yes | n/a | Yes (since the v1.0 slice of 17 Nov 2026; undoable) |
 | **Volume, pan and tempo automations** | Yes | Tempo only | ? | **Partial**: tempo changes only (Guitar Pro's automation tools left out, 19 Oct 2026) |
 | **Instrument changes mid-song** | Yes | No | ? | **No** |
 | Loop, count-in, metronome | Yes | Yes | Yes (API) | Yes |
@@ -161,7 +160,7 @@ Ranked by how often a user switching from Guitar Pro 8 or TuxGuitar would miss e
 **Decided (Mateus, 17 Nov 2026): gaps 1 and 2 go into v1.0,, the mixer built first; gaps 3 to 11 stay out of v1.0.** Notes on the ones he gave a reason or a hint for: volume, pan and instrument automations (3) may come back later, perhaps as a plugin; the stylesheet (7) is out; multi-bar rests (8) are rarely needed, as ties and the present rests do. The list below is kept as it was ranked.
 
 1. **Drum entry.** In v1.0 (17 Nov 2026). Both editors have it, and drum tracks are in most files people open: today they can be played, transposed around and copied as rhythm, but not written. Guitar Pro 8's way is a drum staff with a kit map, and TuxGuitar's is a matrix editor. Size: an editor slice (the model already holds drum notes as General MIDI pitches).
-2. **The mixer saved into the file.** In v1.0 (17 Nov 2026). Guitar Pro and TuxGuitar keep each track's volume and pan. OxiGuitar reads them from the file, then forgets the user's changes at closing. Size: small (the model holds them; the formats that carry them, Guitar Pro's among them, would write the user's).
+2. **The mixer saved into the file.** In v1.0 (17 Nov 2026); built. Guitar Pro and TuxGuitar keep each track's volume and pan. OxiGuitar reads them from the file, then forgets the user's changes at closing. Size: small (the model holds them; the formats that carry them, Guitar Pro's among them, would write the user's).
 3. **Volume, pan and instrument automations.** Out of v1.0 (17 Nov 2026; maybe a plugin later). Guitar Pro files carry them, and OxiGuitar's model holds only tempo changes, so the rest is lost when such a file opens and the song plays differently from Guitar Pro. Size: the model, the timeline, the Guitar Pro plugin. The palette's automation tools were left out on 19 Oct 2026, so this asks to reopen that.
 4. **Image export from the window** (PNG, SVG). Out of v1.0 (17 Nov 2026). Both editors have it, and the renderer already writes PNG for the CLI. Size: small, as an exporter plugin or in File → Export.
 5. **A speed trainer** (out of v1.0, 17 Nov 2026): loop and raise the speed a step each time. Guitar Pro 8 has it, and OxiGuitar has the loop and speed already. Size: small.

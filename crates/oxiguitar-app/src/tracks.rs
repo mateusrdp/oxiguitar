@@ -270,11 +270,11 @@ pub(crate) fn waveform(activity: &[f32]) -> String {
     d
 }
 
-/// Each track's mixer: volume, pan, mute and solo, as the file sets them
-/// until the user changes them (Mateus, 19 Oct 2026: the mixer sits in the
-/// track rows). Nothing sounds yet: the controls are greyed out until an
-/// output plugin is installed and reach the player in M4. The file on disk
-/// is never changed.
+/// Each track's mixer: volume, pan, mute and solo, as the score holds them
+/// (Mateus, 19 Oct 2026: the mixer sits in the track rows). A move is heard
+/// at once and goes into the score as a change (`Command::Mix`), so it is
+/// saved with the file; the controls are greyed out until an output plugin
+/// is installed.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Mixer {
     mix: Vec<Mix>,

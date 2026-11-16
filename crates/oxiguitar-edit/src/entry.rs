@@ -169,6 +169,16 @@ pub enum Command {
     /// Index of another track whose chords to show above this one;
     /// usize::MAX for none.
     ChordsFrom(usize),
+    /// The mixer of the track `track` (its row in the track list, not the
+    /// caret's track) set to `mix`: saved with the score, so every format
+    /// that holds volume, pan, mute and solo writes them. Undoable; a run
+    /// of volume or pan moves on one track is one change.
+    Mix {
+        /// The track.
+        track: usize,
+        /// Its volume, pan, mute and solo.
+        mix: oxiguitar_model::Mix,
+    },
     /// A transposition of the caret's track, the selection or every track.
     Transpose(crate::Transposition),
     /// A string and fret found again for every note of the caret's track,
@@ -316,6 +326,7 @@ impl Command {
             Command::MoveTrackDown => "Move Track Down",
             Command::TrackProperties(_) => "Track Properties",
             Command::ChordsFrom(_) => "Chords From",
+            Command::Mix { .. } => "Mixer",
             Command::Transpose(_) => "Transpose",
             Command::Fingering(_) => "Find Fingering",
             Command::FitBars(_) => "Fit Bars",
@@ -1061,7 +1072,10 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             one(bar, Caret { string: to, ..c })
         }
         // Not a note-entry command.
-        Command::SetBarColor(_) | Command::SetTrackBarColor(_) | Command::ChordsFrom(_) => None,
+        Command::SetBarColor(_)
+        | Command::SetTrackBarColor(_)
+        | Command::ChordsFrom(_)
+        | Command::Mix { .. } => None,
     }
 }
 

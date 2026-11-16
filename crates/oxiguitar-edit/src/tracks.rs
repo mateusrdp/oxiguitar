@@ -120,9 +120,52 @@ pub(crate) fn apply(
                 caret: c.clamp(score).unwrap_or(c),
             })
         }
+        Command::Mix { track, mix } => set_mix(score, history, c, *track, *mix),
         _ => return None,
     };
     Some(edited)
+}
+
+/// A track's mixer set from its row (`Command::Mix`). Each control is a
+/// change of its own name; volume and pan moves of one track in a row are
+/// one change, as a slider is dragged through many values.
+fn set_mix(
+    score: &mut Score,
+    history: &mut History,
+    c: Caret,
+    t: usize,
+    mix: oxiguitar_model::Mix,
+) -> Option<Edited> {
+    let old = score.tracks.get(t)?.mix;
+    let mix = oxiguitar_model::Mix {
+        volume: mix.volume.clamp(0.0, 1.0),
+        pan: mix.pan.clamp(-1.0, 1.0),
+        ..mix
+    };
+    if old == mix {
+        return None;
+    }
+    let (label, merges) = if old.mute != mix.mute {
+        (if mix.mute { "Mute" } else { "Unmute" }, false)
+    } else if old.solo != mix.solo {
+        (if mix.solo { "Solo" } else { "Unsolo" }, false)
+    } else if old.volume != mix.volume {
+        ("Track Volume", true)
+    } else {
+        ("Track Pan", true)
+    };
+    let edit = |s: &mut Score| {
+        if let Some(track) = s.tracks.get_mut(t) {
+            track.mix = mix;
+        }
+    };
+    let regions = vec![Region::Track(t)];
+    let touched = if merges {
+        history.record_merging(score, label, regions, edit)
+    } else {
+        history.record(score, label, regions, edit)
+    };
+    Some(Edited { touched, caret: c })
 }
 
 /// A steel-string guitar in standard tuning, its bars empty, as File →
@@ -397,6 +440,74 @@ mod tests {
             .flat_map(|b| &b.notes)
             .map(|n| n.place)
             .collect()
+    }
+
+    fn mix(
+        s: &mut Score,
+        h: &mut History,
+        track: usize,
+        f: impl Fn(&mut oxiguitar_model::Mix),
+    ) -> bool {
+        let mut m = s.tracks.get(track).map(|t| t.mix).unwrap_or_default();
+        f(&mut m);
+        run(s, h, at(0), None, Command::Mix { track, mix: m }).is_some()
+    }
+
+    #[test]
+    fn the_mixer_is_saved_in_the_score_and_undone() {
+        let mut s = new_score();
+        let mut h = History::new();
+        run(&mut s, &mut h, at(0), None, Command::AddTrack).unwrap();
+        let before = s.clone();
+        // A drag through many volumes on track 2 (not the caret's): one change.
+        for v in [0.5, 0.4, 0.3, 1.5] {
+            assert!(mix(&mut s, &mut h, 1, |m| m.volume = v));
+        }
+        assert_eq!(s.tracks[1].mix.volume, 1.0, "clamped");
+        assert_eq!(s.tracks[0].mix, before.tracks[0].mix);
+        assert_eq!(h.undo_label(), Some("Track Volume"));
+        assert!(
+            !mix(&mut s, &mut h, 1, |m| m.volume = 1.0),
+            "no change, nothing recorded"
+        );
+        // Mute is a change of its own, and so is the pan after it.
+        assert!(mix(&mut s, &mut h, 1, |m| m.mute = true));
+        assert_eq!(h.undo_label(), Some("Mute"));
+        assert!(mix(&mut s, &mut h, 1, |m| m.pan = -0.25));
+        assert!(mix(&mut s, &mut h, 1, |m| m.pan = -2.0));
+        assert_eq!(s.tracks[1].mix.pan, -1.0);
+        assert!(mix(&mut s, &mut h, 1, |m| m.solo = true));
+        assert_eq!(h.undo_label(), Some("Solo"));
+        // Undo: solo, the pan run, mute, the volume run.
+        for label in ["Solo", "Track Pan", "Mute", "Track Volume"] {
+            assert_eq!(h.undo(&mut s).map(|u| u.0).as_deref(), Some(label));
+        }
+        assert_eq!(s, before);
+        assert!(!mix(&mut s, &mut h, 7, |m| m.mute = true), "no such track");
+    }
+
+    #[test]
+    fn a_saved_or_undone_change_is_not_joined() {
+        let mut s = new_score();
+        let mut h = History::new();
+        mix(&mut s, &mut h, 0, |m| m.volume = 0.5);
+        h.mark_saved();
+        mix(&mut s, &mut h, 0, |m| m.volume = 0.4);
+        assert!(
+            h.is_modified(),
+            "the move after saving is a change of its own"
+        );
+        h.undo(&mut s).unwrap();
+        assert!(!h.is_modified());
+        assert_eq!(s.tracks[0].mix.volume, 0.5);
+        // With something undone, the next move doesn't join what is left.
+        mix(&mut s, &mut h, 0, |m| m.volume = 0.3);
+        h.undo(&mut s).unwrap();
+        mix(&mut s, &mut h, 0, |m| m.pan = 0.5);
+        mix(&mut s, &mut h, 0, |m| m.pan = 0.4);
+        h.undo(&mut s).unwrap();
+        assert_eq!(s.tracks[0].mix.pan, 0.0);
+        assert_eq!(s.tracks[0].mix.volume, 0.5);
     }
 
     #[test]
