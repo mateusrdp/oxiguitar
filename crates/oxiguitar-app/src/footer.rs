@@ -3,9 +3,12 @@
 
 //! The footer's messages: one line at the bottom of the window shows the
 //! latest; clicking it expands the whole list for this session. It holds
-//! errors and warnings only: it isn't a log (Mateus, 19 Oct 2026), so
-//! messages that are only worth knowing (`Level::Info`: the plugins found,
-//! a tool's report, a file exported) aren't kept. A message may end with a
+//! errors and warnings: it isn't a log (Mateus, 19 Oct 2026), so messages
+//! that are only worth knowing (`Level::Info`: the plugins found, a file
+//! exported) aren't kept. A plugin's report of what the user just asked it
+//! to do (a tool's run, a click on its drawing) is kept, at the info level
+//! (Mateus, 16 Nov 2026: easier to remove later than to add). A message may
+//! end with a
 //! link (plugin interface 1.3), which opens in the system's browser when
 //! clicked. No window code here.
 
@@ -48,8 +51,21 @@ impl Footer {
         self.push_message(level, text.into(), link);
     }
 
+    /// A plugin's report of what the user just asked it to do: kept at
+    /// the info level, unlike other information.
+    pub(crate) fn push_report(&mut self, text: impl Into<String>) {
+        self.keep(Level::Info, text.into(), None);
+    }
+
     fn push_message(&mut self, level: Level, text: String, link: Option<(String, String)>) {
-        if level == Level::Info || text.trim().is_empty() {
+        if level == Level::Info {
+            return;
+        }
+        self.keep(level, text, link);
+    }
+
+    fn keep(&mut self, level: Level, text: String, link: Option<(String, String)>) {
+        if text.trim().is_empty() {
             return;
         }
         self.messages.push(Message { level, text, link });
@@ -130,5 +146,17 @@ mod tests {
         assert_eq!(f.latest().unwrap().link, None);
         f.push_with_link(Level::Info, "Not kept.", "Here", "https://example.org");
         assert_eq!(f.len(), 2);
+    }
+
+    #[test]
+    fn a_plugins_report_is_kept_at_the_info_level() {
+        let mut f = Footer::default();
+        f.push_report("Test: clicked at [0, 0, 0, 0, 0].");
+        f.push_report("  ");
+        assert_eq!(f.len(), 1);
+        let m = f.latest().unwrap();
+        assert_eq!(m.level, Level::Info);
+        assert_eq!(m.text, "Test: clicked at [0, 0, 0, 0, 0].");
+        assert_eq!(level_code(m.level), 0);
     }
 }

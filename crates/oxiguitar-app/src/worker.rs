@@ -171,8 +171,12 @@ pub(crate) enum Event {
     },
     /// The Tools menu changed (after a tool ran).
     Tools(Vec<ToolEntry>),
-    /// A message for the footer: an error, or a report such as a tool's.
+    /// A message for the footer: an error, a warning, or information the
+    /// footer doesn't keep.
     Message(Level, String),
+    /// A plugin's report of what the user just asked it to do (a tool's
+    /// run, a click on its drawing): the footer shows it.
+    Report(String),
     /// An edit was refused: the sound runs (no editing while playing).
     Refused,
 }
@@ -192,6 +196,7 @@ impl std::fmt::Debug for Event {
             }
             Event::Tools(t) => write!(f, "Tools({})", t.len()),
             Event::Message(l, s) => write!(f, "Message({l:?}, {s:?})"),
+            Event::Report(s) => write!(f, "Report({s:?})"),
             Event::AskSave { heading, .. } => write!(f, "AskSave({heading:?})"),
             Event::Saved { name, .. } => write!(f, "Saved({name:?})"),
             Event::SaveFailed => write!(f, "SaveFailed"),
@@ -420,7 +425,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 };
                 let (report, changed) = doc.apply_tool(i);
                 sink(Event::Tools(doc.tools()));
-                sink(Event::Message(Level::Info, report));
+                sink(Event::Report(report));
                 if changed && changed_score(&mut st, None, false, sink) {
                     st.stale = true;
                 } else {
@@ -509,7 +514,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 let name = t.spec.name.clone();
                 match st.plugins.run_tool(*t) {
                     Ok(report) if !report.trim().is_empty() => {
-                        sink(Event::Message(Level::Info, format!("{name}: {report}")));
+                        sink(Event::Report(format!("{name}: {report}")));
                     }
                     Ok(_) => {}
                     Err(e) => sink(Event::Message(Level::Error, format!("{name}: {e}"))),
@@ -543,7 +548,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     .map_or_else(|| plugin.clone(), |f| f.name());
                 match st.plugins.drawing_clicked(&plugin, click) {
                     Ok(report) if !report.trim().is_empty() => {
-                        sink(Event::Message(Level::Info, format!("{name}: {report}")));
+                        sink(Event::Report(format!("{name}: {report}")));
                     }
                     Ok(_) => {}
                     Err(e) => sink(Event::Message(Level::Error, format!("{name}: {e}"))),
@@ -965,7 +970,7 @@ mod tests {
 
         worker.send(Request::ApplyTool(0));
         assert!(matches!(next(&rx), Event::Tools(_)));
-        assert!(matches!(next(&rx), Event::Message(Level::Info, _)));
+        assert!(matches!(next(&rx), Event::Report(_)));
         assert!(matches!(next(&rx), Event::Engraved { .. }));
         drop(worker);
     }

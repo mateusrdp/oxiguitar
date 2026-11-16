@@ -2803,6 +2803,10 @@ fn handle(app: &Shared, event: Event) {
         }
         Event::Tools(tools) => set_tools(&ui, &tool_rows(&tools)),
         Event::Message(level, text) => message(app, level, text),
+        Event::Report(text) => {
+            app.borrow_mut().footer.push_report(text);
+            sync_footer(app);
+        }
     }
 }
 

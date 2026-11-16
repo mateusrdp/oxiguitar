@@ -66,7 +66,7 @@ OXIGUITAR_HOME=/tmp/og oxiguitar samples/open-strings.extab
 (On Windows: `set OXIGUITAR_HOME=C:\temp\og` before `oxiguitar.exe`.) Then:
 
 - **Tools → Plugins** lists every plugin file found, with its state: loaded, not loaded yet, replaced by another file of the same plugin, or why it can't be used (a manifest problem, another system's file, a newer interface, conditions that don't hold). A plugin is loaded the first time one of its contributions is used.
-- **The footer** (the line at the bottom; click it for the session's messages) shows your warning and error `notify` messages, errors from your calls, and, if your plugin fails, the line saying it was withdrawn and why (a crash's panic message, say). It isn't a log: `Level::Info` messages and import logs don't show there; `oxiguitar-cli info` prints a file's import log.
+- **The footer** (the line at the bottom; click it for the session's messages) shows your warning and error `notify` messages, errors from your calls, what your tools and clicks on your drawings say they did, and, if your plugin fails, the line saying it was withdrawn and why (a crash's panic message, say). It isn't a log: other `Level::Info` messages and import logs don't show there; `oxiguitar-cli info` prints a file's import log.
 - **`oxiguitar --safe-mode`** starts with no plugin loaded at all, while Tools → Plugins still lists them and can disable one: the way out when a plugin breaks the app.
 - **Help → About** lists the plugin folders in the order they are searched.
 
