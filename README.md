@@ -36,6 +36,10 @@ OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF
 <img src="docs/readme/export.png" alt="File, Export WAV Audio: the whole song or the selected bars, as written or at the practice speed, with or without the metronome" width="395">
 </p>
 
+**Drums** are written on the drum staff, a key per kit piece as in Guitar Pro 8, or as their General MIDI numbers on drum tablature ([Drums](https://mateusrdp.github.io/oxiguitar/editing.html#drums)).
+
+<p align="center"><img src="docs/readme/drums.png" alt="A drum track on the drum staff and, below it, its drum tablature: hi-hats as 42, the snare as 38, toms, the bass drum as 36 and cymbals as 49 and 51" width="800"></p>
+
 **Hear it:** a band with recorded guitars, bass and drums, the bass and the drum kit alone, guitar techniques, bends and strums, played by OxiGuitar with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
 
 ## Install

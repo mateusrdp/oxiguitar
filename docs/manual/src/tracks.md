@@ -26,7 +26,7 @@ A tuning that can't be (a wrong note, or notes that don't match the strings) say
 
 ## Notation buttons
 
-Each track has two buttons at the end of its row: **TAB** for tablature and a **treble clef** for standard notation. A lit button is on. Tracks without strings, such as drums, have only the clef.
+Each track has two buttons at the end of its row: **TAB** for tablature and a **treble clef** for standard notation. A lit button is on. Tracks without strings have only the clef; drums have both, their tablature showing each drum's number ([Drums](editing.md#drums)).
 
 | TAB | Clef | The track shows |
 | --- | --- | --- |

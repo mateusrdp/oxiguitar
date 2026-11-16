@@ -13,8 +13,7 @@ The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then
 
 - **Notation and the palette match Guitar Pro 8's tablature notation**: every one of its 124 palette tools works (v0.17), the wah through its plugin. TuxGuitar's model has far fewer marks (no ornaments, fermatas, ottavas, hairpins, pedal, rasgueado, golpe, barre, slurs apart from hammer-ons, fingering; two voices; one staff a track). alphaTab draws nearly everything Guitar Pro writes.
 - **OxiGuitar is ahead** in amp modelling with users' own NAM captures, SFZ instruments, Harmonize, key inference, the `.oxg` sidecar (nothing lost in any format), reading and writing MusicXML, MIDI files and TuxGuitar files, plugins anyone can write, and being free and offline.
-- **The largest gaps** are in editing and practice:
-  - drum entry (both editors have it; OxiGuitar's manual says "entering them comes later");
+- **The largest gaps** were drum entry and the mixer saved in the file, both built for v1.0 (17 Nov 2026). Those left, all out of v1.0 by Mateus's decision, are in editing and practice:
   - volume, pan and instrument automations;
   - instrument views (fretboard, keyboard);
   - image export from the window;
@@ -30,7 +29,7 @@ The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then
 | --- | --- | --- | --- | --- |
 | Standard notation and tablature, together or apart | Yes | Yes | Yes | Yes |
 | Rhythm drawn around tablature-only staves | Yes | Yes | Yes | Yes |
-| Drum staff | Yes | Yes | Yes (and drum tabs) | Yes (General MIDI kit) |
+| Drum staff | Yes | Yes | Yes (and drum tabs) | Yes (General MIDI kit), and drum tablature with MIDI numbers |
 | Slash notation | Yes (staff and beats) | No | Yes (staff and beats) | Partial: slash beats only, no slash staff |
 | Numbered notation (jianpu) | Yes | No | Yes | No |
 | Several staves a track (grand staff) | Yes | No | Yes | Yes (keyboards get a grand staff) |
@@ -70,7 +69,7 @@ The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then
 | --- | --- | --- | --- | --- |
 | Note entry from the keyboard on the tablature | Yes | Yes | n/a | Yes, Guitar Pro 8's keys |
 | Note entry on the standard staff | Yes | Yes | n/a | Yes |
-| **Drum entry** | Yes | Yes (matrix editor and tab) | n/a | **No** ("entering them comes later") |
+| Drum entry | Yes | Yes (matrix editor and tab) | n/a | Yes: on the drum staff and on drum tablature (since the v1.0 slice of 17 Nov 2026) |
 | Entry from a MIDI instrument | Yes (MIDI capture) | ? | n/a | No |
 | Bend and whammy editors | Yes | Yes | n/a | Yes |
 | Copy, cut, paste; special paste | Yes | Yes | n/a | Yes |
@@ -159,7 +158,7 @@ Ranked by how often a user switching from Guitar Pro 8 or TuxGuitar would miss e
 
 **Decided (Mateus, 17 Nov 2026): gaps 1 and 2 go into v1.0,, the mixer built first; gaps 3 to 11 stay out of v1.0.** Notes on the ones he gave a reason or a hint for: volume, pan and instrument automations (3) may come back later, perhaps as a plugin; the stylesheet (7) is out; multi-bar rests (8) are rarely needed, as ties and the present rests do. The list below is kept as it was ranked.
 
-1. **Drum entry.** In v1.0 (17 Nov 2026). Both editors have it, and drum tracks are in most files people open: today they can be played, transposed around and copied as rhythm, but not written. Guitar Pro 8's way is a drum staff with a kit map, and TuxGuitar's is a matrix editor. Size: an editor slice (the model already holds drum notes as General MIDI pitches).
+1. **Drum entry.** In v1.0 (17 Nov 2026); built, with drum tablature. Both editors have it, and drum tracks are in most files people open: today they can be played, transposed around and copied as rhythm, but not written. Guitar Pro 8's way is a drum staff with a kit map, and TuxGuitar's is a matrix editor. Size: an editor slice (the model already holds drum notes as General MIDI pitches).
 2. **The mixer saved into the file.** In v1.0 (17 Nov 2026); built. Guitar Pro and TuxGuitar keep each track's volume and pan. OxiGuitar reads them from the file, then forgets the user's changes at closing. Size: small (the model holds them; the formats that carry them, Guitar Pro's among them, would write the user's).
 3. **Volume, pan and instrument automations.** Out of v1.0 (17 Nov 2026; maybe a plugin later). Guitar Pro files carry them, and OxiGuitar's model holds only tempo changes, so the rest is lost when such a file opens and the song plays differently from Guitar Pro. Size: the model, the timeline, the Guitar Pro plugin. The palette's automation tools were left out on 19 Oct 2026, so this asks to reopen that.
 4. **Image export from the window** (PNG, SVG). Out of v1.0 (17 Nov 2026). Both editors have it, and the renderer already writes PNG for the CLI. Size: small, as an exporter plugin or in File → Export.

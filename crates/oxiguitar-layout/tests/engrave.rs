@@ -1225,3 +1225,86 @@ fn systems_hold_the_bars_set_in_design_mode() {
     });
     assert!(red, "the count in red");
 }
+
+/// docs/design/drums.md: a drum track's tablature shows each element's
+/// General MIDI key on the kit map's line (cymbals on top, the kick at the
+/// bottom), and the drum staff draws the same notes as ever.
+#[test]
+fn drum_tablature_shows_the_kit_s_numbers() {
+    let (fonts, meta) = setup();
+    let mut score = Score::new();
+    score.master_bars.push(MasterBar::default());
+    let hit = |keys: &[u8]| Beat {
+        notes: keys
+            .iter()
+            .map(|k| Note {
+                place: NotePlace::Pitched(Pitch(*k)),
+                ..Note::fretted(1, 0)
+            })
+            .collect(),
+        duration: Duration::new(NoteValue::Quarter),
+        ..Beat::default()
+    };
+    let beats = vec![hit(&[36, 49]), hit(&[42]), hit(&[38, 42]), hit(&[36, 42])];
+    score.tracks.push(Track {
+        instrument: oxiguitar_model::Instrument {
+            midi_program: 0,
+            percussion: true,
+        },
+        staves: vec![Staff {
+            tuning: Vec::new(),
+            bars: vec![Bar {
+                voices: vec![Voice { beats }],
+                ..Bar::default()
+            }],
+            ..Staff::default()
+        }],
+        ..Track::default()
+    });
+    let both = Options {
+        notation: [(
+            0,
+            Notation {
+                standard: true,
+                tablature: true,
+            },
+        )]
+        .into_iter()
+        .collect(),
+        ..Options::default()
+    };
+    let e = engrave(&score, &fonts, &meta, &both);
+    check("drum tab", &e, &fonts);
+    let staff = &e.hits.systems[0].staves[0];
+    let (tab_top, gap, lines) = staff.tablature.expect("drum tablature");
+    assert_eq!(lines, 6);
+    let at = |text: &str| -> Vec<f32> {
+        e.pages[0]
+            .items
+            .iter()
+            .filter_map(|i| match i {
+                Item::Glyphs(run) if run.text == text => Some(run.origin.y),
+                _ => None,
+            })
+            .collect()
+    };
+    let line_of = |y: f32| ((y - tab_top) / gap).round() as i32 + 1;
+    assert_eq!(at("42").len(), 3);
+    assert!(
+        at("42").iter().all(|y| line_of(*y) == 2),
+        "hi-hats on line 2"
+    );
+    assert_eq!(
+        at("49").iter().map(|y| line_of(*y)).collect::<Vec<_>>(),
+        [1]
+    );
+    assert_eq!(
+        at("38").iter().map(|y| line_of(*y)).collect::<Vec<_>>(),
+        [4]
+    );
+    assert!(at("36").iter().all(|y| line_of(*y) == 6), "kick on line 6");
+    // Standard notation alone: no numbers.
+    let plain = engrave(&score, &fonts, &meta, &Options::default());
+    assert!(plain.hits.systems[0].staves[0].tablature.is_none());
+    assert!(!plain.pages.iter().flat_map(texts).any(|t| t == "38"));
+}

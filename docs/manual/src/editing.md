@@ -56,9 +56,36 @@ A beat added after a voice's last beat is as long as the beat before it. Typing 
 
 The palette's **Note** group works too: the whole to sixty-fourth note buttons set the beat's length, and Rest, Dotted Note, Double-Dotted Note and Tie do what their keys do. They light up to show the caret's beat: its length, its dots, whether it is a rest, whether its note is tied.
 
-A tied note always plays the fret of the note it continues: change that note and its ties follow. Notes of a drum track are drum sounds, not frets; entering them comes later.
+A tied note always plays the fret of the note it continues: change that note and its ties follow. Notes of a drum track are drum sounds, not frets: see [Drums](#drums).
 
 Every change can be undone. After typing, the bars that don't add up are checked again (see below).
+
+### Drums
+
+A drum track is written on a drum staff, and each line or space holds the drums the usual kit layout puts there: the bass drum in the bottom space, the snare in the third, the toms between, the hi-hats above the staff and the cymbals on top. Move the caret onto a line or space (click it, or Up and Down), then:
+
+- **Enter** puts the first drum of that line or space on the beat, and **1** to **9** the first to ninth, as Guitar Pro 8 does: on the snare's space 1 is the snare, 2 the side stick, 3 the electric snare and 4 the hand clap; on the hi-hats' space 1 is closed and 2 open.
+- A beat holds one drum on each line or space: typing another there replaces it, and drums on other lines join it (kick and hi-hat together).
+- **Backspace** or **Delete** takes away the drum on the caret's line or space.
+
+| Where | 1 | 2 | 3 | 4 |
+| --- | --- | --- | --- | --- |
+| Space over the first ledger line above | Splash | China | | |
+| First ledger line above | Crash 1 | Crash 2 | | |
+| Space above the staff | Closed hi-hat | Open hi-hat | | |
+| Top line | Ride | Ride bell | Ride 2 | High tom |
+| Top space | High-mid tom | Tambourine | Cowbell | |
+| Fourth line | Low-mid tom | Low tom | | |
+| Third space | Snare | Side stick | Electric snare | Hand clap |
+| Middle line | every other General MIDI drum, by number | | | |
+| Second space | High floor tom | | | |
+| Second line | Low floor tom | | | |
+| Bottom space | Bass drum 1 | Bass drum 2 | | |
+| Space below the staff | Pedal hi-hat | | | |
+
+**Drum tablature** shows each drum as its General MIDI number, on six lines: cymbals and rides on the first, hi-hats on the second, toms on the third, snares and the rest on the fourth, floor toms on the fifth and bass drums on the sixth. Turn it on with the drum track's **TAB** button. On the tablature, type a drum's number, two digits one soon after the other (3 then 8 for the snare): it goes on its own line, whichever line the caret is on. Backspace takes away the drum on the caret's line.
+
+The **Note** tab names the drum on the caret's line or space ("Note · Acoustic Snare (38)"), and its **Drum** list changes it to any General MIDI drum, keeping its effects. Rests, note lengths, dots, tuplets, voices, copy and paste work as on any track. The Note tab's effects (accents, ghost notes and the rest) go on every drum of the beat: put a drum that needs one of its own in another voice, as drummers' parts often have the hands in voice 1 and the feet in voice 2.
 
 ### Tuplets
 

@@ -1,6 +1,6 @@
 # Drum entry (v1.0 slice, parity gap 1)
 
-Status: **design, for Mateus's decision** (17 Nov 2026). Nothing below is built yet.
+Status: **decided by Mateus and built** (17 Nov 2026): see "Decided by Mateus" and "As built" at the end.
 
 [docs/parity.md](../parity.md) ranks drum entry first among the gaps, and Mateus put it in v1.0 on 17 Nov 2026. Today drum tracks open, play, show on a percussion staff and copy as rhythm, but every note command is refused on them (`oxiguitar-edit/src/entry.rs`, `plan`: Fret, Pitch, Tie, StringUp/Down, SemitoneUp/Down return `None` on a percussion track), and the manual says "entering them comes later".
 
@@ -49,3 +49,19 @@ Status: **design, for Mateus's decision** (17 Nov 2026). Nothing below is built 
 1. Which way for v1.0? Proposed: **A**, the drum staff with the kit map (keyboard entry as in Guitar Pro 8); B after v1.0, as a plugin, if wanted.
 2. The kit map: is the fixed General MIDI map above enough for v1.0? Proposed: **yes**, one map for every drum track; a map the user edits per track (Guitar Pro 8 sets it in the drum tablature) after v1.0.
 3. Drum tablature (each element's MIDI number on lines, as Guitar Pro 8 and TuxGuitar show): proposed **not in v1.0**; the Note tab names the element instead.
+
+## Decided by Mateus (17 Nov 2026)
+
+1. **A**: entry on the drum staff with the kit map, as in Guitar Pro 8. The matrix (B) is not in v1.0; it could come later as a plugin.
+2. **The fixed General MIDI map** for every drum track in v1.0; a map edited per track after v1.0.
+3. **Drum tablature in v1.0** (the session had proposed leaving it out): each element's MIDI number on the tablature, editable by typing numbers.
+
+## As built
+
+- **The map**: `oxiguitar-model/src/drums.rs` (`KIT`, `element`, `at_step`, `all`, `KEYS` 27 to 87, `TAB_LINES` 6), with General MIDI's names. The engraver's `pitch::drum` reads it; every place it gives is the one the engraver always drew, so no render changed. Drum tablature lines: 1 cymbals and rides, 2 hi-hats (the pedal one too), 3 toms, 4 snares, side stick, clap, tambourine, cowbell and every other key, 5 floor toms, 6 bass drums.
+- **Commands** (`oxiguitar-edit/src/entry.rs`): `Drum(key)` (joins the beat, replacing the element on the same staff step, so one element a line or space), `DeleteDrum(key)` (the last leaves a rest), `ChangeDrum { from, to }` (the Note tab's list; effects kept). On other tracks they do nothing; Fret, Pitch, Tie and the string and semitone moves stay refused on drums.
+- **Keys** (`oxiguitar-app/src/editing.rs`, `drum_typed`): with the caret on a line or space of the drum staff (`Editing::height`), Enter is the first of `at_step(step)` and 1 to 9 the n-th, Backspace and Delete the element on that step. With the caret on the tablature (no height), two digits within the two-digit window are a key in `KEYS` (a first digit alone enters nothing; a pair outside the range starts again from its second digit), placed on its own line whatever the caret's; Backspace and Delete take the element on the caret's line. A drum track's caret has six strings, the tablature's lines (`Caret::strings`).
+- **The Note tab** (`effect_form.rs`): the heading names the element on the caret's line or space ("Note · Acoustic Snare (38)"), else the beat's first; the Drum list holds all 61 keys.
+- **Display**: a drum track can show tablature (its TAB button, off by default as before; `system::views` gives a percussion staff six lines, `plan::note` each drum's key as its label, in brackets when ghosted or tied).
+- **Not done** (later work, not asked for): effects on one element of a beat (today the Note tab's effects go on every drum of the beat on a staff without strings, as before; drummers' parts use voice 2 for the feet); two elements on one tablature line in one beat overlap (a crash with a ride); the matrix; a kit map per track; Up and Down on the drum tablature move onto the staff rather than between its lines.
+- Tests: `oxiguitar-model` (`every_key_has_one_place_and_a_name`, `the_usual_kit_layout`), `oxiguitar-edit` (`drums_are_entered_one_element_a_line`, `drum_commands_mean_nothing_on_other_tracks`), the app (`drums_are_typed_on_the_drum_staff`, `drums_have_tab_and_stringless_tracks_none`), `oxiguitar-layout`'s engrave test `drum_tablature_shows_the_kit_s_numbers`.

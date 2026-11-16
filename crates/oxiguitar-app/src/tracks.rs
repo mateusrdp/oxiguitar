@@ -390,8 +390,10 @@ mod tests {
         tablature: true,
     };
 
+    /// A guitar, a piano and drums: all three can show tablature (drums
+    /// their kit's numbers), a voice track, the fourth, can't.
     fn guitar_piano_drums() -> Tracks {
-        Tracks::new(vec![BOTH, STD, STD], vec![true, true, false])
+        Tracks::new(vec![BOTH, STD, STD, STD], vec![true, true, true, false])
     }
 
     #[test]
@@ -454,12 +456,14 @@ mod tests {
     }
 
     #[test]
-    fn drums_have_no_tab() {
+    fn drums_have_tab_and_stringless_tracks_none() {
         let mut t = guitar_piano_drums();
-        t.toggle_standard(2);
         t.toggle_tablature(2);
-        assert!(!t.row(2).tablature);
-        assert!(t.row(2).standard);
+        assert!(t.row(2).tablature, "drum tablature");
+        t.toggle_standard(3);
+        t.toggle_tablature(3);
+        assert!(!t.row(3).tablature);
+        assert!(t.row(3).standard);
     }
 
     #[test]
@@ -471,7 +475,7 @@ mod tests {
         assert_eq!(t.shown(), vec![0, 2]);
         t.toggle_standard(1);
         assert_eq!(t.shown(), vec![0, 1, 2], "in score order");
-        assert_eq!(t.notation().len(), 3);
+        assert_eq!(t.notation().len(), 4);
     }
 
     #[test]

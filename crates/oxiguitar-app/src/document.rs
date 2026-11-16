@@ -547,7 +547,7 @@ impl Document {
                 } else {
                     t.name.trim().to_owned()
                 },
-                can_tab: !t.instrument.percussion && t.staves.iter().any(|s| s.string_count() > 0),
+                can_tab: t.instrument.percussion || t.staves.iter().any(|s| s.string_count() > 0),
                 default_notation: oxiguitar_layout::default_notation(t),
                 mix: t.mix,
                 activity,

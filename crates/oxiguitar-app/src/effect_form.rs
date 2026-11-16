@@ -286,7 +286,11 @@ fn rasgueados() -> Vec<String> {
 
 /// The caret's beat, its note (on the caret's string; on a staff without
 /// strings, the beat's first), and whether the staff has strings.
-fn here(score: &Score, c: Caret) -> Option<(&Beat, Option<&Note>, bool, u8)> {
+fn here(
+    score: &Score,
+    c: Caret,
+    drum_step: Option<i32>,
+) -> Option<(&Beat, Option<&Note>, bool, u8)> {
     let track = score.tracks.get(c.track)?;
     let staff = track.staves.get(c.staff)?;
     let strings = staff.string_count() > 0 && !track.instrument.percussion;
@@ -294,8 +298,15 @@ fn here(score: &Score, c: Caret) -> Option<(&Beat, Option<&Note>, bool, u8)> {
     if beat.kind == BeatKind::Empty {
         return None;
     }
+    let on_step = |n: &&Note| match n.place {
+        NotePlace::Pitched(p) => Some(oxiguitar_model::drums::element(p).step) == drum_step,
+        NotePlace::Fretted { .. } => false,
+    };
     let note = if staff.string_count() > 0 {
         beat.notes.iter().find(|n| n.string() == Some(c.string))
+    } else if track.instrument.percussion && drum_step.is_some() {
+        // A drum track's caret on a line or space: the element there.
+        beat.notes.iter().find(on_step)
     } else {
         beat.notes.first()
     };
@@ -337,17 +348,37 @@ fn note_value_name(v: NoteValue) -> &'static str {
 }
 
 /// The rows for the caret's note and beat: none on an empty place.
-pub(crate) fn fields(score: &Score, c: Caret) -> Vec<Field> {
-    let Some((beat, note, strings, frets)) = here(score, c) else {
+pub(crate) fn fields(score: &Score, c: Caret, drum_step: Option<i32>) -> Vec<Field> {
+    let Some((beat, note, strings, frets)) = here(score, c, drum_step) else {
         return Vec::new();
     };
     let mut out = Vec::new();
+    let drums = score
+        .tracks
+        .get(c.track)
+        .is_some_and(|t| t.instrument.percussion);
     if let Some(n) = note {
         let fx = &n.effects;
         out.push(heading(match n.place {
             NotePlace::Fretted { string, fret } => format!("Note · string {string}, fret {fret}"),
+            NotePlace::Pitched(p) if drums => {
+                let e = oxiguitar_model::drums::element(p);
+                format!("Note · {} ({})", e.name, e.key)
+            }
             NotePlace::Pitched(p) => format!("Note · {}", p.name()),
         }));
+        if let (true, NotePlace::Pitched(p)) = (drums, n.place) {
+            // Any General MIDI drum, for the elements of the middle line and
+            // to change one without the keys.
+            let all = oxiguitar_model::drums::all();
+            let names: Vec<String> = all
+                .iter()
+                .map(|e| format!("{} ({})", e.name, e.key))
+                .collect();
+            let names: Vec<&str> = names.iter().map(String::as_str).collect();
+            let at = all.iter().position(|e| e.key == p.0).unwrap_or(0);
+            out.push(choice("drum", "Drum", &names, at));
+        }
         out.push(switch("dead", "Dead note", fx.dead));
         out.push(switch("ghost", "Ghost note", fx.ghost));
         out.push(choice(
@@ -619,14 +650,27 @@ pub(crate) enum Action {
 
 /// The field `id` changed to `value` (on or off, the option picked, the
 /// number): what to do. `None` when nothing changes.
-pub(crate) fn changed(score: &Score, c: Caret, id: &str, value: i32) -> Option<Action> {
-    let (beat, note, _, _) = here(score, c)?;
+pub(crate) fn changed(
+    score: &Score,
+    c: Caret,
+    drum_step: Option<i32>,
+    id: &str,
+    value: i32,
+) -> Option<Action> {
+    let (beat, note, _, _) = here(score, c, drum_step)?;
     let pick = usize::try_from(value).ok();
     let fx = note.map(|n| &n.effects);
     let effect = |e: Effect| Some(Action::Edit(Command::Effect(e)));
     let note_change = |n: NoteChange| Some(Action::Edit(Command::Note(n)));
     let beat_change = |b: BeatChange| Some(Action::Edit(Command::Beat(b)));
     match id {
+        "drum" => {
+            let NotePlace::Pitched(from) = note?.place else {
+                return None;
+            };
+            let to = oxiguitar_model::drums::all().get(pick?)?.key;
+            Some(Action::Edit(Command::ChangeDrum { from: from.0, to }))
+        }
         "dead" => effect(Effect::Dead),
         "ghost" => effect(Effect::Ghost),
         "staccato" => effect(Effect::Staccato),
@@ -835,41 +879,41 @@ mod tests {
     #[test]
     fn the_caret_s_note_and_beat_as_rows() {
         let mut s = with_note();
-        let f = fields(&s, at(0, 2));
+        let f = fields(&s, at(0, 2), None);
         assert_eq!(f[0].label, "Note · string 2, fret 5");
         assert_eq!(f[0].kind, Kind::Heading);
         assert_eq!(field(&f, "bend").options, ["None"]);
         assert!(f.iter().any(|f| f.label == "Beat · quarter note"));
         // No note on string 3: only the beat.
-        let f = fields(&s, at(0, 3));
+        let f = fields(&s, at(0, 3), None);
         assert_eq!(f[0].label, "Beat · quarter note");
         // A trill shows its fret.
         let mut h = History::new();
         let c = at(0, 2);
-        let a = changed(&s, c, "trill", 2).unwrap();
+        let a = changed(&s, c, None, "trill", 2).unwrap();
         let Action::Edit(cmd) = a else { panic!() };
         apply(&mut s, &mut h, c, None, cmd).unwrap();
-        let f = fields(&s, c);
+        let f = fields(&s, c, None);
         assert_eq!(field(&f, "trill").value, 2);
         assert_eq!(field(&f, "trill-fret").value, 6);
         assert_eq!(field(&f, "trill-fret").max, 24);
         // A harmonic's value.
-        let Action::Edit(cmd) = changed(&s, c, "harmonic", 3).unwrap() else {
+        let Action::Edit(cmd) = changed(&s, c, None, "harmonic", 3).unwrap() else {
             panic!()
         };
         apply(&mut s, &mut h, c, None, cmd).unwrap();
-        let f = fields(&s, c);
+        let f = fields(&s, c, None);
         assert_eq!(field(&f, "harmonic-value").label, "Frets up, tapped");
         assert_eq!(field(&f, "harmonic-value").value, 12);
         assert_eq!(
-            changed(&s, c, "harmonic-value", 7),
+            changed(&s, c, None, "harmonic-value", 7),
             Some(Action::Edit(Command::Note(NoteChange::Harmonic(Some(
                 Harmonic::Tapped { fret: 7 }
             )))))
         );
         // A rest: its dynamic only.
         apply(&mut s, &mut h, at(1, 2), None, Command::Rest).unwrap();
-        let f = fields(&s, at(1, 2));
+        let f = fields(&s, at(1, 2), None);
         assert_eq!(f[0].label, "Rest · quarter note");
         assert_eq!(f.len(), 5, "dynamic, chord, text and fermata");
     }
@@ -879,18 +923,18 @@ mod tests {
         let s = with_note();
         let c = at(0, 2);
         assert_eq!(
-            changed(&s, c, "palm-mute", 1),
+            changed(&s, c, None, "palm-mute", 1),
             Some(Action::Edit(Command::Effect(Effect::PalmMute)))
         );
-        assert_eq!(changed(&s, c, "bend", 0), Some(Action::Bend));
+        assert_eq!(changed(&s, c, None, "bend", 0), Some(Action::Bend));
         assert_eq!(
-            changed(&s, c, "slide-out", 2),
+            changed(&s, c, None, "slide-out", 2),
             Some(Action::Edit(Command::Note(NoteChange::SlideOut(Some(
                 Slide::Legato
             )))))
         );
         assert_eq!(
-            changed(&s, c, "brush", 2),
+            changed(&s, c, None, "brush", 2),
             Some(Action::Edit(Command::Beat(BeatChange::Stroke(Some(
                 Stroke {
                     direction: StrokeDirection::Up,
@@ -899,14 +943,14 @@ mod tests {
             )))))
         );
         assert_eq!(
-            changed(&s, c, "dynamic", 0),
+            changed(&s, c, None, "dynamic", 0),
             Some(Action::Edit(Command::Dynamic(Dynamic::PPP)))
         );
         assert_eq!(
-            changed(&s, c, "left-finger", 1),
+            changed(&s, c, None, "left-finger", 1),
             Some(Action::Edit(Command::Note(NoteChange::LeftFinger(Some(0)))))
         );
-        assert_eq!(changed(&s, c, "trill-fret", 3), None, "no trill yet");
-        assert_eq!(changed(&s, c, "nonsense", 0), None);
+        assert_eq!(changed(&s, c, None, "trill-fret", 3), None, "no trill yet");
+        assert_eq!(changed(&s, c, None, "nonsense", 0), None);
     }
 }

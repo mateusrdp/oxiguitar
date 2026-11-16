@@ -6,6 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
+- **Drum entry** (docs/parity.md, gap 1; `docs/design/drums.md`): drum tracks can be written. On the drum staff, move the caret to a line or space and press Enter for the drum the kit puts there, or 1 to 9 for the others sharing it (snare, side stick, electric snare, hand clap; closed and open hi-hat), as in Guitar Pro 8; Backspace takes it away, and a beat holds one drum a line or space. **Drum tablature**: a drum track's TAB button shows each drum as its General MIDI number on six lines (cymbals, hi-hats, toms, snares, floor toms, bass drums), and two digits typed there enter that drum. The Note tab names the drum and changes it to any General MIDI drum. One General MIDI kit map, shared by the engraver and the editor, places every drum.
 - **The mixer is saved in the file** (docs/parity.md, gap 2): each track's volume, pan, mute and solo, as you set them in its row, go into the score, so saving writes them and the next opening has them, where until now they lasted only until OxiGuitar closed. Every format writes as much as it holds (Guitar Pro 7-8 and TuxGuitar all four; Guitar Pro 5 volume and pan to sixteen steps, and mute and solo; MusicXML and MIDI files volume and pan). Mute and solo are saved as they are, as Guitar Pro and TuxGuitar do. A mixer move marks the song changed and is one step for **Edit → Undo** (a whole drag of a slider is one step); the mixer still moves while the song plays.
 
 ### Documentation
