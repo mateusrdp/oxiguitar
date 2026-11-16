@@ -4,6 +4,11 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Documentation
+
+- **The feature-parity check before the beta** (ROADMAP.md, "Then we stop"): `docs/parity.md` compares OxiGuitar 0.20 and its official plugins with Guitar Pro 8, TuxGuitar 2.1 and alphaTab 1.8 (notation, editing, playback, files, display), and ranks the gaps for Mateus to place before the beta, after v1.0 or never. Drum entry, the mixer saved into the file, volume, pan and instrument automations, image export, a speed trainer and instrument views lead the list.
+- The manual's Amp models page and the player's design say where the NAM plugin's faster engine (NeuralAmpModeler-rs 2.0) now plays: ARM64 under Linux, Apple Silicon Macs, and PCs with AVX2 and FMA on Linux (oxiguitar-nam#16).
+
 ## [0.20.0] - 2026-11-16
 
 ### Added
