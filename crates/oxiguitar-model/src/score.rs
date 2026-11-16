@@ -32,6 +32,11 @@ pub struct Score {
     /// Track index → one entry per bar: `None` for no custom colour.
     /// Populated from the sidecar; not in the wire format.
     pub track_bar_colors: std::collections::BTreeMap<usize, Vec<Option<Color>>>,
+    /// What plugins keep on it, by plugin id: a JSON object as text each,
+    /// opaque to the core (plugin interface 1.8). It goes where the score goes
+    /// (edits, copies, undo) and is saved beside the score (`FILE.oxg`),
+    /// since no score format holds it.
+    pub plugins: std::collections::BTreeMap<String, String>,
 }
 
 impl Score {
@@ -140,6 +145,11 @@ pub struct MasterBar {
     pub bar_color: Option<Color>,
     /// Custom colour for this bar on the selected track only. `None` for no custom colour.
     pub track_bar_color: Option<Color>,
+    /// What plugins keep on it, by plugin id: a JSON object as text each,
+    /// opaque to the core (plugin interface 1.8). It goes where the bar goes
+    /// (edits, copies, undo) and is saved beside the score (`FILE.oxg`),
+    /// since no score format holds it.
+    pub plugins: std::collections::BTreeMap<String, String>,
 }
 
 /// A fermata at a moment of a bar.
@@ -193,6 +203,7 @@ impl Default for MasterBar {
             fermatas: Vec::new(),
             bar_color: None,
             track_bar_color: None,
+            plugins: std::collections::BTreeMap::new(),
         }
     }
 }

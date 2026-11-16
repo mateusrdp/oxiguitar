@@ -36,6 +36,11 @@ pub enum Area {
     Left,
     /// Right of the page (Inspector).
     Right,
+    /// None of the areas: the tab is a dialog, shown over the window with
+    /// OK and Cancel when the plugin opens it
+    /// ([`crate::message::HostRequest::OpenDialog`]) and closed by the
+    /// user ([`crate::message::Request::TabClosed`]). Since interface 1.8.
+    Dialog,
 }
 
 /// A tab, as the manifest declares it.
@@ -45,8 +50,17 @@ pub struct TabSpec {
     pub id: String,
     /// The tab's name, as its strip shows it: a word or two.
     pub title: String,
-    /// The area it sits in.
+    /// The area it sits in; the right one, with the Song, Track, Bar and
+    /// Note tabs, when the manifest names none (interface 1.8).
+    #[serde(default)]
     pub area: Area,
+}
+
+impl Default for Area {
+    /// Where a plugin's tab goes unless its manifest says: the inspector.
+    fn default() -> Area {
+        Area::Right
+    }
 }
 
 /// What a tab shows: rows from top to bottom.

@@ -19,7 +19,8 @@ rtrb.workspace = true
 oxiguitar-host = { workspace = true, optional = true }
 
 [features]
-host = ["dep:oxiguitar-host"]
+# The marks an effect that follows the score is told are the wire score's.
+host = ["dep:oxiguitar-host", "oxiguitar-model/wire"]
 
 [dev-dependencies]
 oxiguitar-plugin-test = { workspace = true, features = ["released"] }

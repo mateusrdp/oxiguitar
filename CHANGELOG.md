@@ -4,6 +4,38 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **Plugins own their tools: plugin interface 1.8** (#293, #250). A plugin can now, with no change to OxiGuitar:
+  - put **buttons on the palette**, in one of its sections or a section of its own, with a music symbol or a short text (`palette` on a tool of the manifest);
+  - put **entries in any menu**: File, Edit, View, Tools, Help, the right-click menus of the page and of a track, or a menu of its own between Tools and Help (`menu`);
+  - open **dialogs**, tabs whose area is `dialog`, with the same widgets and canvas as a tab and OxiGuitar's OK and Cancel (`Host::open_dialog`, `Tab::closed`), and bring one of its tabs to the front (`Host::show_tab`);
+  - ask for the **selection** as it is now (`Host::selection`) and read the **engraved page**: every page's drawing and where each beat is on it (`Host::engraving`);
+  - keep **its own data on the score, a bar, a staff's bar, a beat or a note**, and **marks on beats** (`BeatExt::Plugin`, `BeatExt::Mark`): they follow the beat through every edit, the marks are engraved over the beat, and both are saved in the `.oxg` file beside the score, since no score format holds them;
+  - **follow the score as it plays** in an effect (`follows_score`: every beat the track plays, with its marks and the plugin's data, and the score's time with each block of sound), and say where the effect goes in a track's chain by default (`order`);
+  - **draw anything on the page** where it keeps data (`draws`, a `Drawer`): boxes of lines, shapes and text in staff spaces, engraved in a lane of their own above the staff, printed and exported with the rest; asked only about its own places, and not asked again while they don't change; a click or double click on what it drew goes to it (`Drawer::clicked`);
+  - **play the notes its own way** (`performs`, a `Performer`): given each track's notes as the score gives them, with its beats' marks and data, it gives them back as they should sound, changed, added or left out; performing plugins take turns, a track is asked about again only when it changed, and the cursor, practice and audio export follow what is played;
+  - give its tools **keys** (`shortcut`, with Ctrl or Alt), which run them after OxiGuitar's own keys and are listed in Help's shortcuts;
+  - put **buttons in the toolbar**, in a Plugins section all plugins share (`toolbar` on a tool);
+  - have **shared folders of its own name** beside `plugins`, in the user's folder, the system's and the program's (`folders` in the manifest takes any name; `Host::folder`);
+  - be anything a file format's own plugin makes of it: OxiGuitar no longer treats one format as the fullest (see Changed).
+
+  The plugin guide has a section for each (Tools, Tabs, Instruments, Formats, Interface versions); the design is in `docs/design/plugins.md`, "Interface 1.8". The SDK crates are at 1.8.0. Released plugins keep working.
+- **Wah-wah marks can be played** (#250), by the new Wah-wah plugin (`oxiguitar-wah`): it adds Closed and Open Wah-Wah to the palette, with an editor for each mark's curve (the pedal across the beat) and Q, and a wah pedal on any track that the marks rock, a Cry Baby by default. The pedal is off on beats without a mark.
+
+- **Crash reports that name the plugin** (Mateus, 16 Nov 2026). Plugins run inside OxiGuitar, so one with a bad bug can crash it. OxiGuitar now writes a report when it crashes (in the `crash` folder of its user folder, and to the terminal), naming the plugin that was running or whose code crashed, with the offset in its file. The next start says which plugin it was, where the report is, and links to the plugin's page.
+
+### Changed
+
+- **Saving a score in a format that can't hold all of it** (Mateus, 16 Nov 2026). Save always writes the file's own format; OxiGuitar no longer saves a .gp file beside it instead, and names no format as the fullest. When the format can't hold something, the question lists what and offers **Keep Them in the .oxg File**, **Save Without Them** or Cancel. Kept, the whole score goes into the file beside the score (`song.gp5.oxg`): OxiGuitar opens it from there, with nothing lost, for as long as the score file is the one it saved; other programs see what the format holds. If another program changes the score file, OxiGuitar shows the file as it is and says so. The choice holds for later saves of that file. A file whose format no installed plugin writes (Guitar Pro 3 and 4, .gpx) asks for Save As. `oxiguitar-cli` reads a kept score the same way.
+
+- **Plugins' tools moved from the Tools menu to a Plugins menu**, between Tools and Help, unless a plugin names another menu. The palette has a Plugins section for buttons whose plugin names none, and a plugin's tab that names no area goes to the right panel.
+- **Closed and Open Wah-Wah left OxiGuitar's own palette**: the Wah-wah plugin adds them. Wah marks of a file are still read, drawn and written without it.
+- A track's effects without an order of the user's run by each effect's `order` in its manifest (pedals, then amp models, then equalizers) instead of a list of plugin ids in OxiGuitar.
+- The window tells plugins where the caret is when a score opens, not only when it first moves.
+- **Finding the plugins at start no longer reads each plugin file's symbol table**: a Linux plugin's manifest is found from the file's headers alone. A folder of plugins that aren't stripped (a contributor's debug builds, megabytes of symbols each) is read about five times faster; released plugins, which are stripped, read as before.
+- The advice shown when no plugin opens files, plays or sends sound out names no particular plugin; it points at the page of official plugins.
+
 ## [0.19.2] - 2026-11-15
 
 ### Added

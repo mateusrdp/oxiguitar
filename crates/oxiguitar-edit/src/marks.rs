@@ -411,6 +411,7 @@ fn copy(source: &Bar, bar: &Bar, kind: Simile) -> Bar {
         clef: bar.clef,
         voices: source.voices.clone(),
         simile: Some(kind),
+        plugins: bar.plugins.clone(),
     }
 }
 

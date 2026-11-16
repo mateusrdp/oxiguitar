@@ -50,6 +50,7 @@ impl Source for Recorder {
         _pitch: &[PitchPoint],
         _time: f64,
         _step: f64,
+        _playing: bool,
         out: &mut Buffers,
     ) {
         {

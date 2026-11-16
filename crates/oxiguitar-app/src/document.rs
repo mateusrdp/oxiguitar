@@ -14,8 +14,8 @@ use oxiguitar_display::{DisplayList, FontSet, Theme};
 use oxiguitar_edit::{BarCheck, Caret, Command, History, Region, Selection};
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::message::{Level as LogLevel, LogEntry};
-use oxiguitar_host::sidecar::{Sidecar, TrackEntry};
-use oxiguitar_layout::{Engraved, Layout, Notation, Options, Paper, engrave};
+use oxiguitar_host::sidecar::{Kept, KeptEntry, KeptScore, Sidecar, TrackEntry};
+use oxiguitar_layout::{Engraved, Hits, Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::{Mix, Score};
 use oxiguitar_tools::Availability;
 
@@ -145,6 +145,10 @@ pub(crate) struct Document {
     /// Why the score's sidecar (`FILE.oxg`, the tracks' plugin settings)
     /// couldn't be read when it opened, if it couldn't.
     pub(crate) sidecar_problem: Option<String>,
+    /// The user chose to keep what the file's format can't hold in the
+    /// file beside it (FILE.oxg), or the score was opened from there:
+    /// saving goes on keeping it, without asking again.
+    pub(crate) keeps_whole: bool,
     /// Whether bar colour swatches apply to all tracks (`SetBarColor`)
     /// or the current track only (`SetTrackBarColor`): the worker reads
     /// this to pass to the engraver so it knows which source to check.
@@ -177,6 +181,13 @@ struct Shared {
     edits: Option<std::sync::mpsc::Sender<crate::worker::Request>>,
     /// The sound runs: no editing while playing (Mateus, 25 Oct 2026).
     playing: bool,
+    /// The score as last engraved for the window, for the plugins that
+    /// read it (interface 1.8): the revision it is of, its pages and the
+    /// map of where everything is.
+    engraved: Option<(u64, Arc<Vec<DisplayList>>, Arc<Hits>)>,
+    /// The caret or the selection as the window last told it, for the
+    /// plugins that ask (interface 1.8).
+    selection: Option<oxiguitar_host::api::event::Selection2>,
 }
 
 impl OpenScore {
@@ -197,8 +208,40 @@ impl OpenScore {
     /// The open score, and its revision.
     pub(crate) fn set(&self, score: Option<Arc<Score>>, revision: u64) {
         let mut s = self.lock();
+        if score.is_none() {
+            s.engraved = None;
+            s.selection = None;
+        }
         s.score = score;
         s.revision = revision;
+    }
+
+    /// The score was engraved for the window: what plugins read of it.
+    pub(crate) fn set_engraved(
+        &self,
+        revision: u64,
+        pages: Arc<Vec<DisplayList>>,
+        hits: Arc<Hits>,
+    ) {
+        self.lock().engraved = Some((revision, pages, hits));
+    }
+
+    /// The caret or the selection moved.
+    pub(crate) fn set_selection(&self, selection: Option<oxiguitar_host::api::event::Selection2>) {
+        self.lock().selection = selection;
+    }
+
+    /// The caret or the selection, as plugins ask for it (interface 1.8).
+    pub(crate) fn selection(&self) -> Option<oxiguitar_host::api::event::Selection2> {
+        self.lock().selection
+    }
+
+    /// The open score as engraved (interface 1.8); `None` when no score is
+    /// open or it isn't engraved yet.
+    pub(crate) fn engraving(&self) -> Option<oxiguitar_host::api::message::Engraving> {
+        // Converted outside the lock: the pages are shared, not copied.
+        let (revision, pages, hits) = self.lock().engraved.clone()?;
+        Some(crate::engraving::of(revision, &pages, &hits))
     }
 
     /// The open score as it is now, shared.
@@ -302,8 +345,33 @@ impl Document {
         // OxiGuitar works out itself.
         oxiguitar_edit::plain_spellings(&mut score);
         // What plugins keep per track lives beside the file (FILE.oxg).
+        let mut keeps_whole = false;
+        let mut opened_losses: Vec<LogEntry> = opened_losses;
         let sidecar_problem = match Sidecar::read_for(path) {
             Ok(Some(mut sidecar)) => {
+                // The whole score, kept beside a file whose format can't
+                // hold all of it (Mateus, 16 Nov 2026): used while the
+                // file is still the one it was saved beside.
+                let kept_problem = match sidecar.kept_score(&data) {
+                    Kept::None => None,
+                    Kept::Score(kept) => match oxiguitar_model::wire::from_wire2(*kept) {
+                        Ok(whole) => {
+                            score = whole;
+                            keeps_whole = true;
+                            opened_losses.clear();
+                            None
+                        }
+                        Err(e) => Some(format!(
+                            "{name}.oxg keeps the whole score, but this OxiGuitar can't hold it ({e}): {name} itself is shown."
+                        )),
+                    },
+                    Kept::Stale => Some(format!(
+                        "{name} was changed by another program since OxiGuitar saved it, so it is shown as it is now; what {name}.oxg kept beyond it is left out, and goes at the next save."
+                    )),
+                    Kept::Unreadable(e) => Some(format!(
+                        "{name}.oxg keeps the whole score, but this OxiGuitar can't read it ({e}): {name} itself is shown."
+                    )),
+                };
                 sidecar.adopt(&plugins.replaced_ids());
                 let names: Vec<String> = score.tracks.iter().map(|t| t.name.clone()).collect();
                 let str_names: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
@@ -313,6 +381,28 @@ impl Document {
                     track.effects = entry.effects;
                     track.play_chords = entry.chords;
                     track.chords_from = entry.chords_from.unwrap_or(usize::MAX);
+                    // What plugins keep on bars, beats and notes; a place
+                    // no longer there takes nothing.
+                    for kept in entry.kept {
+                        track.keep(
+                            &kept.at,
+                            oxiguitar_model::Kept {
+                                plugins: kept.plugins,
+                                marks: kept.marks,
+                            },
+                        );
+                    }
+                }
+                // What plugins keep on the score and on bars of every track.
+                if !sidecar.plugins.is_empty() {
+                    score.plugins = std::mem::take(&mut sidecar.plugins);
+                }
+                for kept in std::mem::take(&mut sidecar.bars) {
+                    if let [bar] = kept.at[..]
+                        && let Some(m) = score.master_bars.get_mut(bar)
+                    {
+                        m.plugins = kept.plugins;
+                    }
                 }
                 // Convert track_bar_colors from sidecar format (track name →
                 // Vec<Option<serde_json::Value>>) to score format (track
@@ -335,7 +425,7 @@ impl Document {
                         score.track_bar_colors.insert(ti, parsed);
                     }
                 }
-                None
+                kept_problem
             }
             Ok(None) => None,
             Err(why) => Some(why),
@@ -349,28 +439,29 @@ impl Document {
             history: History::new(),
             check,
             untitled: false,
+            keeps_whole,
             sidecar_problem,
             bar_colour_global: false,
         })
     }
 
-    /// File → New: a new score (one bar, one guitar), in the fullest format
-    /// the plugins write, with no file yet.
+    /// File → New: a new score (one bar, one guitar) with no file yet. It
+    /// has no format either until Save As gives it one; the first the
+    /// plugins write stands in.
     pub(crate) fn untitled(plugins: &Plugins) -> Document {
-        let writable = SaveFormat::writable(plugins);
-        let format = writable
-            .iter()
-            .find(|f| f.id == FULLEST)
-            .or(writable.first())
-            .cloned()
+        let format = SaveFormat::writable(plugins)
+            .into_iter()
+            .next()
             .unwrap_or_else(|| SaveFormat {
-                id: FULLEST.to_owned(),
-                name: "Guitar Pro 7–8".to_owned(),
-                extensions: vec!["gp".to_owned()],
+                id: String::new(),
+                name: "no format".to_owned(),
+                extensions: Vec::new(),
             });
         let score = oxiguitar_edit::new_score();
         Document {
-            path: PathBuf::from("Untitled.gp"),
+            keeps_whole: false,
+            path: PathBuf::from("Untitled")
+                .with_extension(format.extensions.first().map_or("", String::as_str)),
             format,
             opened_losses: Vec::new(),
             check: BarCheck::of(&score),
@@ -604,11 +695,6 @@ impl SaveFormat {
     }
 }
 
-/// The format a file is saved in when its own would lose part of the
-/// score, or no plugin writes it: the fullest OxiGuitar writes, Guitar Pro
-/// 7–8's .gp (Mateus, 19 Oct 2026).
-pub(crate) const FULLEST: &str = "gp";
-
 /// A file ready to be written: where, in which format, its bytes, and what
 /// the user should hear before it is written.
 #[derive(Clone, Debug)]
@@ -620,31 +706,31 @@ pub(crate) struct Prepared {
     pub(crate) losses: Vec<LogEntry>,
     /// What the reader left out of the file being written over (FMT-2).
     pub(crate) opened_losses: Vec<LogEntry>,
-    /// Why the file is saved as another file, in another format, than the
-    /// one it was opened from: "Guitar Pro 5 can't hold everything in
-    /// this score" or "no installed plugin writes Guitar Pro 5 files".
-    pub(crate) instead: Option<String>,
+    /// The whole score, for the file beside this one (FILE.oxg), when the
+    /// format loses something: what the user may keep there.
+    pub(crate) whole: Option<KeptScore>,
+    /// The user already chose to keep it there for this score.
+    pub(crate) keeps: bool,
 }
 
 impl Prepared {
-    /// Whether to ask before writing: something is lost, or the score goes
-    /// to another file than the user expects.
+    /// Whether to ask before writing: something is lost that the user
+    /// hasn't already chosen to keep beside the file.
     pub(crate) fn ask(&self) -> bool {
-        !self.losses.is_empty() || !self.opened_losses.is_empty() || self.instead.is_some()
+        (!self.losses.is_empty() && !self.keeps) || !self.opened_losses.is_empty()
+    }
+
+    /// Whether the question offers to keep what the format can't hold in
+    /// the file beside this one.
+    pub(crate) fn can_keep(&self) -> bool {
+        !self.losses.is_empty() && self.whole.is_some()
     }
 
     /// The question before writing: a heading, what to say, and the losses
     /// as lines ("tremolo picking … (bar 3, track 1)").
-    pub(crate) fn question(&self, from: &Path) -> (String, Vec<String>) {
+    pub(crate) fn question(&self) -> (String, Vec<String>) {
         let name = file_name(&self.path);
         let mut lines = Vec::new();
-        if let Some(why) = &self.instead {
-            lines.push(format!(
-                "{why}, so it is saved in OxiGuitar's fullest format, {}, as {name}. {} stays as it was.",
-                self.format.name,
-                file_name(from)
-            ));
-        }
         let entry = |e: &LogEntry| {
             let times = if e.count > 1 {
                 format!(", {} times", e.count)
@@ -660,6 +746,14 @@ impl Prepared {
         if !self.losses.is_empty() {
             lines.push(format!("{} files can't hold:", self.format.name));
             lines.extend(self.losses.iter().map(entry));
+            if self.keeps {
+                lines.push(format!("These are kept in {name}.oxg, beside the file."));
+            } else if self.can_keep() {
+                lines.push(format!(
+                    "OxiGuitar can keep them in {name}.oxg, beside the file: it then opens the score whole, while other programs see what {} holds. Keep the two files together.",
+                    self.format.name
+                ));
+            }
         }
         if !self.opened_losses.is_empty() {
             lines.push(format!(
@@ -673,10 +767,11 @@ impl Prepared {
 
 impl Document {
     /// Gets a save ready, without writing anything: to `to` in its format
-    /// (Save As), or else to the file the score came from (Save). Save
-    /// keeps the file's own format unless that would lose part of the
-    /// score, or no plugin writes it: then the score goes beside it as a
-    /// .gp file, the fullest format OxiGuitar writes (Mateus, 19 Oct 2026).
+    /// (Save As), or else to the file the score came from, in its own
+    /// format (Save). OxiGuitar knows no format that holds everything, and
+    /// picks none for the user (Mateus, 16 Nov 2026): what the format
+    /// can't hold is named, and the user loses it or keeps it in the file
+    /// beside this one.
     pub(crate) fn prepare_save(
         &self,
         plugins: &Plugins,
@@ -708,47 +803,40 @@ impl Document {
             } else {
                 Vec::new()
             };
+            // The score as plugins get it, their own data on beats
+            // included, for the file beside this one.
+            let whole = if written.1.is_empty() {
+                None
+            } else {
+                KeptScore::of(&written.0, &wire)
+            };
             Prepared {
+                // A file saved under another name starts over: the choice
+                // was for the file it was made for.
+                keeps: self.keeps_whole && path == self.path,
                 path,
                 format,
                 data: written.0,
                 losses: written.1,
                 opened_losses,
-                instead: None,
+                whole,
             }
         };
         if let Some((path, format)) = to {
             let written = write(&format)?;
             return Ok(prepared(path, format, written));
         }
-        let writable = SaveFormat::writable(plugins);
-        let own = writable.iter().find(|f| f.id == self.format.id).cloned();
-        let own_written = own.as_ref().map(write).transpose()?;
-        if let (Some(own), Some(written)) = (&own, &own_written)
-            && (written.1.is_empty() || own.id == FULLEST)
-        {
-            return Ok(prepared(self.path.clone(), own.clone(), written.clone()));
-        }
-        let Some(fullest) = writable.iter().find(|f| f.id == FULLEST).cloned() else {
-            // No .gp writer: the file's own format, losses named, if any.
-            return match (own, own_written) {
-                (Some(own), Some(written)) => Ok(prepared(self.path.clone(), own, written)),
-                _ => Err(format!(
-                    "No installed plugin writes {} files, nor Guitar Pro 7–8 files: choose a format with Save As.",
-                    self.format.name
-                )),
-            };
+        let Some(own) = SaveFormat::writable(plugins)
+            .into_iter()
+            .find(|f| f.id == self.format.id)
+        else {
+            return Err(format!(
+                "No installed plugin writes {} files: choose a format with Save As.",
+                self.format.name
+            ));
         };
-        let written = write(&fullest)?;
-        let path = self
-            .path
-            .with_extension(fullest.extensions.first().map_or("gp", String::as_str));
-        let mut p = prepared(path, fullest, written);
-        p.instead = Some(match own {
-            Some(_) => format!("{} can't hold everything in this score", self.format.name),
-            None => format!("No installed plugin writes {} files", self.format.name),
-        });
-        Ok(p)
+        let written = write(&own)?;
+        Ok(prepared(self.path.clone(), own, written))
     }
 
     /// Writes a prepared file: beside the old one first, then in its place,
@@ -756,7 +844,14 @@ impl Document {
     /// the new file. The tracks' plugin settings go beside it (FILE.oxg):
     /// if only they couldn't be saved, the answer is `Ok` with a sentence
     /// saying so. The error is a sentence for the footer.
-    pub(crate) fn save(&mut self, prepared: &Prepared) -> Result<Option<String>, String> {
+    ///
+    /// With `keep`, the whole score goes there too, for what the format
+    /// can't hold; without it, a whole score kept there before goes.
+    pub(crate) fn save(
+        &mut self,
+        prepared: &Prepared,
+        keep: bool,
+    ) -> Result<Option<String>, String> {
         let name = file_name(&prepared.path);
         let temp = prepared
             .path
@@ -807,11 +902,35 @@ impl Document {
                     } else {
                         Some(t.chords_from)
                     },
+                    kept: t
+                        .kept()
+                        .into_iter()
+                        .map(|(at, kept)| KeptEntry {
+                            at,
+                            plugins: kept.plugins,
+                            marks: kept.marks,
+                        })
+                        .collect(),
                 })
                 .collect(),
             bar_colors,
             track_bar_colors,
+            score: prepared.whole.clone().filter(|_| keep),
+            plugins: self.score.plugins.clone(),
+            bars: self
+                .score
+                .master_bars
+                .iter()
+                .enumerate()
+                .filter(|(_, m)| !m.plugins.is_empty())
+                .map(|(i, m)| KeptEntry {
+                    at: vec![i],
+                    plugins: m.plugins.clone(),
+                    marks: Default::default(),
+                })
+                .collect(),
         };
+        self.keeps_whole = sidecar.score.is_some();
         let kept = sidecar.write_for(&prepared.path);
         if prepared.path == self.path {
             self.opened_losses.clear();
@@ -857,10 +976,12 @@ impl Engraver {
         settings: &Settings,
         marked: BTreeSet<(usize, usize, usize)>,
         bar_colour_global: bool,
+        drawings: oxiguitar_layout::Drawings,
     ) -> Engraved {
         let options = Options {
             marked,
             bar_colour_global,
+            drawings,
             ..settings.options()
         };
         engrave(score, &self.fonts, &self.meta, &options)
@@ -872,15 +993,17 @@ impl Engraver {
         &self,
         doc: &Document,
         settings: &Settings,
+        drawings: oxiguitar_layout::Drawings,
     ) -> Result<(Vec<u8>, usize), String> {
         let paged = Settings {
             layout: Layout::Page,
             active_voice: None,
             ..settings.clone()
         };
-        // A PDF shows what the file says: no marks, every voice in ink.
+        // A PDF shows what the file says: no marks, every voice in ink;
+        // what plugins draw is printed as it is shown.
         let pages = self
-            .engrave(&doc.score, &paged, BTreeSet::new(), false)
+            .engrave(&doc.score, &paged, BTreeSet::new(), false, drawings)
             .pages;
         let refs: Vec<&DisplayList> = pages.iter().collect();
         let bytes = oxiguitar_render::to_pdf(&refs, &self.fonts, &Theme::PRINT, &doc.title())
@@ -923,7 +1046,7 @@ mod tests {
                 ..Settings::default()
             };
             assert_eq!(
-                e.engrave(&doc.score, &s, BTreeSet::new(), false)
+                e.engrave(&doc.score, &s, BTreeSet::new(), false, Default::default())
                     .pages
                     .len(),
                 1,
@@ -938,6 +1061,7 @@ mod tests {
                     paper: Paper::Letter,
                     ..Settings::default()
                 },
+                Default::default(),
             )
             .unwrap();
         assert!(pdf.starts_with(b"%PDF"));
@@ -1109,7 +1233,7 @@ mod tests {
         // The settings change no score format: the file keeps its format.
         let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
         assert_eq!(prepared.path, path);
-        assert_eq!(doc.save(&prepared).unwrap(), None);
+        assert_eq!(doc.save(&prepared, false).unwrap(), None);
         let sidecar = dir.join("song.gp5.oxg");
         assert!(
             std::fs::read_to_string(&sidecar)
@@ -1147,12 +1271,12 @@ mod tests {
         let path = dir.join("song.gp");
         std::fs::copy(fixture("gp"), &path).unwrap();
         let mut doc = open(&path).unwrap();
-        assert_eq!(doc.format.id, FULLEST);
+        assert_eq!(doc.format.id, "gp");
         doc.apply_tool(0);
         let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
         assert!(!prepared.ask(), "{prepared:?}");
         assert_eq!(prepared.path, path);
-        doc.save(&prepared).unwrap();
+        doc.save(&prepared, false).unwrap();
         assert!(!doc.edit_state().modified);
         // What was written is what the document holds, and nothing is left
         // beside it.
@@ -1162,35 +1286,45 @@ mod tests {
     }
 
     #[test]
-    fn a_file_no_plugin_writes_is_saved_beside_it_as_gp() {
-        let dir = scratch("save-beside");
+    fn what_plugins_keep_anywhere_is_saved_beside_the_file_and_read_back() {
+        let dir = scratch("save-plugin-data");
+        let path = dir.join("song.gp");
+        std::fs::copy(fixture("gp"), &path).unwrap();
+        let mut doc = open(&path).unwrap();
+        {
+            let s = Arc::make_mut(&mut doc.score);
+            let data = |n: u8| format!(r#"{{"n":{n}}}"#);
+            s.plugins.insert("me.song".into(), data(1));
+            s.master_bars[1].plugins.insert("me.bars".into(), data(2));
+            let bar = &mut s.tracks[0].staves[0].bars[1];
+            bar.plugins.insert("me.bar".into(), data(3));
+            let beat = &mut bar.voices[0].beats[0];
+            beat.plugins.insert("me.beat".into(), data(4));
+            beat.effects.marks.insert("me.beat".into(), "x".into());
+            beat.notes[0].plugins.insert("me.note".into(), data(5));
+        }
+        // No format holds it, and none is lost: Save doesn't ask.
+        let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
+        assert!(!prepared.ask(), "{prepared:?}");
+        doc.save(&prepared, false).unwrap();
+        let again = open(&path).unwrap();
+        assert_eq!(again.score, doc.score);
+        assert!(!again.keeps_whole);
+    }
+
+    #[test]
+    fn a_file_no_plugin_writes_asks_for_another_format() {
+        let dir = scratch("save-unwritable");
         let path = dir.join("song.gp4");
         std::fs::copy(fixture("gp4"), &path).unwrap();
-        let mut doc = open(&path).unwrap();
-        let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
-        assert!(prepared.ask());
-        assert_eq!(prepared.path, dir.join("song.gp"));
-        assert_eq!(prepared.format.id, FULLEST);
-        let (heading, lines) = prepared.question(&doc.path);
-        assert_eq!(heading, "Save song.gp?");
-        assert!(
-            lines[0].starts_with("No installed plugin writes Guitar Pro 4 files, so it is saved in OxiGuitar's fullest format, Guitar Pro 7–8, as song.gp. song.gp4 stays as it was."),
-            "{lines:?}"
-        );
-        let before = std::fs::read(&path).unwrap();
-        doc.save(&prepared).unwrap();
+        let doc = open(&path).unwrap();
+        // OxiGuitar picks no format for the user (Mateus, 16 Nov 2026).
+        let e = doc.prepare_save(crate::test_plugins(), None).unwrap_err();
         assert_eq!(
-            std::fs::read(&path).unwrap(),
-            before,
-            "the .gp4 is untouched"
+            e,
+            "No installed plugin writes Guitar Pro 4 files: choose a format with Save As."
         );
-        assert_eq!(doc.path, dir.join("song.gp"));
-        assert_eq!(doc.name(), "song.gp");
-        assert_eq!(doc.format.id, FULLEST);
-        // From then on, Save writes the .gp in place.
-        let next = doc.prepare_save(crate::test_plugins(), None).unwrap();
-        assert_eq!(next.path, dir.join("song.gp"));
-        assert!(next.instead.is_none());
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
     }
 
     #[test]
@@ -1199,7 +1333,7 @@ mod tests {
         let mut doc = open(&fixture("gp")).unwrap();
         let gp = SaveFormat::writable(crate::test_plugins())
             .into_iter()
-            .find(|f| f.id == FULLEST)
+            .find(|f| f.id == "gp")
             .unwrap();
         // A section colour, which a .gp file can't hold.
         Arc::make_mut(&mut doc.score).master_bars[0].marker = Some(oxiguitar_model::Marker {
@@ -1212,13 +1346,92 @@ mod tests {
             .prepare_save(crate::test_plugins(), Some((to.clone(), gp)))
             .unwrap();
         assert!(prepared.ask());
-        assert!(prepared.instead.is_none());
-        let (_, lines) = prepared.question(&doc.path);
+        assert!(prepared.can_keep() && !prepared.keeps);
+        let (_, lines) = prepared.question();
         assert_eq!(lines[0], "Guitar Pro 7–8 files can't hold:");
         assert_eq!(lines[1], "• section colours are left out (bar 1, track 1)");
-        doc.save(&prepared).unwrap();
+        assert!(
+            lines[2].starts_with("OxiGuitar can keep them in copy.gp.oxg"),
+            "{lines:?}"
+        );
+        // Saved without them: the colour is gone from what is opened again,
+        // and nothing is beside the file.
+        doc.save(&prepared, false).unwrap();
         assert!(to.exists());
         assert_eq!(doc.path, to);
+        assert!(!doc.keeps_whole);
+        assert!(!oxiguitar_host::sidecar::path_for(&to).exists());
+        let lost = open(&to).unwrap();
+        assert_ne!(lost.score, doc.score);
+        assert!(!lost.keeps_whole);
+    }
+
+    #[test]
+    fn what_a_format_cant_hold_is_kept_beside_the_file_when_the_user_says_so() {
+        let dir = scratch("save-keep");
+        let path = dir.join("song.gp");
+        std::fs::copy(fixture("gp"), &path).unwrap();
+        let mut doc = open(&path).unwrap();
+        let red = oxiguitar_model::Color { r: 255, g: 0, b: 0 };
+        Arc::make_mut(&mut doc.score).master_bars[0].marker = Some(oxiguitar_model::Marker {
+            letter: "A".into(),
+            text: "Intro".into(),
+            color: red,
+        });
+        let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
+        assert!(prepared.ask() && prepared.can_keep());
+        doc.save(&prepared, true).unwrap();
+        assert!(doc.keeps_whole);
+        let sidecar = oxiguitar_host::sidecar::path_for(&path);
+        assert!(
+            std::fs::read_to_string(&sidecar)
+                .unwrap()
+                .contains("\"score\": {")
+        );
+        // Opened again, the score is whole: nothing was lost, and nothing
+        // is said.
+        let again = open(&path).unwrap();
+        assert_eq!(again.score, doc.score);
+        assert_eq!(
+            again.score.master_bars[0].marker.as_ref().map(|m| m.color),
+            Some(red)
+        );
+        assert!(again.keeps_whole);
+        assert_eq!(again.sidecar_problem, None);
+        assert!(again.opened_losses.is_empty());
+        // From then on Save keeps it there without asking again, and says
+        // so only when asked for another reason.
+        let next = again.prepare_save(crate::test_plugins(), None).unwrap();
+        assert!(!next.ask() && next.keeps);
+        // Under another name the question comes back.
+        let other = again
+            .prepare_save(
+                crate::test_plugins(),
+                Some((dir.join("other.gp"), again.format.clone())),
+            )
+            .unwrap();
+        assert!(other.ask() && !other.keeps);
+        // Another program changed the file: the file is what counts, and
+        // the user is told.
+        let mut bytes = std::fs::read(fixture("gp")).unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        let stale = open(&path).unwrap();
+        assert!(!stale.keeps_whole);
+        assert!(stale.score.master_bars[0].marker.as_ref().map(|m| m.color) != Some(red));
+        let said = stale.sidecar_problem.clone().unwrap();
+        assert!(said.contains("changed by another program"), "{said}");
+        // Its next save, with nothing lost, takes the old score out of the
+        // sidecar.
+        let mut stale = stale;
+        let plain = stale.prepare_save(crate::test_plugins(), None).unwrap();
+        assert!(!plain.ask());
+        stale.save(&plain, false).unwrap();
+        assert!(
+            !std::fs::read_to_string(&sidecar)
+                .unwrap()
+                .contains("\"score\"")
+        );
+        bytes.clear();
     }
 
     #[test]
@@ -1231,8 +1444,7 @@ mod tests {
         let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
         assert_eq!(prepared.path, path);
         assert_eq!(prepared.format.id, "gp5");
-        assert!(prepared.instead.is_none());
-        doc.save(&prepared).unwrap();
+        doc.save(&prepared, false).unwrap();
         assert_eq!(doc.path, path);
 
         // A free-time bar, which a .gp5 file can't hold, is named.
@@ -1247,10 +1459,10 @@ mod tests {
             .prepare_save(crate::test_plugins(), Some((to.clone(), gp5)))
             .unwrap();
         assert!(prepared.ask());
-        let (_, lines) = prepared.question(&doc.path);
+        let (_, lines) = prepared.question();
         assert_eq!(lines[0], "Guitar Pro 5 files can't hold:", "{lines:?}");
         assert!(lines.iter().any(|l| l.contains("free time")), "{lines:?}");
-        doc.save(&prepared).unwrap();
+        doc.save(&prepared, false).unwrap();
         assert_eq!(open(&to).unwrap().format.id, "gp5");
     }
 
@@ -1265,7 +1477,7 @@ mod tests {
         }];
         let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
         assert!(prepared.ask());
-        let (_, lines) = prepared.question(&doc.path);
+        let (_, lines) = prepared.question();
         assert_eq!(
             lines,
             [

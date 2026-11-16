@@ -818,6 +818,8 @@ fn rebar_passage(score: &Score, k0: usize, k1: usize) -> Option<Rebarred> {
                 clef,
                 voices: vs,
                 simile: None,
+                // New bar lines: no bar is the one plugins kept data on.
+                plugins: Default::default(),
             });
         }
         staves.push(out);

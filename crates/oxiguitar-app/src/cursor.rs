@@ -225,12 +225,14 @@ mod tests {
                     top: 90.0,
                     bottom: 140.0,
                     staves: vec![staff(0, &[110.0, 160.0, 180.0], 100.0)],
+                    drawn: Vec::new(),
                 },
                 SystemHits {
                     sheet: 0,
                     top: 190.0,
                     bottom: 240.0,
                     staves: vec![staff(1, &[110.0, 130.0, 150.0, 170.0], 200.0)],
+                    drawn: Vec::new(),
                 },
             ],
         }

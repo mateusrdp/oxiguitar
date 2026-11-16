@@ -136,8 +136,11 @@ impl Instance {
     }
 
     /// Runs an effect over one track's `left` and `right`, on the audio
-    /// thread. False once the plugin has panicked.
-    pub fn process(&mut self, left: &mut [f32], right: &mut [f32]) -> bool {
+    /// thread: their first frame is at the score's `time`, each frame
+    /// `step` seconds of it further, 0 while the score isn't playing
+    /// (interface 1.8; a plugin built for an older one reads neither).
+    /// False once the plugin has panicked.
+    pub fn process(&mut self, left: &mut [f32], right: &mut [f32], time: f64, step: f64) -> bool {
         if self.failed {
             return false;
         }
@@ -148,6 +151,8 @@ impl Instance {
             frames: frames as u32,
             buffers: pointers.as_ptr(),
             buffer_count: 2,
+            time,
+            step,
         };
         let status = self.loaded.process(self.held.id, &call);
         if status == Status::OK {

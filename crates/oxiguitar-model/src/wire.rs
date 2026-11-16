@@ -31,6 +31,7 @@ pub fn to_wire(score: &Score) -> w::Score {
         // Version 2's extension (to_wire2).
         layout: _,
         track_bar_colors: _,
+        plugins: _,
     } = score;
     w::Score {
         info: info_to(info),
@@ -68,6 +69,7 @@ pub fn from_wire(score: w::Score) -> Result<Score, String> {
             .collect::<Result<_, _>>()?,
         layout: Vec::new(),
         track_bar_colors: std::collections::BTreeMap::new(),
+        plugins: std::collections::BTreeMap::new(),
     })
 }
 
@@ -78,12 +80,24 @@ pub fn to_wire2(score: &Score) -> w2::Score2 {
     if !score.layout.is_empty() {
         out.ext.push(w2::ScoreExt::Layout(score.layout.clone()));
     }
+    for (plugin, data) in &score.plugins {
+        out.ext.push(w2::ScoreExt::Plugin {
+            plugin: plugin.clone(),
+            data: data.clone(),
+        });
+    }
     for (m, w) in score.master_bars.iter().zip(&mut out.master_bars) {
         if m.free_time {
             w.ext.push(w2::MasterBarExt::FreeTime);
         }
         for f in &m.fermatas {
             w.ext.push(w2::MasterBarExt::Fermata(fermata_to(f)));
+        }
+        for (plugin, data) in &m.plugins {
+            w.ext.push(w2::MasterBarExt::Plugin {
+                plugin: plugin.clone(),
+                data: data.clone(),
+            });
         }
     }
     for (t, wt) in score.tracks.iter().zip(&mut out.tracks) {
@@ -104,6 +118,12 @@ pub fn to_wire2(score: &Score) -> w2::Score2 {
                 if let Some(simile) = b.simile {
                     wb.ext.push(w2::BarExt::Simile(simile_to(simile)));
                 }
+                for (plugin, data) in &b.plugins {
+                    wb.ext.push(w2::BarExt::Plugin {
+                        plugin: plugin.clone(),
+                        data: data.clone(),
+                    });
+                }
                 for (v, wv) in b.voices.iter().zip(&mut wb.voices) {
                     for (beat, wbeat) in v.beats.iter().zip(&mut wv.beats) {
                         wbeat.ext = beat_ext_to(beat);
@@ -118,6 +138,17 @@ pub fn to_wire2(score: &Score) -> w2::Score2 {
     out
 }
 
+/// One beat in the score version 2, with every extension: what a plugin
+/// that draws at it is given (interface 1.8), without the whole score.
+pub fn beat_to_wire2(beat: &Beat) -> w2::Beat2 {
+    let mut out = w2::Beat2::from_v1(beat_to(beat));
+    out.ext = beat_ext_to(beat);
+    for (n, wn) in beat.notes.iter().zip(&mut out.notes) {
+        wn.ext = note_ext_to(n);
+    }
+    out
+}
+
 /// The model form of a score, version 2, a plugin sent: as [`from_wire`],
 /// with the extensions.
 pub fn from_wire2(score: w2::Score2) -> Result<Score, String> {
@@ -125,6 +156,9 @@ pub fn from_wire2(score: w2::Score2) -> Result<Score, String> {
     for e in &score.ext {
         match e {
             w2::ScoreExt::Layout(l) => out.layout.clone_from(l),
+            w2::ScoreExt::Plugin { plugin, data } => {
+                out.plugins.insert(plugin.clone(), data.clone());
+            }
         }
     }
     for (m, w) in out.master_bars.iter_mut().zip(&score.master_bars) {
@@ -132,6 +166,9 @@ pub fn from_wire2(score: w2::Score2) -> Result<Score, String> {
             match e {
                 w2::MasterBarExt::FreeTime => m.free_time = true,
                 w2::MasterBarExt::Fermata(f) => m.fermatas.push(fermata_from(f)?),
+                w2::MasterBarExt::Plugin { plugin, data } => {
+                    m.plugins.insert(plugin.clone(), data.clone());
+                }
             }
         }
     }
@@ -150,6 +187,9 @@ pub fn from_wire2(score: w2::Score2) -> Result<Score, String> {
                 for e in &wb.ext {
                     match e {
                         w2::BarExt::Simile(simile) => b.simile = Some(simile_from(*simile)),
+                        w2::BarExt::Plugin { plugin, data } => {
+                            b.plugins.insert(plugin.clone(), data.clone());
+                        }
                     }
                 }
                 for (v, wv) in b.voices.iter_mut().zip(&wb.voices) {
@@ -312,7 +352,25 @@ fn beat_ext_to(b: &Beat) -> Vec<w2::BeatExt> {
     if fx.dead_slap {
         out.push(E::DeadSlap);
     }
+    for (plugin, data) in &b.plugins {
+        out.push(E::Plugin {
+            plugin: plugin.clone(),
+            data: data.clone(),
+        });
+    }
+    for (plugin, text) in &fx.marks {
+        out.push(E::Mark {
+            plugin: plugin.clone(),
+            text: text.clone(),
+        });
+    }
     out
+}
+
+/// A beat's marks as plugins see them: its extensions in the score,
+/// version 2. What the player tells an effect that follows the score.
+pub fn beat_marks(b: &Beat) -> Vec<w2::BeatExt> {
+    beat_ext_to(b)
 }
 
 /// Sets what a beat's extensions hold.
@@ -372,6 +430,22 @@ fn beat_ext_from(b: &mut Beat, ext: &[w2::BeatExt]) {
             }
             E::PickScrape(d) => b.effects.pick_scrape = Some(stroke_direction_from(d)),
             E::DeadSlap => b.effects.dead_slap = true,
+            E::Plugin {
+                ref plugin,
+                ref data,
+            } => {
+                b.plugins.insert(plugin.clone(), data.clone());
+            }
+            E::Mark {
+                ref plugin,
+                ref text,
+            } => {
+                // No more than the engraver draws.
+                let text: String = text.chars().take(w2::MARK_MAX).collect();
+                if !text.trim().is_empty() {
+                    b.effects.marks.insert(plugin.clone(), text);
+                }
+            }
         }
     }
 }
@@ -397,6 +471,12 @@ fn note_ext_to(n: &Note) -> Vec<w2::NoteExt> {
     if let Some(Spelling { step, alter }) = n.spelling {
         out.push(E::Spelling { step, alter });
     }
+    for (plugin, data) in &n.plugins {
+        out.push(E::Plugin {
+            plugin: plugin.clone(),
+            data: data.clone(),
+        });
+    }
     out
 }
 
@@ -405,6 +485,12 @@ fn note_ext_from(n: &mut Note, ext: &[w2::NoteExt]) {
     use w2::NoteExt as E;
     for e in ext {
         match *e {
+            E::Plugin {
+                ref plugin,
+                ref data,
+            } => {
+                n.plugins.insert(plugin.clone(), data.clone());
+            }
             E::WideVibrato => n.effects.vibrato = Some(Vibrato::Wide),
             E::Ornament(o) => {
                 n.effects.ornament = Some(match o {
@@ -514,6 +600,8 @@ fn master_bar_to(b: &MasterBar) -> w::MasterBar {
         // Not yet in the wire format.
         bar_color: _,
         track_bar_color: _,
+        // Version 2's extension (to_wire2).
+        plugins: _,
     } = b;
     w::MasterBar {
         time_signature: w::TimeSignature {
@@ -631,6 +719,7 @@ fn master_bar_from(b: w::MasterBar) -> Result<MasterBar, String> {
         fermatas: Vec::new(),
         bar_color: None,
         track_bar_color: None,
+        plugins: std::collections::BTreeMap::new(),
     })
 }
 
@@ -869,6 +958,7 @@ fn staff_from(s: w::Staff) -> Result<Staff, String> {
             .map(|(i, b)| {
                 Ok(Bar {
                     simile: None,
+                    plugins: std::collections::BTreeMap::new(),
                     clef: clef_from(b.clef),
                     voices: b
                         .voices
@@ -931,6 +1021,7 @@ fn beat_to(b: &Beat) -> w::Beat {
         beaming: _,
         tuplet_group: _,
         barre: _,
+        plugins: _,
     } = b;
     let BeatEffects {
         stroke,
@@ -949,6 +1040,7 @@ fn beat_to(b: &Beat) -> w::Beat {
         golpe: _,
         pick_scrape: _,
         dead_slap: _,
+        marks: _,
     } = effects;
     w::Beat {
         kind: match kind {
@@ -1177,8 +1269,9 @@ fn note_to(n: &Note) -> w::Note {
         tie,
         dynamic,
         effects,
-        // Version 2's extension (to_wire2).
+        // Version 2's extensions (to_wire2).
         spelling: _,
+        plugins: _,
     } = n;
     let NoteEffects {
         hammer_pull,
@@ -1327,6 +1420,7 @@ fn note_from(n: w::Note) -> Result<Note, String> {
             ..NoteEffects::default()
         },
         spelling: None,
+        plugins: std::collections::BTreeMap::new(),
     })
 }
 
@@ -1423,6 +1517,125 @@ mod tests {
         let bytes = oxiguitar_plugin_api::encode(&wire).unwrap();
         let back: w2::Score2 = oxiguitar_plugin_api::decode(&bytes).unwrap();
         assert_eq!(from_wire2(back).unwrap(), score);
+    }
+
+    #[test]
+    fn what_plugins_keep_anywhere_goes_through_version_2_and_back_to_its_place() {
+        let mut score = marked();
+        let data = |n: u8| format!(r#"{{"n":{n}}}"#);
+        score.plugins.insert("me.song".into(), data(1));
+        score.master_bars[0]
+            .plugins
+            .insert("me.bars".into(), data(2));
+        let bar = &mut score.tracks[0].staves[0].bars[0];
+        bar.plugins.insert("me.bar".into(), data(3));
+        let note = &mut bar.voices[0].beats[0].notes[0];
+        note.plugins.insert("me.note".into(), data(4));
+        let wire = to_wire2(&score);
+        assert!(wire.ext.contains(&w2::ScoreExt::Plugin {
+            plugin: "me.song".into(),
+            data: data(1),
+        }));
+        assert!(wire.master_bars[0].ext.contains(&w2::MasterBarExt::Plugin {
+            plugin: "me.bars".into(),
+            data: data(2),
+        }));
+        let wbar = &wire.tracks[0].staves[0].bars[0];
+        assert!(wbar.ext.contains(&w2::BarExt::Plugin {
+            plugin: "me.bar".into(),
+            data: data(3),
+        }));
+        assert!(
+            wbar.voices[0].beats[0].notes[0]
+                .ext
+                .contains(&w2::NoteExt::Plugin {
+                    plugin: "me.note".into(),
+                    data: data(4),
+                })
+        );
+        assert_eq!(from_wire2(wire.clone()).unwrap(), score);
+        // A plugin built for interface 1.7 sees none of it, and format
+        // plugins never get it.
+        for strip in [
+            |w: &mut w2::Score2| w.keep_known(7),
+            |w: &mut w2::Score2| w.drop_plugin_data(),
+        ] {
+            let mut w = wire.clone();
+            strip(&mut w);
+            let back = from_wire2(w).unwrap();
+            assert!(back.plugins.is_empty());
+            assert!(back.master_bars[0].plugins.is_empty());
+            let bar = &back.tracks[0].staves[0].bars[0];
+            assert!(bar.plugins.is_empty());
+            assert!(bar.voices[0].beats[0].notes[0].plugins.is_empty());
+        }
+        // A track lists every place, and each goes back where it was.
+        let kept = score.tracks[0].kept();
+        let places: Vec<&[usize]> = kept.iter().map(|(at, _)| at.as_slice()).collect();
+        assert_eq!(places, [&[0, 0][..], &[0, 0, 0, 0, 0][..]]);
+        let mut empty = marked();
+        for (at, k) in kept {
+            assert!(empty.tracks[0].keep(&at, k));
+        }
+        assert_eq!(empty.tracks[0], score.tracks[0]);
+        // A place no longer there takes nothing.
+        let k = crate::Kept::default();
+        for at in [
+            &[9, 0][..],
+            &[0, 99],
+            &[0, 0, 0, 0, 99],
+            &[0],
+            &[0, 0, 0, 0, 0, 0],
+        ] {
+            assert!(!empty.tracks[0].keep(at, k.clone()), "{at:?}");
+        }
+    }
+
+    #[test]
+    fn what_plugins_keep_on_a_beat_goes_through_version_2() {
+        let mut score = marked();
+        let beat = &mut score.tracks[0].staves[0].bars[0].voices[0].beats[0];
+        beat.plugins.insert("me.pedal".into(), r#"{"q":6}"#.into());
+        beat.effects.marks.insert("me.pedal".into(), "wah".into());
+        let wire = to_wire2(&score);
+        let ext = &wire.tracks[0].staves[0].bars[0].voices[0].beats[0].ext;
+        assert!(ext.contains(&w2::BeatExt::Plugin {
+            plugin: "me.pedal".into(),
+            data: r#"{"q":6}"#.into(),
+        }));
+        assert!(ext.contains(&w2::BeatExt::Mark {
+            plugin: "me.pedal".into(),
+            text: "wah".into(),
+        }));
+        assert_eq!(from_wire2(wire.clone()).unwrap(), score);
+        // A mark longer than the engraver draws is cut; an empty one is
+        // none.
+        let mut long = wire.clone();
+        let ext = &mut long.tracks[0].staves[0].bars[0].voices[0].beats[0].ext;
+        ext.retain(|e| !matches!(e, w2::BeatExt::Mark { .. }));
+        ext.push(w2::BeatExt::Mark {
+            plugin: "me.pedal".into(),
+            text: "x".repeat(w2::MARK_MAX + 5),
+        });
+        ext.push(w2::BeatExt::Mark {
+            plugin: "me.other".into(),
+            text: "  ".into(),
+        });
+        let read = from_wire2(long).unwrap();
+        let marks = &read.tracks[0].staves[0].bars[0].voices[0].beats[0]
+            .effects
+            .marks;
+        assert_eq!(marks.len(), 1);
+        assert_eq!(marks["me.pedal"].chars().count(), w2::MARK_MAX);
+        // Formats are sent neither.
+        let mut sent = wire;
+        sent.drop_plugin_data();
+        assert!(
+            sent.tracks[0].staves[0].bars[0].voices[0].beats[0]
+                .ext
+                .iter()
+                .all(|e| !matches!(e, w2::BeatExt::Plugin { .. } | w2::BeatExt::Mark { .. }))
+        );
     }
 
     #[test]

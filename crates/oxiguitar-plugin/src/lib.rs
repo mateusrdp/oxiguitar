@@ -61,7 +61,8 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::manifest::SharedFolder;
 pub use oxiguitar_plugin_api::message::{
-    Advice, Availability, Error, ErrorKind, Level, LogEntry, TrackInfo,
+    Advice, Availability, Clicked, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, Perform,
+    PlayedNote, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -146,6 +147,18 @@ pub trait Plugin: Send + Sync + 'static {
     /// The tool `id` (an id from the manifest's `tools`; interface 1.2).
     fn tool(&self, id: &str) -> Option<&dyn Tool> {
         let _ = id;
+        None
+    }
+
+    /// What draws on the page, for a manifest with `draws` (interface
+    /// 1.8).
+    fn drawer(&self) -> Option<&dyn Drawer> {
+        None
+    }
+
+    /// What plays the notes its own way, for a manifest with `performs`
+    /// (interface 1.8).
+    fn performer(&self) -> Option<&dyn Performer> {
         None
     }
 
@@ -277,6 +290,25 @@ impl Folders {
     }
 }
 
+/// Where a shared folder of the plugin's is (interface 1.8;
+/// [`Host::folder`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FolderPlaces {
+    /// The one in the user's OxiGuitar folder, beside `plugins`: where the
+    /// user puts files, and the plugin may write.
+    pub user: std::path::PathBuf,
+    /// The same name where it exists beside a system plugin folder or the
+    /// program: a package's files, read only.
+    pub others: Vec<std::path::PathBuf>,
+}
+
+impl FolderPlaces {
+    /// Every place, the user's first.
+    pub fn all(&self) -> impl Iterator<Item = &std::path::Path> {
+        std::iter::once(self.user.as_path()).chain(self.others.iter().map(|p| p.as_path()))
+    }
+}
+
 /// Reads one file format into the score version 2 (interface 1.2).
 pub trait FormatReader2: Send + Sync {
     /// Reads `data`, a whole file. Treat it as untrusted: a damaged file
@@ -308,6 +340,42 @@ pub trait Tool: Send + Sync {
     fn run(&self) -> Result<String, Error>;
 }
 
+/// Draws on the page (interface 1.8), at the bars and beats that carry the
+/// plugin's data or marks: [`Request::Draw`]'s places. Asked each time the
+/// score is engraved and those places changed, so keep it quick and pure:
+/// the same places, the same drawings.
+pub trait Drawer: Send + Sync {
+    /// What to draw at each place: at most one [`Drawn`] a place (its
+    /// `place` the index in `places`), in staff spaces, from the box's top
+    /// left corner; none where nothing is drawn.
+    fn draw(&self, places: &[DrawPlace]) -> Result<Vec<Drawn>, Error>;
+
+    /// The user clicked what it drew at `place`, at `at` in the drawing's
+    /// box (staff spaces from its top left corner); `double` for a double
+    /// click. The caret is already there. Returns a sentence for the footer
+    /// (or an empty one), as a tool does; it may change the score as a tool
+    /// does. Doing nothing is the default.
+    fn clicked(
+        &self,
+        place: &DrawPlace,
+        at: display::Point,
+        double: bool,
+    ) -> Result<String, Error> {
+        let _ = (place, at, double);
+        Ok(String::new())
+    }
+}
+
+/// Plays the notes its own way (interface 1.8): given a track's notes as
+/// the score gives them, gives them back as they should sound, changed,
+/// added or left out. Asked when the song is got ready to play or export
+/// and the notes changed, off the audio thread; keep it a pure function of
+/// what it is given.
+pub trait Performer: Send + Sync {
+    /// The track's notes as they should sound.
+    fn perform(&self, track: &Perform) -> Result<Vec<PlayedNote>, Error>;
+}
+
 /// A tab in one of the window's areas (docs/design/plugins.md, "What
 /// plugins contribute"): standard widgets the core draws, and a canvas the
 /// plugin draws.
@@ -320,6 +388,15 @@ pub trait Tab: Send + Sync {
     /// asked for again afterwards. The default does nothing.
     fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
         let _ = (widget, event);
+        Ok(())
+    }
+
+    /// For a dialog (a tab whose area is `dialog`, interface 1.8): the
+    /// user closed it, with OK (`ok`) or with Cancel or Escape. What the
+    /// dialog changes, it changes now ([`Host::apply`] for the score). An
+    /// error is shown in the footer. The default does nothing.
+    fn closed(&self, ok: bool) -> Result<(), Error> {
+        let _ = ok;
         Ok(())
     }
 }
@@ -451,6 +528,28 @@ pub fn dispatch_kept(
                 losses,
             })
         }
+        Request::Clicked(click) => {
+            let drawer = plugin
+                .drawer()
+                .ok_or_else(|| Error::not_found("this plugin doesn't draw"))?;
+            Ok(Answer::Report(drawer.clicked(
+                &click.place,
+                click.at,
+                click.double,
+            )?))
+        }
+        Request::Perform(track) => {
+            let performer = plugin
+                .performer()
+                .ok_or_else(|| Error::not_found("this plugin doesn't play notes"))?;
+            Ok(Answer::Performed(performer.perform(&track)?))
+        }
+        Request::Draw { places } => {
+            let drawer = plugin
+                .drawer()
+                .ok_or_else(|| Error::not_found("this plugin draws nothing"))?;
+            Ok(Answer::Drawn(drawer.draw(&places)?))
+        }
         Request::Tool { tool } => {
             let tool = plugin
                 .tool(&tool)
@@ -477,6 +576,10 @@ pub fn dispatch_kept(
             let tab = find_tab(plugin, &tab)?;
             tab.on(&widget, event)?;
             Ok(Answer::Tab(Box::new(tab.content())))
+        }
+        Request::TabClosed { tab, ok } => {
+            find_tab(plugin, &tab)?.closed(ok)?;
+            Ok(Answer::Done)
         }
         Request::Event(event) => {
             plugin.event(&event);
@@ -527,6 +630,15 @@ pub fn dispatch_kept(
                 Error::not_found(format!("this plugin has no effect {:?}", p.effect))
             })?;
             prepared(keeper, audio::Instance::Effect(effect.prepare(&p)?))
+        }
+        Request::PrepareFollowing(p) => {
+            let effect = plugin.effect(&p.prepare.effect).ok_or_else(|| {
+                Error::not_found(format!("this plugin has no effect {:?}", p.prepare.effect))
+            })?;
+            prepared(
+                keeper,
+                audio::Instance::Effect(effect.prepare_following(&p.prepare, &p.beats)?),
+            )
         }
         Request::Release { instance } => {
             if keeper.release(instance) {
@@ -807,6 +919,68 @@ impl Host {
         let _ = self.0.request(HostRequest::Redraw { tab: tab.into() });
     }
 
+    /// The open score as it is engraved in the window now (interface 1.8):
+    /// every page's drawing, and where each beat is on it. `None` when no
+    /// score is open. To put something on the page, give a beat a mark
+    /// ([`score2::BeatExt::Mark`]) and hand the score back
+    /// ([`Host::apply`]).
+    pub fn engraving(&self) -> Result<Option<api::message::Engraving>, Error> {
+        match self.0.request(HostRequest::Engraving)? {
+            HostAnswer::Engraving(engraving) => Ok(engraving.map(|e| *e)),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Where the shared folder `name` of the manifest's `folders` is
+    /// (interface 1.8): a folder of the plugin's own choosing beside
+    /// `plugins`, as `soundfonts` and `nam` are. The user's is created if
+    /// it is missing.
+    pub fn folder(&self, name: &str) -> Result<FolderPlaces, Error> {
+        match self.0.request(HostRequest::Folder {
+            name: name.to_owned(),
+        })? {
+            HostAnswer::Folder(f) => Ok(FolderPlaces {
+                user: f.user.into(),
+                others: f.others.into_iter().map(Into::into).collect(),
+            }),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// The caret or the selection in the open score as it is now (interface
+    /// 1.8); `None` when no score is open. What [`Event::Selection2`] tells
+    /// as it changes, for when the plugin needs it at once: a tool run
+    /// before the caret ever moved.
+    pub fn selection(&self) -> Result<Option<Selection2>, Error> {
+        match self.0.request(HostRequest::Selection)? {
+            HostAnswer::Selection(selection) => Ok(selection),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Asks the core to open the dialog `tab` (the id of a tab whose area
+    /// is `dialog`) over the window (interface 1.8): it asks for the
+    /// dialog's [`Tab::content`], sends its widgets' events to [`Tab::on`]
+    /// and tells [`Tab::closed`] how the user closed it. An error when it
+    /// can't be opened: another dialog is open, or there is no window.
+    pub fn open_dialog(&self, tab: &str) -> Result<(), Error> {
+        match self
+            .0
+            .request(HostRequest::OpenDialog { tab: tab.into() })?
+        {
+            HostAnswer::Done => Ok(()),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Asks the core to bring the tab `tab` (an id from the manifest) to
+    /// the front of its area, opening the area if it is closed (interface
+    /// 1.8): for a tool whose controls are in a tab. A request that can't
+    /// be made is dropped.
+    pub fn show_tab(&self, tab: &str) {
+        let _ = self.0.request(HostRequest::ShowTab { tab: tab.into() });
+    }
+
     /// The open score, or `None` when none is open: what a plugin asks for
     /// after [`Event::ScoreOpened`] or [`Event::ScoreChanged`].
     pub fn score(&self) -> Result<Option<score::Score>, Error> {
@@ -860,7 +1034,14 @@ impl HostServices for Detached {
             | HostRequest::Notify2 { .. }
             | HostRequest::SetSettings { .. }
             | HostRequest::Redraw { .. }
+            | HostRequest::ShowTab { .. }
             | HostRequest::Advise(_) => Ok(HostAnswer::Done),
+            HostRequest::Engraving => Ok(HostAnswer::Engraving(None)),
+            HostRequest::Selection => Ok(HostAnswer::Selection(None)),
+            HostRequest::OpenDialog { .. } => Err(Error::new(
+                ErrorKind::Failed,
+                "a detached host has no window to show a dialog in",
+            )),
             HostRequest::Settings => Ok(HostAnswer::Settings("{}".into())),
             HostRequest::Score => Ok(HostAnswer::Score(None)),
             HostRequest::Score2 => Ok(HostAnswer::Score2 {
@@ -874,7 +1055,9 @@ impl HostServices for Detached {
             HostRequest::Service { interface, .. } => Err(Error::not_found(format!(
                 "no service of {interface:?} (a detached host has none)"
             ))),
-            HostRequest::Folders => Err(Error::not_found("a detached host has no folders")),
+            HostRequest::Folders | HostRequest::Folder { .. } => {
+                Err(Error::not_found("a detached host has no folders"))
+            }
         }
     }
 }

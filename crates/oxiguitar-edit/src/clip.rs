@@ -604,6 +604,8 @@ fn insert_bars(
                                 // A pasted bar holds its music: no longer
                                 // a repeat of the bar before it.
                                 simile: None,
+                                // What plugins keep on it goes with it.
+                                plugins: b.plugins.clone(),
                                 // A bar keeps its clef where the track
                                 // sounds in the same octave (Guitar Pro
                                 // holds the octave per track); else it
@@ -680,6 +682,7 @@ fn empty(clef: oxiguitar_model::Clef) -> Bar {
         clef,
         voices: vec![Voice::default()],
         simile: None,
+        plugins: Default::default(),
     }
 }
 

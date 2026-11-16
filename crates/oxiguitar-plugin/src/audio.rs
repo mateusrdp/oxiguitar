@@ -18,12 +18,18 @@
 //! ([`Processor::apply`]). An effect that doesn't is prepared again the
 //! next time the song starts, as before 1.5.
 //!
+//! An effect may follow the score, too (interface 1.8): one whose manifest
+//! entry says `"follows_score": true` is prepared with its track's marked
+//! beats as they will be played ([`Effect::prepare_following`],
+//! [`PlayedBeat`]), and every call tells it where the score is
+//! ([`Processor::process_at`]).
+//!
 //! On the audio thread, never allocate, lock, wait or make a system call:
 //! a device callback is a few milliseconds, and a late one is a click the
 //! listener hears. The contract suite counts allocations and, on Linux,
 //! catches system calls while rendering.
 
-pub use oxiguitar_plugin_api::message::{Prepare, PrepareEffect, PreparedTrack};
+pub use oxiguitar_plugin_api::message::{PlayedBeat, Prepare, PrepareEffect, PreparedTrack};
 pub use oxiguitar_plugin_api::realtime::{
     PitchPoint, RtEvent, RtEventKind, RtNote, attack, flags, harmonic, sound,
 };
@@ -117,6 +123,21 @@ pub trait Effect: Send + Sync {
     /// Gets ready to process the track `prepare.track` at `prepare.rate`.
     fn prepare(&self, prepare: &PrepareEffect) -> Result<Box<dyn Processor>, Error>;
 
+    /// As [`Effect::prepare`], for an effect whose manifest entry says
+    /// `"follows_score": true` (interface 1.8): `beats` are the track's
+    /// marked beats, each time the player plays one, in time order, with
+    /// the marks each carries (the notation's, and what plugins keep on
+    /// beats). The host prepares the effect again when they change. By
+    /// default it is `prepare`.
+    fn prepare_following(
+        &self,
+        prepare: &PrepareEffect,
+        beats: &[PlayedBeat],
+    ) -> Result<Box<dyn Processor>, Error> {
+        let _ = beats;
+        self.prepare(prepare)
+    }
+
     /// The track's settings for this plugin changed while the song plays
     /// (`prepare.track.settings`; the rest is what the processor was
     /// prepared with), from `previous`, the settings it follows now. Off
@@ -163,6 +184,16 @@ pub trait Processor: Send {
     /// The frames it delays the sound by.
     fn latency(&self) -> u32 {
         0
+    }
+
+    /// As [`Processor::process`], told where the score is (interface 1.8):
+    /// `time` is the score's time at the first frame, in seconds at 100 %
+    /// speed (the clock of [`PlayedBeat`]), and `step` its seconds per
+    /// frame, 0 while the score isn't playing. The host calls this one; by
+    /// default it is `process`.
+    fn process_at(&mut self, left: &mut [f32], right: &mut [f32], time: f64, step: f64) {
+        let _ = (time, step);
+        self.process(left, right);
     }
 
     /// Takes what [`Effect::update`] made of the track's new settings, on

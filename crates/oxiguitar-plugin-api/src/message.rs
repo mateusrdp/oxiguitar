@@ -308,6 +308,236 @@ pub enum Request<'a> {
         /// The track's settings it follows now, a JSON object as text.
         previous: String,
     },
+    /// Prepare an effect whose manifest entry says it follows the score
+    /// (`"follows_score": true`): as [`Request::PrepareEffect`], with the
+    /// track's marked beats as they will be played. Answered with
+    /// [`Answer::Prepared`]. Since interface 1.8.
+    PrepareFollowing(Box<PrepareFollowing>),
+    /// The user closed the dialog `tab` (a tab whose area is `dialog`),
+    /// with OK (`ok`) or with Cancel or Escape. Answered with
+    /// [`Answer::Done`]. Since interface 1.8.
+    TabClosed {
+        /// The tab's id.
+        tab: String,
+        /// Closed with OK.
+        ok: bool,
+    },
+    /// Draw at these places of the open score, each a staff's bar or a beat
+    /// that carries the plugin's data or marks (on the beat or on one of
+    /// its notes). Sent each time the score is engraved, when the places
+    /// changed since the last time, to plugins whose manifest `draws`.
+    /// Answered with [`Answer::Drawn`]. Since interface 1.8.
+    Draw {
+        /// The places.
+        places: Vec<DrawPlace>,
+    },
+    /// How one track is to be played: its notes as the score gives them,
+    /// for a plugin whose manifest `performs` to give back as they should
+    /// sound. Sent when the song is got ready to play or export, when the
+    /// notes changed since the last time. Answered with
+    /// [`Answer::Performed`]. Since interface 1.8.
+    Perform(Box<Perform>),
+    /// The user clicked what the plugin drew ([`Request::Draw`]). Answered
+    /// with [`Answer::Report`], a sentence for the footer or nothing, as a
+    /// tool is. The caret is already at the click, so [`HostRequest::Selection`]
+    /// names the beat. Since interface 1.8.
+    Clicked(Box<Clicked>),
+}
+
+/// A click on a drawing ([`Request::Clicked`]). Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Clicked {
+    /// The place the drawing was drawn at, as it is now.
+    pub place: DrawPlace,
+    /// Where in the drawing's box, in staff spaces from its top left
+    /// corner.
+    pub at: crate::display::Point,
+    /// A double click (the first click of it came before, as a click).
+    pub double: bool,
+}
+
+/// One track's notes as played ([`Request::Perform`]). Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Perform {
+    /// The track, from 0.
+    pub track: u32,
+    /// Its class of instrument.
+    pub class: crate::class::InstrumentClass,
+    /// The bar each visit plays, in playing order (repeats unrolled): a
+    /// note's `visit` indexes it.
+    pub visits: Vec<u32>,
+    /// Its notes, by start time, as the score gives them (or as the
+    /// performing plugins before this one gave them back).
+    pub notes: Vec<PlayedNote>,
+    /// Its beats that carry marks or plugins' data, as effects that follow
+    /// the score get them ([`PlayedBeat`]): where a plugin finds its own.
+    pub beats: Vec<PlayedBeat>,
+}
+
+/// A note as played, in the form instruments get it
+/// ([`crate::realtime::RtNote`]) with its place in the score. Since
+/// interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PlayedNote {
+    /// Its staff in the track, from 0.
+    pub staff: u32,
+    /// Its voice.
+    pub voice: u32,
+    /// The visit of its bar ([`Perform::visits`]).
+    pub visit: u32,
+    /// Its beat in the voice.
+    pub beat: u32,
+    /// Its string, 1 for the highest; 0 for none.
+    pub string: u8,
+    /// The sounding MIDI key at its start, 0 to 127.
+    pub key: u8,
+    /// When it starts, in seconds of the score at 100 % speed.
+    pub start: f64,
+    /// When it ends; not before it starts.
+    pub end: f64,
+    /// MIDI velocity, 1 to 127.
+    pub velocity: u8,
+    /// [`crate::realtime::sound`].
+    pub sound: u8,
+    /// [`crate::realtime::harmonic`], for a harmonic.
+    pub harmonic: u8,
+    /// [`crate::realtime::attack`].
+    pub attack: u8,
+    /// [`crate::realtime::flags`].
+    pub flags: u16,
+    /// Its pitch curve: (seconds, cents from its key), in time order; none
+    /// for a steady pitch.
+    pub pitch: Vec<(f64, i32)>,
+}
+
+/// The most notes a performing plugin may give back for one track.
+pub const PERFORMED_MAX: usize = 1_000_000;
+
+impl PlayedNote {
+    /// What is wrong with it, if anything, for a track with `visits`
+    /// visits.
+    pub fn problem(&self, visits: usize) -> Option<String> {
+        if self.key > 127 || !(1..=127).contains(&self.velocity) {
+            return Some(format!(
+                "a note has key {} and velocity {}; keys are 0 to 127, velocities 1 to 127",
+                self.key, self.velocity
+            ));
+        }
+        if !self.start.is_finite()
+            || !self.end.is_finite()
+            || self.end < self.start
+            || self.start < 0.0
+        {
+            return Some(format!(
+                "a note starts at {} and ends at {} seconds",
+                self.start, self.end
+            ));
+        }
+        if self.visit as usize >= visits {
+            return Some(format!("a note is in visit {}, of {visits}", self.visit));
+        }
+        if self.pitch.iter().any(|(t, _)| !t.is_finite()) {
+            return Some("a note's pitch curve has a time that isn't a number".to_owned());
+        }
+        None
+    }
+}
+
+/// A place a plugin draws at ([`Request::Draw`]). Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum DrawPlace {
+    /// A staff's bar with the plugin's data: drawn at its first beat.
+    Bar {
+        /// The track, staff and bar, from 0.
+        at: [u32; 3],
+        /// The plugin's data on it, a JSON object as text.
+        data: String,
+    },
+    /// A beat with the plugin's data or mark, on it or on one of its notes.
+    Beat {
+        /// The track, staff, bar, voice and beat, from 0.
+        at: [u32; 5],
+        /// The whole beat, its notes and every extension included.
+        beat: Box<crate::score2::Beat2>,
+    },
+}
+
+/// What a plugin draws at one place ([`Answer::Drawn`]): a box, measured in
+/// staff spaces (the distance between two lines of a five-line staff),
+/// with its items from the box's top left corner, y downwards. The core
+/// stands it above the staff, in a lane of its own, from the place's
+/// column rightwards, and scales it with the page. Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Drawn {
+    /// Which of the request's places, by its index.
+    pub place: u32,
+    /// The box's width, at most [`DRAWN_MAX`].
+    pub width: f32,
+    /// Its height, at most [`DRAWN_MAX`].
+    pub height: f32,
+    /// What is in it (a [`crate::display::Item::Text`]'s size is in staff
+    /// spaces too), at most [`DRAWN_ITEMS_MAX`].
+    pub items: Vec<crate::display::Item>,
+}
+
+/// The most staff spaces a drawing may be wide or tall.
+pub const DRAWN_MAX: f32 = 40.0;
+
+/// The most items one drawing may have.
+pub const DRAWN_ITEMS_MAX: usize = 2000;
+
+impl Drawn {
+    /// What is wrong with it, if anything.
+    pub fn problem(&self) -> Option<String> {
+        let size = |v: f32| v.is_finite() && (0.0..=DRAWN_MAX).contains(&v);
+        if !size(self.width) || !size(self.height) {
+            return Some(format!(
+                "a drawing is {} by {} staff spaces; at most {DRAWN_MAX} by {DRAWN_MAX}",
+                self.width, self.height
+            ));
+        }
+        if self.items.len() > DRAWN_ITEMS_MAX {
+            return Some(format!(
+                "a drawing has {} items; at most {DRAWN_ITEMS_MAX}",
+                self.items.len()
+            ));
+        }
+        None
+    }
+}
+
+/// What an effect that follows the score is prepared for. Since interface
+/// 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PrepareFollowing {
+    /// What every effect is prepared for.
+    pub prepare: PrepareEffect,
+    /// Every beat of the track that carries a mark (a beat extension of the
+    /// score, version 2: the notation's marks and plugins' own data), each
+    /// time it is played, in time order. A beat a repeat plays twice is
+    /// here twice.
+    pub beats: Vec<PlayedBeat>,
+}
+
+/// A marked beat of a track as the player plays it. Since interface 1.8.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PlayedBeat {
+    /// When it starts, in seconds of the score at 100 % speed: the clock
+    /// of [`crate::realtime::ProcessCall::time`].
+    pub start: f64,
+    /// When it ends.
+    pub end: f64,
+    /// Its staff in the track, from 0.
+    pub staff: u32,
+    /// Its bar, from 0.
+    pub bar: u32,
+    /// Its voice in the bar, from 0.
+    pub voice: u32,
+    /// Its place in the voice, from 0.
+    pub beat: u32,
+    /// Its marks: the beat's extensions, as the plugin's interface version
+    /// knows them. Never empty.
+    pub ext: Vec<crate::score2::BeatExt>,
 }
 
 /// What an instrument is prepared for. Since interface 1.3.
@@ -451,6 +681,13 @@ pub enum Answer<'a> {
     /// will follow the new settings (from its next `process` call), false
     /// when it can't while it runs. Since interface 1.5.
     Updated(bool),
+    /// What the plugin draws, for [`Request::Draw`]: at most one drawing a
+    /// place, none where it draws nothing. Since interface 1.8.
+    Drawn(Vec<Drawn>),
+    /// The track's notes as they should sound, for [`Request::Perform`]:
+    /// changed, added or left out as the plugin plays them. Since
+    /// interface 1.8.
+    Performed(Vec<PlayedNote>),
 }
 
 impl Answer<'_> {
@@ -490,6 +727,8 @@ impl Answer<'_> {
                 start: start.map(Blob::into_owned),
             },
             Answer::Updated(applied) => Answer::Updated(applied),
+            Answer::Drawn(d) => Answer::Drawn(d),
+            Answer::Performed(n) => Answer::Performed(n),
         }
     }
 }
@@ -670,6 +909,93 @@ pub enum HostRequest<'a> {
     /// not: a plugin can't tell, and asks again whenever its reason holds.
     /// Since interface 1.4.
     Advise(Advice),
+    /// Bring the tab `tab` (an id from the manifest) to the front of its
+    /// area, opening the area if it is closed: for a tool whose controls
+    /// are in a tab. Answered with [`HostAnswer::Done`]; a program without
+    /// a window does nothing. Since interface 1.8.
+    ShowTab {
+        /// The tab's id.
+        tab: String,
+    },
+    /// Open the dialog `tab` (an id of a tab whose area is `dialog`) over
+    /// the window: the host asks for its contents as for any tab, and
+    /// tells the plugin when the user closes it ([`Request::TabClosed`]).
+    /// One dialog at a time: a request while another is open is refused.
+    /// Answered with [`HostAnswer::Done`]; a program without a window
+    /// refuses. Since interface 1.8.
+    OpenDialog {
+        /// The tab's id.
+        tab: String,
+    },
+    /// The open score as it is engraved in the window now: every page's
+    /// drawing and where each beat is on it. Answered with
+    /// [`HostAnswer::Engraving`]. Since interface 1.8.
+    Engraving,
+    /// The caret or the selection in the open score as it is now, for a
+    /// plugin that didn't hear of it as an event (it listens to none, or
+    /// was loaded since). Answered with [`HostAnswer::Selection`]. Since
+    /// interface 1.8.
+    Selection,
+    /// Where the shared folder `name` of the plugin's manifest is: every
+    /// OxiGuitar folder that holds one. Answered with
+    /// [`HostAnswer::Folder`]; an error when the manifest doesn't list the
+    /// name. Since interface 1.8.
+    Folder {
+        /// The folder's name, as the manifest lists it.
+        name: String,
+    },
+}
+
+/// The open score as engraved (interface 1.8): what the window shows, in
+/// the layout and with the tracks the user chose. Lengths are points
+/// (1/72 inch) from each page's top-left corner, y down.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Engraving {
+    /// The score's revision the engraving is of.
+    pub revision: u64,
+    /// The pages (or the one long sheet of a layout without pages).
+    pub pages: Vec<EngravedPage>,
+    /// Where every beat is, in the order drawn: systems down the pages,
+    /// staves down a system, bars and beats across.
+    pub beats: Vec<EngravedBeat>,
+}
+
+/// One engraved page.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct EngravedPage {
+    /// Its width.
+    pub width: f32,
+    /// Its height.
+    pub height: f32,
+    /// What is drawn on it, in order, as a canvas's items are
+    /// ([`crate::display`]): colours as roles, text in the text font or
+    /// the music font.
+    pub items: Vec<crate::display::Item>,
+}
+
+/// Where a beat is engraved.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct EngravedBeat {
+    /// Its track.
+    pub track: u32,
+    /// Its staff in the track.
+    pub staff: u32,
+    /// Its bar.
+    pub bar: u32,
+    /// Its voice in the bar.
+    pub voice: u32,
+    /// Its place in the voice.
+    pub beat: u32,
+    /// The page it is on, from 0.
+    pub page: u32,
+    /// The left of its column.
+    pub x: f32,
+    /// The top of its staff (standard notation and tablature together).
+    pub y: f32,
+    /// Its column's width.
+    pub width: f32,
+    /// Its staff's height.
+    pub height: f32,
 }
 
 /// The longest an [`Advice`]'s id may be, in characters.
@@ -788,6 +1114,20 @@ pub struct PluginFolders {
     pub shared: Vec<(SharedFolder, String)>,
 }
 
+/// Where a shared folder of a plugin's is (paths as UTF-8 text). Since
+/// interface 1.8.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FolderPlaces {
+    /// The one in the user's OxiGuitar folder, beside `plugins`: where
+    /// the user puts files, and the plugin may write. The host creates it
+    /// at start.
+    pub user: String,
+    /// The same name where it exists beside a system plugin folder or
+    /// beside the program (a package's or a portable copy's files): read
+    /// only, in the order plugins are looked for.
+    pub others: Vec<String>,
+}
+
 /// The host's answer to a [`HostRequest`].
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum HostAnswer<'a> {
@@ -809,6 +1149,14 @@ pub enum HostAnswer<'a> {
     },
     /// The plugin's folders. Since interface 1.3.
     Folders(PluginFolders),
+    /// The open score as engraved; `None` when none is open or nothing is
+    /// engraved yet. Since interface 1.8.
+    Engraving(Option<Box<Engraving>>),
+    /// The caret or the selection; `None` when no score is open. Since
+    /// interface 1.8.
+    Selection(Option<crate::event::Selection2>),
+    /// Where a shared folder is. Since interface 1.8.
+    Folder(FolderPlaces),
 }
 
 impl HostAnswer<'_> {
@@ -821,6 +1169,9 @@ impl HostAnswer<'_> {
             HostAnswer::Score(s) => HostAnswer::Score(s),
             HostAnswer::Score2 { revision, score } => HostAnswer::Score2 { revision, score },
             HostAnswer::Folders(f) => HostAnswer::Folders(f),
+            HostAnswer::Engraving(e) => HostAnswer::Engraving(e),
+            HostAnswer::Selection(s) => HostAnswer::Selection(s),
+            HostAnswer::Folder(f) => HostAnswer::Folder(f),
         }
     }
 }

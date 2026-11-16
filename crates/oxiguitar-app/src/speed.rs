@@ -25,6 +25,7 @@
 //! build runs the same steps and prints its times.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
@@ -106,7 +107,7 @@ fn open_like_the_window(path: &Path, all_tracks: bool) -> Times {
     let engraved = start.elapsed();
 
     let sheets = Sheets {
-        lists: Vec::new(),
+        lists: Arc::default(),
         rects,
     };
     let (near, _) = Sheets::around(Rect::new(0.0, 0.0, VIEW.0 / px, VIEW.1 / px));
@@ -183,7 +184,7 @@ fn check(name: &str, all_tracks: bool) {
 fn draw_view(worker: &Worker, rx: &Receiver<Event>, engraving: u64, rects: Vec<Rect>) -> usize {
     let px = crate::PX_PER_PT;
     let sheets = Sheets {
-        lists: Vec::new(),
+        lists: Arc::default(),
         rects,
     };
     let (near, _) = Sheets::around(Rect::new(0.0, 0.0, VIEW.0 / px, VIEW.1 / px));

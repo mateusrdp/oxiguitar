@@ -594,6 +594,7 @@ fn append_bar(score: &mut Score, history: &mut History, c: Caret) -> Option<Edit
                     clef,
                     voices: vec![Voice::default()],
                     simile: None,
+                    plugins: Default::default(),
                 });
             }
         },
@@ -950,6 +951,9 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
                 clef: old.clef,
                 voices: vec![Voice::default()],
                 simile: None,
+                // Clearing takes the music out, not what plugins keep on
+                // the bar itself.
+                plugins: old.plugins.clone(),
             };
             one(bar, Caret { beat: 0, ..c })
         }
@@ -1185,6 +1189,7 @@ fn tied_to(origin: &Note) -> Note {
         dynamic: origin.dynamic,
         effects: Default::default(),
         spelling: origin.spelling,
+        plugins: Default::default(),
     }
 }
 

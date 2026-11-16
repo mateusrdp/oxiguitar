@@ -1,5 +1,5 @@
 {
-  "interface": "1.5",
+  "interface": "1.8",
   "id": "oxiguitar.test",
   "name": "Test plugin",
   "version": "0.19.2",
@@ -23,7 +23,7 @@
     { "id": "no-drums", "name": "Test everything but drums", "does_not_play": ["drums"] }
   ],
   "effects": [
-    { "id": "gain", "name": "Test gain (the section's level, half by default)" }
+    { "id": "gain", "name": "Test gain (the section's level, half by default; silent under a stamped beat)", "follows_score": true, "order": 250 }
   ],
   "services": [
     { "interface": "test-echo", "id": "echo", "name": "Echo", "priority": 1 },
@@ -34,18 +34,23 @@
   ],
   "tabs": [
     { "id": "panel", "title": "Test", "area": "bottom" },
-    { "id": "side", "title": "Test side", "area": "right" }
+    { "id": "side", "title": "Test side", "area": "right" },
+    { "id": "ask", "title": "Test Dialog", "area": "dialog" }
   ],
   "events": ["score", "selection", "playback"],
   "tools": [
     { "id": "mark", "name": "Mark the Title", "description": "Adds an exclamation mark to the score's title, as one change." },
-    { "id": "link", "name": "Show a Footer Link", "description": "Shows a warning in the footer with a link to the plugin guide." }
+    { "id": "link", "name": "Show a Footer Link", "description": "Shows a warning in the footer with a link to the plugin guide.", "palette": { "text": "Lnk" }, "menu": "Tools" },
+    { "id": "stamp", "name": "Stamp the First Beat", "description": "Keeps the test plugin's data on the first beat with notes, which its gain then silences.", "palette": { "section": "Effects", "text": "T!" }, "menu": "Test", "shortcut": "Ctrl+Alt+J" },
+    { "id": "ask", "name": "Open the Test Dialog", "description": "Opens the test plugin's dialog and shows its side tab.", "palette": { "section": "Test tools", "symbol": "U+E4A0" }, "menu": "Page", "toolbar": { "text": "Ask" } }
   ],
   "settings_window": true,
+  "draws": true,
+  "performs": true,
   "track_sections": [
     { "id": "test", "title": "Test section", "does_not_play": ["drums"] }
   ],
-  "folders": ["soundfonts"],
+  "folders": ["soundfonts", "test-files"],
   "exporters": [
     { "id": "raw", "name": "Raw Test Audio", "extension": "oxgraw", "kind": "audio" }
   ]

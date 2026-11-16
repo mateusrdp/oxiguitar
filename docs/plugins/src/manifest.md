@@ -30,12 +30,14 @@ The template's:
 | `services` | no | The services it implements ([Services](services.md)) |
 | `instruments` | no | The instruments it offers the player; used from interface 1.3 ([Instruments](instruments.md)) |
 | `effects` | no | The effects it offers a track, after its instrument; interface 1.3 ([Instruments](instruments.md)) |
-| `tabs` | no | Its tabs; interface 1.1 ([Tabs](tabs.md)) |
+| `tabs` | no | Its tabs, and from interface 1.8 its dialogs; interface 1.1 ([Tabs](tabs.md)) |
 | `events` | no | The kinds of event it wants: `"score"`, `"selection"`, `"playback"`; interface 1.1 ([Events](events.md)) |
-| `tools` | no | Its entries in the Tools menu; interface 1.2 ([Tools](tools.md)) |
+| `draws` | no | It draws on the page where it keeps data; interface 1.8 ([Drawing on the page](drawing.md)) |
+| `performs` | no | It plays each track's notes its own way; interface 1.8 ([Playing the notes your own way](playing.md)) |
+| `tools` | no | Its entries in the Tools menu, and from interface 1.8 in any menu and on the palette; interface 1.2 ([Tools](tools.md)) |
 | `settings_window` | no | `true` for a settings window, opened from the plugin manager; interface 1.3 ([Settings](settings.md)) |
 | `track_sections` | no | Its sections of the Track tab; interface 1.3 ([Track sections](track-sections.md)) |
-| `folders` | no | The shared folders it reads, `"soundfonts"` and `"nam"`, which OxiGuitar creates at start; interface 1.3 ([Settings](settings.md)) |
+| `folders` | no | The folders it shares with the user, by name, beside `plugins` in OxiGuitar's folders; OxiGuitar creates the user's at start. `"soundfonts"` and `"nam"` since interface 1.3, any name of the plugin's own since 1.8 ([Settings](settings.md#folders-of-your-own)) |
 | `exporters` | no | Its entries in File → Export; interface 1.4 ([Exporters](exporters.md)) |
 | `needs` | no | The plugins it can't work without, each `{"id": …, "version": …}` with the lowest version that will do; interface 1.4 (below) |
 | `replaces` | no | The ids of plugins it succeeds; interface 1.4 (below) |
@@ -92,7 +94,9 @@ OxiGuitar refuses a manifest that breaks these, and Tools → Plugins names the 
 - names and tab titles aren't empty;
 - a format reads or writes, and one that reads has at least one signature;
 - extensions are lowercase and without the dot (`"gp5"`, not `".GP5"`);
-- tabs and events need interface 1.1.
+- tabs and events need interface 1.1;
+- `draws`, `performs`, a toolbar button, a folder of the plugin's own name (1 to 24 lowercase letters, digits and single hyphens; not `plugins`, `data` or `cache`),
+- a palette button, a menu, a dialog, `follows_score` and `order` need interface 1.8, and a palette button has a symbol or a text of at most 5 characters.
 
 `cargo test` also checks what only the code can tell:
 

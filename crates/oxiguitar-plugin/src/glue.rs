@@ -601,7 +601,7 @@ unsafe extern "C" fn process(instance: u64, call: *const ProcessCall) -> Status 
     let ok = rendering(|| {
         catch_unwind(AssertUnwindSafe(|| {
             shared.mailbox.deliver(|u| processor.apply(u));
-            processor.process(left, right);
+            processor.process_at(left, right, call.time, call.step);
         }))
         .is_ok()
     });

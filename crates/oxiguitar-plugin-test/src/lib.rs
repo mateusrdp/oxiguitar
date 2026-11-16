@@ -52,7 +52,7 @@ use oxiguitar_host::api::display::Point;
 use oxiguitar_host::api::event::{Event, EventKind, Playback, Position};
 use oxiguitar_host::api::manifest::SharedFolder;
 use oxiguitar_host::api::message::{
-    Answer, Error, Prepare, PrepareEffect, PreparedTrack, Request, TrackInfo,
+    Answer, Error, PlayedBeat, Prepare, PrepareEffect, PreparedTrack, Request, TrackInfo,
 };
 use oxiguitar_host::api::realtime::{RtEvent, RtEventKind, RtNote};
 use oxiguitar_host::api::score::Score;
@@ -233,7 +233,7 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
     ) {
         let shared = plugins.shared_folders();
         let _ = folders.ensure_shared(&shared);
-        if shared.contains(&SharedFolder::Soundfonts) {
+        if shared.iter().any(|f| f == SharedFolder::Soundfonts.name()) {
             // A sound set for instruments that play from one: a looped sine,
             // starting on its frame (TEST_SET).
             let _ = std::fs::write(
@@ -388,6 +388,17 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
                 },
             );
         }
+        // A dialog (interface 1.8) is told it was closed, as by Cancel.
+        if tab.spec.area == oxiguitar_host::api::tab::Area::Dialog {
+            plugins.tab_closed(&id, false);
+            report.check(
+                format!("dialog {}: closing it is no crash", id.tab),
+                match tab.plugin.failure() {
+                    None => Ok(()),
+                    Some(why) => Err(why.to_string()),
+                },
+            );
+        }
     }
     let events = [
         (EventKind::Score, Event::ScoreOpened { revision: 1 }),
@@ -433,6 +444,102 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
             format!("tool {}: it runs with no score open", tool.spec.id),
             match answer {
                 Ok(_) => Ok(()),
+                Err(e) => not_a_crash(&e),
+            },
+        );
+    }
+    // Drawing on the page (interface 1.8): a bar and a beat that carry the
+    // plugin's data (an empty object, since the suite can't know what it
+    // keeps) get drawings within the interface's limits, or none.
+    for plugin in plugins.drawers() {
+        use oxiguitar_host::api::message::DrawPlace;
+        use oxiguitar_host::api::score::{Beat, BeatKind, Duration, NoteValue};
+        use oxiguitar_host::api::score2::{Beat2, BeatExt};
+        let mut beat = Beat2::from_v1(Beat {
+            kind: BeatKind::Rest,
+            duration: Duration {
+                value: NoteValue::Quarter,
+                dots: 0,
+                tuplets: Vec::new(),
+            },
+            notes: Vec::new(),
+            grace: None,
+            effects: Default::default(),
+            chord: None,
+            text: String::new(),
+        });
+        beat.ext.push(BeatExt::Plugin {
+            plugin: plugin.clone(),
+            data: "{}".into(),
+        });
+        let places = vec![
+            DrawPlace::Bar {
+                at: [0, 0, 0],
+                data: "{}".into(),
+            },
+            DrawPlace::Beat {
+                at: [0, 0, 0, 0, 0],
+                beat: Box::new(beat),
+            },
+        ];
+        report.check(
+            "it draws within the interface's limits",
+            match plugins.try_draw(&plugin, places) {
+                Ok(_) => Ok(()),
+                Err(e) if e.kind == oxiguitar_host::api::message::ErrorKind::Invalid => {
+                    Err(e.message)
+                }
+                Err(e) => not_a_crash(&e),
+            },
+        );
+    }
+    // Playing the notes its own way (interface 1.8): a track of two notes,
+    // the second on a beat with the plugin's data, comes back within the
+    // interface's limits.
+    for plugin in plugins.performers() {
+        use oxiguitar_host::api::message::{Perform, PlayedBeat, PlayedNote};
+        use oxiguitar_host::api::score2::BeatExt;
+        let note = |beat: u32, start: f64| PlayedNote {
+            staff: 0,
+            voice: 0,
+            visit: 0,
+            beat,
+            string: 1,
+            key: 64,
+            start,
+            end: start + 0.5,
+            velocity: 95,
+            sound: 0,
+            harmonic: 0,
+            attack: 0,
+            flags: 0,
+            pitch: Vec::new(),
+        };
+        let track = Perform {
+            track: 0,
+            class: InstrumentClass::Fretted,
+            visits: vec![0],
+            notes: vec![note(0, 0.0), note(1, 0.5)],
+            beats: vec![PlayedBeat {
+                start: 0.5,
+                end: 1.0,
+                staff: 0,
+                bar: 0,
+                voice: 0,
+                beat: 1,
+                ext: vec![BeatExt::Plugin {
+                    plugin: plugin.clone(),
+                    data: "{}".into(),
+                }],
+            }],
+        };
+        report.check(
+            "it plays a track's notes within the interface's limits",
+            match plugins.try_perform(&plugin, track) {
+                Ok(_) => Ok(()),
+                Err(e) if e.kind == oxiguitar_host::api::message::ErrorKind::Invalid => {
+                    Err(e.message)
+                }
                 Err(e) => not_a_crash(&e),
             },
         );
@@ -509,6 +616,36 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
 /// The sample rate and the largest piece the real-time checks use.
 const RATE: u32 = 48_000;
 const FRAMES: usize = 256;
+
+/// A track's marked beats over `length` seconds, for the checks of an
+/// effect that follows the score: the notation's marks an effect may play
+/// (wah-wah open and closed, the pedal, a fade-out, a volume swell, a
+/// hairpin), a quarter of the time each with the last quarter unmarked.
+fn marked_beats(length: f64) -> Vec<PlayedBeat> {
+    use oxiguitar_host::api::score2::{BeatExt, Hairpin, Pedal, Wah};
+    let quarter = length / 4.0;
+    [
+        vec![BeatExt::Wah(Wah::Open), BeatExt::Pedal(Pedal::Down)],
+        vec![BeatExt::Wah(Wah::Closed), BeatExt::FadeOut],
+        vec![
+            BeatExt::VolumeSwell,
+            BeatExt::Hairpin(Hairpin::Crescendo),
+            BeatExt::Pedal(Pedal::Up),
+        ],
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(i, ext)| PlayedBeat {
+        start: i as f64 * quarter,
+        end: (i + 1) as f64 * quarter,
+        staff: 0,
+        bar: 0,
+        voice: 0,
+        beat: i as u32,
+        ext,
+    })
+    .collect()
+}
 
 /// The real-time checks alone, of every instrument and effect `plugins`
 /// offer, prepared for tracks whose settings are `settings` (a JSON
@@ -730,20 +867,25 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                 frames: FRAMES as u32,
                 track: checked_track(0, class, settings),
             };
-            let mut instance = match plugins.prepare_effect(effect, prepare.clone()) {
-                Ok(i) => {
-                    report.check(format!("effect {id}: it prepares"), Ok(()));
-                    i
-                }
-                Err(e) => {
-                    report.check(format!("effect {id}: it prepares"), Err(e.message));
-                    continue;
-                }
-            };
+            // An effect that follows the score (interface 1.8) is prepared
+            // with marked beats that play during the calls below, so what
+            // it does under a mark runs under the same rules.
+            let beats = marked_beats(FRAMES as f64 / f64::from(RATE));
+            let mut instance =
+                match plugins.prepare_effect_following(effect, prepare.clone(), &beats) {
+                    Ok(i) => {
+                        report.check(format!("effect {id}: it prepares"), Ok(()));
+                        i
+                    }
+                    Err(e) => {
+                        report.check(format!("effect {id}: it prepares"), Err(e.message));
+                        continue;
+                    }
+                };
             let (mut l, mut r) = (vec![0.5f32; FRAMES], vec![-0.5f32; FRAMES]);
-            let _ = instance.process(&mut l, &mut r);
+            let _ = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
             let before = instance.allocations();
-            let ran = instance.process(&mut l, &mut r);
+            let ran = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
             let after = instance.allocations();
             report.check(
                 format!("effect {id}: it runs"),
@@ -756,7 +898,7 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
             report.check(
                 format!("effect {id}: it makes no system call while running"),
                 watched(|| {
-                    let _ = instance.process(&mut l, &mut r);
+                    let _ = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
                 }),
             );
             // Interface 1.5: an effect that follows its track's settings
@@ -769,7 +911,7 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                 Ok(false) => {}
                 Ok(true) => {
                     let before = instance.allocations();
-                    let ran = instance.process(&mut l, &mut r);
+                    let ran = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
                     let after = instance.allocations();
                     report.check(
                         format!("effect {id}: it takes an update while running"),
@@ -785,7 +927,7 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                     report.check(
                         format!("effect {id}: it makes no system call taking an update"),
                         watched(|| {
-                            let _ = instance.process(&mut l, &mut r);
+                            let _ = instance.process(&mut l, &mut r, 0.0, 1.0 / f64::from(RATE));
                         }),
                     );
                 }

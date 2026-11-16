@@ -46,6 +46,9 @@ pub(crate) struct NoteInfo {
 /// One beat as it will be drawn.
 #[derive(Clone, Debug)]
 pub(crate) struct BeatInfo {
+    /// What others draw at the beat (and, at a bar's first beat, at the
+    /// bar), in drawing order.
+    pub(crate) drawings: Vec<(crate::drawing::DrawnAt, crate::drawing::Drawing)>,
     /// Start within the bar; `None` for grace beats.
     pub(crate) onset: Option<Ratio>,
     pub(crate) kind: BeatKind,
@@ -106,6 +109,9 @@ pub(crate) struct BeatInfo {
 /// bars uses it, so marks never collide.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Lanes {
+    /// Others' drawings (plugins'), as tall as this many tenths of a staff
+    /// space; 0 for none.
+    pub(crate) drawn: u16,
     /// Bend and release arrows with their amounts.
     pub(crate) bend: bool,
     /// Hammer-on and pull-off letters.
@@ -131,6 +137,7 @@ impl Lanes {
     /// Lanes needed by either.
     pub(crate) fn or(self, o: Lanes) -> Lanes {
         Lanes {
+            drawn: self.drawn.max(o.drawn),
             bend: self.bend || o.bend,
             hp: self.hp || o.hp,
             vibrato: self.vibrato || o.vibrato,
@@ -144,7 +151,12 @@ impl Lanes {
     }
 
     fn of_beat(b: &BeatInfo, std: bool) -> Lanes {
-        let mut l = Lanes::default();
+        let mut l = Lanes {
+            drawn: crate::drawing::lane_tenths(
+                b.drawings.iter().map(|(_, d)| d.height).fold(0.0, f32::max),
+            ),
+            ..Lanes::default()
+        };
         let e = &b.effects;
         l.vibrato = e.bridge_vibrato.is_some();
         l.let_ring = e.let_ring;
@@ -153,6 +165,7 @@ impl Lanes {
             || e.fade.is_some()
             || e.pick_stroke.is_some()
             || e.wah.is_some()
+            || !e.marks.is_empty()
             || e.rasgueado.is_some()
             || e.golpe.is_some()
             || e.pick_scrape.is_some()
@@ -232,9 +245,46 @@ pub(crate) struct Planner<'a> {
     pub(crate) tab_gap: f32,
     pub(crate) show_std: bool,
     pub(crate) show_tab: bool,
+    /// The staff's track and its place in it, and every drawing, when this
+    /// staff shows its beats as the file has them (a hand of a split staff
+    /// has beats of its own, and no drawings).
+    pub(crate) drawn: Option<((usize, usize), &'a crate::drawing::Drawings)>,
 }
 
 impl Planner<'_> {
+    /// What is drawn at bar `bar`'s beat `beat` of voice `voice`: at its
+    /// first beat, the bar's own drawings first.
+    fn drawings_at(
+        &self,
+        bar: usize,
+        voice: usize,
+        beat: usize,
+    ) -> Vec<(crate::drawing::DrawnAt, crate::drawing::Drawing)> {
+        let Some(((track, staff), all)) = self.drawn else {
+            return Vec::new();
+        };
+        let at = |beat| crate::drawing::DrawnAt {
+            track,
+            staff,
+            bar,
+            beat,
+        };
+        let mut out = Vec::new();
+        let mut take = |place: crate::drawing::DrawnAt| {
+            out.extend(
+                all.get(&place)
+                    .into_iter()
+                    .flatten()
+                    .map(|d| (place, d.clone())),
+            );
+        };
+        if voice == 0 && beat == 0 {
+            take(at(None));
+        }
+        take(at(Some((voice, beat))));
+        out
+    }
+
     fn sp(&self) -> f32 {
         self.p.sp
     }
@@ -257,7 +307,9 @@ impl Planner<'_> {
                 v.beats
                     .iter()
                     .zip(rhythm::onsets(v))
-                    .map(|(b, onset)| BeatInfo {
+                    .enumerate()
+                    .map(|(ei, (b, onset))| BeatInfo {
+                        drawings: self.drawings_at(bar_index, vi, ei),
                         tuplets: b.duration.tuplets.clone(),
                         slur: b.slur,
                         slur_in: false,
@@ -653,6 +705,8 @@ impl Planner<'_> {
             // The technique lane's marks are laid out from the beat
             // rightwards, as chord names are: the column keeps them apart.
             chord_w = chord_w.max(technique_width(p, b));
+            // So are others' drawings, in a lane of their own.
+            chord_w = chord_w.max(crate::drawing::width(&b.drawings, sp));
         }
         if !self.show_std {
             left = 0.0;
@@ -717,6 +771,9 @@ fn technique_width(p: &Painter<'_>, b: &BeatInfo) -> f32 {
     }
     if fx.wah.is_some() {
         w += p.width(glyphs::WAH_OPEN) + 0.4 * sp;
+    }
+    for mark in fx.marks.values() {
+        w += text(mark);
     }
     if fx.golpe.is_some() {
         w += p.width(glyphs::GOLPE) + text("p");
@@ -910,6 +967,7 @@ mod tests {
             show_std: true,
             show_tab: true,
             score: &score,
+            drawn: None,
         };
         let bar = Bar {
             voices: voices

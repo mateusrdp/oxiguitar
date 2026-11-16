@@ -57,8 +57,8 @@ use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{Score, ScoreInfo};
 use oxiguitar_plugin::{
     Availability, Canvas, Error, ErrorKind, Event, FormatReader, FormatWriter, Host, Level,
-    LogEntry, Plugin, PointerKind, Read, Row, Service, SharedFolder, Tab, TabContent, TabEvent,
-    Tool, TrackInfo, TrackSection, Widget, Written,
+    LogEntry, Plugin, PointerKind, Read, Row, Selection2, Service, SharedFolder, Tab, TabContent,
+    TabEvent, Tool, TrackInfo, TrackSection, Widget, Written,
 };
 
 use oxiguitar_plugin::serde_json;
@@ -77,9 +77,14 @@ pub struct TestPlugin {
     side: Side,
     mark: Mark,
     link: LinkTool,
+    stamp: Stamp,
+    ask: Ask,
+    ask_tool: AskTool,
     settings: SettingsWindow,
     fake: fake::Fake,
     raw: Raw,
+    drawer: StampDrawer,
+    performer: StampPerformer,
 }
 
 /// The first bytes of a file the exporter `raw` writes: then the rate
@@ -340,6 +345,271 @@ impl Tool for Mark {
     }
 }
 
+/// This plugin's id, under which it keeps its data on beats.
+pub const ID: &str = "oxiguitar.test";
+
+/// What the tool `stamp` keeps on a beat (interface 1.8).
+pub const STAMP: &str = r#"{"stamped":true}"#;
+
+/// The mark the tool `stamp` has the core draw at that beat.
+pub const MARK: &str = "T!";
+
+/// The tool `stamp`, a palette button and an entry of a menu of its own
+/// (interface 1.8): keeps the plugin's data on the first beat with notes
+/// of the first track, as one change. The effect `gain` is silent while
+/// that beat plays.
+#[derive(Debug)]
+struct Stamp {
+    host: Host,
+}
+
+impl Tool for Stamp {
+    fn run(&self) -> Result<String, Error> {
+        use oxiguitar_plugin::score2::BeatExt;
+        let Some((revision, mut score)) = self.host.score2()? else {
+            return Ok("No score is open.".into());
+        };
+        let beat = score
+            .tracks
+            .iter_mut()
+            .flat_map(|t| &mut t.staves)
+            .flat_map(|s| &mut s.bars)
+            .flat_map(|b| &mut b.voices)
+            .flat_map(|v| &mut v.beats)
+            .find(|b| !b.notes.is_empty());
+        let Some(beat) = beat else {
+            return Ok("The score has no notes.".into());
+        };
+        beat.ext.retain(|e| {
+            !matches!(e, BeatExt::Plugin { plugin, .. } | BeatExt::Mark { plugin, .. } if plugin == ID)
+        });
+        beat.ext.push(BeatExt::Plugin {
+            plugin: ID.into(),
+            data: STAMP.into(),
+        });
+        // Drawn on the page at the beat.
+        beat.ext.push(BeatExt::Mark {
+            plugin: ID.into(),
+            text: MARK.into(),
+        });
+        // What the page shows now, read before it changes.
+        if let Some(engraving) = self.host.engraving()? {
+            self.host.notify(
+                Level::Info,
+                format!(
+                    "Engraved: {} pages, {} beats.",
+                    engraving.pages.len(),
+                    engraving.beats.len()
+                ),
+            );
+        }
+        // Where the caret is, asked for rather than heard of.
+        if let Some(Selection2::Caret { bar, beat, .. }) = self.host.selection()? {
+            self.host.notify(
+                Level::Info,
+                format!("The caret is at bar {}, beat {}.", bar + 1, beat + 1),
+            );
+        }
+        self.host.apply(revision, "Stamp the First Beat", score)?;
+        Ok(String::new())
+    }
+}
+
+/// The tool `ask`, a palette button with a symbol and an entry of the
+/// page's right-click menu: opens the dialog `ask` and brings the tab
+/// `side` to the front (interface 1.8).
+#[derive(Debug)]
+struct AskTool {
+    host: Host,
+}
+
+impl Tool for AskTool {
+    fn run(&self) -> Result<String, Error> {
+        self.host.show_tab("side");
+        self.host.open_dialog("ask")?;
+        Ok(String::new())
+    }
+}
+
+/// The dialog `ask` (a tab whose area is `dialog`): a button that counts
+/// its clicks and a canvas; closing it says how in the footer.
+#[derive(Debug)]
+struct Ask {
+    host: Host,
+    clicks: Mutex<u32>,
+}
+
+impl Tab for Ask {
+    fn content(&self) -> TabContent {
+        let clicks = *self.clicks.lock().unwrap_or_else(PoisonError::into_inner);
+        TabContent {
+            rows: vec![
+                Row {
+                    widgets: vec![Widget::Button {
+                        id: "more".into(),
+                        text: format!("Clicked {clicks} times"),
+                        enabled: true,
+                    }],
+                },
+                Row {
+                    widgets: vec![Widget::Canvas(Canvas {
+                        id: "sketch".into(),
+                        width: CANVAS.0,
+                        height: CANVAS.1,
+                        items: vec![Item::Line {
+                            from: Point::new(0.0, CANVAS.1),
+                            to: Point::new(CANVAS.0, 0.0),
+                            width: 1.0,
+                            paint: Paint::Accent,
+                        }],
+                    })],
+                },
+            ],
+        }
+    }
+
+    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
+        if (widget, &event) == ("more", &TabEvent::Clicked) {
+            *self.clicks.lock().unwrap_or_else(PoisonError::into_inner) += 1;
+        }
+        Ok(())
+    }
+
+    fn closed(&self, ok: bool) -> Result<(), Error> {
+        let clicks =
+            std::mem::take(&mut *self.clicks.lock().unwrap_or_else(PoisonError::into_inner));
+        let how = if ok { "OK" } else { "Cancel" };
+        self.host.notify(
+            Level::Warning,
+            format!("The test dialog was closed with {how} after {clicks} clicks."),
+        );
+        Ok(())
+    }
+}
+
+/// Draws a stamp over each stamped beat (interface 1.8): a box with an S in
+/// it, 2.4 by 1.6 staff spaces. Counts the requests, for the contract
+/// suite's test that the same places aren't asked about twice.
+#[derive(Debug, Default)]
+struct StampDrawer {
+    asked: std::sync::atomic::AtomicU32,
+}
+
+/// Plays the notes of stamped beats an octave up (interface 1.8), as a
+/// plugin that plays the notes its own way would; others as they are.
+#[derive(Debug, Default)]
+struct StampPerformer {
+    asked: std::sync::atomic::AtomicU32,
+}
+
+impl oxiguitar_plugin::Performer for StampPerformer {
+    fn perform(
+        &self,
+        track: &oxiguitar_plugin::Perform,
+    ) -> Result<Vec<oxiguitar_plugin::PlayedNote>, Error> {
+        use oxiguitar_plugin::score2::BeatExt;
+        self.asked
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let stamped: Vec<(u32, u32, u32, u32)> = track
+            .beats
+            .iter()
+            .filter(|b| {
+                b.ext.iter().any(
+                    |e| matches!(e, BeatExt::Plugin { plugin, data } if plugin == ID && data == STAMP),
+                )
+            })
+            .map(|b| (b.staff, b.bar, b.voice, b.beat))
+            .collect();
+        Ok(track
+            .notes
+            .iter()
+            .cloned()
+            .map(|mut n| {
+                let bar = track
+                    .visits
+                    .get(n.visit as usize)
+                    .copied()
+                    .unwrap_or(u32::MAX);
+                if stamped.contains(&(n.staff, bar, n.voice, n.beat)) {
+                    n.key = n.key.saturating_add(12).min(127);
+                }
+                n
+            })
+            .collect())
+    }
+}
+
+/// How wide and tall the stamp is, in staff spaces.
+pub const STAMP_BOX: (f32, f32) = (2.4, 1.6);
+
+impl oxiguitar_plugin::Drawer for StampDrawer {
+    fn clicked(
+        &self,
+        place: &oxiguitar_plugin::DrawPlace,
+        at: Point,
+        double: bool,
+    ) -> Result<String, Error> {
+        let at_ = match place {
+            oxiguitar_plugin::DrawPlace::Bar { at, .. } => at.to_vec(),
+            oxiguitar_plugin::DrawPlace::Beat { at, .. } => at.to_vec(),
+        };
+        Ok(format!(
+            "{} at {at_:?}, {:.1} by {:.1} in",
+            if double { "double-clicked" } else { "clicked" },
+            at.x,
+            at.y
+        ))
+    }
+
+    fn draw(
+        &self,
+        places: &[oxiguitar_plugin::DrawPlace],
+    ) -> Result<Vec<oxiguitar_plugin::Drawn>, Error> {
+        use oxiguitar_plugin::display::PathCmd;
+        use oxiguitar_plugin::score2::BeatExt;
+        self.asked
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let (w, h) = STAMP_BOX;
+        let p = Point::new;
+        Ok(places
+            .iter()
+            .enumerate()
+            .filter(|(_, place)| match place {
+                oxiguitar_plugin::DrawPlace::Beat { beat, .. } => beat.ext.iter().any(
+                    |e| matches!(e, BeatExt::Plugin { plugin, data } if plugin == ID && data == STAMP),
+                ),
+                oxiguitar_plugin::DrawPlace::Bar { .. } => false,
+            })
+            .map(|(i, _)| oxiguitar_plugin::Drawn {
+                place: i as u32,
+                width: w,
+                height: h,
+                items: vec![
+                    Item::Path {
+                        cmds: vec![
+                            PathCmd::MoveTo(p(0.1, 0.1)),
+                            PathCmd::LineTo(p(w - 0.1, 0.1)),
+                            PathCmd::LineTo(p(w - 0.1, h - 0.1)),
+                            PathCmd::LineTo(p(0.1, h - 0.1)),
+                            PathCmd::Close,
+                        ],
+                        fill: None,
+                        stroke: Some((0.12, Paint::Accent)),
+                    },
+                    Item::Text {
+                        text: "S".into(),
+                        at: p(w / 2.0, h - 0.4),
+                        size: 1.2,
+                        font: Font::Sans,
+                        anchor: Anchor::Middle,
+                        paint: Paint::Accent,
+                    },
+                ],
+            })
+            .collect())
+    }
+}
+
 /// The panel canvas's size, in its own units.
 pub const CANVAS: (f32, f32) = (100.0, 50.0);
 
@@ -353,11 +623,27 @@ impl Plugin for TestPlugin {
             side: Side,
             mark: Mark { host: host.clone() },
             link: LinkTool { host: host.clone() },
+            stamp: Stamp { host: host.clone() },
+            ask: Ask {
+                host: host.clone(),
+                clicks: Mutex::new(0),
+            },
+            ask_tool: AskTool { host: host.clone() },
             settings: SettingsWindow { host: host.clone() },
             fake: fake::Fake::new(host.clone()),
             raw: Raw::default(),
+            drawer: StampDrawer::default(),
+            performer: StampPerformer::default(),
             host,
         })
+    }
+
+    fn drawer(&self) -> Option<&dyn oxiguitar_plugin::Drawer> {
+        Some(&self.drawer)
+    }
+
+    fn performer(&self) -> Option<&dyn oxiguitar_plugin::Performer> {
+        Some(&self.performer)
     }
 
     fn audio_exporter(&self, id: &str) -> Option<&dyn oxiguitar_plugin::AudioExporter> {
@@ -368,6 +654,8 @@ impl Plugin for TestPlugin {
         match id {
             "mark" => Some(&self.mark),
             "link" => Some(&self.link),
+            "stamp" => Some(&self.stamp),
+            "ask" => Some(&self.ask_tool),
             _ => None,
         }
     }
@@ -393,6 +681,7 @@ impl Plugin for TestPlugin {
         match id {
             "panel" => Some(&self.panel),
             "side" => Some(&self.side),
+            "ask" => Some(&self.ask),
             _ => None,
         }
     }
@@ -483,6 +772,29 @@ impl Service for TestPlugin {
     fn call(&self, method: &str, input: &[u8]) -> Result<Vec<u8>, Error> {
         match method {
             "echo" => Ok(input.to_vec()),
+            // How many times it was asked to draw (interface 1.8).
+            // How many times it was asked to play a track (interface 1.8).
+            "performed" => Ok(self
+                .performer
+                .asked
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .to_string()
+                .into_bytes()),
+            "drawn" => Ok(self
+                .drawer
+                .asked
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .to_string()
+                .into_bytes()),
+            // Crashes OxiGuitar, as a plugin with a bug would: in its code
+            // on the calling thread, or on a thread of its own. For the
+            // contract suite's test of crash reports, run in a process of
+            // its own.
+            "crash" => crash(),
+            "crash-thread" => {
+                let _ = std::thread::spawn(crash).join();
+                Ok(Vec::new())
+            }
             "notify" => {
                 self.host
                     .notify(Level::Info, String::from_utf8_lossy(input).into_owned());
@@ -535,6 +847,19 @@ impl Service for TestPlugin {
                     folders.cache.display()
                 )
                 .into_bytes())
+            }
+            // A folder of the plugin's own, by its name in the manifest
+            // (interface 1.8): every place it is, the user's first.
+            "folder" => {
+                let name = std::str::from_utf8(input)
+                    .map_err(|e| Error::new(ErrorKind::Invalid, e.to_string()))?;
+                let places = self.host.folder(name)?;
+                Ok(places
+                    .all()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .into_bytes())
             }
             _ => Err(Error::not_found(format!("no method {method:?}"))),
         }
@@ -717,6 +1042,16 @@ impl Tab for Side {
 }
 
 oxiguitar_plugin::export_plugin!(TestPlugin);
+
+/// Writes where no program may: the crash a plugin's bug would be.
+#[allow(unsafe_code)]
+fn crash() -> ! {
+    let nowhere = std::ptr::without_provenance_mut::<u8>(8);
+    // SAFETY: none: this is the crash, on purpose (`crash` and
+    // `crash-thread`, for the contract suite).
+    unsafe { nowhere.write_volatile(1) };
+    unreachable!("the write above crashes")
+}
 
 #[cfg(test)]
 mod tests {

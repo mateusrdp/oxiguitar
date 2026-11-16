@@ -18,6 +18,7 @@
 //! network, and nothing runs on a timer.
 
 pub mod advice;
+pub mod crash;
 mod events;
 mod folders;
 mod inventory;
@@ -37,10 +38,9 @@ pub use inventory::{
 };
 pub use oxiguitar_plugin_api as api;
 pub use plugins::{
-    AudioExport, Core, DEFAULT_EFFECT_ORDER, DISABLED_KEY, ExportEnd, ExporterRef, FormatRef,
-    Found, InstrumentRef, OpenError, OpenedFile, Plugins, ReadScore, SERVICES_KEY, SectionRef,
-    ServiceRef, State, TabId, TabRef, Unheard, Unrecognised, WrittenFile, in_effect_order,
-    is_https,
+    AudioExport, Core, DISABLED_KEY, ExportEnd, ExporterRef, FormatRef, Found, InstrumentRef,
+    OpenError, OpenedFile, Plugins, ReadScore, SERVICES_KEY, SectionRef, ServiceRef, State, TabId,
+    TabRef, Unheard, Unrecognised, WrittenFile, in_effect_order, is_https,
 };
 pub use settings::{Settings, SharedSettings};
 
@@ -162,6 +162,26 @@ fn begin(
             format!("Cannot create {}: {e}.", folders.user_plugins.display()),
         )),
     }
+    // A crash since the last start is told first, and from now on a crash
+    // names the plugin that was running (Mateus, 16 Nov 2026). The app's
+    // only: a program without a window keeps its folders as they are.
+    let crash_folder = folders.data.join("crash");
+    let last_crash = if app {
+        crash::last(&crash_folder)
+    } else {
+        None
+    };
+    if app
+        && let Err(e) = crash::install(
+            &crash_folder,
+            &format!("OxiGuitar {}", env!("CARGO_PKG_VERSION")),
+        )
+    {
+        notices.push(Notice::new(
+            Level::Warning,
+            format!("Crash reports are off: {e}."),
+        ));
+    }
     let settings = match Settings::load(&folders.settings()) {
         Ok(s) => SharedSettings::new(s, app.then(|| folders.settings())),
         Err(e) => {
@@ -236,7 +256,11 @@ fn begin(
     // The core's own check, asked of the window as advice (plugin
     // interface 1.4): never in safe mode, where nothing is installed to
     // speak of, and never without a window.
-    let advice = if app && !safe {
+    let mut advice: Vec<advice::Asked> = last_crash
+        .iter()
+        .map(|report| advice::Asked::core(report.advice()))
+        .collect();
+    advice.extend(if app && !safe {
         let appimage = std::env::var_os("APPIMAGE").is_some_and(|v| !v.is_empty());
         inventory
             .advice(System::this(), appimage, &folders.user_plugins)
@@ -246,7 +270,7 @@ fn begin(
             .collect()
     } else {
         Vec::new()
-    };
+    });
     Startup {
         folders: Some(folders),
         settings,

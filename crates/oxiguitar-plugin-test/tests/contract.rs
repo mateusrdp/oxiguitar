@@ -114,22 +114,34 @@ fn discover(folders: &[PathBuf], settings: SharedSettings) -> (Plugins, Arc<Hear
 fn the_test_plugin_passes_the_contract() {
     let report = oxiguitar_plugin_test::check(test_oxp());
     assert!(report.ok(), "failed: {:#?}", report.failed);
-    // 12 for formats and services; 2 tabs; 10 uses of the panel's widgets
-    // (2 buttons, 5 other widgets, 3 pointer events on its canvas); 3 kinds
-    // of event, the selection in both its forms; 2 tools; the settings
-    // window and its 2 widgets; the track section and its 2 widgets; 2
-    // instruments and an effect, 4 real-time checks each; the effect's 3
-    // checks of an update (interface 1.5); the exporter's 3 checks.
+    // 12 for formats and services; 3 tabs; 10 uses of the panel's widgets
+    // (2 buttons, 5 other widgets, 3 pointer events on its canvas) and 4
+    // of the dialog's (its button, 3 pointer events), which is then closed
+    // (interface 1.8); 3 kinds of event, the selection in both its forms; 4
+    // tools; the settings window and its 2 widgets; the track section and
+    // its 2 widgets; 2 instruments and an effect, 4 real-time checks each;
+    // the effect's 3 checks of an update (interface 1.5); the exporter's 3
+    // checks; its drawing and its playing of a track (interface 1.8).
     assert_eq!(
         report.passed.len(),
-        12 + 2 + 10 + 4 + 2 + 3 + 3 + 3 * 4 + 3 + 3,
+        12 + 3 + 10 + 4 + 1 + 4 + 4 + 3 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
         "{:#?}",
         report.passed
     );
-    // The tool `link` says something on purpose.
-    assert_eq!(report.messages.len(), 1, "{:?}", report.messages);
+    // The tool `link` and the closed dialog say something on purpose.
     assert!(
-        report.messages[0].contains("A footer message with a link"),
+        report
+            .messages
+            .iter()
+            .any(|m| m.contains("A footer message with a link")),
+        "{:?}",
+        report.messages
+    );
+    assert!(
+        report
+            .messages
+            .iter()
+            .any(|m| m.contains("The test dialog was closed with Cancel")),
         "{:?}",
         report.messages
     );
@@ -180,6 +192,180 @@ fn the_manifest_is_read_without_loading_and_the_code_on_first_use() {
     let e = plugins.read(format, b"OXGTEST\n\xff\xfe").unwrap_err();
     assert_eq!((e.kind, e.offset), (ErrorKind::Invalid, Some(8)));
     assert!(heard.0.lock().unwrap().is_empty());
+}
+
+/// Run by `a_crash_in_a_plugin_names_the_plugin` in a process of its own:
+/// installs crash reports into `OXIGUITAR_CRASH_DIR` and has the test
+/// plugin crash as `OXIGUITAR_CRASH_HOW` says.
+#[test]
+#[ignore = "crashes on purpose; run by a_crash_in_a_plugin_names_the_plugin"]
+fn crashing_child() {
+    let (Ok(dir), Ok(how)) = (
+        std::env::var("OXIGUITAR_CRASH_DIR"),
+        std::env::var("OXIGUITAR_CRASH_HOW"),
+    ) else {
+        return;
+    };
+    let plugins_dir = Path::new(&dir).join("plugins");
+    oxiguitar_host::crash::install(Path::new(&dir), "OxiGuitar test").unwrap();
+    let (plugins, _) = discover(
+        std::slice::from_ref(&plugins_dir),
+        SharedSettings::default(),
+    );
+    let _ = plugins.call_service("test-echo", &how, b"");
+    unreachable!("the plugin crashes");
+}
+
+#[test]
+fn a_plugin_draws_at_its_places_and_isnt_asked_twice_about_the_same() {
+    use oxiguitar_host::api::message::DrawPlace;
+    use oxiguitar_host::api::score2::{Beat2, BeatExt};
+    let dir = folder("draws", &["test.oxp"]);
+    let (plugins, heard) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    assert_eq!(plugins.drawers(), ["oxiguitar.test"]);
+    let asked = || {
+        String::from_utf8(plugins.call_service("test-echo", "drawn", b"").unwrap())
+            .unwrap()
+            .parse::<u32>()
+            .unwrap()
+    };
+    let beat = |stamped: bool| {
+        let mut b = Beat2::from_v1(oxiguitar_host::api::score::Beat {
+            kind: oxiguitar_host::api::score::BeatKind::Rest,
+            duration: oxiguitar_host::api::score::Duration {
+                value: oxiguitar_host::api::score::NoteValue::Quarter,
+                dots: 0,
+                tuplets: Vec::new(),
+            },
+            notes: Vec::new(),
+            grace: None,
+            effects: Default::default(),
+            chord: None,
+            text: String::new(),
+        });
+        if stamped {
+            b.ext.push(BeatExt::Plugin {
+                plugin: "oxiguitar.test".into(),
+                data: r#"{"stamped":true}"#.into(),
+            });
+        }
+        DrawPlace::Beat {
+            at: [0, 0, 0, 0, 0],
+            beat: Box::new(b),
+        }
+    };
+    let before = asked();
+    // A stamped beat gets the stamp; one that isn't, nothing.
+    let drawn = plugins.draw("oxiguitar.test", vec![beat(false), beat(true)]);
+    assert_eq!(drawn.len(), 1);
+    assert_eq!(drawn[0].place, 1);
+    assert_eq!((drawn[0].width, drawn[0].height), (2.4, 1.6));
+    assert_eq!(asked(), before + 1);
+    // The same places again: the last answer, not a new request.
+    assert_eq!(
+        plugins.draw("oxiguitar.test", vec![beat(false), beat(true)]),
+        drawn
+    );
+    assert_eq!(asked(), before + 1);
+    // Other places: asked again.
+    assert!(plugins.draw("oxiguitar.test", vec![beat(false)]).is_empty());
+    assert_eq!(asked(), before + 2);
+    // None: nothing drawn, nothing asked.
+    assert!(plugins.draw("oxiguitar.test", Vec::new()).is_empty());
+    assert_eq!(asked(), before + 2);
+    // A click on what it drew goes to it, with the place and the point.
+    let click = |double| oxiguitar_host::api::message::Clicked {
+        place: beat(true),
+        at: oxiguitar_host::api::display::Point { x: 1.0, y: 0.5 },
+        double,
+    };
+    assert_eq!(
+        plugins
+            .drawing_clicked("oxiguitar.test", click(false))
+            .unwrap(),
+        "clicked at [0, 0, 0, 0, 0], 1.0 by 0.5 in"
+    );
+    assert_eq!(
+        plugins
+            .drawing_clicked("oxiguitar.test", click(true))
+            .unwrap(),
+        "double-clicked at [0, 0, 0, 0, 0], 1.0 by 0.5 in"
+    );
+    assert!(
+        plugins
+            .drawing_clicked("someone.else", click(false))
+            .is_err()
+    );
+    // A plugin that doesn't draw is never asked.
+    assert!(plugins.draw("someone.else", vec![beat(true)]).is_empty());
+    assert!(
+        heard.0.lock().unwrap().is_empty(),
+        "{:?}",
+        heard.0.lock().unwrap()
+    );
+}
+
+#[test]
+fn a_crash_in_a_plugin_names_the_plugin() {
+    for how in ["crash", "crash-thread"] {
+        let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("contract-{how}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("plugins")).unwrap();
+        std::fs::copy(test_oxp(), dir.join("plugins/test.oxp")).unwrap();
+        let out = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["crashing_child", "--exact", "--ignored", "--nocapture"])
+            .env("OXIGUITAR_CRASH_DIR", &dir)
+            .env("OXIGUITAR_CRASH_HOW", how)
+            .output()
+            .unwrap();
+        assert!(
+            !out.status.success(),
+            "{how}: the child should have crashed"
+        );
+        // Ended by the crash's signal (SIGSEGV, or SIGBUS on macOS), not
+        // an exit of its own.
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            assert!(out.status.signal().is_some(), "{how}: {:?}", out.status);
+        }
+        let report = oxiguitar_host::crash::last(&dir).unwrap_or_else(|| {
+            panic!(
+                "{how}: no report; stderr: {}",
+                String::from_utf8_lossy(&out.stderr)
+            )
+        });
+        assert!(
+            report
+                .text
+                .starts_with("OxiGuitar test crashed: invalid memory access"),
+            "{}",
+            report.text
+        );
+        // The same lines on the standard error.
+        assert!(String::from_utf8_lossy(&out.stderr).contains("OxiGuitar test crashed"));
+        // On the thread it was called on, the plugin is named everywhere;
+        // on a thread of its own, where its code is known (Linux).
+        let named = how == "crash" || cfg!(target_os = "linux");
+        if named {
+            let plugin = report.plugin.clone().unwrap_or_default();
+            assert!(
+                plugin.starts_with("oxiguitar.test "),
+                "{how}: {}",
+                report.text
+            );
+            assert!(plugin.contains("test.oxp"), "{how}: {}", report.text);
+        }
+        if cfg!(target_os = "linux") {
+            assert!(
+                report
+                    .text
+                    .contains("in the code of the plugin oxiguitar.test"),
+                "{}",
+                report.text
+            );
+        }
+    }
 }
 
 #[test]
@@ -392,6 +578,7 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
         [
             ("panel".into(), "Test".into(), Area::Bottom),
             ("side".into(), "Test side".into(), Area::Right),
+            ("ask".into(), "Test Dialog".into(), Area::Dialog),
         ]
     );
     assert!(!plugins.found()[0].is_loaded());
@@ -548,7 +735,7 @@ fn a_plugin_that_fails_is_withdrawn_as_if_it_were_not_installed() {
     let opened = plugins.open(file, Some("oxgtest")).unwrap();
     assert_eq!(opened.format.plugin.name(), "Test plugin");
     assert_eq!(opened.read.score.info.title, "Tarde em Itapuã");
-    assert_eq!(plugins.tabs().len(), 2);
+    assert_eq!(plugins.tabs().len(), 3);
     assert!(plugins.wants(EventKind::Score));
 
     // An ordinary error is an answer, not a failure.
@@ -825,7 +1012,7 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
     // The test plugin's tool, from its manifest; the second plugin (1.1)
     // has none.
     let tools = plugins.tools();
-    assert_eq!(tools.len(), 2);
+    assert_eq!(tools.len(), 4);
     assert_eq!(tools[0].spec.name, "Mark the Title");
     assert_eq!(plugins.run_tool(tools[0]).unwrap(), "No score is open.");
 
@@ -995,7 +1182,7 @@ fn interface_1_3_settings_windows_track_sections_links_and_folders() {
     );
 
     // The shared folders come from the manifest alone.
-    assert_eq!(plugins.shared_folders(), [SharedFolder::Soundfonts]);
+    assert_eq!(plugins.shared_folders(), ["soundfonts", "test-files"]);
     assert!(!plugins.found()[0].is_loaded());
 
     // The settings window: its widgets change the plugin's own settings.
@@ -1110,7 +1297,33 @@ fn interface_1_3_settings_windows_track_sections_links_and_folders() {
         None,
     )
     .unwrap();
+    // A folder of the plugin's own name (interface 1.8) is beside
+    // `plugins` wherever OxiGuitar has folders: here a system place holds
+    // one too, as a package's files would.
+    let mut folders = folders;
+    let system = home.join("system");
+    std::fs::create_dir_all(system.join("test-files")).unwrap();
+    folders.system_plugins = vec![system.join("plugins"), home.join("nowhere/plugins")];
     plugins.use_folders(folders.clone());
+    let answer = plugins
+        .call_service("test-echo", "folder", b"test-files")
+        .unwrap();
+    assert_eq!(
+        String::from_utf8(answer)
+            .unwrap()
+            .lines()
+            .collect::<Vec<_>>(),
+        [
+            folders.named("test-files").to_str().unwrap(),
+            system.join("test-files").to_str().unwrap(),
+        ]
+    );
+    assert!(folders.named("test-files").is_dir(), "made on asking");
+    // Only the folders its manifest lists.
+    let e = plugins
+        .call_service("test-echo", "folder", b"nam")
+        .unwrap_err();
+    assert!(e.message.contains("lists no folder"), "{e}");
     let answer = plugins.call_service("test-echo", "folders", b"").unwrap();
     let answer = String::from_utf8(answer).unwrap();
     let lines: Vec<&str> = answer.lines().collect();
@@ -1301,6 +1514,87 @@ fn peak_of(
 }
 
 #[test]
+fn a_plugin_plays_the_notes_its_own_way_and_isnt_asked_twice_about_the_same() {
+    use oxiguitar_play::Timeline;
+    use oxiguitar_play::plugin_source::perform;
+
+    let dir = folder("performs", &["test.oxp"]);
+    let (plugins, heard) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    assert_eq!(plugins.performers(), ["oxiguitar.test"]);
+    let asked = || {
+        String::from_utf8(plugins.call_service("test-echo", "performed", b"").unwrap())
+            .unwrap()
+            .parse::<u32>()
+            .unwrap()
+    };
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let mut score =
+        oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
+            .unwrap()
+            .score;
+    let tracks = score.tracks.len() as u32;
+    // Unstamped, every note plays as written, and each track is asked once.
+    let written = Timeline::new(&score);
+    let before = asked();
+    let mut played = Timeline::new(&score);
+    perform(&plugins, &score, &mut played);
+    assert_eq!(asked(), before + tracks);
+    let keys = |t: &Timeline| {
+        let mut k: Vec<_> = t
+            .notes
+            .iter()
+            .map(|n| (n.track, n.visit, n.beat, n.string, n.key))
+            .collect();
+        k.sort();
+        k
+    };
+    assert_eq!(keys(&played), keys(&written));
+    // The same notes again: the last answers, no new requests.
+    let mut again = Timeline::new(&score);
+    perform(&plugins, &score, &mut again);
+    assert_eq!(asked(), before + tracks);
+    // The first beat with notes stamped: its notes play an octave up.
+    let first = written.notes.iter().find(|n| n.track == 0).unwrap().clone();
+    let bar = written.map.visits[first.visit].visit.bar;
+    score.tracks[0].staves[first.staff].bars[bar].voices[first.voice].beats[first.beat]
+        .plugins
+        .insert("oxiguitar.test".into(), r#"{"stamped":true}"#.into());
+    let mut stamped = Timeline::new(&score);
+    perform(&plugins, &score, &mut stamped);
+    let up = |n: &oxiguitar_play::NoteEvent| {
+        n.track == 0
+            && n.staff == first.staff
+            && written.map.visits[n.visit].visit.bar == bar
+            && n.voice == first.voice
+            && n.beat == first.beat
+    };
+    let mut expected: Vec<_> = written
+        .notes
+        .iter()
+        .map(|n| {
+            (
+                n.track,
+                n.visit,
+                n.beat,
+                n.string,
+                if up(n) { n.key + 12 } else { n.key },
+            )
+        })
+        .collect();
+    expected.sort();
+    assert_eq!(keys(&stamped), expected);
+    assert!(stamped.notes.iter().filter(|n| up(n)).count() > 0);
+    // Only the changed track was asked again.
+    assert_eq!(asked(), before + tracks + 1);
+    assert!(
+        heard.0.lock().unwrap().is_empty(),
+        "{:?}",
+        heard.0.lock().unwrap()
+    );
+}
+
+#[test]
 fn the_player_puts_each_track_s_effects_after_its_instrument() {
     use oxiguitar_play::plugin_source::plan;
 
@@ -1355,6 +1649,322 @@ fn the_player_puts_each_track_s_effects_after_its_instrument() {
     );
 }
 
+/// The window, for interface 1.8: a score plugins change, and what they ask
+/// the window to show.
+#[derive(Default)]
+struct Window {
+    score: Mutex<Option<(u64, oxiguitar_host::api::score2::Score2)>>,
+    said: Mutex<Vec<String>>,
+    dialogs: Mutex<Vec<(TabId, String)>>,
+    shown: Mutex<Vec<TabId>>,
+    engraving: Mutex<Option<oxiguitar_host::api::message::Engraving>>,
+    selection: Mutex<Option<Selection2>>,
+}
+
+impl Core for Window {
+    fn notify(&self, _level: Level, text: String) {
+        self.said.lock().unwrap().push(text);
+    }
+
+    fn score2(&self) -> Option<(u64, oxiguitar_host::api::score2::Score2)> {
+        self.score.lock().unwrap().clone()
+    }
+
+    fn apply(
+        &self,
+        _plugin: &str,
+        revision: u64,
+        _name: String,
+        score: oxiguitar_host::api::score2::Score2,
+    ) -> Result<(), String> {
+        *self.score.lock().unwrap() = Some((revision + 1, score));
+        Ok(())
+    }
+
+    fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
+        self.dialogs
+            .lock()
+            .unwrap()
+            .push((tab.clone(), title.to_owned()));
+        Ok(())
+    }
+
+    fn engraving(&self) -> Option<oxiguitar_host::api::message::Engraving> {
+        self.engraving.lock().unwrap().clone()
+    }
+
+    fn selection(&self) -> Option<Selection2> {
+        *self.selection.lock().unwrap()
+    }
+
+    fn show_tab(&self, tab: &TabId) {
+        self.shown.lock().unwrap().push(tab.clone());
+    }
+}
+
+/// Interface 1.8 (#250, #293): tools in the palette and in any menu,
+/// dialogs, a tab brought to the front, what a plugin keeps on a beat, and
+/// an effect that follows the score.
+#[test]
+fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
+    use oxiguitar_host::api::message::{PrepareEffect, PreparedTrack, TrackInfo};
+    use oxiguitar_host::api::score2::BeatExt;
+    use oxiguitar_play::plugin_source::plan;
+
+    let dir = folder("one-eight", &["test.oxp"]);
+    let core = Arc::new(Window::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        core.clone(),
+    );
+
+    // Where each tool goes comes from the manifest alone: one has a button
+    // in the toolbar's Plugins section.
+    let toolbar: Vec<(&str, Option<&str>)> = plugins
+        .toolbar_tools()
+        .iter()
+        .map(|t| {
+            (
+                t.spec.id.as_str(),
+                t.spec.toolbar.as_ref().unwrap().text.as_deref(),
+            )
+        })
+        .collect();
+    assert_eq!(toolbar, [("ask", Some("Ask"))]);
+    // One has keys, and none clash.
+    let (keyed, clashes) = plugins.shortcut_tools();
+    let keyed: Vec<(String, &str)> = keyed
+        .iter()
+        .map(|(k, t)| (k.label(), t.spec.id.as_str()))
+        .collect();
+    assert_eq!(keyed, [("Ctrl + Alt + J".to_owned(), "stamp")]);
+    assert!(clashes.is_empty());
+    let palette: Vec<(String, Option<char>, Option<String>)> = plugins
+        .palette_tools()
+        .iter()
+        .map(|t| {
+            let at = t.spec.palette.as_ref().unwrap();
+            (at.section.clone(), at.symbol_char(), at.text.clone())
+        })
+        .collect();
+    assert_eq!(
+        palette,
+        [
+            // No section named: the palette's Plugins section.
+            ("Plugins".to_owned(), None, Some("Lnk".to_owned())),
+            ("Effects".to_owned(), None, Some("T!".to_owned())),
+            ("Test tools".to_owned(), Some('\u{E4A0}'), None),
+        ]
+    );
+    let menus: Vec<(String, String)> = plugins
+        .menu_tools()
+        .iter()
+        .map(|(menu, t)| (menu.clone(), t.spec.id.clone()))
+        .collect();
+    assert_eq!(
+        menus,
+        [
+            // No place named: the menu the plugins share.
+            ("plugins".to_owned(), "mark".to_owned()),
+            ("tools".to_owned(), "link".to_owned()),
+            ("test".to_owned(), "stamp".to_owned()),
+            ("page".to_owned(), "ask".to_owned()),
+        ]
+    );
+    let tool = |id: &str| {
+        plugins
+            .tools()
+            .into_iter()
+            .find(|t| t.spec.id == id)
+            .unwrap()
+    };
+
+    // The palette's tool keeps the plugin's data on a beat of the score.
+    let song =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gp/oxiguitar-test-song.gp5");
+    let score = oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(song).unwrap())
+        .unwrap()
+        .score;
+    *core.score.lock().unwrap() = Some((1, oxiguitar_model::wire::to_wire2(&score)));
+    // It reads the page as engraved, when there is one: here two pages
+    // with a line on the first and one beat's place.
+    {
+        use oxiguitar_host::api::display::{Item, Paint, Point};
+        use oxiguitar_host::api::message::{EngravedBeat, EngravedPage, Engraving};
+        *core.engraving.lock().unwrap() = Some(Engraving {
+            revision: 1,
+            pages: vec![
+                EngravedPage {
+                    width: 595.0,
+                    height: 842.0,
+                    items: vec![Item::Line {
+                        from: Point::new(40.0, 100.0),
+                        to: Point::new(555.0, 100.0),
+                        width: 0.5,
+                        paint: Paint::Ink,
+                    }],
+                },
+                EngravedPage::default(),
+            ],
+            beats: vec![EngravedBeat {
+                x: 60.0,
+                y: 100.0,
+                width: 20.0,
+                height: 30.0,
+                ..EngravedBeat::default()
+            }],
+        });
+    }
+    // And asks where the caret is.
+    *core.selection.lock().unwrap() = Some(Selection2::Caret {
+        track: 0,
+        staff: 0,
+        voice: 0,
+        bar: 2,
+        beat: 1,
+        string: 3,
+    });
+    assert_eq!(plugins.run_tool(tool("stamp")).unwrap(), "");
+    for said in [
+        "Engraved: 2 pages, 1 beats.",
+        "The caret is at bar 3, beat 2.",
+    ] {
+        assert!(
+            core.said.lock().unwrap().iter().any(|s| s.ends_with(said)),
+            "{:?}",
+            core.said.lock().unwrap()
+        );
+    }
+    let (revision, stamped) = core.score.lock().unwrap().clone().unwrap();
+    assert_eq!(revision, 2);
+    let ours = |e: &BeatExt| matches!(e, BeatExt::Plugin { plugin, data } if plugin == "oxiguitar.test" && data == r#"{"stamped":true}"#);
+    // The core's score carries it with the beat.
+    let score = oxiguitar_model::wire::from_wire2(stamped.clone()).unwrap();
+    let kept: Vec<_> = score.tracks[0].kept();
+    assert_eq!(kept.len(), 1);
+    assert_eq!(kept[0].0.len(), 4, "on a beat");
+    assert_eq!(
+        kept[0].1.plugins.get("oxiguitar.test").map(String::as_str),
+        Some(r#"{"stamped":true}"#)
+    );
+    // So is the mark it has the core draw there.
+    assert_eq!(
+        kept[0].1.marks.get("oxiguitar.test").map(String::as_str),
+        Some("T!")
+    );
+    // No format is sent it, and it is no loss: it is saved beside the score.
+    let format = plugins
+        .writers()
+        .into_iter()
+        .find(|f| f.spec.id == "oxgtest")
+        .unwrap();
+    let written = plugins.write(format, &stamped).unwrap();
+    assert!(
+        written
+            .losses
+            .iter()
+            .all(|l| !l.message.contains("plugins")),
+        "{:?}",
+        written.losses
+    );
+
+    // An effect that follows the score is planned with its track's marked
+    // beats as played, and prepared with them: the test plugin's gain is
+    // silent while the stamped beat plays.
+    let planned = plan(&plugins, &score);
+    let pick = &planned.groups[0].effects[0][0];
+    assert_eq!(pick.effect, "gain");
+    let beat = pick
+        .beats
+        .iter()
+        .find(|b| b.ext.iter().any(ours))
+        .expect("the stamped beat is among the track's played beats");
+    assert!(beat.end > beat.start);
+    assert!(pick.beats.windows(2).all(|w| w[0].start <= w[1].start));
+    let gain = plugins
+        .effects_for(InstrumentClass::Fretted)
+        .into_iter()
+        .find(|e| e.spec.id == "gain")
+        .unwrap();
+    assert!(plugins.follows_score(gain));
+    let prepare = PrepareEffect {
+        effect: "gain".into(),
+        rate: 48_000,
+        frames: 512,
+        track: PreparedTrack {
+            info: TrackInfo {
+                index: 0,
+                name: "Lead".into(),
+                class: InstrumentClass::Fretted,
+            },
+            program: 29,
+            percussion: false,
+            tuning: vec![64, 59, 55, 50, 45, 40],
+            capo: 0,
+            settings: r#"{"level":1.0}"#.into(),
+        },
+    };
+    let mut instance = plugins
+        .prepare_effect_following(gain, prepare, &pick.beats)
+        .unwrap();
+    let step = 1.0 / 48_000.0;
+    let mut run = |time: f64, step: f64| {
+        let (mut l, mut r) = (vec![1.0f32; 64], vec![1.0f32; 64]);
+        assert!(instance.process(&mut l, &mut r, time, step));
+        assert_eq!(l, r);
+        l
+    };
+    let middle = (beat.start + beat.end) / 2.0;
+    assert!(
+        run(middle, step).iter().all(|&v| v == 0.0),
+        "silent under it"
+    );
+    assert!(run(beat.end + 0.01, step).iter().all(|&v| v == 1.0));
+    // The score isn't playing: nothing is followed.
+    assert!(run(middle, 0.0).iter().all(|&v| v == 1.0));
+    // The beat's last frames: silent up to its end, then back.
+    let across = run(beat.end - 32.0 * step, step);
+    assert!(across[0] == 0.0 && across[63] == 1.0, "{across:?}");
+
+    // The other tool brings a tab to the front and opens its dialog, a tab
+    // in no area; the dialog is told how the user closed it.
+    assert_eq!(plugins.run_tool(tool("ask")).unwrap(), "");
+    let side = TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: "side".into(),
+    };
+    let ask = TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: "ask".into(),
+    };
+    assert_eq!(*core.shown.lock().unwrap(), [side]);
+    assert_eq!(
+        *core.dialogs.lock().unwrap(),
+        [(ask.clone(), "Test Dialog".to_owned())]
+    );
+    let content = plugins.tab_content(&ask).unwrap();
+    assert!(
+        matches!(&content.rows[0].widgets[0], Widget::Button { text, .. } if text == "Clicked 0 times")
+    );
+    assert!(matches!(&content.rows[1].widgets[0], Widget::Canvas(_)));
+    let content = plugins.tab_event(&ask, "more", TabEvent::Clicked).unwrap();
+    assert!(
+        matches!(&content.rows[0].widgets[0], Widget::Button { text, .. } if text == "Clicked 1 times")
+    );
+    plugins.tab_closed(&ask, true);
+    assert!(
+        core.said
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|s| s.contains("closed with OK after 1 clicks")),
+        "{:?}",
+        core.said.lock().unwrap()
+    );
+}
+
 /// Interface 1.5 (#232): an effect follows its track's new settings
 /// while it runs, from its next call, ramping to them; the instance stays
 /// alive while an updater holds it.
@@ -1389,7 +1999,7 @@ fn an_effect_follows_new_settings_while_it_runs() {
     let mut instance = plugins.prepare_effect(effect, prepare(0.5)).unwrap();
     let run = |instance: &mut oxiguitar_host::realtime::Instance| {
         let (mut l, mut r) = (vec![1.0f32; 128], vec![1.0f32; 128]);
-        assert!(instance.process(&mut l, &mut r));
+        assert!(instance.process(&mut l, &mut r, 0.0, 0.0));
         l
     };
     assert!(run(&mut instance).iter().all(|&v| (v - 0.5).abs() < 1e-6));

@@ -207,6 +207,14 @@ pub struct ProcessCall {
     pub buffers: *const *mut f32,
     /// 2.
     pub buffer_count: u32,
+    /// The score's time at the first frame, in seconds at 100 % speed, as
+    /// the times an effect that follows the score was prepared with
+    /// ([`crate::message::PlayedBeat`]). Since 1.8, as the field after it:
+    /// a plugin built for an older interface reads neither.
+    pub time: f64,
+    /// The score's seconds per frame (the speed over the sample rate), and
+    /// 0 while the score isn't playing (stopped, paused, the count-in).
+    pub step: f64,
 }
 
 /// The plugin's real-time functions, which its [`crate::abi::PluginTableV1`]

@@ -44,13 +44,15 @@ pub(crate) fn tab_of(shell_id: &str) -> Option<TabId> {
     })
 }
 
-/// The window's side for a manifest's area.
-pub(crate) fn side_of(area: Area) -> Side {
+/// The window's side for a manifest's area; none for a dialog, which is
+/// in no area.
+pub(crate) fn side_of(area: Area) -> Option<Side> {
     match area {
-        Area::Top => Side::Top,
-        Area::Bottom => Side::Bottom,
-        Area::Left => Side::Left,
-        Area::Right => Side::Right,
+        Area::Top => Some(Side::Top),
+        Area::Bottom => Some(Side::Bottom),
+        Area::Left => Some(Side::Left),
+        Area::Right => Some(Side::Right),
+        Area::Dialog => None,
     }
 }
 
@@ -59,7 +61,10 @@ pub(crate) fn side_of(area: Area) -> Side {
 /// manifests.
 pub(crate) fn add_to(shell: &mut Shell, plugins: &Plugins) {
     for tab in plugins.tabs() {
-        shell.area_mut(side_of(tab.spec.area)).tabs.push(Tab {
+        let Some(side) = side_of(tab.spec.area) else {
+            continue;
+        };
+        shell.area_mut(side).tabs.push(Tab {
             id: shell_id(&tab.id()),
             title: tab.spec.title.clone(),
         });
@@ -154,6 +159,9 @@ pub(crate) enum Request {
         widget: String,
         room: (u32, u32),
     },
+    /// The user closed the dialog `tab`, with OK or not: its plugin is
+    /// told, and what the dialog showed is forgotten.
+    Closed { tab: TabId, ok: bool },
     /// The interface became dark (`true`) or light: canvases are drawn
     /// again.
     Dark(bool),
@@ -390,6 +398,10 @@ fn run(rx: &Receiver<Request>, plugins: &Plugins, mut dark: bool, sink: &dyn Fn(
                         sink,
                     );
                 }
+                Request::Closed { tab, ok } => {
+                    plugins.tab_closed(&tab, ok);
+                    contents.remove(&tab);
+                }
                 Request::Size { tab, widget, room } => {
                     rooms.insert((tab.clone(), widget.clone()), room);
                     if let Some(drawn) = contents
@@ -503,7 +515,8 @@ mod tests {
         assert_eq!(tab_of(&shell_id(&t)), Some(t));
         assert_eq!(tab_of("tracks"), None);
         assert_eq!(tab_of("plugin:nothing"), None);
-        assert_eq!(side_of(Area::Left), Side::Left);
+        assert_eq!(side_of(Area::Left), Some(Side::Left));
+        assert_eq!(side_of(Area::Dialog), None);
     }
 
     #[test]
