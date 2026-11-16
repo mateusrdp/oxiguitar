@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-16
+
 ### Added
 
 - **Plugins own their tools: plugin interface 1.8** (#293, #250). A plugin can now, with no change to OxiGuitar:
