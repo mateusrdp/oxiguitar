@@ -16,6 +16,8 @@ A tab sits in one of the window's four areas, beside the core's own (Player, Tra
 
 The window shows the tab's title from the manifest alone. The plugin is loaded when the user first opens the tab.
 
+A tab whose manifest entry names no `area` goes to the right one, the inspector, beside Song, Track, Bar and Note (interface 1.8).
+
 `host.show_tab("statistics")` (interface 1.8) brings a tab of yours to the front of its area, opening the area if it is closed: for a tool whose result the tab shows.
 
 ## Dialogs

@@ -236,7 +236,7 @@ The score file keeps the open or closed mark where its format has one (Guitar Pr
 
 ### Tools that plugins add
 
-A plugin can add buttons to the palette, in one of its sections or in a section of its own after OxiGuitar's, and entries to any menu, the right-click menus of the page and of a track included, or a menu of its own between Tools and Help. A palette button of a plugin does its work at a click, as a menu entry does, and may open a dialog of the plugin's. Its tooltip names it and the palette's search finds it. What such a tool changes in the score is one step for **Undo**. A plugin can also keep marks and data of its own on beats; they follow the beat when you copy or move it, and are saved beside the score ([Saving](saving.md)).
+A plugin can add buttons to the palette and entries to the menus. Unless its author chose otherwise they are in the palette's **Plugins** section and in the **Plugins** menu, between Tools and Help, which hold nothing of OxiGuitar's own. A plugin may instead use one of the palette's sections or a section of its own, and any menu, the right-click menus of the page and of a track included, or a menu of its own. A palette button of a plugin does its work at a click, as a menu entry does, and may open a dialog of the plugin's. Its tooltip names it and the palette's search finds it. What such a tool changes in the score is one step for **Undo**. A plugin can also keep marks and data of its own on beats; they follow the beat when you copy or move it, and are saved beside the score ([Saving](saving.md)).
 
 ### Multivoice
 

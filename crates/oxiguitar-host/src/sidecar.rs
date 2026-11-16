@@ -34,6 +34,14 @@
 //! score was changed elsewhere (tracks added, removed or moved in another
 //! program), a track takes the entry at its own place if the names agree,
 //! else the first unused entry of its name, else none.
+//!
+//! `"score"` is the whole score, when the user chose to keep what the
+//! file's format can't hold (Mateus, 16 Nov 2026): `{ "bytes": N, "mark":
+//! "…", "is": { … } }`, the score as plugins get it (score version 2, as
+//! JSON) and the length and a check sum of the score file it was saved
+//! beside. While the file is still those bytes, OxiGuitar opens the score
+//! from here and nothing is lost; once another program has changed the
+//! file, the file is what counts and this is left unused.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -147,6 +155,57 @@ pub struct Sidecar {
     pub bar_colors: Vec<Option<serde_json::Value>>,
     /// Track name → one entry per bar. Same structure as `bar_colors`.
     pub track_bar_colors: BTreeMap<String, Vec<Option<serde_json::Value>>>,
+    /// The whole score, kept because the file's format can't hold all of
+    /// it.
+    pub score: Option<KeptScore>,
+}
+
+/// The whole score in a sidecar, and the score file it belongs to.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KeptScore {
+    /// The score file's length when this was saved.
+    pub bytes: u64,
+    /// The score file's check sum then ([`mark_of`]).
+    pub mark: String,
+    /// The score, version 2, as JSON.
+    pub is: Value,
+}
+
+/// What a sidecar's whole score is to the score file as it is now.
+#[derive(Debug)]
+pub enum Kept {
+    /// The sidecar keeps no score.
+    None,
+    /// The file is the one the score was saved beside: here it is.
+    Score(Box<oxiguitar_plugin_api::score2::Score2>),
+    /// The file was changed since: the sidecar's score is not for it.
+    Stale,
+    /// The file is the same, but this OxiGuitar can't read the score kept
+    /// (a newer one wrote it): why.
+    Unreadable(String),
+}
+
+/// A check sum of a score file's bytes: enough to tell whether the file
+/// is the one a sidecar was saved beside (FNV-1a, 64 bits; no protection
+/// against anyone, and none is needed).
+pub fn mark_of(file: &[u8]) -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in file {
+        hash ^= u64::from(b);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{hash:016x}")
+}
+
+impl KeptScore {
+    /// `score`, to keep beside the score file whose bytes are `file`.
+    pub fn of(file: &[u8], score: &oxiguitar_plugin_api::score2::Score2) -> Option<KeptScore> {
+        Some(KeptScore {
+            bytes: file.len() as u64,
+            mark: mark_of(file),
+            is: serde_json::to_value(score).ok()?,
+        })
+    }
 }
 
 impl Sidecar {
@@ -158,7 +217,8 @@ impl Sidecar {
                 && !t.chords
                 && t.chords_from.is_none()
                 && t.beats.is_empty()
-        }) && self.bar_colors.iter().all(Option::is_none)
+        }) && self.score.is_none()
+            && self.bar_colors.iter().all(Option::is_none)
             && self
                 .track_bar_colors
                 .values()
@@ -182,6 +242,21 @@ impl Sidecar {
         Sidecar::parse(&text).map(Some).map_err(|why| {
             format!("{name} can't be used ({why}); the tracks' plugin settings start empty.")
         })
+    }
+
+    /// The whole score this sidecar keeps, for the score file whose bytes
+    /// are `file` now.
+    pub fn kept_score(&self, file: &[u8]) -> Kept {
+        let Some(kept) = &self.score else {
+            return Kept::None;
+        };
+        if kept.bytes != file.len() as u64 || kept.mark != mark_of(file) {
+            return Kept::Stale;
+        }
+        match serde_json::from_value(kept.is.clone()) {
+            Ok(score) => Kept::Score(Box::new(score)),
+            Err(e) => Kept::Unreadable(e.to_string()),
+        }
     }
 
     /// Gives each track's settings kept under a replaced plugin's id to the
@@ -217,9 +292,21 @@ impl Sidecar {
             Some(v) => return Err(format!("version {v}, written by a newer OxiGuitar")),
             None => return Err("no \"oxiguitar\" version".into()),
         }
+        let score = top.get("score").and_then(|s| {
+            Some(KeptScore {
+                bytes: s.get("bytes")?.as_u64()?,
+                mark: s.get("mark")?.as_str()?.to_owned(),
+                is: s.get("is").filter(|v| v.is_object())?.clone(),
+            })
+        });
         let tracks = match top.get("tracks") {
             Some(Value::Array(tracks)) => tracks,
-            None => return Ok(Sidecar::default()),
+            None => {
+                return Ok(Sidecar {
+                    score,
+                    ..Default::default()
+                });
+            }
             Some(_) => return Err("\"tracks\" is not a list".into()),
         };
         let tracks = tracks
@@ -262,6 +349,7 @@ impl Sidecar {
             .collect();
         let mut sidecar = Sidecar {
             tracks,
+            score,
             ..Default::default()
         };
         if let Some(Value::Array(arr)) = top.get("bar_colors") {
@@ -351,6 +439,21 @@ impl Sidecar {
             doc["track_bar_colors"] = Value::Object(obj);
         }
         let mut text = serde_json::to_string_pretty(&doc).unwrap_or_default();
+        // The whole score goes last and on one line: it is long, and the
+        // rest stays easy to read above it.
+        if let Some(kept) = &self.score
+            && let Some(end) = text.rfind('}')
+        {
+            let score = serde_json::json!({
+                "bytes": kept.bytes, "mark": kept.mark, "is": kept.is
+            });
+            text.truncate(end);
+            let text_end = text.trim_end().len();
+            text.truncate(text_end);
+            text.push_str(",\n  \"score\": ");
+            text.push_str(&score.to_string());
+            text.push_str("\n}");
+        }
         text.push('\n');
         text
     }
@@ -423,6 +526,40 @@ mod tests {
             chords_from: None,
             beats: Vec::new(),
         }
+    }
+
+    #[test]
+    fn the_whole_score_is_kept_for_the_file_it_was_saved_beside() {
+        use oxiguitar_plugin_api::score2::Score2;
+        let mut score = Score2::default();
+        score.info.title = "Kept".to_owned();
+        let file = b"the score file's bytes";
+        let sidecar = Sidecar {
+            score: KeptScore::of(file, &score),
+            ..Sidecar::default()
+        };
+        assert!(!sidecar.is_empty());
+        let text = sidecar.to_text();
+        // On one line at the end, so the rest stays readable.
+        assert!(text.contains("\n  \"score\": {\"bytes\":22,"), "{text}");
+        let read = Sidecar::parse(&text).unwrap();
+        assert_eq!(read, sidecar);
+        match read.kept_score(file) {
+            Kept::Score(s) => assert_eq!(s.info.title, "Kept"),
+            other => panic!("{other:?}"),
+        }
+        // Another program changed the file: the file counts.
+        assert!(matches!(
+            read.kept_score(b"the score file's bytez"),
+            Kept::Stale
+        ));
+        assert!(matches!(read.kept_score(b"shorter"), Kept::Stale));
+        assert!(matches!(Sidecar::default().kept_score(file), Kept::None));
+        // A score this OxiGuitar can't read says why.
+        let mut odd = read.clone();
+        odd.score.as_mut().unwrap().is = serde_json::json!({ "info": 7 });
+        assert!(matches!(odd.kept_score(file), Kept::Unreadable(_)));
+        assert_eq!(mark_of(b""), "cbf29ce484222325");
     }
 
     #[test]
@@ -644,6 +781,7 @@ mod tests {
     #[test]
     fn bar_colours_round_trip() {
         let s = Sidecar {
+            score: None,
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![
                 None,
@@ -658,6 +796,7 @@ mod tests {
         assert_eq!(parsed, s);
         // All-null should be omitted from output (is_empty-like).
         let empty_colors = Sidecar {
+            score: None,
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None, None],
             track_bar_colors: BTreeMap::new(),
@@ -674,6 +813,7 @@ mod tests {
             vec![None, Some(serde_json::json!({"r": 0, "g": 255, "b": 128}))],
         );
         let s = Sidecar {
+            score: None,
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None, None], // all-null → omitted from output
             track_bar_colors: track_colors,
@@ -689,18 +829,21 @@ mod tests {
     #[test]
     fn is_empty_considers_colours() {
         let empty = Sidecar {
+            score: None,
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None, None],
             track_bar_colors: BTreeMap::new(),
         };
         assert!(empty.is_empty());
         let with_colour = Sidecar {
+            score: None,
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None, Some(serde_json::json!({"r": 1, "g": 2, "b": 3}))],
             track_bar_colors: BTreeMap::new(),
         };
         assert!(!with_colour.is_empty());
         let with_track_colour = Sidecar {
+            score: None,
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None],
             track_bar_colors: {

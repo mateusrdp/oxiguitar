@@ -74,8 +74,9 @@ pub(crate) enum Request {
     /// file, in the format with this id. Asks first ([`Event::AskSave`])
     /// when something would be lost or the file changes.
     Save(Option<(PathBuf, String)>),
-    /// The user agreed to the save asked about.
-    ConfirmSave,
+    /// The user agreed to the save asked about; with `keep`, what the
+    /// format can't hold goes in the file beside the score (FILE.oxg).
+    ConfirmSave { keep: bool },
     /// The user declined it.
     CancelSave,
     /// A plugin handed back the score changed, made from `revision`
@@ -116,9 +117,9 @@ pub(crate) enum Event {
     AskSave {
         heading: String,
         lines: Vec<String>,
-        /// The score would go to another file than it came from: the
-        /// question also offers Save As.
-        elsewhere: bool,
+        /// The format can't hold everything: the question also offers to
+        /// keep the rest in the file beside the score.
+        can_keep: bool,
     },
     /// The score was saved, perhaps under another name.
     Saved {
@@ -324,7 +325,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 Request::PluginEdit { .. } | Request::PluginTool(..) => true,
                 Request::ExportPdf(..)
                 | Request::Save(_)
-                | Request::ConfirmSave
+                | Request::ConfirmSave { .. }
                 | Request::CancelSave => false,
             })
         };
@@ -453,9 +454,9 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
             }
             Request::Save(to) => save(&mut st, to, sink),
-            Request::ConfirmSave => {
+            Request::ConfirmSave { keep } => {
                 if let Some(prepared) = st.pending_save.take() {
-                    write_save(&mut st, &prepared, sink);
+                    write_save(&mut st, &prepared, keep || prepared.keeps, sink);
                 }
             }
             Request::CancelSave => st.pending_save = None,
@@ -593,16 +594,19 @@ fn save(st: &mut State, to: Option<(PathBuf, String)>, sink: &dyn Fn(Event)) {
     };
     match doc.prepare_save(&st.plugins, to) {
         Ok(prepared) if prepared.ask() => {
-            let (heading, lines) = prepared.question(&doc.path);
-            let elsewhere = prepared.instead.is_some();
+            let (heading, lines) = prepared.question();
+            let can_keep = prepared.can_keep() && !prepared.keeps;
             st.pending_save = Some(prepared);
             sink(Event::AskSave {
                 heading,
                 lines,
-                elsewhere,
+                can_keep,
             });
         }
-        Ok(prepared) => write_save(st, &prepared, sink),
+        Ok(prepared) => {
+            let keep = prepared.keeps;
+            write_save(st, &prepared, keep, sink);
+        }
         Err(e) => {
             sink(Event::Message(Level::Error, e));
             sink(Event::SaveFailed);
@@ -610,12 +614,12 @@ fn save(st: &mut State, to: Option<(PathBuf, String)>, sink: &dyn Fn(Event)) {
     }
 }
 
-fn write_save(st: &mut State, prepared: &Prepared, sink: &dyn Fn(Event)) {
+fn write_save(st: &mut State, prepared: &Prepared, keep: bool, sink: &dyn Fn(Event)) {
     let Some(doc) = st.doc.as_mut() else {
         sink(Event::SaveFailed);
         return;
     };
-    match doc.save(prepared) {
+    match doc.save(prepared, keep) {
         Ok(warning) => {
             if let Some(warning) = warning {
                 sink(Event::Message(Level::Error, warning));
@@ -955,30 +959,36 @@ mod tests {
         worker.send(Request::Open(gp4));
         while !matches!(next(&rx), Event::Opened { .. }) {}
 
-        // No plugin writes .gp4: Save asks before writing song.gp.
+        // No plugin writes .gp4, and OxiGuitar picks no other format for
+        // the user: Save says so and writes nothing.
         worker.send(Request::Save(None));
-        let Event::AskSave { heading, .. } = next(&rx) else {
-            panic!("expected a question")
-        };
-        assert_eq!(heading, "Save song.gp?");
-        worker.send(Request::CancelSave);
-        worker.send(Request::ConfirmSave);
         assert!(matches!(
-            rx.recv_timeout(Duration::from_millis(300)),
-            Err(RecvTimeoutError::Timeout)
+            next(&rx),
+            Event::Message(Level::Error, s) if s.ends_with("choose a format with Save As.")
         ));
+        assert!(matches!(next(&rx), Event::SaveFailed));
         assert!(!dir.join("song.gp").exists());
 
-        worker.send(Request::Save(None));
-        assert!(matches!(next(&rx), Event::AskSave { .. }));
-        worker.send(Request::ConfirmSave);
-        assert!(matches!(next(&rx), Event::Message(Level::Info, s) if s == "Saved song.gp."));
-        let Event::Saved { name, edit, .. } = next(&rx) else {
-            panic!("expected Saved")
-        };
-        assert_eq!(name, "song.gp");
-        assert!(!edit.modified);
-        assert!(dir.join("song.gp").exists());
+        // Save As, in a format a plugin writes. A question answered with
+        // Cancel writes nothing; answered, the file is written.
+        let to = dir.join("song.gp");
+        worker.send(Request::Save(Some((to.clone(), "gp".to_owned()))));
+        loop {
+            match next(&rx) {
+                Event::AskSave { heading, .. } => {
+                    assert_eq!(heading, "Save song.gp?");
+                    worker.send(Request::ConfirmSave { keep: true });
+                }
+                Event::Message(Level::Info, s) => assert_eq!(s, "Saved song.gp."),
+                Event::Saved { name, edit, .. } => {
+                    assert_eq!(name, "song.gp");
+                    assert!(!edit.modified);
+                    break;
+                }
+                other => panic!("{other:?}"),
+            }
+        }
+        assert!(to.exists());
 
         // Now a .gp file with nothing lost: written at once.
         worker.send(Request::Save(None));
@@ -1407,7 +1417,7 @@ mod tests {
                     assert!(!edit.modified);
                     break;
                 }
-                Event::AskSave { .. } => worker.send(Request::ConfirmSave),
+                Event::AskSave { .. } => worker.send(Request::ConfirmSave { keep: false }),
                 Event::SaveFailed => panic!("the save failed"),
                 _ => {}
             }

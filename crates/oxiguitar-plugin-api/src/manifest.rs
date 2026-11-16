@@ -260,8 +260,9 @@ pub struct ToolSpec {
     /// comes after the core's entries; `Page` or `Track`, the right-click
     /// menus of the page and of a track's row; or any other name, which
     /// makes a menu of that name in the menu bar, before Help. Absent, a
-    /// tool that is no palette button is in Tools, and a palette button is
-    /// in no menu. Since interface 1.8.
+    /// tool that is no palette or toolbar button is in the Plugins menu,
+    /// the menu the plugins share, and a button is in no menu. Since
+    /// interface 1.8.
     #[serde(default)]
     pub menu: Option<String>,
     /// The tool's button in the toolbar's Plugins section, the one
@@ -319,17 +320,24 @@ fn face_problem(place: &str, symbol: Option<&str>, text: Option<&str>) -> Option
     }
 }
 
+/// Where what a plugin adds goes when its manifest names no place: the
+/// Plugins menu and the palette's Plugins section, which all plugins
+/// share and the core puts nothing of its own in (Mateus, 16 Nov 2026).
+/// A plugin may instead name a place of the core's, or one of its own.
+pub const PLUGINS_PLACE: &str = "Plugins";
+
 /// The most characters a menu's name may have.
 pub const MENU_NAME_MAX: usize = 24;
 
 impl ToolSpec {
-    /// The menu the tool is an entry of, in lower case: `tools` when the
-    /// manifest names none and the tool is no palette or toolbar button;
-    /// `None` for such a button without a menu.
+    /// The menu the tool is an entry of, in lower case: [`PLUGINS_PLACE`]'s
+    /// when the manifest names none and the tool is no palette or toolbar
+    /// button; `None` for such a button without a menu.
     pub fn menu_key(&self) -> Option<String> {
         match &self.menu {
             Some(menu) => Some(menu.trim().to_lowercase()),
-            None => (self.palette.is_none() && self.toolbar.is_none()).then(|| "tools".to_owned()),
+            None => (self.palette.is_none() && self.toolbar.is_none())
+                .then(|| PLUGINS_PLACE.to_lowercase()),
         }
     }
 }
@@ -341,7 +349,9 @@ impl ToolSpec {
 pub struct PaletteSpec {
     /// The palette group it joins, by its heading ("Effects", "Notation";
     /// letter case aside). A heading the palette doesn't have makes a
-    /// group of that name after the core's.
+    /// group of that name after the core's. Absent, the Plugins group
+    /// ([`PLUGINS_PLACE`]), which all plugins share.
+    #[serde(default = "plugins_place")]
     pub section: String,
     /// What the button shows: one symbol of the music font (SMuFL), by
     /// its code point as `U+E5E7`. Exactly one of `symbol` and `text`.
@@ -351,6 +361,10 @@ pub struct PaletteSpec {
     /// [`PALETTE_TEXT_MAX`].
     #[serde(default)]
     pub text: Option<String>,
+}
+
+fn plugins_place() -> String {
+    PLUGINS_PLACE.to_owned()
 }
 
 /// The most characters a palette button's text may have.
@@ -745,12 +759,6 @@ pub struct FormatSpec {
     /// when any signature matches.
     #[serde(default)]
     pub signatures: Vec<Signature>,
-    /// The format holds all of OxiGuitar's score that a score file can:
-    /// a file is saved in it when its own format would lose part of the
-    /// score, or no plugin writes its own. The first installed format
-    /// that says so is used. Since interface 1.8.
-    #[serde(default)]
-    pub fullest: bool,
 }
 
 /// An instrument a plugin offers the player.

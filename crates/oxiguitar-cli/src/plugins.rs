@@ -87,12 +87,23 @@ pub(crate) fn open(path: &str, data: &[u8]) -> Result<Opened, String> {
     // Pitches on strings get a string and fret, as the app does (#157).
     oxiguitar_edit::finger_pitched(&mut score);
     oxiguitar_edit::plain_spellings(&mut score);
+    // The whole score, when the user had what the format can't hold kept
+    // beside the file (FILE.oxg) and the file is still the one saved: as
+    // the app opens it, with nothing left out.
+    let mut log = read.log;
+    if let Ok(Some(sidecar)) = oxiguitar_host::sidecar::Sidecar::read_for(Path::new(path))
+        && let oxiguitar_host::sidecar::Kept::Score(kept) = sidecar.kept_score(data)
+        && let Ok(whole) = oxiguitar_model::wire::from_wire2(*kept)
+    {
+        score = whole;
+        log.clear();
+    }
     Ok(Opened {
         format: name,
         extensions,
         plugin,
         score,
-        log: read.log,
+        log,
     })
 }
 

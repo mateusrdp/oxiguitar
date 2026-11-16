@@ -15,13 +15,16 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
   - **follow the score as it plays** in an effect (`follows_score`: every beat the track plays, with its marks and the plugin's data, and the score's time with each block of sound), and say where the effect goes in a track's chain by default (`order`);
   - put **buttons in the toolbar**, in a Plugins section all plugins share (`toolbar` on a tool);
   - have **shared folders of its own name** beside `plugins`, in the user's folder, the system's and the program's (`folders` in the manifest takes any name; `Host::folder`);
-  - say which of its formats keeps the most of a score (`fullest`).
+  - be anything a file format's own plugin makes of it: OxiGuitar no longer treats one format as the fullest (see Changed).
 
   The plugin guide has a section for each (Tools, Tabs, Instruments, Formats, Interface versions); the design is in `docs/design/plugins.md`, "Interface 1.8". The SDK crates are at 1.8.0. Released plugins keep working.
 - **Wah-wah marks can be played** (#250), by the new Wah-wah plugin (`oxiguitar-wah`): it adds Closed and Open Wah-Wah to the palette, with an editor for each mark's curve (the pedal across the beat) and Q, and a wah pedal on any track that the marks rock, a Cry Baby by default. The pedal is off on beats without a mark.
 
 ### Changed
 
+- **Saving a score in a format that can't hold all of it** (Mateus, 16 Nov 2026). Save always writes the file's own format; OxiGuitar no longer saves a .gp file beside it instead, and names no format as the fullest. When the format can't hold something, the question lists what and offers **Keep Them in the .oxg File**, **Save Without Them** or Cancel. Kept, the whole score goes into the file beside the score (`song.gp5.oxg`): OxiGuitar opens it from there, with nothing lost, for as long as the score file is the one it saved; other programs see what the format holds. If another program changes the score file, OxiGuitar shows the file as it is and says so. The choice holds for later saves of that file. A file whose format no installed plugin writes (Guitar Pro 3 and 4, .gpx) asks for Save As. `oxiguitar-cli` reads a kept score the same way.
+
+- **Plugins' tools moved from the Tools menu to a Plugins menu**, between Tools and Help, unless a plugin names another menu. The palette has a Plugins section for buttons whose plugin names none, and a plugin's tab that names no area goes to the right panel.
 - **Closed and Open Wah-Wah left OxiGuitar's own palette**: the Wah-wah plugin adds them. Wah marks of a file are still read, drawn and written without it.
 - A track's effects without an order of the user's run by each effect's `order` in its manifest (pedals, then amp models, then equalizers) instead of a list of plugin ids in OxiGuitar.
 - The window tells plugins where the caret is when a score opens, not only when it first moves.

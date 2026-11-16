@@ -1489,6 +1489,8 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
     assert_eq!(
         palette,
         [
+            // No section named: the palette's Plugins section.
+            ("Plugins".to_owned(), None, Some("Lnk".to_owned())),
             ("Effects".to_owned(), None, Some("T!".to_owned())),
             ("Test tools".to_owned(), Some('\u{E4A0}'), None),
         ]
@@ -1501,7 +1503,8 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
     assert_eq!(
         menus,
         [
-            ("tools".to_owned(), "mark".to_owned()),
+            // No place named: the menu the plugins share.
+            ("plugins".to_owned(), "mark".to_owned()),
             ("tools".to_owned(), "link".to_owned()),
             ("test".to_owned(), "stamp".to_owned()),
             ("page".to_owned(), "ask".to_owned()),

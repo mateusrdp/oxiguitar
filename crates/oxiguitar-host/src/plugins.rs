@@ -1358,9 +1358,9 @@ impl Plugins {
     }
 
     /// The tools the ready plugins add to menus, in plugin order, each with
-    /// its menu ([`ToolSpec::menu_key`]: `tools` unless its manifest names
-    /// another, interface 1.8). Palette buttons without a menu are left
-    /// out ([`Plugins::palette_tools`]).
+    /// its menu ([`ToolSpec::menu_key`]: the Plugins menu unless its
+    /// manifest names another, interface 1.8). Palette and toolbar buttons
+    /// without a menu are left out ([`Plugins::palette_tools`]).
     pub fn menu_tools(&self) -> Vec<(String, ToolRef<'_>)> {
         self.tools()
             .into_iter()
@@ -1369,7 +1369,8 @@ impl Plugins {
                 let menu = if newer {
                     t.spec.menu_key()?
                 } else {
-                    "tools".to_owned()
+                    // A plugin built before interface 1.8 names no place.
+                    crate::api::manifest::PLUGINS_PLACE.to_lowercase()
                 };
                 Some((menu, t))
             })

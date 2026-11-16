@@ -292,9 +292,9 @@ struct App {
 /// What the question over the window asks.
 #[derive(Clone, Debug, PartialEq)]
 enum Asked {
-    /// Write the file despite what it loses, or under another name? With
-    /// `elsewhere`, the buttons are Save, Save As… and Cancel.
-    Save { elsewhere: bool },
+    /// Write the file despite what it loses? With `can_keep`, the buttons
+    /// are Keep Them in the .oxg File, Save Without Them and Cancel.
+    Save { can_keep: bool },
     /// Save the changes before going on to this?
     Unsaved(Then),
     /// Apply this edit, which leaves notes out?
@@ -776,7 +776,12 @@ fn main() -> Result<(), slint::PlatformError> {
             id: palette::plugin_tool_id(&plugin, &t.spec.id).into(),
             title: t.spec.name.as_str().into(),
         };
-        let own = t.spec.menu.as_deref().unwrap_or_default().trim();
+        // Without a menu of its own choosing, the one the plugins share.
+        let own = t
+            .spec
+            .menu
+            .as_deref()
+            .map_or(oxiguitar_host::api::manifest::PLUGINS_PLACE, str::trim);
         menus.add(&menu, own, item);
     }
     PLUGIN_TOOLS.with(|t| *t.borrow_mut() = tools_menu);
@@ -2632,14 +2637,14 @@ fn handle(app: &Shared, event: Event) {
         Event::AskSave {
             heading,
             lines,
-            elsewhere,
+            can_keep,
         } => {
-            let buttons: &[&str] = if elsewhere {
-                &["Save", "Save As…", "Cancel"]
+            let buttons: &[&str] = if can_keep {
+                &["Keep Them in the .oxg File", "Save Without Them", "Cancel"]
             } else {
                 &["Save", "Cancel"]
             };
-            ask(app, Asked::Save { elsewhere }, &heading, &lines, buttons);
+            ask(app, Asked::Save { can_keep }, &heading, &lines, buttons);
         }
         Event::Saved {
             name,
@@ -5109,12 +5114,14 @@ fn question_answered(app: &Shared, i: i32) {
         return;
     };
     match (asked, i) {
-        (Asked::Save { .. }, 0) => app.borrow().worker.send(Request::ConfirmSave),
-        (Asked::Save { elsewhere: true }, 1) => {
-            // What waits on the save keeps waiting, for the file chosen.
-            app.borrow().worker.send(Request::CancelSave);
-            save_as_dialog(app);
-        }
+        (Asked::Save { can_keep }, 0) => app
+            .borrow()
+            .worker
+            .send(Request::ConfirmSave { keep: can_keep }),
+        (Asked::Save { can_keep: true }, 1) => app
+            .borrow()
+            .worker
+            .send(Request::ConfirmSave { keep: false }),
         (Asked::Save { .. }, _) => {
             let mut s = app.borrow_mut();
             s.after_save = None;
@@ -5131,8 +5138,8 @@ fn question_answered(app: &Shared, i: i32) {
     }
 }
 
-/// File → Save: the file the score came from, in its own format unless
-/// that loses part of the score (the worker asks then).
+/// File → Save: the file the score came from, in its own format (the
+/// worker asks first when that loses part of the score).
 fn save(app: &Shared) {
     // A new score has no file yet: Save asks for a name, as Save As.
     if app.borrow().untitled {
@@ -5143,7 +5150,7 @@ fn save(app: &Shared) {
 }
 
 /// File → Save As…: any name, in a format the plugins write, chosen by the
-/// name's extension (Guitar Pro 7–8's .gp when it has none).
+/// name's extension (the first listed when it has none).
 fn save_as_dialog(app: &Shared) {
     if let Some(problem) = no_dialogs() {
         app.borrow_mut().after_save = None;
@@ -5177,9 +5184,15 @@ fn save_as_dialog(app: &Shared) {
         );
         return;
     }
-    // The fullest format first, as the default.
+    // The score's own format first, as the default: the one its file's
+    // extension names.
+    let own = app.borrow().doc_name.as_deref().and_then(|n| {
+        std::path::Path::new(n)
+            .extension()
+            .map(|e| e.to_string_lossy().to_lowercase())
+    });
     let mut formats = formats;
-    formats.sort_by_key(|f| !f.fullest);
+    formats.sort_by_key(|f| !own.as_ref().is_some_and(|e| f.extensions.contains(e)));
     let pick = move || {
         let first = formats.first().and_then(|f| f.extensions.first()).cloned();
         let mut dialog = rfd::FileDialog::new()

@@ -94,7 +94,7 @@ OxiGuitar refuses a manifest that breaks these, and Tools → Plugins names the 
 - extensions are lowercase and without the dot (`"gp5"`, not `".GP5"`);
 - tabs and events need interface 1.1;
 - a toolbar button, a folder of the plugin's own name (1 to 24 lowercase letters, digits and single hyphens; not `plugins`, `data` or `cache`),
-- a palette button, a menu, a dialog, `follows_score`, `order` and `fullest` need interface 1.8, and a palette button has a symbol or a text of at most 5 characters.
+- a palette button, a menu, a dialog, `follows_score` and `order` need interface 1.8, and a palette button has a symbol or a text of at most 5 characters.
 
 `cargo test` also checks what only the code can tell:
 
