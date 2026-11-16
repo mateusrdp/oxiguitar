@@ -194,6 +194,94 @@ fn the_manifest_is_read_without_loading_and_the_code_on_first_use() {
     assert!(heard.0.lock().unwrap().is_empty());
 }
 
+/// Run by `a_crash_in_a_plugin_names_the_plugin` in a process of its own:
+/// installs crash reports into `OXIGUITAR_CRASH_DIR` and has the test
+/// plugin crash as `OXIGUITAR_CRASH_HOW` says.
+#[test]
+#[ignore = "crashes on purpose; run by a_crash_in_a_plugin_names_the_plugin"]
+fn crashing_child() {
+    let (Ok(dir), Ok(how)) = (
+        std::env::var("OXIGUITAR_CRASH_DIR"),
+        std::env::var("OXIGUITAR_CRASH_HOW"),
+    ) else {
+        return;
+    };
+    let plugins_dir = Path::new(&dir).join("plugins");
+    oxiguitar_host::crash::install(Path::new(&dir), "OxiGuitar test").unwrap();
+    let (plugins, _) = discover(
+        std::slice::from_ref(&plugins_dir),
+        SharedSettings::default(),
+    );
+    let _ = plugins.call_service("test-echo", &how, b"");
+    unreachable!("the plugin crashes");
+}
+
+#[test]
+fn a_crash_in_a_plugin_names_the_plugin() {
+    for how in ["crash", "crash-thread"] {
+        let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("contract-{how}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("plugins")).unwrap();
+        std::fs::copy(test_oxp(), dir.join("plugins/test.oxp")).unwrap();
+        let out = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["crashing_child", "--exact", "--ignored", "--nocapture"])
+            .env("OXIGUITAR_CRASH_DIR", &dir)
+            .env("OXIGUITAR_CRASH_HOW", how)
+            .output()
+            .unwrap();
+        assert!(
+            !out.status.success(),
+            "{how}: the child should have crashed"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            assert_eq!(
+                out.status.signal(),
+                Some(libc::SIGSEGV),
+                "{how}: {:?}",
+                out.status
+            );
+        }
+        let report = oxiguitar_host::crash::last(&dir).unwrap_or_else(|| {
+            panic!(
+                "{how}: no report; stderr: {}",
+                String::from_utf8_lossy(&out.stderr)
+            )
+        });
+        assert!(
+            report
+                .text
+                .starts_with("OxiGuitar test crashed: invalid memory access"),
+            "{}",
+            report.text
+        );
+        // The same lines on the standard error.
+        assert!(String::from_utf8_lossy(&out.stderr).contains("OxiGuitar test crashed"));
+        // On the thread it was called on, the plugin is named everywhere;
+        // on a thread of its own, where its code is known (Linux).
+        let named = how == "crash" || cfg!(target_os = "linux");
+        if named {
+            let plugin = report.plugin.clone().unwrap_or_default();
+            assert!(
+                plugin.starts_with("oxiguitar.test "),
+                "{how}: {}",
+                report.text
+            );
+            assert!(plugin.contains("test.oxp"), "{how}: {}", report.text);
+        }
+        if cfg!(target_os = "linux") {
+            assert!(
+                report
+                    .text
+                    .contains("in the code of the plugin oxiguitar.test"),
+                "{}",
+                report.text
+            );
+        }
+    }
+}
+
 #[test]
 fn services_are_chosen_by_conditions_priority_probe_and_settings() {
     let dir = folder("services", &["test.oxp"]);

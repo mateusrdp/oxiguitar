@@ -269,6 +269,16 @@ As built in slice 3: `crates/oxiguitar-app/src/manager.rs` (the rows and the `di
 - The existing gates stay: the speed budget now includes reading the manifests and loading the format plugin (target: the 300-bar file still opens in under a second, and start-up with 30 plugins installed costs under 10 ms of manifest reading); visual references must not change when the readers move into plugins; NET-5 runs with our plugins installed.
 - CI path filters build and test only the plugins a pull request touches, plus the contract suite.
 
+## Crashes
+
+A plugin runs in OxiGuitar's process and may crash it (Mateus, 16 Nov 2026: acceptable and fair, as long as the user can tell which plugin it was and has something useful to send). `oxiguitar-host/src/crash.rs`:
+
+- Every call into a plugin library (its initialisers and start, each request, each render and process call, `allocations`) marks the calling thread with the plugin (`Slot::running`, a thread-local, put back when the call returns, so nested calls unwind right).
+- On Linux each plugin's loaded segments are noted (`dl_iterate_phdr`), so a crash in a plugin's code is named on any thread, its own threads included, with the offset in its file for `addr2line`.
+- `install` (the app's start, in `begin`) sets a handler for SIGSEGV, SIGBUS, SIGILL, SIGFPE and SIGABRT (Linux, macOS; `SA_ONSTACK`) or the unhandled-exception filter (Windows). The handler writes `crash/last-crash.txt` in the data folder and the same lines to stderr, without allocating (descriptions prepared at load in tables of atomics, the text put together in static space, since the alternate signal stack is too small for a 4 KB buffer in a debug build), then puts the previous action back and lets the crash go on (Rust's stack-overflow message included).
+- `last` reads the report at the next start, renames it `crash-SECONDS.txt`, and the window shows it as the core's advice (`Report::advice`), with the plugin's homepage as a link.
+- The contract suite crashes the test plugin in a child process, on the calling thread and on a thread of its own, and checks the report.
+
 ## Privacy and trust
 
 NET-1 to NET-5 cover the core and our plugins. A native plugin can do anything the user can, so the README and the manual say plainly that the promises cover only the app and the plugins we publish (NET-4). The app itself makes no distinction between our plugins and others' (Mateus, 18 Oct 2026). Our plugins download only when the user asks, through the core's consent dialog.

@@ -277,6 +277,19 @@ pub enum State {
 }
 
 impl Found {
+    /// How a crash report names the plugin: id, version, file and the
+    /// homepage its users report problems to.
+    fn crash_name(&self) -> String {
+        let file = self.path.display();
+        match &self.manifest {
+            Some(m) if !m.homepage.is_empty() => {
+                format!("{} {} ({file}; {})", m.id, m.version, m.homepage)
+            }
+            Some(m) => format!("{} {} ({file})", m.id, m.version),
+            None => format!("({file})"),
+        }
+    }
+
     /// The plugin's name, or its file's name if the manifest is unreadable.
     pub fn name(&self) -> String {
         match &self.manifest {
@@ -1985,8 +1998,13 @@ impl Plugins {
                 }
                 let result = found.loaded.get_or_init(|| {
                     STARTING.with(|s| s.borrow_mut().push(index));
-                    let result =
-                        loader::load(&found.path, &found.manifest_bytes, self.host_calls(index));
+                    let crash = crate::crash::register(found.crash_name());
+                    let result = loader::load(
+                        &found.path,
+                        &found.manifest_bytes,
+                        self.host_calls(index),
+                        crash,
+                    );
                     STARTING.with(|s| s.borrow_mut().retain(|&i| i != index));
                     result
                 });

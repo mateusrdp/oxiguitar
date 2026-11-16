@@ -47,6 +47,8 @@ pub(crate) struct Loaded {
     call: unsafe extern "C" fn(request: RawBytes, answer: *mut RawSink) -> Status,
     /// Its real-time functions (interface 1.3), if it has any.
     realtime: Option<&'static RealtimeTableV1>,
+    /// How a crash report names it.
+    crash: crate::crash::Slot,
 }
 
 // SAFETY: the tables are never written once the plugin returned them, and
@@ -67,7 +69,17 @@ const ENTRY: &[u8] = b"oxiguitar_plugin_v1\0";
 /// Loading runs the library's own initialisation code, and from then on the
 /// plugin can do anything the user can: a plugin file is trusted like the
 /// program itself (docs/design/plugins.md, "Privacy and trust").
-pub(crate) fn load(path: &Path, manifest: &[u8], host: Box<HostCalls>) -> Result<Loaded, String> {
+///
+/// `crash` is how a crash report names the plugin (`crate::crash`): every
+/// call into the library marks the calling thread with it.
+pub(crate) fn load(
+    path: &Path,
+    manifest: &[u8],
+    host: Box<HostCalls>,
+    crash: crate::crash::Slot,
+) -> Result<Loaded, String> {
+    // Its initialisers run as it loads: a crash there names it too.
+    let running = crash.running();
     // SAFETY: loading a library runs its initialisers, which Rust can't
     // check. The plugin folders hold code the user installed and trusts
     // like OxiGuitar itself (NET-4); nothing on our side can make this
@@ -77,6 +89,7 @@ pub(crate) fn load(path: &Path, manifest: &[u8], host: Box<HostCalls>) -> Result
     // Never unloaded: the library lives until the process ends, and with it
     // every pointer into it.
     let library: &'static libloading::Library = Box::leak(Box::new(library));
+    crash.loaded(path);
     // SAFETY: the interface gives the entry symbol the type `EntryV1`. A
     // library exporting this name with another type breaks the interface;
     // nothing can detect that from outside. The symbol stays valid because
@@ -173,11 +186,13 @@ pub(crate) fn load(path: &Path, manifest: &[u8], host: Box<HostCalls>) -> Result
     // interface requires; `sink` and `answer` live until after the call and
     // nothing else touches them meanwhile.
     let status = unsafe { (table.start)(host_table, &raw mut sink) };
+    drop(running);
     oxiguitar_plugin_api::message::outcome(status, &answer)
         .map_err(|e| format!("it didn't start: {}", e.message))?;
     Ok(Loaded {
         call: table.call,
         realtime,
+        crash,
     })
 }
 
@@ -190,11 +205,13 @@ impl Loaded {
             ctx: (&raw mut answer).cast(),
             write: collect,
         };
+        let running = self.crash.running();
         // SAFETY: the table's `call` is valid for the rest of the process
         // (`load`). `request`, `sink` and `answer` live until after the
         // call returns and nothing else touches `answer` meanwhile; the
         // plugin may be called from any thread (the interface's contract).
         let status = unsafe { (self.call)(RawBytes::of(request), &raw mut sink) };
+        drop(running);
         (status, answer)
     }
 
@@ -213,6 +230,7 @@ impl Loaded {
         let Some(rt) = self.realtime else {
             return Status::FAILED;
         };
+        let _running = self.crash.running();
         // SAFETY: the plugin's `render` is valid for the rest of the
         // process (`load`). `call` and what it points to are valid for the
         // call, and `instance` is used as the interface requires (this
@@ -227,6 +245,7 @@ impl Loaded {
         let Some(rt) = self.realtime else {
             return Status::FAILED;
         };
+        let _running = self.crash.running();
         // SAFETY: as in `render`.
         unsafe { (rt.process)(instance, call) }
     }
@@ -237,6 +256,7 @@ impl Loaded {
         let Some(rt) = self.realtime else {
             return u64::MAX;
         };
+        let _running = self.crash.running();
         // SAFETY: the plugin's `allocations` is valid for the rest of the
         // process and takes nothing.
         unsafe { (rt.allocations)() }

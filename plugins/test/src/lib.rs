@@ -637,6 +637,15 @@ impl Service for TestPlugin {
     fn call(&self, method: &str, input: &[u8]) -> Result<Vec<u8>, Error> {
         match method {
             "echo" => Ok(input.to_vec()),
+            // Crashes OxiGuitar, as a plugin with a bug would: in its code
+            // on the calling thread, or on a thread of its own. For the
+            // contract suite's test of crash reports, run in a process of
+            // its own.
+            "crash" => crash(),
+            "crash-thread" => {
+                let _ = std::thread::spawn(crash).join();
+                Ok(Vec::new())
+            }
             "notify" => {
                 self.host
                     .notify(Level::Info, String::from_utf8_lossy(input).into_owned());
@@ -884,6 +893,16 @@ impl Tab for Side {
 }
 
 oxiguitar_plugin::export_plugin!(TestPlugin);
+
+/// Writes where no program may: the crash a plugin's bug would be.
+#[allow(unsafe_code)]
+fn crash() -> ! {
+    let nowhere = std::ptr::without_provenance_mut::<u8>(8);
+    // SAFETY: none: this is the crash, on purpose (`crash` and
+    // `crash-thread`, for the contract suite).
+    unsafe { nowhere.write_volatile(1) };
+    unreachable!("the write above crashes")
+}
 
 #[cfg(test)]
 mod tests {

@@ -3678,6 +3678,7 @@ dependencies = [
 name = "oxiguitar-host"
 version = "0.19.2"
 dependencies = [
+ "libc",
  "libloading",
  "object",
  "oxiguitar-plugin-api",
