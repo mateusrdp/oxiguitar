@@ -34,7 +34,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 - **Closed and Open Wah-Wah left OxiGuitar's own palette**: the Wah-wah plugin adds them. Wah marks of a file are still read, drawn and written without it.
 - A track's effects without an order of the user's run by each effect's `order` in its manifest (pedals, then amp models, then equalizers) instead of a list of plugin ids in OxiGuitar.
 - The window tells plugins where the caret is when a score opens, not only when it first moves.
-- **Finding the plugins at start no longer reads each plugin file's symbol table**: a Linux plugin's manifest is found from the file's headers alone. A folder of plugins that aren't stripped (a contributor's debug builds, megabytes of symbols each) is read about five times faster; released plugins, which are stripped, read as before.
+- **Finding the plugins at start no longer reads each plugin file's symbol table**: a Linux or macOS plugin's manifest is found from the file's headers alone. A folder of plugins that aren't stripped (a contributor's debug builds, megabytes of symbols each) is read about five times faster; released plugins, which are stripped, read as before.
 - The advice shown when no plugin opens files, plays or sends sound out names no particular plugin; it points at the page of official plugins.
 
 ## [0.19.2] - 2026-11-15
