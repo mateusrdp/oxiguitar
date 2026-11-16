@@ -24,13 +24,15 @@
 //! by plugin id (#152; absent for the default order, and ignored by an
 //! older OxiGuitar), and `"chords": true` when its chord diagrams are
 //! played (#151). `"chords_from": N` when chords from another track are
-//! shown above this track (#268; absent for none). `"beats"` lists what
-//! plugins keep on the track's beats (plugin interface 1.8), which no
-//! score format holds either: `{ "at": [staff, bar, voice, beat],
-//! "plugins": { "oxiguitar.wah": { … } }, "marks": { "me.plugin": "sim." }
-//! }`, counted from 0, `plugins` their data and `marks` what they draw at
-//! the beat; an entry
-//! whose beat is no longer there is ignored. When the
+//! shown above this track (#268; absent for none). `"kept"` lists what
+//! plugins keep in the track (plugin interface 1.8), which no score format
+//! holds either: `{ "at": [staff, bar, voice, beat], "plugins": {
+//! "oxiguitar.wah": { … } }, "marks": { "me.plugin": "sim." } }`, counted
+//! from 0, `plugins` their data and `marks` what they draw at a beat; `at`
+//! is `[staff, bar]` for a staff's bar and `[staff, bar, voice, beat,
+//! note]` for a note. At the top, `"plugins"` is what plugins keep on the
+//! score and `"bars"` what they keep on bars of every track (`"at":
+//! [bar]`). An entry whose place is no longer there is ignored. When the
 //! score was changed elsewhere (tracks added, removed or moved in another
 //! program), a track takes the entry at its own place if the names agree,
 //! else the first unused entry of its name, else none.
@@ -78,33 +80,37 @@ pub struct TrackEntry {
     /// Index of another track whose chord diagrams to show above this
     /// track; `None` for none.
     pub chords_from: Option<usize>,
-    /// What plugins keep on the track's beats (plugin interface 1.8).
-    pub beats: Vec<BeatEntry>,
+    /// What plugins keep on the track's bars, beats and notes (plugin
+    /// interface 1.8).
+    pub kept: Vec<KeptEntry>,
 }
 
-/// What plugins keep on one beat, as kept beside the score.
+/// What plugins keep at one place, as kept beside the score.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BeatEntry {
-    /// The beat: staff, bar, voice and beat, counted from 0.
-    pub at: [usize; 4],
+pub struct KeptEntry {
+    /// The place, counted from 0: `[bar]` for a bar of every track (in the
+    /// sidecar's `bars`); in a track's `kept`, `[staff, bar]` for a staff's
+    /// bar, `[staff, bar, voice, beat]` for a beat, `[staff, bar, voice,
+    /// beat, note]` for a note.
+    pub at: Vec<usize>,
     /// Each plugin's data, by its id: a JSON object as text.
     pub plugins: BTreeMap<String, String>,
     /// Each plugin's mark drawn at the beat, by its id.
     pub marks: BTreeMap<String, String>,
 }
 
-impl BeatEntry {
+impl KeptEntry {
     /// The entry of a JSON value; `None` for anything else than one, or
     /// one that keeps nothing.
-    fn parse(v: &Value) -> Option<BeatEntry> {
-        let mut at = [0usize; 4];
+    fn parse(v: &Value) -> Option<KeptEntry> {
         let given = v.get("at")?.as_array()?;
-        if given.len() != at.len() {
+        if given.is_empty() || given.len() > 5 {
             return None;
         }
-        for (to, from) in at.iter_mut().zip(given) {
-            *to = usize::try_from(from.as_u64()?).ok()?;
-        }
+        let at = given
+            .iter()
+            .map(|n| usize::try_from(n.as_u64()?).ok())
+            .collect::<Option<Vec<usize>>>()?;
         let object = |key: &str| v.get(key).and_then(Value::as_object);
         let plugins: BTreeMap<String, String> = object("plugins")
             .into_iter()
@@ -117,7 +123,7 @@ impl BeatEntry {
             .flatten()
             .filter_map(|(id, text)| Some((id.clone(), text.as_str()?.to_owned())))
             .collect();
-        (!plugins.is_empty() || !marks.is_empty()).then_some(BeatEntry { at, plugins, marks })
+        (!plugins.is_empty() || !marks.is_empty()).then_some(KeptEntry { at, plugins, marks })
     }
 
     /// The entry as JSON; `None` when no plugin's data is a JSON object.
@@ -146,6 +152,40 @@ impl BeatEntry {
     }
 }
 
+/// A list of kept places in the sidecar's JSON.
+fn kept_list(v: Option<&Value>) -> Vec<KeptEntry> {
+    match v {
+        Some(Value::Array(list)) => list.iter().filter_map(KeptEntry::parse).collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// Plugins' data by id, from a JSON object of objects.
+fn plugin_map(v: Option<&Value>) -> BTreeMap<String, String> {
+    match v {
+        Some(Value::Object(p)) => p
+            .iter()
+            .filter(|(_, v)| v.is_object())
+            .map(|(id, v)| (id.clone(), v.to_string()))
+            .collect(),
+        _ => BTreeMap::new(),
+    }
+}
+
+/// Plugins' data by id, as a JSON object of objects (data that isn't a
+/// JSON object is left out).
+fn plugin_values(plugins: &BTreeMap<String, String>) -> Map<String, Value> {
+    plugins
+        .iter()
+        .filter_map(|(id, json)| {
+            serde_json::from_str::<Value>(json)
+                .ok()
+                .filter(Value::is_object)
+                .map(|v| (id.clone(), v))
+        })
+        .collect()
+}
+
 /// What a sidecar holds.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Sidecar {
@@ -158,6 +198,11 @@ pub struct Sidecar {
     /// The whole score, kept because the file's format can't hold all of
     /// it.
     pub score: Option<KeptScore>,
+    /// What plugins keep on the score itself, by plugin id (interface 1.8).
+    pub plugins: BTreeMap<String, String>,
+    /// What plugins keep on bars, for every track (interface 1.8): each
+    /// entry's `at` is `[bar]`.
+    pub bars: Vec<KeptEntry>,
 }
 
 /// The whole score in a sidecar, and the score file it belongs to.
@@ -216,8 +261,10 @@ impl Sidecar {
                 && t.effects.is_empty()
                 && !t.chords
                 && t.chords_from.is_none()
-                && t.beats.is_empty()
+                && t.kept.is_empty()
         }) && self.score.is_none()
+            && self.plugins.is_empty()
+            && self.bars.is_empty()
             && self.bar_colors.iter().all(Option::is_none)
             && self
                 .track_bar_colors
@@ -338,18 +385,15 @@ impl Sidecar {
                         .get("chords_from")
                         .and_then(Value::as_u64)
                         .map(|v| v as usize),
-                    beats: match t.get("beats") {
-                        Some(Value::Array(beats)) => {
-                            beats.iter().filter_map(BeatEntry::parse).collect()
-                        }
-                        _ => Vec::new(),
-                    },
+                    kept: kept_list(t.get("kept")),
                 }
             })
             .collect();
         let mut sidecar = Sidecar {
             tracks,
             score,
+            plugins: plugin_map(top.get("plugins")),
+            bars: kept_list(top.get("bars")),
             ..Default::default()
         };
         if let Some(Value::Array(arr)) = top.get("bar_colors") {
@@ -408,14 +452,22 @@ impl Sidecar {
                 if let Some(idx) = t.chords_from {
                     entry["chords_from"] = serde_json::json!(idx);
                 }
-                let beats: Vec<Value> = t.beats.iter().filter_map(BeatEntry::to_value).collect();
-                if !beats.is_empty() {
-                    entry["beats"] = Value::Array(beats);
+                let kept: Vec<Value> = t.kept.iter().filter_map(KeptEntry::to_value).collect();
+                if !kept.is_empty() {
+                    entry["kept"] = Value::Array(kept);
                 }
                 entry
             })
             .collect();
         let mut doc = serde_json::json!({ "oxiguitar": VERSION, "tracks": tracks });
+        let plugins = plugin_values(&self.plugins);
+        if !plugins.is_empty() {
+            doc["plugins"] = Value::Object(plugins);
+        }
+        let bars: Vec<Value> = self.bars.iter().filter_map(KeptEntry::to_value).collect();
+        if !bars.is_empty() {
+            doc["bars"] = Value::Array(bars);
+        }
         if !self.bar_colors.iter().all(Option::is_none) {
             let arr: Vec<Value> = self
                 .bar_colors
@@ -524,7 +576,7 @@ mod tests {
             effects: Vec::new(),
             chords: false,
             chords_from: None,
-            beats: Vec::new(),
+            kept: Vec::new(),
         }
     }
 
@@ -563,31 +615,58 @@ mod tests {
     }
 
     #[test]
-    fn what_plugins_keep_on_beats_is_kept_and_read_back() {
-        let beat = BeatEntry {
-            at: [0, 3, 1, 2],
+    fn what_plugins_keep_anywhere_is_kept_and_read_back() {
+        let entry = |at: &[usize], marks: bool| KeptEntry {
+            at: at.to_vec(),
             plugins: [("me.pedal".to_owned(), r#"{"q":6.5}"#.to_owned())].into(),
-            marks: [("me.pedal".to_owned(), "wah".to_owned())].into(),
+            marks: if marks {
+                [("me.pedal".to_owned(), "wah".to_owned())].into()
+            } else {
+                BTreeMap::new()
+            },
         };
         let sidecar = Sidecar {
             tracks: vec![TrackEntry {
                 name: "Lead".into(),
-                beats: vec![beat],
+                // A staff's bar, a beat with a mark, a note.
+                kept: vec![
+                    entry(&[0, 3], false),
+                    entry(&[0, 3, 1, 2], true),
+                    entry(&[0, 3, 1, 2, 4], false),
+                ],
                 ..Default::default()
             }],
+            plugins: [("me.song".to_owned(), r#"{"key":"A"}"#.to_owned())].into(),
+            bars: vec![entry(&[7], false)],
             ..Default::default()
         };
         assert!(!sidecar.is_empty());
-        assert_eq!(Sidecar::parse(&sidecar.to_text()).unwrap(), sidecar);
+        let text = sidecar.to_text();
+        assert_eq!(Sidecar::parse(&text).unwrap(), sidecar, "{text}");
+        // Each alone keeps the file from being empty.
+        for only in [
+            Sidecar {
+                plugins: sidecar.plugins.clone(),
+                ..Default::default()
+            },
+            Sidecar {
+                bars: sidecar.bars.clone(),
+                ..Default::default()
+            },
+        ] {
+            assert!(!only.is_empty());
+        }
         // An entry that isn't one, or keeps nothing, is left out; the rest
         // of the file is read.
         let odd = r#"{"oxiguitar":1,"tracks":[{"name":"Lead","plugins":{},
-            "beats":[{"at":[0,1],"plugins":{"a.b":{}}},
+            "kept":[{"at":[],"plugins":{"a.b":{}}},
+                     {"at":[0,0,0,0,0,0],"plugins":{"a.b":{}}},
                      {"at":[0,0,0,0],"plugins":{"a.b":7}},
+                     {"at":[0,"x"],"plugins":{"a.b":{}}},
                      {"at":[0,0,0,1],"plugins":{"a.b":{"x":1}}}]}]}"#;
         let read = Sidecar::parse(odd).unwrap();
-        assert_eq!(read.tracks[0].beats.len(), 1);
-        assert_eq!(read.tracks[0].beats[0].at, [0, 0, 0, 1]);
+        assert_eq!(read.tracks[0].kept.len(), 1);
+        assert_eq!(read.tracks[0].kept[0].at, [0, 0, 0, 1]);
     }
 
     #[test]
@@ -782,6 +861,8 @@ mod tests {
     fn bar_colours_round_trip() {
         let s = Sidecar {
             score: None,
+            plugins: BTreeMap::new(),
+            bars: Vec::new(),
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![
                 None,
@@ -797,6 +878,8 @@ mod tests {
         // All-null should be omitted from output (is_empty-like).
         let empty_colors = Sidecar {
             score: None,
+            plugins: BTreeMap::new(),
+            bars: Vec::new(),
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None, None],
             track_bar_colors: BTreeMap::new(),
@@ -814,6 +897,8 @@ mod tests {
         );
         let s = Sidecar {
             score: None,
+            plugins: BTreeMap::new(),
+            bars: Vec::new(),
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None, None], // all-null → omitted from output
             track_bar_colors: track_colors,
@@ -830,6 +915,8 @@ mod tests {
     fn is_empty_considers_colours() {
         let empty = Sidecar {
             score: None,
+            plugins: BTreeMap::new(),
+            bars: Vec::new(),
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None, None],
             track_bar_colors: BTreeMap::new(),
@@ -837,6 +924,8 @@ mod tests {
         assert!(empty.is_empty());
         let with_colour = Sidecar {
             score: None,
+            plugins: BTreeMap::new(),
+            bars: Vec::new(),
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None, Some(serde_json::json!({"r": 1, "g": 2, "b": 3}))],
             track_bar_colors: BTreeMap::new(),
@@ -844,6 +933,8 @@ mod tests {
         assert!(!with_colour.is_empty());
         let with_track_colour = Sidecar {
             score: None,
+            plugins: BTreeMap::new(),
+            bars: Vec::new(),
             tracks: vec![entry("Lead", &[])],
             bar_colors: vec![None],
             track_bar_colors: {

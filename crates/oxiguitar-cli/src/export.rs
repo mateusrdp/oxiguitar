@@ -114,28 +114,10 @@ fn export_file(asked: &Asked) -> Result<(), String> {
 
     let data = std::fs::read(&asked.path).map_err(|e| format!("cannot open: {e}"))?;
     let mut score = open(&asked.path, &data)?.score;
-    // The tracks' plugin settings (NAM's amp, say) live beside the file.
-    if let Some(mut sidecar) = oxiguitar_host::sidecar::Sidecar::read_for(Path::new(&asked.path))? {
-        sidecar.adopt(&plugins.replaced_ids());
-        let names: Vec<&str> = score.tracks.iter().map(|t| t.name.as_str()).collect();
-        let settled = sidecar.settle(&names);
-        for (track, entry) in score.tracks.iter_mut().zip(settled) {
-            track.plugins = entry.plugins;
-            track.effects = entry.effects;
-            track.play_chords = entry.chords;
-            // What plugins keep on beats (interface 1.8), for the effects
-            // that follow the score.
-            for beat in entry.beats {
-                track.set_beat_plugins(
-                    beat.at,
-                    oxiguitar_model::BeatKept {
-                        plugins: beat.plugins,
-                        marks: beat.marks,
-                    },
-                );
-            }
-        }
-    }
+    // What the file beside it keeps: the tracks' plugin settings (NAM's
+    // amp, say) and what plugins keep in the score, for the effects that
+    // follow it.
+    crate::plugins::apply_sidecar(&asked.path, &mut score)?;
     let timeline = Timeline::new(&score);
     let mut plan = Plan::whole(&score);
     if let Some((a, b)) = asked.bars {

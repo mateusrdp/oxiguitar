@@ -125,3 +125,41 @@ pub(crate) fn level_word(level: PluginLevel) -> &'static str {
         PluginLevel::Error => "error",
     }
 }
+
+/// Gives `score` what the file beside `path` keeps (FILE.oxg): the tracks'
+/// plugin settings and effect order, played chords, and what plugins keep
+/// on the score, its bars, beats and notes (interface 1.8), as the window
+/// reads them. The error is a sentence.
+pub(crate) fn apply_sidecar(path: &str, score: &mut Score) -> Result<(), String> {
+    let Some(mut sidecar) = oxiguitar_host::sidecar::Sidecar::read_for(Path::new(path))? else {
+        return Ok(());
+    };
+    sidecar.adopt(&plugins().replaced_ids());
+    let names: Vec<String> = score.tracks.iter().map(|t| t.name.clone()).collect();
+    let names: Vec<&str> = names.iter().map(String::as_str).collect();
+    for (track, entry) in score.tracks.iter_mut().zip(sidecar.settle(&names)) {
+        track.plugins = entry.plugins;
+        track.effects = entry.effects;
+        track.play_chords = entry.chords;
+        for kept in entry.kept {
+            track.keep(
+                &kept.at,
+                oxiguitar_model::Kept {
+                    plugins: kept.plugins,
+                    marks: kept.marks,
+                },
+            );
+        }
+    }
+    if !sidecar.plugins.is_empty() {
+        score.plugins = sidecar.plugins;
+    }
+    for kept in sidecar.bars {
+        if let [bar] = kept.at[..]
+            && let Some(m) = score.master_bars.get_mut(bar)
+        {
+            m.plugins = kept.plugins;
+        }
+    }
+    Ok(())
+}

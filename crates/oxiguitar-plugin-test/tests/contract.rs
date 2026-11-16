@@ -1579,8 +1579,9 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
     let ours = |e: &BeatExt| matches!(e, BeatExt::Plugin { plugin, data } if plugin == "oxiguitar.test" && data == r#"{"stamped":true}"#);
     // The core's score carries it with the beat.
     let score = oxiguitar_model::wire::from_wire2(stamped.clone()).unwrap();
-    let kept: Vec<_> = score.tracks[0].beat_plugins();
+    let kept: Vec<_> = score.tracks[0].kept();
     assert_eq!(kept.len(), 1);
+    assert_eq!(kept[0].0.len(), 4, "on a beat");
     assert_eq!(
         kept[0].1.plugins.get("oxiguitar.test").map(String::as_str),
         Some(r#"{"stamped":true}"#)

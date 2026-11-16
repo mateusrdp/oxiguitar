@@ -55,12 +55,22 @@ pub enum ScoreExt {
     /// Bars per system on the page when several tracks are shown, from the
     /// first system on (Design Mode). Since 1.6.
     Layout(Vec<u8>),
+    /// A plugin's own data on the score, under its id (a JSON object as text),
+    /// as on a beat ([`BeatExt::Plugin`]): kept beside the score, never
+    /// sent to format plugins. One a plugin. Since 1.8.
+    Plugin {
+        /// The plugin's id.
+        plugin: String,
+        /// Its data, a JSON object as text.
+        data: String,
+    },
 }
 
 impl Since for ScoreExt {
     fn since(&self) -> u32 {
         match self {
             ScoreExt::Layout(_) => 6,
+            ScoreExt::Plugin { .. } => 8,
         }
     }
 }
@@ -69,6 +79,7 @@ impl Named for ScoreExt {
     fn what(&self) -> &'static str {
         match self {
             ScoreExt::Layout(_) => "the bars set for each system",
+            ScoreExt::Plugin { .. } => "plugins' data on the score",
         }
     }
 }
@@ -81,6 +92,15 @@ pub enum MasterBarExt {
     FreeTime,
     /// A fermata, holding every track at its moment in the bar. Since 1.6.
     Fermata(Fermata),
+    /// A plugin's own data on the bar, for every track, under its id (a JSON object as text),
+    /// as on a beat ([`BeatExt::Plugin`]): kept beside the score, never
+    /// sent to format plugins. One a plugin. Since 1.8.
+    Plugin {
+        /// The plugin's id.
+        plugin: String,
+        /// Its data, a JSON object as text.
+        data: String,
+    },
 }
 
 impl Since for MasterBarExt {
@@ -88,6 +108,7 @@ impl Since for MasterBarExt {
         match self {
             MasterBarExt::FreeTime => 2,
             MasterBarExt::Fermata(_) => 6,
+            MasterBarExt::Plugin { .. } => 8,
         }
     }
 }
@@ -97,6 +118,7 @@ impl Named for MasterBarExt {
         match self {
             MasterBarExt::FreeTime => "free time",
             MasterBarExt::Fermata(_) => "fermatas",
+            MasterBarExt::Plugin { .. } => "plugins' data on bars",
         }
     }
 }
@@ -179,12 +201,22 @@ pub enum BarExt {
     /// A simile sign drawn in place of the bar's music, which is a copy of
     /// the bar or bars it repeats. Since 1.6.
     Simile(Simile),
+    /// A plugin's own data on one staff's bar, under its id (a JSON object as text),
+    /// as on a beat ([`BeatExt::Plugin`]): kept beside the score, never
+    /// sent to format plugins. One a plugin. Since 1.8.
+    Plugin {
+        /// The plugin's id.
+        plugin: String,
+        /// Its data, a JSON object as text.
+        data: String,
+    },
 }
 
 impl Since for BarExt {
     fn since(&self) -> u32 {
         match self {
             BarExt::Simile(_) => 6,
+            BarExt::Plugin { .. } => 8,
         }
     }
 }
@@ -193,6 +225,7 @@ impl Named for BarExt {
     fn what(&self) -> &'static str {
         match self {
             BarExt::Simile(_) => "repeat (simile) signs",
+            BarExt::Plugin { .. } => "plugins' data on a staff's bars",
         }
     }
 }
@@ -432,11 +465,23 @@ pub enum NoteExt {
         /// Semitones from the step's natural, -2 to 2.
         alter: i8,
     },
+    /// A plugin's own data on the note, under its id (a JSON object as text),
+    /// as on a beat ([`BeatExt::Plugin`]): kept beside the score, never
+    /// sent to format plugins. One a plugin. Since 1.8.
+    Plugin {
+        /// The plugin's id.
+        plugin: String,
+        /// Its data, a JSON object as text.
+        data: String,
+    },
 }
 
 impl Since for NoteExt {
     fn since(&self) -> u32 {
-        6
+        match self {
+            NoteExt::Plugin { .. } => 8,
+            _ => 6,
+        }
     }
 }
 
@@ -447,6 +492,7 @@ impl Named for NoteExt {
             NoteExt::Ornament(_) => "ornaments",
             NoteExt::StringNumber => "string numbers",
             NoteExt::Spelling { .. } => "chosen spellings",
+            NoteExt::Plugin { .. } => "plugins' data on notes",
         }
     }
 }
@@ -901,19 +947,27 @@ impl Score2 {
         out
     }
 
-    /// Leaves out what plugins keep on beats ([`BeatExt::Plugin`],
-    /// [`BeatExt::Mark`]): for a
-    /// score on its way to a format plugin, which never gets it (it is
-    /// saved beside the score, so it is no loss either).
+    /// Leaves out what plugins keep on the score, its bars, beats and
+    /// notes (the `Plugin` extensions, and [`BeatExt::Mark`]): for a score
+    /// on its way to a format plugin, which never gets it (it is saved
+    /// beside the score, so it is no loss either).
     pub fn drop_plugin_data(&mut self) {
+        self.ext.retain(|e| !matches!(e, ScoreExt::Plugin { .. }));
+        for m in &mut self.master_bars {
+            m.ext.retain(|e| !matches!(e, MasterBarExt::Plugin { .. }));
+        }
         for t in &mut self.tracks {
             for s in &mut t.staves {
                 for b in &mut s.bars {
+                    b.ext.retain(|e| !matches!(e, BarExt::Plugin { .. }));
                     for v in &mut b.voices {
                         for beat in &mut v.beats {
                             beat.ext.retain(|e| {
                                 !matches!(e, BeatExt::Plugin { .. } | BeatExt::Mark { .. })
                             });
+                            for n in &mut beat.notes {
+                                n.ext.retain(|e| !matches!(e, NoteExt::Plugin { .. }));
+                            }
                         }
                     }
                 }

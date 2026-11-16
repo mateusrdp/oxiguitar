@@ -14,7 +14,7 @@ use oxiguitar_display::{DisplayList, FontSet, Theme};
 use oxiguitar_edit::{BarCheck, Caret, Command, History, Region, Selection};
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::message::{Level as LogLevel, LogEntry};
-use oxiguitar_host::sidecar::{BeatEntry, Kept, KeptScore, Sidecar, TrackEntry};
+use oxiguitar_host::sidecar::{Kept, KeptEntry, KeptScore, Sidecar, TrackEntry};
 use oxiguitar_layout::{Engraved, Hits, Layout, Notation, Options, Paper, engrave};
 use oxiguitar_model::{Mix, Score};
 use oxiguitar_tools::Availability;
@@ -381,16 +381,27 @@ impl Document {
                     track.effects = entry.effects;
                     track.play_chords = entry.chords;
                     track.chords_from = entry.chords_from.unwrap_or(usize::MAX);
-                    // What plugins keep on beats; a beat no longer there
-                    // takes nothing.
-                    for beat in entry.beats {
-                        track.set_beat_plugins(
-                            beat.at,
-                            oxiguitar_model::BeatKept {
-                                plugins: beat.plugins,
-                                marks: beat.marks,
+                    // What plugins keep on bars, beats and notes; a place
+                    // no longer there takes nothing.
+                    for kept in entry.kept {
+                        track.keep(
+                            &kept.at,
+                            oxiguitar_model::Kept {
+                                plugins: kept.plugins,
+                                marks: kept.marks,
                             },
                         );
+                    }
+                }
+                // What plugins keep on the score and on bars of every track.
+                if !sidecar.plugins.is_empty() {
+                    score.plugins = std::mem::take(&mut sidecar.plugins);
+                }
+                for kept in std::mem::take(&mut sidecar.bars) {
+                    if let [bar] = kept.at[..]
+                        && let Some(m) = score.master_bars.get_mut(bar)
+                    {
+                        m.plugins = kept.plugins;
                     }
                 }
                 // Convert track_bar_colors from sidecar format (track name →
@@ -891,10 +902,10 @@ impl Document {
                     } else {
                         Some(t.chords_from)
                     },
-                    beats: t
-                        .beat_plugins()
+                    kept: t
+                        .kept()
                         .into_iter()
-                        .map(|(at, kept)| BeatEntry {
+                        .map(|(at, kept)| KeptEntry {
                             at,
                             plugins: kept.plugins,
                             marks: kept.marks,
@@ -905,6 +916,19 @@ impl Document {
             bar_colors,
             track_bar_colors,
             score: prepared.whole.clone().filter(|_| keep),
+            plugins: self.score.plugins.clone(),
+            bars: self
+                .score
+                .master_bars
+                .iter()
+                .enumerate()
+                .filter(|(_, m)| !m.plugins.is_empty())
+                .map(|(i, m)| KeptEntry {
+                    at: vec![i],
+                    plugins: m.plugins.clone(),
+                    marks: Default::default(),
+                })
+                .collect(),
         };
         self.keeps_whole = sidecar.score.is_some();
         let kept = sidecar.write_for(&prepared.path);
@@ -1254,6 +1278,33 @@ mod tests {
         let again = open(&path).unwrap();
         assert_eq!(again.score, doc.score);
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn what_plugins_keep_anywhere_is_saved_beside_the_file_and_read_back() {
+        let dir = scratch("save-plugin-data");
+        let path = dir.join("song.gp");
+        std::fs::copy(fixture("gp"), &path).unwrap();
+        let mut doc = open(&path).unwrap();
+        {
+            let s = Arc::make_mut(&mut doc.score);
+            let data = |n: u8| format!(r#"{{"n":{n}}}"#);
+            s.plugins.insert("me.song".into(), data(1));
+            s.master_bars[1].plugins.insert("me.bars".into(), data(2));
+            let bar = &mut s.tracks[0].staves[0].bars[1];
+            bar.plugins.insert("me.bar".into(), data(3));
+            let beat = &mut bar.voices[0].beats[0];
+            beat.plugins.insert("me.beat".into(), data(4));
+            beat.effects.marks.insert("me.beat".into(), "x".into());
+            beat.notes[0].plugins.insert("me.note".into(), data(5));
+        }
+        // No format holds it, and none is lost: Save doesn't ask.
+        let prepared = doc.prepare_save(crate::test_plugins(), None).unwrap();
+        assert!(!prepared.ask(), "{prepared:?}");
+        doc.save(&prepared, false).unwrap();
+        let again = open(&path).unwrap();
+        assert_eq!(again.score, doc.score);
+        assert!(!again.keeps_whole);
     }
 
     #[test]

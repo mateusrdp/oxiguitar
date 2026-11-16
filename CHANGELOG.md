@@ -11,7 +11,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
   - put **entries in any menu**: File, Edit, View, Tools, Help, the right-click menus of the page and of a track, or a menu of its own between Tools and Help (`menu`);
   - open **dialogs**, tabs whose area is `dialog`, with the same widgets and canvas as a tab and OxiGuitar's OK and Cancel (`Host::open_dialog`, `Tab::closed`), and bring one of its tabs to the front (`Host::show_tab`);
   - ask for the **selection** as it is now (`Host::selection`) and read the **engraved page**: every page's drawing and where each beat is on it (`Host::engraving`);
-  - keep **its own data and marks on beats** (`BeatExt::Plugin`, `BeatExt::Mark`): they follow the beat through every edit, the marks are engraved over the beat, and both are saved in the `.oxg` file beside the score, since no score format holds them;
+  - keep **its own data on the score, a bar, a staff's bar, a beat or a note**, and **marks on beats** (`BeatExt::Plugin`, `BeatExt::Mark`): they follow the beat through every edit, the marks are engraved over the beat, and both are saved in the `.oxg` file beside the score, since no score format holds them;
   - **follow the score as it plays** in an effect (`follows_score`: every beat the track plays, with its marks and the plugin's data, and the score's time with each block of sound), and say where the effect goes in a track's chain by default (`order`);
   - put **buttons in the toolbar**, in a Plugins section all plugins share (`toolbar` on a tool);
   - have **shared folders of its own name** beside `plugins`, in the user's folder, the system's and the program's (`folders` in the manifest takes any name; `Host::folder`);

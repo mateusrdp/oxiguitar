@@ -60,14 +60,23 @@ and `None` when no score is open. Everything counts from 0 but the string.
 
 A tool that only needs the selection when it runs asks for it instead (interface 1.8): `host.selection()` answers with the same `Selection2` as it is now, and the plugin needs no `selection` event. The events are for what follows the caret as it moves.
 
-## Your own data and marks on beats
+## Your own data, and marks on beats
 
-Since interface 1.8 a beat's extensions hold what a plugin keeps there:
+Since interface 1.8 a plugin can keep data of its own anywhere in the score: on the score itself, a bar (of every track), one staff's bar, a beat or a note. Each is an extension of that level, a JSON object as text under your plugin's id, one a plugin and place:
 
-- `BeatExt::Plugin { plugin, data }`: your data on that beat, a JSON object as text, under your plugin's id. One a plugin and beat.
+| Where | Extension |
+| --- | --- |
+| The score | `ScoreExt::Plugin { plugin, data }` |
+| A bar, for every track | `MasterBarExt::Plugin { plugin, data }` |
+| One staff's bar | `BarExt::Plugin { plugin, data }` |
+| A beat | `BeatExt::Plugin { plugin, data }` |
+| A note | `NoteExt::Plugin { plugin, data }` |
+
+A beat can also carry a mark:
+
 - `BeatExt::Mark { plugin, text }`: a few characters (at most 16) that the engraver sets over the beat, with the playing techniques, in the text font. One a plugin and beat.
 
-Put them on your copy of the score and hand it back with `host.apply`; take them off the same way. They travel with the beat when the user copies, cuts or moves it, and undo takes them back. No score format holds them, so OxiGuitar saves them in the file it keeps beside the score (`song.gp.oxg`) and never sends them to a format plugin, nor names them as a loss. Leave other plugins' entries as they are. An effect of yours that follows the score gets each beat's with the beat ([Instruments](instruments.md#following-the-score)).
+Put them on your copy of the score and hand it back with `host.apply`; take them off the same way. They travel with their place when the user copies, cuts or moves it, and undo takes them back; a bar the user clears keeps its own data, and bars made anew (an inserted bar, re-barring) start with none. Every plugin reads every note's pitch, string, fret, value and marks from the same score; the data is only for what OxiGuitar has no field for. No score format holds them, so OxiGuitar saves them in the file it keeps beside the score (`song.gp.oxg`) and never sends them to a format plugin, nor names them as a loss. Leave other plugins' entries as they are. An effect of yours that follows the score gets each beat's with the beat ([Instruments](instruments.md#following-the-score)).
 
 ## Reading the engraved page
 

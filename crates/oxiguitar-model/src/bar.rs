@@ -17,6 +17,11 @@ pub struct Bar {
     /// A simile (repeat) sign drawn in place of the bar's music, which is a
     /// copy of the bar or bars it repeats (docs/design/palette.md).
     pub simile: Option<Simile>,
+    /// What plugins keep on it, by plugin id: a JSON object as text each,
+    /// opaque to the core (plugin interface 1.8). It goes where the bar goes
+    /// (edits, copies, undo) and is saved beside the score (`FILE.oxg`),
+    /// since no score format holds it.
+    pub plugins: std::collections::BTreeMap<String, String>,
 }
 
 impl Default for Bar {
@@ -25,6 +30,7 @@ impl Default for Bar {
             clef: Clef::Treble8vb,
             voices: vec![Voice::default()],
             simile: None,
+            plugins: BTreeMap::new(),
         }
     }
 }

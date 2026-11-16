@@ -54,6 +54,11 @@ pub struct Note {
     /// only while it spells the note's written pitch ([`Spelling::spells`]:
     /// the sounding pitch plus the staff's transposition).
     pub spelling: Option<Spelling>,
+    /// What plugins keep on it, by plugin id: a JSON object as text each,
+    /// opaque to the core (plugin interface 1.8). It goes where the note goes
+    /// (edits, copies, undo) and is saved beside the score (`FILE.oxg`),
+    /// since no score format holds it.
+    pub plugins: std::collections::BTreeMap<String, String>,
 }
 
 /// A note's name on the staff, as written: a step and an alteration.
@@ -158,6 +163,7 @@ impl Note {
             dynamic: Dynamic::default(),
             effects: NoteEffects::default(),
             spelling: None,
+            plugins: std::collections::BTreeMap::new(),
         }
     }
 

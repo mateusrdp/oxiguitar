@@ -220,35 +220,64 @@ pub struct LyricLine {
     pub text: String,
 }
 
-/// What plugins keep on one beat, by plugin id: their data
-/// ([`Beat::plugins`](crate::Beat)) and the marks they draw there
-/// ([`BeatEffects::marks`](crate::BeatEffects)).
+/// What plugins keep at one place of a track, by plugin id: their data
+/// (`plugins` on a staff's bar, a beat or a note) and, on a beat, the marks
+/// they draw there ([`BeatEffects::marks`](crate::BeatEffects)).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BeatKept {
+pub struct Kept {
     /// Each plugin's data, a JSON object as text.
     pub plugins: BTreeMap<String, String>,
-    /// Each plugin's mark.
+    /// Each plugin's mark (beats only).
     pub marks: BTreeMap<String, String>,
 }
 
+impl Kept {
+    /// Whether nothing is kept.
+    pub fn is_empty(&self) -> bool {
+        self.plugins.is_empty() && self.marks.is_empty()
+    }
+}
+
 impl Track {
-    /// What plugins keep on this track's beats (plugin interface 1.8),
-    /// each with its beat's place: staff, bar, voice and beat. What the
-    /// file beside the score keeps, since no score format holds it.
-    pub fn beat_plugins(&self) -> Vec<([usize; 4], BeatKept)> {
+    /// What plugins keep in this track (plugin interface 1.8), each with
+    /// its place: `[staff, bar]` for a staff's bar, `[staff, bar, voice,
+    /// beat]` for a beat, `[staff, bar, voice, beat, note]` for a note,
+    /// counted from 0. What the file beside the score keeps, since no score
+    /// format holds it.
+    pub fn kept(&self) -> Vec<(Vec<usize>, Kept)> {
         let mut out = Vec::new();
         for (si, staff) in self.staves.iter().enumerate() {
             for (bi, bar) in staff.bars.iter().enumerate() {
+                if !bar.plugins.is_empty() {
+                    out.push((
+                        vec![si, bi],
+                        Kept {
+                            plugins: bar.plugins.clone(),
+                            marks: BTreeMap::new(),
+                        },
+                    ));
+                }
                 for (vi, voice) in bar.voices.iter().enumerate() {
                     for (ei, beat) in voice.beats.iter().enumerate() {
                         if !beat.plugins.is_empty() || !beat.effects.marks.is_empty() {
                             out.push((
-                                [si, bi, vi, ei],
-                                BeatKept {
+                                vec![si, bi, vi, ei],
+                                Kept {
                                     plugins: beat.plugins.clone(),
                                     marks: beat.effects.marks.clone(),
                                 },
                             ));
+                        }
+                        for (ni, note) in beat.notes.iter().enumerate() {
+                            if !note.plugins.is_empty() {
+                                out.push((
+                                    vec![si, bi, vi, ei, ni],
+                                    Kept {
+                                        plugins: note.plugins.clone(),
+                                        marks: BTreeMap::new(),
+                                    },
+                                ));
+                            }
                         }
                     }
                 }
@@ -257,24 +286,42 @@ impl Track {
         out
     }
 
-    /// Gives the beat at `at` (staff, bar, voice, beat) what plugins kept
-    /// on it. False, and nothing changes, when there is no such beat (the
-    /// score was changed elsewhere since it was kept).
-    pub fn set_beat_plugins(&mut self, at: [usize; 4], kept: BeatKept) -> bool {
-        let [staff, bar, voice, beat] = at;
-        let beat = self
-            .staves
-            .get_mut(staff)
-            .and_then(|s| s.bars.get_mut(bar))
-            .and_then(|b| b.voices.get_mut(voice))
-            .and_then(|v| v.beats.get_mut(beat));
-        match beat {
-            Some(b) => {
-                b.plugins = kept.plugins;
-                b.effects.marks = kept.marks;
+    /// Gives the place `at` ([`Track::kept`]'s) what plugins kept there.
+    /// False, and nothing changes, when there is no such place (the score
+    /// was changed elsewhere since) or `at` has another length. Marks are
+    /// only kept on beats.
+    pub fn keep(&mut self, at: &[usize], kept: Kept) -> bool {
+        let (Some(&staff), Some(&bar)) = (at.first(), at.get(1)) else {
+            return false;
+        };
+        let Some(bar) = self.staves.get_mut(staff).and_then(|s| s.bars.get_mut(bar)) else {
+            return false;
+        };
+        if at.len() == 2 {
+            bar.plugins = kept.plugins;
+            return true;
+        }
+        let Some(beat) = at
+            .get(2)
+            .and_then(|&v| bar.voices.get_mut(v))
+            .and_then(|v| v.beats.get_mut(*at.get(3)?))
+        else {
+            return false;
+        };
+        match at.len() {
+            4 => {
+                beat.plugins = kept.plugins;
+                beat.effects.marks = kept.marks;
                 true
             }
-            None => false,
+            5 => match beat.notes.get_mut(at[4]) {
+                Some(note) => {
+                    note.plugins = kept.plugins;
+                    true
+                }
+                None => false,
+            },
+            _ => false,
         }
     }
 }
