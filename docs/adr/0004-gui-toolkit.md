@@ -1,6 +1,6 @@
 # 0004 — GUI toolkit: Slint
 
-- Status: accepted (Mateus merged the M0 pull request, #5, on 16 October 2026); pinned to Slint 1.17.1 from 19 Oct 2026 ([ADR 0009](0009-wayland-first.md)); since 17 Nov 2026 the app follows the latest Slint release, 1.19.0 ([ADR 0011](0011-no-dead-platform-code.md))
+- Status: accepted (Mateus merged the M0 pull request, #5, on 16 October 2026); pinned to Slint 1.17.1 from 19 Oct 2026 ([ADR 0009](0009-wayland-first.md)); since 17 Nov 2026 the app follows the latest Slint release, 1.19.0 ([ADR 0011](0011-no-environment-checks.md))
 - Date: 2026-10-15
 - Milestone: M0
 

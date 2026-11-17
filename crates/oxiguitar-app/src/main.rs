@@ -27,9 +27,13 @@
 
 #![windows_subsystem = "windows"]
 
-// The windowing backend comes from one of these features (Cargo.toml).
+// The windowing backend comes from one of these features (Cargo.toml), and
+// only one: each build knows its display system when it is built, and never
+// looks at the session to choose (ADR 0011).
 #[cfg(not(any(feature = "wayland", feature = "x11")))]
 compile_error!("build oxiguitar-app with the `wayland` feature (the default) or `x11`");
+#[cfg(all(feature = "wayland", feature = "x11"))]
+compile_error!("build oxiguitar-app with one of the `wayland` and `x11` features, not both");
 
 mod advice;
 mod audio_export;
@@ -489,26 +493,22 @@ fn plugin_withdrawn(app: &Shared, id: &str) {
 }
 
 /// The display system this build draws with, as plugins' conditions name
-/// it. Each Linux build has its own (docs/design/plugins.md); a build with
-/// both features, for development, follows the host's rule.
-fn display_system() -> &'static str {
-    let linux = cfg!(not(any(target_os = "windows", target_vendor = "apple")));
-    match (linux, cfg!(feature = "wayland"), cfg!(feature = "x11")) {
-        (true, true, false) => "wayland",
-        (true, false, true) => "x11",
-        _ => oxiguitar_host::display_system(),
-    }
-}
+/// it: fixed when building (ADR 0011). Each Linux build has its own
+/// (docs/design/plugins.md).
+pub(crate) const DISPLAY_SYSTEM: &str = if cfg!(target_os = "windows") {
+    "windows"
+} else if cfg!(target_vendor = "apple") {
+    "macos"
+} else if cfg!(feature = "wayland") {
+    "wayland"
+} else {
+    "x11"
+};
 
 /// What to tell someone whose session this build can't draw in: the
 /// Wayland build without a Wayland compositor, the X11 build without an X
-/// server. `None` for builds that try both, and outside Linux.
+/// server. `None` outside Linux.
 fn wrong_build_hint(display: &str) -> Option<&'static str> {
-    if !cfg!(not(any(target_os = "windows", target_vendor = "apple")))
-        || (cfg!(feature = "wayland") && cfg!(feature = "x11"))
-    {
-        return None;
-    }
     match display {
         "wayland" => Some(
             "This is OxiGuitar's Wayland build, and it found no Wayland session (is WAYLAND_DISPLAY set?). On an X11 desktop, install the X11 build instead (the package oxiguitar-x11), or use the AppImage, which holds both builds.",
@@ -527,7 +527,7 @@ fn main() -> Result<(), slint::PlatformError> {
         .backend_name("winit".into())
         .select()
     {
-        if let Some(hint) = wrong_build_hint(display_system()) {
+        if let Some(hint) = wrong_build_hint(DISPLAY_SYSTEM) {
             eprintln!("{hint}");
         }
         return Err(e);
@@ -553,9 +553,9 @@ fn main() -> Result<(), slint::PlatformError> {
         open: open_score.clone(),
     });
     let startup = if args.safe_mode {
-        oxiguitar_host::start_in_safe_mode(oxiguitar_host::Folders::here(), display_system(), core)
+        oxiguitar_host::start_in_safe_mode(oxiguitar_host::Folders::here(), DISPLAY_SYSTEM, core)
     } else {
-        oxiguitar_host::start(oxiguitar_host::Folders::here(), display_system(), core)
+        oxiguitar_host::start(oxiguitar_host::Folders::here(), DISPLAY_SYSTEM, core)
     };
     let open_extensions = startup.plugins.read_extensions();
     let save_formats = SaveFormat::writable(&startup.plugins);
@@ -5871,23 +5871,23 @@ mod tests {
     }
 
     #[test]
-    fn each_linux_build_names_its_own_display_system() {
-        let linux = cfg!(not(any(target_os = "windows", target_vendor = "apple")));
-        let one = cfg!(feature = "wayland") != cfg!(feature = "x11");
-        if linux && one {
-            let own = if cfg!(feature = "wayland") {
-                "wayland"
-            } else {
-                "x11"
-            };
-            assert_eq!(display_system(), own);
-            assert!(wrong_build_hint(own).unwrap().contains(&format!(
+    fn each_build_names_its_own_display_system() {
+        let own = if cfg!(target_os = "windows") {
+            "windows"
+        } else if cfg!(target_vendor = "apple") {
+            "macos"
+        } else if cfg!(feature = "wayland") {
+            "wayland"
+        } else {
+            "x11"
+        };
+        assert_eq!(DISPLAY_SYSTEM, own);
+        match own {
+            "wayland" | "x11" => assert!(wrong_build_hint(own).unwrap().contains(&format!(
                 "OxiGuitar's {} build",
                 if own == "x11" { "X11" } else { "Wayland" }
-            )));
-        } else {
-            assert_eq!(display_system(), oxiguitar_host::display_system());
-            assert!(wrong_build_hint("wayland").is_none());
+            ))),
+            _ => assert!(wrong_build_hint(own).is_none()),
         }
     }
 

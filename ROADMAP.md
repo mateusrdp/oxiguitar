@@ -138,7 +138,7 @@ Each slice is one or more pull requests into develop, with the same gates as M1.
    - Interface additions only at the ends of enums and tables, as minor versions.
    - Gates: the contract suite covers tabs, widgets, canvas and events; the manager works on all three systems (headless on Linux; contract tests everywhere; Mateus on sid); every existing gate stays green; no new `unsafe`; no polling.
 4. **Two Linux builds.** Built in session 11 (18 Oct 2026). Slint's `unstable-winit-030` turns on both display systems, so the app takes `i-slint-backend-winit` directly; Wayland first (Mateus, 19 Oct 2026; ADR 0009). Slint was pinned to 1.17.1 until 17 Nov 2026, when ADR 0011 left libraries' contents to them and the app moved to Slint 1.19.0 (#271).
-   - `oxiguitar-app` features `wayland` (default) and `x11`, each enabling only Slint's `backend-winit-wayland` or `backend-winit-x11`; `display_system()` then follows the build.
+   - `oxiguitar-app` features `wayland` (default) and `x11`, each enabling only Slint's `backend-winit-wayland` or `backend-winit-x11`; the display system plugins are checked against then follows the build (`DISPLAY_SYSTEM`, fixed when building since ADR 0011).
    - Packages `oxiguitar` and `oxiguitar-x11` (which Provides, Conflicts with and Replaces `oxiguitar`), and two AppImages; the manual says the X11 build will be dropped.
    - CI checks that each build turns on only its own windowing backend (ADR 0011), and runs the Wayland build's headless tests in the nested compositor (`scripts/wayland-dnd-test/`).
 5. **Packages and Debian.** Done (#59–#63, 19 Oct 2026).

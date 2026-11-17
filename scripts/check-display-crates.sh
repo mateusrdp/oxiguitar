@@ -5,8 +5,10 @@
 # The two Linux builds (docs/design/plugins.md; ADR 0011): each turns on its
 # own windowing backend in Slint and winit, and not the other one, on every
 # Linux target we ship. This checks our choice of features only: what the
-# libraries carry inside is theirs (ADR 0011). Reads `cargo tree`; builds
-# nothing.
+# libraries carry inside is theirs (ADR 0011). And our own Rust code never
+# looks at the session to choose a display system: no string literal naming
+# a session variable (WAYLAND_DISPLAY and the like) in a tracked .rs file.
+# Reads `cargo tree` and the sources; builds nothing.
 #
 # Usage: scripts/check-display-crates.sh
 
@@ -46,5 +48,16 @@ for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
     check "$target" X11 x11 wayland "--no-default-features --features x11"
     [[ "$failed" -eq 0 ]] && echo "check-display-crates: $target: each build turns on its own backend only"
 done
+
+# The session's variables, which only libraries and launchers may read.
+session='"(WAYLAND_DISPLAY|WAYLAND_SOCKET|DISPLAY|XDG_SESSION_TYPE|XDG_CURRENT_DESKTOP|DESKTOP_SESSION)"'
+if found="$(git ls-files -z '*.rs' | xargs -0 grep -nE "$session")"; then
+    while IFS= read -r hit; do
+        echo "::error file=${hit%%:*},title=No session checks::our code looks at the session to choose a display system (ADR 0011): ${hit#*:}"
+    done <<< "$found"
+    failed=1
+else
+    echo "check-display-crates: no session checks in our Rust code"
+fi
 
 exit "$failed"

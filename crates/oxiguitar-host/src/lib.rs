@@ -65,26 +65,17 @@ pub struct Startup {
     pub advice: Vec<advice::Asked>,
 }
 
-/// The display system this program draws with, as plugins' conditions name
-/// it: `windows`, `macos`, or on Linux `wayland` or `x11`. Until the two
-/// Linux builds (docs/design/plugins.md) each fix their own, Linux follows
-/// the windowing library's rule: Wayland when `WAYLAND_DISPLAY` is set.
-pub fn display_system() -> &'static str {
-    if cfg!(target_os = "windows") {
-        "windows"
-    } else if cfg!(target_vendor = "apple") {
-        "macos"
-    } else if std::env::var_os("WAYLAND_DISPLAY").is_some_and(|d| !d.is_empty()) {
-        "wayland"
-    } else {
-        "x11"
-    }
-}
+/// The display system of a program that draws nothing (the CLI, tests), as
+/// it tells the host. A plugin whose conditions name display systems is not
+/// used by such a program. The core never looks at the session to find its
+/// display system (ADR 0011): the app says the one its build draws with.
+pub const NO_DISPLAY: &str = "none";
 
 /// Starts the host for the app: makes sure the user folder, its plugin
 /// folder and settings.json exist (creating what is missing), reads the
 /// settings and every plugin's manifest, and loads no plugin. `display`
-/// is [`display_system`]'s answer, and `core` answers plugins later (it
+/// is the display system the app's build draws with (`wayland`, `x11`,
+/// `windows`, `macos`), and `core` answers plugins later (it
 /// shows their messages and tabs, and hands them the open score).
 pub fn start(folders: Option<Folders>, display: &str, core: Arc<dyn Core>) -> Startup {
     begin(folders, display, core, true, false)

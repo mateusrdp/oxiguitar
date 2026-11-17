@@ -220,7 +220,7 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
     let plugins = Plugins::discover(
         std::slice::from_ref(&folder),
         SharedSettings::default(),
-        oxiguitar_host::display_system(),
+        oxiguitar_host::NO_DISPLAY,
         kept.clone(),
     );
     report.manifest_time = started.elapsed();

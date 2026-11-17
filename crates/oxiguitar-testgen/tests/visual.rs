@@ -63,7 +63,7 @@ fn plugins() -> &'static Plugins {
         Plugins::discover(
             &[folder],
             SharedSettings::default(),
-            oxiguitar_host::display_system(),
+            oxiguitar_host::NO_DISPLAY,
             Arc::new(Unheard),
         )
     })

@@ -43,7 +43,7 @@ pub(crate) fn plugins() -> &'static Plugins {
     PLUGINS.get_or_init(|| {
         let found = oxiguitar_host::find(
             oxiguitar_host::Folders::here(),
-            oxiguitar_host::display_system(),
+            oxiguitar_host::NO_DISPLAY,
             Arc::new(Stderr),
         );
         for notice in &found.notices {
