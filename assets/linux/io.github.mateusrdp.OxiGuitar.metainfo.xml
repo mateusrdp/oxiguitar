@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.21.0" date="2026-11-17" type="development">
+      <description>
+        <p>The core owns nothing of a plugin (Mateus, 17 Nov 2026; ADR 0012; oxiguitar-midi#19): a plugin shows its settings in a dialog of its own, with OK and Cancel, opened from its menu entry (the MIDI plugin's Plugins → MIDI Sound Sets…, the WAV plugin's Plugins → WAV Export Settings…, once they are ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.21.0</url>
+    </release>
     <release version="0.20.1" date="2026-11-17" type="development">
       <description>
         <p>Drum entry (docs/parity.md, gap 1; docs/design/drums.md): drum tracks can be written. On the drum staff, move the caret to a line or space and press Enter for the drum the kit puts there, or 1 to 9 for the others sharing it (snare, side stick, electric snare, hand clap; closed and open hi-hat), as ...</p>
