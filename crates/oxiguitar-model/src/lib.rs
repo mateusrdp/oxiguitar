@@ -24,6 +24,7 @@
 //! `docs/adr/0002-score-model.md` for the reasoning.
 
 mod bar;
+pub mod drums;
 mod duration;
 pub mod lyrics;
 mod note;

@@ -76,13 +76,18 @@ export component PluginManagerWindow inherits Window {
             ScrollView {
                 VerticalLayout {
                     alignment: start;
-                    if root.rows.length == 0 : Text {
-                        x: 12px;
+                    // Inset by the layout's padding, so the text keeps inside the box.
+                    if root.rows.length == 0 : HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
                         height: 40px;
-                        text: "No plugin files were found.";
-                        font-size: 12px;
-                        vertical-alignment: center;
-                        color: Palette.foreground.transparentize(0.4);
+                        Text {
+                            text: "No plugin files were found.";
+                            font-size: 12px;
+                            vertical-alignment: center;
+                            wrap: word-wrap;
+                            color: Palette.foreground.transparentize(0.4);
+                        }
                     }
                     for row[i] in root.rows : Rectangle {
                         background: Math.mod(i, 2) == 1 ? Palette.alternate-background : transparent;
@@ -207,13 +212,18 @@ export component PluginSettingsWindow inherits Window {
             ScrollView {
                 VerticalLayout {
                     alignment: start;
-                    if root.message != "" : Text {
-                        x: 12px;
+                    // Inset by the layout's padding, so the text keeps inside the box.
+                    if root.message != "" : HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
                         height: 40px;
-                        text: root.message;
-                        font-size: 12px;
-                        vertical-alignment: center;
-                        color: Palette.foreground.transparentize(0.4);
+                        Text {
+                            text: root.message;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                            wrap: word-wrap;
+                            color: Palette.foreground.transparentize(0.4);
+                        }
                     }
                     if root.message == "" : VerticalLayout {
                         alignment: start;

@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.20.1" date="2026-11-17" type="development">
+      <description>
+        <p>Drum entry (docs/parity.md, gap 1; docs/design/drums.md): drum tracks can be written. On the drum staff, move the caret to a line or space and press Enter for the drum the kit puts there, or 1 to 9 for the others sharing it (snare, side stick, electric snare, hand clap; closed and open hi-hat), as ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.20.1</url>
+    </release>
     <release version="0.20.0" date="2026-11-16" type="development">
       <description>
         <p>Plugins own their tools: plugin interface 1.8 (#293, #250). A plugin can now, with no change to OxiGuitar:</p>

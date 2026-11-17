@@ -51,15 +51,19 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxkbcommon-dev libwayland-dev libasound2-dev libpipewire-0.3-dev libclang-dev
         timeout-minutes: 15
       # Each problem also becomes an annotation on the pull request.
+      # The app takes one display feature at a time (ADR 0011): every other
+      # crate with all its features, then the app's default (Wayland) build.
       - name: Clippy
         run: |
           set -o pipefail
-          cargo clippy --workspace --all-targets --all-features --locked \
-            --message-format=short -- -D warnings 2>&1 \
+          { cargo clippy --workspace --exclude oxiguitar-app --all-targets --all-features --locked \
+              --message-format=short -- -D warnings \
+            && cargo clippy -p oxiguitar-app --all-targets --locked \
+              --message-format=short -- -D warnings; } 2>&1 \
             | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
       # The X11 build of the app (the Wayland one is the default above), and
-      # the two builds keeping apart: no X11 crate in the Wayland build, no
-      # Wayland crate in the X11 one (docs/design/plugins.md).
+      # the two builds keeping apart: each turns on only its own windowing
+      # backend (docs/design/plugins.md, ADR 0011).
       - name: Clippy, the X11 build
         run: |
           set -o pipefail
@@ -95,8 +99,10 @@ jobs:
           CARGO_TERM_COLOR: never
         run: |
           rustc --version
-          if ! cargo clippy --workspace --all-targets --all-features --locked \
-                --message-format=short -- -D warnings > clippy.log 2>&1; then
+          if ! { cargo clippy --workspace --exclude oxiguitar-app --all-targets --all-features --locked \
+                  --message-format=short -- -D warnings \
+                && cargo clippy -p oxiguitar-app --all-targets --locked \
+                  --message-format=short -- -D warnings; } > clippy.log 2>&1; then
             sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::warning file=\1,line=\2,col=\3::\5/;t;d' clippy.log
             # Anything without a file position (a crash, a lockfile problem):
             # show the end of the output as one annotation.

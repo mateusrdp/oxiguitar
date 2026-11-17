@@ -16,7 +16,7 @@ sudo apt update
 sudo apt install oxiguitar
 ```
 
-`oxiguitar` recommends `oxiguitar-guitarpro`, `oxiguitar-midi` and the audio outputs `oxiguitar-alsa` and `oxiguitar-pipewire`, so apt installs them with it (leave out recommended packages and you get the program alone), and suggests `oxiguitar-nam` for amp models, `oxiguitar-eq` for an equalizer, and `oxiguitar-musicxml`, `oxiguitar-midi-file` and `oxiguitar-tuxguitar` to open and save MusicXML, MIDI and TuxGuitar files; add any plugin by name. `sudo apt upgrade` then keeps OxiGuitar and its plugins current. The repository's key is signed into the `.gpg` file; its fingerprint is on the [repository's page](https://github.com/mateusrdp/oxiguitar-packages). A downloaded `.deb` works too, but then you install the plugins' `.deb` files yourself.
+`oxiguitar` recommends `oxiguitar-guitarpro`, `oxiguitar-midi` and the audio outputs `oxiguitar-alsa` and `oxiguitar-pipewire`, so apt installs them with it (leave out recommended packages and you get the program alone), and suggests `oxiguitar-nam` for amp models, `oxiguitar-eq` for an equalizer, `oxiguitar-wah` for a wah-wah pedal, and `oxiguitar-musicxml`, `oxiguitar-midi-file` and `oxiguitar-tuxguitar` to open and save MusicXML, MIDI and TuxGuitar files; add any plugin by name. `sudo apt upgrade` then keeps OxiGuitar and its plugins current. The repository's key is signed into the `.gpg` file; its fingerprint is on the [repository's page](https://github.com/mateusrdp/oxiguitar-packages). A downloaded `.deb` works too, but then you install the plugins' `.deb` files yourself.
 
 ## Our dnf repository (Fedora and relatives)
 
@@ -35,17 +35,18 @@ dnf installs the recommended plugins with it, and `sudo dnf upgrade` keeps them 
 
 ## Flatpak (any Linux)
 
-OxiGuitar and each plugin are also Flatpak packages, in a signed Flatpak repository of our own beside the apt and dnf ones. Add it once, then install OxiGuitar and the plugins you want:
+OxiGuitar and each plugin are also Flatpak packages, in a signed Flatpak repository of our own beside the apt and dnf ones. Add it once, with Flathub for the runtime OxiGuitar runs on, then install OxiGuitar and the plugins you want:
 
 ```sh
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak remote-add --if-not-exists oxiguitar https://mateusrdp.github.io/oxiguitar-packages/flatpak/oxiguitar.flatpakrepo
 flatpak install oxiguitar io.github.mateusrdp.OxiGuitar
 flatpak install oxiguitar io.github.mateusrdp.OxiGuitar.Plugin.guitarpro io.github.mateusrdp.OxiGuitar.Plugin.midi io.github.mateusrdp.OxiGuitar.Plugin.pipewire
 ```
 
-Opening [io.github.mateusrdp.OxiGuitar.flatpakref](https://mateusrdp.github.io/oxiguitar-packages/flatpak/io.github.mateusrdp.OxiGuitar.flatpakref) in a software centre does the first two steps in one. Flatpak takes the runtime OxiGuitar runs on (org.freedesktop.Platform) from Flathub, which it adds if you don't have it yet; everything else comes from our repository. Add `--user` to each command to install for yourself only, without an administrator's password.
+Many systems have Flathub already, and the first line then changes nothing. Flatpak takes the runtime (org.freedesktop.Platform) from Flathub and everything else from our repository; without Flathub, `flatpak install` stops with "requires the runtime org.freedesktop.Platform … which was not found". Opening [io.github.mateusrdp.OxiGuitar.flatpakref](https://mateusrdp.github.io/oxiguitar-packages/flatpak/io.github.mateusrdp.OxiGuitar.flatpakref) in a software centre, or `flatpak install --from` that address, does the first three steps in one, adding both repositories. Add `--user` to each command to install for yourself only, without an administrator's password.
 
-Each plugin is a package of its own, named `io.github.mateusrdp.OxiGuitar.Plugin.` and the plugin's short name: `guitarpro`, `midi`, `alsa`, `pipewire`, `nam`, `eq`, `wav`, `musicxml`, `midi-file`, `tuxguitar` ([The official plugins](official-plugins.md)). Nothing comes with OxiGuitar on its own: take at least `guitarpro`, `midi` and an audio output (`pipewire` on most desktops, `alsa` otherwise). GNOME Software and KDE Discover list them as OxiGuitar's add-ons. `flatpak update` keeps OxiGuitar and its plugins current, and `flatpak remove` takes a plugin away.
+Each plugin is a package of its own, named `io.github.mateusrdp.OxiGuitar.Plugin.` and the plugin's short name: `guitarpro`, `midi`, `alsa`, `pipewire`, `nam`, `eq`, `wah`, `wav`, `musicxml`, `midi-file`, `tuxguitar` ([The official plugins](official-plugins.md)). Nothing comes with OxiGuitar on its own: take at least `guitarpro`, `midi` and an audio output (`pipewire` on most desktops, `alsa` otherwise). GNOME Software and KDE Discover list them as OxiGuitar's add-ons. `flatpak update` keeps OxiGuitar and its plugins current, and `flatpak remove` takes a plugin away.
 
 The Flatpak runs in Flatpak's own sandbox: it opens and saves the files you choose in its file dialogs, and sees nothing else of your computer. So it has folders of its own, which you can always copy files into:
 

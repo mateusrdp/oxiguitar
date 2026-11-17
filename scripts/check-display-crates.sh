@@ -2,57 +2,62 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# The two Linux builds (docs/design/plugins.md): the Wayland build must hold
-# no X11 crate and the X11 build no Wayland crate, on every Linux target we
-# ship. No exceptions: Wayland comes first, and only the X11 build carries
-# X11 code (Mateus, 19 Oct 2026). Reads `cargo tree`; builds nothing.
+# The two Linux builds (docs/design/plugins.md; ADR 0011): each turns on its
+# own windowing backend in Slint and winit, and not the other one, on every
+# Linux target we ship. This checks our choice of features only: what the
+# libraries carry inside is theirs (ADR 0011). And our own Rust code never
+# looks at the session to choose a display system: no string literal naming
+# a session variable (WAYLAND_DISPLAY and the like) in a tracked .rs file.
+# Reads `cargo tree` and the sources; builds nothing.
 #
 # Usage: scripts/check-display-crates.sh
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-x11='^(x11|x11-dl|x11rb|x11rb-protocol|x11-clipboard|xcb|tiny-xlib|as-raw-xcb-connection|glutin_glx_sys|xkbcommon-x11|winit-x11|arboard)$'
-wayland='^(wayland-.*|smithay-client-toolkit|smithay-clipboard|sctk-adwaita|calloop-wayland-source|wl-clipboard-rs)$'
-
 failed=0
-crates() {
-    # The crates a build of the app compiles for a target, one name a line.
-    cargo tree --locked -q -p oxiguitar-app -e normal,build --target "$1" --prefix none $2 \
-        | sed -E 's/ v[0-9].*$//' | sort -u
+# The features a build of the app turns on in Slint's winit backend and in
+# winit, one `crate feature "name"` a line. `$2` is the build's cargo
+# options, split into words on purpose.
+features() {
+    # shellcheck disable=SC2086
+    cargo tree --locked -q -p oxiguitar-app -e normal --target "$1" --prefix none --format '{p}|{f}' $2 \
+        | awk -F'|' '$1 ~ /^(i-slint-backend-winit|winit) v/ {
+            split($1, p, " "); sub(/ \(\*\)$/, "", $2); n = split($2, f, ",")
+            for (i = 1; i <= n; i++) printf "%s feature \"%s\"\n", p[1], f[i]
+        }' | sort -u
+}
+# Fails unless the build turns on `own` and not `other` in both crates.
+check() {
+    local target="$1" build="$2" own="$3" other="$4" found
+    found="$(features "$target" "$5")"
+    for crate in i-slint-backend-winit winit; do
+        if ! grep -qxF "$crate feature \"$own\"" <<< "$found"; then
+            echo "::error title=Two Linux builds::the $build build for $target doesn't turn on $crate's $own backend"
+            failed=1
+        fi
+        if grep -qxF "$crate feature \"$other\"" <<< "$found"; then
+            echo "::error title=Two Linux builds::the $build build for $target turns on $crate's $other backend"
+            failed=1
+        fi
+    done
 }
 
 for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
-    wl_build="$(crates "$target" "")"
-    x11_build="$(crates "$target" "--no-default-features --features x11")"
-
-    bad="$(grep -E "$x11" <<< "$wl_build" || true)"
-    if [[ -n "$bad" ]]; then
-        echo "::error title=Two Linux builds::the Wayland build for $target holds X11 crates: ${bad//$'\n'/, }"
-        failed=1
-    fi
-    grep -Eq "$wayland" <<< "$wl_build" || {
-        echo "::error title=Two Linux builds::the Wayland build for $target holds no Wayland crate"
-        failed=1
-    }
-
-    # Keyboard maps are shared; their X11 part only in the X11 build.
-    if cargo tree --locked -q -p oxiguitar-app -e features --target "$target" -i xkbcommon-dl 2> /dev/null \
-        | grep -q 'xkbcommon-dl feature "x11"'; then
-        echo "::error title=Two Linux builds::the Wayland build for $target turns on xkbcommon-dl's X11 support"
-        failed=1
-    fi
-
-    bad="$(grep -E "$wayland" <<< "$x11_build" || true)"
-    if [[ -n "$bad" ]]; then
-        echo "::error title=Two Linux builds::the X11 build for $target holds Wayland crates: ${bad//$'\n'/, }"
-        failed=1
-    fi
-    grep -Eq '^(x11-dl|x11rb)$' <<< "$x11_build" || {
-        echo "::error title=Two Linux builds::the X11 build for $target holds no X11 crate"
-        failed=1
-    }
-    [[ "$failed" -eq 0 ]] && echo "check-display-crates: $target: the Wayland and X11 builds keep apart"
+    check "$target" Wayland wayland x11 ""
+    check "$target" X11 x11 wayland "--no-default-features --features x11"
+    [[ "$failed" -eq 0 ]] && echo "check-display-crates: $target: each build turns on its own backend only"
 done
+
+# The session's variables, which only libraries and launchers may read.
+session='"(WAYLAND_DISPLAY|WAYLAND_SOCKET|DISPLAY|XDG_SESSION_TYPE|XDG_CURRENT_DESKTOP|DESKTOP_SESSION)"'
+if found="$(git ls-files -z '*.rs' | xargs -0 grep -nE "$session")"; then
+    while IFS= read -r hit; do
+        echo "::error file=${hit%%:*},title=No session checks::our code looks at the session to choose a display system (ADR 0011): ${hit#*:}"
+    done <<< "$found"
+    failed=1
+else
+    echo "check-display-crates: no session checks in our Rust code"
+fi
 
 exit "$failed"

@@ -2,7 +2,8 @@
 
 - Status: accepted; the gap is permanent (Mateus, 25 Oct 2026)
 - Date: 2026-10-17
-- Note (19 Oct 2026): written against Slint 1.18; the app is now pinned to Slint 1.17.1 ([ADR 0009](0009-wayland-first.md)), on the same winit 0.30.13.
+- Note (19 Oct 2026): written against Slint 1.18; the app was then pinned to Slint 1.17.1 ([ADR 0009](0009-wayland-first.md)), on the same winit 0.30.13.
+- Note (17 Nov 2026): still true with Slint 1.19.0 ([ADR 0011](0011-no-environment-checks.md)), on winit 0.30.13: its winit backend passes no operating-system drops or open-document events on.
 - Milestone: M1
 
 ## Context

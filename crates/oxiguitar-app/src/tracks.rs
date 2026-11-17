@@ -270,11 +270,11 @@ pub(crate) fn waveform(activity: &[f32]) -> String {
     d
 }
 
-/// Each track's mixer: volume, pan, mute and solo, as the file sets them
-/// until the user changes them (Mateus, 19 Oct 2026: the mixer sits in the
-/// track rows). Nothing sounds yet: the controls are greyed out until an
-/// output plugin is installed and reach the player in M4. The file on disk
-/// is never changed.
+/// Each track's mixer: volume, pan, mute and solo, as the score holds them
+/// (Mateus, 19 Oct 2026: the mixer sits in the track rows). A move is heard
+/// at once and goes into the score as a change (`Command::Mix`), so it is
+/// saved with the file; the controls are greyed out until an output plugin
+/// is installed.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Mixer {
     mix: Vec<Mix>,
@@ -390,8 +390,10 @@ mod tests {
         tablature: true,
     };
 
+    /// A guitar, a piano and drums: all three can show tablature (drums
+    /// their kit's numbers), a voice track, the fourth, can't.
     fn guitar_piano_drums() -> Tracks {
-        Tracks::new(vec![BOTH, STD, STD], vec![true, true, false])
+        Tracks::new(vec![BOTH, STD, STD, STD], vec![true, true, true, false])
     }
 
     #[test]
@@ -454,12 +456,14 @@ mod tests {
     }
 
     #[test]
-    fn drums_have_no_tab() {
+    fn drums_have_tab_and_stringless_tracks_none() {
         let mut t = guitar_piano_drums();
-        t.toggle_standard(2);
         t.toggle_tablature(2);
-        assert!(!t.row(2).tablature);
-        assert!(t.row(2).standard);
+        assert!(t.row(2).tablature, "drum tablature");
+        t.toggle_standard(3);
+        t.toggle_tablature(3);
+        assert!(!t.row(3).tablature);
+        assert!(t.row(3).standard);
     }
 
     #[test]
@@ -471,7 +475,7 @@ mod tests {
         assert_eq!(t.shown(), vec![0, 2]);
         t.toggle_standard(1);
         assert_eq!(t.shown(), vec![0, 1, 2], "in score order");
-        assert_eq!(t.notation().len(), 3);
+        assert_eq!(t.notation().len(), 4);
     }
 
     #[test]

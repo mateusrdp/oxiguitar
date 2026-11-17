@@ -8,4 +8,4 @@ Both fonts are licensed under the SIL Open Font License 1.1 (OFL-1.1), which all
 | `bravura/Bravura.json` | Bravura's SMuFL metadata | 1.482 | same | Engraving defaults, glyph boxes and anchors |
 | `noto-sans/` | Noto Sans Regular (The Noto Project Authors) | 2.015 | [notofonts.github.io](https://github.com/notofonts/notofonts.github.io) `fonts/NotoSans/hinted/ttf/` | Text, titles and tab numbers |
 
-The files are unmodified. To update one, replace the files, update this table and the version in CREDITS.md, and run the tests: `oxiguitar-display` checks that every SMuFL glyph it names exists in both the font and the metadata.
+The files are unmodified. To update one, replace the files, update this table, and run the tests: `oxiguitar-display` checks that every SMuFL glyph it names exists in both the font and the metadata.

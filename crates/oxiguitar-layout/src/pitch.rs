@@ -174,29 +174,11 @@ impl BarAccidentals {
 }
 
 /// Where a General MIDI drum sits on a five-line percussion staff (staff
-/// step, 0 = bottom line) and whether it takes a cross notehead, following
-/// the usual drum-kit layout: kick in the bottom space, snare in the third
-/// space, toms between, cymbals and hi-hat above the staff with crosses.
+/// step, 0 = bottom line) and whether it takes a cross notehead, from the
+/// kit map the editor enters by ([`oxiguitar_model::drums`]).
 pub(crate) fn drum(p: Pitch) -> (i32, bool) {
-    match p.0 {
-        35 | 36 => (1, false),     // bass drums
-        37 => (5, true),           // side stick
-        38 | 40 => (5, false),     // snares
-        39 => (5, true),           // hand clap
-        41 => (2, false),          // low floor tom
-        43 => (3, false),          // high floor tom
-        45 | 47 => (6, false),     // low and low-mid toms
-        48 => (7, false),          // high-mid tom
-        50 => (8, false),          // high tom
-        42 => (9, true),           // closed hi-hat
-        44 => (-1, true),          // pedal hi-hat
-        46 => (9, true),           // open hi-hat
-        49 | 57 => (10, true),     // crashes
-        51 | 53 | 59 => (8, true), // rides and ride bell
-        52 | 55 => (11, true),     // china, splash
-        54 | 56 => (7, true),      // tambourine, cowbell
-        _ => (4, false),
-    }
+    let e = oxiguitar_model::drums::element(p);
+    (e.step, e.cross)
 }
 
 #[cfg(test)]

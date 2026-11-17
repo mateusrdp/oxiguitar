@@ -24,7 +24,7 @@ pub(crate) fn test_plugins() -> &'static Plugins {
         Plugins::discover(
             &[ours().to_owned()],
             SharedSettings::default(),
-            oxiguitar_host::display_system(),
+            crate::DISPLAY_SYSTEM,
             Arc::new(Unheard),
         )
     })
@@ -118,7 +118,7 @@ pub(crate) fn tab_host() -> &'static TabHost {
         let plugins = Plugins::discover(
             &[folder],
             SharedSettings::default(),
-            oxiguitar_host::display_system(),
+            crate::DISPLAY_SYSTEM,
             Arc::new(Recorder {
                 open: open.clone(),
                 redraws: Arc::clone(&redraws),

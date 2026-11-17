@@ -571,6 +571,14 @@ impl Editing {
         let caret = self.caret?;
         let score = self.score.clone()?;
         let last = self.digit.take();
+        if let Some(drum) = self.drum_typed(&score, caret, (name, shift, ctrl, alt), last, now) {
+            let command = drum?;
+            return Some(Typed {
+                command,
+                caret,
+                selection: self.selection,
+            });
+        }
         let command = match (name, ctrl, alt) {
             (d, false, false) if digit(d).is_some() => {
                 let n = digit(d)?;
@@ -632,6 +640,74 @@ impl Editing {
             caret,
             selection: self.selection,
         })
+    }
+
+    /// Drum entry (docs/design/drums.md). On a drum track with the caret on
+    /// a line or space of the staff, Enter puts that place's first kit
+    /// element on the beat and 1 to 9 its first to ninth, as Guitar Pro 8
+    /// does; Backspace and Delete take the element there away. On the drum
+    /// tablature, two digits typed one soon after the other are a General
+    /// MIDI key (3 then 8: the snare), which goes on its own line, and
+    /// Backspace and Delete take away an element of the caret's line.
+    /// `None` for every other key, which is the usual one; `Some(None)` for
+    /// one of these that does nothing (yet).
+    fn drum_typed(
+        &mut self,
+        score: &Score,
+        caret: Caret,
+        (name, shift, ctrl, alt): (&str, bool, bool, bool),
+        last: Option<(Caret, u8, Instant)>,
+        now: Instant,
+    ) -> Option<Option<Command>> {
+        let track = score.tracks.get(caret.track)?;
+        if !track.instrument.percussion || ctrl || alt {
+            return None;
+        }
+        let deleting = matches!(name, "backspace" | "delete") && !shift;
+        let Some((step, _)) = self.height else {
+            let beat = caret.voice_in(score).and_then(|v| v.beats.get(caret.beat));
+            if deleting {
+                let key = beat?.notes.iter().find_map(|n| match n.place {
+                    oxiguitar_model::NotePlace::Pitched(p)
+                        if oxiguitar_model::drums::element(p).line == caret.string =>
+                    {
+                        Some(p.0)
+                    }
+                    _ => None,
+                });
+                return Some(key.map(Command::DeleteDrum));
+            }
+            let d = digit(name)?;
+            let key = last
+                .filter(|(c, _, at)| *c == caret && now.duration_since(*at) < SECOND_DIGIT)
+                .map(|(_, first, _)| first * 10 + d)
+                .filter(|k| oxiguitar_model::drums::KEYS.contains(k));
+            if key.is_none() {
+                self.digit = Some((caret, d, now));
+            }
+            return Some(key.map(Command::Drum));
+        };
+        let here = oxiguitar_model::drums::at_step(step);
+        let nth = match name {
+            "\n" | "\r" | "enter" if !shift => Some(0),
+            d => digit(d).filter(|n| *n > 0).map(|n| usize::from(n - 1)),
+        };
+        if let Some(n) = nth {
+            return Some(here.get(n).map(|e| Command::Drum(e.key)));
+        }
+        if deleting {
+            let beat = caret.voice_in(score).and_then(|v| v.beats.get(caret.beat));
+            let key = beat?.notes.iter().find_map(|n| match n.place {
+                oxiguitar_model::NotePlace::Pitched(p)
+                    if oxiguitar_model::drums::element(p).step == step =>
+                {
+                    Some(p.0)
+                }
+                _ => None,
+            });
+            return Some(key.map(Command::DeleteDrum));
+        }
+        None
     }
 
     /// The pitch at the caret's line or space of the standard staff, in its
@@ -826,14 +902,20 @@ impl Editing {
     /// The Note tab's rows for the caret's note and beat.
     pub(crate) fn effect_fields(&self) -> Vec<crate::effect_form::Field> {
         match (self.score.as_ref(), self.caret) {
-            (Some(s), Some(c)) => crate::effect_form::fields(s, c),
+            (Some(s), Some(c)) => crate::effect_form::fields(s, c, self.height.map(|h| h.0)),
             _ => Vec::new(),
         }
     }
 
     /// A field of the Note tab changed.
     pub(crate) fn field_changed(&self, id: &str, value: i32) -> Option<crate::effect_form::Action> {
-        crate::effect_form::changed(self.score.as_ref()?, self.caret?, id, value)
+        crate::effect_form::changed(
+            self.score.as_ref()?,
+            self.caret?,
+            self.height.map(|h| h.0),
+            id,
+            value,
+        )
     }
 
     /// Starts typing lyrics (Ctrl + T): line 1 at the caret's beat, or the
@@ -2132,6 +2214,74 @@ mod tests {
         // Tab leaves the standard staff.
         e.key(Key::Tab, false, false);
         assert_eq!(e.height(), None);
+    }
+
+    /// docs/design/drums.md: on a drum track's staff, Enter and 1 to 9 put
+    /// the kit elements of the caret's line or space, and Backspace takes
+    /// the one there away.
+    #[test]
+    fn drums_are_typed_on_the_drum_staff() {
+        let mut drums = (*score(1, 3)).clone();
+        drums.tracks[0].instrument.percussion = true;
+        for st in &mut drums.tracks[0].staves {
+            st.tuning.clear();
+        }
+        // The first beat: a kick and a hi-hat.
+        drums.tracks[0].staves[0].bars[0].voices[0].beats[0].notes = vec![36, 42]
+            .into_iter()
+            .map(|k| Note {
+                place: oxiguitar_model::NotePlace::Pitched(Pitch(k)),
+                ..Note::fretted(1, 0)
+            })
+            .collect();
+        let mut e = Editing::default();
+        e.opened(Arc::new(drums), 0);
+        e.engraved(hits(&[0], 3));
+        let now = Instant::now();
+        let typed = |e: &mut Editing, name: &str| {
+            e.typed(name, false, false, false, now).map(|t| t.command)
+        };
+        // On the drum tablature (no line or space of the staff): two digits
+        // are a key, and Backspace takes away the element on the caret's
+        // tablature line.
+        assert_eq!(typed(&mut e, "3"), None);
+        assert_eq!(typed(&mut e, "8"), Some(Command::Drum(38)));
+        assert_eq!(typed(&mut e, "9"), None, "98 is no key: 9 is a first digit");
+        assert_eq!(typed(&mut e, "2"), None);
+        assert_eq!(typed(&mut e, "7"), Some(Command::Drum(27)));
+        assert_eq!(typed(&mut e, "backspace"), None, "nothing on line 1");
+        e.caret = e.caret.map(|c| Caret { string: 6, ..c });
+        assert_eq!(
+            typed(&mut e, "delete"),
+            Some(Command::DeleteDrum(36)),
+            "the kick's line"
+        );
+        e.key(Key::Up, false, false);
+        assert_eq!(e.height().map(|h| h.0), Some(5), "the snare's space");
+        assert_eq!(typed(&mut e, "\n"), Some(Command::Drum(38)));
+        assert_eq!(typed(&mut e, "2"), Some(Command::Drum(37)), "side stick");
+        assert_eq!(typed(&mut e, "4"), Some(Command::Drum(39)), "hand clap");
+        assert_eq!(typed(&mut e, "5"), None, "nothing fifth there");
+        assert_eq!(typed(&mut e, "backspace"), None, "no snare on the beat");
+        for _ in 0..4 {
+            e.key(Key::Up, false, false);
+        }
+        assert_eq!(e.height().map(|h| h.0), Some(9));
+        assert_eq!(typed(&mut e, "\n"), Some(Command::Drum(42)));
+        assert_eq!(typed(&mut e, "2"), Some(Command::Drum(46)), "open hi-hat");
+        assert_eq!(typed(&mut e, "backspace"), Some(Command::DeleteDrum(42)));
+        // The Note tab names the element on the caret's line, with every
+        // General MIDI drum to pick from.
+        let fields = e.effect_fields();
+        assert_eq!(fields[0].label, "Note · Closed Hi-Hat (42)");
+        let drum = fields.iter().find(|f| f.id == "drum").unwrap();
+        assert_eq!(drum.options.len(), 61);
+        assert_eq!(
+            drum.options[usize::try_from(drum.value).unwrap()],
+            "Closed Hi-Hat (42)"
+        );
+        // Keys that aren't drum keys keep their meaning: R is a rest.
+        assert_eq!(typed(&mut e, "r"), Some(Command::Rest));
     }
 
     #[test]

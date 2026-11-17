@@ -5,9 +5,11 @@
 //!
 //! An `.oxp` file is a shared library: ELF on Linux, PE on Windows, Mach-O
 //! on macOS (one universal file for both processors). The `object` crate
-//! parses its headers and section table and reads only the manifest's
-//! section, through a small read cache, so a 10 MB plugin costs a few
-//! kilobytes of reading. No code from the file runs.
+//! reads its headers and section table and only the manifest's section,
+//! through a small read cache, so a 10 MB plugin costs a few kilobytes of
+//! reading: ELF and Mach-O files by their headers alone (`elf_section`,
+//! `macho_section`), since a full parse also reads the symbol table. No
+//! code from the file runs.
 //!
 //! The file must also be for this system and processor: a Linux plugin in
 //! a Windows folder, or an ARM64 plugin on an x86_64 computer, is reported
@@ -16,13 +18,15 @@
 use std::fs::File;
 use std::path::Path;
 
-use object::elf;
 use object::read::ReadCache;
 use object::read::elf::{FileHeader, ProgramHeader, SectionHeader};
-use object::read::macho::{FatArch, MachOFatFile32, MachOFatFile64};
+use object::read::macho::{
+    FatArch, MachHeader, MachOFatFile32, MachOFatFile64, Section as _, Segment as _,
+};
 use object::{
     Architecture, BinaryFormat, Endianness, FileKind, Object, ObjectSection, ObjectSegment, ReadRef,
 };
+use object::{elf, macho};
 use oxiguitar_plugin_api::manifest::Manifest;
 use oxiguitar_plugin_api::{MANIFEST_SECTION, MAX_MANIFEST_LEN, PE_MANIFEST_SECTION};
 
@@ -53,10 +57,7 @@ pub(crate) fn read_manifest(path: &Path) -> Result<ManifestFile, String> {
             let fat = MachOFatFile64::parse(&cache).map_err(damaged)?;
             from_fat(&cache, fat.arches())?
         }
-        // An ELF library is read by its headers alone (see `elf_section`).
-        FileKind::Elf64 => elf_section::<elf::FileHeader64<Endianness>, _>(&cache)?,
-        FileKind::Elf32 => elf_section::<elf::FileHeader32<Endianness>, _>(&cache)?,
-        _ => section(&cache)?,
+        _ => one(&cache)?,
     };
     let end = bytes.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
     let bytes = bytes[..end].to_vec();
@@ -76,7 +77,20 @@ fn from_fat<A: FatArch>(cache: &ReadCache<File>, arches: &[A]) -> Result<Vec<u8>
             std::env::consts::ARCH
         ));
     };
-    section(cache.range(arch.offset().into(), arch.size().into()))
+    one(cache.range(arch.offset().into(), arch.size().into()))
+}
+
+/// The manifest section of one library: ELF and Mach-O files by their
+/// headers alone ([`elf_section`], [`macho_section`]), others through
+/// [`section`].
+fn one<'a, R: ReadRef<'a>>(data: R) -> Result<Vec<u8>, String> {
+    match FileKind::parse(data).map_err(damaged)? {
+        FileKind::Elf64 => elf_section::<elf::FileHeader64<Endianness>, _>(data),
+        FileKind::Elf32 => elf_section::<elf::FileHeader32<Endianness>, _>(data),
+        FileKind::MachO64 => macho_section::<macho::MachHeader64<Endianness>, _>(data),
+        FileKind::MachO32 => macho_section::<macho::MachHeader32<Endianness>, _>(data),
+        _ => section(data),
+    }
 }
 
 /// The manifest section of one library, after checking the library is for
@@ -208,6 +222,112 @@ where
         .map_err(|_| "its manifest can't be read (the file is damaged)".to_owned())
 }
 
+/// The manifest section of a Mach-O library, after the same checks as
+/// [`section`], from its header and load commands alone ([`macho_parts`]).
+fn macho_section<'a, Mach, R>(data: R) -> Result<Vec<u8>, String>
+where
+    Mach: MachHeader<Endian = Endianness>,
+    R: ReadRef<'a>,
+{
+    let length = data.len().unwrap_or(0);
+    let parts = macho_parts::<Mach, R>(data)?;
+    if parts.end > length {
+        return Err(format!(
+            "it is cut short ({length} bytes of {}): the file is damaged",
+            parts.end
+        ));
+    }
+    if this_format() != BinaryFormat::MachO {
+        return Err(format!(
+            "it is a macOS or iOS library, and this is {}",
+            std::env::consts::OS
+        ));
+    }
+    if let Some(here) = this_architecture()
+        && parts.built != here
+    {
+        return Err(format!(
+            "it is built for {}, and this computer is {}",
+            name(parts.built),
+            std::env::consts::ARCH
+        ));
+    }
+    parts.manifest.unwrap_or_else(|| {
+        Err(format!(
+            "it has no manifest (no {MANIFEST_SECTION} section): it is not an OxiGuitar plugin"
+        ))
+    })
+}
+
+/// What a Mach-O library's header and load commands say.
+#[derive(Debug)]
+struct MachOParts {
+    /// Where its last segment ends in the file.
+    end: u64,
+    /// Its processor.
+    built: Architecture,
+    /// Its manifest section's bytes, if it has one, or why they can't be
+    /// had.
+    manifest: Option<Result<Vec<u8>, String>>,
+}
+
+/// Reads a Mach-O library's header and load commands, and its manifest
+/// section, and nothing else. As for ELF, `object::File::parse` reads the
+/// whole symbol table first, which made a folder of plugins cost in
+/// proportion to their code (159 ms for 30 debug builds on CI's macOS
+/// runner, over the 100 ms budget).
+fn macho_parts<'a, Mach, R>(data: R) -> Result<MachOParts, String>
+where
+    Mach: MachHeader<Endian = Endianness>,
+    R: ReadRef<'a>,
+{
+    let header = Mach::parse(data, 0).map_err(damaged)?;
+    let endian = header.endian().map_err(damaged)?;
+    let mut end = 0u64;
+    let mut found = None;
+    let mut commands = header.load_commands(endian, data, 0).map_err(damaged)?;
+    while let Some(command) = commands.next().map_err(damaged)? {
+        let Some((segment, section_data)) =
+            Mach::Segment::from_command(command).map_err(damaged)?
+        else {
+            continue;
+        };
+        let (offset, size) = segment.file_range(endian);
+        end = end.max(offset.saturating_add(size));
+        let sections = segment.sections(endian, section_data).map_err(damaged)?;
+        if let Some(s) = sections
+            .iter()
+            .find(|s| s.name() == MANIFEST_SECTION.as_bytes())
+        {
+            found = Some(*s);
+        }
+    }
+    let built = match header.cputype(endian) {
+        macho::CPU_TYPE_X86_64 => Architecture::X86_64,
+        macho::CPU_TYPE_ARM64 => Architecture::Aarch64,
+        macho::CPU_TYPE_X86 => Architecture::I386,
+        macho::CPU_TYPE_ARM => Architecture::Arm,
+        _ => Architecture::Unknown,
+    };
+    let manifest = found.map(|section| {
+        let size: u64 = section.size(endian).into();
+        if size > MAX_MANIFEST_LEN as u64 {
+            return Err(format!(
+                "its manifest is {size} bytes, more than the {MAX_MANIFEST_LEN} a manifest may have"
+            ));
+        }
+        section
+            .data(endian, data)
+            .map(<[u8]>::to_vec)
+            .map_err(|()| "its manifest can't be read (the file is damaged)".to_owned())
+    });
+    Ok(MachOParts {
+        end,
+        built,
+        manifest,
+    })
+}
+
 fn damaged(e: object::Error) -> String {
     format!("it is damaged or not a library ({e})")
 }
@@ -264,6 +384,99 @@ mod tests {
         // A library format, but not a plugin: this test program itself.
         says(&std::env::current_exe().unwrap(), "no manifest");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A 64-bit little-endian Mach-O library for `cputype` with one
+    /// segment holding one section `name` of `contents`.
+    fn tiny_macho(cputype: u32, name: &str, contents: &[u8]) -> Vec<u8> {
+        let mut f = Vec::new();
+        let u32le = |f: &mut Vec<u8>, v: u32| f.extend_from_slice(&v.to_le_bytes());
+        let u64le = |f: &mut Vec<u8>, v: u64| f.extend_from_slice(&v.to_le_bytes());
+        let name16 = |f: &mut Vec<u8>, n: &str| {
+            let mut b = [0u8; 16];
+            b[..n.len()].copy_from_slice(n.as_bytes());
+            f.extend_from_slice(&b);
+        };
+        let commands = 72 + 80;
+        let data_at = (32 + commands) as u64;
+        // mach_header_64
+        u32le(&mut f, macho::MH_MAGIC_64);
+        u32le(&mut f, cputype);
+        u32le(&mut f, 0);
+        u32le(&mut f, macho::MH_DYLIB);
+        u32le(&mut f, 1);
+        u32le(&mut f, commands);
+        u32le(&mut f, 0);
+        u32le(&mut f, 0);
+        // segment_command_64
+        u32le(&mut f, macho::LC_SEGMENT_64);
+        u32le(&mut f, commands);
+        name16(&mut f, "__DATA");
+        u64le(&mut f, 0);
+        u64le(&mut f, 0x1000);
+        u64le(&mut f, data_at);
+        u64le(&mut f, contents.len() as u64);
+        u32le(&mut f, 3);
+        u32le(&mut f, 3);
+        u32le(&mut f, 1);
+        u32le(&mut f, 0);
+        // section_64
+        name16(&mut f, name);
+        name16(&mut f, "__DATA");
+        u64le(&mut f, 0);
+        u64le(&mut f, contents.len() as u64);
+        u32le(&mut f, data_at as u32);
+        for _ in 0..7 {
+            u32le(&mut f, 0);
+        }
+        assert_eq!(f.len() as u64, data_at);
+        f.extend_from_slice(contents);
+        f
+    }
+
+    #[test]
+    fn a_macho_librarys_manifest_is_read_from_its_headers() {
+        type Mach = macho::MachHeader64<Endianness>;
+        let file = tiny_macho(
+            macho::CPU_TYPE_ARM64,
+            MANIFEST_SECTION,
+            b"{\"id\": \"x\"}\0\0",
+        );
+        assert_eq!(FileKind::parse(&*file).unwrap(), FileKind::MachO64);
+        let parts = macho_parts::<Mach, _>(&*file).unwrap();
+        assert_eq!(parts.built, Architecture::Aarch64);
+        assert_eq!(parts.end, file.len() as u64);
+        assert_eq!(parts.manifest, Some(Ok(b"{\"id\": \"x\"}\0\0".to_vec())));
+        // The same as `object`'s full reading finds.
+        let full = object::File::parse(&*file).unwrap();
+        assert_eq!(
+            full.section_by_name(MANIFEST_SECTION)
+                .unwrap()
+                .data()
+                .unwrap(),
+            b"{\"id\": \"x\"}\0\0"
+        );
+        let other = tiny_macho(macho::CPU_TYPE_X86_64, "__text", b"code");
+        let parts = macho_parts::<Mach, _>(&*other).unwrap();
+        assert_eq!(parts.built, Architecture::X86_64);
+        assert_eq!(parts.manifest, None);
+        let big = tiny_macho(
+            macho::CPU_TYPE_ARM64,
+            MANIFEST_SECTION,
+            &vec![b' '; MAX_MANIFEST_LEN + 1],
+        );
+        let parts = macho_parts::<Mach, _>(&*big).unwrap();
+        assert!(matches!(parts.manifest, Some(Err(e)) if e.contains("more than")));
+        // Cut short: the segment runs past the file's end.
+        let cut = &file[..file.len() - 4];
+        assert_eq!(macho_parts::<Mach, _>(cut).unwrap().end, file.len() as u64);
+        let e = one(cut).unwrap_err();
+        assert!(e.contains("cut short"), "{e}");
+        // A whole one, on a system that isn't macOS, says what it is.
+        if !cfg!(target_vendor = "apple") {
+            let e = one(&*file).unwrap_err();
+            assert!(e.contains("macOS"), "{e}");
+        }
     }
 
     #[test]

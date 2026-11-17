@@ -4,10 +4,33 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-11-17
+
+### Added
+
+- **Drum entry** (docs/parity.md, gap 1; `docs/design/drums.md`): drum tracks can be written. On the drum staff, move the caret to a line or space and press Enter for the drum the kit puts there, or 1 to 9 for the others sharing it (snare, side stick, electric snare, hand clap; closed and open hi-hat), as in Guitar Pro 8; Backspace takes it away, and a beat holds one drum a line or space. **Drum tablature**: a drum track's TAB button shows each drum as its General MIDI number on six lines (cymbals, hi-hats, toms, snares, floor toms, bass drums), and two digits typed there enter that drum. The Note tab names the drum and changes it to any General MIDI drum. One General MIDI kit map, shared by the engraver and the editor, places every drum.
+- **The mixer is saved in the file** (docs/parity.md, gap 2): each track's volume, pan, mute and solo, as you set them in its row, go into the score, so saving writes them and the next opening has them, where until now they lasted only until OxiGuitar closed. Every format writes as much as it holds (Guitar Pro 7-8 and TuxGuitar all four; Guitar Pro 5 volume and pan to sixteen steps, and mute and solo; MusicXML and MIDI files volume and pan). Mute and solo are saved as they are, as Guitar Pro and TuxGuitar do. A mixer move marks the song changed and is one step for **Edit → Undo** (a whole drag of a slider is one step); the mixer still moves while the song plays.
+
+### Changed
+
+- **Slint 1.19.0, the latest release** (#271): the app no longer stays on Slint 1.17.1. On Wayland, copy and paste still go through the window's own connection, which works on every compositor, GNOME and Flatpak sandboxes included. Slint 1.19 also brings its own fixes (spin boxes, Flickable, popups and menus, double-clicks at the system's interval). The Track tab's Capo and Frets rows are now as tall as the rows around them, and the plugin manager's "No plugin files were found." and the plugin settings window's message keep inside their box.
+- **The rule for platform code** (Mateus, 17 Nov 2026; ADR 0011, which supersedes ADR 0009's "no X11 crate in the Wayland build"): our code (the app and our plugins) never looks at the environment to choose what to do; other people's plugins may, but shouldn't, and the plugin guide says so. Each build knows its display system when it is built, so a build with both the `wayland` and `x11` features no longer compiles, and the host no longer guesses it from `WAYLAND_DISPLAY`: the CLI and tests, which draw nothing, say they have no display (`oxiguitar_host::NO_DISPLAY`; `oxiguitar_host::display_system()` is gone). Libraries are theirs. `scripts/check-display-crates.sh` now checks that each Linux build turns on only its own windowing backend, and that our Rust code names no session variable.
+- cargo-deny no longer ignores RUSTSEC-2024-0436 (`paste`) and RUSTSEC-2026-0206 (`rustybuzz`): Slint 1.19 doesn't use them.
+
+### Documentation
+
+- **The parity check covers Power Tab Editor** (#274): a section in `docs/parity.md` compares OxiGuitar with Power Tab Editor 2.0 and 1.7's tools. Nothing changes the ranked gaps; three small tools are noted (replacement, naming the chord under the caret, autosave with recovery) and reading `.ptb` and `.pt2` stays with #223.
+- **The feature-parity check before the beta** (ROADMAP.md, "Then we stop"): `docs/parity.md` compares OxiGuitar 0.20 and its official plugins with Guitar Pro 8, TuxGuitar 2.1 and alphaTab 1.8 (notation, editing, playback, files, display), and ranks the gaps for Mateus to place before the beta, after v1.0 or never. Drum entry, the mixer saved into the file, volume, pan and instrument automations, image export, a speed trainer and instrument views lead the list.
+- The manual's Flatpak section lists the wah plugin's package, `io.github.mateusrdp.OxiGuitar.Plugin.wah`, with the others.
+- **Installing the Flatpak**: the manual's Linux page and the README add Flathub before our repository (`flatpak install` from our repository alone stops when Flathub, where the runtime comes from, isn't set up), and the README gains a Flatpak section.
+- `docs/parity.md` and ROADMAP.md record Mateus's placing of the gaps (17 Nov 2026): the mixer saved in the file and drum entry go into v1.0; every other gap stays out of it.
+- The manual's Amp models page and the player's design say where the NAM plugin's faster engine (NeuralAmpModeler-rs 2.0) now plays: ARM64 under Linux, Apple Silicon Macs, and PCs with AVX2 and FMA on Linux (oxiguitar-nam#16).
+
 ## [0.20.0] - 2026-11-16
 
 ### Added
 
+- **The wah-wah plugin in OxiGuitar's packages:** the `.deb` and `.rpm` suggest `oxiguitar-wah`, as they suggest the amp models and the equalizer, and the README's and manual's install instructions include it (its first release, 0.1.0, needs OxiGuitar 0.20.0).
 - **Plugins own their tools: plugin interface 1.8** (#293, #250). A plugin can now, with no change to OxiGuitar:
   - put **buttons on the palette**, in one of its sections or a section of its own, with a music symbol or a short text (`palette` on a tool of the manifest);
   - put **entries in any menu**: File, Edit, View, Tools, Help, the right-click menus of the page and of a track, or a menu of its own between Tools and Help (`menu`);
@@ -29,13 +52,15 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
+- **Help → About links to the credits** (CREDITS.md, in the browser) instead of naming some of them itself; CREDITS.md names the projects without their versions (Mateus, 16 Nov 2026).
+- **The footer shows what a tool did**: the sentence a tool gives about its run ("Moved 312 notes up an octave."), and what a plugin says after a click on its drawing (Mateus, 16 Nov 2026). Other information still isn't kept: the footer holds warnings and errors.
 - **Saving a score in a format that can't hold all of it** (Mateus, 16 Nov 2026). Save always writes the file's own format; OxiGuitar no longer saves a .gp file beside it instead, and names no format as the fullest. When the format can't hold something, the question lists what and offers **Keep Them in the .oxg File**, **Save Without Them** or Cancel. Kept, the whole score goes into the file beside the score (`song.gp5.oxg`): OxiGuitar opens it from there, with nothing lost, for as long as the score file is the one it saved; other programs see what the format holds. If another program changes the score file, OxiGuitar shows the file as it is and says so. The choice holds for later saves of that file. A file whose format no installed plugin writes (Guitar Pro 3 and 4, .gpx) asks for Save As. `oxiguitar-cli` reads a kept score the same way.
 
 - **Plugins' tools moved from the Tools menu to a Plugins menu**, between Tools and Help, unless a plugin names another menu. The palette has a Plugins section for buttons whose plugin names none, and a plugin's tab that names no area goes to the right panel.
 - **Closed and Open Wah-Wah left OxiGuitar's own palette**: the Wah-wah plugin adds them. Wah marks of a file are still read, drawn and written without it.
 - A track's effects without an order of the user's run by each effect's `order` in its manifest (pedals, then amp models, then equalizers) instead of a list of plugin ids in OxiGuitar.
 - The window tells plugins where the caret is when a score opens, not only when it first moves.
-- **Finding the plugins at start no longer reads each plugin file's symbol table**: a Linux plugin's manifest is found from the file's headers alone. A folder of plugins that aren't stripped (a contributor's debug builds, megabytes of symbols each) is read about five times faster; released plugins, which are stripped, read as before.
+- **Finding the plugins at start no longer reads each plugin file's symbol table**: a Linux or macOS plugin's manifest is found from the file's headers alone. A folder of plugins that aren't stripped (a contributor's debug builds, megabytes of symbols each) is read about five times faster; released plugins, which are stripped, read as before.
 - The advice shown when no plugin opens files, plays or sends sound out names no particular plugin; it points at the page of official plugins.
 
 ## [0.19.2] - 2026-11-15

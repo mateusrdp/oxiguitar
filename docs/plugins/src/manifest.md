@@ -84,6 +84,8 @@ Every list given must hold the running system's value; an empty or missing list 
 
 A plugin whose conditions don't hold is listed in Tools → Plugins with the reason, and never loaded. A plugin file is already built for one system and processor, so you need `os` and `arch` only for a file that would load but can't work (a universal macOS file that works on Apple Silicon only, say). `display` matters for plugins that talk to the windowing system. Services have conditions of their own, beside the plugin's.
 
+**Choose when building, not by looking around.** A plugin may look at the environment while it runs (an environment variable naming the session, say) and pick what to do from it, or carry code that never runs on the system it was built for. It shouldn't. OxiGuitar doesn't check for it, but its own code and official plugins never do it: what differs between systems is chosen when building (Cargo features, `cfg`, one file for each system), and the conditions above keep each file to where it works. Code that is meant to run everywhere but that a library's bug stops somewhere is fine.
+
 `cpu` lets you ship a faster build beside a plain one. Build the plugin twice, with the same id and version: once plainly, and once with `-C target-cpu=x86-64-v3` and `"cpu": ["avx2", "fma"]` in its manifest. On a processor without those features that file can't be used and the plain one is; where both can be used, the one needing more features is. A feature name OxiGuitar doesn't know counts as missing, so a build is never loaded on a guess.
 
 ## Rules the checks enforce

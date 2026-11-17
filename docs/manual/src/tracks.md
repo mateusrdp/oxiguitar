@@ -26,7 +26,7 @@ A tuning that can't be (a wrong note, or notes that don't match the strings) say
 
 ## Notation buttons
 
-Each track has two buttons at the end of its row: **TAB** for tablature and a **treble clef** for standard notation. A lit button is on. Tracks without strings, such as drums, have only the clef.
+Each track has two buttons at the end of its row: **TAB** for tablature and a **treble clef** for standard notation. A lit button is on. Tracks without strings have only the clef; drums have both, their tablature showing each drum's number ([Drums](editing.md#drums)).
 
 | TAB | Clef | The track shows |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ When a file opens, each track shows the notation it was saved with. Tablature is
 
 ## Mixer
 
-After its name, each track has its mixer: two buttons, **mute** (a loudspeaker crossed out) and **solo** (headphones), a **volume** slider and a **pan** knob (left to right). They start as the file sets them and change the sound as you move them, while it plays ([Playing a score](playback.md#the-mixer)); they are greyed out while nothing can play the score. Nothing you change there is written to the file.
+After its name, each track has its mixer: two buttons, **mute** (a loudspeaker crossed out) and **solo** (headphones), a **volume** slider and a **pan** knob (left to right). They start as the file sets them and change the sound as you move them, while it plays ([Playing a score](playback.md#the-mixer)); they are greyed out while nothing can play the score. They are part of the song: saving writes them into the file, and Undo takes a move back.
 
 ## Overview
 

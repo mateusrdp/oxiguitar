@@ -588,6 +588,11 @@ impl Planner<'_> {
                 return None;
             };
             let (step, cross) = drum(p);
+            let label = if n.tie || n.effects.ghost {
+                format!("({})", p.0)
+            } else {
+                p.0.to_string()
+            };
             return Some(NoteInfo {
                 step,
                 accidental: None,
@@ -596,7 +601,7 @@ impl Planner<'_> {
                 pitch: Some(p),
                 tie: n.tie,
                 dead: cross || n.effects.dead,
-                tab: None,
+                tab: Some((oxiguitar_model::drums::element(p).line, label)),
                 fret: None,
                 diamond: false,
                 ghost: n.effects.ghost,

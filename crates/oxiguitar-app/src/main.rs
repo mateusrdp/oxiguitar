@@ -27,9 +27,13 @@
 
 #![windows_subsystem = "windows"]
 
-// The windowing backend comes from one of these features (Cargo.toml).
+// The windowing backend comes from one of these features (Cargo.toml), and
+// only one: each build knows its display system when it is built, and never
+// looks at the session to choose (ADR 0011).
 #[cfg(not(any(feature = "wayland", feature = "x11")))]
 compile_error!("build oxiguitar-app with the `wayland` feature (the default) or `x11`");
+#[cfg(all(feature = "wayland", feature = "x11"))]
+compile_error!("build oxiguitar-app with one of the `wayland` and `x11` features, not both");
 
 mod advice;
 mod audio_export;
@@ -489,26 +493,22 @@ fn plugin_withdrawn(app: &Shared, id: &str) {
 }
 
 /// The display system this build draws with, as plugins' conditions name
-/// it. Each Linux build has its own (docs/design/plugins.md); a build with
-/// both features, for development, follows the host's rule.
-fn display_system() -> &'static str {
-    let linux = cfg!(not(any(target_os = "windows", target_vendor = "apple")));
-    match (linux, cfg!(feature = "wayland"), cfg!(feature = "x11")) {
-        (true, true, false) => "wayland",
-        (true, false, true) => "x11",
-        _ => oxiguitar_host::display_system(),
-    }
-}
+/// it: fixed when building (ADR 0011). Each Linux build has its own
+/// (docs/design/plugins.md).
+pub(crate) const DISPLAY_SYSTEM: &str = if cfg!(target_os = "windows") {
+    "windows"
+} else if cfg!(target_vendor = "apple") {
+    "macos"
+} else if cfg!(feature = "wayland") {
+    "wayland"
+} else {
+    "x11"
+};
 
 /// What to tell someone whose session this build can't draw in: the
 /// Wayland build without a Wayland compositor, the X11 build without an X
-/// server. `None` for builds that try both, and outside Linux.
+/// server. `None` outside Linux.
 fn wrong_build_hint(display: &str) -> Option<&'static str> {
-    if !cfg!(not(any(target_os = "windows", target_vendor = "apple")))
-        || (cfg!(feature = "wayland") && cfg!(feature = "x11"))
-    {
-        return None;
-    }
     match display {
         "wayland" => Some(
             "This is OxiGuitar's Wayland build, and it found no Wayland session (is WAYLAND_DISPLAY set?). On an X11 desktop, install the X11 build instead (the package oxiguitar-x11), or use the AppImage, which holds both builds.",
@@ -527,7 +527,7 @@ fn main() -> Result<(), slint::PlatformError> {
         .backend_name("winit".into())
         .select()
     {
-        if let Some(hint) = wrong_build_hint(display_system()) {
+        if let Some(hint) = wrong_build_hint(DISPLAY_SYSTEM) {
             eprintln!("{hint}");
         }
         return Err(e);
@@ -553,9 +553,9 @@ fn main() -> Result<(), slint::PlatformError> {
         open: open_score.clone(),
     });
     let startup = if args.safe_mode {
-        oxiguitar_host::start_in_safe_mode(oxiguitar_host::Folders::here(), display_system(), core)
+        oxiguitar_host::start_in_safe_mode(oxiguitar_host::Folders::here(), DISPLAY_SYSTEM, core)
     } else {
-        oxiguitar_host::start(oxiguitar_host::Folders::here(), display_system(), core)
+        oxiguitar_host::start(oxiguitar_host::Folders::here(), DISPLAY_SYSTEM, core)
     };
     let open_extensions = startup.plugins.read_extensions();
     let save_formats = SaveFormat::writable(&startup.plugins);
@@ -774,7 +774,6 @@ fn main() -> Result<(), slint::PlatformError> {
             env!("CARGO_PKG_VERSION")
         ),
         "Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors. Licensed under the GNU GPL, version 3 or later.".to_owned(),
-        "Music font: Bravura (Steinberg, SIL OFL 1.1). Text font: Noto Sans (SIL OFL 1.1). GUI: Slint (GPL-3.0).".to_owned(),
         "OxiGuitar never connects to the internet on its own and sends nothing anywhere.".to_owned(),
     ];
     about.extend(about_folders(&startup.inventory.folders, args.safe_mode));
@@ -1247,22 +1246,22 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_mixer_volume(move |i, v| {
         let m = a.borrow_mut().mixer.set_volume(i as usize, v);
-        sync_mix(&a, i as usize, m);
+        mixer_moved(&a, i as usize, m);
     });
     let a = app.clone();
     ui.on_mixer_pan(move |i, v| {
         let m = a.borrow_mut().mixer.set_pan(i as usize, v);
-        sync_mix(&a, i as usize, m);
+        mixer_moved(&a, i as usize, m);
     });
     let a = app.clone();
     ui.on_mixer_mute(move |i| {
         let m = a.borrow_mut().mixer.toggle_mute(i as usize);
-        sync_mix(&a, i as usize, m);
+        mixer_moved(&a, i as usize, m);
     });
     let a = app.clone();
     ui.on_mixer_solo(move |i| {
         let m = a.borrow_mut().mixer.toggle_solo(i as usize);
-        sync_mix(&a, i as usize, m);
+        mixer_moved(&a, i as usize, m);
     });
     let a = app.clone();
     ui.on_player_action(move |name| playing::action(&a, name.as_str()));
@@ -1403,6 +1402,12 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_open_link(move |url| {
         if let Err(e) = links::open(&url) {
+            message(&a, Level::Error, e);
+        }
+    });
+    let a = app.clone();
+    ui.on_open_credits(move || {
+        if let Err(e) = links::open(links::CREDITS) {
             message(&a, Level::Error, e);
         }
     });
@@ -2714,10 +2719,18 @@ fn handle(app: &Shared, event: Event) {
             caret,
             tracks,
             note_edit,
+            mixer,
         } => {
+            if mixer {
+                // The window's own mixer moves: the rows and the sound
+                // have them already, and nothing else changed.
+                app.borrow_mut().editing.changed(score);
+                sync_edit_state(app, &edit);
+                return;
+            }
             let play = {
                 let mut s = app.borrow_mut();
-                s.editing.changed(score);
+                s.editing.changed(score.clone());
                 if let Some(c) = caret {
                     s.editing.edited(c);
                 }
@@ -2726,6 +2739,8 @@ fn handle(app: &Shared, event: Event) {
             };
             if let Some((tracks, was)) = tracks {
                 track_list_changed(app, &tracks, &was);
+            } else {
+                mixer_from_score(app, &score);
             }
             sync_sections(app);
             sync_edit_state(app, &edit);
@@ -2803,6 +2818,10 @@ fn handle(app: &Shared, event: Event) {
         }
         Event::Tools(tools) => set_tools(&ui, &tool_rows(&tools)),
         Event::Message(level, text) => message(app, level, text),
+        Event::Report(text) => {
+            app.borrow_mut().footer.push_report(text);
+            sync_footer(app);
+        }
     }
 }
 
@@ -3153,6 +3172,43 @@ fn settings_changed(app: &Shared) {
 }
 
 /// A track's mixer changed: show it in its row, and let the sound follow.
+/// A track's mixer control moved: heard at once, and kept in the score as
+/// one more change, so saving writes it (each format as far as it holds
+/// volume, pan, mute and solo) and Undo takes it back.
+fn mixer_moved(app: &Shared, i: usize, mix: oxiguitar_model::Mix) {
+    sync_mix(app, i, mix);
+    let s = app.borrow();
+    if let Some(caret) = s.editing.caret() {
+        s.worker.send(Request::Edit {
+            command: oxiguitar_edit::Command::Mix { track: i, mix },
+            caret,
+            selection: None,
+        });
+    }
+}
+
+/// The score's mixer, after a change that wasn't the window's own moves
+/// (Undo and Redo, a plugin's change): the rows and the sound follow it.
+fn mixer_from_score(app: &Shared, score: &oxiguitar_model::Score) {
+    let changed: Vec<_> = {
+        let s = app.borrow();
+        score
+            .tracks
+            .iter()
+            .enumerate()
+            .filter(|(i, t)| s.mixer.get(*i) != t.mix)
+            .map(|(i, t)| (i, t.mix))
+            .collect()
+    };
+    if changed.is_empty() {
+        return;
+    }
+    app.borrow_mut().mixer = Mixer::new(score.tracks.iter().map(|t| t.mix).collect());
+    for (i, mix) in changed {
+        sync_mix(app, i, mix);
+    }
+}
+
 fn sync_mix(app: &Shared, i: usize, mix: oxiguitar_model::Mix) {
     app.borrow_mut().player.set_mix(i, mix);
     let Some(ui) = app.borrow().ui.upgrade() else {
@@ -5543,7 +5599,7 @@ fn run_dialog(pick: impl FnOnce() + Send + 'static) {
 ///
 /// **Drops don't work on Wayland** (ADR 0006; CONTRIBUTING.md, "Known
 /// platform gaps"). winit 0.30 sends `DroppedFile` on Windows, macOS and
-/// X11 only: its Wayland backend has no drag and drop, and Slint 1.18
+/// X11 only: its Wayland backend has no drag and drop, and Slint 1.19
 /// passes no operating-system drops on. Listening ourselves would need our
 /// own `wl_data_device` on winit's connection, through an `unsafe` raw
 /// pointer and with no way to wake on its events but polling, which we
@@ -5815,23 +5871,23 @@ mod tests {
     }
 
     #[test]
-    fn each_linux_build_names_its_own_display_system() {
-        let linux = cfg!(not(any(target_os = "windows", target_vendor = "apple")));
-        let one = cfg!(feature = "wayland") != cfg!(feature = "x11");
-        if linux && one {
-            let own = if cfg!(feature = "wayland") {
-                "wayland"
-            } else {
-                "x11"
-            };
-            assert_eq!(display_system(), own);
-            assert!(wrong_build_hint(own).unwrap().contains(&format!(
+    fn each_build_names_its_own_display_system() {
+        let own = if cfg!(target_os = "windows") {
+            "windows"
+        } else if cfg!(target_vendor = "apple") {
+            "macos"
+        } else if cfg!(feature = "wayland") {
+            "wayland"
+        } else {
+            "x11"
+        };
+        assert_eq!(DISPLAY_SYSTEM, own);
+        match own {
+            "wayland" | "x11" => assert!(wrong_build_hint(own).unwrap().contains(&format!(
                 "OxiGuitar's {} build",
                 if own == "x11" { "X11" } else { "Wayland" }
-            )));
-        } else {
-            assert_eq!(display_system(), oxiguitar_host::display_system());
-            assert!(wrong_build_hint("wayland").is_none());
+            ))),
+            _ => assert!(wrong_build_hint(own).is_none()),
         }
     }
 

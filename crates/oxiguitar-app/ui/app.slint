@@ -876,9 +876,9 @@ component TrackTab inherits Rectangle {
     // As wide as the panel, or wider when something in it can't be
     // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        viewport-width: max(self.visible-width, content.min-width);
+        content-width: max(self.visible-width, content.min-width);
         content := VerticalLayout {
-            width: scroll.viewport-width;
+            width: scroll.content-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -948,9 +948,9 @@ component BarTab inherits Rectangle {
     // As wide as the panel, or wider when something in it can't be
     // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        viewport-width: max(self.visible-width, content.min-width);
+        content-width: max(self.visible-width, content.min-width);
         content := VerticalLayout {
-            width: scroll.viewport-width;
+            width: scroll.content-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -1015,9 +1015,9 @@ component NoteTab inherits Rectangle {
     // As wide as the panel, or wider when something in it can't be
     // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        viewport-width: max(self.visible-width, content.min-width);
+        content-width: max(self.visible-width, content.min-width);
         content := VerticalLayout {
-            width: scroll.viewport-width;
+            width: scroll.content-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -1046,9 +1046,9 @@ component SongView inherits Rectangle {
     // As wide as the panel, or wider when something in it can't be
     // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
-        viewport-width: max(self.visible-width, content.min-width);
+        content-width: max(self.visible-width, content.min-width);
         content := VerticalLayout {
-            width: scroll.viewport-width;
+            width: scroll.content-width;
             padding: 12px;
             spacing: 6px;
             alignment: start;
@@ -1357,8 +1357,8 @@ export component AppWindow inherits Window {
     in property <string> redo-title: "Redo";
     // Some shown bar doesn't add up: Tools → Next Bar That Doesn't Add Up.
     in property <bool> bad-bars: false;
-    out property <length> view-x: -flick.viewport-x;
-    out property <length> view-y: -flick.viewport-y;
+    out property <length> view-x: -flick.content-x;
+    out property <length> view-y: -flick.content-y;
     out property <length> view-width: flick.visible-width;
     out property <length> view-height: flick.visible-height;
     // Where the page's viewport sits in the window, for the mouse wheel
@@ -1374,8 +1374,8 @@ export component AppWindow inherits Window {
     // the scroll position has (after a zoom around the pointer, say).
     out property <length> origin-x: round(max(24px, (flick.visible-width - root.content-width) / 2) / 1phx) * 1phx;
     out property <length> origin-y: round(24px / 1phx) * 1phx;
-    property <length> snap-x: round(flick.viewport-x / 1phx) * 1phx - flick.viewport-x;
-    property <length> snap-y: round(flick.viewport-y / 1phx) * 1phx - flick.viewport-y;
+    property <length> snap-x: round(flick.content-x / 1phx) * 1phx - flick.content-x;
+    property <length> snap-y: round(flick.content-y / 1phx) * 1phx - flick.content-y;
 
     // View settings.
     in-out property <int> layout: 0;
@@ -1505,7 +1505,9 @@ export component AppWindow inherits Window {
     in property <length> shortcut-right-column-width;
     in property <length> shortcut-popup-width;
     in property <[string]> about-lines;
-    // Help → About's donation button (links.rs opens the page in the browser).
+    // Help → About's credits link and donation button (links.rs opens the
+    // page in the browser).
+    callback open-credits();
     callback open-donation();
 
     callback open-file();
@@ -1753,13 +1755,13 @@ export component AppWindow inherits Window {
 
     // Scroll the canvas by (dx, dy), within its bounds.
     public function scroll-by(dx: length, dy: length) {
-        flick.viewport-x = clamp(flick.viewport-x - dx, min(0px, flick.visible-width - flick.viewport-width), 0px);
-        flick.viewport-y = clamp(flick.viewport-y - dy, min(0px, flick.visible-height - flick.viewport-height), 0px);
+        flick.content-x = clamp(flick.content-x - dx, min(0px, flick.visible-width - flick.content-width), 0px);
+        flick.content-y = clamp(flick.content-y - dy, min(0px, flick.visible-height - flick.content-height), 0px);
     }
     // Put canvas pixel (x, y) at the top left of the view.
     public function scroll-to(x: length, y: length) {
-        flick.viewport-x = clamp(-x, min(0px, flick.visible-width - flick.viewport-width), 0px);
-        flick.viewport-y = clamp(-y, min(0px, flick.visible-height - flick.viewport-height), 0px);
+        flick.content-x = clamp(-x, min(0px, flick.visible-width - flick.content-width), 0px);
+        flick.content-y = clamp(-y, min(0px, flick.visible-height - flick.content-height), 0px);
     }
 
     MenuBar {
@@ -1916,6 +1918,15 @@ export component AppWindow inherits Window {
         lines: root.about-lines;
         // A click on the button must reach it; a click outside closes.
         close-policy: PopupClosePolicy.close-on-click-outside;
+        // Every project OxiGuitar builds on is in CREDITS.md, not here
+        // (Mateus, 16 Nov 2026).
+        FooterLink {
+            text: "Credits";
+            clicked => {
+                root.open-credits();
+                about-popup.close();
+            }
+        }
         // Donations (Mateus, 25 Oct 2026; the README's "Buy me a drink").
         Rectangle { height: 1px; background: Palette.border; }
         Text {
@@ -2012,7 +2023,7 @@ export component AppWindow inherits Window {
             } else if (event.text == Key.Home) {
                 root.scroll-to(0, 0);
             } else if (event.text == Key.End) {
-                root.scroll-to(flick.viewport-width, flick.viewport-height);
+                root.scroll-to(flick.content-width, flick.content-height);
             } else {
                 return reject;
             }
@@ -2298,10 +2309,10 @@ export component AppWindow inherits Window {
                         height: 1px;
                     }
                     flick := ScrollView {
-                        viewport-width: max(self.visible-width, root.content-width + 48px);
-                        viewport-height: max(self.visible-height, root.content-height + 48px);
-                        changed viewport-x => { root.canvas-changed(); }
-                        changed viewport-y => { root.canvas-changed(); }
+                        content-width: max(self.visible-width, root.content-width + 48px);
+                        content-height: max(self.visible-height, root.content-height + 48px);
+                        changed content-x => { root.canvas-changed(); }
+                        changed content-y => { root.canvas-changed(); }
                         changed visible-width => { root.canvas-changed(); }
                         changed visible-height => { root.canvas-changed(); }
                         for t in root.old-tiles : Image {
@@ -2323,8 +2334,8 @@ export component AppWindow inherits Window {
                         TouchArea {
                             x: 0;
                             y: 0;
-                            width: flick.viewport-width;
-                            height: flick.viewport-height;
+                            width: flick.content-width;
+                            height: flick.content-height;
                             pointer-event(e) => {
                                 if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
                                     keys.focus();
@@ -2352,8 +2363,8 @@ export component AppWindow inherits Window {
                             enabled: false;
                             x: 0;
                             y: 0;
-                            width: flick.viewport-width;
-                            height: flick.viewport-height;
+                            width: flick.content-width;
+                            height: flick.content-height;
                             Menu {
                                 MenuItem { title: "Transpose…"; activated => { root.page-menu("transpose"); } }
                                 MenuItem { title: "Find Fingering"; activated => { root.page-menu("fingering"); } }
