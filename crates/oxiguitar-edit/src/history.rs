@@ -345,6 +345,37 @@ impl History {
         touched
     }
 
+    /// As [`History::record`], but when the last change was the same kind
+    /// (`label` and `regions`), nothing was undone since and the score
+    /// wasn't saved after it, this one joins it: one Undo takes both back.
+    /// For controls dragged through many values, such as a track's volume.
+    pub fn record_merging(
+        &mut self,
+        score: &mut Score,
+        label: &str,
+        regions: Vec<Region>,
+        edit: impl FnOnce(&mut Score),
+    ) -> Touched {
+        let joins = self.undone.is_empty()
+            && self
+                .done
+                .last()
+                .is_some_and(|c| c.label == label && c.regions == regions && c.id != self.saved);
+        if !joins {
+            return self.record(score, label, regions, edit);
+        }
+        edit(score);
+        let after: Vec<Saved> = regions
+            .iter()
+            .filter_map(|r| Saved::take(r, score))
+            .collect();
+        let touched = Touched::of(&regions, score);
+        if let Some(last) = self.done.last_mut() {
+            last.after = after;
+        }
+        touched
+    }
+
     /// Gives the last change another name (a cut is a delete, named so).
     pub(crate) fn rename_last(&mut self, label: &str) {
         if let Some(c) = self.done.last_mut() {

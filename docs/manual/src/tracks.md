@@ -41,7 +41,7 @@ When a file opens, each track shows the notation it was saved with. Tablature is
 
 ## Mixer
 
-After its name, each track has its mixer: two buttons, **mute** (a loudspeaker crossed out) and **solo** (headphones), a **volume** slider and a **pan** knob (left to right). They start as the file sets them and change the sound as you move them, while it plays ([Playing a score](playback.md#the-mixer)); they are greyed out while nothing can play the score. Nothing you change there is written to the file.
+After its name, each track has its mixer: two buttons, **mute** (a loudspeaker crossed out) and **solo** (headphones), a **volume** slider and a **pan** knob (left to right). They start as the file sets them and change the sound as you move them, while it plays ([Playing a score](playback.md#the-mixer)); they are greyed out while nothing can play the score. They are part of the song: saving writes them into the file, and Undo takes a move back.
 
 ## Overview
 

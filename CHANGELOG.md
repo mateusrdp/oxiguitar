@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **The mixer is saved in the file** (docs/parity.md, gap 2): each track's volume, pan, mute and solo, as you set them in its row, go into the score, so saving writes them and the next opening has them, where until now they lasted only until OxiGuitar closed. Every format writes as much as it holds (Guitar Pro 7-8 and TuxGuitar all four; Guitar Pro 5 volume and pan to sixteen steps, and mute and solo; MusicXML and MIDI files volume and pan). Mute and solo are saved as they are, as Guitar Pro and TuxGuitar do. A mixer move marks the song changed and is one step for **Edit → Undo** (a whole drag of a slider is one step); the mixer still moves while the song plays.
+
 ### Documentation
 
 - **The feature-parity check before the beta** (ROADMAP.md, "Then we stop"): `docs/parity.md` compares OxiGuitar 0.20 and its official plugins with Guitar Pro 8, TuxGuitar 2.1 and alphaTab 1.8 (notation, editing, playback, files, display), and ranks the gaps for Mateus to place before the beta, after v1.0 or never. Drum entry, the mixer saved into the file, volume, pan and instrument automations, image export, a speed trainer and instrument views lead the list.

@@ -46,7 +46,9 @@ Every effect of the score is heard as written, the notation of Guitar Pro 8's pa
 
 ## The mixer
 
-Each track's row at the bottom has a **mute** button (the loudspeaker crossed out), a **solo** button (headphones: when any track is soloed, only soloed tracks are heard), a **volume** slider and a **pan** knob (drag it, or use the arrow keys; a double click centres it). They start as the file sets them and change the sound as you move them. **Level**, in the Player tab, is the volume of everything together. None of this is saved into the file; it lasts until you close OxiGuitar.
+Each track's row at the bottom has a **mute** button (the loudspeaker crossed out), a **solo** button (headphones: when any track is soloed, only soloed tracks are heard), a **volume** slider and a **pan** knob (drag it, or use the arrow keys; a double click centres it). They start as the file sets them and change the sound as you move them, even while the song plays. **Level**, in the Player tab, is the volume of everything together.
+
+The mixer is part of the song: **saving writes it into the file**, and **Edit → Undo** takes a move back (a whole drag of a slider or the knob is one step; Undo waits until the song is paused, as all editing does). Mute and solo are saved as they are, as Guitar Pro and TuxGuitar save them, so a track muted when you save opens muted. Each format keeps as much as it holds: Guitar Pro 7-8 (`.gp`) and TuxGuitar files keep all four; a Guitar Pro 5 file keeps volume and pan to sixteen steps and keeps mute and solo; a MusicXML or MIDI file keeps volume and pan, but neither has a place for mute or solo. **Level** is OxiGuitar's own and isn't saved.
 
 However loud a song is, OxiGuitar never lets the sound go past just under full scale, so it doesn't distort when many tracks play at once.
 

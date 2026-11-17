@@ -1246,22 +1246,22 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_mixer_volume(move |i, v| {
         let m = a.borrow_mut().mixer.set_volume(i as usize, v);
-        sync_mix(&a, i as usize, m);
+        mixer_moved(&a, i as usize, m);
     });
     let a = app.clone();
     ui.on_mixer_pan(move |i, v| {
         let m = a.borrow_mut().mixer.set_pan(i as usize, v);
-        sync_mix(&a, i as usize, m);
+        mixer_moved(&a, i as usize, m);
     });
     let a = app.clone();
     ui.on_mixer_mute(move |i| {
         let m = a.borrow_mut().mixer.toggle_mute(i as usize);
-        sync_mix(&a, i as usize, m);
+        mixer_moved(&a, i as usize, m);
     });
     let a = app.clone();
     ui.on_mixer_solo(move |i| {
         let m = a.borrow_mut().mixer.toggle_solo(i as usize);
-        sync_mix(&a, i as usize, m);
+        mixer_moved(&a, i as usize, m);
     });
     let a = app.clone();
     ui.on_player_action(move |name| playing::action(&a, name.as_str()));
@@ -2719,10 +2719,18 @@ fn handle(app: &Shared, event: Event) {
             caret,
             tracks,
             note_edit,
+            mixer,
         } => {
+            if mixer {
+                // The window's own mixer moves: the rows and the sound
+                // have them already, and nothing else changed.
+                app.borrow_mut().editing.changed(score);
+                sync_edit_state(app, &edit);
+                return;
+            }
             let play = {
                 let mut s = app.borrow_mut();
-                s.editing.changed(score);
+                s.editing.changed(score.clone());
                 if let Some(c) = caret {
                     s.editing.edited(c);
                 }
@@ -2731,6 +2739,8 @@ fn handle(app: &Shared, event: Event) {
             };
             if let Some((tracks, was)) = tracks {
                 track_list_changed(app, &tracks, &was);
+            } else {
+                mixer_from_score(app, &score);
             }
             sync_sections(app);
             sync_edit_state(app, &edit);
@@ -3162,6 +3172,43 @@ fn settings_changed(app: &Shared) {
 }
 
 /// A track's mixer changed: show it in its row, and let the sound follow.
+/// A track's mixer control moved: heard at once, and kept in the score as
+/// one more change, so saving writes it (each format as far as it holds
+/// volume, pan, mute and solo) and Undo takes it back.
+fn mixer_moved(app: &Shared, i: usize, mix: oxiguitar_model::Mix) {
+    sync_mix(app, i, mix);
+    let s = app.borrow();
+    if let Some(caret) = s.editing.caret() {
+        s.worker.send(Request::Edit {
+            command: oxiguitar_edit::Command::Mix { track: i, mix },
+            caret,
+            selection: None,
+        });
+    }
+}
+
+/// The score's mixer, after a change that wasn't the window's own moves
+/// (Undo and Redo, a plugin's change): the rows and the sound follow it.
+fn mixer_from_score(app: &Shared, score: &oxiguitar_model::Score) {
+    let changed: Vec<_> = {
+        let s = app.borrow();
+        score
+            .tracks
+            .iter()
+            .enumerate()
+            .filter(|(i, t)| s.mixer.get(*i) != t.mix)
+            .map(|(i, t)| (i, t.mix))
+            .collect()
+    };
+    if changed.is_empty() {
+        return;
+    }
+    app.borrow_mut().mixer = Mixer::new(score.tracks.iter().map(|t| t.mix).collect());
+    for (i, mix) in changed {
+        sync_mix(app, i, mix);
+    }
+}
+
 fn sync_mix(app: &Shared, i: usize, mix: oxiguitar_model::Mix) {
     app.borrow_mut().player.set_mix(i, mix);
     let Some(ui) = app.borrow().ui.upgrade() else {

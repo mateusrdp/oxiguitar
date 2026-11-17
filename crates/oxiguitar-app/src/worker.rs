@@ -160,6 +160,10 @@ pub(crate) enum Event {
         /// Whether the change was a note insertion or deletion (for the
         /// engraved-beat preview toggle, #246).
         note_edit: bool,
+        /// The change was the window's own mixer moves (`Command::Mix`),
+        /// which the window and the sound already have: nothing to engrave
+        /// or play again.
+        mixer: bool,
     },
     /// One tile, premultiplied RGBA, `canvas::TILE` pixels square.
     Tile {
@@ -349,7 +353,8 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
         // No editing while playing: the window and plugins alike are
         // refused until the sound is paused or stopped. Only what plugins
         // keep for a track (their sections of the Track tab) changes while
-        // the song plays: the effects follow it (#232).
+        // the song plays: the effects follow it (#232). So does the mixer,
+        // which the sound follows from the window as it moves.
         let edits = matches!(
             request,
             Request::ApplyTool(_)
@@ -361,6 +366,10 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 | Request::DrawingClicked { .. }
         );
         let settings_only = match &request {
+            Request::Edit {
+                command: Command::Mix { .. },
+                ..
+            } => true,
             Request::Edit { command, caret, .. } => st
                 .doc
                 .as_ref()
@@ -426,10 +435,38 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 let (report, changed) = doc.apply_tool(i);
                 sink(Event::Tools(doc.tools()));
                 sink(Event::Report(report));
-                if changed && changed_score(&mut st, None, false, sink) {
+                if changed && changed_score(&mut st, None, false, false, sink) {
                     st.stale = true;
                 } else {
                     engrave(&mut st, sink);
+                }
+            }
+            Request::Edit {
+                command: Command::Mix { track, mix },
+                caret,
+                ..
+            } => {
+                // A slider dragged sends many: the ones already waiting
+                // join this one, and the score is told about once.
+                let mut moves = vec![(track, mix)];
+                pending.extend(rx.try_iter());
+                while let Some(Request::Edit {
+                    command: Command::Mix { track, mix },
+                    ..
+                }) = pending.front()
+                {
+                    moves.push((*track, *mix));
+                    pending.pop_front();
+                }
+                let Some(doc) = st.doc.as_mut() else {
+                    continue;
+                };
+                let mut changed = false;
+                for (track, mix) in moves {
+                    changed |= doc.edit(Command::Mix { track, mix }, caret, None).is_some();
+                }
+                if changed {
+                    changed_score(&mut st, None, false, true, sink);
                 }
             }
             Request::Edit {
@@ -443,7 +480,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 let mut wait = false;
                 let is_note = command.is_note_edit();
                 if let Some(caret) = doc.edit(command, caret, selection) {
-                    wait = changed_score(&mut st, Some(caret), is_note, sink);
+                    wait = changed_score(&mut st, Some(caret), is_note, false, sink);
                     st.stale = true;
                 }
                 // Typing ahead: the last edit engraves. A changed track list
@@ -464,7 +501,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 };
                 if done.is_some() {
                     sink(Event::Tools(doc.tools()));
-                    if changed_score(&mut st, None, false, sink) {
+                    if changed_score(&mut st, None, false, false, sink) {
                         st.stale = true;
                     } else {
                         engrave(&mut st, sink);
@@ -498,7 +535,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 }
                 doc.apply_change(&name, *score);
                 sink(Event::Tools(doc.tools()));
-                if changed_score(&mut st, None, false, sink) {
+                if changed_score(&mut st, None, false, false, sink) {
                     st.stale = true;
                 } else {
                     engrave(&mut st, sink);
@@ -766,6 +803,7 @@ fn changed_score(
     st: &mut State,
     caret: Option<Caret>,
     note_edit: bool,
+    mixer: bool,
     sink: &dyn Fn(Event),
 ) -> bool {
     let Some(doc) = st.doc.as_ref() else {
@@ -785,6 +823,7 @@ fn changed_score(
         caret,
         tracks,
         note_edit,
+        mixer,
     });
     let changed = shape != st.track_shape;
     st.track_shape = shape;
@@ -1053,6 +1092,83 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// Gap 2 of docs/parity.md: the user's mixer is saved in the file and
+    /// read back from it (Guitar Pro 7-8's `.gp` holds volume, pan, mute and
+    /// solo).
+    #[test]
+    fn the_mixer_is_saved_in_the_file() {
+        let (tx, rx) = channel();
+        let worker = Worker::start(
+            crate::test_plugins().clone(),
+            OpenScore::default(),
+            move |e| {
+                let _ = tx.send(e);
+            },
+        );
+        let dir =
+            std::env::temp_dir().join(format!("oxiguitar-worker-mixer-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        worker.send(Request::Open(fixture()));
+        let score = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        let caret = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        // A second track, to hold a solo while the first is muted.
+        worker.send(Request::Edit {
+            command: Command::AddTrack,
+            caret,
+            selection: None,
+        });
+        let wanted = [
+            oxiguitar_model::Mix {
+                volume: 0.25,
+                pan: -0.5,
+                mute: true,
+                solo: false,
+            },
+            oxiguitar_model::Mix {
+                volume: 0.9,
+                pan: 0.75,
+                mute: false,
+                solo: true,
+            },
+        ];
+        for (track, mix) in wanted.iter().enumerate() {
+            worker.send(Request::Edit {
+                command: Command::Mix { track, mix: *mix },
+                caret,
+                selection: None,
+            });
+        }
+        let to = dir.join("mixed.gp");
+        worker.send(Request::Save(Some((to.clone(), "gp".to_owned()))));
+        loop {
+            match next(&rx) {
+                Event::AskSave { .. } => worker.send(Request::ConfirmSave { keep: false }),
+                Event::Saved { edit, .. } => {
+                    assert!(!edit.modified);
+                    break;
+                }
+                Event::SaveFailed => panic!("not saved"),
+                _ => {}
+            }
+        }
+        worker.send(Request::Open(to));
+        let read = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        for (track, mix) in wanted.iter().enumerate() {
+            assert_eq!(read.tracks[track].mix, *mix, "track {track}");
+        }
+        assert_eq!(read.tracks.len(), 2);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn a_plugin_s_change_is_one_undoable_command_unless_late() {
         let (tx, rx) = channel();
@@ -1142,6 +1258,82 @@ mod tests {
                 break;
             }
         }
+    }
+
+    /// The mixer goes into the score, even while the score plays, as
+    /// changes Undo takes back: a run of volume moves is one.
+    #[test]
+    fn the_mixer_is_kept_in_the_score_while_it_plays() {
+        let (tx, rx) = channel();
+        let open = OpenScore::default();
+        let worker = Worker::start(crate::test_plugins().clone(), open.clone(), move |e| {
+            let _ = tx.send(e);
+        });
+        worker.send(Request::New);
+        let score = loop {
+            if let Event::Opened { score, .. } = next(&rx) {
+                break score;
+            }
+        };
+        let caret = oxiguitar_edit::Caret::at_start(&score, 0).unwrap();
+        let mix = |volume: f32, mute: bool| {
+            worker.send(Request::Edit {
+                command: Command::Mix {
+                    track: 0,
+                    mix: oxiguitar_model::Mix {
+                        volume,
+                        mute,
+                        ..score.tracks[0].mix
+                    },
+                },
+                caret,
+                selection: None,
+            });
+        };
+        open.set_playing(true);
+        for v in [0.6, 0.5, 0.4] {
+            mix(v, false);
+        }
+        mix(0.4, true);
+        let mut last = None;
+        while last
+            .as_ref()
+            .is_none_or(|(s, _): &(Arc<Score>, EditState)| !s.tracks[0].mix.mute)
+        {
+            match next(&rx) {
+                Event::Changed {
+                    score,
+                    edit,
+                    mixer,
+                    tracks,
+                    ..
+                } => {
+                    assert!(mixer && tracks.is_none());
+                    last = Some((score, edit));
+                }
+                Event::Refused => panic!("the mixer was refused while playing"),
+                _ => {}
+            }
+        }
+        let (changed, edit) = last.unwrap();
+        assert_eq!(changed.tracks[0].mix.volume, 0.4);
+        assert_eq!(changed.tracks[0].staves, score.tracks[0].staves);
+        assert!(edit.modified);
+        assert_eq!(edit.undo.as_deref(), Some("Mute"));
+        open.set_playing(false);
+        worker.send(Request::Undo);
+        worker.send(Request::Undo);
+        let undone = loop {
+            if let Event::Changed {
+                score, edit, mixer, ..
+            } = next(&rx)
+                && edit.undo.is_none()
+            {
+                assert!(!mixer, "Undo is not the window's own move");
+                break score;
+            }
+        };
+        assert_eq!(undone.tracks[0].mix, score.tracks[0].mix);
     }
 
     /// #232: while the score plays, a track section's settings still go
