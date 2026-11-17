@@ -1,10 +1,11 @@
-# Feature parity: Guitar Pro 8, TuxGuitar and alphaTab
+# Feature parity: Guitar Pro 8, TuxGuitar, alphaTab and Power Tab
 
 The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then we stop"). Made on 16 Nov 2026, against OxiGuitar 0.20.0 with its official plugins. Each program is read from its own documentation or code:
 
 - **Guitar Pro 8** (Arobas Music, proprietary): its user guide's table of contents and overview at guitar-pro.com/docs/gp8, and its palette as `docs/design/ui.md` and `docs/design/palette.md` list it.
 - **TuxGuitar 2.1.1** (LGPL-2.1, Java; the latest tag of github.com/helge17/tuxguitar): its modules, dialogs and song model in the source (`common/`, `desktop/`, `TGNoteEffect`, `TGBeat`, `TGMeasureHeader`), and its Flathub description.
 - **alphaTab 1.8** (MPL-2.0, TypeScript, C# and Kotlin): its introduction and release notes at alphatab.net. alphaTab is a library that renders and plays scores inside other programs. It has no editor of its own (its authoring route is alphaTex, a text format), so its editing rows say "n/a".
+- **Power Tab Editor 2.0** (GPL-3.0, C++, Qt; github.com/powertab/powertabeditor, release 2.0.22 of June 2025, on Flathub): its README, Flathub page and changelog, and the help topics of the original Power Tab Editor 1.7 (Brad Larsen, 2000 to 2006), which 2.0 follows. Its own wiki and manual were not read in full, so the section "Power Tab Editor" says "?" where a feature is not established from those. Power Tab Editor is an editor (guitar and bass tablature) and a player; it has no amp or sound-set system of its own.
 - **OxiGuitar**: the manual (`docs/manual/src/`), the design documents and the code.
 
 **Yes**: there and working. **Partial**: there, with the limit given. **No**: missing (for the other programs: not in their guide, model or code). **?**: not established from those sources. **Out**: missing by Mateus's decision. **Plugin**: OxiGuitar's, in an official plugin.
@@ -18,6 +19,7 @@ The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then
   - instrument views (fretboard, keyboard);
   - image export from the window;
   - a speed trainer.
+- **Power Tab Editor** has nothing OxiGuitar lacks except its own formats (#223) and three small tools (replacement, naming the chord under the caret, autosave with recovery); see "Power Tab Editor".
 - **Formats**: Guitar Pro 8 and TuxGuitar also import PowerTab and TablEdit, and write ASCII tab; TuxGuitar writes LilyPond and Guitar Pro 3 and 4 files; alphaTab reads CapXML and alphaTex. MuseScore and ABC are out (9 Nov 2026), and the formats #223 adds (PowerTab, Capella, alphaTex) wait until after v1.0 (16 Nov 2026).
 - **Not before v1.0**: audio tracks and line-in (M9 in ROADMAP.md; #240), Guitar Pro's song store. **Out by decision**: the automation and stem tools of Guitar Pro's palette (19 Oct 2026).
 
@@ -152,11 +154,64 @@ The parity check ROADMAP.md's "The way to v1.0" calls for before the beta ("Then
 | Packages | Installers | Installers, Flathub | Libraries | AppImage, apt, dnf, Flatpak (our own repository), installers |
 | Free and open source | No | Yes | Yes | Yes |
 
+## Power Tab Editor
+
+Added on 17 Nov 2026, for #274. Power Tab Editor is a tablature editor in the Guitar Pro mould, narrower than Guitar Pro 8 and older: its feature set sits inside the Guitar Pro 8 palette that OxiGuitar already covers (the notation and palette rows above), plus a handful of small tools of its own. The table lists what it has that the tables above don't already show, and where OxiGuitar stands.
+
+| | Power Tab Editor 2.0 | OxiGuitar 0.20 |
+| --- | --- | --- |
+| Tablature and notation for guitar and bass, up to 8 strings, more than 7 instruments in a file | Yes | Yes (3 to 10 strings, any number of tracks) |
+| Slides, hammer-ons and pull-offs, bends, harmonics, palm mute, let ring, tapping, tremolo bar, tremolo picking, trills, vibrato, arpeggio and pick strokes | Yes | Yes (see "Notation and engraving") |
+| Rhythm slashes, and a converter from notes to slashes | Yes | **Partial**: slash beats only, no slash staff (gap 9, out of v1.0); no converter |
+| Chord names, chord diagrams at the top of the score | Yes | Yes |
+| Chord dictionary of fingerings for many names | Yes | Yes (the chord builder with voicings and chord styles) |
+| Tuning dictionary | Yes (and the user's own) | Yes (tunings, capo) |
+| Score checker (bars that don't add up and other common errors) | Yes | **Partial**: the bar check (F4) and the "Hard" fingering marks; no checker for other errors |
+| Score polisher (aligns positions in a section) | Yes | Not needed: the layout spaces the bars itself |
+| Shifter (notes moved in pitch, or around the fingerboard at the same pitch) | Yes | Yes (Transpose; Find Fingering) |
+| Tonality tools (key signatures that fit the notes) | Yes | Yes (Infer Key Signatures) |
+| Chord identification (the name of the chord at the caret) | Yes | **Partial**: Harmonize names chords for a melody; no tool names the chord under the caret |
+| Replacement tool (note patterns swapped for others) | Yes | **No** |
+| Text: floating text, chord text, time stamps, Italian terms, rehearsal signs, tempo markers | Yes | Yes (text, sections, directions, tempo) |
+| Pickup bar at the start of the song | Yes | Yes (Fit Bars keeps one) |
+| Guitar and bass scores in one window, staves shown or hidden in any mix | Yes | Yes (tracks shown or hidden) |
+| Player change (instrument changes in the song) | Yes | **No** (the instrument changes mid-song row above; gap 3) |
+| Mixer during playback | Yes | Yes (saved in the file since v1.0's slice) |
+| Customisable keyboard shortcuts | Yes | **No** (gap 11) |
+| Several files open at once, in tabs | Yes | **No**: opening another file replaces the song (`saving.md`) |
+| Autosave and a recovery tool for a crashed session | Yes (a backup tool, and the Recovery Tool of 1.7) | **No**: nothing is written until the user saves |
+| Open Guitar Pro 3 to 8 files | Yes | Yes (Plugin) |
+| Open and save .ptb (1.7) and .pt2 (2.0) | Yes | **No** (#223, after v1.0) |
+| Export | MIDI, ASCII tab, HTML, section images (1.7) | MIDI file, WAV and PDF; ASCII tab, HTML and images **No** (gaps 4 and 10) |
+| Platforms | Windows (1.7); Windows, macOS, Linux (2.0) | Linux, Windows, macOS |
+
+**What it adds to the gaps.** Nothing that changes the ranking above. Every feature Power Tab Editor has either is in OxiGuitar, is already a placed gap (slash staves, instrument changes, shortcuts, ASCII and image export, its own file formats), or is a small tool. Three small ones are new and are not in the list below: the replacement tool, naming the chord under the caret, and autosave with recovery. Autosave is the one a user would miss on the day a window crashes; it is small (a timer writing a recovery copy beside the file, which is not an upload) and is offered to Mateus as a candidate for v1.0 or after, not decided. Several files in tabs is a window change, not a model one; Guitar Pro 8 has it too and the earlier tables did not list it, so it is noted here for Mateus to place.
+
+**Reading .ptb and .pt2** is the formats' work (#223): the one real Power Tab gap, and the only reason to keep #223 open after v1.0. Both formats are documented by the open-source editor's code, which reads them.
+
+## Summary: what is planned and what is not (17 Nov 2026)
+
+Closes #274 (parity with alphaTab and Power Tab). Against Guitar Pro 8, TuxGuitar, alphaTab and Power Tab Editor, as placed by Mateus.
+
+**In v1.0, built** (PRs #299 to #301): drum entry on the drum staff and on drum tablature (gap 1), and the mixer saved in the file, mute and solo included (gap 2).
+
+**After v1.0, planned:**
+- The formats of #223 (still open): reading and writing Power Tab's `.ptb` and `.pt2`, Capella (CapXML) and alphaTex, then what it takes to read TablEdit and ASCII tab and write ASCII tab and LilyPond if asked.
+- M9: audio tracks and line-in (#240), the tuner, external MIDI devices, PNG and SVG export in the plugin way.
+
+**Not in v1.0, with no date** (decided 17 Nov 2026; any may come back as a plugin or a request): volume, pan and instrument automations (maybe a plugin) and instrument changes mid-song; image export from the window; the speed trainer; instrument views (fretboard, keyboard); the stylesheet (fonts, spacing, header and footer, page format); multi-bar rests; numbered notation, slash staves and tenuto; the scales tool; customisable shortcuts.
+
+**Not placed yet, small, for Mateus to place if he wants them:** autosave with recovery, the replacement tool, naming the chord under the caret, several files open in tabs, colours for single notation elements.
+
+**Out by decision:** MuseScore and ABC (9 Nov 2026), Guitar Pro's song store, stem direction overrides (19 Oct 2026).
+
+Nothing else Power Tab Editor or alphaTab has is missing from OxiGuitar.
+
 ## Gaps worth deciding before the beta
 
 Ranked by how often a user switching from Guitar Pro 8 or TuxGuitar would miss each one. Each was a question for Mateus: before the beta, after v1.0, or never.
 
-**Decided (Mateus, 17 Nov 2026): gaps 1 and 2 go into v1.0,, the mixer built first; gaps 3 to 11 stay out of v1.0.** Notes on the ones he gave a reason or a hint for: volume, pan and instrument automations (3) may come back later, perhaps as a plugin; the stylesheet (7) is out; multi-bar rests (8) are rarely needed, as ties and the present rests do. The list below is kept as it was ranked.
+**Decided (Mateus, 17 Nov 2026): gaps 1 and 2 go into v1.0, the mixer built first; gaps 3 to 11 stay out of v1.0.** Notes on the ones he gave a reason or a hint for: volume, pan and instrument automations (3) may come back later, perhaps as a plugin; the stylesheet (7) is out; multi-bar rests (8) are rarely needed, as ties and the present rests do. The list below is kept as it was ranked.
 
 1. **Drum entry.** In v1.0 (17 Nov 2026); built, with drum tablature. Both editors have it, and drum tracks are in most files people open: today they can be played, transposed around and copied as rhythm, but not written. Guitar Pro 8's way is a drum staff with a kit map, and TuxGuitar's is a matrix editor. Size: an editor slice (the model already holds drum notes as General MIDI pitches).
 2. **The mixer saved into the file.** In v1.0 (17 Nov 2026); built. Guitar Pro and TuxGuitar keep each track's volume and pan. OxiGuitar reads them from the file, then forgets the user's changes at closing. Size: small (the model holds them; the formats that carry them, Guitar Pro's among them, would write the user's).
