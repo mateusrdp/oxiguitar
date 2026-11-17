@@ -1169,7 +1169,6 @@ impl Core for Linked {
 
 #[test]
 fn interface_1_3_track_sections_links_and_folders() {
-    use oxiguitar_host::api::manifest::SharedFolder;
     use oxiguitar_host::api::message::TrackInfo;
     use oxiguitar_host::{Folders, System};
 
@@ -1312,7 +1311,7 @@ fn interface_1_3_track_sections_links_and_folders() {
         [
             folders.plugin_data("oxiguitar.test").to_str().unwrap(),
             folders.plugin_cache("oxiguitar.test").to_str().unwrap(),
-            folders.shared(SharedFolder::Soundfonts).to_str().unwrap(),
+            folders.named("soundfonts").to_str().unwrap(),
         ]
     );
     assert_eq!(

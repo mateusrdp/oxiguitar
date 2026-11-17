@@ -62,7 +62,7 @@ use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::event::{Event, EventKind};
 use oxiguitar_plugin_api::manifest::{
     Environment, ExportKind, ExporterSpec, FormatSpec, InstrumentSpec, Manifest, ServiceSpec,
-    SharedFolder, Shortcut, ToolSpec, TrackSectionSpec,
+    Shortcut, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
     Answer, Availability, Clicked, DrawPlace, Drawn, Engraving, Error, ErrorKind, FolderPlaces,
@@ -2614,22 +2614,12 @@ impl Plugins {
                 )
             })?;
         }
-        let shared = if manifest.knows_minor(3) {
-            manifest
-                .folders
-                .iter()
-                // The folders interface 1.3 names; a plugin asks for the
-                // others one at a time (`HostRequest::Folder`).
-                .filter_map(|f| SharedFolder::of(f))
-                .map(|f| Ok((f, text(&folders.shared(f))?)))
-                .collect::<Result<Vec<_>, Error>>()?
-        } else {
-            Vec::new()
-        };
+        // The shared folders are asked for by name (`HostRequest::Folder`):
+        // the core knows none (interface 1.10, ADR 0012).
         Ok(PluginFolders {
             data: text(&data)?,
             cache: text(&cache)?,
-            shared,
+            retired_shared: Vec::new(),
         })
     }
 }

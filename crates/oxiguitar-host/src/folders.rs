@@ -7,8 +7,6 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
-use oxiguitar_plugin_api::manifest::SharedFolder;
-
 /// The environment variable that replaces the user folder: for tests, and
 /// for a portable copy that keeps everything beside itself.
 pub const HOME_VARIABLE: &str = "OXIGUITAR_HOME";
@@ -188,14 +186,8 @@ impl Folders {
         self.cache.join(id)
     }
 
-    /// A shared folder, beside `plugins` in the data folder: `soundfonts`,
-    /// `nam` (interface 1.3).
-    pub fn shared(&self, folder: SharedFolder) -> PathBuf {
-        self.data.join(folder.name())
-    }
-
     /// A plugin's shared folder by name, beside `plugins` in the data
-    /// folder (interface 1.8; `soundfonts` and `nam` are two such names).
+    /// folder (interface 1.8).
     pub fn named(&self, name: &str) -> PathBuf {
         self.data.join(name)
     }
@@ -332,7 +324,7 @@ pub(crate) mod tests {
             PathBuf::from("/home/mat/.cache/oxiguitar/me.nam")
         );
         assert_eq!(
-            f.shared(SharedFolder::Soundfonts),
+            f.named("soundfonts"),
             PathBuf::from("/home/mat/.local/share/oxiguitar/soundfonts")
         );
     }
@@ -492,10 +484,7 @@ pub(crate) mod tests {
         assert_eq!(f.config, PathBuf::from("/media/usb/og"));
         assert_eq!(f.user_plugins, PathBuf::from("/media/usb/og/plugins"));
         assert_eq!(f.cache, PathBuf::from("/media/usb/og/cache"));
-        assert_eq!(
-            f.shared(SharedFolder::Nam),
-            PathBuf::from("/media/usb/og/nam")
-        );
+        assert_eq!(f.named("nam"), PathBuf::from("/media/usb/og/nam"));
         assert_eq!(
             f.system_plugins,
             vec![
