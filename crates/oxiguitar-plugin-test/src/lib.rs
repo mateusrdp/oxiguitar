@@ -21,10 +21,9 @@
 //!   release in the middle of a canvas) answers with contents it can draw;
 //! - every kind of event it subscribes to is delivered without an error;
 //! - every tool it adds (interface 1.2) runs with no score open;
-//! - its settings window and its sections of the track dialog (interface
-//!   1.3) show contents the core can draw, before and after a plausible use
-//!   of each widget, and a section hands back its track's settings as a
-//!   JSON object.
+//! - its sections of the track dialog (interface 1.3) show contents the
+//!   core can draw, before and after a plausible use of each widget, and a
+//!   section hands back its track's settings as a JSON object.
 //!
 //! - every instrument and effect it offers (interface 1.3) prepares; an
 //!   instrument starts a note within its declared resolution of the frame
@@ -544,29 +543,7 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
             },
         );
     }
-    // The settings window and the track dialog's sections (interface 1.3).
-    if let Some(found) = plugins.with_settings_window().first() {
-        let content = plugins.settings_window(found);
-        report.check(
-            "the settings window: its contents can be shown",
-            content.as_ref().map(drop).map_err(|e| e.message.clone()),
-        );
-        if let Ok(content) = content {
-            for (widget, event) in plausible_events(&content) {
-                let answer = plugins.settings_event(found, &widget, event.clone());
-                report.check(
-                    format!(
-                        "the settings window: {event:?} on {widget} answers with contents it can show"
-                    ),
-                    match answer {
-                        Ok(_) => Ok(()),
-                        Err(e) if e.message.contains("can't be shown") => Err(e.message),
-                        Err(e) => not_a_crash(&e),
-                    },
-                );
-            }
-        }
-    }
+    // The track dialog's sections (interface 1.3).
     for class in InstrumentClass::ALL {
         for section in plugins.track_sections(class) {
             // Each section once, for the first class it shows for.

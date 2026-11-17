@@ -181,6 +181,14 @@ pub trait Core: Send + Sync {
         let _ = asked;
     }
 
+    /// The plugin `id` saved settings that differ from what it had
+    /// ([`HostRequest::SetSettings`]), from whichever of its parts: the
+    /// window prepares its sounds again if it plays any. The default does
+    /// nothing.
+    fn settings_changed(&self, id: &str) {
+        let _ = id;
+    }
+
     /// The plugin `id` failed and is withdrawn for the rest of the session:
     /// its tabs should go. The footer has already been told. The default
     /// does nothing.
@@ -1849,78 +1857,6 @@ impl Plugins {
         }
     }
 
-    /// The ready plugins with a settings window (interface 1.3), in plugin
-    /// order.
-    pub fn with_settings_window(&self) -> Vec<&Found> {
-        self.ready()
-            .filter(|(_, _, m)| m.knows_minor(3) && m.settings_window)
-            .map(|(_, f, _)| f)
-            .collect()
-    }
-
-    /// What the settings window of `plugin` (one of
-    /// [`Plugins::with_settings_window`]) shows now, loading it if needed.
-    pub fn settings_window(&self, plugin: &Found) -> Result<TabContent, Error> {
-        let index = self.settings_index(plugin)?;
-        self.window_answer(index, &Request::SettingsWindow)
-    }
-
-    /// Tells `plugin` that the user used the widget `widget` of its settings
-    /// window, and returns the window's contents after it.
-    pub fn settings_event(
-        &self,
-        plugin: &Found,
-        widget: &str,
-        event: TabEvent,
-    ) -> Result<TabContent, Error> {
-        let index = self.settings_index(plugin)?;
-        let answer = self.window_answer(
-            index,
-            &Request::SettingsEvent {
-                widget: widget.to_owned(),
-                event,
-            },
-        );
-        match answer {
-            // As for tabs: an ordinary error is said in the footer, and the
-            // window keeps showing what it shows now.
-            Err(e) if plugin.failure().is_none() => {
-                let name = plugin.name();
-                self.0.core.notify(Level::Warning, format!("{name}: {e}"));
-                self.window_answer(index, &Request::SettingsWindow)
-            }
-            answer => answer,
-        }
-    }
-
-    fn settings_index(&self, plugin: &Found) -> Result<usize, Error> {
-        let index = self.index_of(plugin);
-        let usable = self
-            .ready()
-            .any(|(i, _, m)| i == index && m.knows_minor(3) && m.settings_window);
-        if usable {
-            Ok(index)
-        } else {
-            Err(Error::not_found(format!(
-                "{} has no settings window that can be used",
-                plugin.name()
-            )))
-        }
-    }
-
-    fn window_answer(&self, index: usize, request: &Request<'_>) -> Result<TabContent, Error> {
-        match self.request(index, request)? {
-            Answer::Tab(content) => match content.problems().into_iter().next() {
-                None => Ok(*content),
-                Some(problem) => Err(self.fail(
-                    index,
-                    format!("its settings window can't be shown ({problem})"),
-                )),
-            },
-            other => Err(self.unexpected(index, &other)),
-        }
-    }
-
     /// The sections the ready plugins add to the track dialog for a track
     /// of class `class` (interface 1.3), in plugin order.
     pub fn track_sections(&self, class: InstrumentClass) -> Vec<SectionRef<'_>> {
@@ -2523,12 +2459,16 @@ impl Plugins {
                 Ok(HostAnswer::Settings(mine.to_string()))
             }
             HostRequest::SetSettings { json } => match serde_json::from_str::<Value>(&json) {
-                Ok(v @ Value::Object(_)) => self
-                    .0
-                    .settings
-                    .set(&manifest.id, v)
-                    .map(|()| HostAnswer::Done)
-                    .map_err(|e| Error::new(ErrorKind::Failed, e)),
+                Ok(v @ Value::Object(_)) => {
+                    let changed = self.0.settings.get(&manifest.id).as_ref() != Some(&v);
+                    let saved = self.0.settings.set(&manifest.id, v);
+                    if changed && saved.is_ok() {
+                        self.0.core.settings_changed(&manifest.id);
+                    }
+                    saved
+                        .map(|()| HostAnswer::Done)
+                        .map_err(|e| Error::new(ErrorKind::Failed, e))
+                }
                 _ => Err(Error::new(
                     ErrorKind::Invalid,
                     "a plugin's settings must be a JSON object",

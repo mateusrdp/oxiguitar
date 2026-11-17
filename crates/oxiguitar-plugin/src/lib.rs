@@ -162,14 +162,6 @@ pub trait Plugin: Send + Sync + 'static {
         None
     }
 
-    /// The settings window, for a manifest with `settings_window`
-    /// (interface 1.3): standard widgets, as a tab has, in a window the
-    /// plugin manager opens. Keep what the user sets with
-    /// [`Host::set_settings`].
-    fn settings_window(&self) -> Option<&dyn Tab> {
-        None
-    }
-
     /// The track dialog's section `id` (an id from the manifest's
     /// `track_sections`; interface 1.3).
     fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
@@ -585,12 +577,10 @@ pub fn dispatch_kept(
             plugin.event(&event);
             Ok(Answer::Done)
         }
-        Request::SettingsWindow => Ok(Answer::Tab(Box::new(find_settings(plugin)?.content()))),
-        Request::SettingsEvent { widget, event } => {
-            let window = find_settings(plugin)?;
-            window.on(&widget, event)?;
-            Ok(Answer::Tab(Box::new(window.content())))
-        }
+        // Retired in interface 1.9: no host sends them.
+        Request::RetiredSettingsWindow | Request::RetiredSettingsEvent { .. } => Err(
+            Error::not_found("settings windows were retired in interface 1.9"),
+        ),
         Request::TrackSection {
             section,
             track,
@@ -715,12 +705,6 @@ fn prepared(
             resolution,
         }),
     }
-}
-
-fn find_settings(plugin: &dyn Plugin) -> Result<&dyn Tab, Error> {
-    plugin
-        .settings_window()
-        .ok_or_else(|| Error::not_found("this plugin has no settings window"))
 }
 
 fn find_section<'p>(plugin: &'p dyn Plugin, id: &str) -> Result<&'p dyn TrackSection, Error> {
@@ -1155,19 +1139,6 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
             ));
         }
     }
-    match (manifest.settings_window, plugin.settings_window()) {
-        (true, None) => out.push("a settings window is declared, but not implemented".into()),
-        (false, Some(_)) => out.push(
-            "the plugin has a settings window, but the manifest doesn't declare settings_window"
-                .into(),
-        ),
-        (true, Some(window)) => {
-            for p in window.content().problems() {
-                out.push(format!("the settings window: {p}"));
-            }
-        }
-        (false, None) => {}
-    }
     for s in &manifest.track_sections {
         let Some(section) = plugin.track_section(&s.id) else {
             out.push(format!(
@@ -1401,7 +1372,7 @@ mod tests {
             check::<Echo>(&missing, "0.1.0"),
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
-        let later = ECHO.replace("\"1.0\"", "\"1.9\"");
+        let later = ECHO.replace("\"1.0\"", "\"1.10\"");
         let (major, minor) = oxiguitar_plugin_api::INTERFACE;
         assert!(
             check::<Echo>(&later, "0.1.0")[0].contains(&format!("this SDK is {major}.{minor}"))
@@ -1614,17 +1585,12 @@ mod tests {
         );
     }
 
-    /// A plugin with a settings window (the counter again) and a track
-    /// section holding a level per track.
-    struct Amp(Counter);
+    /// A plugin with a track section holding a level per track.
+    struct Amp;
 
     impl Plugin for Amp {
-        fn start(host: Host) -> Result<Amp, Error> {
-            Ok(Amp(Counter::start(host)?))
-        }
-
-        fn settings_window(&self) -> Option<&dyn Tab> {
-            Some(&self.0)
+        fn start(_host: Host) -> Result<Amp, Error> {
+            Ok(Amp)
         }
 
         fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
@@ -1670,17 +1636,8 @@ mod tests {
     }
 
     #[test]
-    fn settings_windows_and_track_sections_answer() {
+    fn track_sections_answer_and_settings_windows_are_retired() {
         let amp = Amp::start(Host::detached()).unwrap();
-        assert_eq!(
-            text_of(dispatch(&amp, Request::SettingsWindow).unwrap()),
-            "0"
-        );
-        let click = Request::SettingsEvent {
-            widget: "more".into(),
-            event: TabEvent::Clicked,
-        };
-        assert_eq!(text_of(dispatch(&amp, click).unwrap()), "1");
         let track = TrackInfo {
             index: 3,
             name: "Lead".into(),
@@ -1713,23 +1670,28 @@ mod tests {
             ErrorKind::Invalid
         );
         assert_eq!(
-            dispatch(&Echo, Request::SettingsWindow).unwrap_err().kind,
+            dispatch(&amp, Request::RetiredSettingsWindow)
+                .unwrap_err()
+                .kind,
             ErrorKind::NotFound
         );
 
         let manifest = r#"{
             "interface": "1.3", "id": "test.amp", "name": "Amp", "version": "0.1.0",
-            "settings_window": true,
             "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}]
         }"#;
         assert_eq!(check::<Amp>(manifest, "0.1.0"), Vec::<String>::new());
-        let neither = manifest
-            .replace("\"settings_window\": true,", "")
+        // A manifest that still declares a settings window is told so.
+        let old = manifest
+            .replace(
+                "\"track_sections\"",
+                "\"settings_window\": true, \"track_sections\"",
+            )
             .replace("\"id\": \"amp\"", "\"id\": \"cab\"");
         assert_eq!(
-            check::<Amp>(&neither, "0.1.0"),
+            check::<Amp>(&old, "0.1.0"),
             vec![
-                "the plugin has a settings window, but the manifest doesn't declare settings_window",
+                "the manifest key \"settings_window\" is unknown",
                 "track section \"cab\" is declared, but not implemented",
             ]
         );

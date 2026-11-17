@@ -1,5 +1,5 @@
 {
-  "interface": "1.8",
+  "interface": "1.9",
   "id": "oxiguitar.test",
   "name": "Test plugin",
   "version": "0.20.1",
@@ -35,16 +35,17 @@
   "tabs": [
     { "id": "panel", "title": "Test", "area": "bottom" },
     { "id": "side", "title": "Test side", "area": "right" },
-    { "id": "ask", "title": "Test Dialog", "area": "dialog" }
+    { "id": "ask", "title": "Test Dialog", "area": "dialog" },
+    { "id": "settings", "title": "Test Settings", "area": "dialog" }
   ],
   "events": ["score", "selection", "playback"],
   "tools": [
     { "id": "mark", "name": "Mark the Title", "description": "Adds an exclamation mark to the score's title, as one change." },
     { "id": "link", "name": "Show a Footer Link", "description": "Shows a warning in the footer with a link to the plugin guide.", "palette": { "text": "Lnk" }, "menu": "Tools" },
     { "id": "stamp", "name": "Stamp the First Beat", "description": "Keeps the test plugin's data on the first beat with notes, which its gain then silences.", "palette": { "section": "Effects", "text": "T!" }, "menu": "Test", "shortcut": "Ctrl+Alt+J" },
-    { "id": "ask", "name": "Open the Test Dialog", "description": "Opens the test plugin's dialog and shows its side tab.", "palette": { "section": "Test tools", "symbol": "U+E4A0" }, "menu": "Page", "toolbar": { "text": "Ask" } }
+    { "id": "ask", "name": "Open the Test Dialog", "description": "Opens the test plugin's dialog and shows its side tab.", "palette": { "section": "Test tools", "symbol": "U+E4A0" }, "menu": "Page", "toolbar": { "text": "Ask" } },
+    { "id": "settings", "name": "Test Settings…", "description": "Opens the test plugin's settings, kept with OK and forgotten with Cancel.", "edits": false }
   ],
-  "settings_window": true,
   "draws": true,
   "performs": true,
   "track_sections": [

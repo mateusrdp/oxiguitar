@@ -18,7 +18,7 @@ A manifest with `exporters` must ask for interface 1.4.
 
 Your `Plugin` hands out each one from `audio_exporter(id)`, as something implementing `AudioExporter`. An export goes:
 
-1. **`start`**: return the rate you want the sound at (8000 to 384000 frames a second; your settings window can let the user pick) and the file's first bytes, a header, perhaps empty.
+1. **`start`**: return the rate you want the sound at (8000 to 384000 frames a second; your [settings dialog](settings.md#a-settings-dialog) can let the user pick) and the file's first bytes, a header, perhaps empty.
 2. **`samples`**, again and again: stereo frames, left and right interleaved, at that rate, as the mixer leaves them (full scale is ±1; louder is possible, so clip or scale as your format needs). Return the bytes that follow in the file.
 3. **`finish`**: return the file's last bytes and, if your header names the file's length (WAV's does), the header again in `start`: OxiGuitar writes it over the beginning once everything else is written. With `cancelled`, the user stopped the export and the file is thrown away; just forget it.
 

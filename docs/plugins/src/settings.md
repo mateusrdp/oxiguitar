@@ -22,10 +22,27 @@ It reads and writes only its own object, through the host:
 - `settings()` returns the object (empty when there is none). It is a `serde_json::Map`, so add `serde_json = "1"` to your dependencies.
 - `set_settings(map)` replaces the whole object and saves settings.json at once. Read, change, write: keys you leave out are gone.
 - The app and every plugin write through one shared copy of settings.json, so none overwrites another's keys. A settings.json that couldn't be read when OxiGuitar started is never written, so settings then last for the session only. `set_settings` returns an error when the file can't be written (a full disk, a folder the user can't write to): handle it (the template tells the footer and carries on).
-- **Show them in a settings window** (interface 1.3): with `"settings_window": true` in the manifest and `Plugin::settings_window` returning a `Tab`, the plugin manager (Tools → Plugins) gives the plugin a Settings… button, which opens a window of the plugin's widgets: the same widgets as a tab's, without a canvas. Its `on` reads the settings, changes them and writes them back. Before 1.3, put them in a tab of your own ([Tabs](tabs.md)).
+- **Show them in a dialog of your own** (below).
 - Users can also edit settings.json by hand while OxiGuitar is closed, so read it defensively: a value of the wrong type falls back to your default, as the template's `and_then(|v| v.as_bool())` does.
 
 Settings are for small values, and they are global. What belongs to one track of one score goes in a [section of the Track tab](track-sections.md) instead.
+
+## A settings dialog
+
+OxiGuitar draws nothing of a plugin's settings: the plugin shows them itself, in a [dialog](tabs.md#dialogs) of its own, opened by a [tool](tools.md) that doesn't edit the score (interface 1.9):
+
+```json
+"tabs": [{ "id": "settings", "title": "Sound Sets", "area": "dialog" }],
+"tools": [{ "id": "settings", "name": "MIDI Sound Sets…",
+            "description": "Picks the sound set for each kind of instrument.",
+            "edits": false }]
+```
+
+- The tool's `run` calls `host.open_dialog("settings")`. With `"edits": false` its menu entry works with no score open and while the song plays. Without `menu`, it is in the **Plugins** menu; name it after your plugin so users find it there.
+- The dialog shows what is saved, and its `on` changes a **draft** the plugin keeps, not settings.json. In `Tab::closed(ok)`, OK (`true`) writes the draft with `set_settings`; Cancel (`false`) forgets it. Clear the draft when the tool opens the dialog, so each opening starts from what is saved. The test plugin's `SettingsDialog` does exactly this.
+- When `set_settings` changes what a plugin that plays sound had saved, OxiGuitar stops the song and prepares its instruments and effects again, so the next Play uses the new settings. Writing only on OK means that happens once, when the user has decided.
+
+OxiGuitar 0.9 to 0.20 drew a settings window for a manifest with `"settings_window": true`, opened from the plugin manager. Interface 1.9 retired it (Mateus, 17 Nov 2026): the core owns nothing of a plugin. The key is now unknown, and the SDK's checks say so; OxiGuitar ignores it in older plugins, which then show no settings until they move to a dialog.
 
 ## Folders (interface 1.3)
 

@@ -23,7 +23,7 @@ About 1.2 GB in all; you can take any of them. Before it downloads anything it s
 - **Flatpak:** run `install.sh` (below). The Flatpak can't see the sets the `.deb` and `.rpm` put in `/usr/share/oxiguitar/soundfonts`, nor your own `soundfonts` folder: when OxiGuitar's Flatpak is installed, `install.sh` installs into its folder, `~/.var/app/io.github.mateusrdp.OxiGuitar/data/oxiguitar/soundfonts/`, too, and says so ([Flatpak](install-linux.md#flatpak-any-linux)).
 - **Any system:** from the installer's [releases page](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases), `install.sh` (Linux, macOS: `bash install.sh` in a terminal) or `install.ps1` (Windows: in PowerShell, `powershell -ExecutionPolicy Bypass -File .\install.ps1`). They install into your own `soundfonts` folder (below). `--list` (`-List`) shows what is on offer, `--sets bass,drums` (`-Sets bass,drums`) takes only some, and `--uninstall` (`-Uninstall`) removes what it installed.
 
-**There is nothing to pick.** Each set says which kind of track it is made for, so OxiGuitar plays clean guitars with Clean Guitar, overdriven ones with Overdriven Guitar, distorted ones with Distorted Guitar, basses with Bass and drums with the Drum Kit, from the next time a score plays. Nylon Guitar and Ukulele share **Nylon-string guitars**, where the larger, Nylon Guitar, plays (pick the Ukulele there, or give one track its own sound: [One track's own sound](#one-tracks-own-sound)); Steel String Guitar has **Steel-string guitars**. To use another set for a kind of track, pick it in the MIDI plugin's settings window (**Tools → Plugins…**, **MIDI (SoundFont, SFZ)**, **Settings…**): each set is listed by its name, with its licence and credit, and each row's first entry says which set plays when you pick nothing. A pick always wins. The installer writes a `CREDITS.txt` beside the sets; the drum kit's licence asks that music you publish with it credit "Drum samples provided by DrumGizmo.org".
+**There is nothing to pick.** Each set says which kind of track it is made for, so OxiGuitar plays clean guitars with Clean Guitar, overdriven ones with Overdriven Guitar, distorted ones with Distorted Guitar, basses with Bass and drums with the Drum Kit, from the next time a score plays. Nylon Guitar and Ukulele share **Nylon-string guitars**, where the larger, Nylon Guitar, plays (pick the Ukulele there, or give one track its own sound: [One track's own sound](#one-tracks-own-sound)); Steel String Guitar has **Steel-string guitars**. To use another set for a kind of track, pick it in **Plugins → MIDI Sound Sets…** and press **OK**: each set is listed by its name, with its licence and credit, and each row's first entry says which set plays when you pick nothing. A pick always wins. The installer writes a `CREDITS.txt` beside the sets; the drum kit's licence asks that music you publish with it credit "Drum samples provided by DrumGizmo.org".
 
 ## Sets to download yourself
 
@@ -48,13 +48,13 @@ All three together take about 2 GB of disk. OxiGuitar holds the samples of the s
    | Windows | `%APPDATA%\OxiGuitar\soundfonts\` |
 
    With `OXIGUITAR_HOME` set, it is the `soundfonts` folder in that folder.
-3. **Pick them**: **Tools → Plugins…**, select **MIDI (SoundFont, SFZ)**, press **Settings…**, and choose:
+3. **Pick them**: **Plugins → MIDI Sound Sets…** (with or without a song open), choose, and press **OK**:
    - **Clean guitars**: `01-green_keyswitch` (the Gretsch) or `02-black_keyswitch` (the Hofner);
    - **Basses**: `01-darkblack_keysw`;
    - **Drums**: `DrumGizmo MuldjordKit` (in its `Stereo` folder).
 
    These guitars are clean. Leave **Overdriven guitars** and **Distorted guitars** on a General MIDI set, whose own overdriven and distortion guitars then play there, or pick a distorted set of your own; or play the clean guitars through an amp model ([Amp models (NAM)](amp-models.md)). Leave **Nylon-string guitars**, **Steel-string guitars** and **Everything else** on a General MIDI set (below). The choice holds for every file; one track can play another row's set, or a set of its own ([One track's own sound](#one-tracks-own-sound)).
-4. **Play.** A change in the settings window takes effect at once: if the song was playing it stops, the new sets load (a few seconds for a big kit) and the ones no longer picked are let go, and the next Play uses them.
+4. **Play.** Your picks take effect when you press **OK** (**Cancel** leaves the sets as they were): if the song was playing it stops, the new sets load (a few seconds for a big kit) and the ones no longer picked are let go, and the next Play uses them.
 
 If you publish music made with these sets, credit them: Karoryfer Lecolds for the guitars and basses, and, as the MuldjordKit's licence (CC BY 4.0) asks, Lars Muldjord and the DrumGizmo team for the drums.
 
@@ -63,7 +63,7 @@ If you publish music made with these sets, credit them: Karoryfer Lecolds for th
 - **Windows** has a General MIDI set, `gm.dls`, and **macOS** one in Core Audio. These are the smallest and plainest.
 - **Linux** has one when a package installs it: on Debian and Ubuntu the `oxiguitar-midi` package recommends `fluid-soundfont-gm` (FluidR3, 148 MB) or `musescore-general-soundfont-small` (MuseScore General, 40 MB), which your package manager installs with it unless told not to; on Fedora it recommends `fluid-soundfont-gm`. OxiGuitar looks in `/usr/share/sounds/sf2`, `/usr/share/sounds/sf3` and `/usr/share/soundfonts`, and, for the recorded sets the sound-set installer puts there, in `/usr/share/oxiguitar/soundfonts`.
 
-A General MIDI set has one sound for each of the 128 standard instruments and a drum kit. While only your system's sets play, the MIDI plugin's settings window says so, with a link to this page, and the first time it happens a dialog says it too ([Advice dialogs](plugins.md#advice-dialogs); tick **Don't show this again** to silence it, `no-sound-sets` in `settings.json`).
+A General MIDI set has one sound for each of the 128 standard instruments and a drum kit. While only your system's sets play, the MIDI plugin's **Sound Sets** dialog says so, with a link to this page, and the first time it happens a dialog says it too ([Advice dialogs](plugins.md#advice-dialogs); tick **Don't show this again** to silence it, `no-sound-sets` in `settings.json`).
 
 ## A better set for everything else
 
@@ -86,9 +86,9 @@ If you'd rather keep disk use small, FreePats' electric guitars (CC0) are SoundF
 
 Pick **Clean** or **Jazz** for **Clean guitars**. **Direct** sounds thin on its own: it is the raw signal an amp model starts from ([Amp models (NAM)](amp-models.md)); pick it for one track ([One track's own sound](#one-tracks-own-sound)) or for **Clean guitars**. FreePats' overdriven and distorted guitars (`electric-guitar-FSBS-dist2` and `-dist1`, on GitHub too) suit **Overdriven guitars** and **Distorted guitars**.
 
-## How the settings window chooses
+## How the sound sets are chosen
 
-The MIDI plugin's settings window (**Tools → Plugins…**, **MIDI (SoundFont, SFZ)**, **Settings…**) has a row for each kind of instrument. A track goes to the row its General MIDI instrument names, which Guitar Pro files keep:
+The MIDI plugin's **Sound Sets** dialog (**Plugins → MIDI Sound Sets…**) has a row for each kind of instrument. A track goes to the row its General MIDI instrument names, which Guitar Pro files keep:
 
 | Row | General MIDI instruments |
 | --- | --- |
@@ -117,9 +117,9 @@ The MIDI plugin's settings window (**Tools → Plugins…**, **MIDI (SoundFont, 
 
 ## One track's own sound
 
-The settings window's rows hold for every song. One track can sound otherwise: select it (click its name), open the **Track** tab on the right, and choose in its **Sound** section:
+The dialog's rows hold for every song. One track can sound otherwise: select it (click its name), open the **Track** tab on the right, and choose in its **Sound** section:
 
-- **Automatic** (the default): the settings window's row its instrument names, as the table above says.
+- **Automatic** (the default): the **Sound Sets** row its instrument names, as the table above says.
 - **Like clean guitars**, **Like overdriven guitars**, **Like distorted guitars**, **Like basses** and the other rows: the track plays that row's set whatever its instrument says. Use **Like clean guitars** for a distorted guitar you play through an amp model, which wants a clean guitar ([Amp models (NAM)](amp-models.md)). The choice travels with the song: on another computer the track plays that row's set there.
 - **A set**, by name: exactly that set. It is kept by where the set is on this computer; where it isn't (the song opened on another computer), the track plays as Automatic and the bottom of the window says so once.
 
@@ -131,7 +131,7 @@ The sound-set installer does everything below for you. For a set you download yo
 
 **Keep every file, and the folders as they are.** An SFZ instrument is a small text file (`.sfz`) that points to its samples by their place under it (`samples/Gtr/A3.flac`), and often to other text files (`#include "controls/common.sfz"`). Move or drop one, or flatten the folders, and the instrument loses its sounds: the bottom of the window says samples are missing and a General MIDI set plays instead. So a pack stays as a whole folder, with the folders inside it as it came.
 
-**Unpack it into the `soundfonts` folder, and that is all.** Extract the zip so that its folder lands inside `soundfonts` (the folder for your system is in the table above). If the zip has no folder of its own, make one first, such as `soundfonts/My Guitar`, and extract into it. OxiGuitar looks up to five levels deep; open the settings window again and the pack is in the lists. There is nothing to register or edit.
+**Unpack it into the `soundfonts` folder, and that is all.** Extract the zip so that its folder lands inside `soundfonts` (the folder for your system is in the table above). If the zip has no folder of its own, make one first, such as `soundfonts/My Guitar`, and extract into it. OxiGuitar looks up to five levels deep; open **Plugins → MIDI Sound Sets…** again and the pack is in the lists. There is nothing to register or edit.
 
 **WAV or FLAC.** Both play, as does Ogg Vorbis. FLAC is lossless, so it sounds the same as WAV and takes about half the room: take the FLAC when a pack offers both. The `.sfz` files name their samples with the extension, so use a pack's `.sfz` files with the samples they name: take one download or the other whole, and do not mix a WAV pack's samples into a FLAC pack's folder. (The sets we install are as their authors publish them: the Karoryfer ones are WAV only.)
 
@@ -147,7 +147,7 @@ The sound-set installer does everything below for you. For a set you download yo
                   "Programs/02-black_keyswitch.sfz": "black" } }
    ```
 
-   The entry then reads `name: product (patch)`: `Karoryfer: Black and Green Guitars (green hammer-on)`. The product is what comes before the comma in the last parentheses of `credit`, and the patch is the name `patches` gives that file (paths from the set's folder), or what comes after the comma. `recommended` is the patch that plays where nothing is picked, and `role` says which row the set is for (the keys are in the section above). Close the settings window and open it again after you edit the file.
+   The entry then reads `name: product (patch)`: `Karoryfer: Black and Green Guitars (green hammer-on)`. The product is what comes before the comma in the last parentheses of `credit`, and the patch is the name `patches` gives that file (paths from the set's folder), or what comes after the comma. `recommended` is the patch that plays where nothing is picked, and `role` says which row the set is for (the keys are in the section above). Close the **Sound Sets** dialog and open it again after you edit the file.
 
 ## Other SFZ sets
 
