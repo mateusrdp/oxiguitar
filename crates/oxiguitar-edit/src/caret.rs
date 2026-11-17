@@ -47,7 +47,8 @@ pub struct Caret {
     pub bar: usize,
     /// The beat in the voice, from 0. In a voice with no beats, 0.
     pub beat: usize,
-    /// The string, from 1 (the highest). 1 on staves without strings.
+    /// The string, from 1 (the highest). 1 on staves without strings; on a
+    /// drum track, the line of its tablature (`drums::TAB_LINES`).
     pub string: u8,
 }
 
@@ -166,11 +167,15 @@ impl Caret {
     }
 
     fn strings(self, score: &Score) -> u8 {
-        let n = score
-            .tracks
-            .get(self.track)
-            .and_then(|t| t.staves.get(self.staff))
-            .map_or(0, |s| s.string_count());
+        let Some(track) = score.tracks.get(self.track) else {
+            return 1;
+        };
+        // A drum track's caret on its tablature is on one of the kit map's
+        // lines (docs/design/drums.md).
+        if track.instrument.percussion {
+            return oxiguitar_model::drums::TAB_LINES;
+        }
+        let n = track.staves.get(self.staff).map_or(0, |s| s.string_count());
         u8::try_from(n).unwrap_or(u8::MAX).max(1)
     }
 

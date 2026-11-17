@@ -51,6 +51,23 @@ pub enum Command {
     /// at the lowest fret it can be played, nearest the caret's string; on
     /// a staff without strings, as a pitch.
     Pitch(Pitch),
+    /// On a drum track, the kit element with this General MIDI key on the
+    /// caret's beat ([`oxiguitar_model::drums`]): it replaces the element
+    /// drawn on the same line or space of the staff, if the beat has one,
+    /// and joins the others.
+    Drum(u8),
+    /// On a drum track, the element with this key taken off the caret's
+    /// beat; the beat becomes a rest when it was the last.
+    DeleteDrum(u8),
+    /// On a drum track, the element `from` on the caret's beat made the
+    /// element `to`, keeping its effects (the Note tab's drop-down); an
+    /// element already on `to`'s line or space gives way.
+    ChangeDrum {
+        /// The key the note has.
+        from: u8,
+        /// The key it gets.
+        to: u8,
+    },
     /// The beat becomes a rest.
     Rest,
     /// The next longer note value (−).
@@ -275,6 +292,9 @@ impl Command {
         match self {
             Command::Fret { .. } => FRET,
             Command::Pitch(_) => "Type Note",
+            Command::Drum(_) => "Type Drum",
+            Command::DeleteDrum(_) => "Delete Drum",
+            Command::ChangeDrum { .. } => "Change Drum",
             Command::Rest => "Rest",
             Command::Longer => "Longer Note",
             Command::Shorter => "Shorter Note",
@@ -363,6 +383,8 @@ impl Command {
             self,
             Command::Fret { .. }
                 | Command::Pitch(_)
+                | Command::Drum(_)
+                | Command::DeleteDrum(_)
                 | Command::Rest
                 | Command::DeleteNote
                 | Command::DeleteBeats
@@ -654,6 +676,14 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         .tracks
         .get(c.track)
         .is_some_and(|t| t.instrument.percussion);
+    if !drums
+        && matches!(
+            command,
+            Command::Drum(_) | Command::DeleteDrum(_) | Command::ChangeDrum { .. }
+        )
+    {
+        return None;
+    }
     if drums
         && matches!(
             command,
@@ -722,6 +752,77 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
             set_note(beat, note);
             settle_dynamic(beat, dynamic);
             one(bar, caret)
+        }
+        Command::Drum(key) => {
+            if !oxiguitar_model::drums::KEYS.contains(&key) {
+                return None;
+            }
+            let step = oxiguitar_model::drums::element(Pitch(key)).step;
+            let dynamic = dynamic_at(score, c);
+            let mut bar = old.clone();
+            let beat = beat_at_caret(&mut bar, c, BeatKind::Notes)?;
+            if beat.kind != BeatKind::Notes {
+                beat.notes.clear();
+            }
+            beat.kind = BeatKind::Notes;
+            let kept = |n: &Note| match n.place {
+                NotePlace::Pitched(p) => oxiguitar_model::drums::element(p).step != step,
+                NotePlace::Fretted { .. } => false,
+            };
+            beat.notes.retain(kept);
+            beat.notes.push(Note {
+                place: NotePlace::Pitched(Pitch(key)),
+                ..Note::fretted(1, 0)
+            });
+            beat.notes.sort_by_key(|n| match n.place {
+                NotePlace::Pitched(p) => p.0,
+                NotePlace::Fretted { .. } => 0,
+            });
+            settle_dynamic(beat, dynamic);
+            one(bar, c)
+        }
+        Command::ChangeDrum { from, to } => {
+            if from == to || !oxiguitar_model::drums::KEYS.contains(&to) {
+                return None;
+            }
+            let step = oxiguitar_model::drums::element(Pitch(to)).step;
+            let mut bar = old.clone();
+            let beat = bar.voices.get_mut(c.voice)?.beats.get_mut(c.beat)?;
+            if beat.kind != BeatKind::Notes {
+                return None;
+            }
+            let at = beat
+                .notes
+                .iter()
+                .position(|n| n.place == NotePlace::Pitched(Pitch(from)))?;
+            let mut note = beat.notes.remove(at);
+            note.place = NotePlace::Pitched(Pitch(to));
+            beat.notes.retain(|n| match n.place {
+                NotePlace::Pitched(p) => oxiguitar_model::drums::element(p).step != step,
+                NotePlace::Fretted { .. } => false,
+            });
+            beat.notes.push(note);
+            beat.notes.sort_by_key(|n| match n.place {
+                NotePlace::Pitched(p) => p.0,
+                NotePlace::Fretted { .. } => 0,
+            });
+            one(bar, c)
+        }
+        Command::DeleteDrum(key) => {
+            let mut bar = old.clone();
+            let beat = bar.voices.get_mut(c.voice)?.beats.get_mut(c.beat)?;
+            if beat.kind != BeatKind::Notes {
+                return None;
+            }
+            let at = beat
+                .notes
+                .iter()
+                .position(|n| n.place == NotePlace::Pitched(Pitch(key)))?;
+            beat.notes.remove(at);
+            if beat.notes.is_empty() {
+                make_rest(beat);
+            }
+            one(bar, c)
         }
         Command::Rest => {
             let mut bar = old.clone();
@@ -1467,6 +1568,116 @@ mod tests {
 
     fn fret(fret: u8) -> Command {
         Command::Fret { fret, again: false }
+    }
+
+    fn drum_score() -> Score {
+        let mut s = score(1, 1);
+        s.tracks[0].instrument.percussion = true;
+        for st in &mut s.tracks[0].staves {
+            st.tuning.clear();
+        }
+        s.tracks[0].staves[0].bars[0] = bar(&[Quarter, Quarter]);
+        s
+    }
+
+    fn beats_mut(s: &mut Score) -> &mut [Beat] {
+        &mut s.tracks[0].staves[0].bars[0].voices[0].beats
+    }
+
+    fn keys(s: &Score, beat: usize) -> Vec<u8> {
+        beats(s)[beat]
+            .notes
+            .iter()
+            .filter_map(|n| match n.place {
+                NotePlace::Pitched(p) => Some(p.0),
+                NotePlace::Fretted { .. } => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn drums_are_entered_one_element_a_line() {
+        let mut s = drum_score();
+        let mut h = History::new();
+        // Frets and pitches still mean nothing on drums.
+        assert!(run(&mut s, &mut h, at(0, 1), fret(3)).is_none());
+        assert!(run(&mut s, &mut h, at(0, 1), Command::Pitch(Pitch(60))).is_none());
+        // Kick and hi-hat together; a snare joins them.
+        for k in [36, 42, 38] {
+            run(&mut s, &mut h, at(0, 1), Command::Drum(k)).unwrap();
+        }
+        assert_eq!(keys(&s, 0), [36, 38, 42]);
+        assert_eq!(beats(&s)[0].kind, BeatKind::Notes);
+        // A side stick is on the snare's space: it takes the snare's place.
+        run(&mut s, &mut h, at(0, 1), Command::Drum(37)).unwrap();
+        assert_eq!(keys(&s, 0), [36, 37, 42]);
+        // The same element again changes nothing; keys outside the kit
+        // aren't entered.
+        assert!(run(&mut s, &mut h, at(0, 1), Command::Drum(37)).is_none());
+        assert!(run(&mut s, &mut h, at(0, 1), Command::Drum(26)).is_none());
+        assert!(run(&mut s, &mut h, at(0, 1), Command::Drum(88)).is_none());
+        // The Note tab's change keeps the note's effects, and the element
+        // on the new one's line gives way (the crash takes the splash's
+        // place only if on its line: the kick stays).
+        beats_mut(&mut s)[0].notes[1].effects.ghost = true;
+        run(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            Command::ChangeDrum { from: 37, to: 40 },
+        )
+        .unwrap();
+        assert_eq!(keys(&s, 0), [36, 40, 42]);
+        assert!(beats(&s)[0].notes[1].effects.ghost);
+        run(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            Command::ChangeDrum { from: 40, to: 46 },
+        )
+        .unwrap();
+        assert_eq!(
+            keys(&s, 0),
+            [36, 46],
+            "the open hi-hat took the closed one's place"
+        );
+        run(
+            &mut s,
+            &mut h,
+            at(0, 1),
+            Command::ChangeDrum { from: 46, to: 42 },
+        )
+        .unwrap();
+        assert!(
+            run(
+                &mut s,
+                &mut h,
+                at(0, 1),
+                Command::ChangeDrum { from: 38, to: 42 }
+            )
+            .is_none()
+        );
+        run(&mut s, &mut h, at(0, 1), Command::Drum(37)).unwrap();
+        // Deleting takes elements off; the last leaves a rest.
+        run(&mut s, &mut h, at(0, 1), Command::DeleteDrum(42)).unwrap();
+        assert!(run(&mut s, &mut h, at(0, 1), Command::DeleteDrum(42)).is_none());
+        run(&mut s, &mut h, at(0, 1), Command::DeleteDrum(36)).unwrap();
+        run(&mut s, &mut h, at(0, 1), Command::DeleteDrum(37)).unwrap();
+        assert_eq!(beats(&s)[0].kind, BeatKind::Rest);
+        // Past the last beat, a new beat as long as the one before.
+        run(&mut s, &mut h, at(2, 1), Command::Drum(49)).unwrap();
+        assert_eq!(keys(&s, 2), [49]);
+        while h.undo(&mut s).is_some() {}
+        assert_eq!(s, drum_score());
+    }
+
+    #[test]
+    fn drum_commands_mean_nothing_on_other_tracks() {
+        let mut s = score(1, 1);
+        s.tracks[0].staves[0].bars[0] = bar(&[Quarter, Quarter]);
+        let mut h = History::new();
+        assert!(run(&mut s, &mut h, at(0, 1), Command::Drum(38)).is_none());
+        assert!(run(&mut s, &mut h, at(0, 1), Command::DeleteDrum(38)).is_none());
     }
 
     #[test]

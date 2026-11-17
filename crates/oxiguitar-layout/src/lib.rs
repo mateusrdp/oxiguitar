@@ -189,7 +189,7 @@ pub struct Options {
 pub struct Notation {
     /// Standard notation.
     pub standard: bool,
-    /// Tablature (only for tracks with strings; drums never have any).
+    /// Tablature (for tracks with strings, and drums: their kit numbers).
     pub tablature: bool,
 }
 

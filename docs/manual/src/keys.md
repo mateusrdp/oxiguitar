@@ -21,6 +21,7 @@
 | Shift + those keys, Ctrl + Shift + Left / Right | Select |
 | Ctrl + A / Escape | Select everything / drop the selection |
 | 0 to 9, Enter, R, − / +, Shift + . / Ctrl + ., L / Shift + L, Backspace, Shift + Delete, Ctrl + Shift + Delete, Ctrl + Insert, Alt + arrows, Alt + 1 to 4, / | Enter notes ([Entering notes](editing.md#entering-notes)) |
+| On a drum staff: Enter, 1 to 9, Backspace; on drum tablature: two digits | Enter drums ([Drums](editing.md#drums)) |
 | Insert, Ctrl + Delete, [ and ], \| | Insert and delete bars, repeats, free time ([Bars](editing.md#bars)) |
 | Ctrl + K, Ctrl + /, D, Shift + Insert | Shows the **Bar** tab ([Bars](editing.md#bars)) |
 | X, O, ;, :, !, H, (, S, Alt + S, Shift + S, V, P, Shift + P, I, Y, Ctrl + Alt + Y, Alt + P, Alt + T, N, ", T, ), $, <, G, Ctrl + Alt + G, Ctrl + D, Ctrl + U, Shift + D, Shift + U, Ctrl + Alt + W | Effects ([Effects](editing.md#effects)) |
