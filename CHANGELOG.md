@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-17
+
 ### Changed
 
 - **The core owns nothing of a plugin** (Mateus, 17 Nov 2026; ADR 0012; oxiguitar-midi#19): a plugin shows its settings in a dialog of its own, with **OK** and **Cancel**, opened from its menu entry (the MIDI plugin's **Plugins → MIDI Sound Sets…**, the WAV plugin's **Plugins → WAV Export Settings…**, once they are updated). The plugin settings window that OxiGuitar drew, and the plugin manager's **Settings…** button, are gone: the plugin manager only lists plugins and switches them on and off. Older releases of the MIDI and WAV plugins show no settings in this version.
