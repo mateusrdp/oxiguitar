@@ -58,8 +58,8 @@ and takes the lock only to read or change `State`.
 | `score()` | The open score, or `None` ([Events](events.md)) | 1.1 |
 | `score2()`, `apply(revision, name, score)` | The open score version 2 with its revision, and a change to it the user can undo ([Tools](tools.md)) | 1.2 |
 | `notify_with_link(level, text, link_text, url)` | A footer message ending with a link that opens `url` in the browser; only `https:` addresses are shown | 1.3 |
-| `folders()` | The plugin's own data and cache folders and the shared folders its manifest lists ([Settings](settings.md)) | 1.3 |
-| `folder(name)` | Every place a shared folder of the plugin's own name is ([Settings](settings.md#folders-of-your-own)) | 1.8 |
+| `folders()` | The plugin's own data and cache folders ([Settings](settings.md)) | 1.3 |
+| `folder(name)` | Every place a shared folder of the plugin's own name is ([Settings](settings.md#shared-folders)) | 1.8 |
 | `advise(advice)` | Asks the core to show a dialog with a title, a text and up to three links, once the window is up, with a "Don't show this again" box ([Advice](advice.md)) | 1.4 |
 
 `Host::detached()` answers like a host with no window, no settings and no services: for unit tests.

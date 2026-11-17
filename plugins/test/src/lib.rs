@@ -59,8 +59,8 @@ use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{Score, ScoreInfo};
 use oxiguitar_plugin::{
     Availability, Canvas, Error, ErrorKind, Event, FormatReader, FormatWriter, Host, Level,
-    LogEntry, Plugin, PointerKind, Read, Row, Selection2, Service, SharedFolder, Tab, TabContent,
-    TabEvent, Tool, TrackInfo, TrackSection, Widget, Written,
+    LogEntry, Plugin, PointerKind, Read, Row, Selection2, Service, Tab, TabContent, TabEvent, Tool,
+    TrackInfo, TrackSection, Widget, Written,
 };
 
 use oxiguitar_plugin::serde_json;
@@ -894,10 +894,7 @@ impl Service for TestPlugin {
                 let folders = self.host.folders()?;
                 std::fs::write(folders.data.join("hello.txt"), "hello\n")
                     .map_err(|e| Error::new(ErrorKind::Failed, e.to_string()))?;
-                let soundfonts = folders
-                    .shared(SharedFolder::Soundfonts)
-                    .map(|p| p.display().to_string())
-                    .unwrap_or_default();
+                let soundfonts = self.host.folder("soundfonts")?.user.display().to_string();
                 Ok(format!(
                     "{}\n{}\n{soundfonts}",
                     folders.data.display(),

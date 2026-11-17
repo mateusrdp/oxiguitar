@@ -59,7 +59,6 @@ pub use oxiguitar_plugin_api as api;
 pub use oxiguitar_plugin_api::class::InstrumentClass;
 pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
-pub use oxiguitar_plugin_api::manifest::SharedFolder;
 pub use oxiguitar_plugin_api::message::{
     Advice, Availability, Clicked, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, Perform,
     PlayedNote, TrackInfo,
@@ -268,18 +267,6 @@ pub struct Folders {
     /// Its own cache folder, for what it can make again; the system or the
     /// user may empty it at any time.
     pub cache: std::path::PathBuf,
-    /// The shared folders its manifest lists, in the manifest's order.
-    pub shared: Vec<(SharedFolder, std::path::PathBuf)>,
-}
-
-impl Folders {
-    /// The shared folder `which`, if the manifest lists it.
-    pub fn shared(&self, which: SharedFolder) -> Option<&std::path::Path> {
-        self.shared
-            .iter()
-            .find(|(f, _)| *f == which)
-            .map(|(_, p)| p.as_path())
-    }
 }
 
 /// Where a shared folder of the plugin's is (interface 1.8;
@@ -875,15 +862,14 @@ impl Host {
         }
     }
 
-    /// The plugin's folders (interface 1.3): its own data and cache
-    /// folders, created on first ask, and the shared folders its manifest
-    /// lists.
+    /// The plugin's own folders (interface 1.3): its data and cache
+    /// folders, created on first ask. Its shared folders are asked for by
+    /// name, with [`Host::folder`].
     pub fn folders(&self) -> Result<Folders, Error> {
         match self.0.request(HostRequest::Folders)? {
             HostAnswer::Folders(f) => Ok(Folders {
                 data: f.data.into(),
                 cache: f.cache.into(),
-                shared: f.shared.into_iter().map(|(w, p)| (w, p.into())).collect(),
             }),
             other => Err(unexpected(&other)),
         }
@@ -1372,7 +1358,7 @@ mod tests {
             check::<Echo>(&missing, "0.1.0"),
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
-        let later = ECHO.replace("\"1.0\"", "\"1.10\"");
+        let later = ECHO.replace("\"1.0\"", "\"1.11\"");
         let (major, minor) = oxiguitar_plugin_api::INTERFACE;
         assert!(
             check::<Echo>(&later, "0.1.0")[0].contains(&format!("this SDK is {major}.{minor}"))

@@ -50,7 +50,6 @@ use crate::Blob;
 use crate::abi::Status;
 use crate::class::InstrumentClass;
 use crate::event::Event;
-use crate::manifest::SharedFolder;
 use crate::score::Score;
 use crate::score2::Score2;
 use crate::tab::{TabContent, TabEvent};
@@ -1109,10 +1108,12 @@ pub struct PluginFolders {
     /// for what it can make again (a decoded sound set), which the system
     /// or the user may delete at any time. Created when this is asked for.
     pub cache: String,
-    /// The shared folders the manifest lists, each with its path, in the
-    /// manifest's order. The user puts files there; the host creates them
-    /// at start.
-    pub shared: Vec<(SharedFolder, String)>,
+    /// Retired in interface 1.10, always empty: interface 1.3's two named
+    /// shared folders (`soundfonts` and `nam`, as indices). A plugin asks
+    /// where its shared folders are by name ([`HostRequest::Folder`]). The
+    /// field stays, with the same encoding, so older plugins still read
+    /// this answer.
+    pub retired_shared: Vec<(u32, String)>,
 }
 
 /// Where a shared folder of a plugin's is (paths as UTF-8 text). Since
@@ -1358,7 +1359,7 @@ mod tests {
         let folders = HostAnswer::Folders(PluginFolders {
             data: "/d".into(),
             cache: "/c".into(),
-            shared: vec![(SharedFolder::Soundfonts, "/s".into())],
+            retired_shared: Vec::new(),
         });
         assert_eq!(
             decode::<HostAnswer<'_>>(&encode(&folders).unwrap()).unwrap(),

@@ -1,5 +1,5 @@
 {
-  "interface": "1.9",
+  "interface": "1.10",
   "id": "oxiguitar.test",
   "name": "Test plugin",
   "version": "0.20.1",

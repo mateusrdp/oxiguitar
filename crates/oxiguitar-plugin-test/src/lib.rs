@@ -49,7 +49,6 @@ use oxiguitar_host::api::Blob;
 use oxiguitar_host::api::class::InstrumentClass;
 use oxiguitar_host::api::display::Point;
 use oxiguitar_host::api::event::{Event, EventKind, Playback, Position};
-use oxiguitar_host::api::manifest::SharedFolder;
 use oxiguitar_host::api::message::{
     Answer, Error, PlayedBeat, Prepare, PrepareEffect, PreparedTrack, Request, TrackInfo,
 };
@@ -232,15 +231,11 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
     ) {
         let shared = plugins.shared_folders();
         let _ = folders.ensure_shared(&shared);
-        if shared.iter().any(|f| f == SharedFolder::Soundfonts.name()) {
-            // A sound set for instruments that play from one: a looped sine,
-            // starting on its frame (TEST_SET).
-            let _ = std::fs::write(
-                folders
-                    .shared(SharedFolder::Soundfonts)
-                    .join("test-sine.sf2"),
-                TEST_SET,
-            );
+        // The suite's own convenience for plugins that play SoundFonts from
+        // a folder they name `soundfonts` (the core knows no such name): a
+        // looped sine, starting on its frame (TEST_SET).
+        if shared.iter().any(|f| f == "soundfonts") {
+            let _ = std::fs::write(folders.named("soundfonts").join("test-sine.sf2"), TEST_SET);
         }
         plugins.use_folders(folders);
     }
