@@ -16,7 +16,7 @@ The file is written under a temporary name and only takes the name you chose onc
 
 ## The file's format
 
-Pick it in the WAV plugin's settings: **Tools → Plugins…**, **WAV export**, **Settings…**:
+Pick it in **Plugins → WAV Export Settings…** (with or without a song open) and press **OK**; **Cancel** leaves it as it was:
 
 | Setting | Choices |
 | --- | --- |

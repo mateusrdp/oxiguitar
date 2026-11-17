@@ -355,16 +355,22 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
         // keep for a track (their sections of the Track tab) changes while
         // the song plays: the effects follow it (#232). So does the mixer,
         // which the sound follows from the window as it moves.
-        let edits = matches!(
-            request,
+        let edits = match &request {
             Request::ApplyTool(_)
-                | Request::Edit { .. }
-                | Request::Undo
-                | Request::Redo
-                | Request::PluginEdit { .. }
-                | Request::PluginTool(..)
-                | Request::DrawingClicked { .. }
-        );
+            | Request::Edit { .. }
+            | Request::Undo
+            | Request::Redo
+            | Request::PluginEdit { .. }
+            | Request::DrawingClicked { .. } => true,
+            // A tool that says it doesn't edit the score (interface 1.9),
+            // such as one opening a plugin's settings, runs while it plays.
+            Request::PluginTool(plugin, tool) => st.plugins.tools().iter().any(|t| {
+                t.spec.id == *tool
+                    && t.spec.edits
+                    && t.plugin.manifest.as_ref().is_some_and(|m| m.id == *plugin)
+            }),
+            _ => false,
+        };
         let settings_only = match &request {
             Request::Edit {
                 command: Command::Mix { .. },

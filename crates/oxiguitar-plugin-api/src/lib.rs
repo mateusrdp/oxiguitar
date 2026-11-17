@@ -52,7 +52,8 @@
 //!   selection that names voice, string and several tracks, and edits a
 //!   plugin submits as undoable commands, with plugin tools in the Tools
 //!   menu. 1.3 (frozen with OxiGuitar 0.9, for the player;
-//!   docs/design/player.md): a settings window per plugin, sections of the
+//!   docs/design/player.md): a settings window per plugin (retired in 1.9),
+//!   sections of the
 //!   track dialog, footer messages with a link, the plugin's own folders
 //!   and the shared ones, instruments, effects and audio devices on the
 //!   audio thread, and the `cpu` condition. 1.4 (frozen with OxiGuitar 0.11): a link among a tab's widgets,
@@ -60,7 +61,12 @@
 //!   which the core renders and the plugin encodes), plugins that need or
 //!   replace other plugins (`needs`, `replaces`) and advice dialogs. 1.5
 //!   (frozen with OxiGuitar 0.14): effects that follow their track's settings while
-//!   the song plays (`message::Request::UpdateEffect`).
+//!   the song plays (`message::Request::UpdateEffect`). 1.6 and 1.7: the
+//!   score version 2's notation and XML signatures. 1.8 (OxiGuitar 0.20):
+//!   tools on the palette, menus and toolbar, dialogs, plugin data, drawing
+//!   and performing. 1.9: tools that don't edit the score (`edits: false`),
+//!   which open a plugin's own settings dialog; the core's settings
+//!   windows are retired.
 //!
 //! # Licence
 //!
@@ -86,7 +92,7 @@ pub use blob::Blob;
 pub use message::{DecodeError, decode, encode};
 
 /// The interface version this crate describes: (major, minor).
-pub const INTERFACE: (u32, u32) = (1, 8);
+pub const INTERFACE: (u32, u32) = (1, 9);
 
 /// The symbol a plugin exports. It returns a pointer to the plugin's
 /// [`abi::PluginTableV1`].

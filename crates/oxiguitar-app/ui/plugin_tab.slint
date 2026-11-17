@@ -97,6 +97,10 @@ export component PluginWidgetView {
             text: w.text;
             checked: w.on;
             enabled: w.enabled;
+            // The plugin's answer wins over the user's click (the click
+            // breaks the binding above): the window changes rows in place.
+            property <bool> says: w.on;
+            changed says => { self.checked = self.says; }
             toggled => { root.toggled(w.id, self.checked); }
         }
         if w.kind == "slider" : Slider {
@@ -105,6 +109,8 @@ export component PluginWidgetView {
             maximum: w.maximum;
             value: w.value;
             enabled: w.enabled;
+            property <float> says: w.value;
+            changed says => { self.value = self.says; }
             released(v) => { root.slid(w.id, v); }
         }
         if w.kind == "field" : LineEdit {
@@ -112,6 +118,8 @@ export component PluginWidgetView {
             text: w.text;
             placeholder-text: w.text2;
             enabled: w.enabled;
+            property <string> says: w.text;
+            changed says => { self.text = self.says; }
             accepted(t) => { root.edited(w.id, t); }
         }
         if w.kind == "choice" : ComboBox {
@@ -119,6 +127,8 @@ export component PluginWidgetView {
             model: w.options;
             current-index: w.selected;
             enabled: w.enabled;
+            property <int> says: w.selected;
+            changed says => { self.current-index = self.says; }
             selected => { root.chosen(w.id, self.current-index); }
         }
         if w.kind == "list" : StandardListView {
@@ -126,6 +136,8 @@ export component PluginWidgetView {
             min-height: 84px;
             model: w.items;
             current-item: w.selected;
+            property <int> says: w.selected;
+            changed says => { self.current-item = self.says; }
             current-item-changed(i) => { root.chosen(w.id, i); }
         }
         if w.kind == "canvas" : room := Rectangle {

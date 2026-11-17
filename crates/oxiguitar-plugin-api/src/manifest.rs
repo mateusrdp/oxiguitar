@@ -29,7 +29,8 @@
 //! ```
 //!
 //! Interface 1.1 added `tabs` and `events`, 1.2 `tools`, 1.3
-//! `settings_window`, `track_sections` and `folders` (and brought
+//! `settings_window` (retired in 1.9: a key the host now ignores),
+//! `track_sections` and `folders` (and brought
 //! `instruments` to life). Later minor
 //! versions add keys for exporters and toolbar sections when plugins need
 //! them (docs/design/plugins.md, "What plugins contribute").
@@ -108,10 +109,6 @@ pub struct Manifest {
     /// interface 1.8.
     #[serde(default)]
     pub performs: bool,
-    /// Whether it has a settings window, opened from the plugin manager's
-    /// Settings… (`Request::SettingsWindow`). Since interface 1.3.
-    #[serde(default)]
-    pub settings_window: bool,
     /// The sections it adds to the track dialog. Since interface 1.3.
     #[serde(default)]
     pub track_sections: Vec<TrackSectionSpec>,
@@ -287,6 +284,12 @@ pub struct ToolSpec {
     /// interface 1.8.
     #[serde(default)]
     pub shortcut: Option<String>,
+    /// Whether the tool edits the open score (the default). A tool that
+    /// doesn't, `"edits": false`, such as one opening the plugin's
+    /// settings in its dialog, can be used with no score open and while
+    /// the song plays. Since interface 1.9.
+    #[serde(default = "yes")]
+    pub edits: bool,
 }
 
 /// A tool's keys ([`ToolSpec::shortcut`]): Ctrl, Shift and Alt as held, and
@@ -453,6 +456,10 @@ pub struct PaletteSpec {
     /// [`PALETTE_TEXT_MAX`].
     #[serde(default)]
     pub text: Option<String>,
+}
+
+fn yes() -> bool {
+    true
 }
 
 fn plugins_place() -> String {
@@ -722,7 +729,6 @@ impl Manifest {
         let since_1_3 = InterfaceVersion { major: 1, minor: 3 };
         if self.interface < since_1_3 {
             for (what, used) in [
-                ("a settings window needs", self.settings_window),
                 ("track sections need", !self.track_sections.is_empty()),
                 ("shared folders need", !self.folders.is_empty()),
                 ("effects need", !self.effects.is_empty()),
@@ -793,6 +799,13 @@ impl Manifest {
                     self.interface
                 ));
             }
+        }
+        let since_1_9 = InterfaceVersion { major: 1, minor: 9 };
+        if self.interface < since_1_9 && self.tools.iter().any(|t| !t.edits) {
+            out.push(format!(
+                "a tool that doesn't edit the score (\"edits\": false) needs interface {since_1_9}, and the manifest asks for {}",
+                self.interface
+            ));
         }
         if self.instruments.iter().any(|i| i.follows_score) {
             out.push("only an effect can follow the score (follows_score)".into());
@@ -1315,6 +1328,32 @@ mod tests {
         }
     }
 
+    /// A tool edits the score unless it says otherwise, which needs 1.9;
+    /// the retired `settings_window` is a key like any unknown one.
+    #[test]
+    fn a_tool_that_doesnt_edit_needs_interface_1_9() {
+        let json = |interface: &str, tool: &str| {
+            format!(
+                r#"{{"interface": "{interface}", "id": "me.sets", "name": "Sets",
+                    "version": "0.1.0", "settings_window": true,
+                    "tools": [{{"id": "sets", "name": "Sound Sets…" {tool}}}]}}"#
+            )
+        };
+        let m: Manifest = serde_json::from_str(&json("1.2", "")).unwrap();
+        assert!(m.tools[0].edits);
+        assert!(m.problems().is_empty(), "{:?}", m.problems());
+        let m: Manifest = serde_json::from_str(&json("1.9", r#", "edits": false"#)).unwrap();
+        assert!(!m.tools[0].edits);
+        assert!(m.problems().is_empty(), "{:?}", m.problems());
+        let m: Manifest = serde_json::from_str(&json("1.8", r#", "edits": false"#)).unwrap();
+        assert_eq!(
+            m.problems(),
+            [
+                "a tool that doesn't edit the score (\"edits\": false) needs interface 1.9, and the manifest asks for 1.8"
+            ]
+        );
+    }
+
     #[test]
     fn interface_1_3_keys_are_checked() {
         let json = |interface: &str, extra: &str| {
@@ -1323,7 +1362,7 @@ mod tests {
                     "version": "0.1.0" {extra}}}"#
             )
         };
-        let keys = r#", "settings_window": true, "folders": ["nam", "soundfonts"],
+        let keys = r#", "folders": ["nam", "soundfonts"],
             "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}],
             "conditions": {"arch": ["x86_64"], "cpu": ["avx2", "fma"]}"#;
         let m: Manifest = serde_json::from_str(&json("1.3", keys)).unwrap();
@@ -1359,7 +1398,6 @@ mod tests {
         assert_eq!(
             old.problems(),
             [
-                "a settings window needs interface 1.3, and the manifest asks for 1.2",
                 "track sections need interface 1.3, and the manifest asks for 1.2",
                 "shared folders need interface 1.3, and the manifest asks for 1.2",
                 "processor features (conditions \"cpu\") need interface 1.3, and the manifest asks for 1.2",

@@ -60,7 +60,7 @@ A track with chord diagrams over its music (Chord…, or A) can play them too: t
 
 Select a track (click its name) and open the **Track** tab on the right: under the track's name, instrument and strings, the plugins add sections that change how that one track sounds. They are kept beside the score, in `FILE.oxg`, so the song sounds the same the next time; the score itself doesn't change.
 
-- **Sound** (the MIDI plugin): **Automatic** plays the set the settings window picks for the track's kind of instrument (clean, overdriven or distorted guitars, basses and so on); or the track plays like another kind, or with a set of its own ([Better sounds](better-sounds.md#one-tracks-own-sound)).
+- **Sound** (the MIDI plugin): **Automatic** plays the set **Plugins → MIDI Sound Sets…** picks for the track's kind of instrument (clean, overdriven or distorted guitars, basses and so on); or the track plays like another kind, or with a set of its own ([Better sounds](better-sounds.md#one-tracks-own-sound)).
 - **Amp (NAM)**, for guitars and basses: an amp model and a cabinet ([Amp models (NAM)](amp-models.md)).
 - **Equalizer**, for every track: **Off** (the default), **Basic** (three bands: Bass, a shelf at 120 Hz; Middle, at 700 Hz; Treble, a shelf at 3.2 kHz) or **Graphic** (ten bands, one octave apart, from 31 Hz to 16 kHz). Each band goes from −12 to +12 dB in half-decibel steps; **Flat** sets them all back to 0. Basic and Graphic each keep their bands, so switching between them loses nothing. It works with or without an amp, adds no delay, and comes as a plugin of its own, `oxiguitar-eq` ([The official plugins](official-plugins.md)).
 

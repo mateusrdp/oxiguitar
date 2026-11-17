@@ -114,17 +114,18 @@ fn discover(folders: &[PathBuf], settings: SharedSettings) -> (Plugins, Arc<Hear
 fn the_test_plugin_passes_the_contract() {
     let report = oxiguitar_plugin_test::check(test_oxp());
     assert!(report.ok(), "failed: {:#?}", report.failed);
-    // 12 for formats and services; 3 tabs; 10 uses of the panel's widgets
+    // 12 for formats and services; 4 tabs; 10 uses of the panel's widgets
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas) and 4
-    // of the dialog's (its button, 3 pointer events), which is then closed
-    // (interface 1.8); 3 kinds of event, the selection in both its forms; 4
-    // tools; the settings window and its 2 widgets; the track section and
-    // its 2 widgets; 2 instruments and an effect, 4 real-time checks each;
-    // the effect's 3 checks of an update (interface 1.5); the exporter's 3
-    // checks; its drawing and its playing of a track (interface 1.8).
+    // of the dialog `ask`'s (its button, 3 pointer events), which is then
+    // closed (interface 1.8); the settings dialog's 2 widgets, then closed
+    // (interface 1.9); 3 kinds of event, the selection in both its forms;
+    // 5 tools; the track section and its 2 widgets; 2 instruments and an
+    // effect, 4 real-time checks each; the effect's 3 checks of an update
+    // (interface 1.5); the exporter's 3 checks; its drawing and its playing
+    // of a track (interface 1.8).
     assert_eq!(
         report.passed.len(),
-        12 + 3 + 10 + 4 + 1 + 4 + 4 + 3 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
+        12 + 4 + 10 + 4 + 1 + 2 + 1 + 4 + 5 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
         "{:#?}",
         report.passed
     );
@@ -579,6 +580,7 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
             ("panel".into(), "Test".into(), Area::Bottom),
             ("side".into(), "Test side".into(), Area::Right),
             ("ask".into(), "Test Dialog".into(), Area::Dialog),
+            ("settings".into(), "Test Settings".into(), Area::Dialog),
         ]
     );
     assert!(!plugins.found()[0].is_loaded());
@@ -735,7 +737,7 @@ fn a_plugin_that_fails_is_withdrawn_as_if_it_were_not_installed() {
     let opened = plugins.open(file, Some("oxgtest")).unwrap();
     assert_eq!(opened.format.plugin.name(), "Test plugin");
     assert_eq!(opened.read.score.info.title, "Tarde em Itapuã");
-    assert_eq!(plugins.tabs().len(), 3);
+    assert_eq!(plugins.tabs().len(), 4);
     assert!(plugins.wants(EventKind::Score));
 
     // An ordinary error is an answer, not a failure.
@@ -1012,7 +1014,7 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
     // The test plugin's tool, from its manifest; the second plugin (1.1)
     // has none.
     let tools = plugins.tools();
-    assert_eq!(tools.len(), 4);
+    assert_eq!(tools.len(), 5);
     assert_eq!(tools[0].spec.name, "Mark the Title");
     assert_eq!(plugins.run_tool(tools[0]).unwrap(), "No score is open.");
 
@@ -1166,7 +1168,7 @@ impl Core for Linked {
 }
 
 #[test]
-fn interface_1_3_settings_windows_track_sections_links_and_folders() {
+fn interface_1_3_track_sections_links_and_folders() {
     use oxiguitar_host::api::manifest::SharedFolder;
     use oxiguitar_host::api::message::TrackInfo;
     use oxiguitar_host::{Folders, System};
@@ -1184,28 +1186,6 @@ fn interface_1_3_settings_windows_track_sections_links_and_folders() {
     // The shared folders come from the manifest alone.
     assert_eq!(plugins.shared_folders(), ["soundfonts", "test-files"]);
     assert!(!plugins.found()[0].is_loaded());
-
-    // The settings window: its widgets change the plugin's own settings.
-    let found = plugins.with_settings_window()[0];
-    let content = plugins.settings_window(found).unwrap();
-    assert!(matches!(
-        &content.rows[0].widgets[0],
-        Widget::Toggle { on: false, .. }
-    ));
-    plugins
-        .settings_event(found, "greet", TabEvent::Toggled(true))
-        .unwrap();
-    let content = plugins
-        .settings_event(found, "name", TabEvent::Edited("Mateus".into()))
-        .unwrap();
-    assert!(matches!(
-        &content.rows[2].widgets[0],
-        Widget::Label { text, .. } if text == "Hello, Mateus."
-    ));
-    assert_eq!(
-        plugins.settings().get("oxiguitar.test"),
-        Some(serde_json::json!({"greet": true, "name": "Mateus"}))
-    );
 
     // The track section: every class but drums, and the settings travel
     // with every request; the plugin keeps none.
@@ -1657,6 +1637,8 @@ struct Window {
     said: Mutex<Vec<String>>,
     dialogs: Mutex<Vec<(TabId, String)>>,
     shown: Mutex<Vec<TabId>>,
+    /// The plugins whose settings changed, in order (interface 1.9).
+    changed: Mutex<Vec<String>>,
     engraving: Mutex<Option<oxiguitar_host::api::message::Engraving>>,
     selection: Mutex<Option<Selection2>>,
 }
@@ -1700,6 +1682,84 @@ impl Core for Window {
     fn show_tab(&self, tab: &TabId) {
         self.shown.lock().unwrap().push(tab.clone());
     }
+
+    fn settings_changed(&self, id: &str) {
+        self.changed.lock().unwrap().push(id.to_owned());
+    }
+}
+
+/// Interface 1.9: a plugin shows its settings in a dialog of its own,
+/// opened by a tool that doesn't edit the score; the dialog keeps them
+/// with OK and forgets them with Cancel, and the window hears when they
+/// changed (to prepare the sound again).
+#[test]
+fn interface_1_9_a_plugins_settings_dialog() {
+    let dir = folder("one-nine", &["test.oxp"]);
+    let core = Arc::new(Window::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        core.clone(),
+    );
+    let tools = plugins.tools();
+    let tool = tools.iter().find(|t| t.spec.id == "settings").unwrap();
+    assert!(!tool.spec.edits);
+    assert!(
+        tools
+            .iter()
+            .filter(|t| t.spec.id != "settings")
+            .all(|t| t.spec.edits)
+    );
+    let dialog = TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: "settings".into(),
+    };
+    let saved = || plugins.settings().get("oxiguitar.test");
+    let edit = || {
+        assert_eq!(plugins.run_tool(*tool).unwrap(), "");
+        let content = plugins.tab_content(&dialog).unwrap();
+        assert!(matches!(
+            &content.rows[0].widgets[0],
+            Widget::Toggle { on: false, .. }
+        ));
+        plugins
+            .tab_event(&dialog, "greet", TabEvent::Toggled(true))
+            .unwrap();
+        let content = plugins
+            .tab_event(&dialog, "name", TabEvent::Edited("Mateus".into()))
+            .unwrap();
+        assert!(matches!(
+            &content.rows[2].widgets[0],
+            Widget::Label { text, .. } if text == "Hello, Mateus."
+        ));
+    };
+    edit();
+    assert_eq!(saved(), None, "nothing is kept before OK");
+    plugins.tab_closed(&dialog, false);
+    assert_eq!(saved(), None, "Cancel forgets");
+    assert!(core.changed.lock().unwrap().is_empty());
+    edit();
+    plugins.tab_closed(&dialog, true);
+    assert_eq!(
+        saved(),
+        Some(serde_json::json!({"greet": true, "name": "Mateus"}))
+    );
+    assert_eq!(*core.changed.lock().unwrap(), ["oxiguitar.test"]);
+    assert_eq!(
+        *core.dialogs.lock().unwrap(),
+        [
+            (dialog.clone(), "Test Settings".to_owned()),
+            (dialog.clone(), "Test Settings".to_owned())
+        ]
+    );
+    // OK with the same settings again changes nothing.
+    assert_eq!(plugins.run_tool(*tool).unwrap(), "");
+    plugins
+        .tab_event(&dialog, "greet", TabEvent::Toggled(true))
+        .unwrap();
+    plugins.tab_closed(&dialog, true);
+    assert_eq!(core.changed.lock().unwrap().len(), 1);
 }
 
 /// Interface 1.8 (#250, #293): tools in the palette and in any menu,
@@ -1771,6 +1831,7 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
             ("tools".to_owned(), "link".to_owned()),
             ("test".to_owned(), "stamp".to_owned()),
             ("page".to_owned(), "ask".to_owned()),
+            ("plugins".to_owned(), "settings".to_owned()),
         ]
     );
     let tool = |id: &str| {

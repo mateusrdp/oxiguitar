@@ -25,8 +25,8 @@
 //! a plugin built for 1.2 or later [`Request::Write2`] instead of
 //! [`Request::Write`], and takes either answer to a [`Request::Read`].
 //!
-//! Interface 1.3 added settings windows ([`Request::SettingsWindow`],
-//! [`Request::SettingsEvent`]), sections of the track dialog
+//! Interface 1.3 added settings windows (retired in 1.9: see
+//! [`Request::RetiredSettingsWindow`]), sections of the track dialog
 //! ([`Request::TrackSection`], [`Request::TrackSectionEvent`],
 //! [`Answer::TrackSection`]), footer messages with a link
 //! ([`HostRequest::Notify2`]) and the plugin's folders
@@ -199,15 +199,16 @@ pub enum Request<'a> {
         /// The tool's id.
         tool: String,
     },
-    /// What the plugin's settings window shows now (the manifest's
-    /// `settings_window`): asked when the user opens it from the plugin
-    /// manager. Answered with [`Answer::Tab`]. The plugin keeps what the
-    /// user sets with [`HostRequest::SetSettings`]. Since interface 1.3.
-    SettingsWindow,
-    /// The user used the widget `widget` of the settings window. Answered
-    /// with [`Answer::Tab`], the window's contents after it. Since
-    /// interface 1.3.
-    SettingsEvent {
+    /// Retired in interface 1.9, never sent: the settings window that
+    /// OxiGuitar 0.9 to 0.20 drew for a plugin (the manifest's
+    /// `settings_window`). A plugin shows its settings in a dialog of its
+    /// own instead, opened by a tool that doesn't edit the score
+    /// ([`crate::manifest::ToolSpec::edits`]). The slot stays so that the
+    /// requests after it keep their encoding.
+    RetiredSettingsWindow,
+    /// Retired in interface 1.9, never sent: see
+    /// [`Request::RetiredSettingsWindow`].
+    RetiredSettingsEvent {
         /// The widget's id.
         widget: String,
         /// What the user did.
@@ -1300,8 +1301,8 @@ mod tests {
             class: InstrumentClass::Fretted,
         };
         let requests = [
-            Request::SettingsWindow,
-            Request::SettingsEvent {
+            Request::RetiredSettingsWindow,
+            Request::RetiredSettingsEvent {
                 widget: "on".into(),
                 event: TabEvent::Toggled(true),
             },
