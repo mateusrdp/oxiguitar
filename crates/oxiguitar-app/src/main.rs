@@ -2169,10 +2169,11 @@ fn row_shape(
         .collect()
 }
 
-/// Puts tab `tab`'s contents in area `side`. Rows of the same shape as
-/// before are changed in place (a row holding a canvas widget by widget,
-/// so a drag on it carries on); other rows are made anew, so every widget
-/// shows exactly what the plugin says.
+/// Puts tab `tab`'s contents in area `side`. Contents of the same shape as
+/// before are changed in place, widget by widget, so a drag on a canvas
+/// carries on and an open list stays open; each widget follows its data
+/// (plugin_tab.slint's `says`), so it shows exactly what the plugin says.
+/// Contents of another shape are made anew.
 fn refresh_plugin_view(app: &Shared, side: View, tab: &TabId) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -2218,28 +2219,17 @@ fn refresh_plugin_view(app: &Shared, side: View, tab: &TabId) {
                     .all(|(a, b)| row_shape(a) == row_shape(b))
         });
     if same_shape {
-        let old = view.content.take().unwrap_or_default();
-        for (i, (before, now)) in old.rows.iter().zip(&content.rows).enumerate() {
-            let has_canvas = now.widgets.iter().any(|w| matches!(w, Widget::Canvas(_)));
-            if has_canvas {
-                // Widget by widget: the canvas's image may be new even when
-                // its contents aren't.
-                let model = &view.row_models[i];
-                for (j, w) in widgets(now).into_iter().enumerate() {
-                    if model.row_data(j).as_ref() != Some(&w) {
-                        model.set_row_data(j, w);
-                    }
+        // Widget by widget, in the models the window already shows: only
+        // what changed is set, so a list the user has open stays open and
+        // keeps the keyboard (oxiguitar-midi#19), and a canvas's image may
+        // be new even when its contents aren't. The shapes are the same, so
+        // each row keeps its stretch.
+        for (i, now) in content.rows.iter().enumerate() {
+            let model = &view.row_models[i];
+            for (j, w) in widgets(now).into_iter().enumerate() {
+                if model.row_data(j).as_ref() != Some(&w) {
+                    model.set_row_data(j, w);
                 }
-            } else if before != now {
-                let model = Rc::new(VecModel::from(widgets(now)));
-                view.rows.set_row_data(
-                    i,
-                    PluginRow {
-                        widgets: ModelRc::from(model.clone()),
-                        stretch: stretch(now),
-                    },
-                );
-                view.row_models[i] = model;
             }
         }
     } else {
