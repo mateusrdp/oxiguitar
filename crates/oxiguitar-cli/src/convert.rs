@@ -22,7 +22,7 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
         .and_then(|e| e.to_str())
         .map(str::to_ascii_lowercase)
     else {
-        return crate::usage_error("the file to write needs an extension, such as .gp");
+        return crate::usage_error("the file to write needs an extension, which names its format");
     };
     let writers = plugins().writers();
     let Some(format) = writers

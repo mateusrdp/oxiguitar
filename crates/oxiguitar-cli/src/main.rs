@@ -27,10 +27,9 @@ Commands:
                              that reads it, recognised from its contents
                              rather than its extension
   convert <file> <new file>  Read a file and write it in the format the new
-                             file's extension names (.gp), through the
-                             format plugins; prints what the new file can't
-                             hold (its losses) and notes on what Guitar Pro
-                             does differently
+                             file's extension names, through the format
+                             plugins; prints what the new file can't hold
+                             (its losses) and the plugins' notes
   render <file> [--png PREFIX] [--pdf FILE] [--scale N] [--dark]
          [--layout page|vertical|horizontal|parchment] [--width PT]
          [--paper a4|letter] [--tracks 1,2|all] [--staff-space PT]
