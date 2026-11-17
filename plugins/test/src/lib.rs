@@ -30,13 +30,15 @@
 //! - the tool `mark` (interface 1.2), "Mark the Title": it asks for the
 //!   score (version 2), adds `!` to its title and hands it back as one
 //!   change;
-//! - interface 1.3: a settings window (a toggle and a field, kept in the
-//!   plugin's settings), the track dialog's section `test` for every track
+//! - interface 1.3: the track dialog's section `test` for every track
 //!   but drums (a level slider and a name field, kept per track), the tool
 //!   `link`, "Show a Footer Link" (a warning in the footer with a link to
 //!   the plugin guide), and the shared folder `soundfonts`;
 //! - the audio device `fake` (interface 1.3, [`fake`]): an output with no
-//!   speaker, priority -100, so a real device always wins.
+//!   speaker, priority -100, so a real device always wins;
+//! - interface 1.9: the tool `settings`, "Test Settings…", which doesn't
+//!   edit the score and opens the dialog `settings` (a toggle and a field,
+//!   kept in the plugin's settings with OK, forgotten with Cancel).
 //!
 //! `echo`'s methods exercise the host's side: `notify` and `settings` call
 //! the host's services, `via-host` calls `test-echo` back through the host
@@ -51,7 +53,7 @@
 pub mod fake;
 pub mod sine;
 
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{Score, ScoreInfo};
@@ -80,7 +82,8 @@ pub struct TestPlugin {
     stamp: Stamp,
     ask: Ask,
     ask_tool: AskTool,
-    settings: SettingsWindow,
+    settings: Arc<SettingsDialog>,
+    settings_tool: SettingsTool,
     fake: fake::Fake,
     raw: Raw,
     drawer: StampDrawer,
@@ -163,16 +166,51 @@ impl Tool for LinkTool {
     }
 }
 
-/// The settings window: a toggle and a field, kept in the plugin's
-/// settings (`greet` and `name`).
+/// The tool `settings` (interface 1.9): it doesn't edit the score, so it
+/// runs with no score open and while the song plays, and opens the dialog
+/// `settings` with what is saved.
 #[derive(Debug)]
-struct SettingsWindow {
+struct SettingsTool {
     host: Host,
+    dialog: Arc<SettingsDialog>,
 }
 
-impl Tab for SettingsWindow {
+impl Tool for SettingsTool {
+    fn run(&self) -> Result<String, Error> {
+        self.dialog.forget();
+        self.host.open_dialog("settings")?;
+        Ok(String::new())
+    }
+}
+
+/// The dialog `settings`: a toggle and a field, kept in the plugin's
+/// settings (`greet` and `name`) when the user presses OK. Until then the
+/// dialog changes a draft, and Cancel forgets it: how a plugin shows its
+/// settings since the core's settings windows were retired (1.9).
+#[derive(Debug)]
+struct SettingsDialog {
+    host: Host,
+    draft: Mutex<Option<serde_json::Map<String, serde_json::Value>>>,
+}
+
+impl SettingsDialog {
+    /// The draft, or what is saved when there is none yet.
+    fn current(&self) -> serde_json::Map<String, serde_json::Value> {
+        self.draft
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+            .unwrap_or_else(|| self.host.settings().unwrap_or_default())
+    }
+
+    fn forget(&self) {
+        *self.draft.lock().unwrap_or_else(PoisonError::into_inner) = None;
+    }
+}
+
+impl Tab for SettingsDialog {
     fn content(&self) -> TabContent {
-        let settings = self.host.settings().unwrap_or_default();
+        let settings = self.current();
         let greet = settings
             .get("greet")
             .and_then(|v| v.as_bool())
@@ -216,13 +254,26 @@ impl Tab for SettingsWindow {
     }
 
     fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-        let mut settings = self.host.settings()?;
+        let mut settings = self.current();
         match (widget, event) {
             ("greet", TabEvent::Toggled(on)) => settings.insert("greet".into(), on.into()),
             ("name", TabEvent::Edited(text)) => settings.insert("name".into(), text.into()),
             _ => return Err(Error::not_found(format!("no widget {widget:?}"))),
         };
-        self.host.set_settings(&settings)
+        *self.draft.lock().unwrap_or_else(PoisonError::into_inner) = Some(settings);
+        Ok(())
+    }
+
+    fn closed(&self, ok: bool) -> Result<(), Error> {
+        let draft = self
+            .draft
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        match draft {
+            Some(settings) if ok => self.host.set_settings(&settings),
+            _ => Ok(()),
+        }
     }
 }
 
@@ -615,6 +666,10 @@ pub const CANVAS: (f32, f32) = (100.0, 50.0);
 
 impl Plugin for TestPlugin {
     fn start(host: Host) -> Result<TestPlugin, Error> {
+        let settings = Arc::new(SettingsDialog {
+            host: host.clone(),
+            draft: Mutex::new(None),
+        });
         Ok(TestPlugin {
             panel: Panel {
                 host: host.clone(),
@@ -629,7 +684,11 @@ impl Plugin for TestPlugin {
                 clicks: Mutex::new(0),
             },
             ask_tool: AskTool { host: host.clone() },
-            settings: SettingsWindow { host: host.clone() },
+            settings: settings.clone(),
+            settings_tool: SettingsTool {
+                host: host.clone(),
+                dialog: settings,
+            },
             fake: fake::Fake::new(host.clone()),
             raw: Raw::default(),
             drawer: StampDrawer::default(),
@@ -656,12 +715,9 @@ impl Plugin for TestPlugin {
             "link" => Some(&self.link),
             "stamp" => Some(&self.stamp),
             "ask" => Some(&self.ask_tool),
+            "settings" => Some(&self.settings_tool),
             _ => None,
         }
-    }
-
-    fn settings_window(&self) -> Option<&dyn Tab> {
-        Some(&self.settings)
     }
 
     fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
@@ -682,6 +738,7 @@ impl Plugin for TestPlugin {
             "panel" => Some(&self.panel),
             "side" => Some(&self.side),
             "ask" => Some(&self.ask),
+            "settings" => Some(&*self.settings),
             _ => None,
         }
     }

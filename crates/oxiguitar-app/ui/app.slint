@@ -15,7 +15,7 @@ import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "p
 export { PluginLinks } from "plugin_tab.slint";
 import { PluginDialog, BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
-export { PluginManagerWindow, PluginSettingsWindow, ManagerRow } from "plugin_manager.slint";
+export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
 import "../../../assets/fonts/noto-sans/NotoSans-Bold.ttf";
 
@@ -100,6 +100,9 @@ export struct PaletteGroupRow {
 export struct ToolRow {
     title: string,
     enabled: bool,
+    // False for a plugin's tool that doesn't edit the score (interface
+    // 1.9): usable with no score open.
+    edits: bool,
 }
 
 // An entry a plugin adds to a menu (plugin interface 1.8): the tool's
@@ -107,6 +110,9 @@ export struct ToolRow {
 export struct PluginMenuItem {
     id: string,
     title: string,
+    // False for a tool that doesn't edit the score (interface 1.9): usable
+    // with no score open.
+    edits: bool,
 }
 
 // A menu of the plugins' own in the menu bar.
@@ -1783,7 +1789,7 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Letter"; checkable: true; checked <=> root.paper-1; activated => { root.pick-paper(1); root.settings-changed(); } }
             }
             if root.plugin-items-file.length > 0 : MenuSeparator { }
-            for it in root.plugin-items-file : MenuItem { title: it.title; enabled: root.has-score; activated => { root.plugin-tool-picked(it.id); } }
+            for it in root.plugin-items-file : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
             MenuSeparator { }
             MenuItem { title: "Quit"; shortcut: @keys(Control + Q); activated => { root.quit(); } }
         }
@@ -1837,7 +1843,7 @@ export component AppWindow inherits Window {
             MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
             MenuItem { title: "Find Fingering for Selection"; enabled: root.has-score; activated => { root.edit-command("fingering-selection"); } }
             if root.plugin-items-edit.length > 0 : MenuSeparator { }
-            for it in root.plugin-items-edit : MenuItem { title: it.title; enabled: root.has-score; activated => { root.plugin-tool-picked(it.id); } }
+            for it in root.plugin-items-edit : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
         }
         Menu {
             title: "View";
@@ -1866,13 +1872,13 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Right"; checkable: true; checked <=> root.right-shown; activated => { root.panels-changed(); } }
             }
             if root.plugin-items-view.length > 0 : MenuSeparator { }
-            for it in root.plugin-items-view : MenuItem { title: it.title; enabled: root.has-score; activated => { root.plugin-tool-picked(it.id); } }
+            for it in root.plugin-items-view : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
         }
         Menu {
             title: "Tools";
             for tool[i] in root.tools : MenuItem {
                 title: tool.title;
-                enabled: root.has-score && tool.enabled;
+                enabled: (root.has-score || !tool.edits) && tool.enabled;
                 activated => { root.tool-picked(i); }
             }
             MenuSeparator {}
@@ -1887,14 +1893,14 @@ export component AppWindow inherits Window {
         }
         for m in root.plugin-menus : Menu {
             title: m.title;
-            for it in m.items : MenuItem { title: it.title; enabled: root.has-score; activated => { root.plugin-tool-picked(it.id); } }
+            for it in m.items : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
         }
         Menu {
             title: "Help";
             MenuItem { title: "Keyboard and Mouse"; shortcut: @keys(F1); activated => { shortcuts-popup.show(); } }
             MenuItem { title: "About OxiGuitar"; activated => { about-popup.show(); } }
             if root.plugin-items-help.length > 0 : MenuSeparator { }
-            for it in root.plugin-items-help : MenuItem { title: it.title; enabled: root.has-score; activated => { root.plugin-tool-picked(it.id); } }
+            for it in root.plugin-items-help : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
         }
     }
 
@@ -2492,7 +2498,7 @@ export component AppWindow inherits Window {
                     }
 
                     if !root.has-score : Text {
-                        text: "File → Open (Ctrl + O) to open a Guitar Pro file";
+                        text: "File → Open (Ctrl + O) to open a score";
                         font-size: 14px;
                         color: Look.on-canvas;
                         horizontal-alignment: center;

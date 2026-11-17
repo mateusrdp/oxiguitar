@@ -137,7 +137,7 @@ Open `OxiGuitar-VERSION-macos-universal.dmg` from the [latest release](https://g
 
 ### After installing
 
-Open a song. OxiGuitar plays each kind of track with the matching recorded set by itself (clean, overdriven and distorted guitars, nylon and steel strings, bass, drums); **Tools → Plugins…** lists the plugins it found and **Settings…** on MIDI changes the sets. The [manual](https://mateusrdp.github.io/oxiguitar/) says more, and [Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html) lists the sets.
+Open a song. OxiGuitar plays each kind of track with the matching recorded set by itself (clean, overdriven and distorted guitars, nylon and steel strings, bass, drums); **Tools → Plugins…** lists the plugins it found and **Plugins → MIDI Sound Sets…** changes the sets. The [manual](https://mateusrdp.github.io/oxiguitar/) says more, and [Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html) lists the sets.
 
 ## How to get involved
 

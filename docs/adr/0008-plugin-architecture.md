@@ -90,7 +90,7 @@ Consequences: the interface gains no plugin windows, plugin menu entries or host
 
 ### Settings windows, and cpal's ALSA code in the PipeWire plugin (Mateus, 25 Oct 2026, M4 slice 2)
 
-- **A plugin may have a settings window** (interface 1.3), opened from its row in the plugin manager (Settings…), made of the same standard widgets as its tabs. This replaces "a plugin with settings shows them in its own tab" above; the manager still only lists, enables, disables, and now opens that window. Plugins also gain sections of the track dialog, whose settings are saved beside the score in `FILE.oxg`, since no score format holds them.
+- **A plugin may have a settings window** (interface 1.3; retired in interface 1.9 by ADR 0012: a plugin shows its settings in a dialog of its own), opened from its row in the plugin manager (Settings…), made of the same standard widgets as its tabs. This replaces "a plugin with settings shows them in its own tab" above; the manager still only lists, enables, disables, and now opens that window. Plugins also gain sections of the track dialog, whose settings are saved beside the score in `FILE.oxg`, since no score format holds them.
 - **cpal is used as it is**, so the PipeWire audio-device plugin carries cpal's ALSA host as well (cpal always builds it on Linux) and links libasound. An accepted exception to "each plugin carries only its own code": forking cpal to make ALSA optional wasn't worth it. On Linux the plugins package depends on the libraries both link; where libpipewire is missing (a plugin zip on a system without PipeWire), the PipeWire plugin is withdrawn quietly, "can't run here" in the plugin manager, and ALSA plays.
 
 ### Every download carries the basic plugins (Mateus, 27 Oct 2026, session 22)

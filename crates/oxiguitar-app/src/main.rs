@@ -111,8 +111,8 @@ mod ui {
 use ui::{
     AdviceLink, AppWindow, AreaState, BoxItem, FooterRow, GridPoint, InspectorField,
     InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow,
-    PluginMenu, PluginMenuItem, PluginRow, PluginSection, PluginSettingsWindow, PluginWidget,
-    ShortcutLine, SongField, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    PluginMenu, PluginMenuItem, PluginRow, PluginSection, PluginWidget, ShortcutLine, SongField,
+    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -212,9 +212,6 @@ struct App {
     /// once opened (hidden, not dropped, when closed).
     plugins: oxiguitar_host::Plugins,
     manager: Option<PluginManagerWindow>,
-    /// A plugin's settings window (interface 1.3): the window, once made,
-    /// and the plugin it shows.
-    settings_window: Option<(PluginSettingsWindow, String)>,
     /// The plugins' sections of the Track tab, and how many times
     /// the dialog has opened (so late answers for an earlier opening are
     /// dropped).
@@ -354,8 +351,8 @@ thread_local! {
     /// The app, for events arriving from the worker thread.
     static APP: RefCell<Option<Shared>> = const { RefCell::new(None) };
     /// The plugins' tools for the Tools menu, after the core's: (plugin id,
-    /// tool id, menu entry).
-    static PLUGIN_TOOLS: RefCell<Vec<(String, String, String)>> = const { RefCell::new(Vec::new()) };
+    /// tool id, menu entry, whether it edits the score).
+    static PLUGIN_TOOLS: RefCell<Vec<(String, String, String, bool)>> = const { RefCell::new(Vec::new()) };
 }
 
 /// What the window does for plugins: shows their footer messages, shows
@@ -463,6 +460,15 @@ impl oxiguitar_host::Core for WindowCore {
         score: oxiguitar_host::api::score2::Score2,
     ) -> Result<(), String> {
         self.open.apply(plugin, revision, name, score)
+    }
+
+    fn settings_changed(&self, id: &str) {
+        let id = id.to_owned();
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                playing::settings_changed(&app, &id);
+            }
+        });
     }
 
     fn withdrawn(&self, id: &str) {
@@ -577,9 +583,8 @@ fn main() -> Result<(), slint::PlatformError> {
         (keys, lines, clashes)
     };
     shell.set_plugin_tools(&toolbar_tools);
-    // Only when a plugin has tabs, a settings window or track sections.
+    // Only when a plugin has tabs or track sections.
     let uses_tab_thread = !startup.plugins.tabs().is_empty()
-        || !startup.plugins.with_settings_window().is_empty()
         || oxiguitar_host::api::class::InstrumentClass::ALL
             .iter()
             .any(|&c| !startup.plugins.track_sections(c).is_empty());
@@ -650,7 +655,6 @@ fn main() -> Result<(), slint::PlatformError> {
         plugin_dialog: None,
         plugins: startup.plugins.clone(),
         manager: None,
-        settings_window: None,
         sections: None,
         dialogs_opened: 0,
         editing: editing::Editing::default(),
@@ -787,12 +791,13 @@ fn main() -> Result<(), slint::PlatformError> {
             continue;
         };
         if menu == "tools" {
-            tools_menu.push((plugin, t.spec.id.clone(), t.spec.name.clone()));
+            tools_menu.push((plugin, t.spec.id.clone(), t.spec.name.clone(), t.spec.edits));
             continue;
         }
         let item = PluginMenuItem {
             id: palette::plugin_tool_id(&plugin, &t.spec.id).into(),
             title: t.spec.name.as_str().into(),
+            edits: t.spec.edits,
         };
         // Without a menu of its own choosing, the one the plugins share.
         let own = t
@@ -1352,7 +1357,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let request = match i.checked_sub(ours) {
             None => Request::ApplyTool(i),
             Some(j) => match PLUGIN_TOOLS.with(|t| t.borrow().get(j).cloned()) {
-                Some((plugin, tool, _)) => Request::PluginTool(plugin, tool),
+                Some((plugin, tool, _, _)) => Request::PluginTool(plugin, tool),
                 None => return,
             },
         };
@@ -1573,10 +1578,12 @@ fn tool_rows(tools: &[ToolEntry]) -> Vec<ToolRow> {
             None => ToolRow {
                 title: t.name.as_str().into(),
                 enabled: true,
+                edits: true,
             },
             Some(why) => ToolRow {
                 title: format!("{} ({})", t.name, reason_phrase(why)).into(),
                 enabled: false,
+                edits: true,
             },
         })
         .collect()
@@ -1659,9 +1666,10 @@ impl PluginMenus {
 fn set_tools(ui: &AppWindow, rows: &[ToolRow]) {
     let mut rows = rows.to_vec();
     PLUGIN_TOOLS.with(|t| {
-        rows.extend(t.borrow().iter().map(|(_, _, name)| ToolRow {
+        rows.extend(t.borrow().iter().map(|(_, _, name, edits)| ToolRow {
             title: name.as_str().into(),
             enabled: true,
+            edits: *edits,
         }));
     });
     ui.set_tools(ModelRc::new(VecModel::from(rows)));
@@ -2006,17 +2014,6 @@ fn plugin_answer(app: &Shared, answer: plugin_tabs::Answer) {
                 .insert(drawn.widget.clone(), drawn_image(&drawn));
             tab
         }
-        plugin_tabs::Answer::Settings {
-            plugin,
-            content,
-            changed,
-        } => {
-            settings_window_answer(app, &plugin, content);
-            if changed {
-                playing::settings_changed(app, &plugin);
-            }
-            return;
-        }
         plugin_tabs::Answer::Section {
             dialog,
             plugin,
@@ -2172,10 +2169,11 @@ fn row_shape(
         .collect()
 }
 
-/// Puts tab `tab`'s contents in area `side`. Rows of the same shape as
-/// before are changed in place (a row holding a canvas widget by widget,
-/// so a drag on it carries on); other rows are made anew, so every widget
-/// shows exactly what the plugin says.
+/// Puts tab `tab`'s contents in area `side`. Contents of the same shape as
+/// before are changed in place, widget by widget, so a drag on a canvas
+/// carries on and an open list stays open; each widget follows its data
+/// (plugin_tab.slint's `says`), so it shows exactly what the plugin says.
+/// Contents of another shape are made anew.
 fn refresh_plugin_view(app: &Shared, side: View, tab: &TabId) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -2221,28 +2219,17 @@ fn refresh_plugin_view(app: &Shared, side: View, tab: &TabId) {
                     .all(|(a, b)| row_shape(a) == row_shape(b))
         });
     if same_shape {
-        let old = view.content.take().unwrap_or_default();
-        for (i, (before, now)) in old.rows.iter().zip(&content.rows).enumerate() {
-            let has_canvas = now.widgets.iter().any(|w| matches!(w, Widget::Canvas(_)));
-            if has_canvas {
-                // Widget by widget: the canvas's image may be new even when
-                // its contents aren't.
-                let model = &view.row_models[i];
-                for (j, w) in widgets(now).into_iter().enumerate() {
-                    if model.row_data(j).as_ref() != Some(&w) {
-                        model.set_row_data(j, w);
-                    }
+        // Widget by widget, in the models the window already shows: only
+        // what changed is set, so a list the user has open stays open and
+        // keeps the keyboard (oxiguitar-midi#19), and a canvas's image may
+        // be new even when its contents aren't. The shapes are the same, so
+        // each row keeps its stretch.
+        for (i, now) in content.rows.iter().enumerate() {
+            let model = &view.row_models[i];
+            for (j, w) in widgets(now).into_iter().enumerate() {
+                if model.row_data(j).as_ref() != Some(&w) {
+                    model.set_row_data(j, w);
                 }
-            } else if before != now {
-                let model = Rc::new(VecModel::from(widgets(now)));
-                view.rows.set_row_data(
-                    i,
-                    PluginRow {
-                        widgets: ModelRc::from(model.clone()),
-                        stretch: stretch(now),
-                    },
-                );
-                view.row_models[i] = model;
             }
         }
     } else {
@@ -2469,12 +2456,6 @@ fn open_plugin_manager(app: &Shared) {
             install_plugin_links(&w.global::<PluginLinks<'_>>(), app);
             let a = app.clone();
             w.on_toggled(move |i, on| manager_toggled(&a, i, on));
-            let a = app.clone();
-            w.on_settings_clicked(move |i| {
-                if let Some(id) = app_rows_settings(&a, i) {
-                    open_settings_window(&a, id);
-                }
-            });
             let weak = w.as_weak();
             w.on_close_clicked(move || {
                 if let Some(w) = weak.upgrade() {
@@ -2522,7 +2503,6 @@ fn sync_manager(app: &Shared) {
             state: r.state.into(),
             can_toggle: r.id.is_some(),
             enabled: r.enabled,
-            has_settings: r.settings.is_some(),
         })
         .collect();
     window.set_rows(ModelRc::new(VecModel::from(rows)));
@@ -3158,9 +3138,6 @@ fn settings_changed(app: &Shared) {
     }
     if let Some(m) = &s.manager {
         m.set_dark_interface(dark);
-    }
-    if let Some((w, _)) = &s.settings_window {
-        w.set_dark_interface(dark);
     }
     // Dark Page only needs new tiles; everything else a new engraving.
     s.paint += 1;
@@ -4716,121 +4693,6 @@ fn track_section_event(app: &Shared, index: i32, widget: &str, event: TabEvent) 
         .and_then(|i| sections.ask(i, Some((widget.to_owned(), event))))
     {
         thread.send(ask);
-    }
-}
-
-/// The plugin id of the manager's row `index`, when it has a settings
-/// window.
-fn app_rows_settings(app: &Shared, index: i32) -> Option<String> {
-    let s = app.borrow();
-    usize::try_from(index)
-        .ok()
-        .and_then(|i| {
-            manager::rows(&s.plugins, &manager::disabled(&s.stored))
-                .into_iter()
-                .nth(i)
-        })
-        .and_then(|r| r.settings)
-}
-
-/// Opens the settings window of the plugin `id` (interface 1.3), made the
-/// first time; it shows one plugin at a time.
-fn open_settings_window(app: &Shared, id: String) {
-    let existing = app
-        .borrow()
-        .settings_window
-        .as_ref()
-        .map(|(w, _)| w.clone_strong());
-    let window = match existing {
-        Some(w) => w,
-        None => {
-            let Ok(w) = PluginSettingsWindow::new() else {
-                message(
-                    app,
-                    Level::Error,
-                    "The plugin's settings window couldn't be opened.",
-                );
-                return;
-            };
-            install_plugin_links(&w.global::<PluginLinks<'_>>(), app);
-            let a = app.clone();
-            w.on_clicked(move |widget| settings_event(&a, &widget, TabEvent::Clicked));
-            let a = app.clone();
-            w.on_toggled(move |widget, on| settings_event(&a, &widget, TabEvent::Toggled(on)));
-            let a = app.clone();
-            w.on_slid(move |widget, v| settings_event(&a, &widget, TabEvent::Slid(v)));
-            let a = app.clone();
-            w.on_edited(move |widget, t| {
-                settings_event(&a, &widget, TabEvent::Edited(t.to_string()));
-            });
-            let a = app.clone();
-            w.on_chosen(move |widget, n| {
-                settings_event(&a, &widget, TabEvent::Chosen(u32::try_from(n).unwrap_or(0)));
-            });
-            let weak = w.as_weak();
-            w.on_close_clicked(move || {
-                if let Some(w) = weak.upgrade() {
-                    let _ = w.hide();
-                }
-            });
-            w
-        }
-    };
-    let name = {
-        let s = app.borrow();
-        s.plugins
-            .found()
-            .iter()
-            .find(|f| f.manifest.as_ref().is_some_and(|m| m.id == id))
-            .map(oxiguitar_host::Found::name)
-            .unwrap_or_else(|| id.clone())
-    };
-    window.set_window_title(format!("{name} Settings").into());
-    window.set_dark_interface(app.borrow().dark_interface);
-    window.set_rows(ModelRc::default());
-    window.set_message("…".into());
-    {
-        let mut s = app.borrow_mut();
-        if let Some(thread) = &s.tab_thread {
-            thread.send(plugin_tabs::Request::Settings {
-                plugin: id.clone(),
-                event: None,
-            });
-        }
-        s.settings_window = Some((window.clone_strong(), id));
-    }
-    let _ = window.show();
-}
-
-/// A widget of the settings window was used.
-fn settings_event(app: &Shared, widget: &str, event: TabEvent) {
-    let s = app.borrow();
-    if let (Some((_, plugin)), Some(thread)) = (&s.settings_window, &s.tab_thread) {
-        thread.send(plugin_tabs::Request::Settings {
-            plugin: plugin.clone(),
-            event: Some((widget.to_owned(), event)),
-        });
-    }
-}
-
-/// The tab thread answered for a settings window.
-fn settings_window_answer(app: &Shared, plugin: &str, content: Result<TabContent, String>) {
-    let s = app.borrow();
-    let Some((window, shown)) = &s.settings_window else {
-        return;
-    };
-    if shown != plugin {
-        return;
-    }
-    match content {
-        Ok(content) => {
-            window.set_rows(plain_rows(&content));
-            window.set_message(SharedString::new());
-        }
-        Err(why) => {
-            window.set_rows(ModelRc::default());
-            window.set_message(why.into());
-        }
     }
 }
 
