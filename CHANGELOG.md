@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Fixed
+
+- **The app icon shows in desktop search again** (#310): the scalable icon's licence comment now sits inside the `<svg>` element, so the `<svg` tag starts within the file's first 256 bytes, where desktops look for it. CI checks this.
+
 ## [0.21.1] - 2026-11-17
 
 ### Changed
