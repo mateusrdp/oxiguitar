@@ -112,13 +112,13 @@ pub struct Manifest {
     /// The sections it adds to the track dialog. Since interface 1.3.
     #[serde(default)]
     pub track_sections: Vec<TrackSectionSpec>,
-    /// The folders it shares with the user and other plugins, by name:
-    /// each sits beside `plugins` in the user's OxiGuitar folder, where the
-    /// host creates it at start, and may also sit beside a system plugin
-    /// folder or the program. Since interface 1.3 for `soundfonts` and
-    /// `nam` (`HostRequest::Folders`); since interface 1.8 any name
-    /// ([`is_folder_name`], `HostRequest::Folder`), so a plugin has folders
-    /// of its own with no change to the core.
+    /// The folders it shares with the user and other plugins, by name
+    /// ([`is_folder_name`]): each sits beside `plugins` in the user's
+    /// OxiGuitar folder, where the host creates it at start, and may also
+    /// sit beside a system plugin folder or the program. The plugin asks
+    /// where one is by its name (`HostRequest::Folder`, interface 1.8): the
+    /// core knows no folder's name (ADR 0012; interface 1.3's two named
+    /// folders were retired in 1.10).
     #[serde(default)]
     pub folders: Vec<String>,
     /// The effects it offers a track's sound, after its instrument. Since
@@ -201,35 +201,6 @@ impl TrackSectionSpec {
     pub fn shows_for(&self, class: InstrumentClass) -> bool {
         self.plays.as_ref().is_none_or(|p| p.contains(&class))
             && !self.does_not_play.contains(&class)
-    }
-}
-
-/// A folder in the user's OxiGuitar folder that the user fills and plugins
-/// read: sound sets, amp models. Since interface 1.3.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum SharedFolder {
-    /// `soundfonts`: sound sets (.sf2, .sf3, .dls, SFZ instruments' folders).
-    Soundfonts,
-    /// `nam`: amp models (.nam) and cabinet impulse responses (.wav).
-    Nam,
-}
-
-impl SharedFolder {
-    /// Every shared folder interface 1.3 names.
-    pub const ALL: [SharedFolder; 2] = [SharedFolder::Soundfonts, SharedFolder::Nam];
-
-    /// The folder of interface 1.3 with this name, if it is one.
-    pub fn of(name: &str) -> Option<SharedFolder> {
-        SharedFolder::ALL.into_iter().find(|f| f.name() == name)
-    }
-
-    /// The folder's name in the user's OxiGuitar folder.
-    pub fn name(self) -> &'static str {
-        match self {
-            SharedFolder::Soundfonts => "soundfonts",
-            SharedFolder::Nam => "nam",
-        }
     }
 }
 
@@ -766,12 +737,6 @@ impl Manifest {
             }) {
                 out.push(format!(
                     "a tool's palette, toolbar and menu need interface {since_1_8}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
-            if self.folders.iter().any(|f| SharedFolder::of(f).is_none()) {
-                out.push(format!(
-                    "folders other than \"soundfonts\" and \"nam\" need interface {since_1_8}, and the manifest asks for {}",
                     self.interface
                 ));
             }
@@ -1368,7 +1333,7 @@ mod tests {
         let m: Manifest = serde_json::from_str(&json("1.3", keys)).unwrap();
         assert!(m.problems().is_empty(), "{:?}", m.problems());
         assert_eq!(m.folders, ["nam", "soundfonts"]);
-        // A folder of the plugin's own needs interface 1.8 and a name
+        // A folder of the plugin's own needs a name
         // that is no path and none of OxiGuitar's.
         let own = |interface: &str, name: &str| -> Vec<String> {
             let m: Manifest =
@@ -1378,7 +1343,6 @@ mod tests {
         };
         assert!(own("1.8", "impulses").is_empty());
         assert!(own("1.8", "my-captures2").is_empty());
-        assert!(own("1.3", "impulses")[0].contains("interface 1.8"));
         for bad in [
             "plugins", "data", "cache", "a.b", "../x", "Up", "", "a/b", "a--b",
         ] {
@@ -1390,8 +1354,6 @@ mod tests {
             );
         }
         assert!(!is_folder_name(&"a".repeat(FOLDER_NAME_MAX + 1)));
-        assert_eq!(SharedFolder::of("nam"), Some(SharedFolder::Nam));
-        assert_eq!(SharedFolder::of("impulses"), None);
         assert!(m.track_sections[0].shows_for(InstrumentClass::Fretted));
         assert!(!m.track_sections[0].shows_for(InstrumentClass::Drums));
         let old: Manifest = serde_json::from_str(&json("1.2", keys)).unwrap();

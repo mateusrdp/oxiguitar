@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- **Plugin interface 1.10** (the SDK crates are at 1.10.0; ADR 0012): the core knows no shared folder's name. The two that interface 1.3 named, `soundfonts` and `nam` (`SharedFolder`, `Folders::shared`), are retired: a plugin asks for its shared folders by name (`host.folder`, interface 1.8). Older plugins still load, but find no shared folder through `folders()`: MIDI and NAM versions that ask by name are needed.
+
 ## [0.21.0] - 2026-11-17
 
 ### Changed

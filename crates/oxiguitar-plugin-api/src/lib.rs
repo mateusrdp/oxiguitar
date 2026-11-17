@@ -66,7 +66,9 @@
 //!   tools on the palette, menus and toolbar, dialogs, plugin data, drawing
 //!   and performing. 1.9: tools that don't edit the score (`edits: false`),
 //!   which open a plugin's own settings dialog; the core's settings
-//!   windows are retired.
+//!   windows are retired. 1.10: the two shared folders 1.3 named
+//!   (`soundfonts`, `nam`) are retired: a plugin asks for its folders by
+//!   name (1.8).
 //!
 //! # Licence
 //!
@@ -92,7 +94,7 @@ pub use blob::Blob;
 pub use message::{DecodeError, decode, encode};
 
 /// The interface version this crate describes: (major, minor).
-pub const INTERFACE: (u32, u32) = (1, 9);
+pub const INTERFACE: (u32, u32) = (1, 10);
 
 /// The symbol a plugin exports. It returns a pointer to the plugin's
 /// [`abi::PluginTableV1`].
