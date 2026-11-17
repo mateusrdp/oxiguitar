@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-11-17
+
 ### Added
 
 - **Drum entry** (docs/parity.md, gap 1; `docs/design/drums.md`): drum tracks can be written. On the drum staff, move the caret to a line or space and press Enter for the drum the kit puts there, or 1 to 9 for the others sharing it (snare, side stick, electric snare, hand clap; closed and open hi-hat), as in Guitar Pro 8; Backspace takes it away, and a beat holds one drum a line or space. **Drum tablature**: a drum track's TAB button shows each drum as its General MIDI number on six lines (cymbals, hi-hats, toms, snares, floor toms, bass drums), and two digits typed there enter that drum. The Note tab names the drum and changes it to any General MIDI drum. One General MIDI kit map, shared by the engraver and the editor, places every drum.
