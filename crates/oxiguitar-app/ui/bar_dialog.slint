@@ -498,7 +498,7 @@ export component TextDialog inherits Rectangle {
 }
 
 // A field with a list to pick from: what an editable ComboBox would be
-// (Slint 1.17's takes no typing). The list opens under the field.
+// (Slint's, up to 1.19 at least, takes no typing). The list opens under the field.
 component EditCombo inherits Rectangle {
     in-out property <string> text;
     in property <[string]> model;

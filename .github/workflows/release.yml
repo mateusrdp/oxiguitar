@@ -323,7 +323,7 @@ jobs:
           done
           OXIGUITAR_HOME="$home" "$root/usr/bin/oxiguitar-cli" info "$SAMPLE" > /dev/null
           # Each build holds only its own display system's code
-          # (scripts/check-display-crates.sh checks the crates; this, the files).
+          # (scripts/check-display-crates.sh checks the features; this, the files).
           ! grep -q "libX11.so" "$root/usr/bin/oxiguitar"
           ! grep -q "libwayland-client.so" "$root/usr/bin/oxiguitar-x11"
           # Without FUSE on the runner, the runtime unpacks and runs. AppRun

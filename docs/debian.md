@@ -18,14 +18,14 @@ OxiGuitar aims for Debian's main archive (ADR 0008, answer 5): both packages, `o
 
 What stands in the way, by where it comes from:
 
-- **Slint 1.17.1.** Debian has started on it (`i-slint-common`, `i-slint-core-macros`, `vtable`, `const-field-offset` are in sid at 1.17.1) but not `slint`, `slint-build`, `slint-macros`, `i-slint-core`, `i-slint-compiler`, `i-slint-backend-winit`, `i-slint-backend-selector` or the two renderers, nor their own missing dependencies (`femtovg`, `accesskit_winit`, `accesskit_unix`, `accesskit_atspi_common`, `atspi`, `icu_locale_fallback`, `pulp`, `equator`, `wayland-protocols-experimental`). Most of the 46 "other" crates are Slint's too: Slint 1.17.1 asks for older series than sid has (`parley` 0.10, `taffy` 0.10, `fontique` 0.10, `resvg` and `usvg` 0.47, `smithay-client-toolkit` 0.20, `calloop` 0.13, `phf` 0.13, …). These move when Debian packages Slint 1.17.1, which needs them.
+- **Slint.** Debian unstable has Slint at the latest upstream release (Mateus, 17 Nov 2026), and the app follows Slint's latest release (1.19.0, ADR 0011). The weekly audit shows which of Slint's crates and their dependencies sid still lacks at our versions. (Until then, this section listed what sid lacked of Slint 1.17.1.)
 - **Ours, directly:**
   - `krilla` 0.8 (PDF export) and what it brings: `pdf-writer`, `subsetter`, `xmp-writer` and `write-fonts` are missing, and krilla holds `skrifa` at 0.42 while sid has 0.44.
   - `zip` 9 (Guitar Pro 7–8): sid has 5.1.
   - `quick-xml` 0.42 (GPIF): sid has 0.38.
   - Already in sid at our version: `object` 0.37.3, `libloading`, `postcard`, `serde`, `rfd`, `png`, `tiny-skia` 0.12.
 
-So `debian/` can't build from Debian's crates alone (it builds from a vendor component for now; below) until Debian packages Slint 1.17.1, krilla and its writers, and the newer `zip` and `quick-xml`. The weekly audit shows the gap closing.
+So `debian/` can't build from Debian's crates alone (it builds from a vendor component for now; below) until Debian has every crate at our versions (the audit says which): krilla and its writers, and the newer `zip` and `quick-xml`. The weekly audit shows the gap closing.
 
 ## The packaging: `debian/`
 

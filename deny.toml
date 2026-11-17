@@ -26,22 +26,15 @@ ignore = [
     { id = "RUSTSEC-2026-0192", reason = "unmaintained, via winit's Wayland decorations; no safe upgrade yet" },
     # zvariant, zvariant_derive and zbus_names are unmaintained as separate
     # crates (not vulnerabilities): zbus 6.0 took them in as modules. They
-    # come in through zbus 5, which Slint 1.18's winit backend, AccessKit's
+    # come in through zbus 5, which Slint 1.19's winit backend, AccessKit's
     # Linux screen-reader bridge and the portal file dialogs still use.
     # Revisit on the next Slint upgrade (with ADRs 0006 and 0007's checks).
-    { id = "RUSTSEC-2026-0370", reason = "zvariant merged into zbus 6; Slint 1.18 and AccessKit still use zbus 5" },
-    { id = "RUSTSEC-2026-0371", reason = "zbus_names merged into zbus 6; Slint 1.18 and AccessKit still use zbus 5" },
-    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive merged into zbus 6; Slint 1.18 and AccessKit still use zbus 5" },
-    # Slint is pinned to 1.17.1 for a Wayland-only clipboard (ADR 0009). Its
-    # code generator (a build dependency, not in the program) takes the image
-    # crate with every format, whose AVIF encoder uses `paste`; its SVG
-    # support (resvg 0.47) uses `rustybuzz`. Both are unmaintained, not
-    # vulnerable. They go when the Slint pin moves.
-    { id = "RUSTSEC-2024-0436", reason = "paste, unmaintained; build time only, via Slint 1.17.1's code generator (ADR 0009)" },
-    { id = "RUSTSEC-2026-0206", reason = "rustybuzz, unmaintained; via Slint 1.17.1's resvg 0.47 (ADR 0009)" },
-    # spin_on uses pin-utils, which is unmaintained (archived Oct 2026); via
-    # Slint 1.17.1's build deps (code generator + macros). Fixed in Slint 1.18.
-    { id = "RUSTSEC-2026-0441", reason = "pin-utils, unmaintained; via spin_on in Slint 1.17.1 build deps (ADR 0009)" },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant merged into zbus 6; Slint 1.19 and AccessKit still use zbus 5" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names merged into zbus 6; Slint 1.19 and AccessKit still use zbus 5" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive merged into zbus 6; Slint 1.19 and AccessKit still use zbus 5" },
+    # spin_on uses pin-utils, which is unmaintained (archived Oct 2026), not
+    # vulnerable; via Slint 1.19's code generator, macros and renderers.
+    { id = "RUSTSEC-2026-0441", reason = "pin-utils, unmaintained; via spin_on in Slint 1.19" },
 ]
 
 [licenses]
