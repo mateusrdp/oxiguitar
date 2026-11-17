@@ -17,6 +17,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Documentation
 
+- **The parity check covers Power Tab Editor** (#274): a section in `docs/parity.md` compares OxiGuitar with Power Tab Editor 2.0 and 1.7's tools. Nothing changes the ranked gaps; three small tools are noted (replacement, naming the chord under the caret, autosave with recovery) and reading `.ptb` and `.pt2` stays with #223.
 - **The feature-parity check before the beta** (ROADMAP.md, "Then we stop"): `docs/parity.md` compares OxiGuitar 0.20 and its official plugins with Guitar Pro 8, TuxGuitar 2.1 and alphaTab 1.8 (notation, editing, playback, files, display), and ranks the gaps for Mateus to place before the beta, after v1.0 or never. Drum entry, the mixer saved into the file, volume, pan and instrument automations, image export, a speed trainer and instrument views lead the list.
 - The manual's Flatpak section lists the wah plugin's package, `io.github.mateusrdp.OxiGuitar.Plugin.wah`, with the others.
 - **Installing the Flatpak**: the manual's Linux page and the README add Flathub before our repository (`flatpak install` from our repository alone stops when Flathub, where the runtime comes from, isn't set up), and the README gains a Flatpak section.
