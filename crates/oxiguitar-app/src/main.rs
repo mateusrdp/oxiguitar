@@ -5599,7 +5599,7 @@ fn run_dialog(pick: impl FnOnce() + Send + 'static) {
 ///
 /// **Drops don't work on Wayland** (ADR 0006; CONTRIBUTING.md, "Known
 /// platform gaps"). winit 0.30 sends `DroppedFile` on Windows, macOS and
-/// X11 only: its Wayland backend has no drag and drop, and Slint 1.18
+/// X11 only: its Wayland backend has no drag and drop, and Slint 1.19
 /// passes no operating-system drops on. Listening ourselves would need our
 /// own `wl_data_device` on winit's connection, through an `unsafe` raw
 /// pointer and with no way to wake on its events but polling, which we

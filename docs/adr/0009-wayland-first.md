@@ -1,6 +1,6 @@
 # 0009 — Wayland first: the Wayland build takes the Wayland path, and Slint is pinned to 1.17.1
 
-- Status: accepted (revisit on every Slint upgrade)
+- Status: accepted; its rule that the Wayland build holds no X11 crate, and the Slint pin, superseded by [ADR 0011](0011-no-dead-platform-code.md) (17 Nov 2026). Two Linux builds and Wayland first still stand.
 - Date: 2026-10-19
 - Milestone: M2 (slice 4)
 
