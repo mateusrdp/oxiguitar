@@ -11,7 +11,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
-- **Slint 1.19.0, the latest release** (#271): the app no longer stays on Slint 1.17.1. On Wayland, copy and paste still go through the window's own connection, which works on every compositor, GNOME and Flatpak sandboxes included. Slint 1.19 also brings its own fixes (spin boxes, Flickable, popups, ScrollView, double-clicks at the system's interval). The Track tab's Capo and Frets rows are now as tall as the rows around them, and the plugin manager's "No plugin files were found." keeps inside its box.
+- **Slint 1.19.0, the latest release** (#271): the app no longer stays on Slint 1.17.1. On Wayland, copy and paste still go through the window's own connection, which works on every compositor, GNOME and Flatpak sandboxes included. Slint 1.19 also brings its own fixes (spin boxes, Flickable, popups and menus, double-clicks at the system's interval). The Track tab's Capo and Frets rows are now as tall as the rows around them, and the plugin manager's "No plugin files were found." and the plugin settings window's message keep inside their box.
 - **The rule for platform code** (Mateus, 17 Nov 2026; ADR 0011, which supersedes ADR 0009's "no X11 crate in the Wayland build"): OxiGuitar's own code holds no code that never runs where it is built. Each build compiles only the paths it takes, chosen when building, never by detecting the environment and branching. What libraries carry inside is theirs. `scripts/check-display-crates.sh` now checks that each Linux build turns on only its own windowing backend.
 - cargo-deny no longer ignores RUSTSEC-2024-0436 (`paste`) and RUSTSEC-2026-0206 (`rustybuzz`): Slint 1.19 doesn't use them.
 
