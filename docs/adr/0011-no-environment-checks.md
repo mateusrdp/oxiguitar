@@ -1,4 +1,4 @@
-# 0011 — The app never looks at the environment to choose what to do; libraries and plugins are theirs
+# 0011 — Our code never looks at the environment to choose what to do; libraries are theirs, and others' plugins may but shouldn't
 
 - Status: accepted (Mateus, 17 Nov 2026)
 - Date: 2026-11-17
@@ -17,9 +17,10 @@ What ADR 0009 was guarding against is a hack in our own code: detecting the envi
 
 Mateus (17 Nov 2026):
 
-- **The app never looks at the environment to choose what to do.** No "if Wayland do this, else do that" in OxiGuitar's own code. What differs between platforms or display systems is chosen when building (Cargo features, `cfg`): each build knows what it is.
-- **Libraries and plugins are theirs.** We fully delegate to libraries: their dependencies, fallbacks and code paths are not ours to audit, trim or work around. A plugin may include code it never uses and may look at the environment; that is its business. This is a quality standard for our own code only.
+- **Our code never looks at the environment to choose what to do.** No "if Wayland do this, else do that" in the app or in our own plugins. What differs between platforms or display systems is chosen when building (Cargo features, `cfg`): each build knows what it is. This is a directive of ours (CONTRIBUTING.md, "Design principles").
 - **If one of our plugins depends on the environment, it is handled in that plugin, never in the app.**
+- **Libraries are theirs.** We fully delegate to libraries: their dependencies, fallbacks and code paths are not ours to audit, trim or work around.
+- **Other people's plugins may, but shouldn't.** A plugin may carry code it never uses or look at the environment to choose what to do. We discourage it, and the plugin guide says so, but OxiGuitar doesn't check for it: we don't limit plugin developers. That they can doesn't mean they should.
 - **Code meant to run that a library's bug stops is not a breach.** The file drop in the window is written for every platform and should work everywhere; on Wayland it doesn't, because winit 0.30 sends no drops there (ADR 0006). It stays as it is.
 - Slint follows the latest release again: 1.19.0 now.
 
