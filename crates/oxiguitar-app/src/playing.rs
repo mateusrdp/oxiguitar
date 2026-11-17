@@ -20,9 +20,6 @@ use crate::sound::{FromSound, ToSound};
 use crate::ui::PlayFrame;
 use crate::{Shared, message, sync_footer};
 
-/// The manual's page on getting better sounds.
-pub(crate) const BETTER_SOUNDS: &str = "https://mateusrdp.github.io/oxiguitar/better-sounds.html";
-
 /// How long the output stays open after the sound stops, for the last
 /// notes to ring out, in seconds.
 const RING_OUT: f64 = 2.5;
@@ -43,10 +40,9 @@ pub(crate) fn from_sound(app: &Shared, m: FromSound) {
         }
         FromSound::Unplayable(why) => {
             dos = app.borrow_mut().player.unplayable_now(why.clone());
-            let link = why
-                .contains("sound set")
-                .then_some(("Better sounds", BETTER_SOUNDS));
-            tell_once(app, Level::Warning, why, link);
+            // The plugin's own words: a plugin with a page to point at
+            // says so itself, with its link (ADR 0012).
+            tell_once(app, Level::Warning, why, None);
         }
         FromSound::NewEngine(control) => app.borrow_mut().player.new_engine(control),
         FromSound::Opened => dos = app.borrow_mut().player.opened(),
