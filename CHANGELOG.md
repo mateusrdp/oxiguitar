@@ -8,6 +8,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 - **The feature-parity check before the beta** (ROADMAP.md, "Then we stop"): `docs/parity.md` compares OxiGuitar 0.20 and its official plugins with Guitar Pro 8, TuxGuitar 2.1 and alphaTab 1.8 (notation, editing, playback, files, display), and ranks the gaps for Mateus to place before the beta, after v1.0 or never. Drum entry, the mixer saved into the file, volume, pan and instrument automations, image export, a speed trainer and instrument views lead the list.
 - The manual's Flatpak section lists the wah plugin's package, `io.github.mateusrdp.OxiGuitar.Plugin.wah`, with the others.
+- **Installing the Flatpak**: the manual's Linux page and the README add Flathub before our repository (`flatpak install` from our repository alone stops when Flathub, where the runtime comes from, isn't set up), and the README gains a Flatpak section.
+- `docs/parity.md` and ROADMAP.md record Mateus's placing of the gaps (17 Nov 2026): the mixer saved in the file and drum entry go into v1.0; every other gap stays out of it.
 - The manual's Amp models page and the player's design say where the NAM plugin's faster engine (NeuralAmpModeler-rs 2.0) now plays: ARM64 under Linux, Apple Silicon Macs, and PCs with AVX2 and FMA on Linux (oxiguitar-nam#16).
 
 ## [0.20.0] - 2026-11-16
