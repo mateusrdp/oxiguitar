@@ -189,6 +189,24 @@ Added on 17 Nov 2026, for #274. Power Tab Editor is a tablature editor in the Gu
 
 **Reading .ptb and .pt2** is the formats' work (#223): the one real Power Tab gap, and the only reason to keep #223 open after v1.0. Both formats are documented by the open-source editor's code, which reads them.
 
+## Summary: what is planned and what is not (17 Nov 2026)
+
+Closes #274 (parity with alphaTab and Power Tab). Against Guitar Pro 8, TuxGuitar, alphaTab and Power Tab Editor, as placed by Mateus.
+
+**In v1.0, built** (PRs #299 to #301): drum entry on the drum staff and on drum tablature (gap 1), and the mixer saved in the file, mute and solo included (gap 2).
+
+**After v1.0, planned:**
+- The formats of #223 (still open): reading and writing Power Tab's `.ptb` and `.pt2`, Capella (CapXML) and alphaTex, then what it takes to read TablEdit and ASCII tab and write ASCII tab and LilyPond if asked.
+- M9: audio tracks and line-in (#240), the tuner, external MIDI devices, PNG and SVG export in the plugin way.
+
+**Not in v1.0, with no date** (decided 17 Nov 2026; any may come back as a plugin or a request): volume, pan and instrument automations (maybe a plugin) and instrument changes mid-song; image export from the window; the speed trainer; instrument views (fretboard, keyboard); the stylesheet (fonts, spacing, header and footer, page format); multi-bar rests; numbered notation, slash staves and tenuto; the scales tool; customisable shortcuts.
+
+**Not placed yet, small, for Mateus to place if he wants them:** autosave with recovery, the replacement tool, naming the chord under the caret, several files open in tabs, colours for single notation elements.
+
+**Out by decision:** MuseScore and ABC (9 Nov 2026), Guitar Pro's song store, stem direction overrides (19 Oct 2026).
+
+Nothing else Power Tab Editor or alphaTab has is missing from OxiGuitar.
+
 ## Gaps worth deciding before the beta
 
 Ranked by how often a user switching from Guitar Pro 8 or TuxGuitar would miss each one. Each was a question for Mateus: before the beta, after v1.0, or never.
