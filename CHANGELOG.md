@@ -4,6 +4,11 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Fixed
+
+- **The app icon shows in desktop search again** (#310): the scalable icon's licence comment now sits inside the `<svg>` element, so the `<svg` tag starts within the file's first 256 bytes, where desktops look for it. CI checks this.
+- **CI passes again after a new advisory**: RUSTSEC-2026-0543 (17 Nov 2026) marks `chrono` unmaintained, with no fix. Only Slint 1.19 uses it, so `deny.toml` ignores it like the other Slint-borne ones; revisit on the next Slint upgrade.
+
 ## [0.21.1] - 2026-11-17
 
 ### Changed

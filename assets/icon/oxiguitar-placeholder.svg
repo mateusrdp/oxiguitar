@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- SPDX-License-Identifier: GPL-3.0-or-later
-     Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
-     Placeholder app icon: a green guitar pick with "OxG". A standard pick
-     shape with a rounded tip, in the dark green of a medium (0.88 mm) pick,
-     with a light sheen. Our own drawing; no maker's shape or logo is copied. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- SPDX-License-Identifier: GPL-3.0-or-later
+       Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+       Placeholder app icon: a green guitar pick with "OxG". A standard pick
+       shape with a rounded tip, in the dark green of a medium (0.88 mm) pick,
+       with a light sheen. Our own drawing; no maker's shape or logo is copied. -->
   <title>OxiGuitar</title>
   <defs>
     <!-- Lighter at the shoulders, deeper at the tip. -->
