@@ -2717,6 +2717,9 @@ fn handle(app: &Shared, event: Event) {
                 s.bad = bad;
                 s.prefs.play_engraved_beat
             };
+            // A preview still sounding plays the score as it was: it ends
+            // before anything follows the new one (#314).
+            playing::end_preview(app);
             if let Some((tracks, was)) = tracks {
                 track_list_changed(app, &tracks, &was);
             } else {
