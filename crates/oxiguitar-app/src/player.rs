@@ -279,9 +279,17 @@ impl Player {
         self.state
     }
 
-    /// The sound runs (or is about to): edits are refused.
+    /// The sound runs (or is about to): edits are refused. Not while it is
+    /// only a note's preview (#246): note entry goes on through it, so the
+    /// second digit of a two-digit fret is never lost to the first's
+    /// preview (#314).
     pub(crate) fn refuses_edits(&self) -> bool {
-        matches!(self.state, State::Starting | State::Playing)
+        matches!(self.state, State::Starting | State::Playing) && self.preview_solo.is_none()
+    }
+
+    /// A note's preview (#246) sounds, or is about to.
+    pub(crate) fn previewing(&self) -> bool {
+        matches!(self.state, State::Starting | State::Playing) && self.preview_solo.is_some()
     }
 
     /// Whether Play can do anything: a timeline was built and something
@@ -503,6 +511,9 @@ impl Player {
     /// Pause: the sound stops where it is; the output stays open. Returns
     /// where it stopped, for the caret.
     pub(crate) fn pause(&mut self) -> Option<Place> {
+        // A paused preview is a preview no more: what plays next is the
+        // song, with the mix as it was.
+        self.restore_preview_solo();
         match self.state {
             State::Playing => {
                 let heard = self.control.heard();
@@ -523,6 +534,7 @@ impl Player {
     /// Stop: the sound stops, and the caret goes back where playing began
     /// (returned).
     pub(crate) fn stop(&mut self) -> (Option<Place>, Vec<Do>) {
+        self.restore_preview_solo();
         if self.state == State::Stopped {
             return (None, Vec::new());
         }
@@ -837,6 +849,41 @@ pub(crate) mod tests {
         // And back from a time to a place.
         assert_eq!(place_at(&tl, 2.5), Some(at(1, 1)));
         assert_eq!(place_at(&tl, 7.99).map(|p| p.bar), Some(3));
+    }
+
+    #[test]
+    fn a_notes_preview_lets_note_entry_go_on() {
+        // Typing 1 then 2 for fret 12 (#314): the 1's preview mustn't
+        // refuse the 2.
+        let (mut p, mut e, s) = rig();
+        let caret = Caret {
+            track: 0,
+            staff: 0,
+            voice: 0,
+            bar: 1,
+            beat: 1,
+            string: 1,
+        };
+        assert_eq!(p.play_beats(caret, &s, 1), vec![Do::Open]);
+        assert!(p.previewing());
+        assert!(!p.refuses_edits(), "a starting preview takes edits");
+        assert!(p.opened().is_empty());
+        render(&mut e, 0.1);
+        assert!(p.previewing());
+        assert!(!p.refuses_edits(), "a sounding preview takes edits");
+        // The edit ends the preview, and its solo with it.
+        p.stop();
+        assert!(!p.previewing());
+        assert!(p.preview_solo.is_none());
+        // Paused, a preview is one no more: the song played next refuses
+        // edits as ever.
+        p.play_beats(caret, &s, 1);
+        assert!(p.previewing());
+        p.pause();
+        assert!(p.preview_solo.is_none());
+        p.play(at(1, 0), None);
+        assert!(!p.previewing());
+        assert!(p.refuses_edits(), "the song refuses edits");
     }
 
     #[test]

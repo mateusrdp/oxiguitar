@@ -6,6 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Fixed
 
+- **A two-digit fret is typed whole with Play Engraved Beat on** (#314): typing 1 then 2 now gives fret 12. Before, the preview of the 1 counted as the song playing, so the 2 was refused or taken as a new fret. A note's preview no longer holds editing back: the next edit ends it and plays its own.
 - **The app icon shows in desktop search again** (#310): the scalable icon's licence comment now sits inside the `<svg>` element, so the `<svg` tag starts within the file's first 256 bytes, where desktops look for it. CI checks this.
 - **CI passes again after a new advisory**: RUSTSEC-2026-0543 (17 Nov 2026) marks `chrono` unmaintained, with no fix. Only Slint 1.19 uses it, so `deny.toml` ignores it like the other Slint-borne ones; revisit on the next Slint upgrade.
 
