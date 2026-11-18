@@ -273,7 +273,7 @@ fn tuplet_for(q: Ratio) -> Option<Tuplet> {
 /// gives one, else the fewest tied values. Tuplets tried: the note's own
 /// and none (in `prefer`'s order), then those with one more tuplet inside,
 /// then one tuplet alone.
-fn spell(len: Ratio, own: &[Tuplet], prefer: Prefer) -> Option<Vec<Duration>> {
+pub(crate) fn spell(len: Ratio, own: &[Tuplet], prefer: Prefer) -> Option<Vec<Duration>> {
     if len < shortest() {
         return None;
     }
@@ -322,7 +322,7 @@ fn spell(len: Ratio, own: &[Tuplet], prefer: Prefer) -> Option<Vec<Duration>> {
 
 /// A piece of a beat that was split: `first` keeps what is struck, `last`
 /// what leads on to the next note; the pieces after the first are tied.
-fn piece(beat: &Beat, duration: Duration, first: bool, last: bool) -> Beat {
+pub(crate) fn piece(beat: &Beat, duration: Duration, first: bool, last: bool) -> Beat {
     let mut b = beat.clone();
     b.duration = duration;
     if !first {

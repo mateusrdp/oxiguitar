@@ -41,6 +41,10 @@
 //!   a name, and names rewritten in a chord notation style, with the
 //!   chordparser crate; [`Command::RenameChords`] restyles a whole song.
 //!
+//! - Merging tracks ([`Command::MergeTracks`], #312): one track's notes
+//!   written alongside another's, beats cut and tied where the rhythms
+//!   differ, then the first track deleted.
+//!
 //! See `docs/design/editor.md` for the rules and the parity checklist.
 
 mod bars;
@@ -56,6 +60,7 @@ mod harmonize;
 pub mod harmony;
 mod history;
 mod marks;
+mod merge;
 mod notation;
 mod selection;
 mod tracks;
@@ -72,6 +77,7 @@ pub use fit::{Fit, FitHow};
 pub use harmonize::{Harmonize, HarmonizeReport, harmonize_report};
 pub use history::{Change, History, Region, Touched};
 pub use marks::plain_spellings;
+pub use merge::{Merge, MergeError, merge_lost};
 pub use notation::{LYRIC_LINES, tidy_info};
 pub use selection::{Selection, Span};
 pub use tracks::{TrackSettings, notes_lost};

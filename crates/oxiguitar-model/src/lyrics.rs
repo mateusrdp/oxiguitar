@@ -223,6 +223,28 @@ pub fn set_syllable(text: &str, index: usize, syllable: &str, hyphen: bool) -> S
     out
 }
 
+/// The line's text with an empty beat before its syllable `index` (from
+/// 0): the syllables from there on move one beat later, and nothing else
+/// of the text changes. A space is put before the syllable (a hyphen when
+/// only spaces come before it, which a file's reader trims); where the
+/// space falls after a line break or a comment, which takes one space of
+/// its own, two. Past the last syllable the text is as it was.
+pub fn with_empty_beat(text: &str, index: usize) -> String {
+    let all = syllables(text);
+    let Some(at) = all.get(index).map(|s| s.start) else {
+        return text.to_owned();
+    };
+    let (head, tail) = text.split_at(at);
+    let gap = if head.trim().is_empty() { '-' } else { ' ' };
+    for n in 1..=2 {
+        let out = format!("{head}{}{tail}", gap.to_string().repeat(n));
+        if syllables(&out).len() > all.len() {
+            return out;
+        }
+    }
+    text.to_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,6 +260,29 @@ mod tests {
                 }
             })
             .collect()
+    }
+
+    #[test]
+    fn an_empty_beat_moves_the_syllables_after_it() {
+        assert_eq!(
+            drawn(&with_empty_beat("Hel-lo world", 1)),
+            ["Hel-", "", "lo", "world"]
+        );
+        assert_eq!(
+            drawn(&with_empty_beat("Hel-lo world", 2)),
+            ["Hel-", "lo", "", "world"]
+        );
+        assert_eq!(with_empty_beat("go now", 0), "-go now");
+        assert_eq!(
+            drawn(&with_empty_beat("tell\nHea-ven", 1)),
+            ["tell", "", "Hea-", "ven"]
+        );
+        assert_eq!(
+            drawn(&with_empty_beat("[Verse 1] Got to", 0)),
+            ["", "Got", "to"]
+        );
+        assert_eq!(drawn(&with_empty_beat("a b", 1)), ["a", "", "b"]);
+        assert_eq!(with_empty_beat("a b", 2), "a b", "past the last");
     }
 
     #[test]

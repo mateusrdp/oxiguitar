@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks } from "plugin_tab.slint";
-import { PluginDialog, BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog } from "bar_dialog.slint";
+import { PluginDialog, BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog, MergeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -1617,6 +1617,18 @@ export component AppWindow inherits Window {
     in-out property <bool> harmonize-all-tracks: true;
     in-out property <bool> harmonize-whole-song;
     callback harmonize-dialog-done(bool);
+    // Merge Into… (#312): the tracks it can merge into, by name.
+    in property <bool> merge-dialog-shown: false;
+    in property <string> merge-heading;
+    in property <[string]> merge-tracks;
+    in-out property <int> merge-into;
+    in-out property <bool> merge-voice1: true;
+    in-out property <bool> merge-voice2;
+    in-out property <bool> merge-voice3;
+    in-out property <bool> merge-voice4;
+    in-out property <int> merge-to-voice;
+    in-out property <bool> merge-discard-unisons;
+    callback merge-dialog-done(bool);
     // File → Export's audio exporters (plugin interface 1.4), by name; the
     // dialog before one exports, and the export under way.
     in property <[string]> exporters;
@@ -1840,6 +1852,7 @@ export component AppWindow inherits Window {
             MenuSeparator { }
             MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
             MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
+            MenuItem { title: "Merge Track Into…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("merge-track"); } }
             MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
             MenuItem { title: "Find Fingering for Selection"; enabled: root.has-score; activated => { root.edit-command("fingering-selection"); } }
             if root.plugin-items-edit.length > 0 : MenuSeparator { }
@@ -2675,6 +2688,7 @@ export component AppWindow inherits Window {
                                         MenuSeparator { }
                                         MenuItem { title: "Add Track"; activated => { root.track-menu(i, "add"); } }
                                         MenuItem { title: "Duplicate"; activated => { root.track-menu(i, "duplicate"); } }
+                                        MenuItem { title: "Merge Into…"; enabled: root.tracks.length > 1; activated => { root.track-menu(i, "merge"); } }
                                         MenuItem { title: "Move Up"; enabled: i > 0; activated => { root.track-menu(i, "up"); } }
                                         MenuItem { title: "Move Down"; enabled: i < root.tracks.length - 1; activated => { root.track-menu(i, "down"); } }
                                         MenuSeparator { }
@@ -2994,6 +3008,21 @@ export component AppWindow inherits Window {
         all-tracks <=> root.harmonize-all-tracks;
         whole-song <=> root.harmonize-whole-song;
         done(ok) => { root.harmonize-dialog-done(ok); }
+    }
+
+    if root.merge-dialog-shown : MergeDialog {
+        width: root.width;
+        height: root.height;
+        heading: root.merge-heading;
+        tracks: root.merge-tracks;
+        into <=> root.merge-into;
+        voice1 <=> root.merge-voice1;
+        voice2 <=> root.merge-voice2;
+        voice3 <=> root.merge-voice3;
+        voice4 <=> root.merge-voice4;
+        to-voice <=> root.merge-to-voice;
+        discard-unisons <=> root.merge-discard-unisons;
+        done(ok) => { root.merge-dialog-done(ok); }
     }
 
     if root.question-shown : Question {

@@ -256,6 +256,9 @@ struct App {
     fit_whole_song: Option<bool>,
     /// Harmonize… is open.
     harmonize_shown: bool,
+    /// Merge Into… is open (#312): the track merged, and the tracks its
+    /// list offers, in its order.
+    merge_dialog: Option<(usize, Vec<usize>)>,
     /// Copy, Cut or Paste Bars' dialog is open, for which.
     bars_dialog: Option<editing::ClipKey>,
     /// What to do once the score is saved (after "Save the changes…?").
@@ -675,6 +678,7 @@ fn main() -> Result<(), slint::PlatformError> {
         transpose_scope: None,
         fit_whole_song: None,
         harmonize_shown: false,
+        merge_dialog: None,
         bars_dialog: None,
         after_save: None,
         player: player::Player::new(control),
@@ -874,6 +878,7 @@ fn main() -> Result<(), slint::PlatformError> {
             "paste-bars" => return clipboard(&a, editing::ClipKey::PasteBars),
             "add-track" => return track_action(&a, "add"),
             "delete-track" => return track_action(&a, "delete"),
+            "merge-track" => return track_action(&a, "merge"),
             "transpose-selection" => return open_transpose(&a, oxiguitar_edit::Scope::Selection),
             "transpose-all" => return open_transpose(&a, oxiguitar_edit::Scope::All),
             "fingering-selection" => return find_fingering(&a, oxiguitar_edit::Scope::Selection),
@@ -994,6 +999,8 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_fit_dialog_done(move |ok| fit_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_harmonize_dialog_done(move |ok| harmonize_dialog_done(&a, ok));
+    let a = app.clone();
+    ui.on_merge_dialog_done(move |ok| merge_dialog_done(&a, ok));
     let a = app.clone();
     ui.on_track_menu(move |i, action| {
         let i = usize::try_from(i).unwrap_or(0);
@@ -4558,6 +4565,7 @@ fn track_action(app: &Shared, action: &str) {
     let command = match action {
         "transpose" => return open_transpose(app, oxiguitar_edit::Scope::Track),
         "fingering" => return find_fingering(app, oxiguitar_edit::Scope::Track),
+        "merge" => return open_merge(app),
         "add" => Command::AddTrack,
         "duplicate" => Command::DuplicateTrack,
         "up" => Command::MoveTrackUp,
@@ -4884,6 +4892,167 @@ fn harmonize_dialog_done(app: &Shared, ok: bool) {
             Level::Warning,
             "No new chords: the chords already there are the ones Harmonize finds, or cover every bar.",
         ),
+    }
+}
+
+/// Opens Merge Into… (#312) for the caret's track, offering every other
+/// track of its kind (a drum track merges only into a drum track). The
+/// voices that hold notes are ticked.
+fn open_merge(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() {
+        return;
+    }
+    let found = {
+        let s = app.borrow();
+        let (Some(score), Some(t)) = (s.editing.score(), s.editing.track()) else {
+            return;
+        };
+        let Some(track) = score.tracks.get(t) else {
+            return;
+        };
+        let drums = track.instrument.percussion;
+        let (choices, names): (Vec<usize>, Vec<String>) = score
+            .tracks
+            .iter()
+            .enumerate()
+            .filter(|&(i, other)| i != t && other.instrument.percussion == drums)
+            .map(|(i, other)| (i, other.name.clone()))
+            .unzip();
+        let mut voices = [false; oxiguitar_edit::VOICES];
+        for bar in track.staves.iter().flat_map(|s| &s.bars) {
+            for (v, voice) in bar.voices.iter().enumerate() {
+                if let Some(on) = voices.get_mut(v) {
+                    *on |= voice
+                        .beats
+                        .iter()
+                        .any(|b| b.kind == oxiguitar_model::BeatKind::Notes);
+                }
+            }
+        }
+        if !voices.contains(&true) {
+            voices[0] = true;
+        }
+        (t, track.name.clone(), drums, choices, names, voices)
+    };
+    let (t, name, drums, choices, names, voices) = found;
+    if choices.is_empty() {
+        message(
+            app,
+            Level::Warning,
+            if drums {
+                "No track to merge into: a drum track merges only into another drum track."
+            } else {
+                "No track to merge into: a track merges only into another track that isn't a drum kit."
+            },
+        );
+        return;
+    }
+    app.borrow_mut().merge_dialog = Some((t, choices));
+    ui.set_merge_heading(format!("Merge {name} into").into());
+    ui.set_merge_tracks(strings(names));
+    ui.set_merge_into(0);
+    ui.set_merge_voice1(voices[0]);
+    ui.set_merge_voice2(voices[1]);
+    ui.set_merge_voice3(voices[2]);
+    ui.set_merge_voice4(voices[3]);
+    ui.set_merge_to_voice(0);
+    ui.set_merge_dialog_shown(true);
+}
+
+/// Merge Into… closed: on OK, the merge as one change, after a question
+/// when notes can't be kept; a bar whose rhythms can't be written together
+/// stops it, with a warning.
+fn merge_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_merge_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some((from, choices)) = app.borrow_mut().merge_dialog.take() else {
+        return;
+    };
+    let picked = usize::try_from(ui.get_merge_into()).unwrap_or(0);
+    let (Some(&into), true) = (choices.get(picked), ok) else {
+        return;
+    };
+    let ticked: Vec<usize> = [
+        ui.get_merge_voice1(),
+        ui.get_merge_voice2(),
+        ui.get_merge_voice3(),
+        ui.get_merge_voice4(),
+    ]
+    .into_iter()
+    .enumerate()
+    .filter_map(|(v, on)| on.then_some(v))
+    .collect();
+    let voices = match ticked.as_slice() {
+        [] => return,
+        [one] => {
+            let to = usize::try_from(ui.get_merge_to_voice()).unwrap_or(0);
+            vec![(*one, to.min(oxiguitar_edit::VOICES - 1))]
+        }
+        many => many.iter().map(|&v| (v, v)).collect(),
+    };
+    let merge = oxiguitar_edit::Merge {
+        into,
+        voices,
+        discard_unisons: ui.get_merge_discard_unisons(),
+    };
+    let (report, receiver) = {
+        let s = app.borrow();
+        let Some(score) = s.editing.score() else {
+            return;
+        };
+        if s.editing.track() != Some(from) {
+            return;
+        }
+        let receiver = score
+            .tracks
+            .get(into)
+            .map(|t| t.name.clone())
+            .unwrap_or_default();
+        (oxiguitar_edit::merge_lost(&score, from, &merge), receiver)
+    };
+    let lost = match report {
+        Ok(lost) => lost,
+        Err(oxiguitar_edit::MergeError::Rhythms { bar }) => {
+            message(
+                app,
+                Level::Warning,
+                format!(
+                    "Not merged: in bar {}, the two tracks' rhythms can't be written in one voice.",
+                    bar + 1
+                ),
+            );
+            return;
+        }
+        Err(_) => return,
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::MergeTracks(merge));
+    let Some(typed) = typed else {
+        return;
+    };
+    if lost > 0 {
+        ask(
+            app,
+            Asked::Apply(typed),
+            &format!(
+                "{lost} {} can't be kept",
+                if lost == 1 { "note" } else { "notes" }
+            ),
+            &[format!(
+                "No string of {receiver} is free to play them at their pitch, so they are left out. Undo brings them back."
+            )],
+            &["Merge", "Cancel"],
+        );
+    } else {
+        send_typed(app, typed);
     }
 }
 
