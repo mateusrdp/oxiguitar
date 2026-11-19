@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
 # Puts the plugin files of the latest release of the named plugin
-# repositories (guitarpro, midi, wav, nam, ...) in one folder, for the tests
+# repositories (guitarpro, midi, export, nam, ...) in one folder, for the tests
 # that need real plugins (#165: the plugins live in repositories of their
 # own, mateusrdp/oxiguitar-NAME). Each release's zip for this system is
 # checked against the release's SHA256SUMS before it is unpacked. Prints the
@@ -12,7 +12,7 @@
 #
 # Usage: scripts/released-plugins.sh OUT-DIR NAME...
 #   OUT-DIR  where the .oxp files go (replaced)
-#   NAME     guitarpro, midi, wav, nam, alsa, pipewire, ...
+#   NAME     guitarpro, midi, export, nam, alsa, pipewire, ...
 # Environment:
 #   GH_TOKEN or GITHUB_TOKEN   used for the GitHub API when set (the rate
 #                              limit without one is 60 requests an hour)

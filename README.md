@@ -44,7 +44,7 @@ OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF
 
 ## Install
 
-OxiGuitar is the program plus **plugins**: it opens, plays and exports files only through them. A usable set is the program, the **Guitar Pro** and **MIDI** plugins, and an audio output (all recommended, and installed with the program by apt and dnf), then the extras we suggest: **WAV** (export your song as audio), **NAM** (amp models), **Equalizer**, and the free **recorded sound sets** (clean, overdriven and distorted guitars, nylon and steel strings, ukulele, bass and drums; about 1.2 GB, downloaded from their authors after the package manager or the installer says so). The steps below install all of them. Leave out what you don't want: every name is a package of its own.
+OxiGuitar is the program plus **plugins**: it opens, plays and exports files only through them. A usable set is the program, the **Guitar Pro** and **MIDI** plugins, and an audio output (all recommended, and installed with the program by apt and dnf), then the extras we suggest: **Audio export** (your song as a WAV, FLAC, MP3 or Opus file), **NAM** (amp models), **Equalizer**, and the free **recorded sound sets** (clean, overdriven and distorted guitars, nylon and steel strings, ukulele, bass and drums; about 1.2 GB, downloaded from their authors after the package manager or the installer says so). The steps below install all of them. Leave out what you don't want: every name is a package of its own.
 
 None of the downloads is code-signed yet, so Windows and macOS warn the first time you open OxiGuitar ([how to get past it](https://mateusrdp.github.io/oxiguitar/installing.html)). Nothing here runs unless you run it, and OxiGuitar itself never downloads anything.
 
@@ -62,7 +62,7 @@ sudo apt update
 **Install** OxiGuitar with the recommended plugins (Guitar Pro, MIDI, ALSA and PipeWire audio) and the extras:
 
 ```sh
-sudo apt install oxiguitar oxiguitar-wav oxiguitar-nam oxiguitar-eq oxiguitar-wah oxiguitar-bettersounds-soundfonts
+sudo apt install oxiguitar oxiguitar-export oxiguitar-nam oxiguitar-eq oxiguitar-wah oxiguitar-bettersounds-soundfonts
 ```
 
 The last package asks whether to download the recorded sound sets (the default answer is yes; an unattended install downloads them). Say no, or install without it, and `sudo oxiguitar-install-sounds --system` fetches them any time later.
@@ -84,7 +84,7 @@ sudo curl -fsSL https://mateusrdp.github.io/oxiguitar-packages/oxiguitar.repo -o
 **Install** (dnf adds the recommended plugins itself):
 
 ```sh
-sudo dnf install oxiguitar oxiguitar-wav oxiguitar-nam oxiguitar-eq oxiguitar-wah oxiguitar-bettersounds-soundfonts
+sudo dnf install oxiguitar oxiguitar-export oxiguitar-nam oxiguitar-eq oxiguitar-wah oxiguitar-bettersounds-soundfonts
 ```
 
 The last package downloads the recorded sound sets as it installs, which takes a while; to skip that and fetch them later with `sudo oxiguitar-install-sounds --system`, install it with `sudo env OXIGUITAR_SKIP_SOUNDS=1 dnf install oxiguitar-bettersounds-soundfonts`.
@@ -104,7 +104,7 @@ flatpak remote-add --if-not-exists oxiguitar https://mateusrdp.github.io/oxiguit
 
 ```sh
 flatpak install oxiguitar io.github.mateusrdp.OxiGuitar
-flatpak install oxiguitar io.github.mateusrdp.OxiGuitar.Plugin.guitarpro io.github.mateusrdp.OxiGuitar.Plugin.midi io.github.mateusrdp.OxiGuitar.Plugin.pipewire io.github.mateusrdp.OxiGuitar.Plugin.wav io.github.mateusrdp.OxiGuitar.Plugin.nam io.github.mateusrdp.OxiGuitar.Plugin.eq io.github.mateusrdp.OxiGuitar.Plugin.wah
+flatpak install oxiguitar io.github.mateusrdp.OxiGuitar.Plugin.guitarpro io.github.mateusrdp.OxiGuitar.Plugin.midi io.github.mateusrdp.OxiGuitar.Plugin.pipewire io.github.mateusrdp.OxiGuitar.Plugin.export io.github.mateusrdp.OxiGuitar.Plugin.nam io.github.mateusrdp.OxiGuitar.Plugin.eq io.github.mateusrdp.OxiGuitar.Plugin.wah
 ```
 
 The Flatpak runs in Flatpak's sandbox, which doesn't see your system's sound sets: download `install.sh` from the [sound-set installer's latest release](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases/latest) and run `bash install.sh`, which fills the Flatpak's own folder. **Update** with `flatpak update`. The manual's [Linux page](https://mateusrdp.github.io/oxiguitar/install-linux.html#flatpak-any-linux) lists every plugin and the Flatpak's folders.
@@ -114,7 +114,7 @@ The Flatpak runs in Flatpak's sandbox, which doesn't see your system's sound set
 The AppImage is the program alone, with no repository to add and no automatic updates:
 
 1. Download `OxiGuitar-VERSION-x86_64.AppImage` (or `aarch64`) from the [latest release](https://github.com/mateusrdp/oxiguitar/releases/latest), then `chmod +x` it and run it.
-2. Download the Linux zip of each plugin from its latest release, unzip it and put the `.oxp` file in `~/.local/share/oxiguitar/plugins/`: [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [ALSA](https://github.com/mateusrdp/oxiguitar-alsa/releases/latest) (the output the AppImage uses), then [WAV](https://github.com/mateusrdp/oxiguitar-wav/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest), [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest) and [Wah-wah](https://github.com/mateusrdp/oxiguitar-wah/releases/latest).
+2. Download the Linux zip of each plugin from its latest release, unzip it and put the `.oxp` file in `~/.local/share/oxiguitar/plugins/`: [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [ALSA](https://github.com/mateusrdp/oxiguitar-alsa/releases/latest) (the output the AppImage uses), then [Audio export](https://github.com/mateusrdp/oxiguitar-export/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest), [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest) and [Wah-wah](https://github.com/mateusrdp/oxiguitar-wah/releases/latest).
 3. For the sound sets, download `install.sh` from the [sound-set installer's latest release](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases/latest) and run `bash install.sh` in a terminal. It shows what it would download and asks first.
 
 To update, download the newer files and replace the old ones.
@@ -124,14 +124,14 @@ To update, download the newer files and replace the old ones.
 There is no repository to add yet (winget is planned), so everything is a download, and each plugin has a small setup program that installs for you alone, with no administrator password:
 
 1. Unzip `OxiGuitar-VERSION-windows-x86_64.zip` (or `arm64`) from the [latest release](https://github.com/mateusrdp/oxiguitar/releases/latest) anywhere, and run `oxiguitar.exe`.
-2. From each plugin's latest release, run its `-setup.exe`: [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [WASAPI](https://github.com/mateusrdp/oxiguitar-wasapi/releases/latest) (the audio output), then [WAV](https://github.com/mateusrdp/oxiguitar-wav/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest), [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest) and [Wah-wah](https://github.com/mateusrdp/oxiguitar-wah/releases/latest). Windows then lists them under Installed apps.
+2. From each plugin's latest release, run its `-setup.exe`: [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [WASAPI](https://github.com/mateusrdp/oxiguitar-wasapi/releases/latest) (the audio output), then [Audio export](https://github.com/mateusrdp/oxiguitar-export/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest), [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest) and [Wah-wah](https://github.com/mateusrdp/oxiguitar-wah/releases/latest). Windows then lists them under Installed apps.
 3. For the sound sets, download `install.ps1` from the [sound-set installer's latest release](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases/latest) and run `powershell -ExecutionPolicy Bypass -File .\install.ps1`. It shows what it would download and asks first.
 
 To update, download the newer zip and setup programs and install them over the old ones.
 
 ### macOS
 
-Open `OxiGuitar-VERSION-macos-universal.dmg` from the [latest release](https://github.com/mateusrdp/oxiguitar/releases/latest) and drag OxiGuitar to Applications, then run the `.pkg` installer from each plugin's latest release (no password needed): [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [Core Audio](https://github.com/mateusrdp/oxiguitar-coreaudio/releases/latest), then [WAV](https://github.com/mateusrdp/oxiguitar-wav/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest), [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest) and [Wah-wah](https://github.com/mateusrdp/oxiguitar-wah/releases/latest). To update, install the newer files over the old.
+Open `OxiGuitar-VERSION-macos-universal.dmg` from the [latest release](https://github.com/mateusrdp/oxiguitar/releases/latest) and drag OxiGuitar to Applications, then run the `.pkg` installer from each plugin's latest release (no password needed): [Guitar Pro](https://github.com/mateusrdp/oxiguitar-guitarpro/releases/latest), [MIDI](https://github.com/mateusrdp/oxiguitar-midi/releases/latest) and [Core Audio](https://github.com/mateusrdp/oxiguitar-coreaudio/releases/latest), then [Audio export](https://github.com/mateusrdp/oxiguitar-export/releases/latest), [NAM](https://github.com/mateusrdp/oxiguitar-nam/releases/latest), [Equalizer](https://github.com/mateusrdp/oxiguitar-eq/releases/latest) and [Wah-wah](https://github.com/mateusrdp/oxiguitar-wah/releases/latest). To update, install the newer files over the old.
 
 **The sound sets:** download `install.sh` from the [sound-set installer's latest release](https://github.com/mateusrdp/oxiguitar-bettersounds-soundfonts/releases/latest) and run `bash install.sh` in Terminal. It shows what it would download and asks first.
 
