@@ -308,6 +308,8 @@ enum Asked {
     Apply(editing::Typed),
     /// Delete this track?
     DeleteTrack(editing::Typed),
+    /// Nothing to answer: it only tells (its one button is OK).
+    Told,
 }
 
 /// What waits on the answer to "Save the changes…?".
@@ -5001,7 +5003,7 @@ fn merge_dialog_done(app: &Shared, ok: bool) {
         voices,
         discard_unisons: ui.get_merge_discard_unisons(),
     };
-    let (report, receiver) = {
+    let (report, donor, receiver) = {
         let s = app.borrow();
         let Some(score) = s.editing.score() else {
             return;
@@ -5009,15 +5011,40 @@ fn merge_dialog_done(app: &Shared, ok: bool) {
         if s.editing.track() != Some(from) {
             return;
         }
-        let receiver = score
-            .tracks
-            .get(into)
-            .map(|t| t.name.clone())
-            .unwrap_or_default();
-        (oxiguitar_edit::merge_lost(&score, from, &merge), receiver)
+        let name = |t: usize| {
+            score
+                .tracks
+                .get(t)
+                .map(|t| t.name.clone())
+                .unwrap_or_default()
+        };
+        (
+            oxiguitar_edit::merge_lost(&score, from, &merge),
+            name(from),
+            name(into),
+        )
     };
     let lost = match report {
         Ok(lost) => lost,
+        Err(oxiguitar_edit::MergeError::Ranges {
+            notes,
+            lowest,
+            highest,
+        }) => {
+            // The question says no; the footer says why and what to do.
+            message(
+                app,
+                Level::Warning,
+                format!(
+                    "{donor} and {receiver} have incompatible ranges: {notes} {} of {donor} can't be played on {receiver}, which plays {} to {}. Consider transposing {donor} first.",
+                    if notes == 1 { "note" } else { "notes" },
+                    lowest.name(),
+                    highest.name(),
+                ),
+            );
+            ask(app, Asked::Told, "Incompatible tracks", &[], &["OK"]);
+            return;
+        }
         Err(oxiguitar_edit::MergeError::Rhythms { bar }) => {
             message(
                 app,
@@ -5300,7 +5327,7 @@ fn question_answered(app: &Shared, i: i32) {
         (Asked::Unsaved(then), 1) => go_on(app, then),
         (Asked::Unsaved(_), _) => {}
         (Asked::Apply(t) | Asked::DeleteTrack(t), 0) => send_typed(app, t),
-        (Asked::Apply(_) | Asked::DeleteTrack(_), _) => {}
+        (Asked::Apply(_) | Asked::DeleteTrack(_) | Asked::Told, _) => {}
     }
 }
 

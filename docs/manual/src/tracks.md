@@ -19,7 +19,9 @@ The **Tracks** tab of the bottom panel shows every track of the song: its name, 
 - **Its voices**: which of the track's voices to take (those with notes start ticked). With one voice ticked, **Into voice** says which voice of the other track it goes into. With several, each goes into the voice of the same number.
 - **Discard unisons**: leaves out a note when the other track plays the same pitch at the same moment.
 
-Where the two rhythms differ, notes are cut where the other track's notes start or end, and the pieces are tied, so everything sounds as before. Notes keep their strings and frets where they can. Where the other track's tuning can't play a note on its string, or the string is taken, the note moves to a free string at the same pitch. If no string can take some notes, a question says how many before they are left out. In the rare bar whose two rhythms can't be written in one voice, nothing is merged and the footer names the bar. The other track keeps its name, sound, mixer and lyrics; its lyrics stay on their notes.
+Both tracks must have compatible ranges: every note merged must be one the other track can play, from its lowest open string to its highest fret. If not (a bass into a guitar, say), nothing is merged: **Incompatible tracks** shows, and the footer says how many notes are out of range and the other track's range. Transpose the track first (right-click its name → Transpose…), then merge.
+
+Where the two rhythms differ, notes are cut where the other track's notes start or end, and the pieces are tied, so everything sounds as before. Notes keep their strings and frets where they can. Where the other track's tuning can't play a note on its string, or the string is taken, the note moves to a free string at the same pitch. If every string that could play some notes is taken at that moment, a question says how many before they are left out. In the rare bar whose two rhythms can't be written in one voice, nothing is merged and the footer names the bar. The other track keeps its name, sound, mixer and lyrics; its lyrics stay on their notes.
 
 ## Track properties
 

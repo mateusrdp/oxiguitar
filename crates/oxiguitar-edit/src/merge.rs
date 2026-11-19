@@ -12,10 +12,15 @@
 //!   are tied, so both sound as before (the pieces are written as Fit Bars
 //!   writes them, `fit::spell`). A bar whose pieces no note value can show
 //!   stops the merge ([`MergeError::Rhythms`]).
+//! - **Ranges:** every donor note merged must be within the range of the
+//!   receiver's staff it goes to (lowest open string to highest fret, with
+//!   the capo), else nothing is merged ([`MergeError::Ranges`]): a bass
+//!   goes into a guitar only once transposed.
 //! - **Strings:** a donor note keeps its string and fret where the
 //!   receiver's tuning plays its pitch there and that string is free; else
 //!   it goes, at its pitch, to the free string nearest its fret (as the
-//!   track dialog does, `tracks::replace`); else it is left out and counted
+//!   track dialog does, `tracks::replace`); else (every string that plays
+//!   it taken at that moment) it is left out and counted
 //!   ([`merge_lost`]). A tied note stays on the string of the note it
 //!   continues, or is struck again where that string isn't free.
 //! - **Unisons:** with [`Merge::discard_unisons`], a donor note is left
@@ -28,7 +33,9 @@
 
 use std::collections::BTreeMap;
 
-use oxiguitar_model::{Bar, Beat, BeatKind, Note, NotePlace, Ratio, Score, Staff, Track, Voice};
+use oxiguitar_model::{
+    Bar, Beat, BeatKind, Note, NotePlace, Pitch, Ratio, Score, Staff, Track, Voice,
+};
 
 use crate::fit::{Prefer, piece, rests, spell};
 use crate::{Caret, Edited, History, Region};
@@ -54,6 +61,17 @@ pub enum MergeError {
     /// A drum track goes only into a drum track, and a pitched one only
     /// into a pitched one.
     Kinds,
+    /// Donor notes are outside the range of the staff they would go to,
+    /// which no string could play: the tracks don't match until one is
+    /// transposed.
+    Ranges {
+        /// How many notes.
+        notes: usize,
+        /// The receiver's lowest pitch (of the first staff out of range).
+        lowest: Pitch,
+        /// Its highest.
+        highest: Pitch,
+    },
     /// The two rhythms of this bar (from 0) can't be written in one voice.
     Rhythms {
         /// The bar, from 0.
@@ -115,6 +133,7 @@ fn merged(score: &Score, from: usize, m: &Merge) -> Result<(Score, usize), Merge
         chords: &[],
         discard_unisons: m.discard_unisons,
     };
+    out_of_range(donor, receiver, &m.voices)?;
     let mut track = receiver.clone();
     let chords = join_chords(&mut track, donor);
     let opts = Opts {
@@ -184,6 +203,62 @@ fn merged(score: &Score, from: usize, m: &Merge) -> Result<(Score, usize), Merge
     }
     remove_track(&mut out, from, Some(m.into));
     Ok((out, lost))
+}
+
+/// Fails with [`MergeError::Ranges`] when a note of the donor's `voices`
+/// (each `(from, to)`) is outside the range of the receiver's staff it
+/// goes to. A staff without strings (a drum kit, a piano) takes any pitch.
+fn out_of_range(
+    donor: &Track,
+    receiver: &Track,
+    voices: &[(usize, usize)],
+) -> Result<(), MergeError> {
+    let last = receiver.staves.len().saturating_sub(1);
+    let mut notes = 0;
+    let mut first = None;
+    for (ds, from) in donor.staves.iter().enumerate() {
+        let Some(to) = receiver.staves.get(ds.min(last)) else {
+            continue;
+        };
+        if receiver.instrument.percussion {
+            continue;
+        }
+        let Some((lowest, highest)) = range(to) else {
+            continue;
+        };
+        let outside = from
+            .bars
+            .iter()
+            .flat_map(|b| voices.iter().filter_map(|&(v, _)| b.voices.get(v)))
+            .flat_map(|v| &v.beats)
+            .flat_map(|b| &b.notes)
+            .filter_map(|n| pitch_of(from, n))
+            .filter(|&p| p < lowest.0 || p > highest.0)
+            .count();
+        if outside > 0 {
+            notes += outside;
+            first.get_or_insert((lowest, highest));
+        }
+    }
+    match first {
+        Some((lowest, highest)) => Err(MergeError::Ranges {
+            notes,
+            lowest,
+            highest,
+        }),
+        None => Ok(()),
+    }
+}
+
+/// The pitches a staff's strings play, open lowest to highest fret, with
+/// its capo; `None` without strings.
+fn range(staff: &Staff) -> Option<(Pitch, Pitch)> {
+    let strings = u8::try_from(staff.string_count()).ok()?;
+    let lowest = (1..=strings).filter_map(|s| staff.pitch_of(s, 0)).min()?;
+    let highest = (1..=strings)
+        .filter_map(|s| staff.pitch_of(s, staff.fret_count))
+        .max()?;
+    Some((lowest, highest))
 }
 
 /// Takes track `t` out of `score`, with what refers to it by number:
@@ -780,13 +855,54 @@ mod tests {
         assert_eq!(merge_lost(&s, 1, &m), Ok(0));
         merge(&mut s, &mut h, 1, m.clone()).unwrap();
         assert_eq!(beats(&s, 0)[0].0, [(1, 3, false), (2, 0, false)]);
-        // A low E (40) on a receiver of the top four strings (lowest D,
-        // 50): no string plays it.
-        let mut s = two(r, vec![b(Half, &[(6, 0)]), b(Half, &[(6, 0)])]);
-        s.tracks[0].staves[0].tuning.truncate(4);
+        // In range, but every string taken by a six-note chord: the
+        // donor's note is left out (the window asks first).
+        let chord = [(1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0)];
+        let mut s = two(vec![b(Half, &chord); 2], vec![b(Half, &[(3, 2)]); 2]);
         assert_eq!(merge_lost(&s, 1, &m), Ok(2));
         merge(&mut s, &mut h, 1, m).unwrap();
-        assert_eq!(beats(&s, 0)[0].0, [(1, 3, false)]);
+        assert_eq!(beats(&s, 0)[0].0.len(), 6);
+    }
+
+    #[test]
+    fn notes_outside_the_receiver_s_range_refuse_the_merge() {
+        // A bass's low E (28) into a guitar (E2, 40, to E6 at fret 24,
+        // 88): refused, nothing changes, until the bass is an octave up.
+        let mut s = two(
+            vec![b(Half, &[(1, 3)]); 2],
+            vec![b(Half, &[(4, 0)]), b(Half, &[(1, 0)])],
+        );
+        s.tracks[1].staves[0].tuning = [43, 38, 33, 28].into_iter().map(Pitch).collect();
+        let m = into_first(&[(0, 0)], false);
+        let refused = Err(MergeError::Ranges {
+            notes: 1,
+            lowest: Pitch(40),
+            highest: Pitch(88),
+        });
+        assert_eq!(merge_lost(&s, 1, &m), refused);
+        let before = s.clone();
+        let mut h = History::new();
+        assert!(merge(&mut s, &mut h, 1, m.clone()).is_none());
+        assert_eq!(s, before);
+        // Only the voices merged count: the low E in voice 2 is left alone.
+        let mut two_voices = s.clone();
+        let donor = &mut two_voices.tracks[1].staves[0].bars[0];
+        donor.voices.push(donor.voices[0].clone());
+        donor.voices[0].beats[0].notes = vec![Note::fretted(4, 12)];
+        assert_eq!(merge_lost(&two_voices, 1, &m), Ok(0));
+        // Transposed an octave up, it fits.
+        s.tracks[1].staves[0].tuning = [55, 50, 45, 40].into_iter().map(Pitch).collect();
+        assert_eq!(merge_lost(&s, 1, &m), Ok(0));
+        // A capo raises the receiver's lowest note.
+        s.tracks[0].staves[0].capo = 2;
+        assert_eq!(
+            merge_lost(&s, 1, &m),
+            Err(MergeError::Ranges {
+                notes: 1,
+                lowest: Pitch(42),
+                highest: Pitch(90),
+            })
+        );
     }
 
     #[test]

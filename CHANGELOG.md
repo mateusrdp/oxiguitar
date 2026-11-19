@@ -6,7 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Added
 
-- **Merge tracks** (#312): right-click a track's row → **Merge Into…** (also Edit → **Merge Track Into…**) writes the track's notes into another track and deletes it, as one step to undo. Pick the track to merge into, which of the track's voices to take (one into the voice you pick, or several voice by voice), and whether to discard unisons (a note the other track plays at the same pitch at the same moment). Where the rhythms differ, notes are cut and tied so both sound as before. Notes keep their strings and frets where they can, else move to a free string at their pitch. Notes no string can take are left out after a question saying how many. Drum tracks merge into drum tracks only.
+- **Merge tracks** (#312): right-click a track's row → **Merge Into…** (also Edit → **Merge Track Into…**) writes the track's notes into another track and deletes it, as one step to undo. Pick the track to merge into, which of the track's voices to take (one into the voice you pick, or several voice by voice), and whether to discard unisons (a note the other track plays at the same pitch at the same moment). Where the rhythms differ, notes are cut and tied so both sound as before. Notes keep their strings and frets where they can, else move to a free string at their pitch; notes whose strings are all taken at that moment are left out after a question saying how many. A track merges only into one that can play all its notes: otherwise **Incompatible tracks** shows and the footer says which notes are out of range and suggests transposing first (a bass goes into a guitar once transposed). Drum tracks merge into drum tracks only.
 
 ### Fixed
 
