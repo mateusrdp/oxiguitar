@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-11-19
+
 ### Added
 
 - **One File → Export Audio… for every audio format** (#313): the export dialog has a **Format** list with every format the installed plugins export to, and starts with the one picked last. Under it are the picked format's own choices (bit depth, rate, bitrate), from its plugin; **Export…** keeps them, **Cancel** forgets them. Before, File → Export had one entry per format, and a format's choices were set elsewhere.
