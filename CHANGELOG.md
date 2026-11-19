@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- **The audio export plugin is `oxiguitar-export`** (#313): the WAV plugin (`oxiguitar-wav`, up to 0.1.2) is now the Audio export plugin, with WAV, FLAC, MP3 and Opus (0.2.0). The manual's Exporting audio and Official plugins pages, the README's install commands and the tests that use the released plugins name it. Remove an old `oxiguitar-wav` package or `wav.oxp` by hand: OxiGuitar uses the new plugin even while the old one is installed, and carries its settings over once.
+
 ## [0.21.2] - 2026-11-19
 
 ### Added

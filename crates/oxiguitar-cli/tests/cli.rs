@@ -444,7 +444,7 @@ fn events_prints_the_score_as_it_plays() {
 fn sound_home() -> &'static Path {
     static HOME: OnceLock<PathBuf> = OnceLock::new();
     HOME.get_or_init(|| {
-        let built = oxiguitar_plugin_test::released::folder(&["guitarpro", "midi", "wav"]);
+        let built = oxiguitar_plugin_test::released::folder(&["guitarpro", "midi", "export"]);
         let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cli-sound-home");
         let _ = std::fs::remove_dir_all(&home);
         std::fs::create_dir_all(home.join("plugins")).unwrap();
@@ -526,7 +526,7 @@ fn export_names_what_no_plugin_exports() {
 }
 
 #[test]
-fn export_writes_a_wav_file_through_the_wav_plugin() {
+fn export_writes_a_wav_file_through_the_export_plugin() {
     let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("exported.wav");
     let _ = std::fs::remove_file(&out);
     let o = Command::new(env!("CARGO_BIN_EXE_oxiguitar-cli"))
