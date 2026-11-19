@@ -10,7 +10,7 @@ Since interface 1.8 a plugin can change how the notes sound: given each track's 
 
 ## The performer
 
-When the song is got ready to play or export, OxiGuitar asks the plugin about each track: `Request::Perform(Perform)`. When a track's notes and beats are the same as last time it doesn't ask again and uses the last answer, so editing one track asks about that track only. Keep the answer a pure function of what you're given. It runs off the audio thread, but the user waits for it before the song starts: keep it quick.
+When the song is got ready to play or export, OxiGuitar asks the plugin about each track: `Request::Perform(Perform)`. When a track's request is the same as last time (its notes, beats, strings and your track settings) it doesn't ask again and uses the last answer, so editing one track asks about that track only; when your plugin saves changed settings of its own (`host.set_settings`), every track is asked again. Keep the answer a pure function of what you're given and your settings. It runs off the audio thread, but the user waits for it before the song starts: keep it quick.
 
 ```rust
 impl Plugin for MyPlugin {
@@ -35,6 +35,9 @@ impl Performer for MyPerformer {
 | `visits` | The bar each visit plays, in playing order, repeats unrolled; a note's `visit` indexes it |
 | `notes` | Its notes by start time, as the score gives them, or as the performing plugins before yours gave them back |
 | `beats` | Its beats that carry marks or plugins' data, each time they are played (`PlayedBeat`, as effects that follow the score get them): where you find your own data |
+| `program` | Its General MIDI program, 0 to 127 (nylon, steel or electric guitar, bass…); since 1.12 |
+| `staves` | Each staff's strings (`PerformStaff`: `tuning`, the open strings' keys from the highest, and `capo`), by staff; a note's fret is its key less its string's open key and the capo; since 1.12 |
+| `settings` | The track's settings for your plugin, a JSON object as text (`{}` when there are none), as your [track section](track-sections.md) keeps them; since 1.12 |
 
 A `PlayedNote` is a note as instruments get it ([Instruments](instruments.md)): its staff, voice, visit and beat, string (0 for none), key, start and end in seconds of the score at 100 % speed, velocity, sound, harmonic, attack, flags and pitch curve as `(seconds, cents)` points. Change any of them, add notes (give them the place of the beat they belong to) or leave some out.
 

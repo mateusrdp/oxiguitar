@@ -372,6 +372,27 @@ pub struct Perform {
     /// Its beats that carry marks or plugins' data, as effects that follow
     /// the score get them ([`PlayedBeat`]): where a plugin finds its own.
     pub beats: Vec<PlayedBeat>,
+    /// Its General MIDI program, 0 to 127. Since interface 1.12.
+    pub program: u8,
+    /// Its staves' strings, by staff (a note's `staff` indexes it): what
+    /// tells a note's fret, its key less its string's open key and the
+    /// capo. Since interface 1.12.
+    pub staves: Vec<PerformStaff>,
+    /// The track's settings for this plugin, a JSON object as text (`{}`
+    /// when there are none), as its track section keeps them. Since
+    /// interface 1.12.
+    pub settings: String,
+}
+
+/// A staff's strings, for a performing plugin ([`Perform::staves`]). Since
+/// interface 1.12.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PerformStaff {
+    /// Its open strings' MIDI keys, highest string first; empty without
+    /// strings.
+    pub tuning: Vec<u8>,
+    /// Its capo's fret, 0 for none.
+    pub capo: u8,
 }
 
 /// A note as played, in the form instruments get it

@@ -1568,6 +1568,61 @@ fn a_plugin_plays_the_notes_its_own_way_and_isnt_asked_twice_about_the_same() {
     assert!(stamped.notes.iter().filter(|n| up(n)).count() > 0);
     // Only the changed track was asked again.
     assert_eq!(asked(), before + tracks + 1);
+    // Interface 1.12: the track's settings for the plugin, and its strings.
+    // Fretted notes are detuned by the track's `detune` plus the plugin's
+    // own `perform-detune`; open strings aren't (the stamped beat, whose
+    // keys the plugin moves, is left out).
+    let strings: Vec<(Vec<u8>, u8)> = score.tracks[0]
+        .staves
+        .iter()
+        .map(|s| (s.tuning.iter().map(|p| p.0).collect(), s.capo))
+        .collect();
+    let check = |t: &Timeline, cents: i32| {
+        let mut fretted = 0;
+        let mut open = 0;
+        for (n, b) in t.notes.iter().zip(&stamped.notes) {
+            assert_eq!(
+                (n.track, n.visit, n.beat, n.key),
+                (b.track, b.visit, b.beat, b.key)
+            );
+            if n.track != 0 || up(b) {
+                assert_eq!(n.pitch, b.pitch);
+                continue;
+            }
+            let (tuning, capo) = &strings[n.staff];
+            let at_fret = n
+                .string
+                .is_some_and(|s| n.key > tuning[usize::from(s) - 1] + capo);
+            let want: Vec<i32> = if !at_fret {
+                open += 1;
+                b.pitch.iter().map(|p| p.cents).collect()
+            } else {
+                fretted += 1;
+                if b.pitch.is_empty() {
+                    vec![cents]
+                } else {
+                    b.pitch.iter().map(|p| p.cents + cents).collect()
+                }
+            };
+            assert_eq!(n.pitch.iter().map(|p| p.cents).collect::<Vec<_>>(), want);
+        }
+        assert!(fretted > 0 && open > 0, "{fretted} fretted, {open} open");
+    };
+    score.tracks[0]
+        .plugins
+        .insert("oxiguitar.test".into(), r#"{"detune":7}"#.into());
+    let mut detuned = Timeline::new(&score);
+    perform(&plugins, &score, &mut detuned);
+    assert_eq!(asked(), before + tracks + 2);
+    check(&detuned, 7);
+    // The plugin's own settings changed: every track is asked again.
+    plugins
+        .call_service("test-echo", "perform-detune", b"5")
+        .unwrap();
+    let mut both = Timeline::new(&score);
+    perform(&plugins, &score, &mut both);
+    assert_eq!(asked(), before + 2 * tracks + 2);
+    check(&both, 12);
     assert!(
         heard.0.lock().unwrap().is_empty(),
         "{:?}",

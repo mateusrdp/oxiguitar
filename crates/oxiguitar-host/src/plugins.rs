@@ -1491,7 +1491,7 @@ impl Plugins {
     /// (interface 1.8), in plugin order: the order they take turns in.
     pub fn performers(&self) -> Vec<String> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(8) && m.performs)
+            .filter(|(_, _, m)| m.knows_minor(12) && m.performs)
             .map(|(_, _, m)| m.id.clone())
             .collect()
     }
@@ -1504,7 +1504,7 @@ impl Plugins {
     pub fn perform(&self, plugin: &str, track: Perform) -> Option<Vec<PlayedNote>> {
         let (_, found, _) = self
             .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.performs)?;
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(12) && m.performs)?;
         match self.try_perform(plugin, track) {
             Ok(notes) => Some(notes),
             Err(e) => {
@@ -1525,7 +1525,7 @@ impl Plugins {
     pub fn try_perform(&self, plugin: &str, track: Perform) -> Result<Vec<PlayedNote>, Error> {
         let (index, _, _) = self
             .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.performs)
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(12) && m.performs)
             .ok_or_else(|| Error::not_found(format!("no ready plugin {plugin} plays notes")))?;
         let key = (index, track.track);
         let visits = track.visits.len();
@@ -2463,6 +2463,12 @@ impl Plugins {
                     let changed = self.0.settings.get(&manifest.id).as_ref() != Some(&v);
                     let saved = self.0.settings.set(&manifest.id, v);
                     if changed && saved.is_ok() {
+                        // What it played may follow its settings: ask again.
+                        self.0
+                            .performed
+                            .lock()
+                            .unwrap_or_else(std::sync::PoisonError::into_inner)
+                            .retain(|(i, _), _| *i != index);
                         self.0.core.settings_changed(&manifest.id);
                     }
                     saved

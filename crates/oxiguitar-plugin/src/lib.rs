@@ -61,7 +61,7 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::message::{
     Advice, Availability, Clicked, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, Perform,
-    PlayedNote, TrackInfo,
+    PerformStaff, PlayedNote, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
