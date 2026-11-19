@@ -2978,8 +2978,6 @@ export component AppWindow inherits Window {
         slid(id, v) => { root.plugin-slid(5, id, v); }
         edited(id, text) => { root.plugin-edited(5, id, text); }
         chosen(id, i) => { root.plugin-chosen(5, id, i); }
-        pointer(id, k, x, y, b) => { root.plugin-pointer(5, id, k, x, y, b); }
-        canvas-room(id, w, h) => { root.plugin-canvas-room(5, id, w / 1px, h / 1px); }
         has-selection: root.export-has-selection;
         selection <=> root.export-selection;
         practice-speed: root.export-practice-speed;

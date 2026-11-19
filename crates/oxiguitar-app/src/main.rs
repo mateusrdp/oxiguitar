@@ -5626,6 +5626,22 @@ fn export_audio_chosen(app: &Shared, ok: bool) {
     if !ok {
         return;
     }
+    // The format is kept with its options, whatever comes of the export.
+    {
+        let mut s = app.borrow_mut();
+        let Some(key) = s.exporters.get(i).map(audio_export::Target::key) else {
+            return;
+        };
+        if s.stored
+            .get(audio_export::FORMAT_KEY)
+            .as_ref()
+            .and_then(|v| v.as_str())
+            != Some(key.as_str())
+            && let Err(e) = s.stored.set(audio_export::FORMAT_KEY, key.into())
+        {
+            s.footer.push(Level::Error, e);
+        }
+    }
     if let Some(problem) = no_dialogs() {
         message(app, Level::Warning, problem);
         return;
@@ -5638,16 +5654,6 @@ fn export_audio_chosen(app: &Shared, ok: bool) {
         let Some(score) = s.open_score.score() else {
             return;
         };
-        let key = target.key();
-        if s.stored
-            .get(audio_export::FORMAT_KEY)
-            .as_ref()
-            .and_then(|v| v.as_str())
-            != Some(key.as_str())
-            && let Err(e) = s.stored.set(audio_export::FORMAT_KEY, key.into())
-        {
-            s.footer.push(Level::Error, e);
-        }
         let timeline = oxiguitar_play::Timeline::new(&score);
         let span = s
             .editing

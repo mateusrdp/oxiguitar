@@ -38,6 +38,7 @@ Before the file dialog, OxiGuitar asks for the format and what to export: the wh
 The file's own choices (bit depth, rate, bitrate, compression) are yours. Name one of your plugin's [dialogs](settings.md#a-settings-dialog) (a tab whose `area` is `"dialog"`) as the exporter's `options`, and the export dialog shows its widgets under the Format list while your format is picked. It is a dialog like any other:
 
 - OxiGuitar asks for its `content` when your format is picked, and sends your `on` the user's changes. Keep them in a draft, as a settings dialog does.
+- It shows as a form, as a [track section](track-sections.md) does: standard widgets, each on the dialog's width, and no canvas.
 - **OK** on the export dialog calls your `closed(true)` **before** your exporter's `start`: save the draft to your settings there, and read your settings in `start`. **Cancel**, or picking another format, calls `closed(false)`: forget the draft.
 - The same dialog may also open from a tool of yours (`"edits": false`), so the choices can be set without exporting.
 

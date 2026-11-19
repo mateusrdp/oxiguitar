@@ -7,7 +7,7 @@
 // fields are the Bar tab's (issue #177, `bar_form.rs`).
 
 import { Button, CheckBox, ComboBox, LineEdit, SpinBox, ScrollView, Palette } from "std-widgets.slint";
-import { PluginTab, PluginRow } from "plugin_tab.slint";
+import { PluginTab, PluginRow, PluginRows } from "plugin_tab.slint";
 
 // A dimmed backdrop and a card, with Enter for OK and Escape for Cancel.
 component Card inherits Rectangle {
@@ -839,8 +839,9 @@ export component ExportDialog inherits Rectangle {
     // Every audio export of every plugin, by name, and the one picked.
     in property <[string]> formats;
     in-out property <int> format: 0;
-    // The picked export's options: its plugin's widgets, or a message
-    // while they are asked for; nothing when it has none.
+    // The picked export's options: its plugin's widgets as a form (as the
+    // track dialog's plugin sections: standard widgets, no canvas), or a
+    // message while they are asked for; nothing when it has none.
     in property <bool> has-options: false;
     in property <[PluginRow]> options;
     in property <string> options-message;
@@ -855,8 +856,6 @@ export component ExportDialog inherits Rectangle {
     callback slid(string, float);
     callback edited(string, string);
     callback chosen(string, int);
-    callback pointer(string, int, float, float, int);
-    callback canvas-room(string, length, length);
     callback done(bool);
     Card {
         width: root.width;
@@ -880,8 +879,7 @@ export component ExportDialog inherits Rectangle {
                     }
                 }
             }
-            if root.has-options : PluginTab {
-                min-height: 40px;
+            if root.has-options : PluginRows {
                 rows: root.options;
                 message: root.options-message;
                 clicked(id) => { root.clicked(id); }
@@ -889,8 +887,6 @@ export component ExportDialog inherits Rectangle {
                 slid(id, v) => { root.slid(id, v); }
                 edited(id, text) => { root.edited(id, text); }
                 chosen(id, i) => { root.chosen(id, i); }
-                pointer(id, k, x, y, b) => { root.pointer(id, k, x, y, b); }
-                canvas-room(id, w, h) => { root.canvas-room(id, w, h); }
             }
             HorizontalLayout {
                 spacing: 8px;

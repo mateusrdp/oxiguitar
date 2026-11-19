@@ -66,11 +66,14 @@ export component PluginWidgetView {
         padding-left: 12px;
         padding-bottom: 4px;
 
-        // Label row: shown for buttons, toggles, sliders, and fields.
+        // Label row: shown for buttons, toggles, sliders, and fields. A
+        // long one wraps at the width it has, rather than widening the
+        // form (the export dialog's options, #313).
         if w.kind == "label" || w.kind == "button" || w.kind == "toggle"
         || w.kind == "slider" || w.kind == "field" : Text {
             text: w.text;
             font-size: 12px;
+            wrap: word-wrap;
             vertical-alignment: center;
             color: Palette.foreground.transparentize(w.muted ? 0.45 : 0.1);
         }
