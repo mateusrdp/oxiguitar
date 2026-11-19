@@ -491,7 +491,7 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
     // the second on a beat with the plugin's data, comes back within the
     // interface's limits.
     for plugin in plugins.performers() {
-        use oxiguitar_host::api::message::{Perform, PlayedBeat, PlayedNote};
+        use oxiguitar_host::api::message::{Perform, PerformStaff, PlayedBeat, PlayedNote};
         use oxiguitar_host::api::score2::BeatExt;
         let note = |beat: u32, start: f64| PlayedNote {
             staff: 0,
@@ -526,6 +526,12 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
                     data: "{}".into(),
                 }],
             }],
+            program: 25,
+            staves: vec![PerformStaff {
+                tuning: vec![64, 59, 55, 50, 45, 40],
+                capo: 0,
+            }],
+            settings: "{}".into(),
         };
         report.check(
             "it plays a track's notes within the interface's limits",

@@ -632,9 +632,38 @@ struct StampDrawer {
 
 /// Plays the notes of stamped beats an octave up (interface 1.8), as a
 /// plugin that plays the notes its own way would; others as they are.
-#[derive(Debug, Default)]
+/// Plays a stamped beat's notes an octave up (interface 1.8), and detunes
+/// every fretted note by the track's `detune` setting plus the plugin's own
+/// `perform-detune`, in cents (interface 1.12: the strings, the track's
+/// settings, and the cache dropped when the plugin's settings change).
+#[derive(Debug)]
 struct StampPerformer {
+    host: Host,
     asked: std::sync::atomic::AtomicU32,
+}
+
+/// A whole number of cents under `key` in a JSON object's text, or 0.
+fn cents_in(json: &str, key: &str) -> i32 {
+    serde_json::from_str::<serde_json::Value>(json)
+        .ok()
+        .and_then(|v| v.get(key).and_then(serde_json::Value::as_i64))
+        .and_then(|c| i32::try_from(c).ok())
+        .unwrap_or(0)
+}
+
+/// Whether `n` is stopped at a fret (not an open string), by its staff's
+/// strings.
+fn fretted(track: &oxiguitar_plugin::Perform, n: &oxiguitar_plugin::PlayedNote) -> bool {
+    let Some(staff) = track.staves.get(n.staff as usize) else {
+        return false;
+    };
+    let Some(open) = (n.string as usize)
+        .checked_sub(1)
+        .and_then(|s| staff.tuning.get(s))
+    else {
+        return false;
+    };
+    n.key > open.saturating_add(staff.capo)
 }
 
 impl oxiguitar_plugin::Performer for StampPerformer {
@@ -655,11 +684,27 @@ impl oxiguitar_plugin::Performer for StampPerformer {
             })
             .map(|b| (b.staff, b.bar, b.voice, b.beat))
             .collect();
+        let own = self
+            .host
+            .settings()
+            .ok()
+            .and_then(|s| s.get("perform-detune").and_then(serde_json::Value::as_i64))
+            .and_then(|c| i32::try_from(c).ok())
+            .unwrap_or(0);
+        let detune = cents_in(&track.settings, "detune").saturating_add(own);
         Ok(track
             .notes
             .iter()
             .cloned()
             .map(|mut n| {
+                if detune != 0 && fretted(track, &n) {
+                    if n.pitch.is_empty() {
+                        n.pitch.push((n.start, 0));
+                    }
+                    for p in &mut n.pitch {
+                        p.1 = p.1.saturating_add(detune);
+                    }
+                }
                 let bar = track
                     .visits
                     .get(n.visit as usize)
@@ -783,7 +828,10 @@ impl Plugin for TestPlugin {
                 draft: Mutex::new(None),
             },
             drawer: StampDrawer::default(),
-            performer: StampPerformer::default(),
+            performer: StampPerformer {
+                host: host.clone(),
+                asked: std::sync::atomic::AtomicU32::new(0),
+            },
             host,
         })
     }
@@ -923,6 +971,17 @@ impl Service for TestPlugin {
             "echo" => Ok(input.to_vec()),
             // How many times it was asked to draw (interface 1.8).
             // How many times it was asked to play a track (interface 1.8).
+            // Sets the plugin's own detune for playing (interface 1.12).
+            "perform-detune" => {
+                let cents: i64 = std::str::from_utf8(input)
+                    .ok()
+                    .and_then(|t| t.trim().parse().ok())
+                    .ok_or_else(|| Error::new(ErrorKind::Invalid, "cents expected"))?;
+                let mut settings = self.host.settings()?;
+                settings.insert("perform-detune".into(), cents.into());
+                self.host.set_settings(&settings)?;
+                Ok(Vec::new())
+            }
             "performed" => Ok(self
                 .performer
                 .asked

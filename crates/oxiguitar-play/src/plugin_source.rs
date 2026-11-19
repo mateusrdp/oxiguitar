@@ -12,7 +12,7 @@ use oxiguitar_host::realtime::{Instance, Updater};
 use oxiguitar_model::{Ratio, Score};
 use oxiguitar_plugin_api::class::InstrumentClass;
 use oxiguitar_plugin_api::message::{
-    Perform, PlayedBeat, PlayedNote, Prepare, PrepareEffect, PreparedTrack, TrackInfo,
+    Perform, PerformStaff, PlayedBeat, PlayedNote, Prepare, PrepareEffect, PreparedTrack, TrackInfo,
 };
 use oxiguitar_plugin_api::realtime::{PitchPoint, RtEvent};
 
@@ -562,6 +562,14 @@ pub fn perform(plugins: &Plugins, score: &Score, timeline: &mut crate::Timeline)
             continue;
         };
         let beats = played_beats(track, &timeline.map);
+        let staves: Vec<PerformStaff> = track
+            .staves
+            .iter()
+            .map(|s| PerformStaff {
+                tuning: s.tuning.iter().map(|p| p.0).collect(),
+                capo: s.capo,
+            })
+            .collect();
         for plugin in &performers {
             let request = Perform {
                 track: u32::try_from(ti).unwrap_or(u32::MAX),
@@ -569,6 +577,13 @@ pub fn perform(plugins: &Plugins, score: &Score, timeline: &mut crate::Timeline)
                 visits: visits.clone(),
                 notes: notes.iter().map(to_played).collect(),
                 beats: beats.clone(),
+                program: track.instrument.midi_program,
+                staves: staves.clone(),
+                settings: track
+                    .plugins
+                    .get(plugin)
+                    .cloned()
+                    .unwrap_or_else(|| "{}".into()),
             };
             if let Some(back) = plugins.perform(plugin, request) {
                 *notes = back.iter().map(|n| from_played(ti, n)).collect();

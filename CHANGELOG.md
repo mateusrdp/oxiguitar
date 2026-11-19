@@ -4,6 +4,14 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **Plugin interface 1.12** (the SDK crates are at 1.12.0; #294): a plugin that plays the notes its own way is also given the track's General MIDI program, each staff's tuning and capo (so it knows each note's fret), and the track's settings for it, as its track-dialog section keeps them. The request grew in place, since no released plugin used it: such a plugin needs interface 1.12 ([Playing the notes your own way](https://mateusrdp.github.io/oxiguitar/plugin-guide/playing.html)).
+
+### Fixed
+
+- **A performing plugin's changed settings are heard**: when such a plugin saves new settings, the next play asks it about every track again; before, it kept playing what it had answered with the old settings.
+
 ### Changed
 
 - **The audio export plugin is `oxiguitar-export`** (#313): the WAV plugin (`oxiguitar-wav`, up to 0.1.2) is now the Audio export plugin, with WAV, FLAC, MP3 and Opus (0.2.0). The manual's Exporting audio and Official plugins pages, the README's install commands and the tests that use the released plugins name it. Remove an old `oxiguitar-wav` package or `wav.oxp` by hand: OxiGuitar uses the new plugin even while the old one is installed, and carries its settings over once.
