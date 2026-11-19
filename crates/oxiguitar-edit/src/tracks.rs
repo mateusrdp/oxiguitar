@@ -92,7 +92,7 @@ pub(crate) fn apply(
             }
             let to = t.min(score.tracks.len() - 2);
             whole(score, history, label, c, to, |s| {
-                s.tracks.remove(t);
+                crate::merge::remove_track(s, t, None);
             })
         }
         Command::MoveTrackUp | Command::MoveTrackDown => {
@@ -121,6 +121,7 @@ pub(crate) fn apply(
             })
         }
         Command::Mix { track, mix } => set_mix(score, history, c, *track, *mix),
+        Command::MergeTracks(m) => crate::merge::apply(score, history, c, label, m),
         _ => return None,
     };
     Some(edited)
@@ -355,7 +356,7 @@ fn restring(track: &mut Track, to: &TrackSettings) {
 
 /// Where note `n` of the old staff goes on the new one, beside `placed`
 /// (the beat's notes already placed); `None` when it can't be kept.
-fn replace(
+pub(crate) fn replace(
     old: &Staff,
     new: &Staff,
     placed: &[Note],

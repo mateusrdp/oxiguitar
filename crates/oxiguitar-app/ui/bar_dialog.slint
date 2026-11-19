@@ -17,6 +17,7 @@ component Card inherits Rectangle {
     in property <bool> takes-focus: true;
     in property <string> heading;
     in property <string> ok-text: "OK";
+    in property <bool> ok-enabled: true;
     in property <bool> show-buttons: true;
     callback done(bool);
     background: #00000060;
@@ -32,7 +33,7 @@ component Card inherits Rectangle {
                 root.done(false);
                 return accept;
             }
-            if (event.text == Key.Return && root.show-buttons) {
+            if (event.text == Key.Return && root.show-buttons && root.ok-enabled) {
                 root.done(true);
                 return accept;
             }
@@ -62,7 +63,7 @@ component Card inherits Rectangle {
             if (root.show-buttons): HorizontalLayout {
                 alignment: end;
                 spacing: 8px;
-                Button { text: root.ok-text; primary: true; clicked => { root.done(true); } }
+                Button { text: root.ok-text; primary: true; enabled: root.ok-enabled; clicked => { root.done(true); } }
                 Button { text: "Cancel"; clicked => { root.done(false); } }
             }
         }
@@ -281,6 +282,78 @@ export component HarmonizeDialog inherits Rectangle {
             }
             Text {
                 text: "The chords are found in the key of the bars' key signature and written above this track with their diagrams.";
+                font-size: 11px;
+                wrap: word-wrap;
+                color: Palette.foreground.transparentize(0.4);
+            }
+        }
+    }
+}
+
+// Merge Into… (#312): the clicked track's notes written into another
+// track (`tracks`, every track of its kind but itself), then the clicked
+// track deleted. One voice goes into the voice picked; several go voice
+// by voice.
+export component MergeDialog inherits Rectangle {
+    in property <string> heading: "Merge Into";
+    in property <[string]> tracks;
+    in-out property <int> into: 0;
+    in-out property <bool> voice1: true;
+    in-out property <bool> voice2: false;
+    in-out property <bool> voice3: false;
+    in-out property <bool> voice4: false;
+    in-out property <int> to-voice: 0;
+    in-out property <bool> discard-unisons: false;
+    callback done(bool);
+    property <int> picked: (root.voice1 ? 1 : 0) + (root.voice2 ? 1 : 0) + (root.voice3 ? 1 : 0) + (root.voice4 ? 1 : 0);
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: root.heading;
+        card-width: 460px;
+        ok-enabled: root.picked > 0;
+        done(ok) => { root.done(ok); }
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Into"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.tracks;
+                    current-index: root.into;
+                    selected => { root.into = self.current-index; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Its voices"; }
+                CheckBox { text: "1"; checked <=> root.voice1; }
+                CheckBox { text: "2"; checked <=> root.voice2; }
+                CheckBox { text: "3"; checked <=> root.voice3; }
+                CheckBox { text: "4"; checked <=> root.voice4; }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Into voice"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    enabled: root.picked == 1;
+                    model: root.picked > 1 ? ["Each into the same voice"] : ["Voice 1", "Voice 2", "Voice 3", "Voice 4"];
+                    current-index: root.picked > 1 ? 0 : root.to-voice;
+                    selected => {
+                        if (root.picked == 1) {
+                            root.to-voice = self.current-index;
+                        }
+                    }
+                }
+            }
+            CheckBox {
+                text: "Discard unisons";
+                checked <=> root.discard-unisons;
+            }
+            Text {
+                text: "Where the rhythms differ, notes are cut and tied. Notes keep their strings where they can. A unison is a note the other track plays at the same pitch at the same moment. This track is then deleted.";
                 font-size: 11px;
                 wrap: word-wrap;
                 color: Palette.foreground.transparentize(0.4);
