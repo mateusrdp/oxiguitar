@@ -45,7 +45,7 @@ fn bash() -> PathBuf {
 }
 
 /// A folder holding the `.oxp` files of the latest release of each plugin
-/// repository in `names` (`"guitarpro"`, `"midi"`, `"wav"`, ...), or
+/// repository in `names` (`"guitarpro"`, `"midi"`, `"export"`, ...), or
 /// `$OXIGUITAR_PLUGINS_DIR`. Panics, saying why, when the release can't be
 /// had: a test that needs a plugin can't go on without it.
 pub fn folder(names: &[&str]) -> PathBuf {

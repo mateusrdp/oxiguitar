@@ -84,7 +84,7 @@ Read and Write file support
 - oxiguitar-bettersounds-soundfonts: scripts only to download and install soundbanks (depends on midi)
 - oxiguitar-nam: Neural Amp Modeller profiler support (depends on oxiguitar-midi)
 - oxiguitar-eq: equalizer
-- oxiguitar-wav: WAV format export
+- oxiguitar-export: audio export (WAV, FLAC, MP3, Opus)
 
 
 

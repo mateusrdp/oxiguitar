@@ -106,7 +106,8 @@ pub struct Manifest {
     /// Whether it plays the notes its own way (`Request::Perform`): it is
     /// given each track's notes as played and gives them back as they
     /// should sound. Performing plugins take turns in plugin order. Since
-    /// interface 1.8.
+    /// interface 1.12 (1.8 to 1.11 had a shorter request, which no released
+    /// plugin used; the host asks only 1.12 plugins).
     #[serde(default)]
     pub performs: bool,
     /// The sections it adds to the track dialog. Since interface 1.3.
@@ -761,12 +762,6 @@ impl Manifest {
                     self.interface
                 ));
             }
-            if self.performs {
-                out.push(format!(
-                    "playing the notes its own way needs interface {since_1_8}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
             if self.draws {
                 out.push(format!(
                     "drawing on the page needs interface {since_1_8}, and the manifest asks for {}",
@@ -785,6 +780,19 @@ impl Manifest {
                     self.interface
                 ));
             }
+        }
+        // Interface 1.12 gave Request::Perform the track's program, strings
+        // and settings; no plugin released before it performed, so the
+        // request was extended in place rather than given a second form.
+        let since_1_12 = InterfaceVersion {
+            major: 1,
+            minor: 12,
+        };
+        if self.interface < since_1_12 && self.performs {
+            out.push(format!(
+                "playing the notes its own way needs interface {since_1_12}, and the manifest asks for {}",
+                self.interface
+            ));
         }
         let since_1_11 = InterfaceVersion {
             major: 1,
@@ -1347,6 +1355,25 @@ mod tests {
             [
                 "a tool that doesn't edit the score (\"edits\": false) needs interface 1.9, and the manifest asks for 1.8"
             ]
+        );
+    }
+
+    /// Playing the notes its own way needs 1.12, whose request grew in
+    /// place (#294).
+    #[test]
+    fn performing_needs_interface_1_12() {
+        let json = |interface: &str| {
+            format!(
+                r#"{{"interface": "{interface}", "id": "me.tunes", "name": "Tunes",
+                    "version": "0.1.0", "performs": true}}"#
+            )
+        };
+        let m: Manifest = serde_json::from_str(&json("1.12")).unwrap();
+        assert!(m.performs && m.problems().is_empty(), "{:?}", m.problems());
+        let m: Manifest = serde_json::from_str(&json("1.8")).unwrap();
+        assert_eq!(
+            m.problems(),
+            ["playing the notes its own way needs interface 1.12, and the manifest asks for 1.8"]
         );
     }
 

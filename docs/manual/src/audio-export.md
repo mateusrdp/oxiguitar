@@ -17,15 +17,17 @@ The file is written under a temporary name and only takes the name you chose onc
 
 ## The file's format
 
-Pick it in **Plugins → WAV Export Settings…** (with or without a song open) and press **OK**; **Cancel** leaves it as it was:
+Each format has its own choices, shown under the **Format** list when it is picked. **Export…** keeps them for the next time:
 
-| Setting | Choices |
-| --- | --- |
-| Bit depth | **16-bit**, as CDs, the smallest files; **24-bit** (the default), with room for quiet passages; **32-bit float**, for mixing further, where nothing is ever clipped |
-| Rate | **44.1 kHz**, as CDs; **48 kHz** (the default), as video and most sound sets |
+| Format | Choices | Default |
+| --- | --- | --- |
+| **WAV** | Bit depth: **16-bit**, as CDs, the smallest files; **24-bit**, with room for quiet passages; **32-bit float**, for mixing further, where nothing is ever clipped. Rate: **44.1 kHz**, as CDs, or **48 kHz**, as video and most sound sets | 24-bit, 48 kHz |
+| **FLAC** | The same sound as WAV in about half the space, with nothing lost. Bit depth: **16-bit** or **24-bit**. Rate: 44.1 or 48 kHz | 24-bit, 48 kHz |
+| **MP3** | Lossy, and played everywhere. Quality: a variable bitrate (**V0**, about 245 kbps; **V2**, about 190; **V4**, about 165) or a constant one (**128**, **192**, **256** or **320 kbps**). Rate: 44.1 or 48 kHz | V2, 44.1 kHz |
+| **Opus** (`.opus`) | Lossy, and smaller than MP3 at the same quality. Bitrate: **96** to **256 kbps**. Always 48 kHz. Current browsers and most players open it | 160 kbps |
 
-A minute of sound takes 10 MB at 16 bits and 44.1 kHz, 16 MB at 24 bits and 48 kHz, 22 MB in 32-bit float at 48 kHz. A WAV file holds at most 4 GB, over three hours of sound.
+The MP3 and Opus files start and end exactly where the song does, so a song loops without a gap in a player that can. A minute of sound takes 10 MB in WAV at 16 bits and 44.1 kHz, 16 MB at 24 bits and 48 kHz, 22 MB in 32-bit float at 48 kHz; in FLAC about half of that; 1.4 MB in MP3 at V2 and 1.2 MB in Opus at 160 kbps. A WAV file holds at most 4 GB, over three hours of sound.
 
 ## From the command line
 
-`oxiguitar-cli export song.gp song.wav` does the same: the whole song as written, with the file's own mixer settings and the WAV plugin's format. `--bars 5-8` exports some bars, `--speed 75` plays at 75 %, `--metronome` adds the clicks.
+`oxiguitar-cli export song.gp song.wav` does the same: the whole song as written, with the file's own mixer settings and the format's choices as the dialog keeps them. The extension picks the format: `.wav`, `.flac`, `.mp3` or `.opus`. `--bars 5-8` exports some bars, `--speed 75` plays at 75 %, `--metronome` adds the clicks.

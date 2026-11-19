@@ -145,7 +145,7 @@ jobs:
       # downloading the job log. Bash on every runner, Windows included.
       # Tests that need real plugins (Guitar Pro files, a sound set, a WAV
       # export) take the latest releases of oxiguitar-guitarpro, -midi and
-      # -wav (scripts/released-plugins.sh through oxiguitar-plugin-test; each
+      # -export (scripts/released-plugins.sh through oxiguitar-plugin-test; each
       # run prints the versions used).
       - name: cargo test
         shell: bash
