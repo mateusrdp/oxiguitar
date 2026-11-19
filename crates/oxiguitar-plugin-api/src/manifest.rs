@@ -164,6 +164,16 @@ pub struct ExporterSpec {
     pub extension: String,
     /// What it is handed to write.
     pub kind: ExportKind,
+    /// The id of one of the plugin's dialogs (a tab whose area is
+    /// `dialog`) holding this export's own choices: the export dialog shows
+    /// its widgets under the list of formats while this export is picked.
+    /// The plugin keeps what the user picks in a draft, as in any dialog:
+    /// OK on the export dialog closes it with OK before the export starts
+    /// (`Request::TabClosed`), so the plugin has saved the choices when
+    /// it is asked to start; Cancel, or picking another format, closes it
+    /// with Cancel. Since interface 1.11.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<String>,
 }
 
 /// What an exporter is handed to write. Since interface 1.4.
@@ -659,6 +669,17 @@ impl Manifest {
                     "{at}: the extension {x:?} must be lowercase letters and digits, without a dot"
                 ));
             }
+            if let Some(options) = &e.options {
+                let dialog = self
+                    .tabs
+                    .iter()
+                    .any(|t| t.id == *options && t.area == crate::tab::Area::Dialog);
+                if !dialog {
+                    out.push(format!(
+                        "{at}: its options {options:?} must be one of the plugin's dialogs (a tab whose area is \"dialog\")"
+                    ));
+                }
+            }
         }
         let mut needs: Vec<&str> = Vec::new();
         for n in &self.needs {
@@ -764,6 +785,16 @@ impl Manifest {
                     self.interface
                 ));
             }
+        }
+        let since_1_11 = InterfaceVersion {
+            major: 1,
+            minor: 11,
+        };
+        if self.interface < since_1_11 && self.exporters.iter().any(|e| e.options.is_some()) {
+            out.push(format!(
+                "an export's options need interface {since_1_11}, and the manifest asks for {}",
+                self.interface
+            ));
         }
         let since_1_9 = InterfaceVersion { major: 1, minor: 9 };
         if self.interface < since_1_9 && self.tools.iter().any(|t| !t.edits) {
@@ -1315,6 +1346,39 @@ mod tests {
             m.problems(),
             [
                 "a tool that doesn't edit the score (\"edits\": false) needs interface 1.9, and the manifest asks for 1.8"
+            ]
+        );
+    }
+
+    /// An export's options name one of the plugin's dialogs, and need 1.11.
+    #[test]
+    fn an_exports_options_are_a_dialog_and_need_interface_1_11() {
+        let json = |interface: &str, area: &str, options: &str| {
+            format!(
+                r#"{{"interface": "{interface}", "id": "me.export", "name": "Export",
+                    "version": "0.1.0",
+                    "tabs": [{{"id": "flac-options", "title": "FLAC", "area": "{area}"}}],
+                    "exporters": [{{"id": "flac", "name": "FLAC Audio", "extension": "flac",
+                        "kind": "audio" {options}}}]}}"#
+            )
+        };
+        let m: Manifest = serde_json::from_str(&json("1.4", "right", "")).unwrap();
+        assert_eq!(m.exporters[0].options, None);
+        assert!(m.problems().is_empty(), "{:?}", m.problems());
+        let with = r#", "options": "flac-options""#;
+        let m: Manifest = serde_json::from_str(&json("1.11", "dialog", with)).unwrap();
+        assert_eq!(m.exporters[0].options.as_deref(), Some("flac-options"));
+        assert!(m.problems().is_empty(), "{:?}", m.problems());
+        let m: Manifest = serde_json::from_str(&json("1.10", "dialog", with)).unwrap();
+        assert_eq!(
+            m.problems(),
+            ["an export's options need interface 1.11, and the manifest asks for 1.10"]
+        );
+        let m: Manifest = serde_json::from_str(&json("1.11", "right", with)).unwrap();
+        assert_eq!(
+            m.problems(),
+            [
+                "exporter \"flac\": its options \"flac-options\" must be one of the plugin's dialogs (a tab whose area is \"dialog\")"
             ]
         );
     }

@@ -160,7 +160,8 @@ pub(crate) enum Request {
         room: (u32, u32),
     },
     /// The user closed the dialog `tab`, with OK or not: its plugin is
-    /// told, and what the dialog showed is forgotten.
+    /// told, and what the dialog showed is forgotten. Answered with
+    /// [`Answer::Closed`] once the plugin has heard it.
     Closed { tab: TabId, ok: bool },
     /// The interface became dark (`true`) or light: canvases are drawn
     /// again.
@@ -200,6 +201,9 @@ pub(crate) enum Answer {
     },
     /// One canvas drawn again (a new size, or the theme changed).
     Canvas { tab: TabId, drawn: Drawn },
+    /// The plugin heard that its dialog `tab` was closed: with OK, it has
+    /// kept what was picked (an export waits for this, interface 1.11).
+    Closed { tab: TabId },
     /// A track section's contents and the track's settings for its plugin,
     /// or why they can't be shown.
     Section {
@@ -368,6 +372,7 @@ fn run(rx: &Receiver<Request>, plugins: &Plugins, mut dark: bool, sink: &dyn Fn(
                 Request::Closed { tab, ok } => {
                     plugins.tab_closed(&tab, ok);
                     contents.remove(&tab);
+                    sink(Answer::Closed { tab });
                 }
                 Request::Size { tab, widget, room } => {
                     rooms.insert((tab.clone(), widget.clone()), room);

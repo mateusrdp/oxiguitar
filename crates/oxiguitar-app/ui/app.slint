@@ -1629,13 +1629,18 @@ export component AppWindow inherits Window {
     in-out property <int> merge-to-voice;
     in-out property <bool> merge-discard-unisons;
     callback merge-dialog-done(bool);
-    // File → Export's audio exporters (plugin interface 1.4), by name; the
-    // dialog before one exports, and the export under way.
+    // File → Export Audio…: every plugin's audio exports (plugin interface
+    // 1.4), by name; the dialog before one exports, with the picked one's
+    // options (1.11, view number 5 of the plugin callbacks), and the
+    // export under way.
     in property <[string]> exporters;
-    callback export-with(int);
+    callback export-audio();
     in property <bool> export-dialog-shown: false;
-    in property <string> export-heading;
-    in property <string> export-plugin;
+    in-out property <int> export-format;
+    callback export-format-picked(int);
+    in property <bool> export-has-options;
+    in property <[PluginRow]> export-plugin-rows;
+    in property <string> export-plugin-message;
     in property <bool> export-has-selection;
     in-out property <bool> export-selection;
     in property <int> export-practice-speed: 100;
@@ -1790,10 +1795,10 @@ export component AppWindow inherits Window {
             MenuItem { title: "Save"; enabled: root.has-score; shortcut: @keys(Control + S); activated => { root.save(); } }
             MenuItem { title: "Save As…"; enabled: root.has-score; shortcut: @keys(Control + Shift + S); activated => { root.save-as(); } }
             MenuItem { title: "Export PDF…"; enabled: root.has-score; activated => { root.export-pdf(); } }
-            for e[i] in root.exporters : MenuItem {
-                title: "Export " + e + "…";
+            if root.exporters.length > 0 : MenuItem {
+                title: "Export Audio…";
                 enabled: root.has-score && !root.export-running;
-                activated => { root.export-with(i); }
+                activated => { root.export-audio(); }
             }
             Menu {
                 title: "Paper Size";
@@ -2962,8 +2967,17 @@ export component AppWindow inherits Window {
     if root.export-dialog-shown : ExportDialog {
         width: root.width;
         height: root.height;
-        heading: root.export-heading;
-        plugin-name: root.export-plugin;
+        formats: root.exporters;
+        format <=> root.export-format;
+        format-picked(i) => { root.export-format-picked(i); }
+        has-options: root.export-has-options;
+        options: root.export-plugin-rows;
+        options-message: root.export-plugin-message;
+        clicked(id) => { root.plugin-clicked(5, id); }
+        toggled(id, on) => { root.plugin-toggled(5, id, on); }
+        slid(id, v) => { root.plugin-slid(5, id, v); }
+        edited(id, text) => { root.plugin-edited(5, id, text); }
+        chosen(id, i) => { root.plugin-chosen(5, id, i); }
         has-selection: root.export-has-selection;
         selection <=> root.export-selection;
         practice-speed: root.export-practice-speed;

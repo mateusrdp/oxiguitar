@@ -7,7 +7,7 @@
 // fields are the Bar tab's (issue #177, `bar_form.rs`).
 
 import { Button, CheckBox, ComboBox, LineEdit, SpinBox, ScrollView, Palette } from "std-widgets.slint";
-import { PluginTab, PluginRow } from "plugin_tab.slint";
+import { PluginTab, PluginRow, PluginRows } from "plugin_tab.slint";
 
 // A dimmed backdrop and a card, with Enter for OK and Escape for Cancel.
 component Card inherits Rectangle {
@@ -829,18 +829,33 @@ export component ChordDialog inherits Rectangle {
     }
 }
 
-// File → Export of an audio exporter (M4 slice 7, PLAY-7): what to render
-// before the file dialog. The whole song or the selected bars, at the
-// written tempo or the practice speed, with or without the metronome.
+// File → Export Audio… (M4 slice 7, PLAY-7; #313): the format, its own
+// choices (the exporter's options, one of its plugin's dialogs, plugin
+// interface 1.11), and what to render before the file dialog. The whole
+// song or the selected bars, at the written tempo or the practice speed,
+// with or without the metronome.
 export component ExportDialog inherits Rectangle {
     in property <string> heading: "Export Audio";
-    // Where the file's format is set: the exporter's plugin's settings.
-    in property <string> plugin-name;
+    // Every audio export of every plugin, by name, and the one picked.
+    in property <[string]> formats;
+    in-out property <int> format: 0;
+    // The picked export's options: its plugin's widgets as a form (as the
+    // track dialog's plugin sections: standard widgets, no canvas), or a
+    // message while they are asked for; nothing when it has none.
+    in property <bool> has-options: false;
+    in property <[PluginRow]> options;
+    in property <string> options-message;
     in property <bool> has-selection: false;
     in-out property <bool> selection: false;
     in property <int> practice-speed: 100;
     in-out property <bool> at-speed: false;
     in-out property <bool> metronome: false;
+    callback format-picked(int);
+    callback clicked(string);
+    callback toggled(string, bool);
+    callback slid(string, float);
+    callback edited(string, string);
+    callback chosen(string, int);
     callback done(bool);
     Card {
         width: root.width;
@@ -851,6 +866,28 @@ export component ExportDialog inherits Rectangle {
         done(ok) => { root.done(ok); }
         VerticalLayout {
             spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Format"; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: root.formats;
+                    current-index: root.format;
+                    selected => {
+                        root.format = self.current-index;
+                        root.format-picked(self.current-index);
+                    }
+                }
+            }
+            if root.has-options : PluginRows {
+                rows: root.options;
+                message: root.options-message;
+                clicked(id) => { root.clicked(id); }
+                toggled(id, on) => { root.toggled(id, on); }
+                slid(id, v) => { root.slid(id, v); }
+                edited(id, text) => { root.edited(id, text); }
+                chosen(id, i) => { root.chosen(id, i); }
+            }
             HorizontalLayout {
                 spacing: 8px;
                 Label { text: "What"; }
@@ -879,7 +916,7 @@ export component ExportDialog inherits Rectangle {
                 toggled => { root.metronome = self.checked; }
             }
             Text {
-                text: "Each track plays with its sound, amp and mixer settings as they are now. The file's format (bit depth, rate) is set in the settings of the plugin “" + root.plugin-name + "” (Tools → Plugins…, its Settings… button).";
+                text: "Each track plays with its sound, amp and mixer settings as they are now.";
                 font-size: 11px;
                 wrap: word-wrap;
                 color: Palette.foreground.transparentize(0.4);

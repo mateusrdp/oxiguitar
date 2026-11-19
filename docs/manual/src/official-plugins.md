@@ -28,7 +28,7 @@ One sends the sound to your speakers. OxiGuitar uses the one that fits your syst
 
 | Plugin | What it does | Repository |
 | --- | --- | --- |
-| **WAV** | File → Export WAV Audio…: the whole song or some bars as a WAV file ([Exporting audio](audio-export.md)) | `oxiguitar-wav` |
+| **WAV** | File → Export Audio…: the whole song or some bars as a WAV file ([Exporting audio](audio-export.md)) | `oxiguitar-wav` |
 | **NAM** | Amp models (Neural Amp Modeler captures) and cabinets for guitar and bass tracks ([Amp models](amp-models.md)). Needs the MIDI plugin, which makes the sound it shapes | `oxiguitar-nam` |
 | **Equalizer** | A three-band or ten-band equalizer on any track, with or without an amp model ([Playing a score](playback.md#each-tracks-sound)). Suggested by OxiGuitar's packages, as NAM is | `oxiguitar-eq` |
 | **Wah-wah** | Wah-wah marks, written and played: the palette's Closed and Open Wah-Wah, an editor for each mark's curve and Q, and a wah pedal on any track that the marks rock, a Cry Baby by default ([Wah-wah](editing.md#wah-wah), [How the marks sound](playback.md#how-the-marks-sound)). Comes before the amp unless the Track tab moves it. Suggested by OxiGuitar's packages, as NAM is | `oxiguitar-wah` |
