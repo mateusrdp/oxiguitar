@@ -99,8 +99,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          scripts/apt-install.sh \
             libfontconfig1-dev libxkbcommon-dev libwayland-dev \
             libasound2-dev libpipewire-0.3-dev libclang-dev \
             rpm squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
@@ -245,8 +244,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          scripts/apt-install.sh \
             squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
       # The latest release of the Guitar Pro plugins, in an OxiGuitar home of
       # its own, so the sample can be opened (the core holds no plugin).
@@ -392,8 +390,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: Flatpak tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder ostree dbus xvfb xauth weston
+          scripts/apt-install.sh flatpak flatpak-builder ostree dbus xvfb xauth weston
           # Ubuntu 24.04 keeps unprivileged user namespaces from bubblewrap,
           # which Flatpak builds and runs in.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0

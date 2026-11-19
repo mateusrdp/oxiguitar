@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI no longer waits 15 minutes on a stalled Ubuntu mirror**: a runner's mirror sometimes stops answering in the middle of `apt-get`, and the step then sat until its limit, failed CI and stopped the Release workflow's wait (19 Nov 2026, on 0.21.2 and 0.21.3). The Linux jobs of CI, the test builds and the release workflow install packages with `scripts/apt-install.sh`: each try is cut off after 5 minutes, a stalled connection after 30 seconds, and it tries 3 times.
+
 ## [0.21.3] - 2026-11-19
 
 ### Added
