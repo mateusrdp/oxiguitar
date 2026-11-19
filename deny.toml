@@ -35,6 +35,9 @@ ignore = [
     # spin_on uses pin-utils, which is unmaintained (archived Oct 2026), not
     # vulnerable; via Slint 1.19's code generator, macros and renderers.
     { id = "RUSTSEC-2026-0441", reason = "pin-utils, unmaintained; via spin_on in Slint 1.19" },
+    # chrono is unmaintained (not a vulnerability; chronotope/chrono#1768).
+    # Only i-slint-core 1.19 uses it. Revisit on the next Slint upgrade.
+    { id = "RUSTSEC-2026-0543", reason = "chrono, unmaintained; via i-slint-core 1.19" },
 ]
 
 [licenses]

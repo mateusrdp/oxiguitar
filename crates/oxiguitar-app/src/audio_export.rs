@@ -1,18 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! File → Export's audio exporters (M4 slice 7, PLAY-7; plugin interface
-//! 1.4), without window code: what each entry exports, the plan the
-//! export dialog makes, and the thread that renders and writes the file
+//! File → Export Audio… (M4 slice 7, PLAY-7; plugin interface 1.4),
+//! without window code: the formats the plugins export to, the one the
+//! dialog picks first, and the thread that renders and writes the file
 //! (`oxiguitar_play::export`) while the window shows how far it has got.
+//!
+//! One entry for every plugin's audio exports (#313): the dialog lists
+//! them and shows the picked one's own choices, its options (interface
+//! 1.11: one of its plugin's dialogs). OK closes the options with OK, and
+//! the export waits ([`Waiting`]) until the plugin has kept them before
+//! the file is asked for.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use oxiguitar_host::{Level, Plugins};
+use oxiguitar_host::{Level, Plugins, TabId};
 use oxiguitar_model::Score;
 use oxiguitar_play::export::{self, Failure, Plan};
+use serde_json::Value;
 
 /// An entry of File → Export that an exporter plugin adds.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -23,8 +30,27 @@ pub(crate) struct Target {
     /// What it makes ("WAV Audio") and its files' extension.
     pub(crate) name: String,
     pub(crate) extension: String,
-    /// Its plugin's name ("WAV export"), where its settings are.
-    pub(crate) plugin_name: String,
+    /// Its options: one of its plugin's dialogs (interface 1.11).
+    pub(crate) options: Option<TabId>,
+}
+
+impl Target {
+    /// How settings.json names it: its plugin's id and its own.
+    pub(crate) fn key(&self) -> String {
+        format!("{}/{}", self.plugin, self.id)
+    }
+}
+
+/// The settings key of the format the export dialog picked last.
+pub(crate) const FORMAT_KEY: &str = "export-format";
+
+/// The format the export dialog starts with: the one picked last, while a
+/// plugin still exports to it, or the first.
+pub(crate) fn remembered(targets: &[Target], saved: Option<&Value>) -> usize {
+    saved
+        .and_then(Value::as_str)
+        .and_then(|key| targets.iter().position(|t| t.key() == key))
+        .unwrap_or(0)
 }
 
 /// The audio exporters the ready plugins add, in plugin order.
@@ -38,7 +64,10 @@ pub(crate) fn targets(plugins: &Plugins) -> Vec<Target> {
             id: e.spec.id.clone(),
             name: e.spec.name.clone(),
             extension: e.spec.extension.clone(),
-            plugin_name: e.plugin.name(),
+            options: e.spec.options.as_ref().map(|tab| TabId {
+                plugin: e.plugin_id().to_owned(),
+                tab: tab.clone(),
+            }),
         })
         .collect()
 }
@@ -146,6 +175,16 @@ impl Job {
     }
 }
 
+/// An export the dialog's OK started, waiting for the plugin to keep its
+/// options (`plugin_tabs::Answer::Closed`) before its file is asked for.
+pub(crate) struct Waiting {
+    pub(crate) options: TabId,
+    pub(crate) job: Job,
+    /// The file name suggested, and the folder the file dialog opens in.
+    pub(crate) name: String,
+    pub(crate) folder: Option<PathBuf>,
+}
+
 /// `path` with the extension `extension` when it has none.
 pub(crate) fn with_extension(mut path: PathBuf, extension: &str) -> PathBuf {
     if path.extension().is_none() {
@@ -164,8 +203,30 @@ mod tests {
             id: "wav".into(),
             name: "WAV Audio".into(),
             extension: "wav".into(),
-            plugin_name: "WAV export".into(),
+            options: None,
         }
+    }
+
+    #[test]
+    fn the_dialog_starts_with_the_format_picked_last() {
+        let flac = Target {
+            id: "flac".into(),
+            name: "FLAC Audio".into(),
+            extension: "flac".into(),
+            ..target()
+        };
+        let targets = [target(), flac];
+        assert_eq!(targets[1].key(), "oxiguitar.wav/flac");
+        let saved = Value::from("oxiguitar.wav/flac");
+        assert_eq!(remembered(&targets, Some(&saved)), 1);
+        assert_eq!(remembered(&targets, None), 0);
+        let gone = Value::from("oxiguitar.mp3/mp3");
+        assert_eq!(
+            remembered(&targets, Some(&gone)),
+            0,
+            "no plugin exports it now"
+        );
+        assert_eq!(remembered(&targets, Some(&Value::from(3))), 0);
     }
 
     #[test]

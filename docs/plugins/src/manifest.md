@@ -37,7 +37,7 @@ The template's:
 | `tools` | no | Its entries in the Tools menu, and from interface 1.8 in any menu and on the palette; interface 1.2 ([Tools](tools.md)) |
 | `track_sections` | no | Its sections of the Track tab; interface 1.3 ([Track sections](track-sections.md)) |
 | `folders` | no | The folders it shares with the user, by name, beside `plugins` in OxiGuitar's folders; OxiGuitar creates the user's at start, and the plugin asks where each is by its name (interface 1.8) ([Settings](settings.md#shared-folders)) |
-| `exporters` | no | Its entries in File → Export; interface 1.4 ([Exporters](exporters.md)) |
+| `exporters` | no | Its formats in File → Export Audio…; interface 1.4, and 1.11 for an exporter's `options` ([Exporters](exporters.md)) |
 | `needs` | no | The plugins it can't work without, each `{"id": …, "version": …}` with the lowest version that will do; interface 1.4 (below) |
 | `replaces` | no | The ids of plugins it succeeds; interface 1.4 (below) |
 

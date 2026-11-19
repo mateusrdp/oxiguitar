@@ -204,7 +204,7 @@ struct App {
     /// canvases; what it last answered for each tab; what each area shows.
     tab_thread: Option<TabThread>,
     plugin_tabs: HashMap<TabId, PluginTabState>,
-    plugin_views: [PluginView; 5],
+    plugin_views: [PluginView; 6],
     /// The plugin dialog that is open (a tab whose area is `dialog`,
     /// interface 1.8).
     plugin_dialog: Option<TabId>,
@@ -256,6 +256,9 @@ struct App {
     fit_whole_song: Option<bool>,
     /// Harmonize… is open.
     harmonize_shown: bool,
+    /// Merge Into… is open (#312): the track merged, and the tracks its
+    /// list offers, in its order.
+    merge_dialog: Option<(usize, Vec<usize>)>,
     /// Copy, Cut or Paste Bars' dialog is open, for which.
     bars_dialog: Option<editing::ClipKey>,
     /// What to do once the score is saved (after "Save the changes…?").
@@ -286,10 +289,14 @@ struct App {
     followed: Option<(i32, i32)>,
     /// Where Pause put the caret: moved from there, the pause ends.
     paused_at: Option<oxiguitar_edit::Caret>,
-    /// File → Export's audio exporters, the one whose dialog is open, and
+    /// File → Export Audio…'s exporters; the one picked while its dialog
+    /// is open, and its options shown there (interface 1.11); the export
+    /// waiting for its options to be kept before its file is asked for;
     /// the stop switch of the export under way.
     exporters: Vec<audio_export::Target>,
     export_with: Option<usize>,
+    export_options: Option<TabId>,
+    export_waiting: Option<audio_export::Waiting>,
     export_cancel: Option<Arc<std::sync::atomic::AtomicBool>>,
 }
 
@@ -305,6 +312,8 @@ enum Asked {
     Apply(editing::Typed),
     /// Delete this track?
     DeleteTrack(editing::Typed),
+    /// Nothing to answer: it only tells (its one button is OK).
+    Told,
 }
 
 /// What waits on the answer to "Save the changes…?".
@@ -675,6 +684,7 @@ fn main() -> Result<(), slint::PlatformError> {
         transpose_scope: None,
         fit_whole_song: None,
         harmonize_shown: false,
+        merge_dialog: None,
         bars_dialog: None,
         after_save: None,
         player: player::Player::new(control),
@@ -692,6 +702,8 @@ fn main() -> Result<(), slint::PlatformError> {
         paused_at: None,
         exporters: audio_export::targets(&startup.plugins),
         export_with: None,
+        export_options: None,
+        export_waiting: None,
         export_cancel: None,
     }));
     APP.with(|a| *a.borrow_mut() = Some(app.clone()));
@@ -874,6 +886,7 @@ fn main() -> Result<(), slint::PlatformError> {
             "paste-bars" => return clipboard(&a, editing::ClipKey::PasteBars),
             "add-track" => return track_action(&a, "add"),
             "delete-track" => return track_action(&a, "delete"),
+            "merge-track" => return track_action(&a, "merge"),
             "transpose-selection" => return open_transpose(&a, oxiguitar_edit::Scope::Selection),
             "transpose-all" => return open_transpose(&a, oxiguitar_edit::Scope::All),
             "fingering-selection" => return find_fingering(&a, oxiguitar_edit::Scope::Selection),
@@ -995,6 +1008,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_harmonize_dialog_done(move |ok| harmonize_dialog_done(&a, ok));
     let a = app.clone();
+    ui.on_merge_dialog_done(move |ok| merge_dialog_done(&a, ok));
+    let a = app.clone();
     ui.on_track_menu(move |i, action| {
         let i = usize::try_from(i).unwrap_or(0);
         let a = a.clone();
@@ -1048,7 +1063,9 @@ fn main() -> Result<(), slint::PlatformError> {
             .collect(),
     ));
     let a = app.clone();
-    ui.on_export_with(move |i| export_audio_dialog(&a, i as usize));
+    ui.on_export_audio(move || export_audio_dialog(&a));
+    let a = app.clone();
+    ui.on_export_format_picked(move |i| export_format_picked(&a, i));
     let a = app.clone();
     ui.on_export_dialog_done(move |ok| export_audio_chosen(&a, ok));
     let a = app.clone();
@@ -1833,24 +1850,28 @@ fn plugin_tab_on_screen(s: &App, side: Side) -> Option<TabId> {
     plugin_tabs::tab_of(area.active_id())
 }
 
-/// Where a plugin's tab shows: one of the window's areas, or the plugin
-/// dialog over the window (interface 1.8).
+/// Where a plugin's tab shows: one of the window's areas, the plugin
+/// dialog over the window (interface 1.8), or the export dialog's options
+/// (interface 1.11).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum View {
     Area(Side),
     Dialog,
+    Export,
 }
 
 impl View {
-    const ALL: [View; 5] = [
+    const ALL: [View; 6] = [
         View::Area(Side::Top),
         View::Area(Side::Bottom),
         View::Area(Side::Left),
         View::Area(Side::Right),
         View::Dialog,
+        View::Export,
     ];
 
-    /// The view for the window's number: an area's, or 4 for the dialog.
+    /// The view for the window's number: an area's, 4 for the dialog, 5
+    /// for the export dialog's options.
     fn from_index(i: i32) -> Option<View> {
         View::ALL.get(usize::try_from(i).ok()?).copied()
     }
@@ -1859,6 +1880,7 @@ impl View {
         match self {
             View::Area(side) => side.index(),
             View::Dialog => 4,
+            View::Export => 5,
         }
     }
 }
@@ -1868,6 +1890,7 @@ fn plugin_tab_at(s: &App, view: View) -> Option<TabId> {
     match view {
         View::Area(side) => plugin_tab_on_screen(s, side),
         View::Dialog => s.plugin_dialog.clone(),
+        View::Export => s.export_options.clone(),
     }
 }
 
@@ -2013,6 +2036,10 @@ fn plugin_answer(app: &Shared, answer: plugin_tabs::Answer) {
                 .canvases
                 .insert(drawn.widget.clone(), drawn_image(&drawn));
             tab
+        }
+        plugin_tabs::Answer::Closed { tab } => {
+            export_options_closed(app, &tab);
+            return;
         }
         plugin_tabs::Answer::Section {
             dialog,
@@ -2264,6 +2291,11 @@ fn set_plugin_area(ui: &AppWindow, side: View, rows: Option<ModelRc<PluginRow>>,
         View::Dialog => {
             ui.set_dialog_plugin_rows(rows);
             ui.set_dialog_plugin_message(message);
+            return;
+        }
+        View::Export => {
+            ui.set_export_plugin_rows(rows);
+            ui.set_export_plugin_message(message);
             return;
         }
     };
@@ -2717,6 +2749,9 @@ fn handle(app: &Shared, event: Event) {
                 s.bad = bad;
                 s.prefs.play_engraved_beat
             };
+            // A preview still sounding plays the score as it was: it ends
+            // before anything follows the new one (#314).
+            playing::end_preview(app);
             if let Some((tracks, was)) = tracks {
                 track_list_changed(app, &tracks, &was);
             } else {
@@ -4555,6 +4590,7 @@ fn track_action(app: &Shared, action: &str) {
     let command = match action {
         "transpose" => return open_transpose(app, oxiguitar_edit::Scope::Track),
         "fingering" => return find_fingering(app, oxiguitar_edit::Scope::Track),
+        "merge" => return open_merge(app),
         "add" => Command::AddTrack,
         "duplicate" => Command::DuplicateTrack,
         "up" => Command::MoveTrackUp,
@@ -4884,6 +4920,192 @@ fn harmonize_dialog_done(app: &Shared, ok: bool) {
     }
 }
 
+/// Opens Merge Into… (#312) for the caret's track, offering every other
+/// track of its kind (a drum track merges only into a drum track). The
+/// voices that hold notes are ticked.
+fn open_merge(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    if app.borrow().question.is_some() {
+        return;
+    }
+    let found = {
+        let s = app.borrow();
+        let (Some(score), Some(t)) = (s.editing.score(), s.editing.track()) else {
+            return;
+        };
+        let Some(track) = score.tracks.get(t) else {
+            return;
+        };
+        let drums = track.instrument.percussion;
+        let (choices, names): (Vec<usize>, Vec<String>) = score
+            .tracks
+            .iter()
+            .enumerate()
+            .filter(|&(i, other)| i != t && other.instrument.percussion == drums)
+            .map(|(i, other)| (i, other.name.clone()))
+            .unzip();
+        let mut voices = [false; oxiguitar_edit::VOICES];
+        for bar in track.staves.iter().flat_map(|s| &s.bars) {
+            for (v, voice) in bar.voices.iter().enumerate() {
+                if let Some(on) = voices.get_mut(v) {
+                    *on |= voice
+                        .beats
+                        .iter()
+                        .any(|b| b.kind == oxiguitar_model::BeatKind::Notes);
+                }
+            }
+        }
+        if !voices.contains(&true) {
+            voices[0] = true;
+        }
+        (t, track.name.clone(), drums, choices, names, voices)
+    };
+    let (t, name, drums, choices, names, voices) = found;
+    if choices.is_empty() {
+        message(
+            app,
+            Level::Warning,
+            if drums {
+                "No track to merge into: a drum track merges only into another drum track."
+            } else {
+                "No track to merge into: a track merges only into another track that isn't a drum kit."
+            },
+        );
+        return;
+    }
+    app.borrow_mut().merge_dialog = Some((t, choices));
+    ui.set_merge_heading(format!("Merge {name} into").into());
+    ui.set_merge_tracks(strings(names));
+    ui.set_merge_into(0);
+    ui.set_merge_voice1(voices[0]);
+    ui.set_merge_voice2(voices[1]);
+    ui.set_merge_voice3(voices[2]);
+    ui.set_merge_voice4(voices[3]);
+    ui.set_merge_to_voice(0);
+    ui.set_merge_dialog_shown(true);
+}
+
+/// Merge Into… closed: on OK, the merge as one change, after a question
+/// when notes can't be kept; a bar whose rhythms can't be written together
+/// stops it, with a warning.
+fn merge_dialog_done(app: &Shared, ok: bool) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    ui.set_merge_dialog_shown(false);
+    ui.invoke_focus_page();
+    let Some((from, choices)) = app.borrow_mut().merge_dialog.take() else {
+        return;
+    };
+    let picked = usize::try_from(ui.get_merge_into()).unwrap_or(0);
+    let (Some(&into), true) = (choices.get(picked), ok) else {
+        return;
+    };
+    let ticked: Vec<usize> = [
+        ui.get_merge_voice1(),
+        ui.get_merge_voice2(),
+        ui.get_merge_voice3(),
+        ui.get_merge_voice4(),
+    ]
+    .into_iter()
+    .enumerate()
+    .filter_map(|(v, on)| on.then_some(v))
+    .collect();
+    let voices = match ticked.as_slice() {
+        [] => return,
+        [one] => {
+            let to = usize::try_from(ui.get_merge_to_voice()).unwrap_or(0);
+            vec![(*one, to.min(oxiguitar_edit::VOICES - 1))]
+        }
+        many => many.iter().map(|&v| (v, v)).collect(),
+    };
+    let merge = oxiguitar_edit::Merge {
+        into,
+        voices,
+        discard_unisons: ui.get_merge_discard_unisons(),
+    };
+    let (report, donor, receiver) = {
+        let s = app.borrow();
+        let Some(score) = s.editing.score() else {
+            return;
+        };
+        if s.editing.track() != Some(from) {
+            return;
+        }
+        let name = |t: usize| {
+            score
+                .tracks
+                .get(t)
+                .map(|t| t.name.clone())
+                .unwrap_or_default()
+        };
+        (
+            oxiguitar_edit::merge_lost(&score, from, &merge),
+            name(from),
+            name(into),
+        )
+    };
+    let lost = match report {
+        Ok(lost) => lost,
+        Err(oxiguitar_edit::MergeError::Ranges {
+            notes,
+            lowest,
+            highest,
+        }) => {
+            // The question says no; the footer says why and what to do.
+            message(
+                app,
+                Level::Warning,
+                format!(
+                    "{donor} and {receiver} have incompatible ranges: {notes} {} of {donor} can't be played on {receiver}, which plays {} to {}. Consider transposing {donor} first.",
+                    if notes == 1 { "note" } else { "notes" },
+                    lowest.name(),
+                    highest.name(),
+                ),
+            );
+            ask(app, Asked::Told, "Incompatible tracks", &[], &["OK"]);
+            return;
+        }
+        Err(oxiguitar_edit::MergeError::Rhythms { bar }) => {
+            message(
+                app,
+                Level::Warning,
+                format!(
+                    "Not merged: in bar {}, the two tracks' rhythms can't be written in one voice.",
+                    bar + 1
+                ),
+            );
+            return;
+        }
+        Err(_) => return,
+    };
+    let typed = app
+        .borrow_mut()
+        .editing
+        .tool(oxiguitar_edit::Command::MergeTracks(merge));
+    let Some(typed) = typed else {
+        return;
+    };
+    if lost > 0 {
+        ask(
+            app,
+            Asked::Apply(typed),
+            &format!(
+                "{lost} {} can't be kept",
+                if lost == 1 { "note" } else { "notes" }
+            ),
+            &[format!(
+                "No string of {receiver} is free to play them at their pitch, so they are left out. Undo brings them back."
+            )],
+            &["Merge", "Cancel"],
+        );
+    } else {
+        send_typed(app, typed);
+    }
+}
+
 /// Transpose… closed: on OK, the transposition as one change, after a
 /// question when notes can't be kept.
 fn transpose_dialog_done(app: &Shared, ok: bool) {
@@ -5128,7 +5350,7 @@ fn question_answered(app: &Shared, i: i32) {
         (Asked::Unsaved(then), 1) => go_on(app, then),
         (Asked::Unsaved(_), _) => {}
         (Asked::Apply(t) | Asked::DeleteTrack(t), 0) => send_typed(app, t),
-        (Asked::Apply(_) | Asked::DeleteTrack(_), _) => {}
+        (Asked::Apply(_) | Asked::DeleteTrack(_) | Asked::Told, _) => {}
     }
 }
 
@@ -5297,39 +5519,128 @@ fn export_dialog(app: &Shared) {
     run_dialog(pick);
 }
 
-/// File → Export of an audio exporter: the dialog of what to render.
-fn export_audio_dialog(app: &Shared, i: usize) {
-    let mut s = app.borrow_mut();
-    let Some(ui) = s.ui.upgrade() else { return };
-    let Some(target) = s.exporters.get(i).cloned() else {
+/// File → Export Audio…: the dialog of the format and what to render. It
+/// starts with the format picked last; a plugin's dialog can't open over
+/// it (they share the window's one dialog at a time).
+fn export_audio_dialog(app: &Shared) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
-    if s.export_cancel.is_some() {
+    let i = {
+        let s = app.borrow();
+        if s.exporters.is_empty() || s.export_cancel.is_some() || s.export_waiting.is_some() {
+            return;
+        }
+        audio_export::remembered(
+            &s.exporters,
+            s.stored.get(audio_export::FORMAT_KEY).as_ref(),
+        )
+    };
+    if DIALOG_OPEN.swap(true, std::sync::atomic::Ordering::SeqCst) {
         return;
     }
-    s.export_with = Some(i);
-    ui.set_export_heading(format!("Export {}", target.name).into());
-    ui.set_export_plugin(target.plugin_name.clone().into());
-    ui.set_export_has_selection(s.editing.selection().is_some());
+    {
+        let s = app.borrow();
+        ui.set_export_has_selection(s.editing.selection().is_some());
+        ui.set_export_practice_speed(s.player.speed() as i32);
+    }
     ui.set_export_selection(false);
-    ui.set_export_practice_speed(s.player.speed() as i32);
     ui.set_export_at_speed(false);
     ui.set_export_metronome(false);
+    ui.set_export_format(i32::try_from(i).unwrap_or(0));
+    export_format_picked(app, i32::try_from(i).unwrap_or(0));
     ui.set_export_dialog_shown(true);
 }
 
-/// The export dialog closed: with OK, the file dialog, then the export on
-/// a thread of its own while the window shows how far it has got.
+/// The export dialog's format is `i`: its options show, and the ones shown
+/// before are closed with Cancel (what was picked in them is forgotten).
+fn export_format_picked(app: &Shared, i: i32) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let options = {
+        let mut s = app.borrow_mut();
+        let Some(target) = usize::try_from(i)
+            .ok()
+            .and_then(|i| s.exporters.get(i).cloned())
+        else {
+            return;
+        };
+        s.export_with = usize::try_from(i).ok();
+        if s.export_options == target.options && s.export_options.is_some() {
+            return;
+        }
+        close_export_options(&mut s, false);
+        s.export_options = target.options.clone();
+        if let Some(tab) = &target.options {
+            // What an earlier opening showed is not what this one shows.
+            s.plugin_tabs.remove(tab);
+            if let Some(thread) = &s.tab_thread {
+                thread.send(plugin_tabs::Request::Content(tab.clone()));
+            }
+        }
+        target.options
+    };
+    ui.set_export_has_options(options.is_some());
+    match options {
+        Some(tab) => refresh_plugin_view(app, View::Export, &tab),
+        None => set_plugin_area(&ui, View::Export, None, ""),
+    }
+}
+
+/// Closes the export dialog's options, if it shows some, telling their
+/// plugin whether the user pressed OK; which ones they were.
+fn close_export_options(s: &mut App, ok: bool) -> Option<TabId> {
+    let tab = s.export_options.take()?;
+    let view = &mut s.plugin_views[View::Export.index()];
+    view.tab = None;
+    view.content = None;
+    s.plugin_tabs.remove(&tab);
+    if let Some(thread) = &s.tab_thread {
+        thread.send(plugin_tabs::Request::Closed {
+            tab: tab.clone(),
+            ok,
+        });
+    }
+    Some(tab)
+}
+
+/// The export dialog closed: with OK, once the plugin has kept the
+/// options, the file dialog, then the export on a thread of its own while
+/// the window shows how far it has got.
 fn export_audio_chosen(app: &Shared, ok: bool) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
     ui.set_export_dialog_shown(false);
-    let Some(i) = app.borrow_mut().export_with.take() else {
+    DIALOG_OPEN.store(false, std::sync::atomic::Ordering::SeqCst);
+    let (i, options) = {
+        let mut s = app.borrow_mut();
+        let options = close_export_options(&mut s, ok);
+        (s.export_with.take(), options)
+    };
+    set_plugin_area(&ui, View::Export, None, "");
+    let Some(i) = i else {
         return;
     };
     if !ok {
         return;
+    }
+    // The format is kept with its options, whatever comes of the export.
+    {
+        let mut s = app.borrow_mut();
+        let Some(key) = s.exporters.get(i).map(audio_export::Target::key) else {
+            return;
+        };
+        if s.stored
+            .get(audio_export::FORMAT_KEY)
+            .as_ref()
+            .and_then(|v| v.as_str())
+            != Some(key.as_str())
+            && let Err(e) = s.stored.set(audio_export::FORMAT_KEY, key.into())
+        {
+            s.footer.push(Level::Error, e);
+        }
     }
     if let Some(problem) = no_dialogs() {
         message(app, Level::Warning, problem);
@@ -5374,6 +5685,41 @@ fn export_audio_chosen(app: &Shared, ok: bool) {
         };
         (job, name, s.folder.clone())
     };
+    match options {
+        // The tab thread tells the plugin before anything else asked of it
+        // after; its answer (`Answer::Closed`) lets the export go on.
+        Some(options) => {
+            app.borrow_mut().export_waiting = Some(audio_export::Waiting {
+                options,
+                job,
+                name,
+                folder,
+            });
+        }
+        None => pick_export_file(&ui, job, name, folder),
+    }
+}
+
+/// The options `tab` were closed: the export waiting for them asks for its
+/// file.
+fn export_options_closed(app: &Shared, tab: &TabId) {
+    let Some(ui) = app.borrow().ui.upgrade() else {
+        return;
+    };
+    let waiting = {
+        let mut s = app.borrow_mut();
+        match &s.export_waiting {
+            Some(w) if w.options == *tab => s.export_waiting.take(),
+            _ => None,
+        }
+    };
+    if let Some(w) = waiting {
+        pick_export_file(&ui, w.job, w.name, w.folder);
+    }
+}
+
+/// The file dialog for `job`, then the export on a thread of its own.
+fn pick_export_file(ui: &AppWindow, job: audio_export::Job, name: String, folder: Option<PathBuf>) {
     let weak = ui.as_weak();
     let pick = move || {
         let extension = job.target.extension.clone();

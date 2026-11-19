@@ -196,6 +196,9 @@ pub enum Command {
         /// Its volume, pan, mute and solo.
         mix: oxiguitar_model::Mix,
     },
+    /// The caret's track merged into another (#312): its notes written
+    /// alongside the other's, then the caret's track deleted.
+    MergeTracks(crate::Merge),
     /// A transposition of the caret's track, the selection or every track.
     Transpose(crate::Transposition),
     /// A string and fret found again for every note of the caret's track,
@@ -347,6 +350,7 @@ impl Command {
             Command::TrackProperties(_) => "Track Properties",
             Command::ChordsFrom(_) => "Chords From",
             Command::Mix { .. } => "Mixer",
+            Command::MergeTracks(_) => "Merge Tracks",
             Command::Transpose(_) => "Transpose",
             Command::Fingering(_) => "Find Fingering",
             Command::FitBars(_) => "Fit Bars",
@@ -980,6 +984,7 @@ fn plan(score: &Score, c: Caret, selection: Option<Selection>, command: Command)
         | Command::MoveTrackUp
         | Command::MoveTrackDown
         | Command::TrackProperties(_)
+        | Command::MergeTracks(_)
         | Command::Transpose(_)
         | Command::Fingering(_)
         | Command::FitBars(_)

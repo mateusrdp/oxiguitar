@@ -86,6 +86,7 @@ pub struct TestPlugin {
     settings_tool: SettingsTool,
     fake: fake::Fake,
     raw: Raw,
+    raw_options: RawOptions,
     drawer: StampDrawer,
     performer: StampPerformer,
 }
@@ -99,18 +100,33 @@ pub const RAW_MAGIC: &[u8; 8] = b"OXGRAW1\n";
 /// so tests see the host render at the rate asked.
 pub const RAW_RATE: u32 = 44_100;
 
+/// The rates the exporter `raw` offers in its options (interface 1.11),
+/// kept in the plugin's settings as `raw-rate`; the first is the default.
+pub const RAW_RATES: [u32; 2] = [RAW_RATE, 22_050];
+
+/// The rate the plugin's settings name for `raw`, or the default.
+fn raw_rate(settings: &serde_json::Map<String, serde_json::Value>) -> u32 {
+    settings
+        .get("raw-rate")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|r| RAW_RATES.into_iter().find(|x| u64::from(*x) == r))
+        .unwrap_or(RAW_RATE)
+}
+
 /// The exporter `raw` (interface 1.4): the samples as they come, after a
-/// header whose frame count is written over when the export finishes.
-#[derive(Debug, Default)]
+/// header whose frame count is written over when the export finishes. Its
+/// rate is the one its options saved (interface 1.11).
+#[derive(Debug)]
 struct Raw {
-    /// The frames of the export under way, or none.
-    frames: Mutex<Option<u64>>,
+    host: Host,
+    /// The rate and the frames of the export under way, or none.
+    frames: Mutex<Option<(u32, u64)>>,
 }
 
 impl Raw {
-    fn header(frames: u64) -> Vec<u8> {
+    fn header(rate: u32, frames: u64) -> Vec<u8> {
         let mut h = RAW_MAGIC.to_vec();
-        h.extend_from_slice(&RAW_RATE.to_le_bytes());
+        h.extend_from_slice(&rate.to_le_bytes());
         h.extend_from_slice(&frames.to_le_bytes());
         h
     }
@@ -118,16 +134,17 @@ impl Raw {
 
 impl oxiguitar_plugin::AudioExporter for Raw {
     fn start(&self) -> Result<oxiguitar_plugin::ExportStart, Error> {
-        *self.frames.lock().unwrap_or_else(|e| e.into_inner()) = Some(0);
+        let rate = raw_rate(&self.host.settings().unwrap_or_default());
+        *self.frames.lock().unwrap_or_else(|e| e.into_inner()) = Some((rate, 0));
         Ok(oxiguitar_plugin::ExportStart {
-            rate: RAW_RATE,
-            data: Raw::header(0),
+            rate,
+            data: Raw::header(rate, 0),
         })
     }
 
     fn samples(&self, interleaved: &[f32]) -> Result<Vec<u8>, Error> {
         let mut frames = self.frames.lock().unwrap_or_else(|e| e.into_inner());
-        let Some(n) = frames.as_mut() else {
+        let Some((_, n)) = frames.as_mut() else {
             return Err(Error::new(ErrorKind::Failed, "no export was started"));
         };
         *n += (interleaved.len() / 2) as u64;
@@ -135,7 +152,7 @@ impl oxiguitar_plugin::AudioExporter for Raw {
     }
 
     fn finish(&self, cancelled: bool) -> Result<oxiguitar_plugin::ExportEnd, Error> {
-        let frames = self
+        let (rate, frames) = self
             .frames
             .lock()
             .unwrap_or_else(|e| e.into_inner())
@@ -143,8 +160,75 @@ impl oxiguitar_plugin::AudioExporter for Raw {
             .ok_or_else(|| Error::new(ErrorKind::Failed, "no export was started"))?;
         Ok(oxiguitar_plugin::ExportEnd {
             data: Vec::new(),
-            start: (!cancelled).then(|| Raw::header(frames)),
+            start: (!cancelled).then(|| Raw::header(rate, frames)),
         })
+    }
+}
+
+/// The options of the exporter `raw` (interface 1.11): a dialog the export
+/// dialog shows under its list of formats, with the rate. As any dialog,
+/// it changes a draft until it is closed: OK keeps the rate in the
+/// plugin's settings (`raw-rate`), Cancel forgets it.
+#[derive(Debug)]
+struct RawOptions {
+    host: Host,
+    draft: Mutex<Option<serde_json::Map<String, serde_json::Value>>>,
+}
+
+impl RawOptions {
+    fn current(&self) -> serde_json::Map<String, serde_json::Value> {
+        self.draft
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+            .unwrap_or_else(|| self.host.settings().unwrap_or_default())
+    }
+}
+
+impl Tab for RawOptions {
+    fn content(&self) -> TabContent {
+        let rate = raw_rate(&self.current());
+        TabContent {
+            rows: vec![Row {
+                widgets: vec![
+                    Widget::Label {
+                        text: "Rate".into(),
+                        muted: false,
+                    },
+                    Widget::Choice {
+                        id: "rate".into(),
+                        options: RAW_RATES.iter().map(|r| format!("{r} Hz")).collect(),
+                        selected: RAW_RATES.iter().position(|r| *r == rate).unwrap_or(0) as u32,
+                        enabled: true,
+                    },
+                ],
+            }],
+        }
+    }
+
+    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
+        let ("rate", TabEvent::Chosen(i)) = (widget, event) else {
+            return Err(Error::not_found(format!("no widget {widget:?}")));
+        };
+        let rate = RAW_RATES
+            .get(i as usize)
+            .ok_or_else(|| Error::new(ErrorKind::Failed, format!("no rate {i}")))?;
+        let mut settings = self.current();
+        settings.insert("raw-rate".into(), (*rate).into());
+        *self.draft.lock().unwrap_or_else(PoisonError::into_inner) = Some(settings);
+        Ok(())
+    }
+
+    fn closed(&self, ok: bool) -> Result<(), Error> {
+        let draft = self
+            .draft
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        match draft {
+            Some(settings) if ok => self.host.set_settings(&settings),
+            _ => Ok(()),
+        }
     }
 }
 
@@ -690,7 +774,14 @@ impl Plugin for TestPlugin {
                 dialog: settings,
             },
             fake: fake::Fake::new(host.clone()),
-            raw: Raw::default(),
+            raw: Raw {
+                host: host.clone(),
+                frames: Mutex::new(None),
+            },
+            raw_options: RawOptions {
+                host: host.clone(),
+                draft: Mutex::new(None),
+            },
             drawer: StampDrawer::default(),
             performer: StampPerformer::default(),
             host,
@@ -739,6 +830,7 @@ impl Plugin for TestPlugin {
             "side" => Some(&self.side),
             "ask" => Some(&self.ask),
             "settings" => Some(&*self.settings),
+            "raw-options" => Some(&self.raw_options),
             _ => None,
         }
     }

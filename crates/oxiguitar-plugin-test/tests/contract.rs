@@ -118,14 +118,15 @@ fn the_test_plugin_passes_the_contract() {
     // (2 buttons, 5 other widgets, 3 pointer events on its canvas) and 4
     // of the dialog `ask`'s (its button, 3 pointer events), which is then
     // closed (interface 1.8); the settings dialog's 2 widgets, then closed
-    // (interface 1.9); 3 kinds of event, the selection in both its forms;
-    // 5 tools; the track section and its 2 widgets; 2 instruments and an
-    // effect, 4 real-time checks each; the effect's 3 checks of an update
-    // (interface 1.5); the exporter's 3 checks; its drawing and its playing
-    // of a track (interface 1.8).
+    // (interface 1.9); the exporter's options, a dialog with 1 widget, then
+    // closed (interface 1.11); 3 kinds of event, the selection in both its
+    // forms; 5 tools; the track section and its 2 widgets; 2 instruments
+    // and an effect, 4 real-time checks each; the effect's 3 checks of an
+    // update (interface 1.5); the exporter's 3 checks; its drawing and its
+    // playing of a track (interface 1.8).
     assert_eq!(
         report.passed.len(),
-        12 + 4 + 10 + 4 + 1 + 2 + 1 + 4 + 5 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
+        12 + 4 + 10 + 4 + 1 + 2 + 1 + 3 + 4 + 5 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
         "{:#?}",
         report.passed
     );
@@ -581,6 +582,7 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
             ("side".into(), "Test side".into(), Area::Right),
             ("ask".into(), "Test Dialog".into(), Area::Dialog),
             ("settings".into(), "Test Settings".into(), Area::Dialog),
+            ("raw-options".into(), "Raw Test Audio".into(), Area::Dialog),
         ]
     );
     assert!(!plugins.found()[0].is_loaded());
@@ -737,7 +739,7 @@ fn a_plugin_that_fails_is_withdrawn_as_if_it_were_not_installed() {
     let opened = plugins.open(file, Some("oxgtest")).unwrap();
     assert_eq!(opened.format.plugin.name(), "Test plugin");
     assert_eq!(opened.read.score.info.title, "Tarde em Itapuã");
-    assert_eq!(plugins.tabs().len(), 4);
+    assert_eq!(plugins.tabs().len(), 5);
     assert!(plugins.wants(EventKind::Score));
 
     // An ordinary error is an answer, not a failure.
@@ -2328,6 +2330,61 @@ fn an_audio_export_writes_the_song_through_the_exporter() {
         "{} s for {expected} s",
         made.seconds
     );
+}
+
+/// Interface 1.11: an export's options are one of its plugin's dialogs.
+/// What they show changes a draft; closed with OK before the export
+/// starts, they are what the export uses, and Cancel forgets them.
+#[test]
+fn interface_1_11_an_exports_options() {
+    use oxiguitar_play::export::{self, Plan};
+
+    let dir = folder("one-eleven", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let exporters = plugins.exporters();
+    let options = TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: exporters[0].spec.options.clone().unwrap(),
+    };
+    assert_eq!(options.tab, "raw-options");
+    let picked = |content: &TabContent| match &content.rows[0].widgets[1] {
+        Widget::Choice { selected, .. } => *selected,
+        other => panic!("{other:?}"),
+    };
+    let rate_of = |out: &Path| {
+        let bytes = std::fs::read(out).unwrap();
+        u32::from_le_bytes(bytes[8..12].try_into().unwrap())
+    };
+    // File → New's bar: no format plugin needed to see the rate.
+    let score = oxiguitar_edit::new_score();
+    let plan = Plan::whole(&score);
+    let out = dir.join("options.oxgraw");
+
+    assert_eq!(picked(&plugins.tab_content(&options).unwrap()), 0);
+    let content = plugins
+        .tab_event(&options, "rate", TabEvent::Chosen(1))
+        .unwrap();
+    assert_eq!(picked(&content), 1, "the draft shows at once");
+    plugins.tab_closed(&options, false);
+    assert_eq!(
+        picked(&plugins.tab_content(&options).unwrap()),
+        0,
+        "Cancel forgets"
+    );
+    let made = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |_| true).unwrap();
+    assert_eq!((made.rate, rate_of(&out)), (44_100, 44_100));
+
+    plugins
+        .tab_event(&options, "rate", TabEvent::Chosen(1))
+        .unwrap();
+    plugins.tab_closed(&options, true);
+    let made = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |_| true).unwrap();
+    assert_eq!(
+        (made.rate, rate_of(&out)),
+        (22_050, 22_050),
+        "OK keeps them"
+    );
+    assert_eq!(picked(&plugins.tab_content(&options).unwrap()), 1);
 }
 
 /// The rest of the core for interface 1.4's advice: what was asked of the

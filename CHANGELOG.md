@@ -4,6 +4,22 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-11-19
+
+### Added
+
+- **One File → Export Audio… for every audio format** (#313): the export dialog has a **Format** list with every format the installed plugins export to, and starts with the one picked last. Under it are the picked format's own choices (bit depth, rate, bitrate), from its plugin; **Export…** keeps them, **Cancel** forgets them. Before, File → Export had one entry per format, and a format's choices were set elsewhere.
+- **Plugin interface 1.11** (the SDK crates are at 1.11.0): an exporter's `options` name one of its plugin's dialogs, which the export dialog shows while that format is picked. The dialog is closed with OK before the export starts, so the plugin has kept the choices by then ([Exporters](https://mateusrdp.github.io/oxiguitar/plugin-guide/exporters.html)).
+
+- **Merge tracks** (#312): right-click a track's row → **Merge Into…** (also Edit → **Merge Track Into…**) writes the track's notes into another track and deletes it, as one step to undo. Pick the track to merge into, which of the track's voices to take (one into the voice you pick, or several voice by voice), and whether to discard unisons (a note the other track plays at the same pitch at the same moment). Where the rhythms differ, notes are cut and tied so both sound as before. Notes keep their strings and frets where they can, else move to a free string at their pitch; notes whose strings are all taken at that moment are left out after a question saying how many. A track merges only into one that can play all its notes: otherwise **Incompatible tracks** shows and the footer says which notes are out of range and suggests transposing first (a bass goes into a guitar once transposed). Drum tracks merge into drum tracks only.
+
+### Fixed
+
+- **A two-digit fret is typed whole with Play Engraved Beat on** (#314): typing 1 then 2 now gives fret 12. Before, the preview of the 1 counted as the song playing, so the 2 was refused or taken as a new fret. A note's preview no longer holds editing back: the next edit ends it and plays its own.
+- **The app icon shows in desktop search again** (#310): the scalable icon's licence comment now sits inside the `<svg>` element, so the `<svg` tag starts within the file's first 256 bytes, where desktops look for it. CI checks this.
+- **Deleting a track no longer shifts other tracks' settings to the wrong track**: a track showing another track's chords, and the colours of bars on one track, now follow their tracks when a track before them is deleted. Showing the deleted track's chords stops.
+- **CI passes again after a new advisory**: RUSTSEC-2026-0543 (17 Nov 2026) marks `chrono` unmaintained, with no fix. Only Slint 1.19 uses it, so `deny.toml` ignores it like the other Slint-borne ones; revisit on the next Slint upgrade.
+
 ## [0.21.1] - 2026-11-17
 
 ### Changed

@@ -72,6 +72,11 @@ jobs:
             | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
       - name: The two Linux builds keep apart
         run: scripts/check-display-crates.sh
+      # Desktops recognise an SVG by "<svg" in its first 256 bytes (#310).
+      - name: The scalable icon is recognised as an SVG
+        run: |
+          [[ "$(head -c 256 assets/icon/oxiguitar-placeholder.svg)" == *"<svg"* ]] \
+            || { echo "::error::<svg must start in the first 256 bytes of assets/icon/oxiguitar-placeholder.svg"; exit 1; }
       - name: Docs
         run: |
           set -o pipefail

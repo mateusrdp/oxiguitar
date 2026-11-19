@@ -398,6 +398,22 @@ fn stop(app: &Shared) -> Vec<Do> {
     dos
 }
 
+/// The score changed while a note's preview (#246) still sounds, as when
+/// a fret's second digit follows the first (#314): the preview ends, its
+/// solo undone, so the score goes to the sound as usual and the next
+/// preview plays the score as it now is.
+pub(crate) fn end_preview(app: &Shared) {
+    let dos = {
+        let mut s = app.borrow_mut();
+        if !s.player.previewing() {
+            return;
+        }
+        s.player.stop().1
+    };
+    act(app, dos);
+    sync(app);
+}
+
 /// Play `count` beats starting at the caret as a preview (#246).
 pub(crate) fn play_beats(app: &Shared, count: usize) -> Vec<Do> {
     let mut s = app.borrow_mut();

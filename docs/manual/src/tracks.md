@@ -5,11 +5,23 @@ The **Tracks** tab of the bottom panel shows every track of the song: its name, 
 - **Click a name** to select that track: the caret moves to it ([Editing](editing.md)). Shift-click a shown track to hide it (at least one must remain); Shift-click a hidden track to add it. Ctrl-click does nothing. A track is shown while its clef or TAB button is on.
 - **Click a hidden track's notation button** to show it with the others, lined up bar by bar in one score. There's no separate "show all" switch: showing each track you want is enough.
 - With several tracks, each system starts with the tracks' names.
-- **Right-click a name** for the track's menu: Properties…, Transpose…, Add Track, Duplicate, Move Up, Move Down and Delete…. Delete asks first; Undo brings a deleted track back.
+- **Right-click a name** for the track's menu: Properties…, Transpose…, Add Track, Duplicate, Merge Into…, Move Up, Move Down and Delete…. Delete asks first; Undo brings a deleted track back.
 
 ## Adding, moving and deleting tracks
 
 **Add Track** (also Edit → Add Track) adds a steel-string guitar in standard tuning after the track, with empty bars, and moves the caret to it. **Duplicate** copies the track with its notes, named "… (copy)". **Move Up** and **Move Down** change its place in the song. The tracks you had on the page stay there wherever they move, and when the caret's track is deleted the caret goes to the nearest track still shown.
+
+## Merging tracks
+
+**Merge Into…** (in a track's right-click menu, and Edit → Merge Track Into…) writes the track's notes into another track, then deletes it. Undo brings both back as they were.
+
+- **Into**: the track that takes the notes. A drum track merges only into another drum track, and other tracks only into tracks that aren't drum kits.
+- **Its voices**: which of the track's voices to take (those with notes start ticked). With one voice ticked, **Into voice** says which voice of the other track it goes into. With several, each goes into the voice of the same number.
+- **Discard unisons**: leaves out a note when the other track plays the same pitch at the same moment.
+
+Both tracks must have compatible ranges: every note merged must be one the other track can play, from its lowest open string to its highest fret. If not (a bass into a guitar, say), nothing is merged: **Incompatible tracks** shows, and the footer says how many notes are out of range and the other track's range. Transpose the track first (right-click its name → Transpose…), then merge.
+
+Where the two rhythms differ, notes are cut where the other track's notes start or end, and the pieces are tied, so everything sounds as before. Notes keep their strings and frets where they can. Where the other track's tuning can't play a note on its string, or the string is taken, the note moves to a free string at the same pitch. If every string that could play some notes is taken at that moment, a question says how many before they are left out. In the rare bar whose two rhythms can't be written in one voice, nothing is merged and the footer names the bar. The other track keeps its name, sound, mixer and lyrics; its lyrics stay on their notes.
 
 ## Track properties
 
