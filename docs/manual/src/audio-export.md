@@ -1,11 +1,12 @@
 # Exporting audio
 
-**File → Export WAV Audio…** saves the song's sound as a WAV file, which every audio program and player opens. OxiGuitar plays the song into the file as fast as your computer can, without a sound card, so a three-minute song takes seconds.
+**File → Export Audio…** saves the song's sound as an audio file. OxiGuitar plays the song into the file as fast as your computer can, without a sound card, so a three-minute song takes seconds. The formats come from plugins: the entry shows once a plugin that exports audio is installed ([Official plugins](official-plugins.md)).
 
 ## What goes in
 
 A dialog asks before the file dialog:
 
+- **Format**: every format the installed plugins export to, starting with the one you picked last. Under it, the format's own choices, from its plugin (a bit depth, a rate, a bitrate). **Export…** keeps them for the next time; **Cancel** forgets what you changed.
 - **What**: the whole song, or the selected bars (when bars or beats are selected).
 - **Tempo**: as written, or at the practice speed set in the Player area (Speed), when it isn't 100 %. The pitch stays the same, as when playing.
 - **The metronome's clicks in the sound**: off unless you tick it.

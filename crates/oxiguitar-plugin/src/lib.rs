@@ -1358,8 +1358,8 @@ mod tests {
             check::<Echo>(&missing, "0.1.0"),
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
-        let later = ECHO.replace("\"1.0\"", "\"1.11\"");
         let (major, minor) = oxiguitar_plugin_api::INTERFACE;
+        let later = ECHO.replace("\"1.0\"", &format!("\"{major}.{}\"", minor + 1));
         assert!(
             check::<Echo>(&later, "0.1.0")[0].contains(&format!("this SDK is {major}.{minor}"))
         );
