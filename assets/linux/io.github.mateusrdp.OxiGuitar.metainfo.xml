@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.21.3" date="2026-11-19" type="development">
+      <description>
+        <p>Plugin interface 1.12 (the SDK crates are at 1.12.0; #294): a plugin that plays the notes its own way is also given the track's General MIDI program, each staff's tuning and capo (so it knows each note's fret), and the track's settings for it, as its track-dialog section keeps them. The request ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.21.3</url>
+    </release>
     <release version="0.21.2" date="2026-11-19" type="development">
       <description>
         <p>One File → Export Audio… for every audio format (#313): the export dialog has a Format list with every format the installed plugins export to, and starts with the one picked last. Under it are the picked format's own choices (bit depth, rate, bitrate), from its plugin; Export… keeps them, Cancel ...</p>

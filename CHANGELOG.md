@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.3] - 2026-11-19
+
 ### Added
 
 - **Plugin interface 1.12** (the SDK crates are at 1.12.0; #294): a plugin that plays the notes its own way is also given the track's General MIDI program, each staff's tuning and capo (so it knows each note's fret), and the track's settings for it, as its track-dialog section keeps them. The request grew in place, since no released plugin used it: such a plugin needs interface 1.12 ([Playing the notes your own way](https://mateusrdp.github.io/oxiguitar/plugin-guide/playing.html)).
