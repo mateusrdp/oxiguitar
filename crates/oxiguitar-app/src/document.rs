@@ -188,6 +188,8 @@ struct Shared {
     /// The caret or the selection as the window last told it, for the
     /// plugins that ask (interface 1.8).
     selection: Option<oxiguitar_host::api::event::Selection2>,
+    /// The open score's file, once it has one (interface 1.13).
+    file: Option<PathBuf>,
 }
 
 impl OpenScore {
@@ -211,6 +213,7 @@ impl OpenScore {
         if score.is_none() {
             s.engraved = None;
             s.selection = None;
+            s.file = None;
         }
         s.score = score;
         s.revision = revision;
@@ -224,6 +227,17 @@ impl OpenScore {
         hits: Arc<Hits>,
     ) {
         self.lock().engraved = Some((revision, pages, hits));
+    }
+
+    /// The open score's file: where it was opened from or last saved to;
+    /// `None` for a score never saved.
+    pub(crate) fn set_file(&self, file: Option<PathBuf>) {
+        self.lock().file = file;
+    }
+
+    /// The open score's file, as plugins ask for it (interface 1.13).
+    pub(crate) fn file(&self) -> Option<PathBuf> {
+        self.lock().file.clone()
     }
 
     /// The caret or the selection moved.

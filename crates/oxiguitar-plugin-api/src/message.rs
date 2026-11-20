@@ -326,10 +326,13 @@ pub enum Request<'a> {
     /// that carries the plugin's data or marks (on the beat or on one of
     /// its notes). Sent each time the score is engraved, when the places
     /// changed since the last time, to plugins whose manifest `draws`.
-    /// Answered with [`Answer::Drawn`]. Since interface 1.8.
+    /// Answered with [`Answer::Drawn`]. Since interface 1.8; since 1.13
+    /// with `times`, and only to plugins built for 1.13 or later.
     Draw {
         /// The places.
         places: Vec<DrawPlace>,
+        /// When the places and the bars are played. Since interface 1.13.
+        times: DrawTimes,
     },
     /// How one track is to be played: its notes as the score gives them,
     /// for a plugin whose manifest `performs` to give back as they should
@@ -483,6 +486,32 @@ pub enum DrawPlace {
     },
 }
 
+/// When what a plugin draws at is played ([`Request::Draw`]), in seconds
+/// of the score at 100 % speed from the song's start: the clock of
+/// [`PlayedBeat`] and [`crate::realtime::ProcessCall::time`]. Since
+/// interface 1.13.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct DrawTimes {
+    /// For each place, by its index in the request, when it starts each
+    /// time it is played, in playing order (repeats unrolled); empty for a
+    /// place that is never played.
+    pub starts: Vec<Vec<f64>>,
+    /// Every bar in playing order, each time it is played: where a jump
+    /// (a repeat, an ending, a D.C.) is, the next bar is not the bar after.
+    pub bars: Vec<PlayedBar>,
+}
+
+/// A bar as played ([`DrawTimes::bars`]). Since interface 1.13.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct PlayedBar {
+    /// The bar, from 0.
+    pub bar: u32,
+    /// When it starts, in seconds of the score at 100 % speed.
+    pub start: f64,
+    /// When it ends.
+    pub end: f64,
+}
+
 /// What a plugin draws at one place ([`Answer::Drawn`]): a box, measured in
 /// staff spaces (the distance between two lines of a five-line staff),
 /// with its items from the box's top left corner, y downwards. The core
@@ -499,7 +528,36 @@ pub struct Drawn {
     /// What is in it (a [`crate::display::Item::Text`]'s size is in staff
     /// spaces too), at most [`DRAWN_ITEMS_MAX`].
     pub items: Vec<crate::display::Item>,
+    /// A line that goes on from the box's right edge, for as long as some
+    /// seconds of the music last: across beats, bars and systems. Since
+    /// interface 1.13.
+    pub run: Option<DrawnRun>,
 }
+
+/// A line from a drawing's box onwards, at the box's middle height, for
+/// `seconds` of the music from the first time its place is played
+/// ([`Drawn::run`]). The core finds where that time falls with its own
+/// time map (tempo changes included) and draws the line to that point,
+/// across systems. It ends early, with no hook, where the playing order
+/// jumps (a repeat, an ending, a D.C.) or the song ends. Since interface
+/// 1.13.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DrawnRun {
+    /// How long it lasts, in seconds of the score at 100 % speed: more
+    /// than 0, at most [`RUN_SECONDS_MAX`].
+    pub seconds: f64,
+    /// Its width, in staff spaces, at most 1.
+    pub width: f32,
+    /// Its colour.
+    pub paint: crate::display::Paint,
+    /// Dashed rather than solid.
+    pub dashed: bool,
+    /// A short downward hook where it ends (not where it is cut short).
+    pub hook: bool,
+}
+
+/// The longest a run lasts: a day.
+pub const RUN_SECONDS_MAX: f64 = 86_400.0;
 
 /// The most staff spaces a drawing may be wide or tall.
 pub const DRAWN_MAX: f32 = 40.0;
@@ -522,6 +580,20 @@ impl Drawn {
                 "a drawing has {} items; at most {DRAWN_ITEMS_MAX}",
                 self.items.len()
             ));
+        }
+        if let Some(run) = &self.run {
+            if !run.seconds.is_finite() || run.seconds <= 0.0 || run.seconds > RUN_SECONDS_MAX {
+                return Some(format!(
+                    "a drawing's run lasts {} seconds; more than 0, at most {RUN_SECONDS_MAX}",
+                    run.seconds
+                ));
+            }
+            if !run.width.is_finite() || !(0.0..=1.0).contains(&run.width) {
+                return Some(format!(
+                    "a drawing's run is {} staff spaces wide; at most 1",
+                    run.width
+                ));
+            }
         }
         None
     }
@@ -965,6 +1037,9 @@ pub enum HostRequest<'a> {
         /// The folder's name, as the manifest lists it.
         name: String,
     },
+    /// The open score's file: for a plugin that keeps paths relative to
+    /// it. Answered with [`HostAnswer::ScoreFile`]. Since interface 1.13.
+    ScoreFile,
 }
 
 /// The open score as engraved (interface 1.8): what the window shows, in
@@ -1180,6 +1255,9 @@ pub enum HostAnswer<'a> {
     Selection(Option<crate::event::Selection2>),
     /// Where a shared folder is. Since interface 1.8.
     Folder(FolderPlaces),
+    /// The open score's file, an absolute path as UTF-8 text; `None` when
+    /// no score is open or it was never saved. Since interface 1.13.
+    ScoreFile(Option<String>),
 }
 
 impl HostAnswer<'_> {
@@ -1195,6 +1273,7 @@ impl HostAnswer<'_> {
             HostAnswer::Engraving(e) => HostAnswer::Engraving(e),
             HostAnswer::Selection(s) => HostAnswer::Selection(s),
             HostAnswer::Folder(f) => HostAnswer::Folder(f),
+            HostAnswer::ScoreFile(f) => HostAnswer::ScoreFile(f),
         }
     }
 }

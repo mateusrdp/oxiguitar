@@ -37,6 +37,7 @@ fn paint(p: w::Paint) -> Paint {
         w::Paint::Page => Paint::Page,
         w::Paint::Accent => Paint::Accent,
         w::Paint::Muted => Paint::Muted,
+        w::Paint::Warning => Paint::Warning,
     }
 }
 

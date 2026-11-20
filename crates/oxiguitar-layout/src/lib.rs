@@ -25,7 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use oxiguitar_model::{Score, Track};
 
-pub use drawing::{Anchor, Drawing, Drawings, DrawnAt, Shape};
+pub use drawing::{Anchor, Drawing, Drawings, DrawnAt, Run, Shape};
 pub use hits::{BarHits, BeatHit, DrawnHit, DrawnSpot, Found, Hits, Spot, StaffHits, SystemHits};
 pub use pitch::pitch_at_step;
 

@@ -762,12 +762,6 @@ impl Manifest {
                     self.interface
                 ));
             }
-            if self.draws {
-                out.push(format!(
-                    "drawing on the page needs interface {since_1_8}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
             if self.tabs.iter().any(|t| t.area == crate::tab::Area::Dialog) {
                 out.push(format!(
                     "dialogs need interface {since_1_8}, and the manifest asks for {}",
@@ -788,6 +782,27 @@ impl Manifest {
             major: 1,
             minor: 12,
         };
+        // Interface 1.13 gave Request::Draw the places' times and Drawn its
+        // run; no plugin released before it drew, so both were extended in
+        // place.
+        let since_1_13 = InterfaceVersion {
+            major: 1,
+            minor: 13,
+        };
+        if self.interface < since_1_13 {
+            if self.draws {
+                out.push(format!(
+                    "drawing on the page needs interface {since_1_13}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+            if self.effects.iter().any(|e| !e.chord_voice) {
+                out.push(format!(
+                    "an effect's chord_voice needs interface {since_1_13}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+        }
         if self.interface < since_1_12 && self.performs {
             out.push(format!(
                 "playing the notes its own way needs interface {since_1_12}, and the manifest asks for {}",
@@ -917,6 +932,17 @@ pub struct InstrumentSpec {
     /// interface 1.8.
     #[serde(default)]
     pub order: Option<i32>,
+    /// For an effect: whether it also runs on its track's chord voice (the
+    /// track's chord diagrams played, a copy of the track's effects). An
+    /// effect that adds sound of its own says `false`, or the sound would
+    /// be heard twice. Since interface 1.13.
+    #[serde(default = "yes", skip_serializing_if = "is_yes")]
+    pub chord_voice: bool,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_yes(v: &bool) -> bool {
+    *v
 }
 
 impl InstrumentSpec {
@@ -1377,6 +1403,58 @@ mod tests {
         );
     }
 
+    /// Drawing and an effect off the chord voice need 1.13, whose drawing
+    /// request grew in place (#240).
+    #[test]
+    fn drawing_and_chord_voice_need_interface_1_13() {
+        let json = |interface: &str| {
+            format!(
+                r#"{{"interface": "{interface}", "id": "me.clips", "name": "Clips",
+                    "version": "0.1.0", "draws": true,
+                    "effects": [{{"id": "play", "name": "Play", "chord_voice": false}}]}}"#
+            )
+        };
+        let m: Manifest = serde_json::from_str(&json("1.13")).unwrap();
+        assert!(m.problems().is_empty(), "{:?}", m.problems());
+        assert!(!m.effects[0].chord_voice);
+        let m: Manifest = serde_json::from_str(&json("1.12")).unwrap();
+        assert_eq!(
+            m.problems(),
+            [
+                "drawing on the page needs interface 1.13, and the manifest asks for 1.12",
+                "an effect's chord_voice needs interface 1.13, and the manifest asks for 1.12"
+            ]
+        );
+        // Without the key, an effect runs on chord voices too.
+        let e: InstrumentSpec = serde_json::from_str(r#"{"id": "e", "name": "E"}"#).unwrap();
+        assert!(e.chord_voice);
+    }
+
+    /// A drawing's run lasts a positive time, at most a day, and is at most
+    /// a staff space wide.
+    #[test]
+    fn a_drawings_run_keeps_its_limits() {
+        use crate::message::{Drawn, DrawnRun};
+        let drawn = |seconds: f64, width: f32| Drawn {
+            place: 0,
+            width: 1.0,
+            height: 1.0,
+            items: Vec::new(),
+            run: Some(DrawnRun {
+                seconds,
+                width,
+                paint: crate::display::Paint::Warning,
+                dashed: false,
+                hook: true,
+            }),
+        };
+        assert_eq!(drawn(10.0, 0.1).problem(), None);
+        assert!(drawn(0.0, 0.1).problem().is_some());
+        assert!(drawn(f64::NAN, 0.1).problem().is_some());
+        assert!(drawn(100_000.0, 0.1).problem().is_some());
+        assert!(drawn(10.0, 1.5).problem().is_some());
+    }
+
     /// An export's options name one of the plugin's dialogs, and need 1.11.
     #[test]
     fn an_exports_options_are_a_dialog_and_need_interface_1_11() {
@@ -1469,6 +1547,7 @@ mod tests {
             |plays: Option<Vec<InstrumentClass>>, not: Vec<InstrumentClass>| InstrumentSpec {
                 follows_score: false,
                 order: None,
+                chord_voice: true,
                 id: "i".into(),
                 name: "I".into(),
                 plays,

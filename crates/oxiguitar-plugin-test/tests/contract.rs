@@ -220,7 +220,7 @@ fn crashing_child() {
 
 #[test]
 fn a_plugin_draws_at_its_places_and_isnt_asked_twice_about_the_same() {
-    use oxiguitar_host::api::message::DrawPlace;
+    use oxiguitar_host::api::message::{DrawPlace, DrawTimes, PlayedBar};
     use oxiguitar_host::api::score2::{Beat2, BeatExt};
     let dir = folder("draws", &["test.oxp"]);
     let (plugins, heard) = discover(std::slice::from_ref(&dir), SharedSettings::default());
@@ -258,23 +258,58 @@ fn a_plugin_draws_at_its_places_and_isnt_asked_twice_about_the_same() {
     };
     let before = asked();
     // A stamped beat gets the stamp; one that isn't, nothing.
-    let drawn = plugins.draw("oxiguitar.test", vec![beat(false), beat(true)]);
+    // Played once each, in a song of two bars (interface 1.13).
+    let played = || DrawTimes {
+        starts: vec![vec![0.0], vec![0.5]],
+        bars: vec![
+            PlayedBar {
+                bar: 0,
+                start: 0.0,
+                end: 2.0,
+            },
+            PlayedBar {
+                bar: 1,
+                start: 2.0,
+                end: 4.0,
+            },
+        ],
+    };
+    let drawn = plugins.draw("oxiguitar.test", vec![beat(false), beat(true)], played());
     assert_eq!(drawn.len(), 1);
     assert_eq!(drawn[0].place, 1);
     assert_eq!((drawn[0].width, drawn[0].height), (2.4, 1.6));
+    // Played, it runs on for a second.
+    assert_eq!(drawn[0].run.as_ref().map(|r| r.seconds), Some(1.0));
     assert_eq!(asked(), before + 1);
     // The same places again: the last answer, not a new request.
     assert_eq!(
-        plugins.draw("oxiguitar.test", vec![beat(false), beat(true)]),
+        plugins.draw("oxiguitar.test", vec![beat(false), beat(true)], played()),
         drawn
     );
     assert_eq!(asked(), before + 1);
+    // The same places played otherwise: asked again; never played, no run.
+    let never = plugins.draw(
+        "oxiguitar.test",
+        vec![beat(false), beat(true)],
+        DrawTimes::default(),
+    );
+    assert_eq!(never.len(), 1);
+    assert_eq!(never[0].run, None);
+    assert_eq!(asked(), before + 2);
     // Other places: asked again.
-    assert!(plugins.draw("oxiguitar.test", vec![beat(false)]).is_empty());
-    assert_eq!(asked(), before + 2);
+    assert!(
+        plugins
+            .draw("oxiguitar.test", vec![beat(false)], played())
+            .is_empty()
+    );
+    assert_eq!(asked(), before + 3);
     // None: nothing drawn, nothing asked.
-    assert!(plugins.draw("oxiguitar.test", Vec::new()).is_empty());
-    assert_eq!(asked(), before + 2);
+    assert!(
+        plugins
+            .draw("oxiguitar.test", Vec::new(), DrawTimes::default())
+            .is_empty()
+    );
+    assert_eq!(asked(), before + 3);
     // A click on what it drew goes to it, with the place and the point.
     let click = |double| oxiguitar_host::api::message::Clicked {
         place: beat(true),
@@ -299,7 +334,11 @@ fn a_plugin_draws_at_its_places_and_isnt_asked_twice_about_the_same() {
             .is_err()
     );
     // A plugin that doesn't draw is never asked.
-    assert!(plugins.draw("someone.else", vec![beat(true)]).is_empty());
+    assert!(
+        plugins
+            .draw("someone.else", vec![beat(true)], played())
+            .is_empty()
+    );
     assert!(
         heard.0.lock().unwrap().is_empty(),
         "{:?}",
@@ -2245,7 +2284,10 @@ fn a_track_s_chords_play_on_a_voice_of_their_own() {
     assert_eq!(g.prepared[k].info.index as usize, t);
     assert!(g.prepared[k].info.name.ends_with("(chords)"));
     let own = g.tracks.iter().position(|&r| r == t).unwrap();
-    assert_eq!(g.effects[k], g.effects[own]);
+    // The test plugin's gain says it isn't for chord voices (interface
+    // 1.13): the track has it, its chord voice doesn't.
+    assert_eq!(g.effects[own].len(), 1);
+    assert!(g.effects[k].is_empty());
     let ready = prepare(&plugins, &score, &with, 48_000, 512).unwrap();
     assert!(ready.silent.is_empty(), "{:?}", ready.silent);
     assert_eq!(ready.routes.len(), 2 * n);
@@ -2559,4 +2601,42 @@ fn interface_1_4_advice_is_shown_once_and_can_be_silenced() {
     .unwrap();
     assert!(plugins.call_service("test-echo", "advise", &blank).is_err());
     assert_eq!(asked().len(), 3);
+}
+
+/// A core with a saved score, for interface 1.13.
+struct Saved;
+
+impl Core for Saved {
+    fn notify(&self, _level: Level, _text: String) {}
+
+    fn score_file(&self) -> Option<std::path::PathBuf> {
+        Some("/songs/song.gp".into())
+    }
+}
+
+/// Interface 1.13: a plugin asks for the open score's file, for paths kept
+/// relative to it; a core without one answers none.
+#[test]
+fn interface_1_13_the_score_s_file() {
+    let dir = folder("score-file", &["test.oxp"]);
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        Arc::new(Saved),
+    );
+    assert_eq!(
+        plugins
+            .call_service("test-echo", "score-file", b"")
+            .unwrap(),
+        b"/songs/song.gp"
+    );
+    // Another copy: a library is started once a process.
+    let other = folder("score-file-none", &["test.oxp"]);
+    let (none, _) = discover(std::slice::from_ref(&other), SharedSettings::default());
+    assert!(
+        none.call_service("test-echo", "score-file", b"")
+            .unwrap()
+            .is_empty()
+    );
 }
