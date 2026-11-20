@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- The manual lists the **AI assistant** plugin (`oxiguitar-ai`, for #227) among the official plugins.
+
 ## [0.21.5] - 2026-11-20
 
 ### Added
