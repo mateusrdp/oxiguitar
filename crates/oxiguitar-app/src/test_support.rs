@@ -69,7 +69,7 @@ impl oxiguitar_host::Core for Recorder {
         name: String,
         score: oxiguitar_host::api::score2::Score2,
     ) -> Result<(), String> {
-        self.open.apply(plugin, revision, name, score)
+        self.open.apply(plugin, revision, name, score, None)
     }
 }
 

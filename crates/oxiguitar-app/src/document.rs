@@ -263,6 +263,23 @@ impl OpenScore {
         self.lock().score.clone()
     }
 
+    /// The open score's revision, as plugins see it.
+    pub(crate) fn revision(&self) -> u64 {
+        self.lock().revision
+    }
+
+    /// Hands `request` to the worker, for a plugin's thread (interface
+    /// 1.14). The error is a sentence for the plugin.
+    pub(crate) fn send(&self, request: crate::worker::Request) -> Result<(), String> {
+        let s = self.lock();
+        let Some(edits) = &s.edits else {
+            return Err("OxiGuitar isn't ready for this yet".to_owned());
+        };
+        edits
+            .send(request)
+            .map_err(|_| "OxiGuitar is closing".to_owned())
+    }
+
     /// Where the changes plugins hand back go: the worker's requests.
     pub(crate) fn connect(&self, edits: std::sync::mpsc::Sender<crate::worker::Request>) {
         self.lock().edits = Some(edits);
@@ -284,14 +301,16 @@ impl OpenScore {
     }
 
     /// A plugin hands back the score changed, made from `revision`: checked
-    /// here, recorded by the worker as one change the user can undo. The
-    /// error is a sentence for the plugin.
+    /// here, recorded by the worker as one change the user can undo. With
+    /// `reply`, the worker says once it has recorded it. The error is a
+    /// sentence for the plugin.
     pub(crate) fn apply(
         &self,
         plugin: &str,
         revision: u64,
         name: String,
         score: oxiguitar_host::api::score2::Score2,
+        reply: Option<std::sync::mpsc::Sender<Result<(), String>>>,
     ) -> Result<(), String> {
         let s = self.lock();
         if s.score.is_none() {
@@ -323,6 +342,7 @@ impl OpenScore {
                 revision,
                 name,
                 score: Box::new(score),
+                reply,
             })
             .map_err(|_| "the score can't be changed now".to_owned())
     }

@@ -37,6 +37,7 @@ compile_error!("build oxiguitar-app with one of the `wayland` and `x11` features
 
 mod advice;
 mod audio_export;
+mod automation;
 mod bar_form;
 mod bend_form;
 mod canvas;
@@ -86,7 +87,9 @@ use i_slint_backend_winit::winit::keyboard::{Key, KeyCode, PhysicalKey};
 use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
 use oxiguitar_display::Rect;
 use oxiguitar_host::api::display::Point as CanvasPoint;
-use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
+use oxiguitar_host::api::tab::{
+    Cursor, Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget,
+};
 use oxiguitar_host::{Level, TabId};
 use oxiguitar_layout::{Layout, Paper};
 use slint::{
@@ -111,8 +114,8 @@ mod ui {
 use ui::{
     AdviceLink, AppWindow, AreaState, BoxItem, FooterRow, GridPoint, InspectorField,
     InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow,
-    PluginMenu, PluginMenuItem, PluginRow, PluginSection, PluginWidget, ShortcutLine, SongField,
-    TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    PluginMenu, PluginMenuItem, PluginRow, PluginSection, PluginSurfaces, PluginWidget,
+    ShortcutLine, SongField, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 /// The app id: the desktop entry's name and the Wayland app id.
@@ -370,6 +373,23 @@ thread_local! {
 /// so the first two are handed to the event loop.
 struct WindowCore {
     open: OpenScore,
+    /// The fonts plugins measure their surfaces' text with (interface
+    /// 1.14): the ones their text is drawn in.
+    fonts: Arc<oxiguitar_display::FontSet>,
+}
+
+/// The window's thread: a plugin asking from it to run a tool or select
+/// would wait on itself (interface 1.14).
+static UI_THREAD: std::sync::OnceLock<std::thread::ThreadId> = std::sync::OnceLock::new();
+
+/// Why a plugin's request to run a tool or select can't wait here, if it
+/// can't: on the window's thread or the worker's (inside a tool's own run),
+/// the answer would wait for the thread that waits for it.
+fn cannot_wait() -> Option<String> {
+    let here = std::thread::current();
+    (UI_THREAD.get() == Some(&here.id()) || here.name() == Some("oxiguitar-worker")).then(|| {
+        "it can't be asked from inside a tool's run or a drawing's click: ask from a thread of the plugin's own".to_owned()
+    })
 }
 
 impl oxiguitar_host::Core for WindowCore {
@@ -472,7 +492,19 @@ impl oxiguitar_host::Core for WindowCore {
         name: String,
         score: oxiguitar_host::api::score2::Score2,
     ) -> Result<(), String> {
-        self.open.apply(plugin, revision, name, score)
+        // Answered once the change is made, so the plugin reads the score
+        // as changed (interface 1.14's plugins drive the editor), except
+        // where waiting would wait on itself: inside a tool's run on the
+        // worker, or on the window's thread.
+        if cannot_wait().is_some() {
+            return self.open.apply(plugin, revision, name, score, None);
+        }
+        let (reply, answer) = std::sync::mpsc::channel();
+        self.open
+            .apply(plugin, revision, name, score, Some(reply))?;
+        answer
+            .recv()
+            .map_err(|_| "OxiGuitar is closing".to_owned())?
     }
 
     fn settings_changed(&self, id: &str) {
@@ -492,6 +524,174 @@ impl oxiguitar_host::Core for WindowCore {
             }
         });
     }
+
+    fn measure_text(
+        &self,
+        text: &str,
+        size: f32,
+        font: oxiguitar_host::api::display::Font,
+    ) -> Option<oxiguitar_host::api::message::TextMeasure> {
+        let font = match font {
+            oxiguitar_host::api::display::Font::Sans => oxiguitar_display::FontSet::TEXT,
+            oxiguitar_host::api::display::Font::Music => oxiguitar_display::FontSet::MUSIC,
+        };
+        let (edges, ascent, descent) = self.fonts.measure(font, size, text);
+        Some(oxiguitar_host::api::message::TextMeasure {
+            edges,
+            ascent,
+            descent,
+        })
+    }
+
+    fn copy(&self, text: String) {
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(ui) = APP
+                .with(|a| a.borrow().clone())
+                .and_then(|app| app.borrow().ui.upgrade())
+            {
+                ui.invoke_copy_text(text.into());
+            }
+        });
+    }
+
+    fn core_tools(&self) -> Vec<oxiguitar_host::api::message::ToolEntry> {
+        automation::entries()
+    }
+
+    fn run_tool(
+        &self,
+        caller: &str,
+        owner: &str,
+        tool: &str,
+        options: Option<String>,
+    ) -> Result<String, String> {
+        if let Some(why) = cannot_wait() {
+            return Err(why);
+        }
+        let _ = caller;
+        let (reply, answer) = std::sync::mpsc::channel();
+        if owner == oxiguitar_host::api::message::CORE_TOOLS {
+            let run = automation::parse(tool, options.as_deref())?;
+            // Everything already asked of the worker first (a plugin's
+            // change just handed back, say), so the tool runs on the score
+            // as it is: the worker's answers reach the window's thread
+            // before this request does.
+            let (fenced, done) = std::sync::mpsc::channel();
+            self.open.send(worker::Request::Fence {
+                before: self.open.revision(),
+                name: String::new(),
+                reply: fenced,
+            })?;
+            let _ = done.recv();
+            slint::invoke_from_event_loop(move || match APP.with(|a| a.borrow().clone()) {
+                Some(app) => run_core_tool(&app, run, reply),
+                None => {
+                    let _ = reply.send(Err("the window is closing".to_owned()));
+                }
+            })
+            .map_err(|_| "the window is closing".to_owned())?;
+        } else {
+            self.open.send(worker::Request::RunPluginTool {
+                plugin: owner.to_owned(),
+                tool: tool.to_owned(),
+                options,
+                reply,
+            })?;
+        }
+        answer
+            .recv()
+            .map_err(|_| "the tool didn't run: OxiGuitar is closing".to_owned())?
+    }
+
+    fn select(&self, selection: oxiguitar_host::api::event::Selection2) -> Result<(), String> {
+        if let Some(why) = cannot_wait() {
+            return Err(why);
+        }
+        let (reply, answer) = std::sync::mpsc::channel();
+        slint::invoke_from_event_loop(move || {
+            let done = match APP.with(|a| a.borrow().clone()) {
+                Some(app) => {
+                    let done = app.borrow_mut().editing.select_for_plugin(selection);
+                    if done.is_ok() {
+                        caret_moved(&app);
+                    }
+                    done
+                }
+                None => Err("the window is closing".to_owned()),
+            };
+            let _ = reply.send(done);
+        })
+        .map_err(|_| "the window is closing".to_owned())?;
+        answer
+            .recv()
+            .map_err(|_| "OxiGuitar is closing".to_owned())?
+    }
+}
+
+/// Runs one of the core's tools as a plugin asked (interface 1.14), as its
+/// menu entry would: with options at once, as one change the user can
+/// undo; without, its dialog opens for the user. `reply` hears the report
+/// once the worker has made the change.
+fn run_core_tool(
+    app: &Shared,
+    run: automation::CoreRun,
+    reply: std::sync::mpsc::Sender<Result<String, String>>,
+) {
+    use automation::CoreRun;
+    let fail = |why: &str| {
+        let _ = reply.send(Err(why.to_owned()));
+    };
+    let name = run.name();
+    {
+        let s = app.borrow();
+        if s.editing.score().is_none() {
+            return fail("no score is open");
+        }
+        if s.open_score.playing() {
+            return fail("the score is playing: it can be changed once it is paused or stopped");
+        }
+        if s.question.is_some() || DIALOG_OPEN.load(std::sync::atomic::Ordering::SeqCst) {
+            return fail("the window is asking the user something: try again once it is answered");
+        }
+    }
+    let before = app.borrow().open_score.revision();
+    let dialog = |app: &Shared, open: fn(&Shared)| {
+        open(app);
+        let _ = reply.send(Ok(format!("{name}'s dialog is open: the user decides.")));
+    };
+    match run {
+        CoreRun::Tool(i) => app.borrow().worker.send(Request::ApplyTool(i)),
+        CoreRun::Fingering(scope) => find_fingering(app, scope),
+        CoreRun::Transpose(None) => {
+            return dialog(app, |a| open_transpose(a, oxiguitar_edit::Scope::All));
+        }
+        CoreRun::Fit(None) => return dialog(app, |a| open_fit(a, true)),
+        CoreRun::Harmonize(None) => return dialog(app, |a| open_harmonize(a, true)),
+        CoreRun::Transpose(Some(t)) => {
+            let typed = app
+                .borrow_mut()
+                .editing
+                .tool(oxiguitar_edit::Command::Transpose(t));
+            if let Some(typed) = typed {
+                send_typed(app, typed);
+            }
+        }
+        CoreRun::Fit(Some(fit)) => {
+            let typed = app
+                .borrow_mut()
+                .editing
+                .tool(oxiguitar_edit::Command::FitBars(fit));
+            if let Some(typed) = typed {
+                send_typed(app, typed);
+            }
+        }
+        CoreRun::Harmonize(Some(h)) => harmonize_run(app, h),
+    }
+    app.borrow().worker.send(Request::Fence {
+        before,
+        name: name.to_owned(),
+        reply,
+    });
 }
 
 /// The plugin `id` failed and was withdrawn: its tabs go, as if it had
@@ -568,8 +768,10 @@ fn main() -> Result<(), slint::PlatformError> {
     // plugins found here.
     let args = Args::parse(std::env::args_os().skip(1));
     let open_score = OpenScore::default();
+    let _ = UI_THREAD.set(std::thread::current().id());
     let core = Arc::new(WindowCore {
         open: open_score.clone(),
+        fonts: Arc::new(oxiguitar_display::FontSet::bundled()),
     });
     let startup = if args.safe_mode {
         oxiguitar_host::start_in_safe_mode(oxiguitar_host::Folders::here(), DISPLAY_SYSTEM, core)
@@ -2185,6 +2387,22 @@ fn plugin_widget(w: &Widget, canvases: &HashMap<String, Image>) -> PluginWidget 
             out.text = text.as_str().into();
             out.text2 = url.as_str().into();
         }
+        Widget::Surface(surface) => {
+            out.kind = "surface".into();
+            out.id = surface.id.as_str().into();
+            out.canvas = canvases.get(&surface.id).cloned().unwrap_or_default();
+            out.surface_height = surface.height;
+            out.keys = surface.keys;
+            out.cursor = match surface.cursor {
+                Cursor::Default => 0,
+                Cursor::Pointer => 1,
+                Cursor::Text => 2,
+                Cursor::Grab => 3,
+                Cursor::Grabbing => 4,
+                Cursor::NotAllowed => 5,
+                Cursor::Wait => 6,
+            };
+        }
     }
     out
 }
@@ -2236,9 +2454,11 @@ fn refresh_plugin_view(app: &Shared, side: View, tab: &TabId) {
             .collect()
     };
     let stretch = |row: &oxiguitar_host::api::tab::Row| {
-        row.widgets
-            .iter()
-            .any(|w| matches!(w, Widget::Canvas(_) | Widget::List { .. }))
+        row.widgets.iter().any(|w| match w {
+            Widget::Canvas(_) | Widget::List { .. } => true,
+            Widget::Surface(s) => s.height == 0.0,
+            _ => false,
+        })
     };
     let same_shape = view.tab.as_ref() == Some(tab)
         && view.content.as_ref().is_some_and(|old| {
@@ -2360,8 +2580,77 @@ fn canvas_room(app: &Shared, area: i32, widget: &str, width: f32, height: f32) {
             tab,
             widget: widget.to_owned(),
             room: device_room(width, height, scale),
+            scale,
         });
     }
+}
+
+/// A surface's room (interface 1.14), in logical pixels: drawn again for
+/// the device pixels it covers and, when its size changed, its plugin
+/// hears it to lay itself out again.
+fn surface_room(app: &Shared, view: i32, widget: &str, width: f32, height: f32) {
+    let Some(tab) = View::from_index(view).and_then(|v| plugin_tab_at(&app.borrow(), v)) else {
+        return;
+    };
+    let before = app
+        .borrow()
+        .plugin_tabs
+        .get(&tab)
+        .and_then(|t| t.rooms.get(widget).copied());
+    canvas_room(app, view, widget, width, height);
+    if before != Some((width, height)) {
+        plugin_event(app, view, widget, TabEvent::Resized { width, height });
+    }
+}
+
+/// What the user did on a surface (interface 1.14), as PluginSurfaces
+/// tells it.
+fn install_surface_callbacks(ui: &AppWindow, app: &Shared) {
+    let surfaces = ui.global::<PluginSurfaces<'_>>();
+    let a = app.clone();
+    surfaces.on_room(move |view, id, w, h| surface_room(&a, view, &id, w, h));
+    let a = app.clone();
+    surfaces.on_pointer(move |view, id, kind, x, y, button| {
+        let kind = match kind {
+            0 => PointerKind::Down,
+            1 => PointerKind::Up,
+            2 => PointerKind::Drag,
+            3 => PointerKind::Move,
+            _ => PointerKind::Leave,
+        };
+        let button = match button {
+            1 => PointerButton::Secondary,
+            2 => PointerButton::Middle,
+            _ => PointerButton::Primary,
+        };
+        let pointer = Pointer {
+            kind,
+            at: CanvasPoint::new(x, y),
+            button,
+        };
+        plugin_event(&a, view, &id, TabEvent::Pointer(pointer));
+    });
+    let a = app.clone();
+    surfaces.on_wheel(move |view, id, x, y, dx, dy| {
+        let at = CanvasPoint::new(x, y);
+        plugin_event(&a, view, &id, TabEvent::Wheel { at, dx, dy });
+    });
+    let a = app.clone();
+    surfaces.on_key(move |view, id, text, shift, ctrl, alt| {
+        match plugin_tabs::surface_key(&text, shift, ctrl, alt) {
+            Some(key) => {
+                plugin_event(&a, view, &id, TabEvent::Key(key));
+                true
+            }
+            None => false,
+        }
+    });
+    let a = app.clone();
+    surfaces.on_typed(move |view, id, text| {
+        plugin_event(&a, view, &id, TabEvent::Typed(text.to_string()));
+    });
+    let a = app.clone();
+    surfaces.on_focus(move |view, id, on| plugin_event(&a, view, &id, TabEvent::Focus(on)));
 }
 
 fn device_room(width: f32, height: f32, scale: f32) -> (u32, u32) {
@@ -2384,6 +2673,7 @@ fn resend_canvas_rooms(app: &Shared, scale: f32) {
                 tab: tab.clone(),
                 widget: widget.clone(),
                 room: device_room(*w, *h, scale),
+                scale,
             });
         }
     }
@@ -2430,6 +2720,7 @@ fn install_plugin_tab_callbacks(ui: &AppWindow, app: &Shared) {
     ui.on_plugin_canvas_room(move |area, id, w, h| canvas_room(&a, area, &id, w, h));
     let a = app.clone();
     ui.on_plugin_dialog_done(move |ok| plugin_dialog_done(&a, ok));
+    install_surface_callbacks(ui, app);
 }
 
 /// The command line: `oxiguitar [--safe-mode] [FILE]`.
@@ -4884,6 +5175,13 @@ fn harmonize_dialog_done(app: &Shared, ok: bool) {
         all_tracks: ui.get_harmonize_all_tracks(),
         whole_song: ui.get_harmonize_whole_song(),
     };
+    harmonize_run(app, harmonize);
+}
+
+/// Harmonize as one change, as its dialog's OK does (or a plugin, interface
+/// 1.14). The footer says when nothing was found, and when the notes fit
+/// another key better than the key signature's.
+fn harmonize_run(app: &Shared, harmonize: oxiguitar_edit::Harmonize) {
     let report = {
         let s = app.borrow();
         match (s.editing.score(), s.editing.caret()) {

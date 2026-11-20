@@ -201,6 +201,56 @@ pub trait Core: Send + Sync {
     fn withdrawn(&self, id: &str) {
         let _ = id;
     }
+
+    /// Where each character of `text` would be drawn in `font` at `size`
+    /// (interface 1.14), for a plugin laying out a surface; `None` for a
+    /// program without fonts, the default.
+    fn measure_text(
+        &self,
+        text: &str,
+        size: f32,
+        font: crate::api::display::Font,
+    ) -> Option<crate::api::message::TextMeasure> {
+        let _ = (text, size, font);
+        None
+    }
+
+    /// A plugin puts `text` on the clipboard (interface 1.14). The default,
+    /// for programs without a window, does nothing.
+    fn copy(&self, text: String) {
+        let _ = text;
+    }
+
+    /// The core's own tools, as plugins may run them (interface 1.14):
+    /// each with [`crate::api::message::CORE_TOOLS`] as its owner. The
+    /// default has none.
+    fn core_tools(&self) -> Vec<crate::api::message::ToolEntry> {
+        Vec::new()
+    }
+
+    /// The plugin `caller` runs a tool (interface 1.14): `owner`'s tool
+    /// `tool`, which the host has found among [`Core::core_tools`] or the
+    /// usable plugins' tools, with `options` (JSON text) only for a tool
+    /// that has an options schema. Runs it as the user's pick would, and
+    /// returns its report once it has run; the error is a sentence for the
+    /// plugin. The default, for programs without a window, runs nothing.
+    fn run_tool(
+        &self,
+        caller: &str,
+        owner: &str,
+        tool: &str,
+        options: Option<String>,
+    ) -> Result<String, String> {
+        let _ = (caller, owner, tool, options);
+        Err("this program runs no tools for plugins".to_owned())
+    }
+
+    /// A plugin moves the caret or the selection (interface 1.14). The
+    /// error is a sentence for the plugin. The default has no score.
+    fn select(&self, selection: crate::api::event::Selection2) -> Result<(), String> {
+        let _ = selection;
+        Err("no score is open".to_owned())
+    }
 }
 
 /// A core without a window: messages go nowhere, and no score is open.
@@ -1710,6 +1760,61 @@ impl Plugins {
         }
     }
 
+    /// Runs `tool` as told by `options`, JSON text (interface 1.14): for a
+    /// tool whose manifest has an options schema, in a plugin built for
+    /// 1.14 or later, which another plugin runs. Returns its report.
+    pub fn run_tool_with(&self, tool: ToolRef<'_>, options: String) -> Result<String, Error> {
+        let knows = tool
+            .plugin
+            .manifest
+            .as_ref()
+            .is_some_and(|m| m.knows_minor(14));
+        if !knows || tool.spec.options.is_none() {
+            return Err(Error::new(
+                ErrorKind::Unsupported,
+                format!(
+                    "the tool {:?} runs only as from its menu, without options",
+                    tool.spec.id
+                ),
+            ));
+        }
+        match self.request(
+            tool.index,
+            &Request::Tool2 {
+                tool: tool.spec.id.clone(),
+                options,
+            },
+        )? {
+            Answer::Report(report) => Ok(report),
+            other => Err(self.unexpected(tool.index, &other)),
+        }
+    }
+
+    /// Every tool there is, as plugins see it (interface 1.14): the core's
+    /// own ([`Core::core_tools`]), then the usable plugins' in plugin
+    /// order. A tool's options schema is listed only for a plugin built
+    /// for 1.14 or later, the only ones that can run as told.
+    pub fn tool_entries(&self) -> Vec<crate::api::message::ToolEntry> {
+        let mut out = self.0.core.core_tools();
+        out.extend(self.tools().into_iter().filter_map(|t| {
+            let m = t.plugin.manifest.as_ref()?;
+            Some(crate::api::message::ToolEntry {
+                owner: m.id.clone(),
+                id: t.spec.id.clone(),
+                name: t.spec.name.clone(),
+                description: t.spec.description.clone(),
+                edits: t.spec.edits,
+                options: t
+                    .spec
+                    .options
+                    .as_ref()
+                    .filter(|_| m.knows_minor(14))
+                    .map(serde_json::Value::to_string),
+            })
+        }));
+        out
+    }
+
     /// Every export the ready plugins add to File → Export, in plugin
     /// order. Only plugins built for interface 1.4 or later have them.
     pub fn exporters(&self) -> Vec<ExporterRef<'_>> {
@@ -2348,6 +2453,67 @@ impl Plugins {
     }
 
     /// Answers one request from the plugin at `index`.
+    /// A plugin asks where the characters of `text` would be drawn
+    /// (interface 1.14).
+    fn measure(
+        &self,
+        text: &str,
+        size: f32,
+        font: crate::api::display::Font,
+    ) -> Result<HostAnswer<'static>, Error> {
+        if !(size.is_finite() && size > 0.0 && size <= crate::api::display::MAX_SIDE) {
+            return Err(Error::new(
+                ErrorKind::Invalid,
+                format!("text can't be measured at size {size}"),
+            ));
+        }
+        self.0
+            .core
+            .measure_text(text, size, font)
+            .map(HostAnswer::Measured)
+            .ok_or_else(|| {
+                Error::new(
+                    ErrorKind::Unsupported,
+                    "this program has no fonts to measure with",
+                )
+            })
+    }
+
+    /// The plugin `caller` runs `owner`'s tool `tool` (interface 1.14):
+    /// checked here, run by the core.
+    fn run_for(
+        &self,
+        caller: &str,
+        owner: &str,
+        tool: &str,
+        options: Option<String>,
+    ) -> Result<HostAnswer<'static>, Error> {
+        let entry = self
+            .tool_entries()
+            .into_iter()
+            .find(|t| t.owner == owner && t.id == tool)
+            .ok_or_else(|| Error::not_found(format!("no usable tool {tool:?} of {owner:?}")))?;
+        if options.is_some() && entry.options.is_none() {
+            return Err(Error::new(
+                ErrorKind::Unsupported,
+                format!("the tool {tool:?} runs only as from its menu, without options"),
+            ));
+        }
+        if let Some(o) = &options
+            && !serde_json::from_str::<serde_json::Value>(o).is_ok_and(|v| v.is_object())
+        {
+            return Err(Error::new(
+                ErrorKind::Invalid,
+                format!("the options of {tool:?} must be a JSON object"),
+            ));
+        }
+        self.0
+            .core
+            .run_tool(caller, owner, tool, options)
+            .map(HostAnswer::Report)
+            .map_err(|e| Error::new(ErrorKind::Failed, e))
+    }
+
     fn answer(&self, index: usize, request: &[u8]) -> (Status, Vec<u8>) {
         let found = &self.0.found[index];
         let Some(manifest) = found.manifest.as_ref() else {
@@ -2442,6 +2608,35 @@ impl Plugins {
                     ))
                 }
             }
+            HostRequest::MeasureText { .. }
+            | HostRequest::Copy { .. }
+            | HostRequest::Tools
+            | HostRequest::RunTool { .. }
+            | HostRequest::Select(_)
+                if !manifest.knows_minor(14) =>
+            {
+                Err(Error::new(
+                    ErrorKind::Unsupported,
+                    "measuring text, the clipboard, running tools and selecting need interface 1.14",
+                ))
+            }
+            HostRequest::MeasureText { text, size, font } => self.measure(&text, size, font),
+            HostRequest::Copy { text } => {
+                self.0.core.copy(text);
+                Ok(HostAnswer::Done)
+            }
+            HostRequest::Tools => Ok(HostAnswer::Tools(self.tool_entries())),
+            HostRequest::RunTool {
+                owner,
+                tool,
+                options,
+            } => self.run_for(&manifest.id, &owner, &tool, options),
+            HostRequest::Select(selection) => self
+                .0
+                .core
+                .select(selection)
+                .map(|()| HostAnswer::Done)
+                .map_err(|e| Error::new(ErrorKind::Failed, e)),
             HostRequest::ScoreFile => {
                 if manifest.knows_minor(13) {
                     Ok(HostAnswer::ScoreFile(

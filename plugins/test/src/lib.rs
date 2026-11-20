@@ -39,6 +39,13 @@
 //! - interface 1.9: the tool `settings`, "Test Settings…", which doesn't
 //!   edit the score and opens the dialog `settings` (a toggle and a field,
 //!   kept in the plugin's settings with OK, forgotten with Cancel).
+//! - interface 1.14: the tab `side` holds the surface `pad`, which writes
+//!   down what it hears (its size, the pointer, the wheel, the keyboard
+//!   and text) and draws the last of it with text it measures; `mark` has
+//!   an options schema (`suffix`, what to add to the title), so other
+//!   plugins can run it as told; and the service methods `tools`,
+//!   `run-tool`, `measure`, `copy` and `select` call the host's new
+//!   requests.
 //!
 //! `echo`'s methods exercise the host's side: `notify` and `settings` call
 //! the host's services, `via-host` calls `test-echo` back through the host
@@ -458,9 +465,13 @@ struct PanelState {
     title: Option<String>,
 }
 
-/// The tab `side`.
+/// The tab `side`, with the surface `pad` (interface 1.14).
 #[derive(Debug)]
-struct Side;
+struct Side {
+    host: Host,
+    /// What the surface heard, oldest first, and its size.
+    heard: Mutex<(Vec<String>, (f32, f32))>,
+}
 
 /// The tool `mark`.
 #[derive(Debug)]
@@ -468,15 +479,30 @@ struct Mark {
     host: Host,
 }
 
-impl Tool for Mark {
-    fn run(&self) -> Result<String, Error> {
+impl Mark {
+    fn suffix(&self, suffix: &str) -> Result<String, Error> {
         let Some((revision, mut score)) = self.host.score2()? else {
             return Ok("No score is open.".into());
         };
-        score.info.title.push('!');
+        score.info.title.push_str(suffix);
         let title = score.info.title.clone();
         self.host.apply(revision, "Mark the Title", score)?;
         Ok(format!("The title is now {title}."))
+    }
+}
+
+impl Tool for Mark {
+    fn run(&self) -> Result<String, Error> {
+        self.suffix("!")
+    }
+
+    /// As told (interface 1.14): `{"suffix": "?"}` adds that instead.
+    fn run_with(&self, options: &serde_json::Value) -> Result<String, Error> {
+        let suffix = options
+            .get("suffix")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| Error::new(ErrorKind::Invalid, "the option suffix is text"))?;
+        self.suffix(suffix)
     }
 }
 
@@ -818,7 +844,10 @@ impl Plugin for TestPlugin {
                 host: host.clone(),
                 state: Mutex::default(),
             },
-            side: Side,
+            side: Side {
+                host: host.clone(),
+                heard: Mutex::default(),
+            },
             mark: Mark { host: host.clone() },
             link: LinkTool { host: host.clone() },
             stamp: Stamp { host: host.clone() },
@@ -983,6 +1012,64 @@ impl Service for TestPlugin {
     fn call(&self, method: &str, input: &[u8]) -> Result<Vec<u8>, Error> {
         match method {
             "echo" => Ok(input.to_vec()),
+            // Interface 1.14: every tool, one `owner/id` a line, with ` *`
+            // after one that has options.
+            "tools" => Ok(self
+                .host
+                .tools()?
+                .iter()
+                .map(|t| {
+                    let star = if t.options.is_some() { " *" } else { "" };
+                    format!("{}/{}{star}\n", t.owner, t.id)
+                })
+                .collect::<String>()
+                .into_bytes()),
+            // `{"owner", "tool", "options"?}`: runs it, returns its report.
+            "run-tool" => {
+                let asked: serde_json::Value = serde_json::from_slice(input)
+                    .map_err(|e| Error::new(ErrorKind::Invalid, e.to_string()))?;
+                let text = |k: &str| {
+                    asked
+                        .get(k)
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("")
+                };
+                Ok(self
+                    .host
+                    .run_tool(text("owner"), text("tool"), asked.get("options"))?
+                    .into_bytes())
+            }
+            // The text's edges at 12, as numbers a line.
+            "measure" => {
+                let text = String::from_utf8_lossy(input);
+                let m = self.host.measure_text(&text, 12.0, Font::Sans)?;
+                Ok(m.edges
+                    .iter()
+                    .map(|e| format!("{e}\n"))
+                    .collect::<String>()
+                    .into_bytes())
+            }
+            "copy" => {
+                self.host.copy(&String::from_utf8_lossy(input))?;
+                Ok(Vec::new())
+            }
+            // Selects bars `first last` of the first track.
+            "select" => {
+                let text = String::from_utf8_lossy(input);
+                let mut n = text
+                    .split_whitespace()
+                    .filter_map(|w| w.parse::<u32>().ok());
+                let (Some(first_bar), Some(last_bar)) = (n.next(), n.next()) else {
+                    return Err(Error::new(ErrorKind::Invalid, "two bars expected"));
+                };
+                self.host.select(Selection2::Bars {
+                    first_track: 0,
+                    last_track: 0,
+                    first_bar,
+                    last_bar,
+                })?;
+                Ok(Vec::new())
+            }
             // The open score's file, or nothing (interface 1.13).
             "score-file" => Ok(self
                 .host
@@ -1253,16 +1340,73 @@ impl Tab for Panel {
     }
 }
 
+impl Side {
+    fn heard(&self) -> MutexGuard<'_, (Vec<String>, (f32, f32))> {
+        self.heard.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
 impl Tab for Side {
     fn content(&self) -> TabContent {
+        let (last, (width, _)) = {
+            let h = self.heard();
+            (h.0.last().cloned().unwrap_or_default(), h.1)
+        };
+        // The last thing heard, cut to the surface's width with the
+        // core's own measure (no fonts of its own); detached, unmeasured.
+        let shown = match self.host.measure_text(&last, 12.0, Font::Sans) {
+            Ok(m) => {
+                let fits = m.edges.iter().take_while(|x| **x <= width.max(1.0)).count();
+                last.chars().take(fits.saturating_sub(1)).collect()
+            }
+            Err(_) => last,
+        };
         TabContent {
-            rows: vec![Row {
-                widgets: vec![Widget::Label {
-                    text: "The test plugin's other tab.".into(),
-                    muted: false,
-                }],
-            }],
+            rows: vec![
+                Row {
+                    widgets: vec![Widget::Label {
+                        text: "The test plugin's other tab.".into(),
+                        muted: false,
+                    }],
+                },
+                Row {
+                    widgets: vec![Widget::Surface(oxiguitar_plugin::Surface {
+                        id: "pad".into(),
+                        height: 60.0,
+                        items: vec![
+                            Item::Rect {
+                                at: Point::new(0.0, 0.0),
+                                width: width.max(1.0),
+                                height: 60.0,
+                                paint: Paint::Muted,
+                            },
+                            Item::Text {
+                                text: shown,
+                                at: Point::new(4.0, 20.0),
+                                size: 12.0,
+                                font: Font::Sans,
+                                anchor: Anchor::Start,
+                                paint: Paint::Ink,
+                            },
+                        ],
+                        keys: true,
+                        cursor: oxiguitar_plugin::Cursor::Text,
+                    })],
+                },
+            ],
         }
+    }
+
+    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
+        if widget != "pad" {
+            return Err(Error::not_found(format!("the side tab has no {widget:?}")));
+        }
+        let mut h = self.heard();
+        if let TabEvent::Resized { width, height } = event {
+            h.1 = (width, height);
+        }
+        h.0.push(format!("{event:?}"));
+        Ok(())
     }
 }
 

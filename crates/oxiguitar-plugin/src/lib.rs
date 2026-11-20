@@ -60,13 +60,15 @@ pub use oxiguitar_plugin_api::class::InstrumentClass;
 pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::message::{
-    Advice, Availability, Clicked, DrawPlace, DrawTimes, Drawn, DrawnRun, Error, ErrorKind, Level,
-    LogEntry, Perform, PerformStaff, PlayedBar, PlayedNote, TrackInfo,
+    Advice, Availability, CORE_TOOLS, Clicked, DrawPlace, DrawTimes, Drawn, DrawnRun, Error,
+    ErrorKind, Level, LogEntry, Perform, PerformStaff, PlayedBar, PlayedNote, TextMeasure,
+    ToolEntry, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
 pub use oxiguitar_plugin_api::tab::{
-    Canvas, Pointer, PointerButton, PointerKind, Row, TabContent, TabEvent, Widget,
+    Canvas, Cursor, Key, KeyName, Pointer, PointerButton, PointerKind, Row, Surface, TabContent,
+    TabEvent, Widget,
 };
 /// serde_json, as the SDK uses it: plugin settings and track sections'
 /// settings are its JSON objects, so a plugin needs no dependency of its
@@ -317,6 +319,19 @@ pub trait Tool: Send + Sync {
     /// Runs the tool, which the user picked in the Tools menu. Returns a
     /// sentence for the footer about what it did (or an empty one).
     fn run(&self) -> Result<String, Error>;
+
+    /// Runs the tool as told by `options` (interface 1.14): another plugin
+    /// asked ([`Host::run_tool`]), so it runs without asking the user. Only
+    /// for a tool whose manifest entry has an options schema; the host
+    /// hands over a JSON value as the plugin that asked sent it, so check
+    /// it. Refusing is the default.
+    fn run_with(&self, options: &serde_json::Value) -> Result<String, Error> {
+        let _ = options;
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            "this tool runs only as from its menu",
+        ))
+    }
 }
 
 /// Draws on the page (interface 1.8), at the bars and beats that carry the
@@ -536,6 +551,18 @@ pub fn dispatch_kept(
                 .tool(&tool)
                 .ok_or_else(|| Error::not_found(format!("this plugin has no tool {tool:?}")))?;
             Ok(Answer::Report(tool.run()?))
+        }
+        Request::Tool2 { tool, options } => {
+            let found = plugin
+                .tool(&tool)
+                .ok_or_else(|| Error::not_found(format!("this plugin has no tool {tool:?}")))?;
+            let options: serde_json::Value = serde_json::from_str(&options).map_err(|e| {
+                Error::new(
+                    ErrorKind::Invalid,
+                    format!("the options of {tool:?} aren't JSON: {e}"),
+                )
+            })?;
+            Ok(Answer::Report(found.run_with(&options)?))
         }
         Request::Probe { interface, id } => {
             let service = find_service(plugin, &interface, &id)?;
@@ -1000,6 +1027,78 @@ impl Host {
     }
 }
 
+impl Host {
+    /// Where each character of `text` would be drawn on one line in the
+    /// core's `font` at `size` (interface 1.14): the left edge of each and,
+    /// last, the end, with the font's ascent and descent. For laying out a
+    /// [`Surface`]: wrapping lines, placing a caret, hitting a character.
+    pub fn measure_text(
+        &self,
+        text: &str,
+        size: f32,
+        font: display::Font,
+    ) -> Result<TextMeasure, Error> {
+        match self.0.request(HostRequest::MeasureText {
+            text: text.into(),
+            size,
+            font,
+        })? {
+            HostAnswer::Measured(m) => Ok(m),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Puts `text` on the system's clipboard (interface 1.14). Pasting
+    /// comes to a surface as [`TabEvent::Typed`].
+    pub fn copy(&self, text: &str) -> Result<(), Error> {
+        match self.0.request(HostRequest::Copy { text: text.into() })? {
+            HostAnswer::Done => Ok(()),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Every tool there is, the core's ([`CORE_TOOLS`]) and every usable
+    /// plugin's (interface 1.14).
+    pub fn tools(&self) -> Result<Vec<ToolEntry>, Error> {
+        match self.0.request(HostRequest::Tools)? {
+            HostAnswer::Tools(t) => Ok(t),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Runs the tool `tool` of `owner` ([`CORE_TOOLS`] or a plugin's id)
+    /// as if the user had picked it (interface 1.14): with `options`, which
+    /// its schema describes, as told; without, as from its menu, asking the
+    /// user in its dialog if it has one. Returns its report once it has
+    /// run. Don't call it from a tool's own `run`: the core runs one tool
+    /// at a time, and answers that with an error.
+    pub fn run_tool(
+        &self,
+        owner: &str,
+        tool: &str,
+        options: Option<&serde_json::Value>,
+    ) -> Result<String, Error> {
+        match self.0.request(HostRequest::RunTool {
+            owner: owner.into(),
+            tool: tool.into(),
+            options: options.map(serde_json::Value::to_string),
+        })? {
+            HostAnswer::Report(r) => Ok(r),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Moves the caret or the selection in the open score (interface 1.14),
+    /// as the user would. An error when no score is open or it has no such
+    /// place.
+    pub fn select(&self, selection: Selection2) -> Result<(), Error> {
+        match self.0.request(HostRequest::Select(selection))? {
+            HostAnswer::Done => Ok(()),
+            other => Err(unexpected(&other)),
+        }
+    }
+}
+
 fn unexpected(answer: &HostAnswer<'_>) -> Error {
     Error::new(
         ErrorKind::Failed,
@@ -1041,6 +1140,14 @@ impl HostServices for Detached {
             HostRequest::Folders | HostRequest::Folder { .. } => {
                 Err(Error::not_found("a detached host has no folders"))
             }
+            HostRequest::Copy { .. } => Ok(HostAnswer::Done),
+            HostRequest::Tools => Ok(HostAnswer::Tools(Vec::new())),
+            HostRequest::MeasureText { .. }
+            | HostRequest::RunTool { .. }
+            | HostRequest::Select(_) => Err(Error::new(
+                ErrorKind::Failed,
+                "a detached host has no window, tools or score",
+            )),
         }
     }
 }

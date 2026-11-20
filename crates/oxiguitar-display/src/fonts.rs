@@ -193,6 +193,24 @@ impl FontSet {
             .map_or(0.0, |g| g.x + g.advance)
     }
 
+    /// Where each character of `text` starts when placed on one line by
+    /// [`FontSet::place_text`], then where the text ends (one more edge
+    /// than characters, the first 0), with the font's ascent and descent
+    /// (positive) at `size`: what a plugin lays text out with (interface
+    /// 1.14).
+    pub fn measure(&self, font: FontId, size: f32, text: &str) -> (Vec<f32>, f32, f32) {
+        let glyphs = self.place_text(font, size, text);
+        let mut edges: Vec<f32> = glyphs.iter().map(|g| g.x).collect();
+        edges.push(glyphs.last().map_or(0.0, |g| g.x + g.advance));
+        let (ascent, descent) = self.get(font).map_or((0.0, 0.0), |f| {
+            let m = f
+                .font_ref()
+                .metrics(Size::new(size), LocationRef::default());
+            (m.ascent, -m.descent)
+        });
+        (edges, ascent, descent)
+    }
+
     /// A run of `text` starting at `origin`.
     pub fn text_run(
         &self,
@@ -234,6 +252,18 @@ impl FontSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn measuring_gives_an_edge_a_character_and_the_end() {
+        let set = FontSet::bundled();
+        let (edges, ascent, descent) = set.measure(FontSet::TEXT, 12.0, "ab");
+        assert_eq!(edges.len(), 3);
+        assert_eq!(edges[0], 0.0);
+        assert!(edges[1] > 0.0 && edges[2] > edges[1]);
+        assert!((edges[2] - set.text_width(FontSet::TEXT, 12.0, "ab")).abs() < 1e-4);
+        assert!(ascent > 0.0 && descent > 0.0);
+        assert_eq!(set.measure(FontSet::TEXT, 12.0, "").0, [0.0]);
+    }
 
     #[test]
     fn bundled_fonts_load() {

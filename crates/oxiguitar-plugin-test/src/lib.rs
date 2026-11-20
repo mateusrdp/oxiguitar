@@ -972,8 +972,9 @@ fn watched(f: impl FnOnce()) -> Result<(), String> {
 }
 
 /// One thing a user could do to each widget of `content`: a click, a tick,
-/// the slider's lowest value, an empty field, the first option, and a
-/// press, drag and release in the middle of a canvas.
+/// the slider's lowest value, an empty field, the first option, a press,
+/// drag and release in the middle of a canvas, and on a surface a bit of
+/// everything it hears.
 fn plausible_events(content: &TabContent) -> Vec<(String, TabEvent)> {
     let mut out = Vec::new();
     for widget in content.rows.iter().flat_map(|r| &r.widgets) {
@@ -1002,6 +1003,56 @@ fn plausible_events(content: &TabContent) -> Vec<(String, TabEvent)> {
                             button: PointerButton::Primary,
                         }),
                     ));
+                }
+            }
+            // A surface (interface 1.14): its size, the pointer over and
+            // on it, the wheel, the keyboard and text.
+            Widget::Surface(surface) => {
+                let at = Point::new(10.0, 10.0);
+                let pointer = |kind| {
+                    TabEvent::Pointer(Pointer {
+                        kind,
+                        at,
+                        button: PointerButton::Primary,
+                    })
+                };
+                let key = |name| {
+                    TabEvent::Key(oxiguitar_host::api::tab::Key {
+                        name,
+                        shift: false,
+                        ctrl: false,
+                        alt: false,
+                    })
+                };
+                use oxiguitar_host::api::tab::KeyName;
+                let height = if surface.height > 0.0 {
+                    surface.height
+                } else {
+                    300.0
+                };
+                for event in [
+                    TabEvent::Resized {
+                        width: 320.0,
+                        height,
+                    },
+                    pointer(PointerKind::Move),
+                    pointer(PointerKind::Down),
+                    pointer(PointerKind::Drag),
+                    pointer(PointerKind::Up),
+                    pointer(PointerKind::Leave),
+                    TabEvent::Wheel {
+                        at,
+                        dx: 0.0,
+                        dy: 40.0,
+                    },
+                    TabEvent::Focus(true),
+                    TabEvent::Typed("Hello, é".into()),
+                    key(KeyName::Backspace),
+                    key(KeyName::Left),
+                    key(KeyName::Enter),
+                    TabEvent::Focus(false),
+                ] {
+                    out.push((id.clone(), event));
                 }
             }
             _ => {}

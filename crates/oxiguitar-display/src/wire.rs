@@ -27,6 +27,21 @@ pub fn canvas(width: f32, height: f32, items: &[w::Item], fonts: &FontSet) -> Di
     list
 }
 
+/// A surface (interface 1.14) whose room is `width` × `height` logical
+/// pixels, holding `items` in them: as a canvas, but its items may reach as
+/// far as the largest surface's (the plugin lays out for the room, and what
+/// lies outside it isn't shown).
+pub fn surface(width: f32, height: f32, items: &[w::Item], fonts: &FontSet) -> DisplayList {
+    let mut list = DisplayList::new(width, height);
+    let side = w::MAX_SIDE;
+    list.items = items
+        .iter()
+        .filter(|i| i.problem(side, side).is_none())
+        .map(|i| item(i, side, fonts))
+        .collect();
+    list
+}
+
 fn point(p: w::Point) -> Point {
     Point::new(p.x, p.y)
 }
@@ -108,6 +123,19 @@ fn item(i: &w::Item, canvas_width: f32, fonts: &FontSet) -> Item {
             });
             Item::Glyphs(run)
         }
+        w::Item::Image {
+            at,
+            width,
+            height,
+            columns,
+            rows,
+            pixels,
+        } => Item::Image {
+            rect: Rect::new(at.x, at.y, *width, *height),
+            columns: *columns,
+            rows: *rows,
+            pixels: std::sync::Arc::new(pixels.clone()),
+        },
     }
 }
 

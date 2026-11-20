@@ -345,6 +345,18 @@ pub enum Request<'a> {
     /// tool is. The caret is already at the click, so [`HostRequest::Selection`]
     /// names the beat. Since interface 1.8.
     Clicked(Box<Clicked>),
+    /// Run the tool `tool` with `options`, a JSON object its manifest's
+    /// options schema ([`crate::manifest::ToolSpec::options`]) describes:
+    /// asked by another plugin ([`HostRequest::RunTool`]), so the tool runs
+    /// as told, without asking the user. Answered with [`Answer::Report`].
+    /// Sent only to a plugin built for interface 1.14 or later, for a tool
+    /// with options. Since interface 1.14.
+    Tool2 {
+        /// The tool's id.
+        tool: String,
+        /// The options, JSON text.
+        options: String,
+    },
 }
 
 /// A click on a drawing ([`Request::Clicked`]). Since interface 1.8.
@@ -1040,6 +1052,85 @@ pub enum HostRequest<'a> {
     /// The open score's file: for a plugin that keeps paths relative to
     /// it. Answered with [`HostAnswer::ScoreFile`]. Since interface 1.13.
     ScoreFile,
+    /// Where each character of `text` would be drawn on one line, in the
+    /// core's font `font` at `size` (the font's em): what a plugin needs
+    /// to wrap lines and place a caret on a surface
+    /// ([`crate::tab::Widget::Surface`]). Answered with
+    /// [`HostAnswer::Measured`]. Since interface 1.14.
+    MeasureText {
+        /// The text.
+        text: String,
+        /// Its size: the font's em.
+        size: f32,
+        /// The font.
+        font: crate::display::Font,
+    },
+    /// Put `text` on the system's clipboard, for a plugin whose surface
+    /// copies what the user selected (pasting comes to the surface as
+    /// [`crate::tab::TabEvent::Typed`], and no plugin reads the clipboard).
+    /// Answered with [`HostAnswer::Done`]. Since interface 1.14.
+    Copy {
+        /// The text.
+        text: String,
+    },
+    /// Every tool there is: the core's and every usable plugin's, as
+    /// [`ToolEntry`]s. Answered with [`HostAnswer::Tools`]. Since interface
+    /// 1.14.
+    Tools,
+    /// Run a tool ([`HostRequest::Tools`]) as if the user had picked it:
+    /// with `options` (JSON text matching its schema) it runs as told;
+    /// without, it runs as from its menu, asking the user in its dialog if
+    /// it has one. An edit runs only with a score open and not while the
+    /// song plays, as one change the user can undo. Answered with
+    /// [`HostAnswer::Report`] once it has run. Since interface 1.14.
+    RunTool {
+        /// Whose tool: [`CORE_TOOLS`] for the core's own, otherwise the
+        /// plugin's id.
+        owner: String,
+        /// The tool's id.
+        tool: String,
+        /// Its options, JSON text, for a tool that has an options schema.
+        options: Option<String>,
+    },
+    /// Move the caret or the selection in the open score, as the user
+    /// would. Answered with [`HostAnswer::Done`]; an error when no score is
+    /// open or it has no such place. Since interface 1.14.
+    Select(crate::event::Selection2),
+}
+
+/// The owner [`HostRequest::RunTool`] names for the core's own tools.
+pub const CORE_TOOLS: &str = "oxiguitar";
+
+/// A tool, as [`HostRequest::Tools`] lists it. Since interface 1.14.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ToolEntry {
+    /// Whose it is: [`CORE_TOOLS`] or a plugin's id.
+    pub owner: String,
+    /// Its id, unique for its owner.
+    pub id: String,
+    /// Its name, as its menu entry shows it.
+    pub name: String,
+    /// What it does, in a sentence.
+    pub description: String,
+    /// Whether it changes the score.
+    pub edits: bool,
+    /// The JSON Schema of its options, as JSON text, for a tool that can
+    /// run as told ([`HostRequest::RunTool`] with options); `None` for one
+    /// that runs only as from its menu.
+    pub options: Option<String>,
+}
+
+/// Where each character of a text would be drawn
+/// ([`HostRequest::MeasureText`]). Since interface 1.14.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct TextMeasure {
+    /// The left edge of each character and, last, the end of the text:
+    /// one more than the text has characters, the first 0.
+    pub edges: Vec<f32>,
+    /// How far the font reaches above its baseline.
+    pub ascent: f32,
+    /// How far it reaches below, a positive number.
+    pub descent: f32,
 }
 
 /// The open score as engraved (interface 1.8): what the window shows, in
@@ -1258,6 +1349,13 @@ pub enum HostAnswer<'a> {
     /// The open score's file, an absolute path as UTF-8 text; `None` when
     /// no score is open or it was never saved. Since interface 1.13.
     ScoreFile(Option<String>),
+    /// Where a text's characters would be drawn. Since interface 1.14.
+    Measured(TextMeasure),
+    /// Every tool there is. Since interface 1.14.
+    Tools(Vec<ToolEntry>),
+    /// What a tool did: its report for the footer, which may be empty.
+    /// Since interface 1.14.
+    Report(String),
 }
 
 impl HostAnswer<'_> {
@@ -1274,6 +1372,9 @@ impl HostAnswer<'_> {
             HostAnswer::Selection(s) => HostAnswer::Selection(s),
             HostAnswer::Folder(f) => HostAnswer::Folder(f),
             HostAnswer::ScoreFile(f) => HostAnswer::ScoreFile(f),
+            HostAnswer::Measured(m) => HostAnswer::Measured(m),
+            HostAnswer::Tools(t) => HostAnswer::Tools(t),
+            HostAnswer::Report(r) => HostAnswer::Report(r),
         }
     }
 }
@@ -1571,6 +1672,46 @@ mod tests {
             links: vec![],
         });
         assert_eq!(first(encode(&advise).unwrap()), 10);
+
+        // Interface 1.14.
+        let tool2 = Request::Tool2 {
+            tool: "t".into(),
+            options: "{}".into(),
+        };
+        assert_eq!(first(encode(&tool2).unwrap()), 25);
+        let measure = HostRequest::MeasureText {
+            text: "a".into(),
+            size: 12.0,
+            font: crate::display::Font::Sans,
+        };
+        assert_eq!(first(encode(&measure).unwrap()), 17);
+        assert_eq!(
+            first(encode(&HostRequest::Copy { text: "a".into() }).unwrap()),
+            18
+        );
+        assert_eq!(first(encode(&HostRequest::Tools).unwrap()), 19);
+        let run = HostRequest::RunTool {
+            owner: CORE_TOOLS.into(),
+            tool: "t".into(),
+            options: None,
+        };
+        assert_eq!(first(encode(&run).unwrap()), 20);
+        let select = HostRequest::Select(crate::event::Selection2::Bars {
+            first_track: 0,
+            last_track: 0,
+            first_bar: 0,
+            last_bar: 1,
+        });
+        assert_eq!(first(encode(&select).unwrap()), 21);
+        assert_eq!(
+            first(encode(&HostAnswer::Measured(TextMeasure::default())).unwrap()),
+            10
+        );
+        assert_eq!(first(encode(&HostAnswer::Tools(vec![])).unwrap()), 11);
+        assert_eq!(
+            first(encode(&HostAnswer::Report(String::new())).unwrap()),
+            12
+        );
     }
 
     fn advice(id: &str, links: &[&str]) -> Advice {
