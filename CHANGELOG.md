@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.4] - 2026-11-20
+
 ### Added
 
 - **Plugin interface 1.13** (the SDK crates are at 1.13.0; for #240, audio played along with the score as a plugin): a plugin that draws on the page is told when each of its places and every bar are played, and a drawing can run on from its box for some seconds of the music, across beats, bars and systems, ending where that time falls with the score's tempo changes, or at a jump in the playing order; drawings can be laid in the warning red; an effect that adds sound of its own can stay off a track's chord voice (`"chord_voice": false`), so it isn't heard twice; and a plugin can ask for the open score's file, to keep paths relative to it. The drawing request grew in place, since no released plugin drew: a plugin that draws needs interface 1.13 ([Drawing on the page](https://mateusrdp.github.io/oxiguitar/plugin-guide/drawing.html)).

@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.21.4" date="2026-11-20" type="development">
+      <description>
+        <p>Plugin interface 1.13 (the SDK crates are at 1.13.0; for #240, audio played along with the score as a plugin): a plugin that draws on the page is told when each of its places and every bar are played, and a drawing can run on from its box for some seconds of the music, across beats, bars and ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.21.4</url>
+    </release>
     <release version="0.21.3" date="2026-11-19" type="development">
       <description>
         <p>Plugin interface 1.12 (the SDK crates are at 1.12.0; #294): a plugin that plays the notes its own way is also given the track's General MIDI program, each staff's tuning and capo (so it knows each note's fret), and the track's settings for it, as its track-dialog section keeps them. The request ...</p>
