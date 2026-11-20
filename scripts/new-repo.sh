@@ -8,9 +8,12 @@
 # Every setting is read from oxiguitar through the API when the script runs,
 # never written down here: repository settings, the rulesets, Actions
 # permissions, Dependabot and security settings, labels, Pages and its
-# environment. The starting files (LICENSE, README.md, CONTRIBUTING.md,
-# CLAUDE.md, scripts/check-dco.sh, .github/...) take oxiguitar's current
-# check-dco.sh, action pins, MSRV, rustfmt.toml, clippy.toml and deny.toml.
+# environment (so a new repository publishes its manual from GitHub Actions at
+# once, main allowed to deploy), and the PACKAGES_TOKEN secret (its value
+# can't be read, so it is asked for: see scripts/lib/packages-token.sh). The
+# starting files (LICENSE, README.md, CONTRIBUTING.md, CLAUDE.md,
+# scripts/check-dco.sh, .github/...) take oxiguitar's current check-dco.sh,
+# action pins, MSRV, rustfmt.toml, clippy.toml and deny.toml.
 #
 # Run by the maintainer on his own machine with his gh login (Claude's
 # sessions can't write to other repositories). Needs gh, jq and git.
@@ -50,6 +53,8 @@ dry=0
 history=0
 ref="main"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/packages-token.sh
+source "$here/lib/packages-token.sh"
 
 usage() { sed -n '/^# Usage:/,/^# Run it again/p' "$0" | sed 's/^# \{0,1\}//' | sed '$d'; }
 
@@ -842,6 +847,32 @@ if pages="$(get "$src/pages")"; then
     fi
 else
     echo "  $SOURCE has no Pages"
+fi
+
+end_section
+
+# --- 6b. The PACKAGES_TOKEN secret ----------------------------------------------
+
+section "6b. Secrets"
+# A publish workflow needs PACKAGES_TOKEN to tell oxiguitar-packages about a
+# release. A secret's value can't be read back, so it can't be copied from
+# oxiguitar: it comes from OXIGUITAR_PACKAGES_TOKEN or a hidden prompt
+# (scripts/lib/packages-token.sh), and a secret that already exists is left
+# alone.
+if new_in_dry_run || ! get "$dst/actions/secrets/PACKAGES_TOKEN" > /dev/null; then
+    if packages_token_value; then
+        if ((dry)); then
+            echo "  would: set the secret PACKAGES_TOKEN"
+        else
+            set_packages_token "$OWNER/$name"
+            echo "  set the secret PACKAGES_TOKEN"
+        fi
+        note "secret PACKAGES_TOKEN set"
+    else
+        todo "set the secret PACKAGES_TOKEN on $OWNER/$name (Settings, Secrets and variables, Actions), or run again with OXIGUITAR_PACKAGES_TOKEN set: its value can't be copied from $SOURCE, GitHub never shows a secret"
+    fi
+else
+    echo "  PACKAGES_TOKEN already set"
 fi
 
 end_section

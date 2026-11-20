@@ -1,10 +1,10 @@
 # Settings and plugins
 
-OxiGuitar is a small program that does more with plugins: one plugin for each file format, plugins that play the score, plugins that export it in other formats than PDF, and plugins that add tabs to the window's panels. Plugins are single files ending in `.oxp`. OxiGuitar opens files only through its format plugins; ours, in repositories of their own, open Guitar Pro files ([Installing](installing.md)). A plugin is loaded only when it is first needed: the Guitar Pro 5 plugin when you open a .gp5 file, a plugin with a tab when you open its tab.
+OxiGuitar is a small program that does more with plugins: one plugin for each file format, plugins that play the score, plugins that export it in other formats than PDF, and plugins that add tabs to the window's panels. Plugins are single files ending in `.oxp`. OxiGuitar opens files only through its format plugins. Each official plugin has a manual of its own ([Plugin manuals](official-plugins.md)). A plugin is loaded only when it is first needed: the Guitar Pro 5 plugin when you open a .gp5 file, a plugin with a tab when you open its tab.
 
 ## Where OxiGuitar keeps things
 
-When it starts, OxiGuitar makes sure its settings folder, a `settings.json` file and your `plugins` folder exist (on Linux in the usual freedesktop places), and creates any that are missing, with the `soundfonts` folder beside `plugins` for sound sets ([Better sounds](better-sounds.md)). It never changes anything else.
+When it starts, OxiGuitar makes sure its settings folder, a `settings.json` file and your `plugins` folder exist (on Linux in the usual freedesktop places), and creates any that are missing, with the `soundfonts` folder beside `plugins` for sound sets. It never changes anything else.
 
 | System | Settings (`settings.json`) | Your plugins | The program's plugin folder |
 | --- | --- | --- | --- |
@@ -33,11 +33,11 @@ This list replaces the usual folders. If the file isn't valid JSON, OxiGuitar sa
 At start, the line at the bottom of the window says what is missing:
 
 - **No output plugin is installed, so the player is off.** The player's buttons stay greyed out until a plugin that makes sound is installed.
-- **No read/write plugins are installed.** OxiGuitar can open and save files only through format plugins, so nothing can be opened. Install the Guitar Pro plugin ([Installing](installing.md)). If you did, it isn't in a folder OxiGuitar searches: a `plugin_folders` list in `settings.json` that leaves out the folder it is in (see above), or, on Debian, Ubuntu and Fedora, the package `oxiguitar-guitarpro` removed. **Help → About** lists the folders searched.
+- **No read/write plugins are installed.** OxiGuitar can open and save files only through format plugins, so nothing can be opened. Install the Guitar Pro plugin ([Plugin manuals](official-plugins.md)). If you did, it isn't in a folder OxiGuitar searches: a `plugin_folders` list in `settings.json` that leaves out the folder it is in (see above), or, on Debian, Ubuntu and Fedora, the package `oxiguitar-guitarpro` removed. **Help → About** lists the folders searched.
 
 Both messages link to [the install page](installing.md), which says where each plugin comes from.
 
-The same gaps also open a dialog, once, when the window is up ([Advice dialogs](#advice-dialogs)): it says what is missing and links to [the official plugins](official-plugins.md) and to the install page for your system ([Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md)). There are three, each silenced on its own:
+The same gaps also open a dialog, once, when the window is up ([Advice dialogs](#advice-dialogs)): it says what is missing and links to [the plugin manuals](official-plugins.md) and to the install page for your system ([Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md)). There are three, each silenced on its own:
 
 | Dialog | When | Its line in `settings.json` |
 | --- | --- | --- |
@@ -59,15 +59,7 @@ OxiGuitar keeps what you silenced in `settings.json`, under `advice`, one line f
 }
 ```
 
-The official plugins use it for:
-
-| Dialog | Asked by | When | Its line under the plugin's name |
-| --- | --- | --- | --- |
-| Only basic sounds are installed | `oxiguitar.midi` | A score plays and only your system's own sound set is found ([Better sounds](better-sounds.md)) | `no-sound-sets` |
-| No amp model to play | `oxiguitar.nam` | A track's amp is on and the `nam` folder holds no model | `no-model` |
-| No cabinet of your own | `oxiguitar.nam` | A track's amp is on, its model doesn't include a cabinet and the `nam` folder holds no impulse response | `no-cabinet` |
-
-The last two link to [Amp models](amp-models.md).
+Each plugin's manual lists the dialogs it asks, with the lines to look for.
 
 Delete a line to get its dialog back. No dialog appears in safe mode.
 
