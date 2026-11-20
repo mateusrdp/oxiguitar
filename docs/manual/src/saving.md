@@ -2,7 +2,7 @@
 
 Choose **File → Save** (Ctrl + S) to write the score back to its file, or **File → Save As…** (Ctrl + Shift + S) to write it under another name. The window's title shows the file's name, with a dot before it while the score has changes not yet saved.
 
-OxiGuitar saves through its format plugins, as it opens files. Ours write Guitar Pro 7 and 8 files (.gp), which Guitar Pro 7 and later open, and Guitar Pro 5 files (.gp5), which Guitar Pro 5 and every later version open, and TuxGuitar too; with [their plugins](official-plugins.md), MusicXML, MIDI and TuxGuitar 2 files (.tg) as well. Choose the format in Save As… by the name's extension. Save always writes a file in its own format. When no installed plugin writes that format (Guitar Pro 3 and 4 files and .gpx are only read), Save says so: use Save As… and choose a format.
+OxiGuitar saves through its format plugins, as it opens files. Ours write Guitar Pro 7 and 8 files (.gp), which Guitar Pro 7 and later open, and Guitar Pro 5 files (.gp5), which Guitar Pro 5 and every later version open, and TuxGuitar too; other plugins add more formats ([Plugin manuals](official-plugins.md)). Choose the format in Save As… by the name's extension. Save always writes a file in its own format. When no installed plugin writes that format (Guitar Pro 3 and 4 files and .gpx are only read), Save says so: use Save As… and choose a format.
 
 ## What a file can't hold
 
@@ -36,7 +36,7 @@ To try a file without changing it, use Save As.
 
 ## Plugins' settings for each track
 
-Some plugins add their own settings to a track's **Properties…** (the NAM plugin's amp model, for example). No score format holds them, so OxiGuitar keeps them in a small file beside the score, named after it: `song.gp3` keeps them in `song.gp3.oxg`. The same file keeps what plugins put on beats: the curve and the Q of a wah-wah mark ([Wah-wah](editing.md#wah-wah)), and any plugin's own marks. Saving writes it and opening reads it; keep the two files together when you copy or share a song. Without the .oxg file the score opens as usual, with those settings empty. Guitar Pro and other programs ignore it.
+Some plugins add their own settings to a track's **Properties…** (an amp model, for example). No score format holds them, so OxiGuitar keeps them in a small file beside the score, named after it: `song.gp3` keeps them in `song.gp3.oxg`. The same file keeps what plugins put on beats: a wah-wah mark's curve, for example, and any plugin's own marks. Saving writes it and opening reads it; keep the two files together when you copy or share a song. Without the .oxg file the score opens as usual, with those settings empty. Guitar Pro and other programs ignore it.
 
 ## Before closing
 

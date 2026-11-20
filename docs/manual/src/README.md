@@ -1,6 +1,6 @@
 # OxiGuitar
 
-OxiGuitar is a free guitar tablature and score viewer, editor and player for Windows, macOS and Linux. It opens Guitar Pro files, shows them as standard notation and tablature, edits them, saves them as .gp and .gp5, exports them to PDF, and plays them ([Playing a score](playback.md)) with the sound sets your system has or better ones you add ([Better sounds](better-sounds.md)).
+OxiGuitar is a free guitar tablature and score viewer, editor and player for Windows, macOS and Linux. It opens Guitar Pro files, shows them as standard notation and tablature, edits them, saves them as .gp and .gp5, exports them to PDF, and plays them ([Playing a score](playback.md)). Files, sound and exports come from plugins, each with a manual of its own ([Plugin manuals](official-plugins.md)).
 
 ![The OxiGuitar window, paused while playing a score in the Page layout](images/window.png)
 
