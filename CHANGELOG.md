@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- **The manual's list of official plugins** has Temperament and Audio clips (#240). Neither is suggested by the packages: they are fun extras.
+
 ## [0.21.4] - 2026-11-20
 
 ### Added
