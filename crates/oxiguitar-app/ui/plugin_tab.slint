@@ -152,6 +152,13 @@ export component PluginWidgetView {
             property <string> says: w.text;
             changed says => { self.text = self.says; }
             accepted(t) => { root.edited(w.id, t); }
+            // Entered also when the keyboard leaves it (clicking OK, say),
+            // as the Song tab's fields are, so nothing typed is lost.
+            changed has-focus => {
+                if (!self.has-focus && self.text != w.text) {
+                    root.edited(w.id, self.text);
+                }
+            }
         }
         if w.kind == "choice" : ComboBox {
             horizontal-stretch: 1;

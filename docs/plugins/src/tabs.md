@@ -47,7 +47,7 @@ pub trait Tab: Send + Sync {
 | `Button { id, text, enabled }` | A push button | `Clicked` |
 | `Toggle { id, text, on, enabled }` | A tickbox with its text | `Toggled(bool)` |
 | `Slider { id, value, min, max, enabled }` | A slider, `min` < `max` | `Slid(f32)`, when it is let go |
-| `Field { id, text, placeholder, enabled }` | One line of text to type | `Edited(String)`, when Enter is pressed |
+| `Field { id, text, placeholder, enabled }` | One line of text to type | `Edited(String)`, when Enter is pressed or the keyboard leaves it with the text changed |
 | `Choice { id, options, selected, enabled }` | A drop-down | `Chosen(u32)`, the option's index |
 | `List { id, items, selected }` | Lines, one of which may be selected | `Chosen(u32)`, the line's index |
 | `Canvas(Canvas { id, width, height, items })` | A drawing of the plugin's own | `Pointer(Pointer)` |

@@ -10,6 +10,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
+- **A plugin's one-line field is entered when the keyboard leaves it** too, not only on Enter, as the Song tab's fields are: text typed in a plugin's dialog is no longer lost when the user clicks OK straight away.
 - **The manual's list of official plugins** has Temperament and Audio clips (#240). Neither is suggested by the packages: they are fun extras.
 
 ## [0.21.4] - 2026-11-20
