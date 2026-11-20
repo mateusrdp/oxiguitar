@@ -623,8 +623,10 @@ impl Tab for Ask {
 }
 
 /// Draws a stamp over each stamped beat (interface 1.8): a box with an S in
-/// it, 2.4 by 1.6 staff spaces. Counts the requests, for the contract
-/// suite's test that the same places aren't asked about twice.
+/// it, 2.4 by 1.6 staff spaces, and from it a dashed run of one second of
+/// the music, with a hook, where the beat is played (interface 1.13).
+/// Counts the requests, for the contract suite's test that the same places
+/// aren't asked about twice.
 #[derive(Debug, Default)]
 struct StampDrawer {
     asked: std::sync::atomic::AtomicU32,
@@ -744,6 +746,7 @@ impl oxiguitar_plugin::Drawer for StampDrawer {
     fn draw(
         &self,
         places: &[oxiguitar_plugin::DrawPlace],
+        times: &oxiguitar_plugin::DrawTimes,
     ) -> Result<Vec<oxiguitar_plugin::Drawn>, Error> {
         use oxiguitar_plugin::display::PathCmd;
         use oxiguitar_plugin::score2::BeatExt;
@@ -785,6 +788,17 @@ impl oxiguitar_plugin::Drawer for StampDrawer {
                         paint: Paint::Accent,
                     },
                 ],
+                run: times
+                    .starts
+                    .get(i)
+                    .is_some_and(|s| !s.is_empty())
+                    .then_some(oxiguitar_plugin::DrawnRun {
+                        seconds: 1.0,
+                        width: 0.12,
+                        paint: Paint::Accent,
+                        dashed: true,
+                        hook: true,
+                    }),
             })
             .collect())
     }
@@ -969,6 +983,12 @@ impl Service for TestPlugin {
     fn call(&self, method: &str, input: &[u8]) -> Result<Vec<u8>, Error> {
         match method {
             "echo" => Ok(input.to_vec()),
+            // The open score's file, or nothing (interface 1.13).
+            "score-file" => Ok(self
+                .host
+                .score_file()?
+                .map(|p| p.to_string_lossy().into_owned().into_bytes())
+                .unwrap_or_default()),
             // How many times it was asked to draw (interface 1.8).
             // How many times it was asked to play a track (interface 1.8).
             // Sets the plugin's own detune for playing (interface 1.12).

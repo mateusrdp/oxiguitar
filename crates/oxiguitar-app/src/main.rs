@@ -426,6 +426,10 @@ impl oxiguitar_host::Core for WindowCore {
         self.open.selection()
     }
 
+    fn score_file(&self) -> Option<PathBuf> {
+        self.open.file()
+    }
+
     fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
         // Asked from any thread: whether one is open is known here, and
         // the window shows it when its turn comes.

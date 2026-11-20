@@ -1,8 +1,8 @@
 {
-  "interface": "1.12",
+  "interface": "1.13",
   "id": "oxiguitar.test",
   "name": "Test plugin",
-  "version": "0.21.3",
+  "version": "0.21.4",
   "description": "Tests the plugin interface. Never shipped.",
   "authors": ["The OxiGuitar contributors"],
   "license": "GPL-3.0-or-later",
@@ -23,7 +23,8 @@
     { "id": "no-drums", "name": "Test everything but drums", "does_not_play": ["drums"] }
   ],
   "effects": [
-    { "id": "gain", "name": "Test gain (the section's level, half by default; silent under a stamped beat)", "follows_score": true, "order": 250 }
+    { "id": "gain", "name": "Test gain (the section's level, half by default; silent under a stamped beat)", "follows_score": true,
+      "chord_voice": false, "order": 250 }
   ],
   "services": [
     { "interface": "test-echo", "id": "echo", "name": "Echo", "priority": 1 },

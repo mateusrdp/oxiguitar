@@ -57,6 +57,27 @@ struct BarX {
 }
 
 impl BarX {
+    /// Where `pos` whole notes from the bar's start fall, between its
+    /// columns in proportion to their onsets (as the cursor moves), and
+    /// towards the bar line after the last one; `length` is the bar's.
+    fn x_at(&self, grid: &BarGrid, length: Ratio, pos: f64) -> f32 {
+        let onsets: Vec<f64> = grid.cols.iter().map(|c| c.onset.to_f64()).collect();
+        let i = onsets.partition_point(|o| *o <= pos);
+        let Some(k) = i.checked_sub(1) else {
+            return self.cols.first().copied().unwrap_or(self.notes);
+        };
+        let (o0, x0) = (onsets[k], self.cols.get(k).copied().unwrap_or(self.notes));
+        let (o1, x1) = match (onsets.get(k + 1), self.cols.get(k + 1)) {
+            (Some(o), Some(x)) => (*o, *x),
+            _ => (length.to_f64().max(o0), self.end),
+        };
+        if o1 <= o0 {
+            return x0;
+        }
+        let t = ((pos - o0) / (o1 - o0)).clamp(0.0, 1.0) as f32;
+        x0 + t * (x1 - x0)
+    }
+
     fn x_of(&self, grid: &BarGrid, onset: Ratio) -> f32 {
         self.cols
             .get(grid.index_of(onset))
@@ -569,7 +590,51 @@ pub(crate) fn system(
             }
         }
         let geometry = effects::Geometry { band, tg, right };
-        effects::draw(p, &mut list, &marks, &geometry, &mut hits.drawn);
+        let mut started = Vec::new();
+        effects::draw(
+            p,
+            &mut list,
+            &marks,
+            &geometry,
+            &mut hits.drawn,
+            &mut started,
+        );
+        // Others' runs: each piece of one that crosses this system.
+        if let (Some(lane), Some(runs), Some(first), Some(last)) = (
+            band.lane(Lane::Drawn),
+            plans.runs.get(vi),
+            bars.first(),
+            bars.last(),
+        ) {
+            for r in runs {
+                if r.at.bar > last.index || r.run.to_bar < first.index {
+                    continue;
+                }
+                let x0 = if r.at.bar >= first.index {
+                    // Starts here: from its box, if it was drawn.
+                    match started.iter().find(|s| s.at == r.at && s.rank == r.rank) {
+                        Some(s) => s.x,
+                        None => continue,
+                    }
+                } else {
+                    first.notes - 0.5 * sp
+                };
+                let ends = r.run.to_bar <= last.index;
+                let x1 = if ends {
+                    let Some(bx) = bars.iter().find(|b| b.index == r.run.to_bar) else {
+                        continue;
+                    };
+                    match (plans.grids.get(bx.index), plan_of(bx.index)) {
+                        (Some(grid), Some(plan)) => bx.x_at(grid, plan.length, r.run.to),
+                        _ => bx.end,
+                    }
+                } else {
+                    last.end
+                };
+                let y = lane.base - 0.5 * r.height * sp;
+                crate::drawing::draw_run(p, &mut list, &r.run, (x0, x1, y), ends);
+            }
+        }
     }
     // The line joining every staff at the start of the system.
     if let (Some(first), Some(last)) = (bands.first(), bands.last())

@@ -478,7 +478,27 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
         ];
         report.check(
             "it draws within the interface's limits",
-            match plugins.try_draw(&plugin, places) {
+            // Played twice, as in a repeat, so a drawing's run can be
+            // checked too (interface 1.13).
+            match plugins.try_draw(
+                &plugin,
+                places,
+                oxiguitar_host::api::message::DrawTimes {
+                    starts: vec![vec![0.0, 2.0], vec![0.0, 2.0]],
+                    bars: vec![
+                        oxiguitar_host::api::message::PlayedBar {
+                            bar: 0,
+                            start: 0.0,
+                            end: 2.0,
+                        },
+                        oxiguitar_host::api::message::PlayedBar {
+                            bar: 0,
+                            start: 2.0,
+                            end: 4.0,
+                        },
+                    ],
+                },
+            ) {
                 Ok(_) => Ok(()),
                 Err(e) if e.kind == oxiguitar_host::api::message::ErrorKind::Invalid => {
                     Err(e.message)

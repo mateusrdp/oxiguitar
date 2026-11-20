@@ -639,6 +639,9 @@ fn opened(st: &mut State, doc: Document, folder: Option<PathBuf>, sink: &dyn Fn(
     // Plugins hear of it as the window does (pushing never waits).
     st.revision += 1;
     st.open.set(Some(doc.score.clone()), st.revision);
+    st.open.set_file(
+        (!doc.untitled).then(|| std::path::absolute(&doc.path).unwrap_or(doc.path.clone())),
+    );
     st.plugins.push(PluginEvent::ScoreOpened {
         revision: st.revision,
     });
@@ -720,6 +723,9 @@ fn write_save(st: &mut State, prepared: &Prepared, keep: bool, sink: &dyn Fn(Eve
             if let Some(warning) = warning {
                 sink(Event::Message(Level::Error, warning));
             }
+            st.open.set_file(Some(
+                std::path::absolute(&doc.path).unwrap_or(doc.path.clone()),
+            ));
             let name = doc.name();
             sink(Event::Message(Level::Info, format!("Saved {name}.")));
             sink(Event::Saved {

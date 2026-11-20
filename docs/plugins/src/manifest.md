@@ -32,7 +32,7 @@ The template's:
 | `effects` | no | The effects it offers a track, after its instrument; interface 1.3 ([Instruments](instruments.md)) |
 | `tabs` | no | Its tabs, and from interface 1.8 its dialogs; interface 1.1 ([Tabs](tabs.md)) |
 | `events` | no | The kinds of event it wants: `"score"`, `"selection"`, `"playback"`; interface 1.1 ([Events](events.md)) |
-| `draws` | no | It draws on the page where it keeps data; interface 1.8 ([Drawing on the page](drawing.md)) |
+| `draws` | no | It draws on the page where it keeps data; interface 1.13 (1.8 to 1.12 had a shorter request) ([Drawing on the page](drawing.md)) |
 | `performs` | no | It plays each track's notes its own way; interface 1.12 (1.8 to 1.11 had a shorter request) ([Playing the notes your own way](playing.md)) |
 | `tools` | no | Its entries in the Tools menu, and from interface 1.8 in any menu and on the palette; interface 1.2 ([Tools](tools.md)) |
 | `track_sections` | no | Its sections of the Track tab; interface 1.3 ([Track sections](track-sections.md)) |
@@ -96,7 +96,8 @@ OxiGuitar refuses a manifest that breaks these, and Tools → Plugins names the 
 - a format reads or writes, and one that reads has at least one signature;
 - extensions are lowercase and without the dot (`"gp5"`, not `".GP5"`);
 - tabs and events need interface 1.1;
-- `draws`, `performs`, a toolbar button, a folder of the plugin's own name (1 to 24 lowercase letters, digits and single hyphens; not `plugins`, `data` or `cache`),
+- `draws` and an effect's `chord_voice` need interface 1.13, `performs` 1.12;
+- a toolbar button, a folder of the plugin's own name (1 to 24 lowercase letters, digits and single hyphens; not `plugins`, `data` or `cache`),
 - a palette button, a menu, a dialog, `follows_score` and `order` need interface 1.8, and a palette button has a symbol or a text of at most 5 characters.
 
 `cargo test` also checks what only the code can tell:

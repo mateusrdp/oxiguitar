@@ -134,6 +134,8 @@ pub(crate) struct Plans {
     pub(crate) bars: Vec<Vec<BarPlan>>,
     /// By bar.
     pub(crate) grids: Vec<BarGrid>,
+    /// Others' runs ([`crate::drawing::Run`]), by view.
+    pub(crate) runs: Vec<Vec<crate::drawing::RunSpan>>,
 }
 
 pub(crate) fn plan_all(
@@ -166,7 +168,7 @@ pub(crate) fn plan_all(
             (right, left, hands::without_shared_marks(staff))
         });
     }
-    let bars: Vec<Vec<BarPlan>> = views
+    let (bars, runs): (Vec<Vec<BarPlan>>, Vec<Vec<crate::drawing::RunSpan>>) = views
         .iter()
         .filter_map(|v| {
             let track = score.tracks.get(v.track)?;
@@ -205,16 +207,32 @@ pub(crate) fn plan_all(
                 }
                 measure_lyrics(&mut planned, p);
             }
-            Some(planned)
+            // A run needs the drawing lane in every bar it crosses.
+            let runs = if matches!(v.part, Part::Whole) {
+                crate::drawing::runs_of(drawings, v.track, v.staff)
+            } else {
+                Vec::new()
+            };
+            for r in &runs {
+                let tenths = crate::drawing::lane_tenths(r.height);
+                for bar in planned
+                    .iter_mut()
+                    .take(r.run.to_bar.saturating_add(1))
+                    .skip(r.at.bar + 1)
+                {
+                    bar.lanes.drawn = bar.lanes.drawn.max(tenths);
+                }
+            }
+            Some((planned, runs))
         })
-        .collect();
+        .unzip();
     let grids = (0..score.master_bars.len())
         .map(|i| {
             let of_bar: Vec<&BarPlan> = bars.iter().filter_map(|v| v.get(i)).collect();
             BarGrid::merge(&of_bar, p.sp)
         })
         .collect();
-    Plans { bars, grids }
+    Plans { bars, grids, runs }
 }
 
 /// Marks each beat a slur reaches from the beat before it in its voice,

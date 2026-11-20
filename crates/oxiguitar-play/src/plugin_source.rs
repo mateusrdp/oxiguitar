@@ -122,7 +122,8 @@ pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
                 .unwrap_or_else(|| "{}".into()),
         };
         let mut beats: Option<Vec<PlayedBeat>> = None;
-        let effects: Vec<EffectPick> = plugins
+        // Each effect, and whether it runs on the chord voice too.
+        let picks: Vec<(EffectPick, bool)> = plugins
             .effects_in_order(class_of(score, t), &track.effects)
             .into_iter()
             .filter_map(|e| {
@@ -137,25 +138,36 @@ pub fn plan(plugins: &Plugins, score: &Score) -> Plan {
                 } else {
                     Vec::new()
                 };
-                Some(EffectPick {
-                    beats,
-                    settings: track
-                        .plugins
-                        .get(&plugin)
-                        .cloned()
-                        .unwrap_or_else(|| "{}".into()),
-                    plugin,
-                    effect: e.spec.id.clone(),
-                })
+                Some((
+                    EffectPick {
+                        beats,
+                        settings: track
+                            .plugins
+                            .get(&plugin)
+                            .cloned()
+                            .unwrap_or_else(|| "{}".into()),
+                        plugin,
+                        effect: e.spec.id.clone(),
+                    },
+                    e.spec.chord_voice,
+                ))
             })
             .collect();
         // The chord voice, when the track's chords are played: the same
-        // instrument and effects, prepared as a track of their own.
+        // instrument and effects, prepared as a track of their own, less
+        // the effects that add sound of their own (interface 1.13), which
+        // the track itself already plays.
         let chords = plays_chords(track).then(|| {
             let mut voice = prepared.clone();
             voice.info.name = format!("{} (chords)", track.name);
-            (score.tracks.len() + t, voice, effects.clone())
+            let effects: Vec<EffectPick> = picks
+                .iter()
+                .filter(|(_, on_chords)| *on_chords)
+                .map(|(e, _)| e.clone())
+                .collect();
+            (score.tracks.len() + t, voice, effects)
         });
+        let effects: Vec<EffectPick> = picks.into_iter().map(|(e, _)| e).collect();
         let at = match out
             .groups
             .iter()
