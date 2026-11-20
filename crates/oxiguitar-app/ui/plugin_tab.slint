@@ -9,6 +9,26 @@
 
 import { Button, CheckBox, Slider, LineEdit, ComboBox, StandardListView, Palette } from "std-widgets.slint";
 
+// What the user does on a plugin's surface (interface 1.14), for whichever
+// view shows it (`view`: the window's area number, 4 for a plugin's
+// dialog): main.rs sends it to the plugin. `key` answers whether the key
+// was the plugin's (a named key, or a character with Ctrl or Alt): what it
+// doesn't take goes on to the surface's text sink, which hears typing, an
+// input method and pasting as text (`typed`). `copy` is how a plugin's
+// text reaches the clipboard: through the one TextInput the window keeps
+// for it (app.slint's `clipboard`).
+export global PluginSurfaces {
+    callback room(int, string, float, float);
+    // Down (0), up (1), a drag (2), a move with no button (3), left (4);
+    // where, in logical pixels; which button (0 main, 1 right, 2 middle).
+    callback pointer(int, string, int, float, float, int);
+    callback wheel(int, string, float, float, float, float);
+    // The key's text (Slint's KeyEvent text), Shift, Ctrl, Alt.
+    callback key(int, string, string, bool, bool, bool) -> bool;
+    callback typed(int, string, string);
+    callback focus(int, string, bool);
+}
+
 // A plugin's link was clicked (interface 1.4): main.rs opens its address
 // in the browser, `https://` only (links.rs), for whichever window shows it.
 export global PluginLinks {
@@ -39,6 +59,12 @@ export struct PluginWidget {
     canvas: image,
     canvas-width: float,
     canvas-height: float,
+    // Surfaces (interface 1.14): the height asked for (0 fills the room),
+    // whether it takes the keyboard, and the pointer's shape (0 default,
+    // 1 pointer, 2 text, 3 grab, 4 grabbing, 5 not allowed, 6 wait).
+    surface-height: float,
+    keys: bool,
+    cursor: int,
 }
 
 export struct PluginRow {
@@ -52,6 +78,8 @@ export struct PluginRow {
 // horizontal-stretch.
 export component PluginWidgetView {
     in property <PluginWidget> w;
+    // The view showing it, for surfaces' events (PluginSurfaces).
+    in property <int> view;
     callback clicked(string);
     callback toggled(string, bool);
     callback slid(string, float);
@@ -142,6 +170,93 @@ export component PluginWidgetView {
             property <int> says: w.selected;
             changed says => { self.current-item = self.says; }
             current-item-changed(i) => { root.chosen(w.id, i); }
+        }
+        if w.kind == "surface" : surface := Rectangle {
+            horizontal-stretch: 1;
+            min-height: w.surface-height > 0 ? w.surface-height * 1px : 24px;
+            preferred-height: w.surface-height > 0 ? w.surface-height * 1px : 2000px;
+            vertical-stretch: w.surface-height > 0 ? 0 : 1;
+            clip: true;
+            property <int> button;
+            init => { PluginSurfaces.room(root.view, w.id, self.width / 1px, self.height / 1px); }
+            changed width => { PluginSurfaces.room(root.view, w.id, self.width / 1px, self.height / 1px); }
+            changed height => { PluginSurfaces.room(root.view, w.id, self.width / 1px, self.height / 1px); }
+            // Drawn at the device pixels it covers: shown one to one.
+            Image {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                source: w.canvas;
+                image-fit: fill;
+            }
+            area := TouchArea {
+                mouse-cursor: w.cursor == 1 ? MouseCursor.pointer
+                    : w.cursor == 2 ? MouseCursor.text
+                    : w.cursor == 3 ? MouseCursor.grab
+                    : w.cursor == 4 ? MouseCursor.grabbing
+                    : w.cursor == 5 ? MouseCursor.not-allowed
+                    : w.cursor == 6 ? MouseCursor.wait
+                    : MouseCursor.default;
+                pointer-event(e) => {
+                    if (e.kind == PointerEventKind.down) {
+                        surface.button = e.button == PointerEventButton.right ? 1
+                            : e.button == PointerEventButton.middle ? 2 : 0;
+                        if (w.keys) {
+                            sink.focus();
+                        }
+                        PluginSurfaces.pointer(root.view, w.id, 0, self.mouse-x / 1px, self.mouse-y / 1px, surface.button);
+                    } else if (e.kind == PointerEventKind.up) {
+                        PluginSurfaces.pointer(root.view, w.id, 1, self.mouse-x / 1px, self.mouse-y / 1px, surface.button);
+                    } else if (e.kind == PointerEventKind.move) {
+                        PluginSurfaces.pointer(root.view, w.id, self.pressed ? 2 : 3, self.mouse-x / 1px, self.mouse-y / 1px,
+                            self.pressed ? surface.button : 0);
+                    }
+                }
+                changed has-hover => {
+                    if (!self.has-hover) {
+                        PluginSurfaces.pointer(root.view, w.id, 4, self.mouse-x / 1px, self.mouse-y / 1px, 0);
+                    }
+                }
+                scroll-event(e) => {
+                    // Slint's delta is how far the contents move: down the
+                    // wheel, up they go, which the plugin hears as positive.
+                    PluginSurfaces.wheel(root.view, w.id, self.mouse-x / 1px, self.mouse-y / 1px, -e.delta-x / 1px, -e.delta-y / 1px);
+                    accept
+                }
+            }
+            // The keyboard, once clicked: keys that aren't text are the
+            // plugin's; text (typed, from an input method, pasted) comes
+            // through the invisible sink.
+            FocusScope {
+                x: 0;
+                y: 0;
+                width: 1px;
+                height: 1px;
+                enabled: w.keys;
+                focus-on-click: false;
+                focus-on-tab-navigation: false;
+                capture-key-pressed(e) => {
+                    if (PluginSurfaces.key(root.view, w.id, e.text, e.modifiers.shift, e.modifiers.control, e.modifiers.alt)) {
+                        return accept;
+                    }
+                    reject
+                }
+                sink := TextInput {
+                    width: 1px;
+                    height: 1px;
+                    opacity: 0;
+                    single-line: false;
+                    enabled: w.keys;
+                    edited => {
+                        if (self.text != "") {
+                            PluginSurfaces.typed(root.view, w.id, self.text);
+                            self.text = "";
+                        }
+                    }
+                    changed has-focus => { PluginSurfaces.focus(root.view, w.id, self.has-focus); }
+                }
+            }
         }
         if w.kind == "canvas" : room := Rectangle {
             horizontal-stretch: 1;
@@ -234,6 +349,9 @@ export component PluginRows inherits VerticalLayout {
 
 export component PluginTab inherits Rectangle {
     in property <[PluginRow]> rows;
+    // The view it is (the window's area number, 4 for a plugin's dialog),
+    // for surfaces' events.
+    in property <int> view;
     // Shown instead of the rows: while the plugin is asked, or why its tab
     // can't be shown.
     in property <string> message;
@@ -264,6 +382,7 @@ export component PluginTab inherits Rectangle {
             spacing: 2px;
             for w in row.widgets : PluginWidgetView {
                 w: w;
+                view: root.view;
                 clicked(id) => { root.clicked(id); }
                 toggled(id, on) => { root.toggled(id, on); }
                 slid(id, v) => { root.slid(id, v); }

@@ -52,6 +52,7 @@ pub trait Tab: Send + Sync {
 | `List { id, items, selected }` | Lines, one of which may be selected | `Chosen(u32)`, the line's index |
 | `Canvas(Canvas { id, width, height, items })` | A drawing of the plugin's own | `Pointer(Pointer)` |
 | `Link { text, url }` (interface 1.4) | Text the user clicks to open `url`, an `https://` address, in the browser; the core opens it | None |
+| `Surface(Surface { id, height, items, keys, cursor })` (interface 1.14) | A drawing of the plugin's own at the window's scale, which can take the keyboard ([Surfaces](#surfaces-interface-114)) | `Resized`, `Pointer`, `Wheel`, `Focus`, `Key`, `Typed` |
 
 Every widget the user can use has an `id`, unique in the tab (a valid id: lowercase letters and digits joined by `.` or `-`). When the user uses one, the core calls `on(id, event)`, then `content` again. The widgets hold no state of their own: a toggle shows `on` as your last `content` said, so `on` must remember what changed.
 
@@ -89,6 +90,7 @@ Its `items` are drawn in order, later ones over earlier ones (`oxiguitar_plugin:
 | `Rect { at, width, height, paint }` | A filled rectangle, `at` its top-left corner |
 | `Path { cmds, fill, stroke }` | A shape of `MoveTo`, `LineTo`, `CubicTo` and `Close`, filled (non-zero winding), stroked (`(width, paint)`), or both |
 | `Text { text, at, size, font, anchor, paint }` | One line of text on its baseline at `at`, starting, centred or ending there (`Anchor::Start`, `Middle`, `End`); `size` is the font's em in canvas units |
+| `Image { at, width, height, columns, rows, pixels }` (interface 1.14) | A picture of `columns` × `rows` pixels (each side 1 to 4096), premultiplied RGBA a byte a channel, row by row from the top, scaled to fill the box. It keeps its own colours, so prefer the other items where they do: they follow the theme. A drawing on the page leaves pictures out |
 
 Colours are **roles**, resolved by the window's theme, so a canvas follows the dark interface by itself:
 
@@ -121,11 +123,32 @@ pub struct Pointer {
 }
 ```
 
-A press gives `Down`, moving with the button held gives `Drag`s, letting go gives `Up` (wherever the pointer is). Drags the plugin hasn't answered yet are merged, so a slow plugin gets the latest position rather than a backlog. There is no hover: the pointer is reported only while a button is held. The template finds the bar under a press:
+A press gives `Down`, moving with the button held gives `Drag`s, letting go gives `Up` (wherever the pointer is). Drags the plugin hasn't answered yet are merged, so a slow plugin gets the latest position rather than a backlog. On a canvas there is no hover: the pointer is reported only while a button is held (a surface also hears moves). The template finds the bar under a press:
 
 ```rust,ignore
 {{#include ../template/src/statistics.rs:pointer}}
 ```
+
+## Surfaces (interface 1.14)
+
+A **surface** is for a plugin that draws its own controls: a text box, a chat, a piano keyboard, anything the standard widgets don't have. OxiGuitar draws no such control for you; it gives the surface what it needs to be one:
+
+```rust,ignore
+Widget::Surface(Surface {
+    id: "chat".into(),
+    height: 0.0,            // 0: all the room the tab has left; or a height in pixels
+    items,                  // in logical pixels from the top-left corner
+    keys: true,             // takes the keyboard when clicked
+    cursor: Cursor::Text,   // the pointer's shape over it
+})
+```
+
+- **It isn't scaled.** One unit is one logical pixel of the window (the window's scale and zoom make it sharp on any screen), and its width is the room's. Its size comes as `TabEvent::Resized { width, height }` as soon as it is laid out and whenever it changes: lay yourself out for it in your next `content`. What you draw outside the room isn't shown, so to scroll, draw from an offset of your own.
+- **The pointer**, as on a canvas, plus `PointerKind::Move` (no button held) and `Leave`, so buttons of your own can light up under it. Moves you haven't answered yet are merged. **The wheel**: `TabEvent::Wheel { at, dx, dy }` in pixels, `dy` positive to show what is further down.
+- **The keyboard**, when `keys` is true: a click on the surface gives it the keyboard (`Focus(true)`; `Focus(false)` when it goes). Named keys (Enter, Escape, Backspace, Delete, Tab, the arrows, Home, End, Page Up and Down, Insert, F1 to F24) and characters pressed with Ctrl or Alt come as `Key(Key { name, shift, ctrl, alt })` (Ctrl is Command on macOS); everything else is text, `Typed(String)`: what the user types, what an input method makes, and what they paste with Ctrl + V or Shift + Insert. You never read the clipboard; to copy, `host.copy(text)` puts text on it.
+- **Measuring text**: `host.measure_text(text, size, font)` answers where each character of `text` starts in the core's font at `size` and where it ends (`edges`, one more than characters), with the font's `ascent` and `descent`: what you need to wrap lines, place a caret and find the character under the pointer. Text is drawn exactly where it measures.
+
+Every event is answered with your next `content`, as for any widget, so keep it quick and do slow work on a thread of your own, calling `host.redraw` when it is done. A surface is shown in tabs and dialogs; a track section or an export's options can't hold one. The test plugin's tab `side` (`plugins/test`) has a small one.
 
 ## Tips
 

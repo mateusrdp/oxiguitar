@@ -12,7 +12,7 @@
 
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
-export { PluginLinks } from "plugin_tab.slint";
+export { PluginLinks, PluginSurfaces } from "plugin_tab.slint";
 import { PluginDialog, BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog, MergeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
@@ -1323,6 +1323,24 @@ component Pill inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
+    // A plugin's text on its way to the clipboard (interface 1.14,
+    // HostRequest::Copy): the window's own clipboard is reached through a
+    // TextInput, so this one is kept for it, never seen and never focused.
+    clipboard := TextInput {
+        x: 0;
+        y: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        enabled: false;
+    }
+    public function copy-text(text: string) {
+        clipboard.text = text;
+        clipboard.select-all();
+        clipboard.copy();
+        clipboard.text = "";
+    }
+
     // "song.gp — OxiGuitar", with a dot while the score differs from the
     // file (main.rs).
     in property <string> window-title: "OxiGuitar";
@@ -2245,6 +2263,7 @@ export component AppWindow inherits Window {
                     }
                 }
                 if root.top-area.plugin : PluginTab {
+                    view: 0;
                     rows: root.top-plugin-rows;
                     message: root.top-plugin-message;
                     clicked(id) => { root.plugin-clicked(0, id); }
@@ -2302,6 +2321,7 @@ export component AppWindow inherits Window {
                           }
                         }
                         if root.left-area.plugin : PluginTab {
+                    view: 2;
                     rows: root.left-plugin-rows;
                     message: root.left-plugin-message;
                     clicked(id) => { root.plugin-clicked(2, id); }
@@ -2611,6 +2631,7 @@ export component AppWindow inherits Window {
                             edited(id, text) => { root.song-edited(id, text); }
                         }
                         if root.right-area.plugin : PluginTab {
+                    view: 3;
                     rows: root.right-plugin-rows;
                     message: root.right-plugin-message;
                     clicked(id) => { root.plugin-clicked(3, id); }
@@ -2774,6 +2795,7 @@ export component AppWindow inherits Window {
                     }
                 }
                 if root.bottom-area.plugin : PluginTab {
+                    view: 1;
                     rows: root.bottom-plugin-rows;
                     message: root.bottom-plugin-message;
                     clicked(id) => { root.plugin-clicked(1, id); }

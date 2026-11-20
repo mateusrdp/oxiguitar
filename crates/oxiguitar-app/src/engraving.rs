@@ -26,8 +26,10 @@ fn paint(p: Paint) -> wire::Paint {
     }
 }
 
-fn item(item: &Item) -> wire::Item {
-    match item {
+/// An item of a page as plugins read it; `None` for a picture, which no
+/// page holds and no engraving carries (interface 1.14).
+fn item(item: &Item) -> Option<wire::Item> {
+    Some(match item {
         Item::Glyphs(run) => wire::Item::Text {
             text: run.text.clone(),
             at: point(run.origin),
@@ -73,7 +75,8 @@ fn item(item: &Item) -> wire::Item {
             fill: fill.map(paint),
             stroke: stroke.map(|(w, p)| (w, paint(p))),
         },
-    }
+        Item::Image { .. } => return None,
+    })
 }
 
 /// The engraving of `pages` and `hits`, made of the score at `revision`.
@@ -107,7 +110,7 @@ pub(crate) fn of(revision: u64, pages: &[DisplayList], hits: &Hits) -> Engraving
             .map(|page| EngravedPage {
                 width: page.width,
                 height: page.height,
-                items: page.items.iter().map(item).collect(),
+                items: page.items.iter().filter_map(item).collect(),
             })
             .collect(),
         beats,

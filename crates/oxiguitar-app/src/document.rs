@@ -263,6 +263,23 @@ impl OpenScore {
         self.lock().score.clone()
     }
 
+    /// The open score's revision, as plugins see it.
+    pub(crate) fn revision(&self) -> u64 {
+        self.lock().revision
+    }
+
+    /// Hands `request` to the worker, for a plugin's thread (interface
+    /// 1.14). The error is a sentence for the plugin.
+    pub(crate) fn send(&self, request: crate::worker::Request) -> Result<(), String> {
+        let s = self.lock();
+        let Some(edits) = &s.edits else {
+            return Err("OxiGuitar isn't ready for this yet".to_owned());
+        };
+        edits
+            .send(request)
+            .map_err(|_| "OxiGuitar is closing".to_owned())
+    }
+
     /// Where the changes plugins hand back go: the worker's requests.
     pub(crate) fn connect(&self, edits: std::sync::mpsc::Sender<crate::worker::Request>) {
         self.lock().edits = Some(edits);

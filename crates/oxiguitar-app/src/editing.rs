@@ -1777,6 +1777,124 @@ impl Editing {
     /// The selection as plugins built for interface 1.2 see it: the caret
     /// with its voice and string, a run of beats of one voice, or bars
     /// across tracks.
+    /// A plugin moves the caret or the selection (interface 1.14) to
+    /// `wanted`, as the user would: a run of beats puts the caret on its
+    /// last beat, whole bars on the first bar's first beat of the first
+    /// track. The error, for the plugin, names what the score doesn't have.
+    pub(crate) fn select_for_plugin(&mut self, wanted: Selection2) -> Result<(), String> {
+        let score = self.score.clone().ok_or("no score is open")?;
+        let u = |n: u32| usize::try_from(n).unwrap_or(usize::MAX);
+        let exact = |c: Caret, what: &str| -> Result<Caret, String> {
+            let clamped = c.clamp(&score).ok_or("the score has no tracks or bars")?;
+            let same = clamped.track == c.track
+                && clamped.staff == c.staff
+                && clamped.voice == c.voice
+                && clamped.bar == c.bar
+                && clamped.beat == c.beat;
+            if same {
+                Ok(clamped)
+            } else {
+                Err(format!(
+                    "the score has no {what} at track {}, staff {}, voice {}, bar {}, beat {} (all from 0)",
+                    c.track, c.staff, c.voice, c.bar, c.beat
+                ))
+            }
+        };
+        let (caret, anchor, selection) = match wanted {
+            Selection2::Caret {
+                track,
+                staff,
+                voice,
+                bar,
+                beat,
+                string,
+            } => {
+                let c = exact(
+                    Caret {
+                        track: u(track),
+                        staff: u(staff),
+                        voice: u(voice),
+                        bar: u(bar),
+                        beat: u(beat),
+                        string: string.max(1),
+                    },
+                    "place for the caret",
+                )?;
+                (c, None, None)
+            }
+            Selection2::Beats {
+                track,
+                staff,
+                voice,
+                from,
+                to,
+            } => {
+                let at = |p: Position| Caret {
+                    track: u(track),
+                    staff: u(staff),
+                    voice: u(voice),
+                    bar: u(p.bar),
+                    beat: u(p.beat),
+                    string: 1,
+                };
+                let first = exact(at(from), "beat")?;
+                let last = exact(at(to), "beat")?;
+                if (last.bar, last.beat) < (first.bar, first.beat) {
+                    return Err("a run of beats goes from its first beat to its last".to_owned());
+                }
+                let selection = Selection::Beats {
+                    track: first.track,
+                    staff: first.staff,
+                    voice: first.voice,
+                    from: (first.bar, first.beat),
+                    to: (last.bar, last.beat),
+                };
+                (last, Some(first), Some(selection))
+            }
+            Selection2::Bars {
+                first_track,
+                last_track,
+                first_bar,
+                last_bar,
+            } => {
+                let tracks = (u(first_track), u(last_track));
+                let bars = (u(first_bar), u(last_bar));
+                if tracks.0 > tracks.1
+                    || bars.0 > bars.1
+                    || tracks.1 >= score.tracks.len()
+                    || bars.1 >= score.bar_count()
+                {
+                    return Err(format!(
+                        "the score has {} tracks and {} bars (from 0): it has no tracks {}-{}, bars {}-{}",
+                        score.tracks.len(),
+                        score.bar_count(),
+                        tracks.0,
+                        tracks.1,
+                        bars.0,
+                        bars.1
+                    ));
+                }
+                let c = exact(
+                    Caret {
+                        track: tracks.0,
+                        staff: 0,
+                        voice: 0,
+                        bar: bars.0,
+                        beat: 0,
+                        string: 1,
+                    },
+                    "place for the caret",
+                )?;
+                (c, None, Some(Selection::Bars { tracks, bars }))
+            }
+        };
+        self.lyric = None;
+        self.caret = Some(caret);
+        self.anchor = anchor;
+        self.selection = selection;
+        Ok(())
+    }
+
     pub(crate) fn for_plugins2(&self) -> Option<Selection2> {
         let score = self.score.as_ref()?;
         let c = self.caret?;

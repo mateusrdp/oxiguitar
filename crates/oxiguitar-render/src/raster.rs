@@ -151,6 +151,12 @@ impl Raster {
                         pixmap.stroke_path(&p, &paint_of(theme, *s), &st, base, None);
                     }
                 }
+                Item::Image {
+                    rect,
+                    columns,
+                    rows,
+                    pixels,
+                } => draw_image(pixmap, *rect, *columns, *rows, pixels, base),
             }
         }
     }
@@ -231,6 +237,43 @@ fn to_skia_path(path: &Path) -> Option<tiny_skia::Path> {
 
 fn color(c: Rgba) -> tiny_skia::Color {
     tiny_skia::Color::from_rgba8(c.r, c.g, c.b, c.a)
+}
+
+/// A plugin's picture (interface 1.14), scaled to fill `rect`. Pixels that
+/// don't make a whole image are left undrawn (the host checks them).
+fn draw_image(
+    pixmap: &mut Pixmap,
+    rect: oxiguitar_display::Rect,
+    columns: u32,
+    rows: u32,
+    pixels: &[u8],
+    base: Transform,
+) {
+    let (Some(image), Some(r)) = (
+        tiny_skia::PixmapRef::from_bytes(pixels, columns, rows),
+        tiny_skia::Rect::from_xywh(rect.x, rect.y, rect.width, rect.height),
+    ) else {
+        return;
+    };
+    let to_rect = Transform::from_row(
+        rect.width / columns as f32,
+        0.0,
+        0.0,
+        rect.height / rows as f32,
+        rect.x,
+        rect.y,
+    );
+    let paint = tiny_skia::Paint {
+        shader: tiny_skia::Pattern::new(
+            image,
+            tiny_skia::SpreadMode::Pad,
+            tiny_skia::FilterQuality::Bilinear,
+            1.0,
+            to_rect,
+        ),
+        ..tiny_skia::Paint::default()
+    };
+    pixmap.fill_rect(r, &paint, base, None);
 }
 
 fn paint_of(theme: &Theme, paint: Paint) -> tiny_skia::Paint<'static> {

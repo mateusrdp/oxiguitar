@@ -39,6 +39,25 @@ A palette tool is a button, not a mode: a click runs it, as a menu entry does. T
 
 The rule is the same everywhere a plugin adds something (Mateus, 16 Nov 2026): name a place of OxiGuitar's own, name a new one of yours, or name none and land in Plugins. OxiGuitar puts nothing of its own in the Plugins menu or the palette's Plugins section, so what plugins add stays apart from the core's unless its author chose otherwise. A manifest whose palette section or menu name is too long, or whose button has neither or both of `symbol` and `text`, is refused.
 
+## Running tools (interface 1.14)
+
+A plugin can run any tool there is, the core's and other plugins', as the user would from its menu: to automate a procedure, or for a plugin that acts for the user (such as a chat with a language model).
+
+- `host.tools()` lists them: `ToolEntry { owner, id, name, description, edits, options }`, the core's first (owner `CORE_TOOLS`, `"oxiguitar"`: its Tools menu, with Transpose, Find Fingering, Fit Bars and Harmonize), then each plugin's (owner its id). `options` is the JSON Schema of what runs the tool as told, as JSON text, or `None` for a tool that runs only as from its menu.
+- `host.run_tool(owner, id, options)` runs one and returns its report once it has run. With `options` (a JSON object its schema describes) it runs as told, without asking the user: `{"amount": 2, "scope": "track"}` transposes the caret's track up a tone. Without, it runs as from its menu: a tool with a dialog opens it for the user. An edit runs only with a score open and not while the song plays, as one change the user can undo. Ask from a thread of your own, never from inside a tool's `run`: the core runs one tool at a time, and refuses that.
+- `host.select(selection)` moves the caret or the selection first, as the user would: select bars, then run a tool on the selection.
+
+To let other plugins run **your** tool as told, give its manifest entry an `options` schema and implement `Tool::run_with`, which gets the options as a JSON value. Check them: the host checks only that they are an object.
+
+```json
+"tools": [
+  { "id": "octave-up", "name": "Up an Octave", "description": "Moves every note of the score up an octave.",
+    "options": { "type": "object", "properties": { "octaves": { "type": "integer", "minimum": 1, "maximum": 3 } } } }
+]
+```
+
+File's entries (open, save, export) are not tools: files stay the user's.
+
 ## Changing the score
 
 A tool, a tab's button or anything else in your plugin changes the score the same way:

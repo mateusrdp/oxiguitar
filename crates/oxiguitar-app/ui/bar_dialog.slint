@@ -391,6 +391,7 @@ export component PluginDialog inherits Rectangle {
         PluginTab {
             min-height: 120px;
             preferred-height: 420px;
+            view: 4;
             rows: root.rows;
             message: root.message;
             clicked(id) => { root.clicked(id); }
