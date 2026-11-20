@@ -117,6 +117,7 @@ fn export_file(asked: &Asked) -> Result<(), String> {
     // What the file beside it keeps: the tracks' plugin settings (NAM's
     // amp, say) and what plugins keep in the score, for the effects that
     // follow it.
+    crate::plugins::set_score_file(std::path::Path::new(&asked.path));
     crate::plugins::apply_sidecar(&asked.path, &mut score)?;
     let timeline = Timeline::new(&score);
     let mut plan = Plan::whole(&score);

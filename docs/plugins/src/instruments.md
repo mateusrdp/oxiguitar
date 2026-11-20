@@ -75,6 +75,8 @@ The beats are the score's as playback started; the song isn't edited while it pl
 
 `order` says where the effect goes in a track's chain when the user hasn't moved it: lower first. Pedals before the amp take 100, amp models 200, equalizers and what shapes the finished sound 300; without it an effect goes last. The user's own order for a track, set with the arrows of the Track tab's sections, wins.
 
+A track whose chord diagrams are played has a chord voice: the chords on an instrument of their own, through a copy of the track's effects. An effect that adds sound of its own rather than changing the track's (audio played along, say) says `"chord_voice": false` (interface 1.13), so it runs on the track and not again on its chord voice, where it would be heard twice.
+
 ## Tracks and classes
 
 - **One instrument per track.** Each track chooses its instrument, with one default for the rest.

@@ -29,9 +29,28 @@ pub(crate) struct Opened {
 /// Plugins' messages go to the standard error.
 struct Stderr;
 
+/// The score file the command plays or exports, for plugins that keep
+/// paths relative to it (interface 1.13).
+static SCORE_FILE: std::sync::Mutex<Option<std::path::PathBuf>> = std::sync::Mutex::new(None);
+
+/// The command works on the score file `path`.
+pub(crate) fn set_score_file(path: &Path) {
+    *SCORE_FILE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) =
+        Some(std::path::absolute(path).unwrap_or_else(|_| path.to_owned()));
+}
+
 impl Core for Stderr {
     fn notify(&self, _level: Level, text: String) {
         eprintln!("{text}");
+    }
+
+    fn score_file(&self) -> Option<std::path::PathBuf> {
+        SCORE_FILE
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 }
 

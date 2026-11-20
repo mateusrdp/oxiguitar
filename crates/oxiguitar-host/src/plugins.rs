@@ -65,10 +65,10 @@ use oxiguitar_plugin_api::manifest::{
     Shortcut, ToolSpec, TrackSectionSpec,
 };
 use oxiguitar_plugin_api::message::{
-    Answer, Availability, Clicked, DrawPlace, Drawn, Engraving, Error, ErrorKind, FolderPlaces,
-    HostAnswer, HostRequest, Link, LogEntry, PERFORMED_MAX, Perform, PlayedBeat, PlayedNote,
-    PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode,
-    outcome,
+    Answer, Availability, Clicked, DrawPlace, DrawTimes, Drawn, Engraving, Error, ErrorKind,
+    FolderPlaces, HostAnswer, HostRequest, Link, LogEntry, PERFORMED_MAX, Perform, PlayedBeat,
+    PlayedNote, PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo,
+    decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
@@ -141,6 +141,12 @@ pub trait Core: Send + Sync {
     /// without a window.
     fn show_tab(&self, tab: &TabId) {
         let _ = tab;
+    }
+
+    /// The open score's file, or `None` when none is open or it was never
+    /// saved (interface 1.13). The default has none.
+    fn score_file(&self) -> Option<std::path::PathBuf> {
+        None
     }
 
     /// The open score, as plugins see it, or `None` when none is open. The
@@ -1570,7 +1576,7 @@ impl Plugins {
     pub fn drawing_clicked(&self, plugin: &str, click: Clicked) -> Result<String, Error> {
         let (index, _, _) = self
             .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.draws)
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(13) && m.draws)
             .ok_or_else(|| Error::not_found(format!("no ready plugin {plugin} draws")))?;
         match self.request(index, &Request::Clicked(Box::new(click)))? {
             Answer::Report(report) => Ok(report),
@@ -1578,11 +1584,12 @@ impl Plugins {
         }
     }
 
-    /// The ids of the ready plugins that draw on the page (interface 1.8),
+    /// The ids of the ready plugins that draw on the page (interface 1.8;
+    /// since 1.13 only those built for it, as `Request::Draw` grew then),
     /// in plugin order.
     pub fn drawers(&self) -> Vec<String> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(8) && m.draws)
+            .filter(|(_, _, m)| m.knows_minor(13) && m.draws)
             .map(|(_, _, m)| m.id.clone())
             .collect()
     }
@@ -1592,10 +1599,10 @@ impl Plugins {
     /// same as last time. No places, no request: nothing is drawn. A
     /// plugin that can't draw, or answers with a drawing that breaks the
     /// interface's limits, draws nothing, and the footer says why.
-    pub fn draw(&self, plugin: &str, places: Vec<DrawPlace>) -> Vec<Drawn> {
+    pub fn draw(&self, plugin: &str, places: Vec<DrawPlace>, times: DrawTimes) -> Vec<Drawn> {
         let Some((index, found, _)) = self
             .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.draws)
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(13) && m.draws)
         else {
             return Vec::new();
         };
@@ -1608,7 +1615,7 @@ impl Plugins {
             return Vec::new();
         }
         let count = places.len();
-        let request = Request::Draw { places };
+        let request = Request::Draw { places, times };
         let Ok(bytes) = encode(&request) else {
             return Vec::new();
         };
@@ -1646,17 +1653,22 @@ impl Plugins {
     /// [`Plugins::draw`] does but each time, with what goes wrong as an
     /// error: a drawing that breaks the interface's limits, or one at a
     /// place it wasn't given. For the contract suite.
-    pub fn try_draw(&self, plugin: &str, places: Vec<DrawPlace>) -> Result<Vec<Drawn>, Error> {
+    pub fn try_draw(
+        &self,
+        plugin: &str,
+        places: Vec<DrawPlace>,
+        times: DrawTimes,
+    ) -> Result<Vec<Drawn>, Error> {
         let Some((index, _, _)) = self
             .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(8) && m.draws)
+            .find(|(_, _, m)| m.id == plugin && m.knows_minor(13) && m.draws)
         else {
             return Err(Error::not_found(format!(
                 "no usable plugin {plugin:?} draws"
             )));
         };
         let count = places.len();
-        self.drawn_by(index, &Request::Draw { places }, count)
+        self.drawn_by(index, &Request::Draw { places, times }, count)
     }
 
     fn drawn_by(
@@ -2427,6 +2439,21 @@ impl Plugins {
                     Err(Error::new(
                         ErrorKind::Unsupported,
                         "asking for the selection needs interface 1.8",
+                    ))
+                }
+            }
+            HostRequest::ScoreFile => {
+                if manifest.knows_minor(13) {
+                    Ok(HostAnswer::ScoreFile(
+                        self.0
+                            .core
+                            .score_file()
+                            .and_then(|p| p.to_str().map(str::to_owned)),
+                    ))
+                } else {
+                    Err(Error::new(
+                        ErrorKind::Unsupported,
+                        "asking for the score's file needs interface 1.13",
                     ))
                 }
             }

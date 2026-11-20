@@ -70,3 +70,7 @@ Such a folder sits beside `plugins`, in each of OxiGuitar's folders:
 - **beside the program** in a portable copy (`impulses\` next to `oxiguitar.exe`).
 
 `host.folder("impulses")` answers with `FolderPlaces`: `user`, and `others`, the system's and the program's that exist, in the order plugins are looked for; `all()` walks them, the user's first. Read from every place; write only to the user's. A name is 1 to 24 lowercase letters, digits and single hyphens, and none of `plugins`, `data` and `cache`. Two plugins that list the same name share the folder, as the MIDI plugin and a sampler might share `soundfonts`. `host.folder` refuses a name the manifest doesn't list.
+
+## The score's file (interface 1.13)
+
+A plugin that keeps paths to files the user picked can keep them relative to the open score, so a folder holding the score, its `.oxg` file and those files can be moved or shared whole: `host.score_file()` answers with the score's file as an absolute path, or `None` when no score is open or it was never saved. Resolve a relative path against its folder each time you need the file, since the score may have been saved elsewhere since. OxiGuitar opens no files for a plugin: a plugin that lets the user pick one shows its own file dialog.

@@ -61,6 +61,7 @@ pub(crate) fn draw(
     marks: &[Mark<'_>],
     g: &Geometry<'_>,
     drawn: &mut Vec<crate::hits::DrawnHit>,
+    started: &mut Vec<crate::drawing::RunStart>,
 ) {
     let voices: Vec<usize> = {
         let mut v: Vec<usize> = marks.iter().map(|m| m.voice).collect();
@@ -102,7 +103,16 @@ pub(crate) fn draw(
         for m in marks.iter().filter(|m| !m.beat.drawings.is_empty()) {
             let boxes =
                 crate::drawing::draw(p, list, &m.beat.drawings, m.x - 0.5 * p.sp, lane.base);
-            for ((at, d), rect) in m.beat.drawings.iter().zip(boxes) {
+            for (i, ((at, d), rect)) in m.beat.drawings.iter().zip(boxes).enumerate() {
+                if d.run.is_some() {
+                    // Its rank among its place's drawings, as RunSpan has.
+                    let rank = m.beat.drawings[..i].iter().filter(|(a, _)| a == at).count();
+                    started.push(crate::drawing::RunStart {
+                        at: *at,
+                        rank,
+                        x: rect.x + rect.width,
+                    });
+                }
                 drawn.push(crate::hits::DrawnHit {
                     at: *at,
                     tag: d.tag,

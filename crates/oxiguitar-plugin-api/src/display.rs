@@ -52,6 +52,10 @@ pub enum Paint {
     Accent,
     /// Secondary marks.
     Muted,
+    /// What needs the user's attention: a translucent red, for a shape
+    /// laid under what it marks. Since interface 1.13; the engraving
+    /// ([`crate::message::Engraving`]) never holds it.
+    Warning,
 }
 
 /// A font the core draws text in.

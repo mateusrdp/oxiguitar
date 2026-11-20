@@ -12,6 +12,10 @@
 //! beat, before the beat's own), and the column is made wide enough for
 //! them. So a drawing is printed, exported and scrolled as the rest of the
 //! page is, and clicking it finds its beat.
+//!
+//! A drawing may also have a [`Run`] (interface 1.13): a line from its box
+//! onwards to a point in a later beat or bar, drawn across systems as an
+//! ottava's line is. Its caller says where it ends; the engraver only draws.
 
 use std::collections::BTreeMap;
 
@@ -48,6 +52,106 @@ pub struct Drawing {
     pub height: f32,
     /// What is in it, in drawing order.
     pub shapes: Vec<Shape>,
+    /// A line from the box onwards, at its middle height.
+    pub run: Option<Run>,
+}
+
+/// A line from a drawing's box to a point further on in its staff
+/// ([`Drawing::run`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Run {
+    /// The bar it ends in: the drawing's own or a later one.
+    pub to_bar: usize,
+    /// Where in that bar, in whole notes from its start.
+    pub to: f64,
+    /// Its width, in staff spaces.
+    pub width: f32,
+    /// Its colour.
+    pub paint: Paint,
+    /// Dashed rather than solid.
+    pub dashed: bool,
+    /// A short hook down at its end.
+    pub hook: bool,
+}
+
+/// A run as one staff's systems draw it: where it starts and ends.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct RunSpan {
+    /// The drawing's place, and its rank among that place's drawings.
+    pub(crate) at: DrawnAt,
+    pub(crate) rank: usize,
+    /// Its box's height, in staff spaces: the line is at its middle.
+    pub(crate) height: f32,
+    /// The run.
+    pub(crate) run: Run,
+}
+
+/// Every run of the staff `staff` of `track`, by where it starts.
+pub(crate) fn runs_of(drawings: &Drawings, track: usize, staff: usize) -> Vec<RunSpan> {
+    drawings
+        .iter()
+        .filter(|(at, _)| at.track == track && at.staff == staff)
+        .flat_map(|(at, list)| {
+            list.iter().enumerate().filter_map(|(rank, d)| {
+                let run = d.run.clone()?;
+                (run.to_bar >= at.bar).then_some(RunSpan {
+                    at: *at,
+                    rank,
+                    height: d.height,
+                    run,
+                })
+            })
+        })
+        .collect()
+}
+
+/// Where a drawing with a run was drawn in a system: its box's right edge.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct RunStart {
+    /// The drawing's place and rank ([`RunSpan`]).
+    pub(crate) at: DrawnAt,
+    pub(crate) rank: usize,
+    /// Its box's right edge, in points.
+    pub(crate) x: f32,
+}
+
+/// Draws a run's piece in one system, from `x0` to `x1` at height `y`,
+/// with its hook when it `ends` there.
+pub(crate) fn draw_run(
+    p: &Painter<'_>,
+    list: &mut DisplayList,
+    run: &Run,
+    (x0, x1, y): (f32, f32, f32),
+    ends: bool,
+) {
+    let sp = p.sp;
+    if x1 <= x0 {
+        return;
+    }
+    let w = run.width * sp;
+    if run.dashed {
+        let (dash, gap) = (0.6 * sp, 0.4 * sp);
+        let mut x = x0;
+        while x < x1 {
+            list.line(
+                Point::new(x, y),
+                Point::new((x + dash).min(x1), y),
+                w,
+                run.paint,
+            );
+            x += dash + gap;
+        }
+    } else {
+        list.line(Point::new(x0, y), Point::new(x1, y), w, run.paint);
+    }
+    if ends && run.hook {
+        list.line(
+            Point::new(x1, y - 0.5 * w),
+            Point::new(x1, y + 0.8 * sp),
+            w,
+            run.paint,
+        );
+    }
 }
 
 /// Where a text stands on its point.
@@ -132,7 +236,8 @@ pub(crate) fn width(drawings: &[(DrawnAt, Drawing)], sp: f32) -> f32 {
 const GAP: f32 = 0.3;
 
 /// Draws `drawings` side by side from `x`, standing on `base`, and gives
-/// each one's box.
+/// each one's box. Their runs are drawn later, once the system's bars are
+/// all placed.
 pub(crate) fn draw(
     p: &Painter<'_>,
     list: &mut DisplayList,

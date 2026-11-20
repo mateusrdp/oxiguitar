@@ -60,8 +60,8 @@ pub use oxiguitar_plugin_api::class::InstrumentClass;
 pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::message::{
-    Advice, Availability, Clicked, DrawPlace, Drawn, Error, ErrorKind, Level, LogEntry, Perform,
-    PerformStaff, PlayedNote, TrackInfo,
+    Advice, Availability, Clicked, DrawPlace, DrawTimes, Drawn, DrawnRun, Error, ErrorKind, Level,
+    LogEntry, Perform, PerformStaff, PlayedBar, PlayedNote, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -326,8 +326,10 @@ pub trait Tool: Send + Sync {
 pub trait Drawer: Send + Sync {
     /// What to draw at each place: at most one [`Drawn`] a place (its
     /// `place` the index in `places`), in staff spaces, from the box's top
-    /// left corner; none where nothing is drawn.
-    fn draw(&self, places: &[DrawPlace]) -> Result<Vec<Drawn>, Error>;
+    /// left corner; none where nothing is drawn. `times` says when each
+    /// place and every bar are played (interface 1.13), for a drawing whose
+    /// [`DrawnRun`] lasts as long as something it plays.
+    fn draw(&self, places: &[DrawPlace], times: &DrawTimes) -> Result<Vec<Drawn>, Error>;
 
     /// The user clicked what it drew at `place`, at `at` in the drawing's
     /// box (staff spaces from its top left corner); `double` for a double
@@ -523,11 +525,11 @@ pub fn dispatch_kept(
                 .ok_or_else(|| Error::not_found("this plugin doesn't play notes"))?;
             Ok(Answer::Performed(performer.perform(&track)?))
         }
-        Request::Draw { places } => {
+        Request::Draw { places, times } => {
             let drawer = plugin
                 .drawer()
                 .ok_or_else(|| Error::not_found("this plugin draws nothing"))?;
-            Ok(Answer::Drawn(drawer.draw(&places)?))
+            Ok(Answer::Drawn(drawer.draw(&places, &times)?))
         }
         Request::Tool { tool } => {
             let tool = plugin
@@ -917,6 +919,16 @@ impl Host {
         }
     }
 
+    /// The open score's file (interface 1.13), as an absolute path; `None`
+    /// when no score is open or it was never saved. For paths kept relative
+    /// to the score.
+    pub fn score_file(&self) -> Result<Option<std::path::PathBuf>, Error> {
+        match self.0.request(HostRequest::ScoreFile)? {
+            HostAnswer::ScoreFile(f) => Ok(f.map(Into::into)),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// The caret or the selection in the open score as it is now (interface
     /// 1.8); `None` when no score is open. What [`Event::Selection2`] tells
     /// as it changes, for when the plugin needs it at once: a tool run
@@ -1008,6 +1020,7 @@ impl HostServices for Detached {
             | HostRequest::Advise(_) => Ok(HostAnswer::Done),
             HostRequest::Engraving => Ok(HostAnswer::Engraving(None)),
             HostRequest::Selection => Ok(HostAnswer::Selection(None)),
+            HostRequest::ScoreFile => Ok(HostAnswer::ScoreFile(None)),
             HostRequest::OpenDialog { .. } => Err(Error::new(
                 ErrorKind::Failed,
                 "a detached host has no window to show a dialog in",

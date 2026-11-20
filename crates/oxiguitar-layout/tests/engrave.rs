@@ -550,6 +550,7 @@ fn others_drawings_stand_in_a_lane_of_their_own_over_their_beat() {
                 paint: Paint::Ink,
             },
         ],
+        run: None,
     };
     let mut options = Options::default();
     options.drawings.insert(
@@ -1307,4 +1308,94 @@ fn drum_tablature_shows_the_kit_s_numbers() {
     let plain = engrave(&score, &fonts, &meta, &Options::default());
     assert!(plain.hits.systems[0].staves[0].tablature.is_none());
     assert!(!plain.pages.iter().flat_map(texts).any(|t| t == "38"));
+}
+
+#[test]
+fn a_drawing_s_run_goes_on_across_bars_and_systems_to_its_point() {
+    use oxiguitar_display::{Paint, Point};
+    use oxiguitar_layout::{Drawing, DrawnAt, Run};
+    let (fonts, meta) = setup();
+    let score = tune_in_g(24);
+    let plain = engrave(&score, &fonts, &meta, &Options::default());
+    let at = DrawnAt {
+        track: 0,
+        staff: 0,
+        bar: 1,
+        beat: Some((0, 0)),
+    };
+    // A box 2 by 2 staff spaces, its run to halfway through bar 20.
+    let mut options = Options::default();
+    options.drawings.insert(
+        at,
+        vec![Drawing {
+            tag: 1,
+            width: 2.0,
+            height: 2.0,
+            shapes: Vec::new(),
+            run: Some(Run {
+                to_bar: 20,
+                to: 0.5,
+                width: 0.1,
+                paint: Paint::Accent,
+                dashed: false,
+                hook: true,
+            }),
+        }],
+    );
+    let e = engrave(&score, &fonts, &meta, &options);
+    check("run", &e, &fonts);
+    let sp = options.staff_space;
+    // Which system each bar is in.
+    let system_of = |bar: usize| {
+        e.hits
+            .systems
+            .iter()
+            .position(|s| s.staves[0].bars.iter().any(|b| b.bar == bar))
+            .unwrap()
+    };
+    let (first, last) = (system_of(1), system_of(20));
+    assert!(last > first, "the run crosses systems");
+    let lines: Vec<(Point, Point)> = e
+        .pages
+        .iter()
+        .flat_map(|p| &p.items)
+        .filter_map(|i| match i {
+            Item::Line {
+                from,
+                to,
+                paint: Paint::Accent,
+                ..
+            } => Some((*from, *to)),
+            _ => None,
+        })
+        .collect();
+    let across: Vec<&(Point, Point)> = lines.iter().filter(|(a, b)| a.y == b.y).collect();
+    let down: Vec<&(Point, Point)> = lines.iter().filter(|(a, b)| a.x == b.x).collect();
+    assert_eq!(across.len(), last - first + 1, "one piece a system");
+    assert_eq!(down.len(), 1, "one hook, at its end");
+    // It starts at its box's right edge.
+    let drawn = &e.hits.systems[first].drawn[0];
+    assert!((across[0].0.x - (drawn.rect.x + drawn.rect.width)).abs() < 0.01);
+    // It ends halfway through bar 20: between its third beat and its
+    // fourth's column, by the onsets.
+    let bar = e.hits.systems[last].staves[0]
+        .bars
+        .iter()
+        .find(|b| b.bar == 20)
+        .unwrap();
+    let end = across.last().unwrap().1.x;
+    assert!(
+        (end - bar.beats[2].x).abs() < 0.01,
+        "{end} vs {}",
+        bar.beats[2].x
+    );
+    assert!((down[0].0.x - end).abs() < 0.01);
+    // Every system it crosses has the drawings' lane: its staff is lower.
+    for k in first..=last {
+        assert!(
+            e.hits.systems[k].staves[0].top - e.hits.systems[k].top
+                > plain.hits.systems[k].staves[0].top - plain.hits.systems[k].top + sp,
+            "system {k}"
+        );
+    }
 }
