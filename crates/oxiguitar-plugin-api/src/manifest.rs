@@ -272,6 +272,13 @@ pub struct ToolSpec {
     /// the song plays. Since interface 1.9.
     #[serde(default = "yes")]
     pub edits: bool,
+    /// The JSON Schema of the tool's options, an object, for a tool that
+    /// other plugins can run as told, without asking the user
+    /// (`HostRequest::RunTool` with options, answered by
+    /// `Request::Tool2`); absent for one that runs only as from its menu.
+    /// Since interface 1.14.
+    #[serde(default)]
+    pub options: Option<serde_json::Value>,
 }
 
 /// A tool's keys ([`ToolSpec::shortcut`]): Ctrl, Shift and Alt as held, and
@@ -596,6 +603,12 @@ impl Manifest {
             if let Some(problem) = t.toolbar.as_ref().and_then(ButtonFace::problem) {
                 out.push(format!("tool {:?}: {problem}", t.id));
             }
+            if t.options.as_ref().is_some_and(|o| !o.is_object()) {
+                out.push(format!(
+                    "tool {:?}: its options must be a JSON Schema, an object",
+                    t.id
+                ));
+            }
             if let Some(keys) = &t.shortcut
                 && Shortcut::parse(keys).is_none()
             {
@@ -802,6 +815,16 @@ impl Manifest {
                     self.interface
                 ));
             }
+        }
+        let since_1_14 = InterfaceVersion {
+            major: 1,
+            minor: 14,
+        };
+        if self.interface < since_1_14 && self.tools.iter().any(|t| t.options.is_some()) {
+            out.push(format!(
+                "a tool's options need interface {since_1_14}, and the manifest asks for {}",
+                self.interface
+            ));
         }
         if self.interface < since_1_12 && self.performs {
             out.push(format!(
@@ -1428,6 +1451,29 @@ mod tests {
         // Without the key, an effect runs on chord voices too.
         let e: InstrumentSpec = serde_json::from_str(r#"{"id": "e", "name": "E"}"#).unwrap();
         assert!(e.chord_voice);
+    }
+
+    /// A tool's options schema needs 1.14 and is an object.
+    #[test]
+    fn a_tools_options_need_interface_1_14() {
+        let json = |interface: &str, options: &str| {
+            format!(
+                r#"{{"interface": "{interface}", "id": "me.tools", "name": "Tools",
+                    "version": "0.1.0",
+                    "tools": [{{"id": "up", "name": "Up", "options": {options}}}]}}"#
+            )
+        };
+        let schema = r#"{"type": "object", "properties": {"by": {"type": "integer"}}}"#;
+        let m: Manifest = serde_json::from_str(&json("1.14", schema)).unwrap();
+        assert!(m.problems().is_empty(), "{:?}", m.problems());
+        assert!(m.tools[0].options.is_some());
+        let m: Manifest = serde_json::from_str(&json("1.13", schema)).unwrap();
+        assert_eq!(
+            m.problems(),
+            ["a tool's options need interface 1.14, and the manifest asks for 1.13"]
+        );
+        let m: Manifest = serde_json::from_str(&json("1.14", "3")).unwrap();
+        assert!(m.problems()[0].contains("JSON Schema"));
     }
 
     /// A drawing's run lasts a positive time, at most a day, and is at most

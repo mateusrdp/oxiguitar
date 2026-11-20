@@ -127,6 +127,8 @@ fn draw(
                 surface.set_stroke(s.map(|(w, paint)| stroke(theme, paint, w, LineCap::Round)));
                 surface.draw_path(&p);
             }
+            // Only a plugin's canvas holds pictures, never a page.
+            Item::Image { .. } => {}
         }
     }
     surface.set_fill(None);

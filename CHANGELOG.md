@@ -4,6 +4,17 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.5] - 2026-11-20
+
+### Added
+
+- **Plugin interface 1.14** (the SDK crates are at 1.14.0; for #227, a chat with a language model as a plugin of its own): everything is generic, and the core holds nothing of the plugin. A plugin can draw controls of its own on a **surface**, a drawing at the window's scale that is told its size and takes the keyboard (named keys, Ctrl and Alt shortcuts, and text typed, entered through an input method or pasted), the pointer moving over it and the wheel; draw **pictures** in canvases and surfaces; **measure text** in the core's fonts; **copy** to the clipboard; **list every tool and run one**, the core's (the Tools menu, Transpose, Find Fingering, Fit Bars, Harmonize) or another plugin's, as told by its options (a tool's `options` schema) or as from its menu; and **move the caret or the selection** ([Tabs](https://mateusrdp.github.io/oxiguitar/plugin-guide/tabs.html#surfaces-interface-114), [Tools](https://mateusrdp.github.io/oxiguitar/plugin-guide/tools.html#running-tools-interface-114)).
+
+### Changed
+
+- **A plugin's one-line field is entered when the keyboard leaves it** too, not only on Enter, as the Song tab's fields are: text typed in a plugin's dialog is no longer lost when the user clicks OK straight away.
+- **The manual's list of official plugins** has Temperament and Audio clips (#240). Neither is suggested by the packages: they are fun extras.
+
 ## [0.21.4] - 2026-11-20
 
 ### Added

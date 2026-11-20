@@ -21,7 +21,7 @@ use std::thread::JoinHandle;
 
 use oxiguitar_display::{FontSet, Rgba, Theme};
 use oxiguitar_host::api::message::TrackInfo;
-use oxiguitar_host::api::tab::{Area, PointerKind, TabContent, TabEvent, Widget};
+use oxiguitar_host::api::tab::{Area, Key, KeyName, PointerKind, TabContent, TabEvent, Widget};
 use oxiguitar_host::{Plugins, TabId};
 use oxiguitar_render::{Raster, View};
 
@@ -116,15 +116,40 @@ pub(crate) fn draw(
     content: &TabContent,
     widget: &str,
     room: (u32, u32),
+    scale: f32,
     dark: bool,
     raster: &mut Raster,
     fonts: &FontSet,
 ) -> Option<Drawn> {
-    let Some(Widget::Canvas(canvas)) = content.widget(widget) else {
-        return None;
+    let (list, (width, height, scale)) = match content.widget(widget)? {
+        Widget::Canvas(canvas) => (
+            oxiguitar_display::wire::canvas(canvas.width, canvas.height, &canvas.items, fonts),
+            fitted(canvas.width, canvas.height, room),
+        ),
+        // A surface (interface 1.14) is drawn one logical pixel to `scale`
+        // device pixels, over the room it has.
+        Widget::Surface(surface) => {
+            let (w, h) = (
+                room.0.clamp(1, MAX_CANVAS_PIXELS),
+                room.1.clamp(1, MAX_CANVAS_PIXELS),
+            );
+            let scale = if scale.is_finite() && scale > 0.0 {
+                scale
+            } else {
+                1.0
+            };
+            (
+                oxiguitar_display::wire::surface(
+                    w as f32 / scale,
+                    h as f32 / scale,
+                    &surface.items,
+                    fonts,
+                ),
+                (w, h, scale),
+            )
+        }
+        _ => return None,
     };
-    let list = oxiguitar_display::wire::canvas(canvas.width, canvas.height, &canvas.items, fonts);
-    let (width, height, scale) = fitted(canvas.width, canvas.height, room);
     let view = View {
         scale,
         x: 0.0,
@@ -142,6 +167,102 @@ pub(crate) fn draw(
     })
 }
 
+/// The key a surface hears (interface 1.14) for Slint's key `text` with
+/// Shift, Ctrl and Alt as held; `None` for what goes on to the surface's
+/// text sink as text: plain typing, and pasting (Ctrl + V, Shift + Insert),
+/// which the sink takes from the clipboard itself.
+pub(crate) fn surface_key(text: &str, shift: bool, ctrl: bool, alt: bool) -> Option<Key> {
+    use slint::platform::Key as K;
+    let mut chars = text.chars();
+    let (c, None) = (chars.next()?, chars.next()) else {
+        return None;
+    };
+    let named = |k: K| char::from(k) == c;
+    let name = if named(K::Return) {
+        KeyName::Enter
+    } else if named(K::Escape) {
+        KeyName::Escape
+    } else if named(K::Backspace) {
+        KeyName::Backspace
+    } else if named(K::Delete) {
+        KeyName::Delete
+    } else if named(K::Tab) || named(K::Backtab) {
+        KeyName::Tab
+    } else if named(K::LeftArrow) {
+        KeyName::Left
+    } else if named(K::RightArrow) {
+        KeyName::Right
+    } else if named(K::UpArrow) {
+        KeyName::Up
+    } else if named(K::DownArrow) {
+        KeyName::Down
+    } else if named(K::Home) {
+        KeyName::Home
+    } else if named(K::End) {
+        KeyName::End
+    } else if named(K::PageUp) {
+        KeyName::PageUp
+    } else if named(K::PageDown) {
+        KeyName::PageDown
+    } else if named(K::Insert) {
+        if shift && !ctrl && !alt {
+            return None;
+        }
+        KeyName::Insert
+    } else if let Some(n) = FUNCTION_KEYS.iter().position(|k| named(*k)) {
+        KeyName::Function(u8::try_from(n + 1).unwrap_or(u8::MAX))
+    } else if (ctrl || alt) && !c.is_control() && !('\u{f700}'..='\u{f8ff}').contains(&c) {
+        let c = c.to_lowercase().next().unwrap_or(c);
+        if ctrl && !alt && c == 'v' {
+            return None;
+        }
+        KeyName::Char(c)
+    } else {
+        // Plain text, and keys a surface doesn't hear (Shift alone, say).
+        return None;
+    };
+    Some(Key {
+        name,
+        shift,
+        ctrl,
+        alt,
+    })
+}
+
+const FUNCTION_KEYS: [slint::platform::Key; 24] = {
+    use slint::platform::Key as K;
+    [
+        K::F1,
+        K::F2,
+        K::F3,
+        K::F4,
+        K::F5,
+        K::F6,
+        K::F7,
+        K::F8,
+        K::F9,
+        K::F10,
+        K::F11,
+        K::F12,
+        K::F13,
+        K::F14,
+        K::F15,
+        K::F16,
+        K::F17,
+        K::F18,
+        K::F19,
+        K::F20,
+        K::F21,
+        K::F22,
+        K::F23,
+        K::F24,
+    ]
+};
+
+/// Each canvas's and surface's room, in device pixels, and the window's
+/// scale it was measured at.
+type Rooms = HashMap<(TabId, String), ((u32, u32), f32)>;
+
 /// What the window asks of the tab thread.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Request {
@@ -153,11 +274,13 @@ pub(crate) enum Request {
         widget: String,
         event: TabEvent,
     },
-    /// The tab's canvas `widget` has `room` pixels to fill.
+    /// The tab's canvas or surface `widget` has `room` pixels to fill, at
+    /// `scale` device pixels a logical pixel (a surface is drawn at it).
     Size {
         tab: TabId,
         widget: String,
         room: (u32, u32),
+        scale: f32,
     },
     /// The user closed the dialog `tab`, with OK or not: its plugin is
     /// told, and what the dialog showed is forgotten. Answered with
@@ -221,9 +344,9 @@ fn without_canvas(content: &TabContent) -> Result<(), String> {
         .rows
         .iter()
         .flat_map(|r| &r.widgets)
-        .any(|w| matches!(w, Widget::Canvas(_)));
+        .any(|w| matches!(w, Widget::Canvas(_) | Widget::Surface(_)));
     if canvas {
-        Err("it holds a canvas, which only a tab can show".to_owned())
+        Err("it holds a canvas or a surface, which only a tab can show".to_owned())
     } else {
         Ok(())
     }
@@ -255,9 +378,10 @@ fn track_section(
 }
 
 /// Merges the requests waiting: a drag on a canvas replaces the drag just
-/// before it on the same canvas, a size replaces an earlier size of the
-/// same canvas, and a tab's contents asked for twice in a row are asked for
-/// once.
+/// before it on the same canvas (and a surface's moves without a button
+/// the move before, interface 1.14), a size replaces an earlier size of
+/// the same canvas, and a tab's contents asked for twice in a row are
+/// asked for once.
 pub(crate) fn merge(requests: Vec<Request>) -> Vec<Request> {
     let mut out: Vec<Request> = Vec::with_capacity(requests.len());
     let drag = |r: &Request| match r {
@@ -265,7 +389,9 @@ pub(crate) fn merge(requests: Vec<Request>) -> Vec<Request> {
             tab,
             widget,
             event: TabEvent::Pointer(p),
-        } if p.kind == PointerKind::Drag => Some((tab.clone(), widget.clone())),
+        } if matches!(p.kind, PointerKind::Drag | PointerKind::Move) => {
+            Some((tab.clone(), widget.clone(), p.kind))
+        }
         _ => None,
     };
     for request in requests {
@@ -336,7 +462,7 @@ fn run(rx: &Receiver<Request>, plugins: &Plugins, mut dark: bool, sink: &dyn Fn(
     let fonts = FontSet::bundled();
     let mut raster = Raster::new();
     let mut contents: HashMap<TabId, TabContent> = HashMap::new();
-    let mut rooms: HashMap<(TabId, String), (u32, u32)> = HashMap::new();
+    let mut rooms: Rooms = HashMap::new();
     // Sleeps until the window asks, then takes whatever else is waiting.
     while let Ok(first) = rx.recv() {
         let mut batch = vec![first];
@@ -374,21 +500,26 @@ fn run(rx: &Receiver<Request>, plugins: &Plugins, mut dark: bool, sink: &dyn Fn(
                     contents.remove(&tab);
                     sink(Answer::Closed { tab });
                 }
-                Request::Size { tab, widget, room } => {
-                    rooms.insert((tab.clone(), widget.clone()), room);
+                Request::Size {
+                    tab,
+                    widget,
+                    room,
+                    scale,
+                } => {
+                    rooms.insert((tab.clone(), widget.clone()), (room, scale));
                     if let Some(drawn) = contents
                         .get(&tab)
-                        .and_then(|c| draw(c, &widget, room, dark, &mut raster, &fonts))
+                        .and_then(|c| draw(c, &widget, room, scale, dark, &mut raster, &fonts))
                     {
                         sink(Answer::Canvas { tab, drawn });
                     }
                 }
                 Request::Dark(now) if now != dark => {
                     dark = now;
-                    for ((tab, widget), room) in &rooms {
+                    for ((tab, widget), (room, scale)) in &rooms {
                         if let Some(drawn) = contents
                             .get(tab)
-                            .and_then(|c| draw(c, widget, *room, dark, &mut raster, &fonts))
+                            .and_then(|c| draw(c, widget, *room, *scale, dark, &mut raster, &fonts))
                         {
                             sink(Answer::Canvas {
                                 tab: tab.clone(),
@@ -425,7 +556,7 @@ fn answered(
     tab: &TabId,
     answer: Result<TabContent, oxiguitar_host::api::message::Error>,
     contents: &mut HashMap<TabId, TabContent>,
-    rooms: &HashMap<(TabId, String), (u32, u32)>,
+    rooms: &Rooms,
     dark: bool,
     raster: &mut Raster,
     fonts: &FontSet,
@@ -436,8 +567,8 @@ fn answered(
             let canvases = rooms
                 .iter()
                 .filter(|((t, _), _)| t == tab)
-                .filter_map(|((_, widget), room)| {
-                    draw(&content, widget, *room, dark, raster, fonts)
+                .filter_map(|((_, widget), (room, scale))| {
+                    draw(&content, widget, *room, *scale, dark, raster, fonts)
                 })
                 .collect();
             contents.insert(tab.clone(), content.clone());
@@ -458,6 +589,85 @@ fn answered(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_surface_is_drawn_at_its_room_one_logical_pixel_to_scale_device_pixels() {
+        use oxiguitar_host::api::display::{Item, Paint, Point};
+        use oxiguitar_host::api::tab::{Cursor, Row, Surface};
+        let content = TabContent {
+            rows: vec![Row {
+                widgets: vec![Widget::Surface(Surface {
+                    id: "s".into(),
+                    height: 0.0,
+                    items: vec![
+                        Item::Rect {
+                            at: Point::new(0.0, 0.0),
+                            width: 10.0,
+                            height: 10.0,
+                            paint: Paint::Ink,
+                        },
+                        Item::Image {
+                            at: Point::new(10.0, 0.0),
+                            width: 10.0,
+                            height: 10.0,
+                            columns: 1,
+                            rows: 1,
+                            pixels: vec![255, 0, 0, 255],
+                        },
+                    ],
+                    keys: true,
+                    cursor: Cursor::Text,
+                })],
+            }],
+        };
+        let fonts = FontSet::bundled();
+        let mut raster = Raster::new();
+        let drawn = draw(&content, "s", (60, 30), 2.0, false, &mut raster, &fonts).unwrap();
+        assert_eq!((drawn.width, drawn.height), (60, 30));
+        let px = |x: usize, y: usize| &drawn.rgba[(y * 60 + x) * 4..(y * 60 + x) * 4 + 4];
+        // Ink at (5, 5) logical is device (10, 10); the red image right of it.
+        assert_eq!(px(10, 10)[3], 255);
+        assert_eq!(px(30, 10), [255, 0, 0, 255]);
+        // Beyond 20 logical pixels across nothing is drawn.
+        assert_eq!(px(50, 10)[3], 0);
+    }
+
+    #[test]
+    fn a_surface_hears_named_keys_and_shortcuts_and_its_sink_the_text() {
+        let return_key = char::from(slint::platform::Key::Return).to_string();
+        let left = char::from(slint::platform::Key::LeftArrow).to_string();
+        let f5 = char::from(slint::platform::Key::F5).to_string();
+        let insert = char::from(slint::platform::Key::Insert).to_string();
+        let key = |name, shift, ctrl, alt| {
+            Some(Key {
+                name,
+                shift,
+                ctrl,
+                alt,
+            })
+        };
+        assert_eq!(
+            surface_key(&return_key, false, false, false),
+            key(KeyName::Enter, false, false, false)
+        );
+        assert_eq!(
+            surface_key(&left, true, false, false),
+            key(KeyName::Left, true, false, false)
+        );
+        assert_eq!(
+            surface_key(&f5, false, false, false),
+            key(KeyName::Function(5), false, false, false)
+        );
+        assert_eq!(
+            surface_key("C", true, true, false),
+            key(KeyName::Char('c'), true, true, false)
+        );
+        assert_eq!(surface_key("a", false, false, false), None);
+        assert_eq!(surface_key("é", false, false, false), None);
+        assert_eq!(surface_key("v", false, true, false), None);
+        assert_eq!(surface_key(&insert, true, false, false), None);
+        assert_eq!(surface_key("", false, false, false), None);
+    }
     use oxiguitar_host::api::display::{Item, Paint, Point};
     use oxiguitar_host::api::tab::{Canvas, Pointer, PointerButton, Row};
 
@@ -538,6 +748,7 @@ mod tests {
             tab: tab("panel"),
             widget: "canvas".into(),
             room: (w, 10),
+            scale: 1.0,
         };
         let content = Request::Content(tab("panel"));
         let click = Request::Event {
@@ -588,6 +799,7 @@ mod tests {
             tab: panel.clone(),
             widget: "canvas".into(),
             room: (300, 300),
+            scale: 1.0,
         });
         thread.send(Request::Content(panel.clone()));
         let Answer::Content {
@@ -665,7 +877,7 @@ mod tests {
         };
         let fonts = FontSet::bundled();
         let mut raster = Raster::new();
-        let drawn = draw(&content, "c", (20, 20), true, &mut raster, &fonts).unwrap();
+        let drawn = draw(&content, "c", (20, 20), 1.0, true, &mut raster, &fonts).unwrap();
         assert_eq!((drawn.width, drawn.height), (20, 10));
         let px = |x: usize, y: usize| &drawn.rgba[(y * 20 + x) * 4..][..4];
         assert_eq!(
@@ -674,8 +886,19 @@ mod tests {
             "dark interface: light ink"
         );
         assert_eq!(px(15, 5), [0, 0, 0, 0], "a transparent ground");
-        let light = draw(&content, "c", (20, 20), false, &mut raster, &fonts).unwrap();
+        let light = draw(&content, "c", (20, 20), 1.0, false, &mut raster, &fonts).unwrap();
         assert_eq!(&light.rgba[..4], [0x1a, 0x1a, 0x1a, 0xff]);
-        assert!(draw(&content, "nothing", (20, 20), true, &mut raster, &fonts).is_none());
+        assert!(
+            draw(
+                &content,
+                "nothing",
+                (20, 20),
+                1.0,
+                true,
+                &mut raster,
+                &fonts
+            )
+            .is_none()
+        );
     }
 }

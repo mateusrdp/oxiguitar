@@ -167,6 +167,60 @@ pub enum Widget {
         /// The address.
         url: String,
     },
+    /// A drawing of the plugin's own at the window's own scale, which the
+    /// plugin lays out for the room it has and which can take the keyboard:
+    /// for a plugin that draws its own controls. Since interface 1.14.
+    Surface(Surface),
+}
+
+/// A drawing in logical pixels that knows its size and can take the
+/// keyboard ([`Widget::Surface`], interface 1.14).
+///
+/// Unlike a [`Canvas`], it isn't scaled: one unit is one logical pixel of
+/// the window (the window's scale and zoom make it sharp), its width is
+/// the room's, and the plugin hears the room's size
+/// ([`TabEvent::Resized`]) before it is first shown and whenever the size
+/// changes, and lays itself out for it. What it draws past its room isn't
+/// shown. Besides the pointer ([`TabEvent::Pointer`], with
+/// [`PointerKind::Move`] and [`PointerKind::Leave`] too) it hears the wheel
+/// ([`TabEvent::Wheel`]) and, when `keys` is true, the keyboard once the
+/// user clicks it: [`TabEvent::Focus`], [`TabEvent::Key`] and
+/// [`TabEvent::Typed`], which also brings what the user pastes.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Surface {
+    /// Its id.
+    pub id: String,
+    /// Its height in logical pixels; 0 to fill the room the tab has left
+    /// (its height then comes in [`TabEvent::Resized`]).
+    pub height: f32,
+    /// What it shows, in logical pixels from its top-left corner
+    /// ([`crate::display`]).
+    pub items: Vec<Item>,
+    /// Whether it takes the keyboard when clicked.
+    pub keys: bool,
+    /// The pointer's shape over it.
+    pub cursor: Cursor,
+}
+
+/// The pointer's shape over a surface ([`Surface::cursor`]). Since interface
+/// 1.14.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Cursor {
+    /// The ordinary arrow.
+    #[default]
+    Default,
+    /// A hand: something to click.
+    Pointer,
+    /// An I-beam: text to type in or select.
+    Text,
+    /// Something to drag.
+    Grab,
+    /// Something being dragged.
+    Grabbing,
+    /// Something that can't be used now.
+    NotAllowed,
+    /// Busy.
+    Wait,
 }
 
 /// A drawing of the plugin's own, in a tab.
@@ -195,6 +249,7 @@ impl Widget {
             | Widget::Choice { id, .. }
             | Widget::List { id, .. } => Some(id),
             Widget::Canvas(c) => Some(&c.id),
+            Widget::Surface(s) => Some(&s.id),
         }
     }
 }
@@ -269,6 +324,29 @@ impl TabContent {
                             out.push(format!("{at}: {p}"));
                         }
                     }
+                    Widget::Surface(surface) => {
+                        let height = surface.height;
+                        if !height.is_finite() || !(0.0..=MAX_SIDE).contains(&height) {
+                            out.push(format!(
+                                "{at}: the surface's height must be 0 (fill) to {MAX_SIDE} pixels"
+                            ));
+                        }
+                        if surface.items.len() > MAX_ITEMS {
+                            out.push(format!(
+                                "{at}: the surface holds {} items, more than {MAX_ITEMS}",
+                                surface.items.len()
+                            ));
+                        }
+                        // Its width is the room's, unknown here: items stay
+                        // within reach of the largest surface there is.
+                        if let Some(p) = surface
+                            .items
+                            .iter()
+                            .find_map(|i| i.problem(MAX_SIDE, MAX_SIDE))
+                        {
+                            out.push(format!("{at}: {p}"));
+                        }
+                    }
                     Widget::Link { url, .. }
                         if !url.starts_with("https://") || url.chars().any(char::is_whitespace) =>
                     {
@@ -297,6 +375,86 @@ pub enum TabEvent {
     Chosen(u32),
     /// The pointer on a canvas.
     Pointer(Pointer),
+    /// A surface's room, in logical pixels: before it is first shown and
+    /// whenever it changes. Since interface 1.14.
+    Resized {
+        /// Its width.
+        width: f32,
+        /// Its height.
+        height: f32,
+    },
+    /// The wheel (or a touchpad's scroll) over a surface: how far, in
+    /// logical pixels, with the pointer `at`; positive `dy` scrolls the
+    /// contents up, showing what is further down. Since interface 1.14.
+    Wheel {
+        /// Where the pointer is.
+        at: crate::display::Point,
+        /// Across.
+        dx: f32,
+        /// Down.
+        dy: f32,
+    },
+    /// A surface took the keyboard (`true`) or lost it. Since interface
+    /// 1.14.
+    Focus(bool),
+    /// A key that isn't text was pressed on the surface that has the
+    /// keyboard: a named key, or a character with Ctrl, Alt or Meta held.
+    /// Since interface 1.14.
+    Key(Key),
+    /// Text was typed (or entered through an input method, or pasted) on
+    /// the surface that has the keyboard. Since interface 1.14.
+    Typed(String),
+}
+
+/// A key pressed on a surface ([`TabEvent::Key`]). Since interface 1.14.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Key {
+    /// Which key.
+    pub name: KeyName,
+    /// Shift is held.
+    pub shift: bool,
+    /// Ctrl is held (Command on macOS, so Ctrl + C copies everywhere).
+    pub ctrl: bool,
+    /// Alt (Option on macOS) is held.
+    pub alt: bool,
+}
+
+/// A key that isn't text ([`Key::name`]). Since interface 1.14.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum KeyName {
+    /// Return or Enter.
+    Enter,
+    /// Escape.
+    Escape,
+    /// Backspace.
+    Backspace,
+    /// Delete, forwards.
+    Delete,
+    /// Tab.
+    Tab,
+    /// The left arrow.
+    Left,
+    /// The right arrow.
+    Right,
+    /// The up arrow.
+    Up,
+    /// The down arrow.
+    Down,
+    /// Home.
+    Home,
+    /// End.
+    End,
+    /// Page Up.
+    PageUp,
+    /// Page Down.
+    PageDown,
+    /// Insert.
+    Insert,
+    /// A function key, F1 to F24.
+    Function(u8),
+    /// A character pressed with Ctrl or Alt held, lowercase for a letter
+    /// (Ctrl + C is `Char('c')` with `ctrl`).
+    Char(char),
 }
 
 /// The pointer on a canvas.
@@ -320,6 +478,13 @@ pub enum PointerKind {
     /// The pointer moved with a button held: a drag. Moves the plugin
     /// hasn't answered yet are merged, so a slow plugin gets fewer.
     Drag,
+    /// The pointer moved over a surface with no button held (its `button`
+    /// is [`PointerButton::Primary`]); merged as drags are. Never sent for a
+    /// canvas. Since interface 1.14.
+    Move,
+    /// The pointer left a surface. Never sent for a canvas. Since
+    /// interface 1.14.
+    Leave,
 }
 
 /// A pointer's button.
@@ -416,6 +581,67 @@ mod tests {
         let bytes = encode(&pointer).unwrap();
         assert_eq!((bytes[0], bytes[1], bytes[10]), (5, 2, 2));
         assert_eq!(encode(&Area::Right).unwrap(), [3]);
+    }
+
+    #[test]
+    fn interface_1_14_adds_at_the_ends() {
+        let first = |b: Vec<u8>| b[0];
+        let surface = Widget::Surface(Surface {
+            id: "chat".into(),
+            height: 0.0,
+            items: vec![],
+            keys: true,
+            cursor: Cursor::Text,
+        });
+        assert_eq!(first(encode(&surface).unwrap()), 9);
+        assert_eq!(
+            decode::<Widget>(&encode(&surface).unwrap()).unwrap(),
+            surface
+        );
+        let events = [
+            TabEvent::Resized {
+                width: 1.0,
+                height: 2.0,
+            },
+            TabEvent::Wheel {
+                at: Point::new(0.0, 0.0),
+                dx: 0.0,
+                dy: 1.0,
+            },
+            TabEvent::Focus(true),
+            TabEvent::Key(Key {
+                name: KeyName::Char('c'),
+                shift: false,
+                ctrl: true,
+                alt: false,
+            }),
+            TabEvent::Typed("é".into()),
+        ];
+        for (event, n) in events.iter().zip(6u8..) {
+            let bytes = encode(event).unwrap();
+            assert_eq!(bytes[0], n);
+            assert_eq!(&decode::<TabEvent>(&bytes).unwrap(), event);
+        }
+        assert_eq!(encode(&PointerKind::Move).unwrap(), [3]);
+        assert_eq!(encode(&PointerKind::Leave).unwrap(), [4]);
+        let content = TabContent {
+            rows: vec![Row {
+                widgets: vec![surface],
+            }],
+        };
+        assert!(content.problems().is_empty());
+        let tall = TabContent {
+            rows: vec![Row {
+                widgets: vec![Widget::Surface(Surface {
+                    id: "s".into(),
+                    height: -1.0,
+                    items: vec![],
+                    keys: false,
+                    cursor: Cursor::Default,
+                })],
+            }],
+        };
+        assert!(tall.problems()[0].contains("height"));
     }
 
     #[test]

@@ -81,15 +81,35 @@ pub(crate) enum Request {
     CancelSave,
     /// A plugin handed back the score changed, made from `revision`
     /// (interface 1.2): one change the user can undo, named `name`.
+    /// `reply`, when there is one, hears whether it was made (interface
+    /// 1.14: the plugin then reads the score as changed).
     PluginEdit {
         plugin: String,
         revision: u64,
         name: String,
         score: Box<Score>,
+        reply: Option<Sender<Result<(), String>>>,
     },
     /// Run a plugin's tool from the Tools menu: the plugin's id, the
     /// tool's id.
     PluginTool(String, String),
+    /// Run a plugin's tool for another plugin (interface 1.14): with
+    /// `options` (JSON text) as told, without as from its menu; `reply`
+    /// hears its report, or why it didn't run.
+    RunPluginTool {
+        plugin: String,
+        tool: String,
+        options: Option<String>,
+        reply: Sender<Result<String, String>>,
+    },
+    /// Every request before this one is done: `reply` hears whether the
+    /// score changed since revision `before`, as the report of the core's
+    /// tool `name`, which a plugin ran (interface 1.14).
+    Fence {
+        before: u64,
+        name: String,
+        reply: Sender<Result<String, String>>,
+    },
     /// A click on what a plugin drew on the page (interface 1.8): the
     /// drawing's tag and place, where in its box (staff spaces) and
     /// whether it was a double click.
@@ -343,7 +363,9 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 Request::Tiles { .. } => tiles,
                 Request::PluginEdit { .. }
                 | Request::PluginTool(..)
+                | Request::RunPluginTool { .. }
                 | Request::DrawingClicked { .. } => true,
+                Request::Fence { .. } => false,
                 Request::ExportPdf(..)
                 | Request::Save(_)
                 | Request::ConfirmSave { .. }
@@ -364,11 +386,13 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
             | Request::DrawingClicked { .. } => true,
             // A tool that says it doesn't edit the score (interface 1.9),
             // such as one opening a plugin's settings, runs while it plays.
-            Request::PluginTool(plugin, tool) => st.plugins.tools().iter().any(|t| {
-                t.spec.id == *tool
-                    && t.spec.edits
-                    && t.plugin.manifest.as_ref().is_some_and(|m| m.id == *plugin)
-            }),
+            Request::PluginTool(plugin, tool) | Request::RunPluginTool { plugin, tool, .. } => {
+                st.plugins.tools().iter().any(|t| {
+                    t.spec.id == *tool
+                        && t.spec.edits
+                        && t.plugin.manifest.as_ref().is_some_and(|m| m.id == *plugin)
+                })
+            }
             _ => false,
         };
         let settings_only = match &request {
@@ -383,6 +407,18 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
             _ => false,
         };
         if edits && !settings_only && st.open.playing() {
+            let playing = "the score is playing: it can be changed once it is paused or stopped";
+            match &request {
+                Request::RunPluginTool { reply, .. } => {
+                    let _ = reply.send(Err(playing.to_owned()));
+                }
+                Request::PluginEdit {
+                    reply: Some(reply), ..
+                } => {
+                    let _ = reply.send(Err(playing.to_owned()));
+                }
+                _ => {}
+            }
             sink(Event::Refused);
             continue;
         }
@@ -526,8 +562,15 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 revision,
                 name,
                 score,
+                reply,
             } => {
+                let answer = |done: Result<(), String>| {
+                    if let Some(r) = &reply {
+                        let _ = r.send(done);
+                    }
+                };
                 let Some(doc) = st.doc.as_mut() else {
+                    answer(Err("no score is open".to_owned()));
                     continue;
                 };
                 if revision != st.revision {
@@ -537,6 +580,9 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                             "{plugin}: its change came after another and was left out: {name}."
                         ),
                     ));
+                    answer(Err(format!(
+                        "the score changed since revision {revision}: ask for it again"
+                    )));
                     continue;
                 }
                 doc.apply_change(&name, *score);
@@ -546,6 +592,7 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                 } else {
                     engrave(&mut st, sink);
                 }
+                answer(Ok(()));
             }
             Request::PluginTool(plugin, tool) => {
                 let tools = st.plugins.tools();
@@ -562,6 +609,46 @@ fn run(rx: &Receiver<Request>, plugins: Plugins, open_score: OpenScore, sink: &d
                     Ok(_) => {}
                     Err(e) => sink(Event::Message(Level::Error, format!("{name}: {e}"))),
                 }
+            }
+            Request::RunPluginTool {
+                plugin,
+                tool,
+                options,
+                reply,
+            } => {
+                let tools = st.plugins.tools();
+                let Some(t) = tools.iter().find(|t| {
+                    t.spec.id == tool && t.plugin.manifest.as_ref().is_some_and(|m| m.id == plugin)
+                }) else {
+                    let _ = reply.send(Err(format!("{plugin} has no usable tool {tool:?}")));
+                    continue;
+                };
+                let name = t.spec.name.clone();
+                let ran = match options {
+                    Some(o) => st.plugins.run_tool_with(*t, o),
+                    None => st.plugins.run_tool(*t),
+                };
+                // The footer says what it did, as when the user picks it.
+                match &ran {
+                    Ok(report) if !report.trim().is_empty() => {
+                        sink(Event::Report(format!("{name}: {report}")));
+                    }
+                    Ok(_) => {}
+                    Err(e) => sink(Event::Message(Level::Error, format!("{name}: {e}"))),
+                }
+                let _ = reply.send(ran.map_err(|e| e.to_string()));
+            }
+            Request::Fence {
+                before,
+                name,
+                reply,
+            } => {
+                let report = if st.revision == before {
+                    format!("{name} changed nothing.")
+                } else {
+                    format!("{name} is done: Undo takes it back as one step.")
+                };
+                let _ = reply.send(Ok(report));
             }
             Request::DrawingClicked {
                 tag,
@@ -1194,14 +1281,20 @@ mod tests {
         score.info.title = "Changed".into();
         // A stale revision is refused at once, with a sentence.
         let late = open
-            .apply("A plugin", revision + 1, "Rename".into(), score.clone())
+            .apply(
+                "A plugin",
+                revision + 1,
+                "Rename".into(),
+                score.clone(),
+                None,
+            )
             .unwrap_err();
         assert!(late.contains("has changed since"), "{late}");
         assert!(
-            open.apply("A plugin", revision, " ".into(), score.clone())
+            open.apply("A plugin", revision, " ".into(), score.clone(), None)
                 .is_err()
         );
-        open.apply("A plugin", revision, "Rename".into(), score)
+        open.apply("A plugin", revision, "Rename".into(), score, None)
             .unwrap();
         loop {
             if let Event::Changed { score, edit, .. } = next(&rx) {
@@ -1218,6 +1311,29 @@ mod tests {
                 break;
             }
         }
+        // A change with a reply (interface 1.14) is heard once it is made,
+        // and the score plugins read is the changed one; a fence then says
+        // the score changed since the revision before it.
+        let (revision, mut score) = open.wire2().unwrap();
+        score.info.title = "Answered".into();
+        let (reply, done) = channel();
+        open.apply("A plugin", revision, "Rename".into(), score, Some(reply))
+            .unwrap();
+        done.recv().unwrap().unwrap();
+        assert_eq!(open.wire2().unwrap().1.info.title, "Answered");
+        let (reply, fenced) = channel();
+        worker.send(Request::Fence {
+            before: revision,
+            name: "Rename".into(),
+            reply,
+        });
+        assert!(fenced.recv().unwrap().unwrap().contains("is done"));
+        // A late one is told why.
+        let (_, stale) = open.wire2().unwrap();
+        let (reply, done) = channel();
+        open.apply("A plugin", revision, "Rename".into(), stale, Some(reply))
+            .unwrap_err();
+        drop(done);
     }
 
     #[test]
@@ -1258,7 +1374,7 @@ mod tests {
         assert!(matches!(next(&rx), Event::Refused), "undo is refused too");
         let (revision, plugin_score) = open.wire2().unwrap();
         let why = open
-            .apply("A plugin", revision, "Rename".into(), plugin_score)
+            .apply("A plugin", revision, "Rename".into(), plugin_score, None)
             .unwrap_err();
         assert!(why.contains("playing"), "{why}");
         // Paused: allowed again.

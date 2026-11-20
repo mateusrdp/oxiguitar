@@ -980,6 +980,7 @@ fn other_voices_are_greyed_out_for_the_editor() {
                 Item::Path { fill, stroke, .. } => {
                     *fill == Some(Paint::Muted) || stroke.is_some_and(|(_, p)| p == Paint::Muted)
                 }
+                Item::Image { .. } => false,
             })
             .count()
     };

@@ -46,7 +46,7 @@ pub(crate) fn of(plugins: &Plugins, score: &Score) -> Drawings {
                 tag: u32::try_from(tag).unwrap_or(u32::MAX),
                 width: drawn.width,
                 height: drawn.height,
-                shapes: drawn.items.iter().map(shape).collect(),
+                shapes: drawn.items.iter().filter_map(shape).collect(),
                 run: drawn
                     .run
                     .as_ref()
@@ -227,9 +227,10 @@ fn paint(p: wire::Paint) -> Paint {
     }
 }
 
-/// An item of the interface's canvases as the engraver's shape.
-fn shape(item: &wire::Item) -> Shape {
-    match item {
+/// An item of the interface's canvases as the engraver's shape; `None` for
+/// a picture (interface 1.14), which a canvas shows but the page doesn't.
+fn shape(item: &wire::Item) -> Option<Shape> {
+    Some(match item {
         wire::Item::Line {
             from,
             to,
@@ -286,7 +287,8 @@ fn shape(item: &wire::Item) -> Shape {
             },
             paint: paint(*p),
         },
-    }
+        wire::Item::Image { .. } => return None,
+    })
 }
 
 #[cfg(test)]

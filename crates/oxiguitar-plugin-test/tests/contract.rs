@@ -115,7 +115,8 @@ fn the_test_plugin_passes_the_contract() {
     let report = oxiguitar_plugin_test::check(test_oxp());
     assert!(report.ok(), "failed: {:#?}", report.failed);
     // 12 for formats and services; 4 tabs; 10 uses of the panel's widgets
-    // (2 buttons, 5 other widgets, 3 pointer events on its canvas) and 4
+    // (2 buttons, 5 other widgets, 3 pointer events on its canvas), 13 of
+    // the side tab's surface (interface 1.14) and 4
     // of the dialog `ask`'s (its button, 3 pointer events), which is then
     // closed (interface 1.8); the settings dialog's 2 widgets, then closed
     // (interface 1.9); the exporter's options, a dialog with 1 widget, then
@@ -126,7 +127,7 @@ fn the_test_plugin_passes_the_contract() {
     // playing of a track (interface 1.8).
     assert_eq!(
         report.passed.len(),
-        12 + 4 + 10 + 4 + 1 + 2 + 1 + 3 + 4 + 5 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
+        12 + 4 + 10 + 13 + 4 + 1 + 2 + 1 + 3 + 4 + 5 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
         "{:#?}",
         report.passed
     );
@@ -644,6 +645,7 @@ fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
             Widget::List { .. } => "list",
             Widget::Canvas(_) => "canvas",
             Widget::Link { .. } => "link",
+            Widget::Surface(_) => "surface",
         })
         .collect();
     assert_eq!(
@@ -2639,4 +2641,221 @@ fn interface_1_13_the_score_s_file() {
             .unwrap()
             .is_empty()
     );
+}
+
+/// A core that measures, copies, selects and runs tools, for interface
+/// 1.14: what it was asked, and the plugins, to run their tools through.
+#[derive(Default)]
+struct Automated {
+    plugins: OnceLock<Plugins>,
+    asked: Mutex<Vec<String>>,
+}
+
+impl Automated {
+    fn heard(&self, what: String) {
+        self.asked.lock().unwrap().push(what);
+    }
+}
+
+impl Core for Automated {
+    fn notify(&self, _level: Level, _text: String) {}
+
+    fn score2(&self) -> Option<(u64, oxiguitar_host::api::score2::Score2)> {
+        let mut score = oxiguitar_host::api::score2::Score2::default();
+        score.info.title = "Song".into();
+        Some((1, score))
+    }
+
+    fn apply(
+        &self,
+        _plugin: &str,
+        _revision: u64,
+        name: String,
+        score: oxiguitar_host::api::score2::Score2,
+    ) -> Result<(), String> {
+        self.heard(format!("apply {name}: {}", score.info.title));
+        Ok(())
+    }
+
+    fn measure_text(
+        &self,
+        text: &str,
+        size: f32,
+        _font: oxiguitar_host::api::display::Font,
+    ) -> Option<oxiguitar_host::api::message::TextMeasure> {
+        let n = text.chars().count();
+        Some(oxiguitar_host::api::message::TextMeasure {
+            edges: (0..=n).map(|i| i as f32 * size / 2.0).collect(),
+            ascent: size * 0.8,
+            descent: size * 0.2,
+        })
+    }
+
+    fn copy(&self, text: String) {
+        self.heard(format!("copy {text}"));
+    }
+
+    fn core_tools(&self) -> Vec<oxiguitar_host::api::message::ToolEntry> {
+        vec![oxiguitar_host::api::message::ToolEntry {
+            owner: oxiguitar_host::api::message::CORE_TOOLS.into(),
+            id: "tidy".into(),
+            name: "Tidy".into(),
+            description: "Tidies.".into(),
+            edits: true,
+            options: Some(r#"{"type": "object"}"#.into()),
+        }]
+    }
+
+    fn run_tool(
+        &self,
+        caller: &str,
+        owner: &str,
+        tool: &str,
+        options: Option<String>,
+    ) -> Result<String, String> {
+        self.heard(format!("run {owner}/{tool} for {caller} with {options:?}"));
+        if owner == oxiguitar_host::api::message::CORE_TOOLS {
+            return Ok("Tidied.".into());
+        }
+        let plugins = self.plugins.get().ok_or("no plugins")?;
+        let tools = plugins.tools();
+        let t = tools
+            .iter()
+            .find(|t| t.spec.id == tool)
+            .ok_or("no such tool")?;
+        match options {
+            Some(o) => plugins.run_tool_with(*t, o),
+            None => plugins.run_tool(*t),
+        }
+        .map_err(|e| e.to_string())
+    }
+
+    fn select(&self, selection: Selection2) -> Result<(), String> {
+        self.heard(format!("select {selection:?}"));
+        Ok(())
+    }
+}
+
+/// Interface 1.14: a plugin lists every tool and runs them, the core's and
+/// other plugins' (with options as told), measures text, copies and
+/// selects; and its surface hears its size, the keyboard and text.
+#[test]
+fn interface_1_14_tools_text_and_surfaces() {
+    let dir = folder("automation", &["test.oxp"]);
+    let core = Arc::new(Automated::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        core.clone(),
+    );
+    let _ = core.plugins.set(plugins.clone());
+    let call = |method: &str, input: &[u8]| plugins.call_service("test-echo", method, input);
+    let text = |b: Vec<u8>| String::from_utf8(b).unwrap();
+
+    let tools = text(call("tools", b"").unwrap());
+    let lines: Vec<&str> = tools.lines().collect();
+    assert_eq!(lines[0], "oxiguitar/tidy *");
+    assert!(lines.contains(&"oxiguitar.test/mark *"), "{tools}");
+    assert!(lines.contains(&"oxiguitar.test/link"), "{tools}");
+
+    let run = |json: serde_json::Value| call("run-tool", json.to_string().as_bytes());
+    assert_eq!(
+        text(
+            run(serde_json::json!({"owner": "oxiguitar", "tool": "tidy", "options": {}})).unwrap()
+        ),
+        "Tidied."
+    );
+    assert_eq!(
+        text(
+            run(serde_json::json!({"owner": "oxiguitar.test", "tool": "mark", "options": {"suffix": "?"}}))
+                .unwrap()
+        ),
+        "The title is now Song?."
+    );
+    // As from its menu, without options.
+    assert_eq!(
+        text(run(serde_json::json!({"owner": "oxiguitar.test", "tool": "mark"})).unwrap()),
+        "The title is now Song!."
+    );
+    // The tool refuses options it can't use; a tool without a schema
+    // takes none; a tool that isn't there isn't run.
+    let e = run(
+        serde_json::json!({"owner": "oxiguitar.test", "tool": "mark", "options": {"suffix": 3}}),
+    )
+    .unwrap_err();
+    assert!(e.message.contains("suffix"), "{e}");
+    let e = run(serde_json::json!({"owner": "oxiguitar.test", "tool": "link", "options": {}}))
+        .unwrap_err();
+    assert_eq!(e.kind, ErrorKind::Unsupported);
+    let e = run(serde_json::json!({"owner": "oxiguitar.test", "tool": "nothing"})).unwrap_err();
+    assert_eq!(e.kind, ErrorKind::NotFound);
+
+    assert_eq!(text(call("measure", b"ab").unwrap()), "0\n6\n12\n");
+    call("copy", b"words").unwrap();
+    call("select", b"2 3").unwrap();
+    let asked = core.asked.lock().unwrap().clone();
+    assert!(
+        asked.contains(&"apply Mark the Title: Song?".to_owned()),
+        "{asked:?}"
+    );
+    assert!(asked.contains(&"copy words".to_owned()), "{asked:?}");
+    assert!(
+        asked
+            .iter()
+            .any(|a| a.starts_with("select Bars") && a.contains("first_bar: 2")),
+        "{asked:?}"
+    );
+    assert!(
+        asked
+            .iter()
+            .any(|a| a == "run oxiguitar/tidy for oxiguitar.test with Some(\"{}\")"),
+        "{asked:?}"
+    );
+
+    // The surface: its size first, then the keyboard and text.
+    let side = TabId {
+        plugin: "oxiguitar.test".into(),
+        tab: "side".into(),
+    };
+    let surface = |content: &TabContent| match content.widget("pad") {
+        Some(Widget::Surface(s)) => s.clone(),
+        other => panic!("{other:?}"),
+    };
+    let first = plugins.tab_content(&side).unwrap();
+    assert!(surface(&first).keys);
+    for event in [
+        TabEvent::Resized {
+            width: 12.0,
+            height: 60.0,
+        },
+        TabEvent::Focus(true),
+        TabEvent::Key(oxiguitar_host::api::tab::Key {
+            name: oxiguitar_host::api::tab::KeyName::Enter,
+            shift: false,
+            ctrl: false,
+            alt: false,
+        }),
+        TabEvent::Wheel {
+            at: Point::new(1.0, 1.0),
+            dx: 0.0,
+            dy: 3.0,
+        },
+        TabEvent::Typed("hello there".into()),
+    ] {
+        let content = plugins.tab_event(&side, "pad", event).unwrap();
+        assert!(content.problems().is_empty());
+    }
+    // The last thing heard, cut to the 12 pixels measured: one character
+    // of 6.
+    let last = plugins.tab_content(&side).unwrap();
+    let shown = surface(&last)
+        .items
+        .iter()
+        .find_map(|i| match i {
+            Item::Text { text, .. } => Some(text.clone()),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(shown, "Ty");
 }

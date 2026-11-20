@@ -327,6 +327,19 @@ pub enum Item {
         /// Stroke width and colour, if stroked.
         stroke: Option<(f32, Paint)>,
     },
+    /// A picture: `columns` × `rows` pixels, premultiplied RGBA, scaled to
+    /// fill `rect`. Only a plugin's canvas or surface holds one (interface
+    /// 1.14); the engraver draws none.
+    Image {
+        /// Where.
+        rect: Rect,
+        /// Pixels a row.
+        columns: u32,
+        /// Rows.
+        rows: u32,
+        /// The pixels, `columns` × `rows` × 4 bytes.
+        pixels: std::sync::Arc<Vec<u8>>,
+    },
 }
 
 impl Item {
@@ -370,6 +383,17 @@ impl Item {
                 fill: *fill,
                 stroke: *stroke,
             },
+            Item::Image {
+                rect,
+                columns,
+                rows,
+                pixels,
+            } => Item::Image {
+                rect: Rect::new(rect.x + dx, rect.y + dy, rect.width, rect.height),
+                columns: *columns,
+                rows: *rows,
+                pixels: pixels.clone(),
+            },
         }
     }
 
@@ -390,7 +414,7 @@ impl Item {
                 let y = from.y.min(to.y);
                 Rect::new(x, y, (from.x - to.x).abs(), (from.y - to.y).abs()).inflate(*width)
             }
-            Item::Rect { rect, .. } => *rect,
+            Item::Rect { rect, .. } | Item::Image { rect, .. } => *rect,
             Item::Path { path, stroke, .. } => path.bounds().inflate(stroke.map_or(0.0, |s| s.0)),
         }
     }
@@ -458,6 +482,7 @@ impl DisplayList {
                         mute(s);
                     }
                 }
+                Item::Image { .. } => {}
             }
         }
     }

@@ -34,7 +34,7 @@ The template's:
 | `events` | no | The kinds of event it wants: `"score"`, `"selection"`, `"playback"`; interface 1.1 ([Events](events.md)) |
 | `draws` | no | It draws on the page where it keeps data; interface 1.13 (1.8 to 1.12 had a shorter request) ([Drawing on the page](drawing.md)) |
 | `performs` | no | It plays each track's notes its own way; interface 1.12 (1.8 to 1.11 had a shorter request) ([Playing the notes your own way](playing.md)) |
-| `tools` | no | Its entries in the Tools menu, and from interface 1.8 in any menu and on the palette; interface 1.2 ([Tools](tools.md)) |
+| `tools` | no | Its entries in the Tools menu, and from interface 1.8 in any menu and on the palette; interface 1.2. From interface 1.14 a tool's `options`, a JSON Schema, lets other plugins run it as told ([Tools](tools.md)) |
 | `track_sections` | no | Its sections of the Track tab; interface 1.3 ([Track sections](track-sections.md)) |
 | `folders` | no | The folders it shares with the user, by name, beside `plugins` in OxiGuitar's folders; OxiGuitar creates the user's at start, and the plugin asks where each is by its name (interface 1.8) ([Settings](settings.md#shared-folders)) |
 | `exporters` | no | Its formats in File → Export Audio…; interface 1.4, and 1.11 for an exporter's `options` ([Exporters](exporters.md)) |

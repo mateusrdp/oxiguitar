@@ -141,7 +141,31 @@ pub enum Item {
         /// Its colour.
         paint: Paint,
     },
+    /// A picture of the plugin's own: `columns` × `rows` pixels, scaled to
+    /// fill the box `width` × `height` at `at`. For what the other items
+    /// can't draw; it doesn't follow the window's theme, so prefer them
+    /// where they do. Since interface 1.14: the core sends no plugin built
+    /// for less an engraving holding one, and never holds one itself.
+    Image {
+        /// Its top-left corner.
+        at: Point,
+        /// Its width, never negative.
+        width: f32,
+        /// Its height, never negative.
+        height: f32,
+        /// How many pixels a row has, at most [`MAX_IMAGE_SIDE`].
+        columns: u32,
+        /// How many rows, at most [`MAX_IMAGE_SIDE`].
+        rows: u32,
+        /// The pixels, row by row from the top: red, green, blue and alpha,
+        /// a byte each, with the colours premultiplied by the alpha;
+        /// `columns` × `rows` × 4 bytes.
+        pixels: Vec<u8>,
+    },
 }
+
+/// The most pixels an image ([`Item::Image`]) has a side.
+pub const MAX_IMAGE_SIDE: u32 = 4096;
 
 /// The largest canvas side the core draws, in canvas units, and the most
 /// items: limits that keep a mistaken plugin from costing the window time.
@@ -186,6 +210,33 @@ impl Item {
             }
             Item::Text { at, size: s, .. } => {
                 (!near(at) || !size(*s) || *s <= 0.0).then(|| format!("text {far}"))
+            }
+            Item::Image {
+                at,
+                width: w,
+                height: h,
+                columns,
+                rows,
+                pixels,
+            } => {
+                if !near(at) || !size(*w) || !size(*h) {
+                    return Some(format!("an image {far}"));
+                }
+                let sides =
+                    (1..=MAX_IMAGE_SIDE).contains(columns) && (1..=MAX_IMAGE_SIDE).contains(rows);
+                let bytes = (*columns as usize) * (*rows as usize) * 4;
+                if !sides {
+                    Some(format!(
+                        "an image is {columns} × {rows} pixels: each side must be 1 to {MAX_IMAGE_SIDE}"
+                    ))
+                } else if pixels.len() != bytes {
+                    Some(format!(
+                        "an image of {columns} × {rows} pixels holds {} bytes, not {bytes}",
+                        pixels.len()
+                    ))
+                } else {
+                    None
+                }
             }
         }
     }
@@ -242,6 +293,34 @@ mod tests {
         assert_eq!(encode(&Anchor::End).unwrap(), [2]);
         assert_eq!(encode(&PathCmd::Close).unwrap(), [3]);
         assert!(items.iter().all(|i| i.problem(10.0, 10.0).is_none()));
+    }
+
+    #[test]
+    fn an_image_follows_the_text_and_holds_its_pixels() {
+        let image = |columns, rows, bytes| Item::Image {
+            at: Point::new(1.0, 1.0),
+            width: 4.0,
+            height: 2.0,
+            columns,
+            rows,
+            pixels: vec![255; bytes],
+        };
+        let good = image(2, 1, 8);
+        assert_eq!(encode(&good).unwrap()[0], 4);
+        assert_eq!(decode::<Item>(&encode(&good).unwrap()).unwrap(), good);
+        assert!(good.problem(10.0, 10.0).is_none());
+        assert!(image(2, 1, 7).problem(10.0, 10.0).unwrap().contains("8"));
+        assert!(
+            image(0, 1, 0)
+                .problem(10.0, 10.0)
+                .unwrap()
+                .contains("each side")
+        );
+        assert!(
+            image(MAX_IMAGE_SIDE + 1, 1, 0)
+                .problem(10.0, 10.0)
+                .is_some()
+        );
     }
 
     #[test]
