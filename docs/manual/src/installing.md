@@ -1,13 +1,13 @@
 # Installing
 
-Download the one file for your system from the [releases page](https://github.com/mateusrdp/oxiguitar/releases). Each exists for x86_64 (Intel, AMD) and ARM64 machines; the macOS app runs on both. The downloads hold the program only; the plugins, which open Guitar Pro files of every version from 3 to 8 and play them through your system's sound, are separate and come with the package repositories (Linux), or from each plugin's releases page (below, and the system pages).
+Download the one file for your system from the [releases page](https://github.com/mateusrdp/oxiguitar/releases). Each exists for x86_64 (Intel, AMD) and ARM64 machines; the macOS app runs on both. The downloads hold the program only. The plugins, which open files and play them through your system's sound, are separate ([The plugins](#the-plugins)).
 
 | System | Download | Install |
 | --- | --- | --- |
 | Any Linux | `OxiGuitar-VERSION-x86_64.AppImage` or `-aarch64` | `chmod +x OxiGuitar-*.AppImage`, then run it |
-| Debian, Ubuntu | our apt repository ([Linux](install-linux.md)), or `oxiguitar_VERSION_amd64.deb` (or `_arm64`) | `sudo apt install oxiguitar`, or `sudo apt install ./oxiguitar_*.deb` |
-| Fedora | our dnf repository ([Linux](install-linux.md)), or `oxiguitar-VERSION-1.x86_64.rpm` (or `.aarch64`) | `sudo dnf install oxiguitar`, or `sudo dnf install ./oxiguitar-*.rpm` |
-| Any Linux, as a Flatpak | our Flatpak repository ([Linux](install-linux.md#flatpak-any-linux)), or `OxiGuitar-VERSION-x86_64.flatpak` (or `-aarch64`) | `flatpak install oxiguitar io.github.mateusrdp.OxiGuitar`, or `flatpak install ./OxiGuitar-*.flatpak` |
+| Debian, Ubuntu | the apt repository ([Linux](install-linux.md)), or `oxiguitar_VERSION_amd64.deb` (or `_arm64`) | `sudo apt install oxiguitar`, or `sudo apt install ./oxiguitar_*.deb` |
+| Fedora | the dnf repository ([Linux](install-linux.md)), or `oxiguitar-VERSION-1.x86_64.rpm` (or `.aarch64`) | `sudo dnf install oxiguitar`, or `sudo dnf install ./oxiguitar-*.rpm` |
+| Any Linux, as a Flatpak | the Flatpak repository ([Linux](install-linux.md)), or `OxiGuitar-VERSION-x86_64.flatpak` (or `-aarch64`) | `flatpak install oxiguitar io.github.mateusrdp.OxiGuitar`, or `flatpak install ./OxiGuitar-*.flatpak` |
 | Windows 10 and 11 | `OxiGuitar-VERSION-windows-x86_64.zip` or `-arm64` | Unzip anywhere and run `oxiguitar.exe` |
 | macOS | `OxiGuitar-VERSION-macos-universal.dmg` | Open it and drag OxiGuitar to Applications |
 
@@ -25,9 +25,7 @@ If you start the wrong package's build, it says which one you need. **The X11 bu
 
 ## The plugins
 
-Each system's page says where plugins go and how they are kept up to date: [Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md). [The official plugins](official-plugins.md) says what each one does.
-
-OxiGuitar opens and plays files only through plugins, and none comes in the downloads: install at least the Guitar Pro and MIDI plugins (and an audio output on the AppImage, Windows and macOS). Each plugin has a repository and releases of its own, listed in [the official plugins](official-plugins.md); the system pages ([Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md)) say how to install and update them. OxiGuitar says so, once, when it starts without them.
+OxiGuitar opens and plays files only through plugins, and none comes in the downloads. Each system's page says where plugins go: [Linux](install-linux.md), [Windows](install-windows.md), [macOS](install-macos.md). This work depends on the [packages manual](https://mateusrdp.github.io/oxiguitar-packages/manual/), which lists every plugin, links to its manual and says how to install it. OxiGuitar says so, once, when it starts without the ones it needs.
 
 To add other plugins, put their `.oxp` files in your own plugin folder ([Settings and plugins](plugins.md)); when the same plugin is in both places, OxiGuitar uses the higher version, and yours when the versions are equal. **Help → About** lists every folder OxiGuitar searches, and **Tools → Plugins** the plugins it found. To leave out a plugin you don't want, untick it in **Tools → Plugins**. (OxiGuitar 0.11 and earlier carried their plugins inside, or in a separate zip. If you ever put those plugin files in your own plugin folder, delete them: their version numbers, 0.9 to 0.11, are higher than the separate plugins' (0.1 and up), so OxiGuitar would take them over the newer ones.)
 

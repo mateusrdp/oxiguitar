@@ -2,17 +2,13 @@
 
 OxiGuitar for macOS is a .dmg: open it and drag OxiGuitar to Applications. It runs on Intel and Apple silicon. [Installing](installing.md) lists the files and the first-launch steps. This page is about plugins.
 
-Plugins are files ending in `.oxp`. OxiGuitar looks for them in your own folder, `~/Library/Application Support/OxiGuitar/plugins`, and inside the app, in `Contents/PlugIns` (empty: the app holds no plugin). **Help → About** lists every folder it searches, and **Tools → Plugins…** every plugin it found. [The official plugins](official-plugins.md) says what each does.
+Plugins are files ending in `.oxp`. OxiGuitar looks for them in your own folder, `~/Library/Application Support/OxiGuitar/plugins`, and inside the app, in `Contents/PlugIns` (empty: the app holds no plugin). **Help → About** lists every folder it searches, and **Tools → Plugins…** every plugin it found.
 
 ## Plugins
 
-The app holds the program only. Install each plugin with its installer:
+The app holds the program only. Each plugin has an installer (.pkg) on its releases page. It installs for you alone, in your own Library, without asking for a password.
 
-- **An installer (.pkg) for each plugin,** from its releases page. It installs for you alone, in your own Library, without asking for a password.
-
-You need at least the Guitar Pro plugin, the MIDI plugin and the Core Audio plugin (the one that sends sound to your speakers).
-
-For the free recorded sound sets we recommend, the sound-set installer's releases page has `install.sh`: run it in Terminal (`bash install.sh`); it lists what it would download, from where and under which licence, and asks before it fetches anything, into your `soundfonts` folder ([Better sounds](better-sounds.md#the-sound-set-installer)).
+You need at least a plugin that reads Guitar Pro files, one that plays a score and the Core Audio plugin, which sends the sound to your speakers. This work depends on the [packages manual](https://mateusrdp.github.io/oxiguitar-packages/manual/plugins.html), which links to the manual and releases page of every plugin.
 
 ### Why macOS asks about OxiGuitar
 

@@ -1,6 +1,6 @@
 # Playing a score
 
-OxiGuitar plays the open score through your sound card, with the [sound sets](better-sounds.md) it finds. Its controls are the **Player** tab at the top of the window and each track's row at the bottom.
+OxiGuitar plays the open score through your sound card, using the plugins that make and send the sound. Its controls are the **Player** tab at the top of the window and each track's row at the bottom.
 
 ![The Player tab](images/player.png)
 
@@ -17,7 +17,7 @@ OxiGuitar plays the open score through your sound card, with the [sound sets](be
 
 A blue line moves through the music with the sound, and the beat you are hearing is lightly boxed in blue (the caret is green). The page turns by itself to keep it in sight. While a song plays, each track's overview at the bottom shows where the sound is; click an overview to jump there.
 
-**The score can't be edited while it plays.** Pause it (Space), edit, and play on. If you type while it plays, the bottom of the window reminds you. The plugins' sections of the **Track** tab are the exception: the equalizer's sliders and the amp's levels work while the song plays, and you hear the change at once ([Each track's sound](#each-tracks-sound)).
+**The score can't be edited while it plays.** Pause it (Space), edit, and play on. If you type while it plays, the bottom of the window reminds you. The plugins' sections of the **Track** tab are the exception: many of their settings work while the song plays ([Each track's sound](#each-tracks-sound)).
 
 ## Practising
 
@@ -41,7 +41,7 @@ Every effect of the score is heard as written, the notation of Guitar Pro 8's pa
 - A **rasgueado** strikes the chord once for each finger of its pattern across the beat, short-short-long for an anapaest pattern; an index finger's second stroke (i i) comes back up.
 - A **golpe** is a muted knock (the lowest string for the thumb, the highest for a finger), a **dead slap** every string muted.
 - Ottava lines, slurs and slash notation change how the music is written, not how it sounds; pick scrapes are shown only, as in Guitar Pro.
-- A **wah-wah** mark rocks a wah pedal across its beat, with the **Wah-wah** plugin installed ([Official plugins](official-plugins.md)): an open mark from the heel to the toe ("wah"), a closed one back, each over the beat's first half, unless you drew the mark a curve of its own ([Wah-wah](editing.md#wah-wah)). The pedal is off on beats without a mark. It is a Cry Baby unless the track's **Wah-wah** section (the Track tab) says otherwise: there you switch a track's pedal off, or set where its sweep starts (**Heel**, 450 Hz) and how far it goes (**Sweep**, 2.3 octaves). The wah comes before the amp unless you move it. Without the plugin the marks are shown only.
+- A **wah-wah** mark is played by the Wah-wah plugin, and is shown only without it ([Plugin manuals](official-plugins.md)).
 - A bar with a **repeat sign** plays the bar (or two bars) it repeats.
 
 ## The mixer
@@ -58,15 +58,11 @@ A track with chord diagrams over its music (Chord…, or A) can play them too: t
 
 ## Each track's sound
 
-Select a track (click its name) and open the **Track** tab on the right: under the track's name, instrument and strings, the plugins add sections that change how that one track sounds. They are kept beside the score, in `FILE.oxg`, so the song sounds the same the next time; the score itself doesn't change.
+Select a track (click its name) and open the **Track** tab on the right: under the track's name, instrument and strings, plugins add sections that change how that one track sounds, such as a sound set, an amp or an equalizer. Each plugin's manual describes its own ([Plugin manuals](official-plugins.md)). They are kept beside the score, in `FILE.oxg`, so the song sounds the same the next time; the score itself doesn't change.
 
-- **Sound** (the MIDI plugin): **Automatic** plays the set **Plugins → MIDI Sound Sets…** picks for the track's kind of instrument (clean, overdriven or distorted guitars, basses and so on); or the track plays like another kind, or with a set of its own ([Better sounds](better-sounds.md#one-tracks-own-sound)).
-- **Amp (NAM)**, for guitars and basses: an amp model and a cabinet ([Amp models (NAM)](amp-models.md)).
-- **Equalizer**, for every track: **Off** (the default), **Basic** (three bands: Bass, a shelf at 120 Hz; Middle, at 700 Hz; Treble, a shelf at 3.2 kHz) or **Graphic** (ten bands, one octave apart, from 31 Hz to 16 kHz). Each band goes from −12 to +12 dB in half-decibel steps; **Flat** sets them all back to 0. Basic and Graphic each keep their bands, so switching between them loses nothing. It works with or without an amp, adds no delay, and comes as a plugin of its own, `oxiguitar-eq` ([The official plugins](official-plugins.md)).
+Sections that change the sound after the instrument (an amp, an equalizer) come last, in the order they work: the sound goes through the first, then the next. The up and down arrows by such a section's heading move it, and so change that order for the track. Each change, like any edit, is one step for **Undo**.
 
-Sections that change the sound after the instrument (the amp, the equalizer) come last, in the order they work: the sound goes through the first, then the next. The up and down arrows by such a section's heading move it, and so change that order for the track: an equalizer before the amp shapes what drives the amp, after it what you hear. Without a change, the amp comes first and the equalizer after it. Each change, like any edit, is one step for **Undo**.
-
-**While the song plays**, these sections still work, so you can set a tone by ear: the equalizer's mode and bands, and the amp's **Input** and **Output**, change the sound as you move them, gliding there in a few hundredths of a second so nothing clicks. A change that has to load something (another **Sound**, turning the amp on or off, another model or cabinet) is kept and takes effect the next time you press Play. Moving a section up or down waits for the song to be paused or stopped, and so does **Undo**.
+**While the song plays**, these sections still work, so you can set a tone by ear: a setting that can change on the fly does so as you move it, and one that has to load something takes effect the next time you press Play. Moving a section up or down waits for the song to be paused or stopped, and so does **Undo**.
 
 ## Output
 
@@ -76,8 +72,7 @@ Sections that change the sound after the instrument (the amp, the equalizer) com
 
 The controls are greyed out when nothing can play the score, and the line at the bottom of the window says why and what to get:
 
-- **No sound set**: put one in your `soundfonts` folder, or install one with your package manager ([Better sounds](better-sounds.md)).
-- **No instrument or no audio output**: the MIDI plugin and an audio output for your system are plugins to install. See [Settings and plugins](plugins.md).
+- **No sound set, no instrument or no audio output**: these come from plugins. See [Plugin manuals](official-plugins.md) and [Settings and plugins](plugins.md).
 
 Sounds are made ready when a file opens, so Play starts at once. A SoundFont 3 set is decoded the first time it is used, which can take a few seconds.
 

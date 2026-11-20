@@ -257,9 +257,7 @@ How each one sounds is on the [Playback](playback.md#how-the-marks-sound) page.
 
 ### Wah-wah
 
-Wah-wah marks are written and played by the **Wah-wah** plugin ([Official plugins](official-plugins.md)), which adds **Closed Wah-Wah** and **Open Wah-Wah** to the palette's Effects. Each opens the **wah-wah editor** for the caret's beat, or the selected beats. On a beat without a mark it opens on the mark you clicked, so OK adds it; on a beat with one it shows that mark. Pick the mark (**No wah-wah** takes it away, **Open** is drawn "o", **Closed** "+") and how sharp the wah sounds (**Q**: 4 is a Cry Baby's; higher is more nasal). The grid is the pedal across the beat, from **Heel** (closed, dark) at the bottom to **Toe** (open, bright) at the top: drag its points to shape how the pedal moves. Picking a mark gives its usual curve again.
-
-The score file keeps the open or closed mark where its format has one (Guitar Pro's do); the curve and the Q are kept in the file beside the score ([Saving](saving.md)). A wah mark of a file you open is drawn without the plugin too; the tools and the sound need it. How it sounds is under [How the marks sound](playback.md#how-the-marks-sound).
+Wah-wah marks are written with the Wah-wah plugin, which adds **Closed Wah-Wah** and **Open Wah-Wah** to the palette's Effects. Its manual covers them ([Plugin manuals](official-plugins.md)). A wah mark in a file you open is drawn without the plugin too; the tools and the sound need it.
 
 ### Tools that plugins add
 

@@ -4,6 +4,14 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- **The manual covers only what the core delivers** (#325): each plugin has a manual of its own, published from its repository, and the packages manual lists them. The pages on amp models, better sounds, audio export and the recorded examples moved to those manuals; "The official plugins" is now "Plugin manuals", a short page that points to the packages manual. `scripts/enable-pages.sh` turns on Pages for every repository, and `new-repo.sh` does it for a new one and copies the `PACKAGES_TOKEN` secret in.
+
+### Added
+
+- The manual lists the **AI assistant** plugin (`oxiguitar-ai`, for #227) among the official plugins.
+
 ## [0.21.5] - 2026-11-20
 
 ### Added
