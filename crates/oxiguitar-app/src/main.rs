@@ -492,7 +492,19 @@ impl oxiguitar_host::Core for WindowCore {
         name: String,
         score: oxiguitar_host::api::score2::Score2,
     ) -> Result<(), String> {
-        self.open.apply(plugin, revision, name, score)
+        // Answered once the change is made, so the plugin reads the score
+        // as changed (interface 1.14's plugins drive the editor), except
+        // where waiting would wait on itself: inside a tool's run on the
+        // worker, or on the window's thread.
+        if cannot_wait().is_some() {
+            return self.open.apply(plugin, revision, name, score, None);
+        }
+        let (reply, answer) = std::sync::mpsc::channel();
+        self.open
+            .apply(plugin, revision, name, score, Some(reply))?;
+        answer
+            .recv()
+            .map_err(|_| "OxiGuitar is closing".to_owned())?
     }
 
     fn settings_changed(&self, id: &str) {
@@ -560,6 +572,17 @@ impl oxiguitar_host::Core for WindowCore {
         let (reply, answer) = std::sync::mpsc::channel();
         if owner == oxiguitar_host::api::message::CORE_TOOLS {
             let run = automation::parse(tool, options.as_deref())?;
+            // Everything already asked of the worker first (a plugin's
+            // change just handed back, say), so the tool runs on the score
+            // as it is: the worker's answers reach the window's thread
+            // before this request does.
+            let (fenced, done) = std::sync::mpsc::channel();
+            self.open.send(worker::Request::Fence {
+                before: self.open.revision(),
+                name: String::new(),
+                reply: fenced,
+            })?;
+            let _ = done.recv();
             slint::invoke_from_event_loop(move || match APP.with(|a| a.borrow().clone()) {
                 Some(app) => run_core_tool(&app, run, reply),
                 None => {

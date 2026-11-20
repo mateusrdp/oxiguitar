@@ -301,14 +301,16 @@ impl OpenScore {
     }
 
     /// A plugin hands back the score changed, made from `revision`: checked
-    /// here, recorded by the worker as one change the user can undo. The
-    /// error is a sentence for the plugin.
+    /// here, recorded by the worker as one change the user can undo. With
+    /// `reply`, the worker says once it has recorded it. The error is a
+    /// sentence for the plugin.
     pub(crate) fn apply(
         &self,
         plugin: &str,
         revision: u64,
         name: String,
         score: oxiguitar_host::api::score2::Score2,
+        reply: Option<std::sync::mpsc::Sender<Result<(), String>>>,
     ) -> Result<(), String> {
         let s = self.lock();
         if s.score.is_none() {
@@ -340,6 +342,7 @@ impl OpenScore {
                 revision,
                 name,
                 score: Box::new(score),
+                reply,
             })
             .map_err(|_| "the score can't be changed now".to_owned())
     }

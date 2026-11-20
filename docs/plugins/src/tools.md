@@ -66,7 +66,7 @@ A tool, a tab's button or anything else in your plugin changes the score the sam
 2. Change your copy.
 3. Hand it back: `host.apply(revision, "Up an Octave", score)`. The name is what the Edit menu shows ("Undo Up an Octave"), a few words.
 
-The core takes the whole score and records the difference as one change; the page shows it a moment later, and plugins that listen hear `Event::ScoreChanged`. If the score changed since your revision (the user typed a note while your tool worked), the core refuses the change with an error: ask for the score again and redo it, or tell the user. A score the core can't hold (a staff missing bars, a fraction with a zero denominator) is refused the same way.
+The core takes the whole score and records the difference as one change; the page shows it a moment later, and plugins that listen hear `Event::ScoreChanged`. From OxiGuitar with interface 1.14, `apply` answers once the change is made, so the score you ask for next is the changed one (inside a tool's `run` it answers at once, as before: the change is made right after). If the score changed since your revision (the user typed a note while your tool worked), the core refuses the change with an error: ask for the score again and redo it, or tell the user. A score the core can't hold (a staff missing bars, a fraction with a zero denominator) is refused the same way.
 
 ## The selection
 
