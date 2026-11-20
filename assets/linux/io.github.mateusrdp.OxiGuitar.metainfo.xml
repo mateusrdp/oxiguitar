@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.21.5" date="2026-11-20" type="development">
+      <description>
+        <p>Plugin interface 1.14 (the SDK crates are at 1.14.0; for #227, a chat with a language model as a plugin of its own): everything is generic, and the core holds nothing of the plugin. A plugin can draw controls of its own on a surface, a drawing at the window's scale that is told its size and takes ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.21.5</url>
+    </release>
     <release version="0.21.4" date="2026-11-20" type="development">
       <description>
         <p>Plugin interface 1.13 (the SDK crates are at 1.13.0; for #240, audio played along with the score as a plugin): a plugin that draws on the page is told when each of its places and every bar are played, and a drawing can run on from its box for some seconds of the music, across beats, bars and ...</p>
