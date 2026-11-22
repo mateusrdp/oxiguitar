@@ -217,6 +217,10 @@ struct Item {
     end: f64,
     /// Where it may go (string, fret); one place for a note kept as it is.
     options: Vec<(u8, u8)>,
+    /// Open strings it could sound on but isn't offered, as what the left
+    /// hand does to it (a bend, vibrato, a slide, a trill) needs a fret:
+    /// tried only when nothing else lets the notes still ringing go on.
+    open: Vec<(u8, u8)>,
     /// Whether the search may move it.
     free: bool,
     /// The item it sounds with: the note a tied note continues, or the
@@ -413,6 +417,15 @@ fn collect(staff: &Staff, starts: &[f64], free: &dyn Fn(At) -> bool) -> Vec<Item
                     {
                         options.push(o);
                     }
+                    let open: Vec<(u8, u8)> = if options.is_empty() {
+                        Vec::new()
+                    } else {
+                        (1..=u8::try_from(staff.string_count()).unwrap_or(0))
+                            .filter(|&s| staff.pitch_of(s, 0).is_some_and(|p| p.0 == pitch))
+                            .map(|s| (s, 0))
+                            .filter(|p| !options.contains(p))
+                            .collect()
+                    };
                     let mut moves = is_free;
                     if options.is_empty() {
                         // Kept where it is (or left as a pitch).
@@ -434,6 +447,7 @@ fn collect(staff: &Staff, starts: &[f64], free: &dyn Fn(At) -> bool) -> Vec<Item
                         time,
                         end: time + length,
                         options,
+                        open,
                         free: moves,
                         follows: root,
                         legato_to: None,
@@ -670,6 +684,57 @@ fn candidates(
         budget = BUDGET;
         enumerate(&options, None, &mut Vec::new(), 0, &mut found, &mut budget);
     }
+    // Still nothing: the struck notes may take the open strings their bends,
+    // vibratos, slides or trills keep them off (the notes sound right, the
+    // left hand's part can't be played), before a ringing note is cut short
+    // (which also breaks a tie that continues it).
+    if found.is_empty() {
+        let mut with_open = options.clone();
+        for (m, o) in with_open.iter_mut().enumerate().take(slice.struck) {
+            o.extend(items[slice.members[m]].open.iter().copied());
+        }
+        budget = BUDGET;
+        enumerate(
+            &with_open,
+            Some(6),
+            &mut Vec::new(),
+            0,
+            &mut found,
+            &mut budget,
+        );
+        if found.is_empty() {
+            budget = BUDGET;
+            enumerate(
+                &with_open,
+                None,
+                &mut Vec::new(),
+                0,
+                &mut found,
+                &mut budget,
+            );
+        }
+    }
+    // Every way the slice before can hold the notes still ringing has its
+    // hands here, a stretch if that is what they leave: the span limit
+    // must not leave only hands that move a ringing note (which would put a
+    // struck note on the string it still rings on).
+    for way in ringing_ways(slice, prev) {
+        if found.iter().any(|p| p[slice.struck..] == way[..]) {
+            continue;
+        }
+        let mut fixed = options.clone();
+        for (m, &place) in way.iter().enumerate() {
+            fixed[slice.struck + m] = vec![place];
+        }
+        let mut more = Vec::new();
+        budget = BUDGET;
+        enumerate(&fixed, Some(6), &mut Vec::new(), 0, &mut more, &mut budget);
+        if more.is_empty() {
+            budget = BUDGET;
+            enumerate(&fixed, None, &mut Vec::new(), 0, &mut more, &mut budget);
+        }
+        found.extend(more);
+    }
     let mut stuck = false;
     if found.is_empty() {
         // More notes than strings, or notes still ringing where the struck
@@ -752,6 +817,11 @@ fn candidates(
                 if it.old.is_some_and(|o| o != (s, f)) {
                     cost += 0.01;
                 }
+                // An open string its bend, vibrato, slide or trill can't
+                // be played on: only where nothing else goes.
+                if it.open.contains(&(s, f)) {
+                    cost += 2.0;
+                }
                 cost += 0.0005 * f64::from(f);
             }
             let positions = if positions.is_empty() {
@@ -768,8 +838,52 @@ fn candidates(
         })
         .collect();
     cands.sort_by(|a, b| a.cost.total_cmp(&b.cost));
-    cands.truncate(KEPT);
-    cands
+    keep_ringing_ways(cands, slice, prev)
+}
+
+/// Each way a candidate of the slice before holds the notes of `slice`
+/// still ringing: their places, in `slice`'s member order.
+fn ringing_ways(slice: &Slice, prev: Option<&Slice>) -> Vec<Vec<(u8, u8)>> {
+    let ringing = &slice.members[slice.struck..];
+    let mut ways: Vec<Vec<(u8, u8)>> = match prev {
+        Some(p) if !ringing.is_empty() => p
+            .cands
+            .iter()
+            .filter_map(|c| {
+                ringing
+                    .iter()
+                    .map(|i| {
+                        let pm = p.members.iter().position(|x| x == i)?;
+                        c.places.get(pm).copied()
+                    })
+                    .collect::<Option<Vec<_>>>()
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    ways.sort_unstable();
+    ways.dedup();
+    ways
+}
+
+/// The [`KEPT`] cheapest candidates, and the cheapest for each way a
+/// candidate of the slice before holds the notes still ringing: without
+/// them the search could follow a hand only by moving a ringing note, and
+/// a struck note would take the string that note still rings on.
+fn keep_ringing_ways(cands: Vec<Cand>, slice: &Slice, prev: Option<&Slice>) -> Vec<Cand> {
+    let mut wanted = ringing_ways(slice, prev);
+    let mut kept = Vec::with_capacity(KEPT + wanted.len());
+    for (k, c) in cands.into_iter().enumerate() {
+        let ways = &c.places[slice.struck..];
+        let found = wanted.iter().position(|w| w.as_slice() == ways);
+        if let Some(w) = found {
+            wanted.swap_remove(w);
+        }
+        if k < KEPT || found.is_some() {
+            kept.push(c);
+        }
+    }
+    kept
 }
 
 /// Every way to give each member one of its places on distinct strings;
@@ -1703,5 +1817,87 @@ mod tests {
         assert_eq!(finger_pitched(&mut s), 300 * 16);
         let limit = if cfg!(debug_assertions) { 30.0 } else { 2.0 };
         assert!(t.elapsed().as_secs_f64() < limit, "{:?}", t.elapsed());
+    }
+
+    /// The strings of every note, beat by beat: (string, key, tied).
+    fn strings_by_beat(s: &Score) -> Vec<Vec<(u8, u8, bool)>> {
+        let staff = &s.tracks[0].staves[0];
+        staff
+            .bars
+            .iter()
+            .flat_map(|b| &b.voices[0].beats)
+            .map(|bt| {
+                bt.notes
+                    .iter()
+                    .filter_map(|n| match n.place {
+                        NotePlace::Fretted { string, fret } => {
+                            Some((string, staff.pitch_of(string, fret)?.0, n.tie))
+                        }
+                        NotePlace::Pitched(_) => None,
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// A struck note never takes the string a tied note still rings on
+    /// (corpus: a MIDI file's chords held under a moving line, two bars of
+    /// Ghost's "He Is" as the MIDI plugin reads them). The span limit had
+    /// left only hands that moved the held C5, so B4 went to its string,
+    /// and a MIDI round trip lost notes on every trip.
+    #[test]
+    fn a_struck_note_never_takes_the_string_of_a_held_one() {
+        let (t, f) = (true, false);
+        let (e, x, q) = (NoteValue::Eighth, NoteValue::Sixteenth, NoteValue::Quarter);
+        let beat = |keys: &[(u8, bool)], v| {
+            let mut b = pitched(&keys.iter().map(|k| k.0).collect::<Vec<_>>(), v);
+            for (n, k) in b.notes.iter_mut().zip(keys) {
+                n.tie = k.1;
+            }
+            b
+        };
+        let mut bar8 = vec![beat(&[(67, t), (72, t), (74, t), (76, f)], e)];
+        for k in 0..5 {
+            bar8.push(beat(
+                &[(67, t), (71, k % 2 == 1), (72, t), (76, k % 2 == 0)],
+                e,
+            ));
+        }
+        for high in [76, 77, 76, 74] {
+            bar8.push(beat(&[(67, t), (71, t), (72, t), (high, f)], x));
+        }
+        let bar9 = vec![
+            beat(&[(67, t), (71, t), (72, t), (76, f)], e),
+            beat(&[(67, t), (69, f), (72, t), (76, t)], e),
+            beat(&[(67, t), (69, t), (72, t), (76, f)], x),
+            beat(&[(67, t), (69, t), (76, t)], x),
+            beat(&[(67, t), (69, f), (76, t)], x),
+            beat(&[(69, t), (76, t)], x),
+            beat(&[(69, t), (76, f)], e),
+            beat(&[(69, f), (76, t)], q),
+            beat(&[(69, f), (76, t)], e),
+        ];
+        let mut s = song(&GUITAR, 0, vec![bar8, bar9]);
+        finger_pitched(&mut s);
+        let beats = strings_by_beat(&s);
+        for (i, b) in beats.iter().enumerate() {
+            let mut strings: Vec<u8> = b.iter().map(|n| n.0).collect();
+            strings.sort_unstable();
+            strings.dedup();
+            assert_eq!(
+                strings.len(),
+                b.len(),
+                "beat {i}: two notes on a string: {b:?}"
+            );
+            if i > 0 {
+                for &(string, key, _) in b.iter().filter(|n| n.2) {
+                    assert!(
+                        beats[i - 1].iter().any(|p| p.0 == string && p.1 == key),
+                        "beat {i}: the tied {key} left its string ({string}): {b:?} after {:?}",
+                        beats[i - 1]
+                    );
+                }
+            }
+        }
     }
 }

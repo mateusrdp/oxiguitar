@@ -1,30 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The timeline of every file of the private corpus, where `corpus/files/`
-//! exists (skipped quietly otherwise), held to what any timeline must be:
+//! The timeline of every Guitar Pro file of the test corpus
+//! (`OXIGUITAR_CORPUS`, or `corpus/files/`; see `tests/support/corpus.rs`),
+//! file by file, held to what any timeline must be:
 //! notes in order, inside the song, with a length; bars back to back; the
 //! cursor's lookup finding every bar. Prints what it found:
 //! `cargo test --release -p oxiguitar-play --test corpus -- --nocapture`
 
-use std::path::{Path, PathBuf};
+#[path = "../../../tests/support/corpus.rs"]
+mod corpus;
+#[path = "../../../tests/support/guitar_pro.rs"]
+mod guitar_pro;
+
+use std::path::Path;
 use std::time::Instant;
 
 use oxiguitar_play::Timeline;
-
-fn files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for e in entries.flatten() {
-        let path = e.path();
-        if path.is_dir() {
-            files(&path, out);
-        } else {
-            out.push(path);
-        }
-    }
-}
 
 /// What every timeline must be; the first problem, if any.
 fn check(t: &Timeline) -> Result<(), String> {
@@ -73,21 +65,14 @@ fn check(t: &Timeline) -> Result<(), String> {
 
 #[test]
 fn every_corpus_file_has_a_sound_timeline() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
-    let mut all = Vec::new();
-    files(&dir, &mut all);
-    all.sort();
+    let fallback = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
     let (mut count, mut notes, mut slowest) = (0, 0, (0.0f64, String::new()));
-    let mut problems = Vec::new();
-    for path in all {
-        let Ok(data) = std::fs::read(&path) else {
-            continue;
-        };
-        let Ok(imported) = oxiguitar_plugin_test::released::guitar_pro::read(&data) else {
-            continue;
+    corpus::check("timeline", &fallback, |path, data| {
+        let Some(score) = guitar_pro::read(data)? else {
+            return Ok(corpus::Outcome::NotTaken);
         };
         let started = Instant::now();
-        let t = Timeline::new(&imported.score);
+        let t = Timeline::new(&score);
         let ms = started.elapsed().as_secs_f64() * 1e3;
         let name = path.file_name().unwrap().to_string_lossy().into_owned();
         if ms > slowest.0 {
@@ -102,23 +87,21 @@ fn every_corpus_file_has_a_sound_timeline() {
             t.notes.len(),
             ms
         );
-        if let Err(e) = check(&t) {
-            problems.push(format!("{name}: {e}"));
-        }
-    }
+        check(&t)?;
+        Ok(corpus::Outcome::Passed)
+    });
     println!(
         "{count} files, {notes} notes; slowest {:.1} ms ({})",
         slowest.0, slowest.1
     );
-    assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
 #[test]
 fn the_reference_songs_have_sound_timelines() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures");
     let mut all = Vec::new();
-    files(&root.join("reference"), &mut all);
-    files(&root.join("gp"), &mut all);
+    all.extend(corpus::files(&root.join("reference")));
+    all.extend(corpus::files(&root.join("gp")));
     for path in all {
         let Ok(imported) =
             oxiguitar_plugin_test::released::guitar_pro::read(&std::fs::read(&path).unwrap())

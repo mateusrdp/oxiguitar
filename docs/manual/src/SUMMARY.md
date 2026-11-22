@@ -20,3 +20,5 @@
 - [Keyboard and mouse](keys.md)
 - [Settings and plugins](plugins.md)
 - [Plugin manuals](official-plugins.md)
+- [Features and their tests](features.md)
+- [Testing](testing.md)

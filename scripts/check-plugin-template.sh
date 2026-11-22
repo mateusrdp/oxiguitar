@@ -28,6 +28,17 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
+
+# --rust-ok: whether this rustc is at least the template's rust-version.
+# The template's builds nest cargo (the checker's --build, build-oxp.sh),
+# which --ignore-rust-version can't reach, so scripts/test-all.py skips
+# this check on an older Rust instead of failing it.
+if [[ "${1:-}" == --rust-ok ]]; then
+    want="$(sed -n 's/^rust-version = "\(.*\)"/\1/p' "$root/docs/plugins/template/Cargo.toml")"
+    have="$(rustc -V | awk '{print $2}')"
+    [[ "$(printf '%s\n%s\n' "$want" "$have" | sort -V | head -n 1)" == "$want" ]]
+    exit
+fi
 work="${1:-$(mktemp -d)}"
 
 # Every example the guide includes from the template is there (mdBook
@@ -40,7 +51,7 @@ while IFS= read -r include; do
     if [[ ! -f "$path" ]]; then
         echo "check-plugin-template: the guide includes $file, which doesn't exist" >&2
         missing=1
-    elif [[ "$anchor" != "$include" ]] && ! grep -Eq "ANCHOR: $anchor[[:space:]]*$" "$path"; then
+    elif [[ "$anchor" != "$include" ]] && ! grep -Eq "ANCHOR: ${anchor}[[:space:]]*$" "$path"; then
         echo "check-plugin-template: the guide includes $file:$anchor, an anchor it doesn't have" >&2
         missing=1
     fi

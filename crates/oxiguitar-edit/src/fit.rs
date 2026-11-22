@@ -24,7 +24,7 @@
 //! as it is. The whole fit is one change for Undo.
 
 use oxiguitar_model::{
-    Bar, Beat, BeatKind, Direction, Duration, MasterBar, NoteValue, Ratio, Score, Slide,
+    Bar, Beat, BeatKind, Direction, Duration, Dynamic, MasterBar, NoteValue, Ratio, Score, Slide,
     TempoChange, Tuplet, Voice,
 };
 
@@ -334,7 +334,13 @@ pub(crate) fn piece(beat: &Beat, duration: Duration, first: bool, last: bool) ->
         e.pick_stroke = None;
         e.technique = None;
         e.fade = None;
-        e.dynamic = None;
+        // A tied piece plays at its notes' dynamic, and is marked so when
+        // that isn't the default, as a Guitar Pro 6-8 file holds it (one
+        // dynamic per beat): it reads back the same.
+        e.dynamic = (b.kind == BeatKind::Notes)
+            .then(|| b.notes.first().map(|n| n.dynamic))
+            .flatten()
+            .filter(|d| *d != Dynamic::default());
         e.whammy = None;
         e.pedal = None;
         e.wah = None;
@@ -1474,5 +1480,30 @@ mod tests {
         let out = rebarred(&s);
         assert_eq!(out.bar_count(), 4);
         assert_eq!(out.tracks[0].staves[0].tuning, s.tracks[0].staves[0].tuning);
+    }
+
+    /// A beat cut into tied pieces: the pieces after the first lose its
+    /// marks, but keep the dynamic their notes play at as their marking
+    /// when it isn't the default, as a Guitar Pro 6-8 file holds it (a
+    /// pasted beat across a bar line came back from a .gp file with a mark
+    /// the score didn't have).
+    #[test]
+    fn tied_pieces_keep_their_notes_dynamic() {
+        let mut beat = Beat {
+            kind: BeatKind::Notes,
+            notes: vec![Note {
+                dynamic: Dynamic::P,
+                ..Note::fretted(1, 3)
+            }],
+            ..Beat::default()
+        };
+        beat.effects.dynamic = Some(Dynamic::P);
+        let quarter = Duration::new(Quarter);
+        let rest = piece(&beat, quarter.clone(), false, true);
+        assert_eq!(rest.effects.dynamic, Some(Dynamic::P));
+        assert!(rest.notes[0].tie);
+        beat.notes[0].dynamic = Dynamic::default();
+        beat.effects.dynamic = None;
+        assert_eq!(piece(&beat, quarter, false, true).effects.dynamic, None);
     }
 }

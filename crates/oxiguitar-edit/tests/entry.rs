@@ -4,9 +4,15 @@
 //! Slice 3's gates for note entry, on the public fixtures: random runs of
 //! caret moves and commands, every one undone back to the original and
 //! redone to the end; and the edited score saved as .gp reads back equal.
-//! Where the private corpus is (`corpus/files/`), its files too.
+//! On the test corpus too, file by file (`OXIGUITAR_CORPUS`, or
+//! `corpus/files/`; see `tests/support/corpus.rs` at the workspace's root).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing)]
+
+#[path = "../../../tests/support/corpus.rs"]
+mod corpus;
+#[path = "../../../tests/support/guitar_pro.rs"]
+mod guitar_pro;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -380,15 +386,20 @@ fn fixtures() -> Vec<PathBuf> {
         .collect();
     refs.sort();
     out.extend(refs);
-    // The private corpus too, where it is (never in CI).
-    for dir in ["corpus/files/tabs", "corpus/files/scores"] {
-        if let Ok(entries) = std::fs::read_dir(root.join(dir)) {
-            let mut files: Vec<PathBuf> = entries.map(|e| e.unwrap().path()).collect();
-            files.sort();
-            out.extend(files);
-        }
-    }
     out
+}
+
+/// Runs `on` on each Guitar Pro file of the test corpus, one at a time,
+/// naming every file that fails (`tests/support/corpus.rs`).
+fn on_the_corpus(name: &str, on: impl Fn(Vec<PathBuf>)) {
+    let fallback = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
+    corpus::check(name, &fallback, |path, data| {
+        match guitar_pro::read(data)? {
+            None => return Ok(corpus::Outcome::NotTaken),
+            Some(_) => on(vec![path.to_owned()]),
+        }
+        Ok(corpus::Outcome::Passed)
+    });
 }
 
 fn read(path: &Path) -> Option<Score> {
@@ -528,11 +539,12 @@ fn random_edits(
     (changes, effects)
 }
 
-#[test]
-fn random_edits_undo_to_the_original_and_redo_to_the_end() {
+/// Random edits on each file undo to the original and redo to the end;
+/// the changes and the effects changed, counted.
+fn undo_and_redo(paths: Vec<PathBuf>) -> (usize, usize) {
     let mut total = 0;
     let mut effects = 0;
-    for (i, path) in fixtures().into_iter().enumerate() {
+    for (i, path) in paths.into_iter().enumerate() {
         let Some(original) = read(&path) else {
             continue;
         };
@@ -548,14 +560,28 @@ fn random_edits_undo_to_the_original_and_redo_to_the_end() {
         while history.redo(&mut score).is_some() {}
         assert!(score == end, "{}: redo all", path.display());
     }
+    (total, effects)
+}
+
+#[test]
+fn random_edits_undo_to_the_original_and_redo_to_the_end() {
+    let (total, effects) = undo_and_redo(fixtures());
     assert!(total > 2000, "only {total} changes were made");
     assert!(effects > 1000, "only {effects} effects were changed");
 }
 
 #[test]
-fn every_edit_is_saved_and_read_back_equal() {
+fn random_edits_on_the_corpus_undo_and_redo() {
+    on_the_corpus("edits undo and redo", |p| {
+        undo_and_redo(p);
+    });
+}
+
+/// Random edits on each file, saved as .gp and read back equal; the files
+/// compared, counted.
+fn saved_and_read_back(paths: Vec<PathBuf>) -> usize {
     let mut compared = 0;
-    for (i, path) in fixtures().into_iter().enumerate() {
+    for (i, path) in paths.into_iter().enumerate() {
         if std::env::var("TRACE").is_ok_and(|t| !path.to_string_lossy().contains(&t)) {
             continue;
         }
@@ -658,7 +684,20 @@ fn every_edit_is_saved_and_read_back_equal() {
         }
         compared += 1;
     }
+    compared
+}
+
+#[test]
+fn every_edit_is_saved_and_read_back_equal() {
+    let compared = saved_and_read_back(fixtures());
     assert!(compared >= 40, "only {compared} files compared");
+}
+
+#[test]
+fn edits_on_the_corpus_are_saved_and_read_back_equal() {
+    on_the_corpus("edits saved as gp", |p| {
+        saved_and_read_back(p);
+    });
 }
 
 /// The beats as the file holds them, one line each, with where each note is
@@ -706,14 +745,13 @@ fn first_line_apart(a: &[String], b: &[String]) -> String {
     format!("{} beats vs {}", a.len(), b.len())
 }
 
-#[test]
-fn every_edit_is_saved_as_gp5_and_read_back_equal() {
+/// A few edits keep many files within what .gp5 holds, and then they come
+/// back note for note; many edits go beyond it, and then what is named lost
+/// is all that is lost. The files compared, and those exact, counted.
+fn saved_as_gp5(paths: Vec<PathBuf>) -> (usize, usize) {
     let mut compared = 0;
     let mut exact = 0;
-    // A few edits keep many files within what .gp5 holds, and then they
-    // come back note for note; many edits go beyond it, and then what is
-    // named lost is all that is lost.
-    for (i, (path, steps)) in fixtures()
+    for (i, (path, steps)) in paths
         .into_iter()
         .enumerate()
         .flat_map(|(i, p)| [(i, p.clone(), 5), (i, p, 600)])
@@ -774,8 +812,21 @@ fn every_edit_is_saved_as_gp5_and_read_back_equal() {
         );
         compared += 1;
     }
+    (compared, exact)
+}
+
+#[test]
+fn every_edit_is_saved_as_gp5_and_read_back_equal() {
+    let (compared, exact) = saved_as_gp5(fixtures());
     assert!(compared > 40, "only {compared} files were compared");
     assert!(exact > 10, "only {exact} saved without a loss");
+}
+
+#[test]
+fn edits_on_the_corpus_are_saved_as_gp5_and_read_back() {
+    on_the_corpus("edits saved as gp5", |p| {
+        saved_as_gp5(p);
+    });
 }
 
 /// #153: text that Guitar Pro saved on voice 2 (as "Intro / Solo" in a

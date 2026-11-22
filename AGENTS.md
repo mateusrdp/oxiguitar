@@ -30,6 +30,17 @@ You are the lead engineer and technical writer for OxiGuitar, an open-source, fu
 - When implmenting/updating a feature that should be persisted, check compatibility with all File Format plugins
 - Never run the app for me, I'll build and run it myself, or else the run might time out mid test
 
+### Tests
+
+- Every repository (the core and each plugin) has one test runner, `scripts/test-all.py`, the same file everywhere: if you change it, change it in every repository at once. Each repository describes its own tests in `tests/suite.json`.
+- Every new feature or plugin comes with its tests and a row on that repository's `docs/manual/src/features.md` naming them, in the same PR. Changing a feature means updating its tests and its row.
+- A test that reads the corpus uses `tests/support/corpus.rs` (also the same file everywhere) and must pass on anyone's corpus, not only mine: it takes the files it understands, skips the rest, and only checks what must hold for every file.
+- Never put corpus files, or anything made from them, in a repository, an issue or a PR.
+- While working, run the tests you touched with `cargo test`, and `python3 scripts/test-all.py --features-only` to check the Features page.
+- Before you ask me to check your work, give me the full run's command, which I run myself: `python3 scripts/test-all.py --corpus /mnt/LinuxData/Tabs/`. In a plugin's repository it also fetches and builds the newest OxiGuitar release and checks the plugin against it.
+- Then read the newest `target/test-all/<date>-<time>/summary.md` (and `test-all.log` for details): look at the exit code and every failed line, and fix what failed before committing. Exit codes: 0 passed, 1 failed, 2 could not start. Skipped stages (other systems, missing tools) are not failures.
+- When a failure isn't ours to fix in this repository, follow the "Reporting a problem" steps at the end of summary.md to open an issue in the repository it names.
+
 ### GitHub work
 
 - IMPORTANT: ALWAYS signoff the commits / pushes / PRs. Use "Mateus <42054862+mateusrdp@users.noreply.github.com>"

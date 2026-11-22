@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Harmonize (#235) on every Guitar Pro file of the private corpus, where
-//! `corpus/files/` exists (skipped quietly otherwise):
+//! Harmonize (#235) on every Guitar Pro file of the test corpus
+//! (`OXIGUITAR_CORPUS`, or `corpus/files/`; see `tests/support/corpus.rs`),
+//! file by file:
 //! `cargo test --release -p oxiguitar-edit --test harmonize_corpus -- --nocapture`
 //!
 //! Every pitched track of every file is harmonized four ways, which take
@@ -22,26 +23,17 @@
 //! sounds, so the file's roots are moved by the tuning and the capo
 //! before they are compared.
 
-use std::path::{Path, PathBuf};
+#[path = "../../../tests/support/corpus.rs"]
+mod corpus;
+#[path = "../../../tests/support/guitar_pro.rs"]
+mod guitar_pro;
+
+use std::path::Path;
 use std::time::Instant;
 
 use oxiguitar_edit::harmony::Chord;
 use oxiguitar_edit::{Caret, Command, Harmonize, History, harmonize_report};
 use oxiguitar_model::{Score, Track};
-
-fn files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for e in entries.flatten() {
-        let path = e.path();
-        if path.is_dir() {
-            files(&path, out);
-        } else {
-            out.push(path);
-        }
-    }
-}
 
 /// A track without its chords: what Harmonize must leave alone.
 fn without_chords(track: &Track) -> Track {
@@ -136,23 +128,18 @@ fn run(score: &mut Score, history: &mut History, track: usize, h: Harmonize) -> 
 
 #[test]
 fn harmonizing_runs_on_the_corpus() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
-    let mut all = Vec::new();
-    files(&dir, &mut all);
-    all.sort();
+    let fallback = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
     let (mut done, mut tracks, mut written) = (0, 0, 0);
     let (mut bars, mut same, mut roots) = (0usize, 0usize, 0usize);
     let (mut hinted, mut slowest) = (0, std::time::Duration::ZERO);
-    for path in all {
-        let Ok(data) = std::fs::read(&path) else {
-            continue;
+    corpus::check("harmonize", &fallback, |path, data| {
+        let Some(score) = guitar_pro::read(data)? else {
+            return Ok(corpus::Outcome::NotTaken);
         };
-        let Ok(imported) = oxiguitar_plugin_test::released::guitar_pro::read(&data) else {
-            continue;
-        };
-        let score = imported.score;
+        // Nothing to harmonize (a file with no bars, or one that doesn't
+        // hang together, which the reading checks report).
         if score.bar_count() == 0 || score.check_structure().is_err() {
-            continue;
+            return Ok(corpus::Outcome::NotTaken);
         }
         let name = path.file_name().unwrap_or_default().to_string_lossy();
         done += 1;
@@ -255,7 +242,8 @@ fn harmonizing_runs_on_the_corpus() {
             }
         }
         hinted += usize::from(hint);
-    }
+        Ok(corpus::Outcome::Passed)
+    });
     if done > 0 {
         println!(
             "{done} files, {tracks} pitched tracks, {written} chords written (plain, one a bar); slowest run {slowest:?}"
