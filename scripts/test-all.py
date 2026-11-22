@@ -139,11 +139,20 @@ class Out:
 # ------------------------------------------------------------- commands --
 
 
+def resolved(cmd, env=None):
+    """The command with its program found along PATH as a shell finds it.
+    On Windows a bare "bash" would otherwise start System32's (WSL's)
+    before Git's, since CreateProcess looks in System32 before PATH."""
+    path = (env or os.environ).get("PATH")
+    found = shutil.which(cmd[0], path=path) if cmd else None
+    return [found] + list(cmd[1:]) if found else list(cmd)
+
+
 def run_capture(cmd, cwd=ROOT, env=None, timeout=120):
     """Runs a short command; returns (exit status, output). Never raises."""
     try:
         p = subprocess.run(
-            cmd, cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            resolved(cmd, env), cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             timeout=timeout, universal_newlines=True, encoding="utf-8", errors="replace",
         )
         return p.returncode, p.stdout
@@ -161,7 +170,7 @@ def stream(cmd, out, env, on_line, cwd=ROOT):
     out.logline("$ " + " ".join(cmd))
     try:
         p = subprocess.Popen(
-            cmd, cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            resolved(cmd, env), cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             universal_newlines=True, encoding="utf-8", errors="replace", bufsize=1,
         )
     except FileNotFoundError:
@@ -482,7 +491,7 @@ def run_stage(stage, out, env, args=None):
     ready = stage.get("ready")
     if ready:
         try:
-            ok = subprocess.run(ready["run"], cwd=str(ROOT), env=env, stdin=subprocess.DEVNULL,
+            ok = subprocess.run(resolved(ready["run"], env), cwd=str(ROOT), env=env, stdin=subprocess.DEVNULL,
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                 timeout=60).returncode == 0
         except (OSError, subprocess.TimeoutExpired):
@@ -518,6 +527,10 @@ def run_setup(step, out, env):
     Returns ("passed"|"failed"|"skipped", note)."""
     if not applies_here(step):
         return "skipped", why_not_here(step)
+    var = step.get("env_from_stdout")
+    if var and env.get(var):
+        out.logline("Setup %s: %s is already set, to %s" % (step["name"], var, env[var]))
+        return "skipped", "%s already set" % var
     for tool in step.get("needs", []):
         if shutil.which(tool) is None:
             return "failed", "needs %s, not found" % tool
@@ -526,7 +539,6 @@ def run_setup(step, out, env):
     status = stream(step["run"], out, env, lambda l: lines.append(l))
     if status != 0:
         return "failed", "exit status %d" % status
-    var = step.get("env_from_stdout")
     if var:
         value = next((l.strip() for l in reversed(lines) if l.strip()), "")
         if not value:
@@ -1188,7 +1200,7 @@ def main():
         out.logline("%s: %s" % (k, v))
     out.logline("suite.json: " + json.dumps(suite, indent=2))
 
-    for step in suite.get("setup", []):
+    for step in suite.get("setup", []) if not args.features_only else []:
         status, note = run_setup(step, out, env)
         stages["setup: " + step["name"]] = {"status": status, "note": note}
         out.say("  setup %s: %s (%s)" % (step["name"], status, note),
