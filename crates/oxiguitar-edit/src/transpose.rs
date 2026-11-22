@@ -16,7 +16,7 @@
 //! [`notes_lost`] counts them first. Transposing every track chromatically
 //! moves the key signatures too. Drum tracks are never transposed.
 
-use oxiguitar_model::{BeatKind, KeySignature, Note, NotePlace, Pitch, Score, Staff};
+use oxiguitar_model::{BeatKind, KeySignature, Note, NotePlace, Pitch, Score, Spelling, Staff};
 
 use crate::{Caret, Command, Edited, History, Region, Selection};
 
@@ -256,6 +256,7 @@ fn moved(
             match p {
                 Some(p) => out.push(Note {
                     place: NotePlace::Pitched(p),
+                    spelling: respelled(n.spelling, p, staff.transposition, t),
                     ..n
                 }),
                 None => lost += 1,
@@ -303,6 +304,7 @@ fn moved(
         match place {
             Some((string, fret)) => out.push(Note {
                 place: NotePlace::Fretted { string, fret },
+                spelling: respelled(n.spelling, p, staff.transposition, t),
                 ..n
             }),
             None => lost += 1,
@@ -310,6 +312,36 @@ fn moved(
     }
     out.sort_by_key(|n| n.string().unwrap_or(u8::MAX));
     (out, lost)
+}
+
+/// The spelling a transposed note takes: its own with the letter moved by
+/// the interval's (down a fourth, E sharp becomes B sharp; diatonically, by
+/// the steps), when that spells the note's new written pitch (`to`, with
+/// the staff's `transposition`); otherwise none, and OxiGuitar works it
+/// out. A spelling is only kept while it spells its note.
+fn respelled(
+    own: Option<Spelling>,
+    to: Pitch,
+    transposition: i8,
+    t: &Transposition,
+) -> Option<Spelling> {
+    // The letters each number of semitones moves: a minor second one, a
+    // major third two, the tritone three (an augmented fourth) ...
+    const LETTERS: [i32; 12] = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6];
+    let own = own?;
+    let amount = i32::from(t.amount);
+    let letters = if t.diatonic {
+        amount
+    } else {
+        let within = usize::try_from(amount.rem_euclid(12)).ok()?;
+        7 * amount.div_euclid(12) + LETTERS.get(within).copied()?
+    };
+    let step = u8::try_from((i32::from(own.step) + letters).rem_euclid(7)).ok()?;
+    let written = u8::try_from((i32::from(to.0) + i32::from(transposition)).rem_euclid(12)).ok()?;
+    [0, 1, -1, 2, -2]
+        .into_iter()
+        .map(|alter| Spelling { step, alter })
+        .find(|s| s.spells(Pitch(written)))
 }
 
 /// A pitch moved by `t` in `key`, or `None` past MIDI's range.
@@ -558,5 +590,38 @@ mod tests {
         assert_eq!(notes_lost(&s, at(0), None, &t), 4);
         h.undo(&mut s);
         assert_eq!(places(&s), before);
+    }
+
+    /// A chosen spelling moves with the notes (E sharp a fourth down is B
+    /// sharp), and a transposed note's spelling always spells it: the
+    /// writers drop one that doesn't, so a stale one was lost on saving.
+    #[test]
+    fn spellings_move_with_the_notes_and_always_spell_them() {
+        let t = |amount, diatonic| Transposition {
+            amount,
+            diatonic,
+            keep_fingering: false,
+            scope: Scope::All,
+        };
+        let e_sharp = Spelling { step: 2, alter: 1 };
+        assert_eq!(
+            respelled(Some(e_sharp), Pitch(53 - 5), 0, &t(-5, false)),
+            Some(Spelling { step: 6, alter: 1 })
+        );
+        assert_eq!(respelled(None, Pitch(60), 0, &t(3, false)), None);
+        for amount in -12..=12i8 {
+            for pitch in 30..90u8 {
+                for own in Spelling::all(Pitch(pitch)) {
+                    let Some(to) =
+                        shifted(Pitch(pitch), KeySignature::default(), &t(amount, false))
+                    else {
+                        continue;
+                    };
+                    if let Some(s) = respelled(Some(own), to, 0, &t(amount, false)) {
+                        assert!(s.spells(to), "{own:?} by {amount}: {s:?} for {to:?}");
+                    }
+                }
+            }
+        }
     }
 }

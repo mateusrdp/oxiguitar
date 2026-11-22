@@ -4,6 +4,22 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.6] - 2026-11-22
+
+### Added
+
+- **Every test with one command** (mateusrdp/oxiguitar#273): `scripts/test-all.py` builds and runs all of this repository's tests on your own corpus (`--corpus DIR` or `OXIGUITAR_CORPUS`), with a progress bar, a summary to paste into an issue and a log to diagnose from. The manual has a Features page naming the tests of every feature (CI checks it) and a Testing page.
+- `oxiguitar-plugin-test --with NEEDED.oxp` checks a plugin beside the plugins it needs (an amp model plugin beside the MIDI plugin), checking only the plugin given.
+- `scripts/test-no-network.sh`: a whole session of the app and the command-line program under strace, failing at any attempt to open an internet connection (one of the full run's stages on Linux).
+- `scripts/new-repo.sh` starts a repository with the test runner, the corpus helper, a `tests/suite.json`, an empty Features page, the Features page step in CI and the rule in CLAUDE.md and CONTRIBUTING.md.
+
+### Fixed
+
+- **Find Fingering never puts a struck note on the string of a note still ringing**: a note held over the beat keeps its string, and the open strings are tried when nothing else fits (found on the corpus by the runner).
+- **Transposing keeps a note's chosen spelling only when it still spells the new pitch**: the letter moves with the interval.
+- **Fit Bars keeps a tied note's dynamic** on the pieces after the first.
+- `new-repo.sh` wrote CLAUDE.md with an unescaped command substitution in the sign-off rule.
+
 ### Changed
 
 - **The manual covers only what the core delivers** (#325): each plugin has a manual of its own, published from its repository, and the packages manual lists them. The pages on amp models, better sounds, audio export and the recorded examples moved to those manuals; "The official plugins" is now "Plugin manuals", a short page that points to the packages manual. `scripts/enable-pages.sh` turns on Pages for every repository, and `new-repo.sh` does it for a new one and copies the `PACKAGES_TOKEN` secret in.

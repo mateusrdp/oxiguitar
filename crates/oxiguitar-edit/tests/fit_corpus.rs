@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Fit Bars to Time Signature (#222) on every Guitar Pro file of the
-//! private corpus, where `corpus/files/` exists (skipped quietly otherwise):
+//! Fit Bars to Time Signature (#222) on every Guitar Pro file of the test
+//! corpus (`OXIGUITAR_CORPUS`, or `corpus/files/`; see
+//! `tests/support/corpus.rs`), file by file:
 //! `cargo test --release -p oxiguitar-edit --test fit_corpus -- --nocapture`
 //!
 //! Each file's time signatures are changed (n/d to (n-1)/d, 2/d to 3/d), as
@@ -16,25 +17,16 @@
 //! - stretched, every voice strikes the same notes in the same order, the
 //!   bar count stays, and every bar fitted adds up.
 
-use std::path::{Path, PathBuf};
+#[path = "../../../tests/support/corpus.rs"]
+mod corpus;
+#[path = "../../../tests/support/guitar_pro.rs"]
+mod guitar_pro;
+
+use std::path::Path;
 use std::time::Instant;
 
 use oxiguitar_edit::{BarCheck, Caret, Command, Fit, FitHow, History};
 use oxiguitar_model::{BeatKind, NotePlace, Ratio, Score, TimeSignature};
-
-fn files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for e in entries.flatten() {
-        let path = e.path();
-        if path.is_dir() {
-            files(&path, out);
-        } else {
-            out.push(path);
-        }
-    }
-}
 
 /// Each bar's place on the time line, as Fit reads it: as long as its
 /// longest voice holding music, or its time signature if it holds none.
@@ -123,22 +115,17 @@ fn changed(ts: TimeSignature) -> TimeSignature {
 
 #[test]
 fn fitting_runs_on_the_corpus() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
-    let mut all = Vec::new();
-    files(&dir, &mut all);
-    all.sort();
+    let fallback = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
     let mut done = 0;
     let mut moved_total = 0;
-    for path in all {
-        let Ok(data) = std::fs::read(&path) else {
-            continue;
+    corpus::check("fit bars", &fallback, |path, data| {
+        let Some(mut score) = guitar_pro::read(data)? else {
+            return Ok(corpus::Outcome::NotTaken);
         };
-        let Ok(imported) = oxiguitar_plugin_test::released::guitar_pro::read(&data) else {
-            continue;
-        };
-        let mut score = imported.score;
+        // Nothing to fit (a file with no bars, or one that doesn't hang
+        // together, which the reading checks report).
         if score.bar_count() == 0 || score.check_structure().is_err() {
-            continue;
+            return Ok(corpus::Outcome::NotTaken);
         }
         for m in &mut score.master_bars {
             m.time_signature = changed(m.time_signature);
@@ -146,7 +133,7 @@ fn fitting_runs_on_the_corpus() {
         let name = path.file_name().unwrap_or_default().to_string_lossy();
         let red = BarCheck::of(&score).len();
         let Some(c) = Caret::at_start(&score, 0) else {
-            continue;
+            return Ok(corpus::Outcome::NotTaken);
         };
 
         // Re-bar.
@@ -221,6 +208,7 @@ fn fitting_runs_on_the_corpus() {
             stretch_time.as_secs_f64(),
         );
         done += 1;
-    }
+        Ok(corpus::Outcome::Passed)
+    });
     println!("{done} files fitted; {moved_total} struck beats moved by a sliver");
 }

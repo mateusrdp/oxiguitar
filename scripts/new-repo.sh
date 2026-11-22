@@ -304,6 +304,14 @@ guitar tablature and score viewer, editor and player for Windows, macOS and
 Linux. The user manual and the plugin developer guide live in the
 [OxiGuitar repository](https://github.com/$OWNER/$SOURCE).
 
+## Testing
+
+Every test, with one command (\`--corpus DIR\` adds your own files):
+
+\`\`\`sh
+python3 scripts/test-all.py
+\`\`\`
+
 ## Licence
 
 $license. See $(printf '%s ' "${license_files[@]}" | sed 's/ $//; s/ / and /').
@@ -330,6 +338,15 @@ is the part every pull request meets first.
 - Feature branches are squash-merged into \`develop\`; \`develop\` is merged
   into \`main\` with a merge commit.
 - CI must be green. The \`ci-success\` check sums up every other job.
+
+## Tests for every feature
+
+Every feature has tests, and a row on the manual's Features page
+(\`docs/manual/src/features.md\`) naming them. A pull request that adds or
+changes a feature, or a plugin, adds or updates both. Before opening it, run
+\`python3 scripts/test-all.py\`: everything must pass. CI checks the Features
+page on every system it tests; the full run, on your corpus
+(\`--corpus DIR\`) and the newest OxiGuitar release, is yours.
 
 ## Sign-off (Developer Certificate of Origin)
 
@@ -372,7 +389,7 @@ decisions; this file only repeats the standing rules.
 - Never commit the corpus (tabs.tar.gz, scores.tar.gz) or publish renders of it.
 - No telemetry, no uploads, no downloads by the app.
 - No emojis anywhere, including PR attribution lines.
-- No signatures or credit anywhere on GitHub: **never** write "Generated with Claude", "Generated with Claude Code" or any variant in a comment, an issue, a PR body or a review. The author line already says it. Commits carry only `Signed-off-by: Claude <noreply@anthropic.com>`.
+- No signatures or credit anywhere on GitHub: **never** write "Generated with Claude", "Generated with Claude Code" or any variant in a comment, an issue, a PR body or a review. The author line already says it. Commits carry only \`Signed-off-by: Claude <noreply@anthropic.com>\`.
 - Keep README.md up to date with screenshots and example sounds.
 - I merge PRs and create v* tags. Whenever I need to do something on git, give me step-by-step instructions with the exact commands.
 - Stack PRs to save CI runs.
@@ -381,6 +398,7 @@ decisions; this file only repeats the standing rules.
 - Locally you only have rustc 1.97: lower rust-version to 1.97 for nested plugin builds, always restore $msrv, and delete target/lib after build-plugins.sh.
 - When checking a local test run, look at the exit code and every FAILED line.
 - Never rewrite a pushed branch without asking me; never rebase a commit of mine into a branch (the DCO check fails on it).
+- Every new feature or plugin comes with its tests and a row on \`docs/manual/src/features.md\` naming them, in the same PR; corpus tests use \`tests/support/corpus.rs\` and must pass on any corpus. Run \`python3 scripts/test-all.py\` before every PR (locally: \`--ignore-rust-version\`, rust-version lowered for nested builds) and read its summary.md. \`scripts/test-all.py\` is the same file in every repository: change it in all of them at once.
 - Update claude/START-HERE.md at the end of the session.
 
 ## This repository
@@ -395,6 +413,34 @@ EOF
 
 raw scripts/check-dco.sh "$default_branch" > "$files/scripts/check-dco.sh"
 chmod +x "$files/scripts/check-dco.sh"
+
+# The test runner and the corpus helper are the same files in every
+# repository (docs/manual/src/testing.md). The suite names no plugin yet and
+# the Features page no feature: the runner fails until the first code adds
+# both, so no feature lands without its tests.
+mkdir -p "$files/tests/support" "$files/docs/manual/src"
+raw scripts/test-all.py "$default_branch" > "$files/scripts/test-all.py"
+raw tests/support/corpus.rs "$default_branch" > "$files/tests/support/corpus.rs"
+cat > "$files/tests/suite.json" << EOF
+{
+  "repository": "$OWNER/$name",
+  "plugins": [],
+  "stages": []
+}
+EOF
+cat > "$files/docs/manual/src/features.md" << 'EOF'
+# Features and their tests
+
+Every feature of this repository and the tests that check it.
+`python3 scripts/test-all.py` runs them and checks that every row names a
+test that exists. A new feature or plugin comes with its tests and a row
+here, in the same pull request. How the Tests column is written, and what
+goes into `tests/suite.json`, is on the Testing page of OxiGuitar's manual
+(docs/manual/src/testing.md in the OxiGuitar repository).
+
+| Feature | Tests |
+| --- | --- |
+EOF
 raw .github/pull_request_template.md "$default_branch" > "$files/.github/pull_request_template.md"
 raw rustfmt.toml "$default_branch" > "$files/rustfmt.toml"
 raw clippy.toml "$default_branch" > "$files/clippy.toml"
@@ -415,6 +461,7 @@ cat > "$files/.gitignore" << 'EOF'
 
 # The private test corpus is never committed.
 *.tar.gz
+/corpus/files/
 
 # Editors and systems
 .idea/
@@ -578,6 +625,20 @@ jobs:
             echo "::error title=cargo test (\${{ matrix.name }})::\$report"
           fi
           exit "\$status"
+      # Every feature on the manual's Features page names tests, and every
+      # test it names exists on this system (the full run, on a corpus and
+      # the newest core, is scripts/test-all.py).
+      - name: Features page
+        shell: bash
+        env:
+          CARGO_TERM_COLOR: never
+        run: |
+          py=\$(command -v python3 || command -v python)
+          "\$py" scripts/test-all.py --features-only --out target/test-all/ci || {
+            cat target/test-all/ci/summary.md
+            echo "::error title=Features page (\${{ matrix.name }})::\$(grep -E '^- ' target/test-all/ci/summary.md | head -n 20 | sed -z 's/%/%25/g; s/\\n/%0A/g')"
+            exit 1
+          }
 
   deny:
     name: Licences and advisories

@@ -1,0 +1,75 @@
+{
+  "repository": "mateusrdp/oxiguitar",
+  "corpus": {
+    "uses": true
+  },
+  "stages": [
+    {
+      "name": "released-plugin contract",
+      "run": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "oxiguitar-plugin-test",
+        "--features",
+        "released"
+      ],
+      "doc": "the plugin contract tests that use OxiGuitar's released plugins (`cargo test -p oxiguitar-plugin-test --features released`)"
+    },
+    {
+      "name": "plugin template",
+      "run": [
+        "bash",
+        "scripts/check-plugin-template.sh",
+        "target/test-all/template"
+      ],
+      "needs": [
+        "bash"
+      ],
+      "doc": "a plugin built from the template as the plugin guide says, and checked (`scripts/check-plugin-template.sh`)",
+      "ready": {
+        "run": [
+          "bash",
+          "scripts/check-plugin-template.sh",
+          "--rust-ok"
+        ],
+        "why": "needs the Rust the template names in rust-version (its nested builds can't take --ignore-rust-version)"
+      }
+    },
+    {
+      "name": "no network",
+      "run": [
+        "bash",
+        "scripts/test-no-network.sh"
+      ],
+      "os": [
+        "linux"
+      ],
+      "needs": [
+        "bash",
+        "strace",
+        "weston",
+        "Xvfb",
+        "curl"
+      ],
+      "doc": "on Linux, a whole session of the app and the command-line program under strace, failing at any attempt to open an internet connection (`scripts/test-no-network.sh`; needs strace, weston and Xvfb)"
+    },
+    {
+      "name": "speed budget",
+      "run": [
+        "cargo",
+        "test",
+        "--release",
+        "--locked",
+        "-p",
+        "oxiguitar-app",
+        "speed",
+        "--",
+        "--nocapture"
+      ],
+      "advisory": true,
+      "doc": "the speed budgets (`cargo test --release -p oxiguitar-app speed`): advisory, since they depend on the machine"
+    }
+  ]
+}

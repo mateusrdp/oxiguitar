@@ -168,6 +168,20 @@ jobs:
             echo "::error title=cargo test (${{ matrix.name }})::$report"
           fi
           exit "$status"
+      # Every feature on the manual's Features page names tests, and every
+      # test it names exists on this system (docs/manual/src/testing.md; the
+      # full run, on a corpus and the newest core, is scripts/test-all.py).
+      - name: Features page
+        shell: bash
+        env:
+          CARGO_TERM_COLOR: never
+        run: |
+          py=$(command -v python3 || command -v python)
+          "$py" scripts/test-all.py --features-only --out target/test-all/ci || {
+            cat target/test-all/ci/summary.md
+            echo "::error title=Features page (${{ matrix.name }})::$(grep -E '^- ' target/test-all/ci/summary.md | head -n 20 | sed -z 's/%/%25/g; s/\n/%0A/g')"
+            exit 1
+          }
       # A visual-regression failure leaves what was drawn and a picture of
       # the differences here (crates/oxiguitar-testgen/tests/visual.rs).
       - if: failure()
