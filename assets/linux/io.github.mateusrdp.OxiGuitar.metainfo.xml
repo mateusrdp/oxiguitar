@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.21.6" date="2026-11-22" type="development">
+      <description>
+        <p>Every test with one command (mateusrdp/oxiguitar#273): scripts/test-all.py builds and runs all of this repository's tests on your own corpus (--corpus DIR or OXIGUITARCORPUS), with a progress bar, a summary to paste into an issue and a log to diagnose from. The manual has a Features page naming the ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.21.6</url>
+    </release>
     <release version="0.21.5" date="2026-11-20" type="development">
       <description>
         <p>Plugin interface 1.14 (the SDK crates are at 1.14.0; for #227, a chat with a language model as a plugin of its own): everything is generic, and the core holds nothing of the plugin. A plugin can draw controls of its own on a surface, a drawing at the window's scale that is told its size and takes ...</p>
