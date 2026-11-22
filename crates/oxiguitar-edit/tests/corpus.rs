@@ -2,9 +2,15 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! The bar check and the caret on every Guitar Pro file of the private
-//! corpus, where `corpus/files/` exists (skipped quietly otherwise), and on
-//! the public fixtures always:
+//! test corpus (`OXIGUITAR_CORPUS`, or `corpus/files/`; see
+//! `tests/support/corpus.rs`), file by file, and on the public fixtures
+//! always:
 //! `cargo test --release -p oxiguitar-edit --test corpus -- --nocapture`
+
+#[path = "../../../tests/support/corpus.rs"]
+mod corpus;
+#[path = "../../../tests/support/guitar_pro.rs"]
+mod guitar_pro;
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -62,39 +68,34 @@ fn walk(score: &oxiguitar_model::Score) {
     }
 }
 
+/// Every Guitar Pro file of the test corpus: the bar check runs (bars that
+/// don't add up are counted, not failed: files have them), and the caret
+/// walks every beat and stays in the score. Our corpus's Master of Puppets,
+/// where it is, has the 107 bars counted on 19 Oct 2026.
 #[test]
 fn the_corpus() {
-    let all = scores("corpus/files");
-    let (mut bad, mut bars, mut with_bad) = (0, 0, 0);
+    let fallback = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
     let start = Instant::now();
-    for (path, score) in &all {
-        let check = BarCheck::of(score);
-        bad += check.len();
-        bars += score
-            .tracks
-            .iter()
-            .flat_map(|t| &t.staves)
-            .map(|s| s.bars.len())
-            .sum::<usize>();
+    corpus::check("bar check and caret", &fallback, |path, data| {
+        let Some(score) = guitar_pro::read(data)? else {
+            return Ok(corpus::Outcome::NotTaken);
+        };
+        let check = BarCheck::of(&score);
         if !check.is_empty() {
-            with_bad += 1;
             println!("{:4} bars don't add up: {}", check.len(), path.display());
         }
-    }
-    let took = start.elapsed();
-    println!(
-        "{bad} of {bars} staff bars don't add up, in {with_bad} of {} files; checked in {took:?}",
-        all.len()
-    );
-    for (_, score) in &all {
-        walk(score);
-    }
-    let known = all
-        .iter()
-        .find(|(p, _)| p.ends_with("mettalica-master-off-puppets.gp5"));
-    if let Some((_, score)) = known {
-        assert_eq!(BarCheck::of(score).len(), 107, "counted on 19 Oct 2026");
-    }
+        walk(&score);
+        if guitar_pro::ours(path, data, "mettalica-master-off-puppets.gp5", 170_975)
+            && check.len() != 107
+        {
+            return Err(format!(
+                "{} bars don't add up, not the 107 counted on 19 Oct 2026",
+                check.len()
+            ));
+        }
+        Ok(corpus::Outcome::Passed)
+    });
+    println!("checked in {:?}", start.elapsed());
 }
 
 #[test]

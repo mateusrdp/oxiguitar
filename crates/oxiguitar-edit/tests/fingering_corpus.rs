@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Automatic fingering (#157) on every Guitar Pro file of the private
-//! corpus, where `corpus/files/` exists (skipped quietly otherwise):
+//! Automatic fingering (#157) on every Guitar Pro file of the test corpus
+//! (`OXIGUITAR_CORPUS`, or `corpus/files/`; see `tests/support/corpus.rs`),
+//! file by file:
 //! `cargo test --release -p oxiguitar-edit --test fingering_corpus -- --nocapture`
 //!
 //! Each file's tab is taken away (every note becomes its pitch), found again
@@ -11,25 +12,16 @@
 //! many notes landed where the transcriber put them, how many beats are
 //! marked hard, and how long it took.
 
-use std::path::{Path, PathBuf};
+#[path = "../../../tests/support/corpus.rs"]
+mod corpus;
+#[path = "../../../tests/support/guitar_pro.rs"]
+mod guitar_pro;
+
+use std::path::Path;
 use std::time::Instant;
 
 use oxiguitar_edit::{Caret, Command, HARD_FINGERS, HARD_SHIFT, HARD_STRETCH, History, Scope};
 use oxiguitar_model::{NotePlace, Score};
-
-fn files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for e in entries.flatten() {
-        let path = e.path();
-        if path.is_dir() {
-            files(&path, out);
-        } else {
-            out.push(path);
-        }
-    }
-}
 
 /// Every note's sounding pitch (with its place, if on a string), staff by
 /// staff, for staves with strings outside drum tracks, each beat's in
@@ -234,19 +226,12 @@ fn sounding(s: &oxiguitar_model::Staff, n: &oxiguitar_model::Note, string: u8, f
 
 #[test]
 fn fingering_runs_on_the_corpus() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
-    let mut all = Vec::new();
-    files(&dir, &mut all);
-    all.sort();
+    let fallback = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/files");
     let (mut total, mut same) = (0usize, 0usize);
-    for path in all {
-        let Ok(data) = std::fs::read(&path) else {
-            continue;
+    corpus::check("fingering", &fallback, |path, data| {
+        let Some(mut score) = guitar_pro::read(data)? else {
+            return Ok(corpus::Outcome::NotTaken);
         };
-        let Ok(imported) = oxiguitar_plugin_test::released::guitar_pro::read(&data) else {
-            continue;
-        };
-        let mut score = imported.score;
         follow_ties(&mut score);
         let before = notes(&score);
         // The tab taken away: pitches only, harmonics' sounding pitch kept
@@ -347,7 +332,8 @@ fn fingering_runs_on_the_corpus() {
             open_time.as_secs_f64(),
             tool_time.as_secs_f64(),
         );
-    }
+        Ok(corpus::Outcome::Passed)
+    });
     if total > 0 {
         println!(
             "All: {total} notes, {:.1} % where the tabs had them",

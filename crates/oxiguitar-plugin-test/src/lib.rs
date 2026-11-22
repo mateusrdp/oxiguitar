@@ -605,7 +605,9 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
             }
         }
     }
-    realtime_checks(&plugins, &mut report, "{}");
+    // Only the checked plugin's instruments and effects: the plugins it
+    // needs are there to meet the need, not to be checked.
+    realtime_checks(&plugins, &mut report, "{}", Some(&copy));
     report.messages = kept.0.lock().map(|m| m.clone()).unwrap_or_default();
     let _ = std::fs::remove_dir_all(&folder);
     report
@@ -650,7 +652,7 @@ fn marked_beats(length: f64) -> Vec<PlayedBeat> {
 /// object): for tests of the checks themselves.
 pub fn check_realtime(plugins: &Plugins, settings: &str) -> Report {
     let mut report = Report::default();
-    realtime_checks(plugins, &mut report, settings);
+    realtime_checks(plugins, &mut report, settings, None);
     report
 }
 
@@ -789,10 +791,12 @@ fn notes(instance: &mut Instance, pieces: &mut Pieces, resolution: usize) -> Res
     Ok(())
 }
 
-/// The real-time checks of every instrument and effect (interface 1.3).
-fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
+/// The real-time checks of every instrument and effect (interface 1.3), or
+/// only those of the plugin file `own`.
+fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str, own: Option<&Path>) {
+    let ours = |i: &oxiguitar_host::InstrumentRef<'_>| own.is_none_or(|p| i.plugin.path == p);
     for class in InstrumentClass::ALL {
-        for instrument in plugins.playable(class) {
+        for instrument in plugins.playable(class).into_iter().filter(ours) {
             // Each instrument once, for the first class it plays.
             if InstrumentClass::ALL
                 .iter()
@@ -850,7 +854,7 @@ fn realtime_checks(plugins: &Plugins, report: &mut Report, settings: &str) {
                 }),
             );
         }
-        for effect in plugins.effects_for(class) {
+        for effect in plugins.effects_for(class).into_iter().filter(ours) {
             if InstrumentClass::ALL
                 .iter()
                 .take_while(|&&c| c != class)

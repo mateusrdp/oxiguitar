@@ -12,6 +12,10 @@ Before a large change, open an issue or a discussion so we can agree the approac
 - CI must be green. The `ci-success` check sums up every other job.
 - One pull request carries the code, its tests, its documentation and any credit updates together.
 
+## Tests for every feature
+
+Every feature has tests, and a row on the manual's Features page (`docs/manual/src/features.md`) naming them. A pull request that adds or changes a feature, or a plugin, adds or updates both. Before opening it, run `python3 scripts/test-all.py --corpus DIR`: everything must pass. CI checks the Features page on every system it tests; the full run, on your own corpus, is yours, since the corpus is never uploaded.
+
 ## Sign-off (Developer Certificate of Origin)
 
 We use the [Developer Certificate of Origin](https://developercertificate.org/) instead of a contributor license agreement. By signing off a commit you state that you wrote it, or otherwise have the right to submit it under the project's license. Sign off with `-s`:

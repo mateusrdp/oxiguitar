@@ -2859,3 +2859,24 @@ fn interface_1_14_tools_text_and_surfaces() {
         .unwrap();
     assert_eq!(shown, "Ty");
 }
+
+/// `check_with` checks the plugin file it is given, and not the plugins
+/// it needs: their instruments and effects are there to meet the need
+/// (the NAM plugin's contract failed on the MIDI plugin's instrument).
+#[test]
+fn only_the_checked_plugin_is_checked_beside_the_ones_it_needs() {
+    let of_the_test_plugin = |name: &String| {
+        ["instrument drums", "instrument no-drums", "effect gain"]
+            .iter()
+            .any(|t| name.starts_with(t))
+    };
+    let alone = oxiguitar_plugin_test::check(test_oxp());
+    assert!(
+        alone.passed.iter().any(of_the_test_plugin),
+        "{:?}",
+        alone.passed
+    );
+    let beside = oxiguitar_plugin_test::check_with(second_oxp(), &[test_oxp()]);
+    let named: Vec<&String> = beside.passed.iter().chain(&beside.failed).collect();
+    assert!(!named.iter().any(|n| of_the_test_plugin(n)), "{named:?}");
+}

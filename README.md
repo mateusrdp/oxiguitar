@@ -237,6 +237,14 @@ Pull requests are welcome from day one. Read [CONTRIBUTING.md](CONTRIBUTING.md) 
 
 See [How to get involved](#how-to-get-involved), point 4. The same PayPal link and QR code are in the app, under **Help → About**.
 
+## Testing
+
+Every test, with one command (the manual's Testing page says more, and how to report a failure):
+
+```sh
+python3 scripts/test-all.py --corpus DIR
+```
+
 ## License
 
 OxiGuitar is free software under the [GNU General Public License, version 3](LICENSE). Our own code is GPL-3.0-or-later; the program as distributed is GPL-3.0, because code ported from MuseScore keeps its GPL-3.0-only license. The plugin interface and the SDK for plugin authors (`oxiguitar-plugin-api`, `oxiguitar-plugin`) are MIT OR Apache-2.0, so plugins may use any GPL-compatible license.

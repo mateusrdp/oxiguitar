@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Engraving tests on the public fixtures, on damaged scores and, where
-//! `corpus/files/` exists, on the private corpus (skipped quietly otherwise).
+//! Engraving tests on the public fixtures, on damaged scores and on the test
+//! corpus, file by file (`OXIGUITAR_CORPUS`, or `corpus/files/`; skipped
+//! quietly without one unless `OXIGUITAR_CORPUS_REQUIRED` is set).
 //!
 //! With the corpus in place:
 //! `cargo test --release -p oxiguitar-layout --test engrave -- --nocapture`
+
+#[path = "../../../tests/support/corpus.rs"]
+mod corpus;
+#[path = "../../../tests/support/guitar_pro.rs"]
+mod guitar_pro;
 
 use std::path::{Path, PathBuf};
 
@@ -283,38 +289,20 @@ fn odd_scores_do_not_panic() {
     let _ = engrave(&score, &fonts, &meta, &tiny);
 }
 
-fn corpus_files() -> Vec<PathBuf> {
-    let dir = root().join("corpus/files");
-    let mut v = Vec::new();
-    for sub in ["tabs", "scores"] {
-        if let Ok(d) = std::fs::read_dir(dir.join(sub)) {
-            v.extend(d.filter_map(|e| Some(e.ok()?.path())));
-        }
-    }
-    v.sort();
-    v
-}
-
-/// Every Guitar Pro file of the corpus engraves in every layout with every
-/// track shown, everything on the sheet and every glyph in the fonts.
+/// Every Guitar Pro file of the test corpus (`OXIGUITAR_CORPUS`, or
+/// `corpus/files/`; see `tests/support/corpus.rs`) engraves in every layout
+/// with every track shown, everything on the sheet and every glyph in the
+/// fonts.
 #[test]
 fn corpus_engraves() {
-    let files = corpus_files();
-    if files.is_empty() {
-        eprintln!("corpus/files not present; skipped");
-        return;
-    }
     let (fonts, meta) = setup();
     let mut count = 0;
-    let mut failures = Vec::new();
     let mut slowest = (0.0_f32, String::new());
-    for path in files {
-        let Ok(data) = std::fs::read(&path) else {
-            continue;
+    corpus::check("engraving", &root().join("corpus/files"), |path, data| {
+        let Some(score) = guitar_pro::read(data)? else {
+            return Ok(corpus::Outcome::NotTaken);
         };
-        let Ok(imported) = oxiguitar_plugin_test::released::guitar_pro::read(&data) else {
-            continue;
-        };
+        let mut failures = Vec::new();
         let name = path
             .file_name()
             .map_or(String::new(), |n| n.to_string_lossy().into_owned());
@@ -325,7 +313,7 @@ fn corpus_engraves() {
                 ..all_tracks()
             };
             let started = std::time::Instant::now();
-            let e = engrave(&imported.score, &fonts, &meta, &options);
+            let e = engrave(&score, &fonts, &meta, &options);
             let ms = started.elapsed().as_secs_f32() * 1000.0;
             if ms > slowest.0 {
                 slowest = (ms, format!("{name}, {}", layout.name()));
@@ -350,13 +338,16 @@ fn corpus_engraves() {
             }
         }
         count += 1;
-    }
+        if failures.is_empty() {
+            Ok(corpus::Outcome::Passed)
+        } else {
+            Err(failures.join("; "))
+        }
+    });
     eprintln!(
         "{count} corpus files engraved; slowest {:.1} ms ({})",
         slowest.0, slowest.1
     );
-    assert!(failures.is_empty(), "{}", failures.join("\n"));
-    assert!(count >= 100, "{count}");
 }
 
 /// Every text of a page, in drawing order.
