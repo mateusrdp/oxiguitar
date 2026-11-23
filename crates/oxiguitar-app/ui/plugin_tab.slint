@@ -11,7 +11,7 @@ import { Button, CheckBox, Slider, LineEdit, ComboBox, StandardListView, Palette
 
 // What the user does on a plugin's surface (interface 1.14), for whichever
 // view shows it (`view`: the window's area number, 4 for a plugin's
-// dialog): main.rs sends it to the plugin. `key` answers whether the key
+// dialog): plugin_view.rs sends it to the plugin. `key` answers whether the key
 // was the plugin's (a named key, or a character with Ctrl or Alt): what it
 // doesn't take goes on to the surface's text sink, which hears typing, an
 // input method and pasting as text (`typed`). `copy` is how a plugin's
@@ -53,7 +53,7 @@ export struct PluginWidget {
     items: [StandardListViewItem],
     selected: int,
     // Choices: wide enough for their longest option (its text's length,
-    // estimated in main.rs), so the list doesn't cut options short.
+    // estimated in plugin_view.rs), so the list doesn't cut options short.
     wide: length,
     // Canvases: the drawing, and the canvas's size in its own units.
     canvas: image,

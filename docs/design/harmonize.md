@@ -91,7 +91,7 @@ In POP909 the cheapest key, heard with the accompaniment, was the song's own in 
 ## Where it lives
 
 - `crates/oxiguitar-edit/src/harmonize.rs`: `Harmonize { sevenths, inside_bars, keep, all_tracks, whole_song }`, `Command::Harmonize`, `harmonize_report` (how many chords the command would write, and the warning about another key), the cells, the chain, the spelling and the diagrams; `harmonize/numbers.rs` (written by the script); `harmonize/tests.rs`.
-- The app: `HarmonizeDialog` in `bar_dialog.slint` (four drop-downs and the whole-song tickbox); Tools → Harmonize… (the tickbox ticked) and the page's right-click menu (unticked: the selected bars, or the caret's bar); `open_harmonize` and `harmonize_dialog_done` in `main.rs`. The drop-downs' choices stay as they were for the next time, while the window is open; the tickbox follows the menu it was opened from.
+- The app: `HarmonizeDialog` in `bar_dialog.slint` (four drop-downs and the whole-song tickbox); Tools → Harmonize… (the tickbox ticked) and the page's right-click menu (unticked: the selected bars, or the caret's bar); `open_harmonize` and `harmonize_dialog_done` in `tool_dialogs.rs`. The drop-downs' choices stay as they were for the next time, while the window is open; the tickbox follows the menu it was opened from.
 - Undo: one change, of the track's chord list and the bars' beats.
 
 ## Limits, and possible later work (not asked for)

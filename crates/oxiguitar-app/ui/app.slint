@@ -1333,7 +1333,7 @@ export component AppWindow inherits Window {
     in property <length> content-height;
     in property <[TileItem]> tiles;
     // Tiles from before a zoom or a new engraving, shown under the new ones
-    // until those cover the view (main.rs).
+    // until those cover the view (zoom.rs).
     in property <[TileItem]> old-tiles;
     // Logical pixels per canvas point (the score zoom).
     in property <float> pt-scale: 1.333;
@@ -1358,7 +1358,7 @@ export component AppWindow inherits Window {
     out property <length> view-width: flick.visible-width;
     out property <length> view-height: flick.visible-height;
     // Where the page's viewport sits in the window, for the mouse wheel
-    // (main.rs: the wheel zooms the page only over the page).
+    // (window_events.rs: the wheel zooms the page only over the page).
     out property <length> canvas-left: canvas.absolute-position.x;
     out property <length> canvas-top: canvas.absolute-position.y;
     out property <length> canvas-width: canvas.width;
@@ -2352,7 +2352,7 @@ export component AppWindow inherits Window {
                             source: t.image;
                             image-rendering: pixelated;
                         }
-                        // A press puts the caret there (main.rs, page_pressed).
+                        // A press puts the caret there (page.rs, page_pressed).
                         TouchArea {
                             x: 0;
                             y: 0;
@@ -2524,7 +2524,7 @@ export component AppWindow inherits Window {
                     // Score zoom, bottom right: 25 % to 400 % on a logarithmic
                     // scale, so 100 % sits in the middle. Clicking the
                     // percentage resets it to 100 %. The mouse wheel over the
-                    // page zooms too (main.rs).
+                    // page zooms too (window_events.rs).
                     Pill {
                         width: 168px;
                         x: parent.width - self.width - 10px;
