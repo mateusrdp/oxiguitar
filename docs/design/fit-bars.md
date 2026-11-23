@@ -45,7 +45,7 @@ Both work only on the passages that need them: a passage whose bars all add up i
 ## Where it lives
 
 - `oxiguitar-edit::fit`: `Command::FitBars(Fit { how, whole_song })`, recorded as `Region::Whole`. `spell` writes a length as a value (two dots at most), a tuplet stack, or tied values; `piece` splits a beat's effects between the first and last pieces.
-- The app: `FitDialog` in `bar_dialog.slint`, `open_fit` and `fit_dialog_done` in `main.rs`.
+- The app: `FitDialog` in `bar_dialog.slint`, `open_fit` and `fit_dialog_done` in `tool_dialogs.rs`.
 - Tests: unit tests in `fit.rs`; `tests/fit_corpus.rs` changes every corpus file's time signatures and fits them both ways, checking that re-barring strikes every note at the same moment and stretching strikes the same notes in the same order; a worker test.
 
 ## Decided by Mateus (8 Nov 2026)
