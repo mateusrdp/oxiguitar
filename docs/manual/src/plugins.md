@@ -67,6 +67,8 @@ Delete a line to get its dialog back. No dialog appears in safe mode.
 
 **Tools → Plugins…** opens the plugin manager in a window of its own, which you can leave open beside the score. It lists every plugin file in the plugin folders, yours and the program's, with its name, its version, the folder and file it is in, and what became of it:
 
+![The plugin manager: each plugin with a tick box, its name and version, whether it is loaded, and the folder and file it came from](images/plugins-dialog.png)
+
 - **Loaded**: it is in use.
 - **Not loaded yet**: it loads when it is first needed.
 - **Disabled**: you switched it off.

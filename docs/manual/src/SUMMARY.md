@@ -22,3 +22,4 @@
 - [Plugin manuals](official-plugins.md)
 - [Features and their tests](features.md)
 - [Testing](testing.md)
+- [Credits](credits.md)

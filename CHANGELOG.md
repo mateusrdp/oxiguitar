@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- **The manual's introduction explains the ideas behind OxiGuitar** (tablature and notation, plugins, sound sets, the `.oxg` file), its pages on tracks, tools, saving and plugins have screenshots, and it has a Credits page. ARCHITECTURE.md says what the core can't do yet, what is left out on purpose and why, and where help is wanted. The README's status, links to the plugin manuals and credits are up to date, with a short glossary for newcomers. CREDITS.md lists the core's own dependencies (the plugins' libraries are credited in their repositories).
+
 ## [0.21.6] - 2026-11-22
 
 ### Added
