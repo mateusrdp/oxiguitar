@@ -2,6 +2,11 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! `oxiguitar-cli render`: engrave a score file into PNG pages and/or a PDF.
+//!
+//! It draws with the same engraver and backends as the window and File >
+//! Export, so it is the quick way to see what the engraver does to a file
+//! without the GUI. A page longer than `PNG_MAX` pixels (a Horizontal
+//! line, a large scale) is written as several PNG files.
 
 use std::process::ExitCode;
 use std::time::Instant;

@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Bars, voices and beats.
+//! Bars, voices and beats: a [`Bar`] of one staff holds up to four
+//! voices of beats, and the bar structure shared by every track (time
+//! signature, repeats, markers) is the score's `MasterBar`.
+//!
+//! A field added here doesn't compile in `wire.rs` until someone decides how
+//! it crosses the plugin interface (a variant at the end of the matching
+//! `score2` extension list, never a change to version 1), and every format
+//! plugin's writer then decides whether its format can hold it; what one
+//! can't is kept in the `.oxg` file beside the score if the user says so.
+//! Edits to it go through `oxiguitar-edit`'s commands, so undo works.
 
 use std::collections::BTreeMap;
 

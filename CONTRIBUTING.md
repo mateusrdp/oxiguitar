@@ -33,7 +33,8 @@ You keep the copyright on what you contribute. Your name goes in [CREDITS.md](CR
 ## Code standards
 
 - **Rust only.** Every line we write is Rust and every dependency is a Rust crate. The only exceptions are the operating system's own libraries for windows, graphics and audio. C and C++ projects are references to read and port from, never libraries to link.
-- **Crates Debian has.** OxiGuitar aims for Debian's main archive, which builds only from crates Debian packages ([docs/debian.md](docs/debian.md)). Given a choice, take a crate and a version Debian unstable has; the Debian workflow's weekly audit shows which.
+- **Crates Debian has.** OxiGuitar aims for Debian's main archive, which builds only from crates Debian packages ([docs/debian.md](docs/debian.md)). Given a choice between crates, take one Debian unstable has; the Debian workflow's weekly audit shows which.
+- **The newest versions, one copy each** (Mateus, 23 Nov 2026). Every dependency on its newest release; where that would put a second copy of a library in `Cargo.lock` (because a library we use still takes an older one), the newest release that keeps one copy. Where a version is held back, `Cargo.toml` says why, with an `Upstream` note (below), and what to move when. A plain `cargo update` can undo a hold kept only in the lock (flate2, nix): `Cargo.toml` says which, and the `--precise` command.
 - **Formatting and lint:** `cargo fmt --all` and `cargo clippy --workspace --all-targets -- -D warnings` must be clean. With `--all-features`, add `--exclude oxiguitar-nam-plugin` on Linux x86_64: its feature `x86-64-v3` (the build for those processors, with NeuralAmpModeler-rs) only builds with `RUSTFLAGS="-C target-cpu=x86-64-v3"`, as CI's "NAM for x86-64-v3" job lints it.
 - **Libraries exactly as published** (Mateus, 25 Oct 2026). Every dependency is the released version, used as it is: no fork, no `[patch]`, no vendored or edited copy. Never plan on a change upstream or wait on a pull request elsewhere. What a library lacks is added only in our own code on top of it: wrapping it, preparing what it is given, or processing what it returns. When a gap can't be closed that way, say plainly what it costs and propose our own code or another library.
 - **No panics on user input.** Readers return errors that name the file and the byte position or element where things went wrong (FMT-1). Reader crates deny `unwrap`, `expect`, `panic!` and unchecked indexing outside tests.
@@ -124,6 +125,22 @@ Every format is its own plugin, and every plugin has a repository of its own (#1
 1. Add it to the model, attached to the beat or note it acts on.
 2. Teach each reader and writer about it, or record in the import log that they can't.
 3. Later milestones add its drawing (layout) and its sound (playback).
+
+## Comments in the code
+
+Comments are for the next person who debugs or changes the code: they record what the code can't say by itself, so nobody does the same work twice or breaks a part they couldn't see from here.
+
+- **Every file starts with a `//!` overview**: what it is for; the decisions behind its shape, with who decided and when if it was Mateus's call ("(Mateus, 23 Nov 2026)"); what was tried and dropped; and what else depends on it (the plugin interface's numbering, a golden file, a test, a script). Link the design note or ADR rather than copy it.
+- **At the code, only what isn't obvious**: why this and not the plain way, a finding that cost time (a crash on a real file, a measurement), an invariant another part relies on. Not what the next line does.
+- **Code shaped by what a library does or lacks says so with an `Upstream` note**, on one line where it starts:
+
+  ```rust
+  // Upstream (slint 1.19): Slint's ComboBox takes no typing, so this is a
+  // field with a list. On update: if it gains an editable mode, use it.
+  ```
+
+  The crate is named as in `Cargo.lock`, and the version is as precise as it was checked: `slint 1.19` holds for any 1.19.x, `chordparser 4.0.4` only for 4.0.4. Say what the library does, what we do about it, and what to check when it moves. `python3 scripts/upstream-notes.py --list` lists every note; without `--list` it fails, in CI too, when `Cargo.lock` no longer has a version a note names. So the pull request that moves a library (Dependabot's too) shows the notes to read again: change the code if the gap is gone, and write the version you checked.
+- `// SAFETY:` on every `unsafe` block, as above.
 
 ## Decisions
 

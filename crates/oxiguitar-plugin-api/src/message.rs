@@ -10,6 +10,12 @@
 //! the rules in the crate's "Versions" section keep old and new sides
 //! compatible. New variants go at the end of each enum.
 //!
+//! Upstream (postcard 1.2): every released plugin was built with a postcard
+//! 1.x, whose wire format is stable through the 1.x series; the host and
+//! plugins never share a postcard, only its bytes. On update: a postcard
+//! 2.0 (or any format change) breaks every released plugin, so it would
+//! need a new interface version, never a plain dependency bump.
+//!
 //! Contributions are named by the ids in the plugin's manifest: a format's
 //! `id`, a service's `interface` and `id`, a tab's `id`.
 //!

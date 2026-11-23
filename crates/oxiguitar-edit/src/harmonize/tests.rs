@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
+//! Harmonize's tests: small tunes whose chords a musician would agree on,
+//! in several keys and modes (docs/design/harmonize.md has the rules they
+//! check). The corpus check, `harmonize_corpus`, runs it on real songs.
+
 use super::*;
 use oxiguitar_model::NoteValue::{Half, Quarter, Whole};
 use oxiguitar_model::{

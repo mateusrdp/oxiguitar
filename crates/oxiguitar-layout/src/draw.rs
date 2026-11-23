@@ -2,7 +2,15 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Drawing primitives in staff spaces: SMuFL glyphs placed by the font's
-//! metadata, lines, beams, ties and tab numbers.
+//! metadata, lines, beams, ties and tab numbers.//!
+//! Glyphs are placed by the font's SMuFL metadata (anchors, bounding boxes,
+//! engraving defaults) wherever it has them; the few numbers of our own
+//! (`FALLBACK_RAISE`, tab number sizes) say why at their line. The glyph
+//! table lists only what is drawn: an unused one warns.//!
+//! A change here moves what the fifty-one reference scores engrave to:
+//! `cargo test -p oxiguitar-testgen --test visual` compares them, and after
+//! an intended change `OXIGUITAR_BLESS=1` rewrites the pictures, each of
+//! which is looked at before committing.
 
 use oxiguitar_display::smufl::{EngravingDefaults, Metadata};
 use oxiguitar_display::{DisplayList, FontId, FontSet, Paint, Path, Point, Rect};

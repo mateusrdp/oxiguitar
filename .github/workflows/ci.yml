@@ -72,6 +72,14 @@ jobs:
             | sed -E 's/^([^ :]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\6\n&/'
       - name: The two Linux builds keep apart
         run: scripts/check-display-crates.sh
+      # Every Upstream note in the code names a version Cargo.lock has
+      # (CONTRIBUTING.md, "Comments in the code"): a pull request that moves
+      # a library shows here the notes to read again.
+      - name: Upstream notes match Cargo.lock
+        run: |
+          set -o pipefail
+          python3 scripts/upstream-notes.py \
+            | sed -E 's/^([^ :]+):([0-9]+): (.*)$/::error file=\1,line=\2::\3\n&/'
       # Desktops recognise an SVG by "<svg" in its first 256 bytes (#310).
       - name: The scalable icon is recognised as an SVG
         run: |

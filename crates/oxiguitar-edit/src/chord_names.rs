@@ -121,6 +121,10 @@ fn read_with(parser: &mut Parser, name: &str) -> Option<Reading> {
     let root = chord.root.to_semitone() % 12;
     let bass = chord.bass.map(|b| b.to_semitone() % 12);
     // The normalised name is the root, the kind, and a slash and the bass.
+    // Upstream (chordparser 4.0.4): the library gives no kind of its own,
+    // only that string, and its bass loses an accidental there, so the bass
+    // comes from `chord.bass` and the kind is cut out of the string. On
+    // update: use a kind field if one appears; check `tests` still pass.
     let (_, mut kind, _) = parts(&chord.normalized)?;
     if bass.is_none() {
         kind = chord.normalized.get(note_len(&chord.normalized)?..)?;
@@ -176,7 +180,9 @@ pub fn names(pitches: &[u8]) -> Vec<String> {
     let mut parser = Parser::new();
     let mut out: Vec<String> = Vec::new();
     for candidate in inference::descriptors_from_midi_codes(&sorted) {
-        // The library's candidates are not all chords: it says to check.
+        // Upstream (chordparser 4.0.4): the library's candidates are not
+        // all chords (its documentation says to check), so each is read
+        // back and dropped when it doesn't parse.
         let Some(r) = read_with(&mut parser, &candidate) else {
             continue;
         };

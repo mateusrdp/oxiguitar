@@ -1354,7 +1354,9 @@ fn main() -> Result<(), slint::PlatformError> {
 
     // Once the system's window exists, Slint knows its size and scale: keep
     // the system's scale and put the saved interface zoom on top of it
-    // (ADR 0010).
+    // (ADR 0010). Upstream (i-slint-backend-winit 1.19): `winit_window()`
+    // is a future that wakes when the window has been made, after Slint has
+    // set its scale; before 23 Nov 2026 this waited 50 ms and hoped.
     let (a, weak) = (app.clone(), ui.as_weak());
     let made = slint::spawn_local(async move {
         let Some(ui) = weak.upgrade() else {
@@ -1388,6 +1390,13 @@ fn main() -> Result<(), slint::PlatformError> {
 }
 
 /// The command line: `oxiguitar [--safe-mode] [FILE]`.
+///
+/// The only way a file manager hands us a file on macOS today.
+/// Upstream (winit 0.30): Finder's double-click, Open With and drops on the
+/// Dock icon arrive as Apple Events to the application delegate, which
+/// winit (and Slint 1.19 through it) doesn't report; a delegate of our own
+/// would need `unsafe` Objective-C glue, which we rejected (ADR 0007). On
+/// update: if winit or Slint reports opened files, open them like `FILE`.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Args {
     /// Start with no plugins at all.

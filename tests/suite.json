@@ -5,6 +5,17 @@
   },
   "stages": [
     {
+      "name": "upstream notes",
+      "run": [
+        "python3",
+        "scripts/upstream-notes.py"
+      ],
+      "needs": [
+        "python3"
+      ],
+      "doc": "every `Upstream (CRATE VERSION)` note in the code names a version Cargo.lock has (`python3 scripts/upstream-notes.py`; CONTRIBUTING.md, \"Comments in the code\")"
+    },
+    {
       "name": "released-plugin contract",
       "run": [
         "cargo",

@@ -20,9 +20,9 @@ use super::*;
 /// - A file dropped on the window opens like File → Open.
 ///
 /// **Drops don't work on Wayland** (ADR 0006; CONTRIBUTING.md, "Known
-/// platform gaps"). winit 0.30 sends `DroppedFile` on Windows, macOS and
-/// X11 only: its Wayland backend has no drag and drop, and Slint 1.19
-/// passes no operating-system drops on. Listening ourselves would need our
+/// platform gaps"). Upstream (winit 0.30): `DroppedFile` comes on Windows,
+/// macOS and X11 only: its Wayland backend has no drag and drop.
+/// Upstream (slint 1.19): Slint passes no operating-system drops on. Listening ourselves would need our
 /// own `wl_data_device` on winit's connection, through an `unsafe` raw
 /// pointer and with no way to wake on its events but polling, which we
 /// rejected. Drops will work on Wayland with no change here once the winit
@@ -197,6 +197,14 @@ pub(crate) fn save_zooms(s: &mut App) {
 
 /// Scales the window by the system's scale times our interface zoom, and
 /// draws what depends on the scale again.
+///
+/// Upstream (slint 1.19): Slint has no call to change a window's scale
+/// while it runs (`SLINT_SCALE_FACTOR` is read once, at the start), so we
+/// tell it what winit would on a scale change: `ScaleFactorChanged`, then
+/// `Resized` to the same physical size in fewer logical pixels. Anything
+/// that reads `window().scale_factor()` afterwards gets the system's scale
+/// times the zoom; `App::system_scale` keeps the system's part. On update:
+/// if Slint gains such a call, use it here and keep the rest.
 pub(crate) fn apply_interface_scale(a: &Shared) {
     let Some(ui) = a.borrow().ui.upgrade() else {
         return;
