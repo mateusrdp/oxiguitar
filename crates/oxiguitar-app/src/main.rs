@@ -979,17 +979,10 @@ fn main() -> Result<(), slint::PlatformError> {
         ],
         plugins: key_lines,
     };
-    let (left, left_w, center, center_w, right, right_w) = shortcuts_to_columns(&shortcuts);
+    let [left, center, right] = shortcuts_to_columns(&shortcuts);
     ui.set_shortcut_left_column(left);
     ui.set_shortcut_center_column(center);
     ui.set_shortcut_right_column(right);
-    // Popup width = sum of column widths + spacing gaps between them.
-    let spacing = 16.0 * 2.0;
-    let popup_w = left_w + center_w + right_w + spacing;
-    ui.set_shortcut_left_column_width(left_w);
-    ui.set_shortcut_center_column_width(center_w);
-    ui.set_shortcut_right_column_width(right_w);
-    ui.set_shortcut_popup_width(popup_w);
     let mut about = vec![
         format!(
             "Guitar tablature and score viewer, editor and player. Version {}.",
@@ -1676,15 +1669,31 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     }
 
-    // Once the window has its size and scale.
-    let a = app.clone();
-    slint::Timer::single_shot(Duration::from_millis(50), move || {
-        let scale = a.borrow().ui.upgrade().map(|ui| ui.window().scale_factor());
-        if let Some(scale) = scale {
-            a.borrow_mut().system_scale = scale;
+    // Once the system's window exists, Slint knows its size and scale: keep
+    // the system's scale and put the saved interface zoom on top of it
+    // (ADR 0010).
+    let (a, weak) = (app.clone(), ui.as_weak());
+    let made = slint::spawn_local(async move {
+        let Some(ui) = weak.upgrade() else {
+            return;
+        };
+        if ui.window().winit_window().await.is_err() {
+            return;
+        }
+        let zoomed = {
+            let mut s = a.borrow_mut();
+            s.system_scale = ui.window().scale_factor();
+            s.ui_zoom != 1.0
+        };
+        if zoomed {
+            apply_interface_scale(&a);
+        } else {
             canvas_changed(&a);
         }
     });
+    if let Err(e) = made {
+        app.borrow_mut().footer.push(Level::Error, e.to_string());
+    }
 
     // Advice plugins asked for while the window was still being made.
     let a = app.clone();
@@ -1714,16 +1723,9 @@ struct ShortcutData {
     plugins: Vec<(String, String)>,
 }
 
-fn shortcuts_to_columns(
-    data: &ShortcutData,
-) -> (
-    ModelRc<ShortcutLine>,
-    f32,
-    ModelRc<ShortcutLine>,
-    f32,
-    ModelRc<ShortcutLine>,
-    f32,
-) {
+/// The shortcuts in three columns; the window makes each as wide as its
+/// longest line.
+fn shortcuts_to_columns(data: &ShortcutData) -> [ModelRc<ShortcutLine>; 3] {
     // Collect all shortcut lines in section order, then distribute
     // sequentially: every 3rd line goes to the next column.
     let mut all: Vec<ShortcutLine> = Vec::new();
@@ -1741,44 +1743,11 @@ fn shortcuts_to_columns(
         }
     }
 
-    let mut left: Vec<ShortcutLine> = Vec::new();
-    let mut center: Vec<ShortcutLine> = Vec::new();
-    let mut right: Vec<ShortcutLine> = Vec::new();
-    let cols = [&mut left, &mut center, &mut right];
-
-    for (idx, line) in all.iter().enumerate() {
-        cols[idx % 3].push(line.clone());
+    let mut cols: [Vec<ShortcutLine>; 3] = Default::default();
+    for (idx, line) in all.into_iter().enumerate() {
+        cols[idx % 3].push(line);
     }
-
-    let left_w = estimate_column_width(&left);
-    let center_w = estimate_column_width(&center);
-    let right_w = estimate_column_width(&right);
-    (
-        ModelRc::new(VecModel::from(left)),
-        left_w,
-        ModelRc::new(VecModel::from(center)),
-        center_w,
-        ModelRc::new(VecModel::from(right)),
-        right_w,
-    )
-}
-
-/// Estimate the pixel width needed for a column of shortcut lines.
-///
-/// Finds the longest rendered text in the column and multiplies by a
-/// per-character width factor for the 16px Noto Sans font.  Uses
-/// character count (not byte count) so multi-byte UTF-8 chars like →
-/// and ↑ are measured correctly.
-fn estimate_column_width(lines: &[ShortcutLine]) -> f32 {
-    let mut max_chars: f32 = 0.0;
-    for line in lines {
-        let chars = line.text.chars().count() as f32 * 8.0;
-        if chars > max_chars {
-            max_chars = chars;
-        }
-    }
-    // Small padding so text doesn't touch the column edge.
-    max_chars + 8.0
+    cols.map(|c| ModelRc::new(VecModel::from(c)))
 }
 
 /// The Tools menu before any score is open: every tool, greyed out.
@@ -3921,24 +3890,7 @@ fn set_zoom(app: &Shared, v: f32, anchor: Option<(f32, f32)>) {
         s.zoom = zoom;
         s.paint += 1;
         retire_tiles(&mut s, zoom / old);
-        // Persist the new score zoom so it survives restarts.
-        let prefs = ViewPrefs {
-            dark_interface: s.prefs.dark_interface,
-            dark_page: s.prefs.dark_page,
-            dynamics: s.prefs.dynamics,
-            layout: s.prefs.layout,
-            paper: s.prefs.paper,
-            score_zoom: s.zoom,
-            ui_zoom: s.ui_zoom,
-            play_engraved_beat: s.prefs.play_engraved_beat,
-        };
-        if prefs != s.prefs {
-            s.prefs = prefs;
-            let value = prefs.to_value(s.stored.get(prefs::KEY).as_ref());
-            if let Err(e) = s.stored.set(prefs::KEY, value) {
-                s.footer.push(Level::Error, e);
-            }
-        }
+        save_zooms(&mut s);
     }
     ui.set_pt_scale(PX_PER_PT * zoom);
     set_content_size(app, &ui);
@@ -5712,10 +5664,13 @@ fn save_as_dialog(app: &Shared) {
     let mut formats = formats;
     formats.sort_by_key(|f| !own.as_ref().is_some_and(|e| f.extensions.contains(e)));
     let pick = move || {
-        let first = formats.first().and_then(|f| f.extensions.first()).cloned();
+        let name = match formats.first().and_then(|f| f.extensions.first()) {
+            Some(extension) => format!("{stem}.{extension}"),
+            None => stem,
+        };
         let mut dialog = rfd::FileDialog::new()
             .set_title("Save As")
-            .set_file_name(format!("{stem}.{}", first.as_deref().unwrap_or("gp")));
+            .set_file_name(name);
         for f in &formats {
             dialog = dialog.add_filter(&f.name, &f.extensions);
         }
@@ -6128,14 +6083,14 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
                 if !s.drop_pending {
                     s.drop_pending = true;
                     // Once this event is done with the app: unsaved
-                    // changes are asked about first.
-                    let (a2, path) = (a.clone(), path.clone());
+                    // changes are asked about first. winit sends a drop's
+                    // files one after another in one turn of the event
+                    // loop, and timers run at the start of the next turn:
+                    // by then the drop's other files have been ignored.
+                    let (a, path) = (a.clone(), path.clone());
                     slint::Timer::single_shot(Duration::ZERO, move || {
-                        unless_unsaved(&a2, Then::Open(path));
-                    });
-                    let a = a.clone();
-                    slint::Timer::single_shot(Duration::from_millis(100), move || {
                         a.borrow_mut().drop_pending = false;
+                        unless_unsaved(&a, Then::Open(path));
                     });
                 }
                 return EventResult::PreventDefault;
@@ -6253,62 +6208,69 @@ fn install_window_events(ui: &AppWindow, app: &Shared) {
             0 => s.ui_zoom,
             n => step_ui_zoom(s.ui_zoom, n),
         };
-        // Persist the new interface zoom so it survives restarts.
-        let prefs = ViewPrefs {
-            dark_interface: s.prefs.dark_interface,
-            dark_page: s.prefs.dark_page,
-            dynamics: s.prefs.dynamics,
-            layout: s.prefs.layout,
-            paper: s.prefs.paper,
-            score_zoom: s.zoom,
-            ui_zoom: s.ui_zoom,
-            play_engraved_beat: s.prefs.play_engraved_beat,
-        };
-        if prefs != s.prefs {
-            s.prefs = prefs;
-            let value = prefs.to_value(s.stored.get(prefs::KEY).as_ref());
-            if let Err(e) = s.stored.set(prefs::KEY, value) {
-                s.footer.push(Level::Error, e);
-            }
-        }
-        let scale = s.system_scale * s.ui_zoom;
+        save_zooms(&mut s);
         drop(s);
         // Apply after winit's own handling of this event has finished.
         let a = a.clone();
-        slint::Timer::single_shot(Duration::ZERO, move || {
-            let Some(ui) = a.borrow().ui.upgrade() else {
-                return;
-            };
-            let window = ui.window();
-            window.dispatch_event(slint::platform::WindowEvent::ScaleFactorChanged {
-                scale_factor: scale,
-            });
-            // The window keeps its size on screen; its content gets fewer,
-            // larger logical pixels.
-            let physical = window.size();
-            window.dispatch_event(slint::platform::WindowEvent::Resized {
-                size: slint::LogicalSize::new(
-                    physical.width as f32 / scale,
-                    physical.height as f32 / scale,
-                ),
-            });
-            // Tiles and plugins' canvases are drawn for device pixels: draw
-            // them again.
-            resend_canvas_rooms(&a, scale);
-            {
-                let mut s = a.borrow_mut();
-                s.paint += 1;
-                // Tiles sit in logical pixels, which still fit the score.
-                retire_tiles(&mut s, 1.0);
-            }
-            canvas_changed(&a);
-        });
+        slint::Timer::single_shot(Duration::ZERO, move || apply_interface_scale(&a));
         if matches!(event, WinitEvent::ScaleFactorChanged { .. }) {
             EventResult::Propagate
         } else {
             EventResult::PreventDefault
         }
     });
+}
+
+/// Saves the score and interface zooms with the other View settings, so
+/// they survive restarts (ADR 0010).
+fn save_zooms(s: &mut App) {
+    let prefs = ViewPrefs {
+        score_zoom: s.zoom,
+        ui_zoom: s.ui_zoom,
+        ..s.prefs
+    };
+    if prefs != s.prefs {
+        s.prefs = prefs;
+        let value = prefs.to_value(s.stored.get(prefs::KEY).as_ref());
+        if let Err(e) = s.stored.set(prefs::KEY, value) {
+            s.footer.push(Level::Error, e);
+        }
+    }
+}
+
+/// Scales the window by the system's scale times our interface zoom, and
+/// draws what depends on the scale again.
+fn apply_interface_scale(a: &Shared) {
+    let Some(ui) = a.borrow().ui.upgrade() else {
+        return;
+    };
+    let scale = {
+        let s = a.borrow();
+        s.system_scale * s.ui_zoom
+    };
+    let window = ui.window();
+    window.dispatch_event(slint::platform::WindowEvent::ScaleFactorChanged {
+        scale_factor: scale,
+    });
+    // The window keeps its size on screen; its content gets fewer, larger
+    // logical pixels.
+    let physical = window.size();
+    window.dispatch_event(slint::platform::WindowEvent::Resized {
+        size: slint::LogicalSize::new(
+            physical.width as f32 / scale,
+            physical.height as f32 / scale,
+        ),
+    });
+    // Tiles and plugins' canvases are drawn for device pixels: draw them
+    // again.
+    resend_canvas_rooms(a, scale);
+    {
+        let mut s = a.borrow_mut();
+        s.paint += 1;
+        // Tiles sit in logical pixels, which still fit the score.
+        retire_tiles(&mut s, 1.0);
+    }
+    canvas_changed(a);
 }
 
 fn step_ui_zoom(zoom: f32, steps: i32) -> f32 {
@@ -6407,5 +6369,23 @@ mod tests {
         assert_eq!(step_ui_zoom(1.0, -2), 0.8);
         assert_eq!(step_ui_zoom(2.0, 5), 2.0);
         assert_eq!(step_ui_zoom(0.5, -1), 0.5);
+    }
+
+    #[test]
+    fn shortcuts_fill_three_columns_in_turn() {
+        let pair = |k: &str| (k.to_owned(), "x".to_owned());
+        let data = ShortcutData {
+            navigation: vec![pair("A"), pair("B")],
+            editing: vec![pair("C"), pair("D")],
+            plugins: vec![pair("E")],
+            ..ShortcutData::default()
+        };
+        let texts = |m: &ModelRc<ShortcutLine>| -> Vec<String> {
+            m.iter().map(|l| l.text.to_string()).collect()
+        };
+        let [left, center, right] = shortcuts_to_columns(&data);
+        assert_eq!(texts(&left), ["A   →   x", "D   →   x"]);
+        assert_eq!(texts(&center), ["B   →   x", "E   →   x"]);
+        assert_eq!(texts(&right), ["C   →   x"]);
     }
 }

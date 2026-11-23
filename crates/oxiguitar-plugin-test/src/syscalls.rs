@@ -91,31 +91,51 @@ pub fn watch(renders: impl FnOnce()) -> Watched {
     // The parent.
     // SAFETY: closing our copy of the writing end.
     unsafe { libc::close(write) };
-    let started = Instant::now();
-    let mut status = 0;
+    // What the child says, until its end of the pipe closes: the child can
+    // make no other process (the filter), so the pipe closes when it ends.
+    let deadline = Instant::now() + LIMIT;
+    let mut said = Vec::new();
     let ended = loop {
-        // SAFETY: waiting for our own child, without blocking.
-        let r = unsafe { libc::waitpid(pid, &raw mut status, libc::WNOHANG) };
-        if r == pid {
-            break true;
+        let left = deadline.saturating_duration_since(Instant::now());
+        let mut ready = libc::pollfd {
+            fd: read,
+            events: libc::POLLIN,
+            revents: 0,
+        };
+        let ms = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
+        // SAFETY: one valid pollfd for our own pipe.
+        let r = unsafe { libc::poll(&raw mut ready, 1, ms) };
+        if r == 0 {
+            break false;
         }
-        if started.elapsed() > LIMIT {
-            // SAFETY: ending our own child, then reaping it.
-            unsafe {
-                libc::kill(pid, libc::SIGKILL);
-                libc::waitpid(pid, &raw mut status, 0);
+        if r < 0 {
+            if std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+                continue;
             }
             break false;
         }
-        std::thread::sleep(Duration::from_millis(5));
+        let mut chunk = [0u8; 16];
+        // SAFETY: reading at most 16 bytes into `chunk` from our pipe,
+        // which poll() said is readable or closed, so this doesn't block.
+        let n = unsafe { libc::read(read, chunk.as_mut_ptr().cast(), chunk.len()) };
+        match usize::try_from(n) {
+            Ok(0) => break true,
+            Ok(n) => said.extend_from_slice(&chunk[..n]),
+            Err(_) if std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted => {
+            }
+            Err(_) => break false,
+        }
     };
-    let mut said = [0u8; 16];
-    // SAFETY: reading at most 16 bytes into `said` from our pipe, which is
-    // closed at the child's end, so this never blocks.
-    let n = unsafe { libc::read(read, said.as_mut_ptr().cast(), said.len()) };
-    // SAFETY: closing the reading end.
-    unsafe { libc::close(read) };
-    let said = &said[..usize::try_from(n).unwrap_or(0)];
+    let mut status = 0;
+    // SAFETY: ending our own child if it is stuck, then reaping it (the
+    // pipe is closed or the child killed, so this returns at once).
+    unsafe {
+        if !ended {
+            libc::kill(pid, libc::SIGKILL);
+        }
+        libc::waitpid(pid, &raw mut status, 0);
+        libc::close(read);
+    }
     if !ended {
         return Watched::Stuck;
     }
@@ -257,5 +277,17 @@ mod tests {
             let _ = unsafe { libc::getpid() };
         });
         assert_eq!(got, Watched::Called(libc::SYS_getpid));
+    }
+
+    #[test]
+    fn renders_that_never_end_are_stuck() {
+        let started = Instant::now();
+        let got = watch(|| {
+            loop {
+                std::hint::spin_loop();
+            }
+        });
+        assert_eq!(got, Watched::Stuck);
+        assert!(started.elapsed() >= LIMIT);
     }
 }

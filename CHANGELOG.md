@@ -7,7 +7,12 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 ### Changed
 
 - **The manual's introduction explains the ideas behind OxiGuitar** (tablature and notation, plugins, sound sets, the `.oxg` file), its pages on tracks, tools, saving and plugins have screenshots, and it has a Credits page. ARCHITECTURE.md says what the core can't do yet, what is left out on purpose and why, and where help is wanted. The README's status, links to the plugin manuals and credits are up to date, with a short glossary for newcomers. CREDITS.md lists the core's own dependencies (the plugins' libraries are credited in their repositories).
+- **The side areas give way to the score when the window has no room** (a smaller window, a larger interface zoom): they keep the width or height they were dragged to while it fits, and the score keeps at least 160 px of width, where before the areas kept their size and the score could shrink to nothing.
+- **Keyboard and Mouse and About stay inside the window**: they scroll what doesn't fit, and each column of keys is as wide as its text (measured, no longer estimated), so no line is cut off.
+- Code review: the window waits for its system window (Slint's `winit_window()`) instead of a 50 ms timer, and a file drop's other files are ignored without a 100 ms timer; the contract suite's system-call watch waits on its pipe instead of checking every 5 ms; Space and the Play/Pause button share one path; unused code is gone (an unused bar-check search, two drawing helpers, four glyphs, player actions nothing sent, a Guitar Pro default extension); the window's own Slint properties are private. rfd 0.18 (Save As starts in the score's folder on macOS too).
 ### Fixed
+
+- **The interface zoom is restored at startup**: it was saved (ADR 0010) but the window opened at 100 %.
 
 - `Cargo.lock` takes `url` 2.5.9 for RUSTSEC-2026-0592 (a stack overflow in `Url::origin()` on nested `blob:` URLs), which failed CI's advisories check. OxiGuitar itself opens no URLs; the crate comes in through Slint's compiler and webbrowser.
 
