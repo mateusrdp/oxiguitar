@@ -11,10 +11,18 @@
 //! the tracks of one instrument share one prepared instance. The audio
 //! device is the one the plugin host chooses (settings.json's pin, else
 //! the highest priority that works here: PipeWire before ALSA on Linux).
+//!
+//! Nothing here is timed or polled (the project's rule, kept in the
+//! terminal too): the device's callback, after the engine has filled its
+//! buffer, counts the frames and wakes the main thread
+//! (`Thread::unpark`: no lock, no allocation, so the callback still waits
+//! for nothing). The main thread sleeps until then, and says the bar the
+//! engine's clock says is heard. Until 23 Nov 2026 it slept 50 ms at a
+//! time for the first callback and guessed how long until the next bar.
 
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::time::Duration;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use oxiguitar_model::Score;
 use oxiguitar_play::plugin_source;
@@ -187,15 +195,24 @@ fn play(asked: &Asked) -> Result<(), String> {
         return play_into(asked, &score, &timeline, from, speed, wav);
     }
 
+    // What the device's callbacks have done, for this thread: frames
+    // handed over, and the latest delay to the speaker, in frames.
+    let written = Arc::new(AtomicU64::new(0));
+    let delay_now = Arc::new(AtomicU64::new(0));
+    let main = std::thread::current();
     // The device first, at 48 kHz if it takes it: the engine and the
     // instruments then run at the rate it opened at.
     let mut rate = oxiguitar_play::engine::RATE;
     let (stream, mut control, names) = loop {
         let (mut engine, control) = engine(rate, CAPACITY);
+        let (written, delay_now, main) = (written.clone(), delay_now.clone(), main.clone());
         let stream = plugins()
             .open_stream(rate, &asked.device, move |out, channels, delay_ns| {
                 let delay = delay_ns.saturating_mul(u64::from(rate)) / 1_000_000_000;
                 engine.render(out, channels, delay);
+                written.fetch_add((out.len() / channels.max(1)) as u64, Ordering::Release);
+                delay_now.store(delay, Ordering::Relaxed);
+                main.unpark();
             })
             .map_err(|e| format!("no sound: {e}"))?;
         if stream.opened().rate == rate {
@@ -230,33 +247,38 @@ fn play(asked: &Asked) -> Result<(), String> {
         names.join(", ")
     );
 
-    // Each bar as it is heard: sleep until its time comes, then say it.
+    // Each bar as it is heard: woken by every callback (a few hundred
+    // times a second at most), say the bar when it changes. `park` may
+    // also return for no reason; that only means one more look.
     let mut shown: Option<usize> = None;
+    let mut ended_at: Option<u64> = None;
     loop {
-        let done = control.collect();
-        if done.ended {
+        std::thread::park();
+        let frames = written.load(Ordering::Acquire);
+        if let Some(end) = ended_at {
+            // Closed once the last sound has reached the speaker: the
+            // device's delay, and 0.3 s for the last notes' release.
+            let tail = delay_now.load(Ordering::Relaxed) + u64::from(rate) * 3 / 10;
+            if frames.saturating_sub(end) >= tail {
+                break;
+            }
+            continue;
+        }
+        if control.collect().ended {
             println!("The end.");
-            break;
+            ended_at = Some(frames);
+            continue;
         }
         let Some(heard) = control.heard() else {
-            std::thread::sleep(Duration::from_millis(50));
             continue;
         };
-        let at = timeline.find(heard.max(from));
-        if let Some((visit, _)) = at
+        if let Some((visit, _)) = timeline.find(heard.max(from))
             && shown != Some(visit)
         {
             shown = Some(visit);
             println!("Bar {}", visits[visit].visit.bar + 1);
         }
-        // Until the next bar starts (or a little, during the count-in).
-        let next = at
-            .and_then(|(v, _)| visits.get(v + 1))
-            .map_or(0.05, |n| ((n.start - heard) / speed).clamp(0.005, 1.0));
-        std::thread::sleep(Duration::from_secs_f64(next));
     }
-    // Let the last sound reach the speaker before closing.
-    std::thread::sleep(Duration::from_millis(300));
     drop(stream);
     Ok(())
 }
