@@ -38,6 +38,28 @@ pub enum Watched {
     Unwatched(String),
 }
 
+/// Whether `fd` became readable within `limit` (poll(2), restarted after a
+/// signal with the time that is left).
+fn wait_readable(fd: libc::c_int, limit: Duration) -> bool {
+    let deadline = Instant::now() + limit;
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        let mut ready = libc::pollfd {
+            fd,
+            events: libc::POLLIN,
+            revents: 0,
+        };
+        let ms = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
+        // SAFETY: one valid pollfd.
+        match unsafe { libc::poll(&raw mut ready, 1, ms) } {
+            r if r > 0 => return true,
+            0 => return false,
+            _ if std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted => {}
+            _ => return false,
+        }
+    }
+}
+
 /// How long the child may take.
 const LIMIT: Duration = Duration::from_secs(10);
 
@@ -91,51 +113,49 @@ pub fn watch(renders: impl FnOnce()) -> Watched {
     // The parent.
     // SAFETY: closing our copy of the writing end.
     unsafe { libc::close(write) };
-    // What the child says, until its end of the pipe closes: the child can
-    // make no other process (the filter), so the pipe closes when it ends.
-    let deadline = Instant::now() + LIMIT;
-    let mut said = Vec::new();
-    let ended = loop {
-        let left = deadline.saturating_duration_since(Instant::now());
-        let mut ready = libc::pollfd {
-            fd: read,
-            events: libc::POLLIN,
-            revents: 0,
-        };
-        let ms = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
-        // SAFETY: one valid pollfd for our own pipe.
-        let r = unsafe { libc::poll(&raw mut ready, 1, ms) };
-        if r == 0 {
-            break false;
+    // Wait for the child's end on a pidfd, which becomes readable exactly
+    // when that one process ends, with the limit as poll()'s timeout. Not on
+    // the pipe: a child that another test forks at the same moment inherits
+    // this pipe's writing end, so the pipe can stay open after our child
+    // ended (found on CI, 23 Nov 2026, next to a child spinning for 10 s).
+    // SAFETY: pidfd_open(2) on our own child, which hasn't been reaped.
+    let pidfd = unsafe { libc::syscall(libc::SYS_pidfd_open, pid, 0) };
+    let Some(fd) = libc::c_int::try_from(pidfd).ok().filter(|fd| *fd >= 0) else {
+        // No pidfd (a kernel older than 5.3): nothing to wait on, so the
+        // child is ended, and the render goes unwatched.
+        // SAFETY: ending and reaping our own child, closing our pipe.
+        unsafe {
+            libc::kill(pid, libc::SIGKILL);
+            libc::waitpid(pid, std::ptr::null_mut(), 0);
+            libc::close(read);
         }
-        if r < 0 {
-            if std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
-                continue;
-            }
-            break false;
-        }
-        let mut chunk = [0u8; 16];
-        // SAFETY: reading at most 16 bytes into `chunk` from our pipe,
-        // which poll() said is readable or closed, so this doesn't block.
-        let n = unsafe { libc::read(read, chunk.as_mut_ptr().cast(), chunk.len()) };
-        match usize::try_from(n) {
-            Ok(0) => break true,
-            Ok(n) => said.extend_from_slice(&chunk[..n]),
-            Err(_) if std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted => {
-            }
-            Err(_) => break false,
-        }
+        return Watched::Unwatched("this system has no pidfd (Linux 5.3)".into());
     };
+    let ended = wait_readable(fd, LIMIT);
+    // SAFETY: closing the pidfd we opened.
+    unsafe { libc::close(fd) };
     let mut status = 0;
-    // SAFETY: ending our own child if it is stuck, then reaping it (the
-    // pipe is closed or the child killed, so this returns at once).
+    // SAFETY: ending our own child if it is stuck, then reaping it (it has
+    // ended or been killed, so this returns at once).
     unsafe {
         if !ended {
             libc::kill(pid, libc::SIGKILL);
         }
         libc::waitpid(pid, &raw mut status, 0);
-        libc::close(read);
     }
+    // What the child wrote, without waiting: another test's child may still
+    // hold the writing end, so the reading end must not block.
+    let mut said = [0u8; 16];
+    // SAFETY: making our reading end non-blocking, reading at most 16 bytes
+    // into `said`, then closing it.
+    let n = unsafe {
+        let flags = libc::fcntl(read, libc::F_GETFL);
+        libc::fcntl(read, libc::F_SETFL, flags | libc::O_NONBLOCK);
+        let n = libc::read(read, said.as_mut_ptr().cast(), said.len());
+        libc::close(read);
+        n
+    };
+    let said = &said[..usize::try_from(n).unwrap_or(0)];
     if !ended {
         return Watched::Stuck;
     }
