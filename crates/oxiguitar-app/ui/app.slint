@@ -1093,29 +1093,12 @@ component SongView inherits Rectangle {
 
 // Renders a single shortcut cheat sheet line — identical for headers,
 // shortcuts, and spacer rows (all use the same `text` field).
-component ShortcutLineItem inherits Rectangle {
-    in property <string> text;
-    in property <length> column-width;
-
-    // Every row is 18px tall with identical structure.
-    height: 18px;
-
-    Text {
-        text: root.text;
-        font-size: 16px;
-        horizontal-alignment: left;
-        width: root.column-width;
-        height: 18px;
-    }
-}
-
 // A small framed note that closes when clicked anywhere.
 // mode 0 = about (single-column lines), mode 1 = shortcuts (three-column).
 //
 // Three columns balance the large shortcut count across ~equal-height
-// columns. Vertical spacing is 2px because shortcut lines are short
-// key-description pairs — no need for generous breathing room.
-// Column separators are 1px lines; horizontal gap between columns is 20px.
+// columns, each as wide as its longest line. The note never runs off the
+// window: what doesn't fit scrolls.
 component InfoPopup inherits PopupWindow {
     in property <string> heading;
     in property <int> mode: 0;
@@ -1123,19 +1106,21 @@ component InfoPopup inherits PopupWindow {
     in property <[ShortcutLine]> left-column;
     in property <[ShortcutLine]> center-column;
     in property <[ShortcutLine]> right-column;
-    in property <length> left-column-width;
-    in property <length> center-column-width;
-    in property <length> right-column-width;
-    in property <length> popup-width: 500px;
+    // The room the window leaves the note.
+    in property <length> room-width: 500px;
+    in property <length> room-height: 600px;
     Rectangle {
-        width: root.popup-width;
+        // The About lines wrap at 500 px; the shortcut columns take the
+        // width of their text (and the scroll bar's room).
+        width: min((root.mode == 1 ? columns.preferred-width + 2 * 16px : 500px) + 12px, root.room-width);
+        height: min(box.preferred-height, root.room-height);
         background: Palette.background;
         border-color: Palette.border;
         border-width: 1px;
         border-radius: 6px;
         drop-shadow-blur: 12px;
         drop-shadow-color: #00000040;
-        VerticalLayout {
+        box := VerticalLayout {
             padding: 16px;
             spacing: 8px;
             Text { text: root.heading; font-size: 16px; font-weight: 700; }
@@ -1143,41 +1128,28 @@ component InfoPopup inherits PopupWindow {
                 height: 1px;
                 background: Palette.border;
             }
-            VerticalLayout {
-                visible: root.mode == 0;
-                spacing: 4px;
-                for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
-            }
-            HorizontalLayout {
-                visible: root.mode == 1;
-                spacing: 16px; // gap between 3 columns
-                alignment: start; // don't stretch shorter columns to tallest
-                VerticalLayout {
-                    width: root.left-column-width;
-                    spacing: 2px; // tight: shortcut lines are short key-desc pairs
-                    for line in root.left-column : ShortcutLineItem {
-                        column-width: root.left-column-width;
-                        text: line.text;
+            ScrollView {
+                preferred-height: min(content.preferred-height, root.room-height - 80px);
+                content := VerticalLayout {
+                    padding-right: 12px;
+                    spacing: 8px;
+                    VerticalLayout {
+                        visible: root.mode == 0;
+                        spacing: 4px;
+                        for line in root.lines : Text { text: line; font-size: 12px; wrap: word-wrap; }
                     }
-                }
-                VerticalLayout {
-                    width: root.center-column-width;
-                    spacing: 2px; // tight
-                    for line in root.center-column : ShortcutLineItem {
-                        column-width: root.center-column-width;
-                        text: line.text;
+                    columns := HorizontalLayout {
+                        visible: root.mode == 1;
+                        spacing: 16px; // gap between 3 columns
+                        alignment: start; // don't stretch shorter columns to tallest
+                        for column in [root.left-column, root.center-column, root.right-column] : VerticalLayout {
+                            alignment: start;
+                            for line in column : Text { text: line.text; font-size: 16px; }
+                        }
                     }
-                }
-                VerticalLayout {
-                    width: root.right-column-width;
-                    spacing: 2px; // tight
-                    for line in root.right-column : ShortcutLineItem {
-                        column-width: root.right-column-width;
-                        text: line.text;
-                    }
+                    @children
                 }
             }
-            @children
         }
     }
 }
@@ -1361,7 +1333,7 @@ export component AppWindow inherits Window {
     in property <length> content-height;
     in property <[TileItem]> tiles;
     // Tiles from before a zoom or a new engraving, shown under the new ones
-    // until those cover the view (main.rs).
+    // until those cover the view (zoom.rs).
     in property <[TileItem]> old-tiles;
     // Logical pixels per canvas point (the score zoom).
     in property <float> pt-scale: 1.333;
@@ -1386,14 +1358,16 @@ export component AppWindow inherits Window {
     out property <length> view-width: flick.visible-width;
     out property <length> view-height: flick.visible-height;
     // Where the page's viewport sits in the window, for the mouse wheel
-    // (main.rs: the wheel zooms the page only over the page).
+    // (window_events.rs: the wheel zooms the page only over the page).
     out property <length> canvas-left: canvas.absolute-position.x;
     out property <length> canvas-top: canvas.absolute-position.y;
     out property <length> canvas-width: canvas.width;
     out property <length> canvas-height: canvas.height;
     // Pages are centred when narrower than the canvas.
-    // Tiles sit on whole device pixels: at a fractional position Slint 1.17
-    // blends their edges with the canvas behind, a faint line between tiles.
+    // Tiles sit on whole device pixels. Upstream (slint 1.19): at a
+    // fractional position Slint blends their edges with the canvas behind, a
+    // faint line between tiles (found with 1.17, not checked again since).
+    // On update: draw at a fraction of a pixel and look for the lines.
     // The origin is rounded, and the tiles are shifted by whatever fraction
     // the scroll position has (after a zoom around the pointer, say).
     out property <length> origin-x: round(max(24px, (flick.visible-width - root.content-width) / 2) / 1phx) * 1phx;
@@ -1408,12 +1382,12 @@ export component AppWindow inherits Window {
     // A checkable item flips its own tick when clicked, which would break
     // a one-way binding such as "checked: layout == 0" for good, so every
     // tick here is two-way and set from one place.
-    in-out property <bool> layout-0: true;
-    in-out property <bool> layout-1: false;
-    in-out property <bool> layout-2: false;
-    in-out property <bool> layout-3: false;
-    in-out property <bool> paper-0: true;
-    in-out property <bool> paper-1: false;
+    property <bool> layout-0: true;
+    property <bool> layout-1: false;
+    property <bool> layout-2: false;
+    property <bool> layout-3: false;
+    property <bool> paper-0: true;
+    property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
     // Design Mode (docs/design/palette.md): systems show their bar counts
     // and the page menu sets them.
@@ -1446,10 +1420,10 @@ export component AppWindow inherits Window {
     in property <AreaState> bottom-area;
     in property <AreaState> left-area;
     in property <AreaState> right-area;
-    in-out property <length> top-height: 44px;
+    property <length> top-height: 44px;
     in-out property <length> bottom-height: 120px;
-    in-out property <length> left-width: 220px;
-    in-out property <length> right-width: 240px;
+    property <length> left-width: 220px;
+    property <length> right-width: 240px;
     // The most the right panel may take: the window less the left panel and
     // 160 px of score.
     property <length> right-room: root.width - (root.left-shown && !root.left-area.collapsed ? root.left-width : 0px) - 160px - 12px;
@@ -1519,15 +1493,11 @@ export component AppWindow inherits Window {
     in-out property <bool> advice-hide: false;
     callback advice-done();
     in property <[FooterRow]> footer-rows;
-    in-out property <bool> footer-expanded: false;
+    property <bool> footer-expanded: false;
 
     in property <[ShortcutLine]> shortcut-left-column;
     in property <[ShortcutLine]> shortcut-center-column;
     in property <[ShortcutLine]> shortcut-right-column;
-    in property <length> shortcut-left-column-width;
-    in property <length> shortcut-center-column-width;
-    in property <length> shortcut-right-column-width;
-    in property <length> shortcut-popup-width;
     in property <[string]> about-lines;
     // Help → About's credits link and donation button (links.rs opens the
     // page in the browser).
@@ -1805,6 +1775,8 @@ export component AppWindow inherits Window {
         flick.content-y = clamp(-y, min(0px, flick.visible-height - flick.content-height), 0px);
     }
 
+    // Upstream (slint 1.19): a menu taller than the screen doesn't scroll
+    // (seen on an 800 px screen), so long menus lose their last items.
     MenuBar {
         Menu {
             title: "File";
@@ -1948,16 +1920,16 @@ export component AppWindow inherits Window {
         left-column: root.shortcut-left-column;
         center-column: root.shortcut-center-column;
         right-column: root.shortcut-right-column;
-        left-column-width: root.shortcut-left-column-width;
-        center-column-width: root.shortcut-center-column-width;
-        right-column-width: root.shortcut-right-column-width;
-        popup-width: root.shortcut-popup-width;
+        room-width: root.width - 40px;
+        room-height: root.height - self.y - 20px;
     }
     about-popup := InfoPopup {
         x: (root.width - self.width) / 2;
         y: 60px;
         heading: "OxiGuitar";
         lines: root.about-lines;
+        room-width: root.width - 40px;
+        room-height: root.height - self.y - 20px;
         // A click on the button must reach it; a click outside closes.
         close-policy: PopupClosePolicy.close-on-click-outside;
         // Every project OxiGuitar builds on is in CREDITS.md, not here
@@ -2111,8 +2083,13 @@ export component AppWindow inherits Window {
                 tab-clicked(i) => { root.tab-clicked(0, i); }
                 chevron-clicked => { root.area-toggled(0); }
             }
+            // The areas keep the size they were dragged to while the window
+            // has room, and give way after the score when it hasn't (a
+            // smaller window, a larger interface zoom).
             if root.top-shown && !root.top-area.collapsed : Rectangle {
-                height: root.top-height;
+                preferred-height: root.top-height;
+                min-height: 36px;
+                vertical-stretch: 0;
                 background: Palette.alternate-background;
                 if root.top-area.active-id == "player" : HorizontalLayout {
                     padding-left: 8px;
@@ -2280,6 +2257,7 @@ export component AppWindow inherits Window {
             }
 
             HorizontalLayout {
+                vertical-stretch: 1;
                 // Left area: the palette (greyed out until M3), then plugins' tabs.
                 if root.left-shown && root.left-area.collapsed : SideStrip {
                     chevron: @image-url("../../../assets/icons/ui/chevron-right.svg");
@@ -2287,7 +2265,9 @@ export component AppWindow inherits Window {
                     clicked => { root.area-toggled(2); }
                 }
                 if root.left-shown && !root.left-area.collapsed : VerticalLayout {
-                    width: root.left-width;
+                    preferred-width: root.left-width;
+                    min-width: 120px;
+                    horizontal-stretch: 0;
                     TabStrip {
                         state: root.left-area;
                         chevron-open: @image-url("../../../assets/icons/ui/chevron-left.svg");
@@ -2343,6 +2323,8 @@ export component AppWindow inherits Window {
                 canvas := Rectangle {
                     background: Look.canvas;
                     clip: true;
+                    min-width: 160px;
+                    horizontal-stretch: 1;
                     // Reads the frame while the sound runs, so frames keep
                     // coming even when the cursor's bar isn't in the view
                     // (it draws nothing).
@@ -2374,7 +2356,7 @@ export component AppWindow inherits Window {
                             source: t.image;
                             image-rendering: pixelated;
                         }
-                        // A press puts the caret there (main.rs, page_pressed).
+                        // A press puts the caret there (page.rs, page_pressed).
                         TouchArea {
                             x: 0;
                             y: 0;
@@ -2546,7 +2528,7 @@ export component AppWindow inherits Window {
                     // Score zoom, bottom right: 25 % to 400 % on a logarithmic
                     // scale, so 100 % sits in the middle. Clicking the
                     // percentage resets it to 100 %. The mouse wheel over the
-                    // page zooms too (main.rs).
+                    // page zooms too (window_events.rs).
                     Pill {
                         width: 168px;
                         x: parent.width - self.width - 10px;
@@ -2581,10 +2563,12 @@ export component AppWindow inherits Window {
                 if root.right-shown && !root.right-area.collapsed : SideSplitter {
                     // As wide as the window allows, leaving the score
                     // 160 px (Mateus, 3 Nov 2026: as wide as possible).
-                    dragged(d) => { root.right-width = clamp(root.right-width - d, 120px, max(120px, root.right-room)); }
+                    dragged(d) => { root.right-width = clamp(min(root.right-width, max(120px, root.right-room)) - d, 120px, max(120px, root.right-room)); }
                 }
                 if root.right-shown && !root.right-area.collapsed : VerticalLayout {
-                    width: root.right-width;
+                    preferred-width: root.right-width;
+                    min-width: 120px;
+                    horizontal-stretch: 0;
                     TabStrip {
                         state: root.right-area;
                         chevron-open: @image-url("../../../assets/icons/ui/chevron-right.svg");
@@ -2663,7 +2647,9 @@ export component AppWindow inherits Window {
                 chevron-clicked => { root.area-toggled(1); }
             }
             if root.bottom-shown && !root.bottom-area.collapsed : Rectangle {
-                height: root.bottom-height;
+                preferred-height: root.bottom-height;
+                min-height: 48px;
+                vertical-stretch: 0;
                 background: Palette.alternate-background;
                 if root.bottom-area.active-id == "tracks" && !root.has-score : Placeholder { text: "The tracks of the open score appear here."; }
                 // Track list: each track's notation buttons show it (both

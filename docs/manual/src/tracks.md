@@ -36,6 +36,8 @@ The **Track** tab on the right shows the caret's track (click a track's row to s
 
 A tuning that can't be (a wrong note, or notes that don't match the strings) says why in red under the tuning and changes nothing. If the new strings or capo can't play some notes, a question says how many before they are left out. Plugins add their own sections under these; sections that change the sound after the instrument have arrows to put them in the order they work in ([Playing a score](playback.md#each-tracks-sound)).
 
+![The Track tab: the track's name, short name, instrument, strings, capo and frets, its tuning, and below them the sections its plugins add](images/track-tab.png)
+
 ## Notation buttons
 
 Each track has two buttons at the end of its row: **TAB** for tablature and a **treble clef** for standard notation. A lit button is on. Tracks without strings have only the clef; drums have both, their tablature showing each drum's number ([Drums](editing.md#drums)).

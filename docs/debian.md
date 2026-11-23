@@ -22,8 +22,9 @@ What stands in the way, by where it comes from:
 - **Ours, directly:**
   - `krilla` 0.8 (PDF export) and what it brings: `pdf-writer`, `subsetter`, `xmp-writer` and `write-fonts` are missing, and krilla holds `skrifa` at 0.42 while sid has 0.44.
   - `zip` 9 (Guitar Pro 7–8): sid has 5.1.
-  - `quick-xml` 0.42 (GPIF): sid has 0.38.
-  - Already in sid at our version: `object` 0.37.3, `libloading`, `postcard`, `serde`, `rfd`, `png`, `tiny-skia` 0.12.
+  - `quick-xml` 0.41 (GPIF, the test generator only; held at wayland-scanner's version so the tree has one copy): sid has 0.38.
+  - `object` 0.41 (reading plugin files): sid has 0.37.3. The core went to the newest release on 23 Nov 2026 (Mateus: the latest versions first).
+  - Already in sid at our version: `libloading`, `postcard`, `serde`, `rfd`, `png`, `tiny-skia` 0.12.
 
 So `debian/` can't build from Debian's crates alone (it builds from a vendor component for now; below) until Debian has every crate at our versions (the audit says which): krilla and its writers, and the newer `zip` and `quick-xml`. The weekly audit shows the gap closing.
 

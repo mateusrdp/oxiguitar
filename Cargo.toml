@@ -8,7 +8,7 @@ members = ["crates/*", "plugins/*"]
 exclude = ["spikes", "fuzz", "docs/plugins/template"]
 
 [workspace.package]
-version = "0.21.6"
+version = "0.21.7"
 edition = "2024"
 # Rust from rustup, raised only when something needs it, so Debian unstable
 # can catch up before an upload (CONTRIBUTING.md, "Minimum Rust version").
@@ -34,17 +34,31 @@ oxiguitar-plugin = { path = "crates/oxiguitar-plugin" }
 oxiguitar-plugin-test = { path = "crates/oxiguitar-plugin-test" }
 oxiguitar-test-plugin = { path = "plugins/test" }
 # Inflating the start of a ZIP member to recognise a file (plugin
-# signatures, `container_root`).
-miniz_oxide = "0.9"
-# Reading plugin manifests without loading the plugin. 0.37 is the version
-# Debian has (rust-object 0.37.3). `unaligned`: without it object insists on
-# its structures' natural alignment and rejects real Mach-O files ("Invalid
-# Mach-O number of sections"; found on macOS CI, session 9).
-object = { version = "0.37", default-features = false, features = ["read_core", "elf", "macho", "pe", "std", "unaligned"] }
-# Loading plugins (already in the tree through Slint and winit).
-libloading = "0.8"
-# Fonts: skrifa reads outlines and metrics; keep it on the version krilla uses.
-skrifa = "0.42"
+# signatures, `container_root`). On 0.8 although 0.9 is out, so the tree
+# has one copy. Upstream (png 0.18.1): png (the newest; through Slint, muda
+# and tiny-skia) takes miniz_oxide 0.8 directly, and flate2 from 1.1.10
+# takes 0.9, so Cargo.lock holds flate2 at 1.1.9, the newest on 0.8 (a
+# plain `cargo update` moves it on: use `--precise`). On update: when png
+# takes 0.9, move miniz_oxide to 0.9 and let flate2 go.
+miniz_oxide = "0.8.9"
+# Reading plugin manifests without loading the plugin. The newest release
+# (Mateus, 23 Nov 2026: latest versions over Debian's, which has 0.37).
+# Upstream (object 0.41): without the `unaligned` feature object insists
+# on its structures' natural alignment and rejects real Mach-O files
+# ("Invalid Mach-O number of sections"; found on macOS CI, session 9, with
+# 0.37). On update: keep it unless object's changelog says otherwise.
+object = { version = "0.41", default-features = false, features = ["read_core", "elf", "macho", "pe", "std", "unaligned"] }
+# Loading plugins. Kept on 0.8 although 0.9 is out.
+# Upstream (winit 0.30.13): winit (and Slint 1.19 through it) takes
+# libloading 0.8, and a second copy would be the only gain. On update: move
+# when winit does.
+libloading = "0.8.9"
+# Fonts: skrifa reads outlines and metrics; keep it on the version krilla
+# uses, since the PDF writer shares our faces. Upstream (krilla 0.8.2):
+# krilla, the newest, takes skrifa 0.42, while Slint 1.19 brings 0.44 for
+# its own text (never mixed with ours), so two copies stay. On update: when
+# krilla takes Slint's skrifa, follow it and the copies become one.
+skrifa = "0.42.1"
 # Chord names read in any convention and notes named as chords (the chord
 # dialog, #278; oxiguitar-edit's `chord_names`).
 chordparser = "4.0.4"
@@ -52,17 +66,27 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # The audio thread's queues (the player's engine, oxiguitar-play): lock-free,
 # single producer and single consumer, allocation-free once made.
-rtrb = "0.4"
+rtrb = "0.4.1"
 # The plugin interface's messages (oxiguitar-plugin-api). No default
-# features: the defaults add nothing we use. Debian ships 1.1.3.
-postcard = { version = "1.1", default-features = false, features = ["use-std"] }
+# features: the defaults add nothing we use.
+postcard = { version = "1.2", default-features = false, features = ["use-std"] }
 # Guitar Pro 7/8 files are ZIP archives. No default features: they build
 # the zstd C library. zlib-rs is a pure-Rust deflate.
-zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
-# XML for GPIF (Guitar Pro 6-8).
-quick-xml = "0.42"
+# Upstream (i-slint-backend-linuxkms 1.19): Slint's linuxkms backend takes
+# nix 0.31, and zip 9.8 takes 0.30 to 0.32, so Cargo.lock holds nix at
+# 0.31.4 for a single copy (`cargo update -p nix --precise 0.31.4` after an
+# update).
+zip = { version = "9.8.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# XML for GPIF (Guitar Pro 6-8), in the test generator only.
+# Upstream (wayland-scanner 0.31): winit's Wayland support takes quick-xml
+# 0.41, so ours stays there and the tree has one copy. On update: move to
+# 0.42 when wayland-scanner does (the generator's test reads names as bytes).
+quick-xml = "0.41.0"
 # Pixel output for the screen, PNG and visual regression tests.
-tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd", "png-format"] }
+# 0.12 is the newest and resvg's. Upstream (sctk-adwaita 0.10): winit's
+# window decorations still bring tiny-skia 0.11, which we can't move. On
+# update: nothing to do here; the old copy goes when sctk-adwaita moves.
+tiny-skia = { version = "0.12.0", default-features = false, features = ["std", "simd", "png-format"] }
 # PDF output. No default features: we position every glyph ourselves and
 # embed no raster images yet.
 krilla = { version = "0.8", default-features = false }

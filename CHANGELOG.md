@@ -4,6 +4,24 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.7] - 2026-11-23
+
+### Changed
+
+- **The manual's introduction explains the ideas behind OxiGuitar** (tablature and notation, plugins, sound sets, the `.oxg` file), its pages on tracks, tools, saving and plugins have screenshots, and it has a Credits page. ARCHITECTURE.md says what the core can't do yet, what is left out on purpose and why, and where help is wanted. The README's status, links to the plugin manuals and credits are up to date, with a short glossary for newcomers. CREDITS.md lists the core's own dependencies (the plugins' libraries are credited in their repositories).
+- **The side areas give way to the score when the window has no room** (a smaller window, a larger interface zoom): they keep the width or height they were dragged to while it fits, and the score keeps at least 160 px of width, where before the areas kept their size and the score could shrink to nothing.
+- **Keyboard and Mouse and About stay inside the window**: they scroll what doesn't fit, and each column of keys is as wide as its text (measured, no longer estimated), so no line is cut off.
+- **The code records its decisions and its libraries' gaps** (Mateus, 23 Nov 2026): CONTRIBUTING.md's new "Comments in the code" says what a comment is for (each file's `//!` overview with the decisions behind it and what depends on it; at the code only what isn't obvious), and code shaped by what a library does or lacks carries an `Upstream (CRATE VERSION)` note saying what to check when the library moves. `scripts/upstream-notes.py` lists them and fails, in CI and in `scripts/test-all.py`, when `Cargo.lock` no longer has the version a note names. The files with a one-line overview got the decisions and dependencies behind them (the model's path across the plugin interface, the layout's reference pictures, the folders' rule for the Flatpak, and more).
+- **`oxiguitar-cli play` waits on the sound device, not on timers**: each of the device's callbacks wakes the terminal's thread, which says the bar being heard; it no longer looks every 50 ms for the first callback, guesses how long until the next bar, or sleeps 0.3 s at the end (it counts the frames handed to the device instead).
+- **Libraries on their newest releases, one copy each where we can choose** (Mateus, 23 Nov 2026): object 0.41 (Mach-O sections are read at the offsets object now computes, right past 4 GB), postcard 1.2, rtrb 0.4.1, zip 9.8.1 and every other crate in Cargo.lock at its newest compatible release. Held back so the tree keeps a single copy: miniz_oxide 0.8.9 and flate2 1.1.9 (png 0.18.1 still takes miniz_oxide 0.8), quick-xml 0.41 (wayland-scanner's), nix 0.31.4 (Slint's), libloading 0.8.9 (Slint's and winit's). Two copies stay where two libraries outside our control disagree: skrifa (krilla 0.42, Slint 0.44) and tiny-skia (resvg 0.12, winit's decorations 0.11). Cargo.toml says why at each line, and what to move when.
+- **`oxiguitar-audio-cpal` has its own repository** (mateusrdp/oxiguitar-audio-cpal): the layer the four audio output plugins share was never used by the core, and in its workspace it made every core build compile cpal and need ALSA's headers. Building the core on Linux no longer needs `libasound2-dev`, `libpipewire-0.3-dev` or `libclang-dev` (CI, the release jobs, the README and the Testing page say so).
+- Code review: the window waits for its system window (Slint's `winit_window()`) instead of a 50 ms timer, and a file drop's other files are ignored without a 100 ms timer; the contract suite's system-call watch waits on its pipe instead of checking every 5 ms; Space and the Play/Pause button share one path; unused code is gone (an unused bar-check search, two drawing helpers, four glyphs, player actions nothing sent, a Guitar Pro default extension); the window's own Slint properties are private. rfd 0.18 (Save As starts in the score's folder on macOS too).
+### Fixed
+
+- **The interface zoom is restored at startup**: it was saved (ADR 0010) but the window opened at 100 %.
+
+- `Cargo.lock` takes `url` 2.5.9 for RUSTSEC-2026-0592 (a stack overflow in `Url::origin()` on nested `blob:` URLs), which failed CI's advisories check. OxiGuitar itself opens no URLs; the crate comes in through Slint's compiler and webbrowser.
+
 ## [0.21.6] - 2026-11-22
 
 ### Added

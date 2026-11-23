@@ -8,7 +8,7 @@
 
 ## Context
 
-Dropping a file on the window opens it (session 6). The window comes from Slint 1.18 on winit 0.30 (ADR 0004). `main.rs` (`install_window_events`) opens the file from winit's `WindowEvent::DroppedFile`.
+Dropping a file on the window opens it (session 6). The window comes from Slint 1.18 on winit 0.30 (ADR 0004). `main.rs` (`install_window_events`, in `window_events.rs` since 23 Nov 2026) opens the file from winit's `WindowEvent::DroppedFile`.
 
 - winit 0.30 sends `DroppedFile` on Windows, macOS and X11. Its Wayland backend has no drag and drop: `DroppedFile` appears only in winit's `x11`, `windows` and `macos` platform code.
 - Slint 1.18 has drag and drop inside a window (`DragArea`, `DropArea`, `DataTransfer` with file paths), but its winit backend passes no drops from the operating system on.

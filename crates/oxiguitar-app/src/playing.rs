@@ -269,7 +269,6 @@ fn send_score(s: &mut crate::App, score: std::sync::Arc<oxiguitar_model::Score>,
 /// A Player tab control was used.
 pub(crate) fn action(app: &Shared, name: &str) {
     let dos = match name {
-        "play" => play(app, false),
         "play-selection" => play(app, true),
         // The Play/Pause button, as Space does. Play's result may ask to open
         // the output first: it must reach `act`, or nothing plays (#284).
@@ -284,11 +283,6 @@ pub(crate) fn action(app: &Shared, name: &str) {
                 Vec::new()
             }
         }
-        "pause" => {
-            pause(app);
-            Vec::new()
-        }
-        "stop" => stop(app),
         "rewind" => {
             let to = app.borrow_mut().player.rewind();
             if let Some(p) = to {
@@ -435,12 +429,7 @@ fn put_caret_at(app: &Shared, p: Place) {
 /// while it runs, else the caret). Returns whether the key was taken.
 pub(crate) fn key(app: &Shared, name: &str, shift: bool, ctrl: bool, alt: bool) -> bool {
     if name == " " && !shift && !ctrl && !alt {
-        let state = app.borrow().player.state();
-        if matches!(state, State::Playing | State::Starting) {
-            action(app, "pause");
-        } else if app.borrow().player.can_play() {
-            action(app, "play");
-        }
+        action(app, "play-pause");
         return true;
     }
     if ctrl && alt && !shift && name == "left" {

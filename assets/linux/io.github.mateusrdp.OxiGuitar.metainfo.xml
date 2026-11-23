@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.21.7" date="2026-11-23" type="development">
+      <description>
+        <p>The manual's introduction explains the ideas behind OxiGuitar (tablature and notation, plugins, sound sets, the .oxg file), its pages on tracks, tools, saving and plugins have screenshots, and it has a Credits page. ARCHITECTURE.md says what the core can't do yet, what is left out on purpose and ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.21.7</url>
+    </release>
     <release version="0.21.6" date="2026-11-22" type="development">
       <description>
         <p>Every test with one command (mateusrdp/oxiguitar#273): scripts/test-all.py builds and runs all of this repository's tests on your own corpus (--corpus DIR or OXIGUITARCORPUS), with a progress bar, a summary to paste into an issue and a log to diagnose from. The manual has a Features page naming the ...</p>

@@ -12,6 +12,16 @@ We support a wide variety of typesetting tools, and try to stay aligned with the
 
 Playback is also big. We all like to play along with our favorite songs, don’t always have a band, and can’t always find a good backing track. So this is KEY. And we want quality here, because no one wants to be playing along to a cheap CASIO keyboard from the 90's operated by the neighbor’s toddler who just learnt a few chords and where that dumb arse automatic drumkit is! This is NOT a glorified metronome! Like file formats, every output method is a plugin. The most basic is a MIDI synthesizer that plays whatever sound fonts your computer already has (Windows and macOS come with one; on Linux it’s a package away). But we REALLY recommend that you get yourself some better ones – it makes a massive difference. We do have a few suggestions of nice free ones, with instructions on how to download, install and use them with OxiGuitar. And v1.0 brings some BIG tones too, using the famed *Neural Amp Modeler (NAM)* for some juicy realistic guitar tones. Compose your song, get yourself a sweet profile online (or capture your own rig with their software!) and you’ll have a pretty decent backing track to rock with real quick!
 
+## New to some of these words?
+
+- **Tablature (tab)**: six lines, one per string, with the fret to press written on the string. OxiGuitar shows it with standard notation above it, kept in step.
+- **Plugin**: a single `.oxp` file that adds a file format, a sound, an effect or a tool. OxiGuitar itself only holds, shows, edits and plays the score; everything else is a plugin, so you install what you use ([the manual](https://mateusrdp.github.io/oxiguitar/plugins.html)).
+- **Sound set (SoundFont, SFZ)**: a library of recordings of real instruments that turns notes into sound. Your system has a basic one; a good recorded one makes a massive difference ([the MIDI plugin's manual](https://mateusrdp.github.io/oxiguitar-midi/)).
+- **NAM profile**: a capture of a real amp (or pedal, or whole rig) made with the open-source Neural Amp Modeler, the same `.nam` files that pedals from Darkglass, Fractal Audio, HeadRush and others now load. It's the profiling idea Kemper made famous, done in the open ([the NAM plugin's manual](https://mateusrdp.github.io/oxiguitar-nam/) explains profiling, modelling and cab IRs).
+- **Cab IR**: an impulse response, a short `.wav` that sounds like a speaker cabinet and the microphone in front of it. Most amp profiles need one after them.
+- **Temperament**: how the twelve notes of an octave are tuned. Everything digital plays perfect equal temperament; a real guitar doesn't, and True Temperament frets don't either. [The temperament plugin's manual](https://mateusrdp.github.io/oxiguitar-temperament/) explains why, with pictures.
+- **`.oxg` file**: a small file OxiGuitar keeps beside a song for what that song's format can't hold (amp settings, a temperament, wah curves), so nothing is lost when you save.
+
 ## Privacy
 
 OxiGuitar values your privacy first. It never uploads anything. No telemetry, no analytics, no automatic crash reports, no accounts, no background requests — not a single bit of data. It downloads nothing either: better sounds and plugins are files you get yourself and put in a folder, and the manual says where. The only network use ever planned is an update check you start yourself. If it crashes, it writes a log to your disk and tells you where it is; sending it to us is up to you. A CI test even runs OxiGuitar under a system-call tracer and fails if it ever tries to open a network connection to keep us honest. We don’t collect your data EVER. Because friends do **not** look at their friends’ browser histories.
@@ -20,9 +30,9 @@ OxiGuitar values your privacy first. It never uploads anything. No telemetry, no
 
 ## Status
 
-**v0.18.0, a pre-release for testers, 9 November 2026**: the plugins live in repositories of their own, with apt and dnf repositories that keep OxiGuitar and its plugins up to date. This release adds the MusicXML and MIDI file plugins (`.musicxml`, `.mxl`, `.mid`, `.kar`, `.rmi`), plugin interface 1.7, automatic fingering, Fit Bars to Time Signature, the rest of Guitar Pro 8's notation (Multivoice and Design Mode), live effect settings while a song plays, and an equalizer plugin with an order for each track's effects. v1.0 follows it.
+**v0.21.6, a pre-release for testers, 22 November 2026.** v1.0 is next, after a beta and the maintainer's own use. Since v0.18 came the TuxGuitar plugin, the Flatpak repository, the mixer saved with the song, drum entry on the drum staff, audio export to WAV, FLAC, MP3 and Opus, and four new plugins: wah-wah, temperament (real-guitar intonation and True Temperament), audio clips and an AI assistant.
 
-OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). And it plays them: from the caret or the selection, looping, with a count-in and a metronome (heard, seen, or both), at 25 to 200 % speed, with each track's volume, pan, mute and solo, and a cursor on the very beat you're hearing. It uses the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html)). `oxiguitar-cli play` plays a score from the terminal too. Coming with v1.0, and built: guitars and basses through **amp models** (Neural Amp Modeler captures) and cabinets, picked per track in its Properties ([Amp models](https://mateusrdp.github.io/oxiguitar/amp-models.html)), and **File → Export Audio…**, the whole song or some bars, as written or at your practice speed ([Exporting audio](https://mateusrdp.github.io/oxiguitar/audio-export.html)). See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
+OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF. It supports pretty much every tool from TuxGuitar at least (more to come!). And it plays them: from the caret or the selection, looping, with a count-in and a metronome (heard, seen, or both), at 25 to 200 % speed, with each track's volume, pan, mute and solo, and a cursor on the very beat you're hearing. It uses the best sound set it finds: yours in the `soundfonts` folder, else the one your system has ([better sounds](https://mateusrdp.github.io/oxiguitar-bettersounds-soundfonts/)). `oxiguitar-cli play` plays a score from the terminal too. Built for v1.0: guitars and basses through **amp models** (Neural Amp Modeler captures) and cabinets, picked per track in its Properties ([the NAM plugin's manual](https://mateusrdp.github.io/oxiguitar-nam/)), and **File → Export Audio…**, the whole song or some bars, as written or at your practice speed ([the audio export plugin's manual](https://mateusrdp.github.io/oxiguitar-export/)). See [ROADMAP.md](ROADMAP.md) for what is done and what comes next, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 <p align="center"><img src="docs/readme/playing.png" alt="OxiGuitar paused while playing an eight-track song: the blue cursor on the beat being heard, the Player controls above, each track's mixer and its overview below" width="800"></p>
 
@@ -40,7 +50,7 @@ OxiGuitar opens, shows, edits and saves Guitar Pro files and exports them to PDF
 
 <p align="center"><img src="docs/readme/drums.png" alt="A drum track on the drum staff and, below it, its drum tablature: hi-hats as 42, the snare as 38, toms, the bass drum as 36 and cymbals as 49 and 51" width="800"></p>
 
-**Hear it:** a band with recorded guitars, bass and drums, the bass and the drum kit alone, guitar techniques, bends and strums, played by OxiGuitar with free sound sets, on the manual's [Hear it](https://mateusrdp.github.io/oxiguitar/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
+**Hear it:** a band with recorded guitars, bass and drums, the bass and the drum kit alone, guitar techniques, bends and strums, played by OxiGuitar with free sound sets, on the sound sets' [Hear it](https://mateusrdp.github.io/oxiguitar-bettersounds-soundfonts/hear-it.html) page. Amp modelling (NAM) examples come with v1.0.
 
 ## Install
 
@@ -137,7 +147,7 @@ Open `OxiGuitar-VERSION-macos-universal.dmg` from the [latest release](https://g
 
 ### After installing
 
-Open a song. OxiGuitar plays each kind of track with the matching recorded set by itself (clean, overdriven and distorted guitars, nylon and steel strings, bass, drums); **Tools → Plugins…** lists the plugins it found and **Plugins → MIDI Sound Sets…** changes the sets. The [manual](https://mateusrdp.github.io/oxiguitar/) says more, and [Better sounds](https://mateusrdp.github.io/oxiguitar/better-sounds.html) lists the sets.
+Open a song. OxiGuitar plays each kind of track with the matching recorded set by itself (clean, overdriven and distorted guitars, nylon and steel strings, bass, drums); **Tools → Plugins…** lists the plugins it found and **Plugins → MIDI Sound Sets…** changes the sets. The [manual](https://mateusrdp.github.io/oxiguitar/) says more, and [the sound sets' manual](https://mateusrdp.github.io/oxiguitar-bettersounds-soundfonts/) lists them.
 
 ## How to get involved
 
@@ -165,7 +175,7 @@ How can you help, you ask?
 | Linux | the AppImage: distributions with glibc 2.35 or newer (Debian 12 and later, Ubuntu 22.04+, Fedora 36+); the .deb and .rpm: glibc 2.39 or newer (Debian trixie and sid, Ubuntu 24.04+, Fedora 40+) | x86\_64, ARM64 |
 | macOS | the current release | Apple Silicon and Intel (one universal app) |
 
-Each [release](https://github.com/mateusrdp/oxiguitar/releases) has one download for your system: a portable .exe for Windows (in a zip); one AppImage for any Linux, which holds both the Wayland and the X11 build, starts the right one and plays through ALSA (which PipeWire desktops pass on to PipeWire); a .deb and an .rpm for Debian, Ubuntu and Fedora; one .dmg for macOS. **None carries the plugins** that open Guitar Pro files and play them: those live in repositories of their own ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi), [oxiguitar-nam](https://github.com/mateusrdp/oxiguitar-nam), [oxiguitar-wav](https://github.com/mateusrdp/oxiguitar-wav) and the audio outputs), with releases, packages and updates of their own. The Linux package repositories below install OxiGuitar and its plugins together and keep them up to date.
+Each [release](https://github.com/mateusrdp/oxiguitar/releases) has one download for your system: a portable .exe for Windows (in a zip); one AppImage for any Linux, which holds both the Wayland and the X11 build, starts the right one and plays through ALSA (which PipeWire desktops pass on to PipeWire); a .deb and an .rpm for Debian, Ubuntu and Fedora; one .dmg for macOS. **None carries the plugins** that open Guitar Pro files and play them: those live in repositories of their own ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro), [oxiguitar-midi](https://github.com/mateusrdp/oxiguitar-midi), [oxiguitar-nam](https://github.com/mateusrdp/oxiguitar-nam), [oxiguitar-export](https://github.com/mateusrdp/oxiguitar-export) and the audio outputs), with releases, packages and updates of their own. The Linux package repositories below install OxiGuitar and its plugins together and keep them up to date.
 
 Every release carries a SHA256SUMS file. The .deb, .rpm and .dmg register the Guitar Pro file types (.gp, .gpx, .gp5, .gp4, .gp3), so double-clicking a file opens OxiGuitar; the portable .exe and the AppImage register nothing, and the [user manual](https://mateusrdp.github.io/oxiguitar/installing.html) shows how to do it by hand. The [manual](https://mateusrdp.github.io/oxiguitar/) explains the whole program in a few short pages.
 
@@ -184,8 +194,7 @@ You need Rust 1.99 or newer, from [rustup](https://rustup.rs): distributions' ow
 
 ```
 sudo apt install git build-essential pkg-config rustup \
-  libfontconfig1-dev libxkbcommon-dev libwayland-dev \
-  libasound2-dev libpipewire-0.3-dev libclang-dev
+  libfontconfig1-dev libxkbcommon-dev libwayland-dev
 rustup default stable
 git clone https://github.com/mateusrdp/oxiguitar.git
 cd oxiguitar
@@ -193,7 +202,7 @@ cargo build --release
 cargo test
 ```
 
-Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The `lib…-dev` packages are the system libraries OxiGuitar needs: fontconfig, xkbcommon and Wayland for fonts, keyboard and windows, and ALSA and PipeWire (with libclang, which builds PipeWire's bindings) for the audio-device plugins.
+Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The `lib…-dev` packages are the system libraries OxiGuitar needs: fontconfig, xkbcommon and Wayland for fonts, keyboard and windows. The audio output plugins, in their own repositories, need ALSA's and PipeWire's.
 
 The program opens files only through format plugins (one per format, `.oxp` files), which are built from the plugin repositories ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro) and the others; each has a `build-oxp.sh`). A build from source looks for them in `target/lib/oxiguitar/plugins/` beside the program on Linux, in `plugins\` beside the .exe on Windows, and in your own plugin folder everywhere; `cargo test` takes the latest releases of the plugins it needs by itself (`OXIGUITAR_PLUGINS_DIR` points it at a folder of your own builds instead).
 
@@ -231,7 +240,7 @@ Test builds of every change on `develop` (the program for each system, its plugi
 
 ## Contributing
 
-Pull requests are welcome from day one. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers code standards, the sign-off rule and how to add a file format or an effect. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the code fits together, and [docs/adr/](docs/adr/) records why things are the way they are.
+Pull requests are welcome from day one. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers code standards, the sign-off rule and how to add a file format or an effect. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the code fits together, what it can't do yet, what is left out on purpose and where help is most wanted, and [docs/adr/](docs/adr/) records why things are the way they are.
 
 ## Donations
 
@@ -244,6 +253,12 @@ Every test, with one command (the manual's Testing page says more, and how to re
 ```sh
 python3 scripts/test-all.py --corpus DIR
 ```
+
+## Credits
+
+OxiGuitar stands on the shoulders of a lot of generous people, and we're grateful to every one of them. The core is built on [Slint](https://slint.dev) (the window), [krilla](https://github.com/LaurenzV/krilla) (PDF), [tiny-skia](https://github.com/linebender/tiny-skia) and [skrifa](https://github.com/googlefonts/fontations) (drawing and fonts), [chordparser](https://github.com/PauSala/chordparser) (chord names), [rtrb](https://github.com/mgeier/rtrb) (the real-time queues), [libloading](https://github.com/nagisa/rust_libloading) and [object](https://github.com/gimli-rs/object) (loading plugins), [postcard](https://github.com/jamesmunns/postcard) and [serde](https://serde.rs) (the plugin messages), [rfd](https://github.com/PolyMeilex/rfd) (file dialogs), and the [Bravura](https://github.com/steinbergmedia/bravura) and [Noto Sans](https://github.com/notofonts/latin-greek-cyrillic) fonts. We learn from [MuseScore](https://github.com/musescore/MuseScore), [TuxGuitar](https://github.com/helge17/tuxguitar), [alphaTab](https://github.com/CoderLine/alphaTab), [PyGuitarPro](https://github.com/Perlence/PyGuitarPro), [Verovio](https://github.com/rism-digital/verovio) and [sfizz](https://github.com/sfztools/sfizz). [CREDITS.md](CREDITS.md) lists every one of them with its authors and licence, and the manual's [Credits](https://mateusrdp.github.io/oxiguitar/credits.html) page too; each plugin credits its own in its repository.
+
+Thank you, all of you. And thanks to everyone who tests, reports bugs and tells their friends.
 
 ## License
 

@@ -66,7 +66,7 @@ i-slint-backend-winit = { version = "=1.19.0", default-features = false }
 # The system's own Open and Save dialogs: the XDG desktop portal on Linux
 # (pure Rust, no GTK), the native dialogs on Windows and macOS. Its
 # `wayland` feature comes with the Wayland build.
-rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
+rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
 
 [dev-dependencies]
 # The speed budget's 300-bar, 8-track score (src/speed.rs).

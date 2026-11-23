@@ -3,6 +3,16 @@
 
 //! Where OxiGuitar keeps its settings and looks for plugins, on each system
 //! (docs/design/plugins.md, "Folders and settings").
+//!
+//! The system's plugin folder is found from the program's own path
+//! (`/usr/bin/oxiguitar` gives `/usr/lib/oxiguitar/plugins`), so the same
+//! rule serves the packages, `/usr/local`, the AppImage and the Flatpak
+//! (`/app/bin` gives `/app/lib/oxiguitar/plugins`, where the plugins'
+//! extensions are merged). Inside the Flatpak `XDG_DATA_HOME` already points
+//! into `~/.var/app/io.github.mateusrdp.OxiGuitar/`, so nothing here names
+//! the Flatpak. `OXIGUITAR_HOME` replaces the user's folders, for tests and
+//! portable copies; the folders' names are part of what users and the
+//! sound-set installer rely on, so they don't move.
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};

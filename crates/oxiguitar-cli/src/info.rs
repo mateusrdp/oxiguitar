@@ -3,6 +3,10 @@
 
 //! `info` and `detect`: print what a file contains, as the format plugins
 //! read it.
+//!
+//! The output is read by people and by tests (`tests/cli.rs` matches lines
+//! of it), and sessions use `info --bars` to check what a reader made of a
+//! file: change its wording with those tests.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

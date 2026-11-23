@@ -3,6 +3,10 @@
 
 //! Fonts a display list refers to, and simple text placement.
 //!
+//! Upstream (krilla 0.8.2): skrifa is kept on krilla's version (0.42), so
+//! the faces read here are the ones the PDF writer embeds; Slint has its
+//! own, newer skrifa for its own text (Cargo.toml says more).
+//!
 //! OxiGuitar bundles two fonts, both under the SIL Open Font License 1.1 (see
 //! `assets/fonts/`): Bravura, the reference SMuFL music font, and Noto Sans for
 //! text and tab numbers. Every backend draws from the same font bytes, so the

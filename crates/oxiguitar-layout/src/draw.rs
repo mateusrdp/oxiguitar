@@ -2,7 +2,15 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Drawing primitives in staff spaces: SMuFL glyphs placed by the font's
-//! metadata, lines, beams, ties and tab numbers.
+//! metadata, lines, beams, ties and tab numbers.//!
+//! Glyphs are placed by the font's SMuFL metadata (anchors, bounding boxes,
+//! engraving defaults) wherever it has them; the few numbers of our own
+//! (`FALLBACK_RAISE`, tab number sizes) say why at their line. The glyph
+//! table lists only what is drawn: an unused one warns.//!
+//! A change here moves what the fifty-one reference scores engrave to:
+//! `cargo test -p oxiguitar-testgen --test visual` compares them, and after
+//! an intended change `OXIGUITAR_BLESS=1` rewrites the pictures, each of
+//! which is looked at before committing.
 
 use oxiguitar_display::smufl::{EngravingDefaults, Metadata};
 use oxiguitar_display::{DisplayList, FontId, FontSet, Paint, Path, Point, Rect};
@@ -11,7 +19,6 @@ use oxiguitar_display::{DisplayList, FontId, FontSet, Paint, Path, Point, Rect};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct G(pub(crate) &'static str, pub(crate) char);
 
-#[allow(dead_code)] // The full set grows with the engraving.
 pub(crate) mod glyphs {
     use super::G;
     pub(crate) const NOTEHEAD_BLACK: G = G("noteheadBlack", '\u{E0A4}');
@@ -67,7 +74,6 @@ pub(crate) mod glyphs {
     pub(crate) const UP_BOW: G = G("stringsUpBow", '\u{E612}');
     pub(crate) const ARROWHEAD_UP: G = G("arrowheadBlackUp", '\u{EB78}');
     pub(crate) const ARROWHEAD_DOWN: G = G("arrowheadBlackDown", '\u{EB7C}');
-    pub(crate) const GRACE_SLASH_UP: G = G("graceNoteSlashStemUp", '\u{E564}');
     pub(crate) const REPEAT_DOT: G = G("repeatDot", '\u{E044}');
     pub(crate) const NOTE_QUARTER_UP: G = G("noteQuarterUp", '\u{E1D5}');
     pub(crate) const SEGNO: G = G("segno", '\u{E047}');
@@ -94,9 +100,6 @@ pub(crate) mod glyphs {
     pub(crate) const LOWER_MORDENT: G = G("ornamentMordent", '\u{E56D}');
     pub(crate) const TURN: G = G("ornamentTurn", '\u{E567}');
     pub(crate) const TURN_INVERTED: G = G("ornamentTurnInverted", '\u{E568}');
-    pub(crate) const ARPEGGIO_SEGMENT: G = G("wiggleArpeggiatoUp", '\u{EAA9}');
-    pub(crate) const ARPEGGIO_UP_ARROW: G = G("wiggleArpeggiatoUpArrow", '\u{EAAD}');
-    pub(crate) const ARPEGGIO_DOWN_ARROW: G = G("wiggleArpeggiatoDownArrow", '\u{EAAE}');
     pub(crate) const FINGER_THUMB: G = G("fingeringTUpper", '\u{ED16}');
 
     /// The fingering digit glyph for 0–5.
@@ -424,35 +427,9 @@ impl Painter<'_> {
         list.line(a, b, width, Paint::Ink);
     }
 
-    #[allow(dead_code)] // Utility for future use.
-    pub(crate) fn line_between_with(
-        &self,
-        list: &mut DisplayList,
-        a: Point,
-        b: Point,
-        width: f32,
-        paint: Paint,
-    ) {
-        list.line(a, b, width, paint);
-    }
-
     /// A slur: like a tie, but between any two points.
     pub(crate) fn slur(&self, list: &mut DisplayList, a: Point, b: Point, height: f32) {
         self.tie(list, a, b, height);
-    }
-
-    /// A tab number centred on (`cx`, `y`) with the string line knocked out
-    /// behind it. `gap` is the distance between tab lines.
-    #[allow(dead_code)]
-    pub(crate) fn tab_number(
-        &self,
-        list: &mut DisplayList,
-        cx: f32,
-        y: f32,
-        gap: f32,
-        label: &str,
-    ) {
-        self.tab_number_with(list, cx, y, gap, label, Paint::Ink);
     }
 
     /// A tab number centred on (`cx`, `y`) with the string line knocked out

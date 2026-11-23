@@ -1,5 +1,7 @@
 # Tools
 
+![The Tools menu: Infer Key Signatures, Next Bar That Doesn't Add Up, Transpose, Find Fingering, Fit Bars to Time Signature, Harmonize, and Plugins](images/tools-menu.png)
+
 The **Tools** menu holds actions that change the open score. They only run when you choose them: OxiGuitar never changes a score on its own. A tool changes the score on screen, never the file on disk, until you save it; each tool's change is one step that **Edit → Undo** takes back.
 
 **Transpose…**, **Find Fingering** and **Fit Bars to Time Signature…** are in this menu too, for every track, and **Harmonize…**, which finds chords for the caret's track; [Editing](editing.md) describes them. The one change OxiGuitar makes as a file opens is giving notes a string and fret where the file has only their pitch, so a file without tablature shows tab ([Finding a fingering](editing.md#finding-a-fingering)).

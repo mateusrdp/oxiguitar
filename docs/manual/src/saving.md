@@ -2,6 +2,8 @@
 
 Choose **File → Save** (Ctrl + S) to write the score back to its file, or **File → Save As…** (Ctrl + Shift + S) to write it under another name. The window's title shows the file's name, with a dot before it while the score has changes not yet saved.
 
+![The File menu: New, Open, Save, Save As, Export PDF, Export Audio, Paper Size and Quit](images/file-menu.png)
+
 OxiGuitar saves through its format plugins, as it opens files. Ours write Guitar Pro 7 and 8 files (.gp), which Guitar Pro 7 and later open, and Guitar Pro 5 files (.gp5), which Guitar Pro 5 and every later version open, and TuxGuitar too; other plugins add more formats ([Plugin manuals](official-plugins.md)). Choose the format in Save As… by the name's extension. Save always writes a file in its own format. When no installed plugin writes that format (Guitar Pro 3 and 4 files and .gpx are only read), Save says so: use Save As… and choose a format.
 
 ## What a file can't hold

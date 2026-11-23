@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The score, its header information and the bar layout shared by all tracks.
+//! The score, its header information and the bar layout shared by all
+//! tracks. Every staff has one bar per master bar, and every bar at least
+//! one voice: [`Score::check_structure`] says so, and every reader and edit
+//! must keep it (the layout, the player and the writers index by it).
+//!
+//! A field added here doesn't compile in `wire.rs` until someone decides how
+//! it crosses the plugin interface (a variant at the end of the matching
+//! `score2` extension list, never a change to version 1), and every format
+//! plugin's writer then decides whether its format can hold it; what one
+//! can't is kept in the `.oxg` file beside the score if the user says so.
+//! Edits to it go through `oxiguitar-edit`'s commands, so undo works.
 
 use crate::{Ratio, Track};
 

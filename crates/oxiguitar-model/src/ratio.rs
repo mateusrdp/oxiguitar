@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Exact fractions for musical time.
+//! Exact fractions for musical time, always in lowest terms.
+//!
+//! The operators (`+`, `-`, `*`) panic on overflow, on purpose: in our own
+//! code an overflow is a bug. Readers of files build ratios from numbers
+//! they don't trust, so they use the `checked_*` functions and report a
+//! damaged file instead (START-HERE, "Model operators").
 
 use std::cmp::Ordering;
 use std::fmt;

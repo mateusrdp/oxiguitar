@@ -2,7 +2,11 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Time within a bar: columns of beats that start together, and beam groups
-//! (NOT-2).
+//! (NOT-2).//!
+//! A change here moves what the fifty-one reference scores engrave to:
+//! `cargo test -p oxiguitar-testgen --test visual` compares them, and after
+//! an intended change `OXIGUITAR_BLESS=1` rewrites the pictures, each of
+//! which is looked at before committing.
 
 use oxiguitar_model::{Bar, Beaming, BeatKind, NoteValue, Ratio, TimeSignature, Voice};
 

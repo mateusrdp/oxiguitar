@@ -2,7 +2,14 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Which staves are shown, the plan of every bar, and how bars are broken
-//! into systems (NOT-4).
+//! into systems (NOT-4).//!
+//! Line breaks come from the widths `plan.rs` measured: as many bars as fit
+//! the line, unless Design Mode set a system's bars (`stored_layout`, in
+//! the Page layouts only; Vertical and Horizontal lines are the window's).//!
+//! A change here moves what the fifty-one reference scores engrave to:
+//! `cargo test -p oxiguitar-testgen --test visual` compares them, and after
+//! an intended change `OXIGUITAR_BLESS=1` rewrites the pictures, each of
+//! which is looked at before committing.
 
 use std::collections::HashMap;
 

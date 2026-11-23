@@ -272,8 +272,9 @@ struct MachOParts {
 }
 
 /// Reads a Mach-O library's header and load commands, and its manifest
-/// section, and nothing else. As for ELF, `object::File::parse` reads the
-/// whole symbol table first, which made a folder of plugins cost in
+/// section, and nothing else. Upstream (object 0.41): as for ELF,
+/// `object::File::parse` reads the whole symbol table first (measured with
+/// 0.37), which made a folder of plugins cost in
 /// proportion to their code (159 ms for 30 debug builds on CI's macOS
 /// runner, over the 100 ms budget).
 fn macho_parts<'a, Mach, R>(data: R) -> Result<MachOParts, String>
@@ -295,11 +296,14 @@ where
         let (offset, size) = segment.file_range(endian);
         end = end.max(offset.saturating_add(size));
         let sections = segment.sections(endian, section_data).map_err(damaged)?;
-        if let Some(s) = sections
-            .iter()
-            .find(|s| s.name() == MANIFEST_SECTION.as_bytes())
-        {
-            found = Some(*s);
+        // Upstream (object 0.41): a section's data is read at the offset
+        // this iterator gives, not the header's 32-bit one (which wraps past
+        // 4 GB); `Section::data` takes it since 0.40.
+        for item in segment.section_offsets(endian, sections) {
+            let (s, offset) = item.map_err(damaged)?;
+            if s.name() == MANIFEST_SECTION.as_bytes() {
+                found = Some((*s, offset));
+            }
         }
     }
     let built = match header.cputype(endian) {
@@ -309,7 +313,7 @@ where
         macho::CPU_TYPE_ARM => Architecture::Arm,
         _ => Architecture::Unknown,
     };
-    let manifest = found.map(|section| {
+    let manifest = found.map(|(section, offset)| {
         let size: u64 = section.size(endian).into();
         if size > MAX_MANIFEST_LEN as u64 {
             return Err(format!(
@@ -317,9 +321,9 @@ where
             ));
         }
         section
-            .data(endian, data)
+            .data(endian, data, offset)
             .map(<[u8]>::to_vec)
-            .map_err(|()| "its manifest can't be read (the file is damaged)".to_owned())
+            .map_err(|e| format!("its manifest can't be read (the file is damaged: {e})"))
     });
     Ok(MachOParts {
         end,
@@ -388,7 +392,7 @@ mod tests {
 
     /// A 64-bit little-endian Mach-O library for `cputype` with one
     /// segment holding one section `name` of `contents`.
-    fn tiny_macho(cputype: u32, name: &str, contents: &[u8]) -> Vec<u8> {
+    fn tiny_macho(cputype: macho::CpuType, name: &str, contents: &[u8]) -> Vec<u8> {
         let mut f = Vec::new();
         let u32le = |f: &mut Vec<u8>, v: u32| f.extend_from_slice(&v.to_le_bytes());
         let u64le = |f: &mut Vec<u8>, v: u64| f.extend_from_slice(&v.to_le_bytes());
@@ -401,15 +405,15 @@ mod tests {
         let data_at = (32 + commands) as u64;
         // mach_header_64
         u32le(&mut f, macho::MH_MAGIC_64);
-        u32le(&mut f, cputype);
+        u32le(&mut f, cputype.0);
         u32le(&mut f, 0);
-        u32le(&mut f, macho::MH_DYLIB);
+        u32le(&mut f, macho::MH_DYLIB.0);
         u32le(&mut f, 1);
         u32le(&mut f, commands);
         u32le(&mut f, 0);
         u32le(&mut f, 0);
         // segment_command_64
-        u32le(&mut f, macho::LC_SEGMENT_64);
+        u32le(&mut f, macho::LC_SEGMENT_64.0);
         u32le(&mut f, commands);
         name16(&mut f, "__DATA");
         u64le(&mut f, 0);

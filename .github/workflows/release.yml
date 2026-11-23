@@ -101,7 +101,6 @@ jobs:
       - run: |
           scripts/apt-install.sh \
             libfontconfig1-dev libxkbcommon-dev libwayland-dev \
-            libasound2-dev libpipewire-0.3-dev libclang-dev \
             rpm squashfs-tools xvfb xauth weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1
       # The two Linux builds of the app (docs/design/plugins.md): the
       # Wayland one, the default, and the deprecated X11 one in a target

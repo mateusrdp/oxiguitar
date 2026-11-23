@@ -13,9 +13,6 @@ Build-Depends:
  libfontconfig-dev,
  libxkbcommon-dev,
  libwayland-dev,
- libasound2-dev,
- libpipewire-0.3-dev,
- libclang-dev,
  fonts-noto-core,
 Standards-Version: 4.7.2
 Homepage: https://github.com/mateusrdp/oxiguitar

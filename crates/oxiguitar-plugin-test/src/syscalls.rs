@@ -38,6 +38,28 @@ pub enum Watched {
     Unwatched(String),
 }
 
+/// Whether `fd` became readable within `limit` (poll(2), restarted after a
+/// signal with the time that is left).
+fn wait_readable(fd: libc::c_int, limit: Duration) -> bool {
+    let deadline = Instant::now() + limit;
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        let mut ready = libc::pollfd {
+            fd,
+            events: libc::POLLIN,
+            revents: 0,
+        };
+        let ms = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
+        // SAFETY: one valid pollfd.
+        match unsafe { libc::poll(&raw mut ready, 1, ms) } {
+            r if r > 0 => return true,
+            0 => return false,
+            _ if std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted => {}
+            _ => return false,
+        }
+    }
+}
+
 /// How long the child may take.
 const LIMIT: Duration = Duration::from_secs(10);
 
@@ -91,30 +113,48 @@ pub fn watch(renders: impl FnOnce()) -> Watched {
     // The parent.
     // SAFETY: closing our copy of the writing end.
     unsafe { libc::close(write) };
-    let started = Instant::now();
-    let mut status = 0;
-    let ended = loop {
-        // SAFETY: waiting for our own child, without blocking.
-        let r = unsafe { libc::waitpid(pid, &raw mut status, libc::WNOHANG) };
-        if r == pid {
-            break true;
+    // Wait for the child's end on a pidfd, which becomes readable exactly
+    // when that one process ends, with the limit as poll()'s timeout. Not on
+    // the pipe: a child that another test forks at the same moment inherits
+    // this pipe's writing end, so the pipe can stay open after our child
+    // ended (found on CI, 23 Nov 2026, next to a child spinning for 10 s).
+    // SAFETY: pidfd_open(2) on our own child, which hasn't been reaped.
+    let pidfd = unsafe { libc::syscall(libc::SYS_pidfd_open, pid, 0) };
+    let Some(fd) = libc::c_int::try_from(pidfd).ok().filter(|fd| *fd >= 0) else {
+        // No pidfd (a kernel older than 5.3): nothing to wait on, so the
+        // child is ended, and the render goes unwatched.
+        // SAFETY: ending and reaping our own child, closing our pipe.
+        unsafe {
+            libc::kill(pid, libc::SIGKILL);
+            libc::waitpid(pid, std::ptr::null_mut(), 0);
+            libc::close(read);
         }
-        if started.elapsed() > LIMIT {
-            // SAFETY: ending our own child, then reaping it.
-            unsafe {
-                libc::kill(pid, libc::SIGKILL);
-                libc::waitpid(pid, &raw mut status, 0);
-            }
-            break false;
-        }
-        std::thread::sleep(Duration::from_millis(5));
+        return Watched::Unwatched("this system has no pidfd (Linux 5.3)".into());
     };
+    let ended = wait_readable(fd, LIMIT);
+    // SAFETY: closing the pidfd we opened.
+    unsafe { libc::close(fd) };
+    let mut status = 0;
+    // SAFETY: ending our own child if it is stuck, then reaping it (it has
+    // ended or been killed, so this returns at once).
+    unsafe {
+        if !ended {
+            libc::kill(pid, libc::SIGKILL);
+        }
+        libc::waitpid(pid, &raw mut status, 0);
+    }
+    // What the child wrote, without waiting: another test's child may still
+    // hold the writing end, so the reading end must not block.
     let mut said = [0u8; 16];
-    // SAFETY: reading at most 16 bytes into `said` from our pipe, which is
-    // closed at the child's end, so this never blocks.
-    let n = unsafe { libc::read(read, said.as_mut_ptr().cast(), said.len()) };
-    // SAFETY: closing the reading end.
-    unsafe { libc::close(read) };
+    // SAFETY: making our reading end non-blocking, reading at most 16 bytes
+    // into `said`, then closing it.
+    let n = unsafe {
+        let flags = libc::fcntl(read, libc::F_GETFL);
+        libc::fcntl(read, libc::F_SETFL, flags | libc::O_NONBLOCK);
+        let n = libc::read(read, said.as_mut_ptr().cast(), said.len());
+        libc::close(read);
+        n
+    };
     let said = &said[..usize::try_from(n).unwrap_or(0)];
     if !ended {
         return Watched::Stuck;
@@ -257,5 +297,17 @@ mod tests {
             let _ = unsafe { libc::getpid() };
         });
         assert_eq!(got, Watched::Called(libc::SYS_getpid));
+    }
+
+    #[test]
+    fn renders_that_never_end_are_stuck() {
+        let started = Instant::now();
+        let got = watch(|| {
+            loop {
+                std::hint::spin_loop();
+            }
+        });
+        assert_eq!(got, Watched::Stuck);
+        assert!(started.elapsed() >= LIMIT);
     }
 }
