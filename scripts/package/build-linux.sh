@@ -30,7 +30,7 @@ apt-get update -qq
 apt-get install -y -qq --no-install-recommends \
     ca-certificates curl git build-essential pkg-config \
     libfontconfig1-dev libxkbcommon-dev libwayland-dev \
-    libasound2-dev libpipewire-0.3-dev libclang-dev libxkbcommon-x11-0 > /dev/null
+    libxkbcommon-x11-0 > /dev/null
 
 # Rust from rustup, like everywhere else we build (Mateus, 24 Oct 2026):
 # stable, as dtolnay/rust-toolchain@stable gives the other jobs.

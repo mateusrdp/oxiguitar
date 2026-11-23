@@ -194,8 +194,7 @@ You need Rust 1.99 or newer, from [rustup](https://rustup.rs): distributions' ow
 
 ```
 sudo apt install git build-essential pkg-config rustup \
-  libfontconfig1-dev libxkbcommon-dev libwayland-dev \
-  libasound2-dev libpipewire-0.3-dev libclang-dev
+  libfontconfig1-dev libxkbcommon-dev libwayland-dev
 rustup default stable
 git clone https://github.com/mateusrdp/oxiguitar.git
 cd oxiguitar
@@ -203,7 +202,7 @@ cargo build --release
 cargo test
 ```
 
-Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The `lib…-dev` packages are the system libraries OxiGuitar needs: fontconfig, xkbcommon and Wayland for fonts, keyboard and windows, and ALSA and PipeWire (with libclang, which builds PipeWire's bindings) for the audio-device plugins.
+Elsewhere, install rustup from your system's packages or from [rustup.rs](https://rustup.rs). The `lib…-dev` packages are the system libraries OxiGuitar needs: fontconfig, xkbcommon and Wayland for fonts, keyboard and windows. The audio output plugins, in their own repositories, need ALSA's and PipeWire's.
 
 The program opens files only through format plugins (one per format, `.oxp` files), which are built from the plugin repositories ([oxiguitar-guitarpro](https://github.com/mateusrdp/oxiguitar-guitarpro) and the others; each has a `build-oxp.sh`). A build from source looks for them in `target/lib/oxiguitar/plugins/` beside the program on Linux, in `plugins\` beside the .exe on Windows, and in your own plugin folder everywhere; `cargo test` takes the latest releases of the plugins it needs by itself (`OXIGUITAR_PLUGINS_DIR` points it at a folder of your own builds instead).
 
@@ -257,7 +256,7 @@ python3 scripts/test-all.py --corpus DIR
 
 ## Credits
 
-OxiGuitar stands on the shoulders of a lot of generous people, and we're grateful to every one of them. The core is built on [Slint](https://slint.dev) (the window), [krilla](https://github.com/LaurenzV/krilla) (PDF), [tiny-skia](https://github.com/linebender/tiny-skia) and [skrifa](https://github.com/googlefonts/fontations) (drawing and fonts), [chordparser](https://github.com/PauSala/chordparser) (chord names), [cpal](https://github.com/RustAudio/cpal) (sound output), [rtrb](https://github.com/mgeier/rtrb) (the real-time queues), [libloading](https://github.com/nagisa/rust_libloading) and [object](https://github.com/gimli-rs/object) (loading plugins), [postcard](https://github.com/jamesmunns/postcard) and [serde](https://serde.rs) (the plugin messages), [rfd](https://github.com/PolyMeilex/rfd) (file dialogs), and the [Bravura](https://github.com/steinbergmedia/bravura) and [Noto Sans](https://github.com/notofonts/latin-greek-cyrillic) fonts. We learn from [MuseScore](https://github.com/musescore/MuseScore), [TuxGuitar](https://github.com/helge17/tuxguitar), [alphaTab](https://github.com/CoderLine/alphaTab), [PyGuitarPro](https://github.com/Perlence/PyGuitarPro), [Verovio](https://github.com/rism-digital/verovio) and [sfizz](https://github.com/sfztools/sfizz). [CREDITS.md](CREDITS.md) lists every one of them with its authors and licence, and the manual's [Credits](https://mateusrdp.github.io/oxiguitar/credits.html) page too; each plugin credits its own in its repository.
+OxiGuitar stands on the shoulders of a lot of generous people, and we're grateful to every one of them. The core is built on [Slint](https://slint.dev) (the window), [krilla](https://github.com/LaurenzV/krilla) (PDF), [tiny-skia](https://github.com/linebender/tiny-skia) and [skrifa](https://github.com/googlefonts/fontations) (drawing and fonts), [chordparser](https://github.com/PauSala/chordparser) (chord names), [rtrb](https://github.com/mgeier/rtrb) (the real-time queues), [libloading](https://github.com/nagisa/rust_libloading) and [object](https://github.com/gimli-rs/object) (loading plugins), [postcard](https://github.com/jamesmunns/postcard) and [serde](https://serde.rs) (the plugin messages), [rfd](https://github.com/PolyMeilex/rfd) (file dialogs), and the [Bravura](https://github.com/steinbergmedia/bravura) and [Noto Sans](https://github.com/notofonts/latin-greek-cyrillic) fonts. We learn from [MuseScore](https://github.com/musescore/MuseScore), [TuxGuitar](https://github.com/helge17/tuxguitar), [alphaTab](https://github.com/CoderLine/alphaTab), [PyGuitarPro](https://github.com/Perlence/PyGuitarPro), [Verovio](https://github.com/rism-digital/verovio) and [sfizz](https://github.com/sfztools/sfizz). [CREDITS.md](CREDITS.md) lists every one of them with its authors and licence, and the manual's [Credits](https://mateusrdp.github.io/oxiguitar/credits.html) page too; each plugin credits its own in its repository.
 
 Thank you, all of you. And thanks to everyone who tests, reports bugs and tells their friends.
 
