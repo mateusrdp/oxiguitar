@@ -2,6 +2,11 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! End-to-end tests of `oxiguitar-cli` on the public fixtures.
+//!
+//! The program reads files only through format plugins, so these tests
+//! use the released Guitar Pro plugins (`oxiguitar_plugin_test::released`:
+//! downloaded, or taken from `OXIGUITAR_PLUGINS_DIR`). A Guitar Pro
+//! plugin release can turn them red: test the core against its build first.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! Note values, dots and tuplets.
+//! Note values, dots and tuplets. A duration's length is always an exact
+//! [`Ratio`] of a whole note (`Duration::length`): never floating point,
+//! so tuplets add up and bars check (CONTRIBUTING.md, "Exact time").
 
 use crate::Ratio;
 

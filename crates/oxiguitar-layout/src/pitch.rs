@@ -2,7 +2,14 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Where a pitch sits on a five-line staff, and which accidental it needs
-//! (NOT-1).
+//! (NOT-1).//!
+//! A note's own spelling (`Spelling`, from the file or from Transpose) wins
+//! over the key's; accidentals carry through the bar as engraving rules
+//! say (`BarAccidentals`).//!
+//! A change here moves what the fifty-one reference scores engrave to:
+//! `cargo test -p oxiguitar-testgen --test visual` compares them, and after
+//! an intended change `OXIGUITAR_BLESS=1` rewrites the pictures, each of
+//! which is looked at before committing.
 
 use oxiguitar_model::{Clef, KeySignature, Pitch, Spelling};
 

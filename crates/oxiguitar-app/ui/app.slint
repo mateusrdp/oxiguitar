@@ -1364,8 +1364,10 @@ export component AppWindow inherits Window {
     out property <length> canvas-width: canvas.width;
     out property <length> canvas-height: canvas.height;
     // Pages are centred when narrower than the canvas.
-    // Tiles sit on whole device pixels: at a fractional position Slint 1.17
-    // blends their edges with the canvas behind, a faint line between tiles.
+    // Tiles sit on whole device pixels. Upstream (slint 1.19): at a
+    // fractional position Slint blends their edges with the canvas behind, a
+    // faint line between tiles (found with 1.17, not checked again since).
+    // On update: draw at a fraction of a pixel and look for the lines.
     // The origin is rounded, and the tiles are shifted by whatever fraction
     // the scroll position has (after a zoom around the pointer, say).
     out property <length> origin-x: round(max(24px, (flick.visible-width - root.content-width) / 2) / 1phx) * 1phx;
@@ -1773,6 +1775,8 @@ export component AppWindow inherits Window {
         flick.content-y = clamp(-y, min(0px, flick.visible-height - flick.content-height), 0px);
     }
 
+    // Upstream (slint 1.19): a menu taller than the screen doesn't scroll
+    // (seen on an 800 px screen), so long menus lose their last items.
     MenuBar {
         Menu {
             title: "File";

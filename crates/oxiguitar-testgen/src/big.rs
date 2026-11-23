@@ -3,6 +3,10 @@
 
 //! A long band score for the speed budget: any number of bars, eight
 //! tracks as a rock song has them, as dense as real files of that size.
+//!
+//! The speed budget's numbers (docs/testing.md, "Speed budget") were
+//! measured on this score: changing how dense it is changes what they mean,
+//! so a change here comes with new measurements.
 
 use std::fmt::Write as _;
 

@@ -2,6 +2,10 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! The engine tests' stand-in device and recording source.
+//!
+//! The device calls the engine with the uneven buffer sizes real devices
+//! use (`SIZES`, including 1 and 333 frames), so a bug that shows only at
+//! a buffer's edge shows here.
 
 #![allow(dead_code)]
 

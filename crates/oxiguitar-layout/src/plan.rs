@@ -2,7 +2,14 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Planning one bar of one staff: where each note sits on the staff, which
-//! way stems point, how wide each column must be (NOT-1, NOT-2, NOT-4).
+//! way stems point, how wide each column must be (NOT-1, NOT-2, NOT-4).//!
+//! The plan is measured before anything is drawn: a bar's columns get the
+//! width their widest content needs (noteheads, accidentals, tab numbers,
+//! techniques, lyrics), and `system.rs` breaks lines from those widths.//!
+//! A change here moves what the fifty-one reference scores engrave to:
+//! `cargo test -p oxiguitar-testgen --test visual` compares them, and after
+//! an intended change `OXIGUITAR_BLESS=1` rewrites the pictures, each of
+//! which is looked at before committing.
 
 use oxiguitar_model::{
     Bar, Barre, Beaming, BeatEffects, BeatKind, Clef, Dynamic, FermataKind, GraceKind, Hairpin,

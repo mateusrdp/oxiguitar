@@ -272,8 +272,9 @@ struct MachOParts {
 }
 
 /// Reads a Mach-O library's header and load commands, and its manifest
-/// section, and nothing else. As for ELF, `object::File::parse` reads the
-/// whole symbol table first, which made a folder of plugins cost in
+/// section, and nothing else. Upstream (object 0.41): as for ELF,
+/// `object::File::parse` reads the whole symbol table first (measured with
+/// 0.37), which made a folder of plugins cost in
 /// proportion to their code (159 ms for 30 debug builds on CI's macOS
 /// runner, over the 100 ms budget).
 fn macho_parts<'a, Mach, R>(data: R) -> Result<MachOParts, String>
@@ -295,8 +296,9 @@ where
         let (offset, size) = segment.file_range(endian);
         end = end.max(offset.saturating_add(size));
         let sections = segment.sections(endian, section_data).map_err(damaged)?;
-        // object 0.41: a section's data is read at the offset this iterator
-        // gives, not the header's 32-bit one (which wraps past 4 GB).
+        // Upstream (object 0.41): a section's data is read at the offset
+        // this iterator gives, not the header's 32-bit one (which wraps past
+        // 4 GB); `Section::data` takes it since 0.40.
         for item in segment.section_offsets(endian, sections) {
             let (s, offset) = item.map_err(damaged)?;
             if s.name() == MANIFEST_SECTION.as_bytes() {

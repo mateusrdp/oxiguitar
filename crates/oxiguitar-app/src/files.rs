@@ -533,6 +533,12 @@ pub(crate) fn no_dialogs() -> Option<String> {
 
 /// macOS wants dialogs on the main thread; elsewhere they run on their own
 /// thread so the window stays responsive.
+///
+/// Upstream (rfd 0.18): on Linux rfd asks the XDG desktop portal (the
+/// `xdg-portal` feature; no GTK), so a session without D-Bus has no dialog
+/// (`no_dialogs`). Its blocking dialogs are why they run off the UI thread.
+/// From 0.18 macOS honours `set_directory` with `set_file_name` (Save As
+/// starts in the score's folder there too).
 pub(crate) fn run_dialog(pick: impl FnOnce() + Send + 'static) {
     if cfg!(target_os = "macos") {
         pick();
