@@ -63,6 +63,42 @@ Crates marked with a later milestone do not exist yet. Throwaway experiments liv
 - **No network** and no downloads; the only use planned is an update check the user starts (NET-1, NET-2, as changed on 21 Oct 2026). CI enforces this.
 - **No polling.** Code reacts to events or waits on something that wakes it; see CONTRIBUTING.md, "Design principles".
 
+## Current limitations
+
+What the core can't do yet, as of v0.21. [docs/parity.md](docs/parity.md) compares it, feature by feature, with Guitar Pro 8, TuxGuitar, alphaTab and Power Tab Editor.
+
+- **Not v1.0 yet.** Every release is a pre-release. The plugin interface is still growing (by additions only, at the ends of enums), and the maintainer tests by hand on x86_64 Debian sid only: Windows, macOS, other distributions and ARM64 are built and tested by CI, not by a person.
+- **No automations.** Volume, pan and instrument changes in the middle of a song aren't in the model.
+- **No instrument views** (fretboard, keyboard), **no speed trainer**, **no image export** from the window: placed after v1.0 by Mateus (17 Nov 2026).
+- **No audio tracks or line-in** (M9, #240), **no external MIDI devices** (M9).
+- **No editing while playing**, except a plugin's track section and the mixer (decided 25 Oct 2026): the player plays a snapshot of the score.
+- **Engraving is the core's own and still young.** Slash notation is partial (slash beats, no slash staff), there is no numbered notation (jianpu), stem directions follow the voice and can't be overridden (decided 19 Oct 2026), and layout styles (Guitar Pro's stylesheets, M5) aren't there.
+- **Known rough edges**, waiting for a fix: menus taller than an 800-pixel screen don't scroll; tracks hidden from the page still play; the player pads a short bar to its time signature.
+- **Screen readers** aren't supported yet (UI-11); the keyboard reaches everything.
+
+## Left out on purpose
+
+Each of these is a decision, recorded in the roadmap, an ADR or a design document, not an oversight. Please ask before working against one.
+
+- **Anything over the network.** No telemetry, accounts, crash uploads, update downloads or online services, ever. Sound sets and models are files you bring. The only network use ever planned is an update check you start yourself. CI fails if OxiGuitar opens a connection.
+- **File formats in the core.** The core recognises no format; every one is a plugin, so the core stays small and anyone can add one.
+- **MuseScore and ABC files** (dropped 9 Nov 2026): export them as MusicXML. **Old TuxGuitar files** (before 2.0): TuxGuitar 2 converts them.
+- **Forks of libraries.** Libraries are used exactly as published, with no `[patch]` and no vendored copies; gaps are handled in our code. Nothing goes on crates.io.
+- **Bundled sounds and models.** Each has its own author and licence; the program ships none and downloads none. A separate, optional installer fetches a recommended set.
+- **Homebrew, Flathub and paid code signing.** Packages come from our own signed apt, dnf and Flatpak repositories; Windows and macOS installers are unsigned.
+- **Polling, hacks and workarounds.** Code waits on events; when something needs a workaround, the fix goes where it belongs instead.
+
+## Where you can help
+
+- **Test on the systems the maintainer can't**: Windows, macOS, Fedora, ARM64. Test builds of every change are under the Actions tab; say what you find in Discussions or an issue.
+- **Check what we write in Guitar Pro 7 or 8**: `fixtures/guitar-pro-check/` holds files we wrote for exactly that.
+- **Review the code.** Much of it was written quickly with an AI assistant and strict rules; human review of any crate is welcome, starting with the readers of untrusted input and the real-time audio path (`oxiguitar-play`).
+- **Engraving**: slash staves, layout styles and the rough edges above, in `oxiguitar-layout` and `oxiguitar-render`.
+- **Write a plugin** for a format, an effect or a tool we don't have: the [plugin developer guide](https://mateusrdp.github.io/oxiguitar/plugin-guide/) starts from a template, and the SDK is MIT OR Apache-2.0.
+- **Accessibility**: screen-reader support through Slint's AccessKit.
+
+CONTRIBUTING.md has the rules every change follows (tests, the Features page, the sign-off).
+
 ## Where decisions are recorded
 
 [docs/adr/](docs/adr/) holds one short record per significant decision. [docs/formats/](docs/formats/) holds what we have learned about each file format.
