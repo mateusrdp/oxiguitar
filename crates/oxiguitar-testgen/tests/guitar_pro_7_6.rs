@@ -81,14 +81,16 @@ fn element_paths(xml: &str) -> BTreeSet<String> {
     let mut reader = quick_xml::Reader::from_str(xml);
     let mut stack: Vec<String> = Vec::new();
     let mut out = BTreeSet::new();
+    // quick-xml 0.41 (wayland-scanner's, so the tree has one copy) gives
+    // names and values as bytes; GPIF is UTF-8.
     let name = |e: &quick_xml::events::BytesStart<'_>| {
-        let mut n = e.name().as_ref().to_owned();
+        let mut n = String::from_utf8_lossy(e.name().as_ref()).into_owned();
         if n == "Property"
             && let Some(Ok(a)) = e
                 .attributes()
-                .find(|a| a.as_ref().is_ok_and(|a| a.key.as_ref() == "name"))
+                .find(|a| a.as_ref().is_ok_and(|a| a.key.as_ref() == b"name"))
         {
-            n = format!("Property[{}]", a.value);
+            n = format!("Property[{}]", String::from_utf8_lossy(&a.value));
         }
         n
     };
