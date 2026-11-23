@@ -458,7 +458,7 @@ pub(crate) fn apply_section_settings(app: &Shared) {
     }
 }
 
-/// Edit → Go to Section lists the score's sections.
+/// The Song tab's structure lists the score's sections.
 pub(crate) fn sync_sections(app: &Shared) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;

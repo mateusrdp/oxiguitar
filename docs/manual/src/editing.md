@@ -48,7 +48,7 @@ Type at the caret, with Guitar Pro 8's keys:
 
 **On the standard staff**, click a line or a space: the caret marks it, and Up / Down move it a step at a time. **Enter** puts a note there, in the bar's key (on a line or space the key signature sharpens, the note is sharp); on a guitar it goes on the string where its fret is lowest, nearest the caret's string, and the caret moves to that string. A semitone up or down with Alt + Shift + Up / Down gives the notes the key leaves out. Clicking the tablature, or Tab, takes the caret back to the strings.
 
-The **Edit** menu has the same commands and a few more: Insert Beat, Delete Beats, Clear Beats, Clear Bar, Move Beat Left / Right (it swaps places with its neighbour in the bar), Move Beat to Voice (into a voice that has room at that moment: a rest of its length takes its place), and Remove Unused Voices (voices after the first that hold no notes, in every bar of the track).
+The **Edit** menu's **Beats, Bars and Tracks** submenu has the same commands and a few more, in a submenu each for beats, bars and tracks. **Beat** has Insert Beat, Delete Beats, Clear Beats, Clear Bar, Move Beat Left / Right (it swaps places with its neighbour in the bar), Move Beat to Voice (into a voice that has room at that moment: a rest of its length takes its place), and Remove Unused Voices (voices after the first that hold no notes, in every bar of the track).
 
 **File → New** (Ctrl + N) starts a new score: one bar of 4/4 at 120 and a steel-string guitar in standard tuning. Pressing Right at its end adds a bar. Save asks where to put it the first time.
 
@@ -89,7 +89,7 @@ The **Note** tab names the drum on the caret's line or space ("Note · Acoustic 
 
 ### Tuplets
 
-**/** (or the palette's **Triplet**) makes the beat a triplet, three in the time of two, or takes it out of one; with a run of beats selected, all of them. **Custom N-tuplet** (in the palette, or **Edit → Custom N-tuplet…**) asks for any grouping, *n* notes in the time of *m*, with the usual *m* filled in as you change *n*: 5 to 7 in the time of 4, 9 to 15 in the time of 8, and 2, 4 and 8 in the time of 3, 3 and 6. A beat added after a tuplet's last beat is in the same tuplet, so typing on fills it.
+**/** (or the palette's **Triplet**) makes the beat a triplet, three in the time of two, or takes it out of one; with a run of beats selected, all of them. **Custom N-tuplet** (in the palette) asks for any grouping, *n* notes in the time of *m*, with the usual *m* filled in as you change *n*: 5 to 7 in the time of 4, 9 to 15 in the time of 8, and 2, 4 and 8 in the time of 3, 3 and 6. A beat added after a tuplet's last beat is in the same tuplet, so typing on fills it.
 
 ## Bars
 
@@ -167,13 +167,13 @@ OxiGuitar keeps its own clipboard: copying and pasting work inside OxiGuitar, no
 
 Beats and bars paste into any track. Between a drum track and a pitched one only the rhythm carries over, as rests. Notes on strings the track hasn't got are left out. Chord names go with their diagrams.
 
-**Edit → Go to Section** lists the score's sections and moves the caret to the one you choose.
+The **Song** tab's **Structure** lists the score's sections; click one to move the caret to its bar.
 
 ## Transposing
 
 **Transpose…** moves notes up or down, by semitones or by **steps of the key**, which keeps the music in its key (C, D, E up a step in C major become D, E, F). There are three ways in:
 
-- **Right-click on the page → Transpose…**, or **Edit → Transpose Selection…**: the selection, or the caret's beat when nothing is selected. A right-click outside the selection first moves the caret there.
+- **Right-click on the page → Transpose…**, or **Tools → Transpose Selection…**: the selection, or the caret's beat when nothing is selected. A right-click outside the selection first moves the caret there.
 - **Right-click on a track's name → Transpose…**: the whole track.
 - **Tools → Transpose…**: every track, with the key signatures.
 
@@ -183,7 +183,7 @@ Up is a positive number, down a negative one. **Keep the fingering** keeps each 
 
 **Find Fingering** gives every note a string and fret again, so the passage is as easy to play as OxiGuitar can make it: tabs found online often put notes where no hand would. It runs at once, as one step for Undo. There are three ways in, as for Transpose:
 
-- **Right-click on the page → Find Fingering**, or **Edit → Find Fingering for Selection**: the selection, or the caret's beat when nothing is selected. The notes just before and after stay as they are, and the new fingering joins them.
+- **Right-click on the page → Find Fingering**, or **Tools → Find Fingering for Selection**: the selection, or the caret's beat when nothing is selected. The notes just before and after stay as they are, and the new fingering joins them.
 - **Right-click on a track's name → Find Fingering**: the whole track.
 - **Tools → Find Fingering**: every track.
 
@@ -283,7 +283,7 @@ A .gp file keeps trills in sixteenths only: saving a faster trill as .gp names i
 
 ## Chords, text and lyrics
 
-**A** (or the palette's **Chord**, or **Edit → Chord…**) opens the **chord dialog** for the caret's beat. It shows one chord three ways, and each follows the others as you change it:
+**A** (or the palette's **Chord**) opens the **chord dialog** for the caret's beat. It shows one chord three ways, and each follows the others as you change it:
 
 - **Name**: type the chord's name in whatever way you write chords (`Em7b5`, `Em7-5`, `Eø`, `Cmaj7`, `C△7`, `CM7`, `F-`, `Fmin`, `G°7`, `D+`, `C7(b9)/E`). The arrow beside it lists every name the diagram's notes can take, one for each note taken as the root ("x 2 3 2 3 x" is Bm7b5, F6(b5)/B, Dm6/B and so on). While the diagram is empty it lists the track's chords instead, to use one again.
 - **Voicing**: the frets in inline notation, low string first, **x** for a string that isn't played: `x 0 2 2 1 0`, or `x02210` when no fret has two digits. You can type it from the low string up; strings you haven't reached are not played. The arrow lists the ways to play the name on the track's strings, with its tuning and capo, easiest first.
@@ -308,9 +308,9 @@ The styles live in `settings.json` ([where it is](plugins.md)), under `chord-sty
 
 The left side can be written in any way OxiGuitar reads chords, with or without parentheses: `m7b5`, `m7(b5)`, `-7b5` and `ø` are the same entry. It is compared with everything after a chord's root (and before a bass note) as a whole, so `maj7` does not change `Cmaj7#11`; give that chord an entry of its own. Add a style by adding a name; delete `chord-styles` to get OxiGuitar's four back. The style and the tickbox you last used are kept under `chord`.
 
-**Shift + T** (or the palette's **Text**, or **Edit → Text…**) sets the text above the caret's beat; empty takes it away. Text another voice holds is drawn above the staff the same way: if the caret's beat has no text of its own, the dialog shows and changes the text of another voice that starts while the caret's beat lasts, so a text Guitar Pro saved on voice 2 is changed or removed from voice 1 too.
+**Shift + T** (or the palette's **Text**) sets the text above the caret's beat; empty takes it away. Text another voice holds is drawn above the staff the same way: if the caret's beat has no text of its own, the dialog shows and changes the text of another voice that starts while the caret's beat lasts, so a text Guitar Pro saved on voice 2 is changed or removed from voice 1 too.
 
-**Lyrics are typed on the page**, as in MuseScore. Put the caret on a note and press **Ctrl + T** (or the palette's **Lyrics**, or **Edit → Type Lyrics**): a small field opens under the beat. Type the syllable, then:
+**Lyrics are typed on the page**, as in MuseScore. Put the caret on a note and press **Ctrl + T** (or the palette's **Lyrics**): a small field opens under the beat. Type the syllable, then:
 
 | Keys | Does |
 | --- | --- |

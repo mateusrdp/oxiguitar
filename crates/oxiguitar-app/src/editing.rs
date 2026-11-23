@@ -1258,8 +1258,8 @@ impl Editing {
         Some(typed)
     }
 
-    /// The score's sections, in order: each one's bar and how the Go to
-    /// Section menu names it ("A Verse — bar 5").
+    /// The score's sections, in order: each one's bar and how the Song tab's
+    /// structure names it ("A Verse — bar 5").
     pub(crate) fn sections(&self) -> Vec<(usize, String)> {
         let Some(score) = self.score.as_ref() else {
             return Vec::new();

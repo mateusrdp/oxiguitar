@@ -13,7 +13,7 @@ The **Tracks** tab of the bottom panel shows every track of the song: its name, 
 
 ## Merging tracks
 
-**Merge Into…** (in a track's right-click menu, and Edit → Merge Track Into…) writes the track's notes into another track, then deletes it. Undo brings both back as they were.
+**Merge Into…** (in a track's right-click menu, and Edit → Beats, Bars and Tracks → Track → Merge Track Into…) writes the track's notes into another track, then deletes it. Undo brings both back as they were.
 
 - **Into**: the track that takes the notes. A drum track merges only into another drum track, and other tracks only into tracks that aren't drum kits.
 - **Its voices**: which of the track's voices to take (those with notes start ticked). With one voice ticked, **Into voice** says which voice of the other track it goes into. With several, each goes into the voice of the same number.

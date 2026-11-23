@@ -13,7 +13,7 @@
 import { Slider, ScrollView, Palette, ComboBox, Button, CheckBox, SpinBox, LineEdit, TextEdit } from "std-widgets.slint";
 import { PluginTab, PluginRow, PluginRows, PluginWidget, PluginSection } from "plugin_tab.slint";
 export { PluginLinks, PluginSurfaces } from "plugin_tab.slint";
-import { PluginDialog, BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, FitDialog, HarmonizeDialog, MergeDialog } from "bar_dialog.slint";
+import { PluginDialog, BendDialog, ChordDialog, ExportDialog, ExportProgress, BarsDialog, GridPoint, TextDialog, TupletDialog, TransposeDialog, SettingsDialog, FitDialog, HarmonizeDialog, MergeDialog } from "bar_dialog.slint";
 // The plugin manager's own window (Tools → Plugins).
 export { PluginManagerWindow, ManagerRow } from "plugin_manager.slint";
 import "../../../assets/fonts/noto-sans/NotoSans-Regular.ttf";
@@ -1048,7 +1048,11 @@ export struct SongField {
 // set when Enter is pressed in it or the keyboard leaves it.
 component SongView inherits Rectangle {
     in property <[SongField]> fields;
+    // The structure: one line a section ("A Verse — bar 5"); a click puts
+    // the caret at its bar (#339, replacing Edit → Go to Section).
+    in property <[string]> sections;
     callback edited(string, string);
+    callback go-to-section(int);
     // As wide as the panel, or wider when something in it can't be
     // narrower (a plugin's label never wraps): then it scrolls sideways.
     scroll := ScrollView {
@@ -1058,6 +1062,33 @@ component SongView inherits Rectangle {
             padding: 12px;
             spacing: 6px;
             alignment: start;
+            VerticalLayout {
+                spacing: 2px;
+                Text { text: "Structure"; font-size: 11px; color: Palette.foreground.transparentize(0.35); }
+                if root.sections.length == 0 : Text {
+                    text: "No sections yet. Name one in the Bar tab.";
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    color: Palette.foreground.transparentize(0.4);
+                }
+                for s[i] in root.sections : Rectangle {
+                    height: 24px;
+                    background: touch.has-hover ? Palette.foreground.transparentize(0.9) : transparent;
+                    border-radius: 3px;
+                    Text {
+                        x: 6px;
+                        width: parent.width - 12px;
+                        text: s;
+                        font-size: 12px;
+                        overflow: elide;
+                        vertical-alignment: center;
+                    }
+                    touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.go-to-section(i); }
+                    }
+                }
+            }
             for f in root.fields : VerticalLayout {
                 spacing: 2px;
                 Text { text: f.label; font-size: 11px; color: Palette.foreground.transparentize(0.35); }
@@ -1378,16 +1409,14 @@ export component AppWindow inherits Window {
     // View settings.
     in-out property <int> layout: 0;
     in-out property <int> paper: 0;
-    // One tick per menu item, kept in step by pick-layout and pick-paper.
-    // A checkable item flips its own tick when clicked, which would break
-    // a one-way binding such as "checked: layout == 0" for good, so every
-    // tick here is two-way and set from one place.
+    // One tick per menu item, kept in step by pick-layout. A checkable item
+    // flips its own tick when clicked, which would break a one-way binding
+    // such as "checked: layout == 0" for good, so every tick here is
+    // two-way and set from one place.
     property <bool> layout-0: true;
     property <bool> layout-1: false;
     property <bool> layout-2: false;
     property <bool> layout-3: false;
-    property <bool> paper-0: true;
-    property <bool> paper-1: false;
     in-out property <bool> dark-page: false;
     // Design Mode (docs/design/palette.md): systems show their bar counts
     // and the page menu sets them.
@@ -1406,6 +1435,11 @@ export component AppWindow inherits Window {
     changed dark-interface => { root.settings-changed(); }
     in-out property <bool> dynamics: false;
     in-out property <bool> play-engraved-beat: true;
+    // Settings → the count-in and metronome a session starts with (#339).
+    in-out property <bool> count-in-default: false;
+    in-out property <bool> metronome-default: false;
+    // View → Settings… shows the dialog; it applies as it is used.
+    property <bool> settings-dialog-shown: false;
 
     // The shell (shell.rs): the toolbar and the four areas, numbered
     // 0 top, 1 bottom, 2 left, 3 right. The View menu's ticks show or hide
@@ -1502,6 +1536,8 @@ export component AppWindow inherits Window {
     // Help → About's credits link and donation button (links.rs opens the
     // page in the browser).
     callback open-credits();
+    // Help → Manual.
+    callback open-manual();
     callback open-donation();
 
     callback open-file();
@@ -1645,7 +1681,7 @@ export component AppWindow inherits Window {
     callback track-menu(int, string);
     // The page's right-click menu.
     callback page-menu(string);
-    // The score's sections, for Edit → Go to Section.
+    // The score's sections, for the Song tab's structure.
     in property <[string]> sections;
     callback go-to-section(int);
     // Gives the keyboard back to the page (after a question).
@@ -1760,8 +1796,6 @@ export component AppWindow inherits Window {
     }
     public function pick-paper(n: int) {
         root.paper = n;
-        root.paper-0 = n == 0;
-        root.paper-1 = n == 1;
     }
 
     // Scroll the canvas by (dx, dy), within its bounds.
@@ -1776,7 +1810,8 @@ export component AppWindow inherits Window {
     }
 
     // Upstream (slint 1.19): a menu taller than the screen doesn't scroll
-    // (seen on an 800 px screen), so long menus lose their last items.
+    // (seen on an 800 px screen), so no menu here runs past about a dozen
+    // lines: the long ones are split into submenus (#339).
     MenuBar {
         Menu {
             title: "File";
@@ -1790,11 +1825,6 @@ export component AppWindow inherits Window {
                 enabled: root.has-score && !root.export-running;
                 activated => { root.export-audio(); }
             }
-            Menu {
-                title: "Paper Size";
-                MenuItem { title: "A4"; checkable: true; checked <=> root.paper-0; activated => { root.pick-paper(0); root.settings-changed(); } }
-                MenuItem { title: "Letter"; checkable: true; checked <=> root.paper-1; activated => { root.pick-paper(1); root.settings-changed(); } }
-            }
             if root.plugin-items-file.length > 0 : MenuSeparator { }
             for it in root.plugin-items-file : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
             MenuSeparator { }
@@ -1806,53 +1836,77 @@ export component AppWindow inherits Window {
             MenuItem { title: root.redo-title; enabled: root.can-redo; shortcut: @keys(Control + Y); activated => { root.redo(); } }
             MenuSeparator { }
             MenuItem { title: "Select All"; enabled: root.has-score; shortcut: @keys(Control + A); activated => { root.caret-key("a", false, true); } }
-            MenuSeparator { }
             MenuItem { title: "Cut (Ctrl + X)"; enabled: root.has-score; activated => { root.edit-command("cut"); } }
             MenuItem { title: "Copy (Ctrl + C)"; enabled: root.has-score; activated => { root.edit-command("copy"); } }
             MenuItem { title: "Paste (Ctrl + V)"; enabled: root.has-score; activated => { root.edit-command("paste"); } }
-            MenuItem { title: "Cut Bars… (Ctrl + Shift + X)"; enabled: root.has-score; activated => { root.edit-command("cut-bars"); } }
-            MenuItem { title: "Copy Bars… (Ctrl + Shift + C)"; enabled: root.has-score; activated => { root.edit-command("copy-bars"); } }
-            MenuItem { title: "Paste Bars… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("paste-bars"); } }
             MenuSeparator { }
+            // The palette has Chord, Text, Lyrics and Custom N-tuplet, so the
+            // menu doesn't (#339); their keys work as before. Note entry's
+            // keys are taken on the page (editing.rs); these items name
+            // them, and do the same.
             Menu {
-                title: "Go to Section";
-                if root.sections.length == 0 : MenuItem { title: "No sections"; enabled: false; }
-                for s[i] in root.sections : MenuItem { title: s; activated => { root.go-to-section(i); } }
+                title: "Beats, Bars and Tracks";
+                Menu {
+                    title: "Beat";
+                    MenuItem { title: "Insert Beat (Ctrl + Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-beat"); } }
+                    MenuItem { title: "Delete Beats (Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-beats"); } }
+                    MenuItem { title: "Clear Beats (Ctrl + Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("clear-beats"); } }
+                    MenuItem { title: "Move Beat Left"; enabled: root.has-score; activated => { root.edit-command("move-left"); } }
+                    MenuItem { title: "Move Beat Right"; enabled: root.has-score; activated => { root.edit-command("move-right"); } }
+                    Menu {
+                        title: "Move Beat to Voice";
+                        MenuItem { title: "Voice 1 (Alt + 1)"; enabled: root.has-score; activated => { root.edit-command("voice-1"); } }
+                        MenuItem { title: "Voice 2 (Alt + 2)"; enabled: root.has-score; activated => { root.edit-command("voice-2"); } }
+                        MenuItem { title: "Voice 3 (Alt + 3)"; enabled: root.has-score; activated => { root.edit-command("voice-3"); } }
+                        MenuItem { title: "Voice 4 (Alt + 4)"; enabled: root.has-score; activated => { root.edit-command("voice-4"); } }
+                    }
+                    MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
+                }
+                Menu {
+                    title: "Bar";
+                    MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
+                    MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
+                    MenuItem { title: "Clear Bar"; enabled: root.has-score; activated => { root.edit-command("clear-bar"); } }
+                    MenuSeparator { }
+                    MenuItem { title: "Cut Bars… (Ctrl + Shift + X)"; enabled: root.has-score; activated => { root.edit-command("cut-bars"); } }
+                    MenuItem { title: "Copy Bars… (Ctrl + Shift + C)"; enabled: root.has-score; activated => { root.edit-command("copy-bars"); } }
+                    MenuItem { title: "Paste Bars… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("paste-bars"); } }
+                }
+                Menu {
+                    title: "Track";
+                    MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
+                    MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
+                    MenuItem { title: "Merge Track Into…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("merge-track"); } }
+                }
             }
-            MenuSeparator { }
-            // Note entry's keys are taken on the page (editing.rs); these
-            // items name them, and do the same.
-            MenuItem { title: "Insert Beat (Ctrl + Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-beat"); } }
-            MenuItem { title: "Delete Beats (Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-beats"); } }
-            MenuItem { title: "Clear Beats (Ctrl + Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("clear-beats"); } }
-            MenuItem { title: "Clear Bar"; enabled: root.has-score; activated => { root.edit-command("clear-bar"); } }
-            MenuItem { title: "Move Beat Left"; enabled: root.has-score; activated => { root.edit-command("move-left"); } }
-            MenuItem { title: "Move Beat Right"; enabled: root.has-score; activated => { root.edit-command("move-right"); } }
-            Menu {
-                title: "Move Beat to Voice";
-                MenuItem { title: "Voice 1 (Alt + 1)"; enabled: root.has-score; activated => { root.edit-command("voice-1"); } }
-                MenuItem { title: "Voice 2 (Alt + 2)"; enabled: root.has-score; activated => { root.edit-command("voice-2"); } }
-                MenuItem { title: "Voice 3 (Alt + 3)"; enabled: root.has-score; activated => { root.edit-command("voice-3"); } }
-                MenuItem { title: "Voice 4 (Alt + 4)"; enabled: root.has-score; activated => { root.edit-command("voice-4"); } }
-            }
-            MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
-            MenuSeparator { }
-            MenuItem { title: "Play Engraved Beat"; checkable: true; checked <=> root.play-engraved-beat; activated => { root.settings-changed(); } }
-            MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
-            MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
-            MenuItem { title: "Custom N-tuplet…"; enabled: root.has-score; activated => { root.edit-command("tuplet-dialog"); } }
-            MenuItem { title: "Chord… (A)"; enabled: root.has-score; activated => { root.edit-command("chord-dialog"); } }
-            MenuItem { title: "Text… (Shift + T)"; enabled: root.has-score; activated => { root.edit-command("text-dialog"); } }
-            MenuItem { title: "Type Lyrics (Ctrl + T)"; enabled: root.has-score; activated => { root.edit-command("lyrics"); } }
-            MenuSeparator { }
-            MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
-            MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
-            MenuItem { title: "Merge Track Into…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("merge-track"); } }
-            MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
-            MenuItem { title: "Find Fingering for Selection"; enabled: root.has-score; activated => { root.edit-command("fingering-selection"); } }
             if root.plugin-items-edit.length > 0 : MenuSeparator { }
             for it in root.plugin-items-edit : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
         }
+        Menu {
+            title: "Tools";
+            for tool[i] in root.tools : MenuItem {
+                title: tool.title;
+                enabled: (root.has-score || !tool.edits) && tool.enabled;
+                activated => { root.tool-picked(i); }
+            }
+            MenuSeparator {}
+            // Guitar Pro 8's "Check bar duration" key.
+            MenuItem { title: "Next Bar That Doesn't Add Up"; enabled: root.bad-bars; shortcut: @keys(F4); activated => { root.next-bad-bar(); } }
+            MenuSeparator {}
+            MenuItem { title: "Transpose…"; enabled: root.has-score; activated => { root.edit-command("transpose-all"); } }
+            MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
+            MenuItem { title: "Find Fingering"; enabled: root.has-score; activated => { root.edit-command("fingering-all"); } }
+            MenuItem { title: "Find Fingering for Selection"; enabled: root.has-score; activated => { root.edit-command("fingering-selection"); } }
+            MenuItem { title: "Fit Bars to Time Signature…"; enabled: root.has-score; activated => { root.edit-command("fit-all"); } }
+            MenuItem { title: "Harmonize…"; enabled: root.has-score; activated => { root.edit-command("harmonize-all"); } }
+            MenuSeparator {}
+            MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
+        }
+        for m in root.plugin-menus : Menu {
+            title: m.title;
+            for it in m.items : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
+        }
+        // Second last, just before Help (#339).
         Menu {
             title: "View";
             // Staff layouts (VIEW-3), as in Guitar Pro.
@@ -1863,11 +1917,6 @@ export component AppWindow inherits Window {
                 MenuItem { title: "Horizontal"; checkable: true; checked <=> root.layout-2; activated => { root.pick-layout(2); root.settings-changed(); } }
                 MenuItem { title: "Parchment"; checkable: true; checked <=> root.layout-3; activated => { root.pick-layout(3); root.settings-changed(); } }
             }
-            MenuSeparator { }
-            // The item ticks itself before `activated`: its new state is the
-            // user's choice from then on.
-            MenuItem { title: "Dark Interface"; checkable: true; checked: root.dark-interface; activated => { root.chosen-dark = self.checked; root.follow-desktop = false; } }
-            MenuItem { title: "Dark Page"; checkable: true; checked <=> root.dark-page; activated => { root.settings-changed(); } }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
             MenuItem { title: "Design Mode"; checkable: true; checked <=> root.design-mode; activated => { root.settings-changed(); } }
             MenuSeparator { }
@@ -1881,30 +1930,12 @@ export component AppWindow inherits Window {
             }
             if root.plugin-items-view.length > 0 : MenuSeparator { }
             for it in root.plugin-items-view : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
-        }
-        Menu {
-            title: "Tools";
-            for tool[i] in root.tools : MenuItem {
-                title: tool.title;
-                enabled: (root.has-score || !tool.edits) && tool.enabled;
-                activated => { root.tool-picked(i); }
-            }
-            MenuSeparator {}
-            // Guitar Pro 8's "Check bar duration" key.
-            MenuItem { title: "Next Bar That Doesn't Add Up"; enabled: root.bad-bars; shortcut: @keys(F4); activated => { root.next-bad-bar(); } }
-            MenuItem { title: "Transpose…"; enabled: root.has-score; activated => { root.edit-command("transpose-all"); } }
-            MenuItem { title: "Find Fingering"; enabled: root.has-score; activated => { root.edit-command("fingering-all"); } }
-            MenuItem { title: "Fit Bars to Time Signature…"; enabled: root.has-score; activated => { root.edit-command("fit-all"); } }
-            MenuItem { title: "Harmonize…"; enabled: root.has-score; activated => { root.edit-command("harmonize-all"); } }
-            MenuSeparator {}
-            MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
-        }
-        for m in root.plugin-menus : Menu {
-            title: m.title;
-            for it in m.items : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
+            MenuSeparator { }
+            MenuItem { title: "Settings…"; activated => { root.settings-dialog-shown = true; } }
         }
         Menu {
             title: "Help";
+            MenuItem { title: "Manual"; activated => { root.open-manual(); } }
             MenuItem { title: "Keyboard and Mouse"; shortcut: @keys(F1); activated => { shortcuts-popup.show(); } }
             MenuItem { title: "About OxiGuitar"; activated => { about-popup.show(); } }
             if root.plugin-items-help.length > 0 : MenuSeparator { }
@@ -2612,7 +2643,9 @@ export component AppWindow inherits Window {
                         if root.right-area.active-id == "song" && !root.has-score : Placeholder { text: "Open a file or start a new one: its title, artist and the rest show here."; }
                         if root.right-area.active-id == "song" && root.has-score : SongView {
                             fields: root.song-fields;
+                            sections: root.sections;
                             edited(id, text) => { root.song-edited(id, text); }
+                            go-to-section(i) => { root.go-to-section(i); }
                         }
                         if root.right-area.plugin : PluginTab {
                     view: 3;
@@ -3009,6 +3042,21 @@ export component AppWindow inherits Window {
         steps <=> root.transpose-steps;
         keep-fingering <=> root.transpose-keep;
         done(ok) => { root.transpose-dialog-done(ok); }
+    }
+
+    if root.settings-dialog-shown : SettingsDialog {
+        width: root.width;
+        height: root.height;
+        paper: root.paper;
+        dark-interface: root.dark-interface;
+        dark-page <=> root.dark-page;
+        play-engraved-beat <=> root.play-engraved-beat;
+        count-in <=> root.count-in-default;
+        metronome <=> root.metronome-default;
+        paper-picked(n) => { root.pick-paper(n); root.settings-changed(); }
+        dark-interface-picked(on) => { root.chosen-dark = on; root.follow-desktop = false; }
+        changed => { root.settings-changed(); }
+        done => { root.settings-dialog-shown = false; root.focus-page(); }
     }
 
     if root.fit-dialog-shown : FitDialog {
