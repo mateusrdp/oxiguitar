@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Fixed
+
+- `Cargo.lock` takes `url` 2.5.9 for RUSTSEC-2026-0592 (a stack overflow in `Url::origin()` on nested `blob:` URLs), which failed CI's advisories check. OxiGuitar itself opens no URLs; the crate comes in through Slint's compiler and webbrowser.
+
 ## [0.21.6] - 2026-11-22
 
 ### Added
