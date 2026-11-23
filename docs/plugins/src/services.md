@@ -64,7 +64,7 @@ A plugin may call only the interfaces it `requires`. When no installed plugin im
 
 ## The audio device (interface 1.3)
 
-`audio-device` is the core's own interface: the service that sends OxiGuitar's sound to the system. The basic plugins implement it for PipeWire and ALSA (Linux), WASAPI (Windows) and Core Audio (macOS), through cpal. Its types are in `oxiguitar_plugin::api::audio_device`.
+`audio-device` is the core's own interface: the service that sends OxiGuitar's sound to the system. The basic plugins implement it for PipeWire and ALSA (Linux), WASAPI (Windows) and Core Audio (macOS), through cpal. All four are a few lines over [oxiguitar-audio-cpal](https://github.com/mateusrdp/oxiguitar-audio-cpal), which does the whole job on one of cpal's hosts: a plugin for another of cpal's hosts can be built the same way. Its types are in `oxiguitar_plugin::api::audio_device`.
 
 | Method | Input | Output |
 | --- | --- | --- |

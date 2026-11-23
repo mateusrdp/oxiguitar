@@ -14,7 +14,7 @@ You need:
 
 - Rust, from [rustup](https://rustup.rs) (the version in `Cargo.toml`'s `rust-version` or newer);
 - git, and Python 3.8 or newer (nothing to install with pip);
-- on Linux, the libraries a build needs: `libasound2-dev`, `libpipewire-0.3-dev` and `libclang-dev` on Debian and Ubuntu (`alsa-lib-devel`, `pipewire-devel` and `clang-devel` on Fedora);
+- on Linux, the libraries a build needs: `libfontconfig1-dev`, `libxkbcommon-dev` and `libwayland-dev` on Debian and Ubuntu (`fontconfig-devel`, `libxkbcommon-devel` and `wayland-devel` on Fedora);
 - for the plugin template stage: `bash`.
 - for the no network stage: `bash`, `strace`, `weston`, `Xvfb`, `curl`.
 
