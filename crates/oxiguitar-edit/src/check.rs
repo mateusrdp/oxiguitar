@@ -121,19 +121,6 @@ impl BarCheck {
         out.sort_by_key(|b| (b.bar, b.track, b.staff));
         out
     }
-
-    /// Tools → Next Bar That Doesn't Add Up (F4, as Guitar Pro 8's "Check
-    /// bar duration"): the first bad bar `keep` accepts after `from` in
-    /// score order, going round to the start.
-    pub fn next_after(&self, from: StaffBar, keep: impl Fn(StaffBar) -> bool) -> Option<StaffBar> {
-        let order = self.in_score_order(keep);
-        let key = |b: &StaffBar| (b.bar, b.track, b.staff);
-        order
-            .iter()
-            .find(|b| key(b) > key(&from))
-            .or_else(|| order.first())
-            .copied()
-    }
 }
 
 #[cfg(test)]
@@ -239,12 +226,9 @@ mod tests {
         let all = |_| true;
         let order = check.in_score_order(all);
         assert_eq!(order, [at(2, 1), at(0, 4), at(1, 4), at(1, 5)]);
-        assert_eq!(check.next_after(at(0, 0), all), Some(at(2, 1)));
-        assert_eq!(check.next_after(at(2, 1), all), Some(at(0, 4)));
-        assert_eq!(check.next_after(at(1, 5), all), Some(at(2, 1)), "round");
         // Only the shown tracks.
         let shown = |b: StaffBar| b.track != 2;
-        assert_eq!(check.next_after(at(0, 0), shown), Some(at(0, 4)));
-        assert_eq!(BarCheck::default().next_after(at(0, 0), all), None);
+        assert_eq!(check.in_score_order(shown), [at(0, 4), at(1, 4), at(1, 5)]);
+        assert!(BarCheck::default().in_score_order(all).is_empty());
     }
 }
