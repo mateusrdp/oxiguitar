@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- The plugin guide says what a repository that builds on oxiguitar-audio-cpal must do: the same SDK tag and cpal version, `allow-git` in `deny.toml`, refreshing `Cargo.lock`, and the system libraries a Linux build needs.
+
 ## [0.21.7] - 2026-11-23
 
 ### Changed
