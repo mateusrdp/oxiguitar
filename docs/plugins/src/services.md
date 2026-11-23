@@ -66,6 +66,13 @@ A plugin may call only the interfaces it `requires`. When no installed plugin im
 
 `audio-device` is the core's own interface: the service that sends OxiGuitar's sound to the system. The basic plugins implement it for PipeWire and ALSA (Linux), WASAPI (Windows) and Core Audio (macOS), through cpal. All four are a few lines over [oxiguitar-audio-cpal](https://github.com/mateusrdp/oxiguitar-audio-cpal), which does the whole job on one of cpal's hosts: a plugin for another of cpal's hosts can be built the same way. Its types are in `oxiguitar_plugin::api::audio_device`.
 
+Building on oxiguitar-audio-cpal asks more of your repository than a crate from crates.io would; its [How to use it](https://mateusrdp.github.io/oxiguitar-audio-cpal/use-cases.html) page has the reasons:
+
+- Depend on it by git tag, with `oxiguitar-plugin` at the tag it uses (a second tag makes a second `Host` type) and the same cpal version, `default-features = false`, plus only your host's feature.
+- If you use cargo-deny with `unknown-git = "deny"`, add `https://github.com/mateusrdp/oxiguitar-audio-cpal` to `allow-git` next to `https://github.com/mateusrdp/oxiguitar`. The `deny.toml` that `scripts/new-repo.sh` writes lists only the second.
+- After changing a tag, run `cargo update -p oxiguitar-audio-cpal -p cpal` and commit `Cargo.lock`.
+- On Linux the build needs `libasound2-dev` (`alsa-lib-devel` on Fedora) whatever the host, because cpal always builds its ALSA host; the PipeWire host adds `libpipewire-0.3-dev` and `libclang-dev`. OxiGuitar's own build needs none of them.
+
 | Method | Input | Output |
 | --- | --- | --- |
 | `open` | `Open { stream, rate, frames, device }` | `Opened { rate, channels, frames, device }` |
