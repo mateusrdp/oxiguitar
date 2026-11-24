@@ -13,9 +13,10 @@
 #
 # So:
 # - A stalled connection is dropped after 30 seconds (apt's own timeout).
-# - Each command is cut off after TRY minutes, and tries go on until the
-#   whole has taken BUDGET minutes. What a try downloaded stays in apt's cache, so
-#   the next one only fetches the rest.
+# - Each download (the index, then the packages) is cut off after TRY
+#   minutes, and tries go on until the whole has taken BUDGET minutes. What
+#   a try downloaded stays in apt's cache, so the next one only fetches the
+#   rest. The install itself, from the cache, is never cut off.
 # - Before each new try, the mirror that was just used goes to the back of
 #   the runner's mirror list (/etc/apt/apt-mirrors.txt), so a slow mirror is
 #   not used again while another is listed.
@@ -24,13 +25,19 @@
 # The step that runs this needs a timeout-minutes above BUDGET (25 for the
 # default of 20).
 #
-# Usage: scripts/apt-install.sh PACKAGE...
+# Usage: scripts/apt-install.sh [--recommends] PACKAGE...
+#   --recommends also installs the packages' recommended packages.
 # Environment: APT_INSTALL_BUDGET (minutes, default 20),
 #              APT_INSTALL_TRY (minutes, default 8).
 
 set -euo pipefail
 
-(( $# > 0 )) || { echo "usage: $0 PACKAGE..." >&2; exit 2; }
+install=(install -y --no-install-recommends)
+if [[ "${1:-}" == --recommends ]]; then
+  install=(install -y)
+  shift
+fi
+(( $# > 0 )) || { echo "usage: $0 [--recommends] PACKAGE..." >&2; exit 2; }
 
 budget=$(( ${APT_INSTALL_BUDGET:-20} * 60 ))
 try=$(( ${APT_INSTALL_TRY:-8} * 60 ))
@@ -87,8 +94,11 @@ start=$SECONDS
 attempt=0
 while :; do
   attempt=$((attempt + 1))
+  # Only the downloads are cut off: a dpkg stopped half way would leave the
+  # system for every later try to refuse ("dpkg was interrupted").
   if sudo timeout "$(limit)" apt-get "${opts[@]}" update \
-    && sudo timeout "$(limit)" apt-get "${opts[@]}" install -y --no-install-recommends "$@"; then
+    && sudo timeout "$(limit)" apt-get "${opts[@]}" "${install[@]}" --download-only "$@" \
+    && sudo apt-get "${opts[@]}" "${install[@]}" "$@"; then
     (( attempt == 1 )) || echo "::notice::apt finished on try $attempt, after $(( (SECONDS - start) / 60 )) minutes"
     exit 0
   fi

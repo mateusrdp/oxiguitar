@@ -6,7 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Fixed
 
-- **CI rides out a slow Ubuntu mirror** (24 Nov 2026: the NET-5 job got 140 kB/s, three 5-minute tries did not fit in the step's 15 minutes, and the 0.21.8 release stopped on it). `scripts/apt-install.sh` now tries until 20 minutes have passed instead of three times, cuts each command off after 8, keeps what a try downloaded, moves the mirror it just used to the back of the runner's mirror list before trying again, and skips the translation files. Its steps in CI have 25 minutes.
+- **CI rides out a slow Ubuntu mirror** (24 Nov 2026: the NET-5 job got 140 kB/s, three 5-minute tries did not fit in the step's 15 minutes, and the 0.21.8 release stopped on it). `scripts/apt-install.sh` now tries until 20 minutes have passed instead of three times, cuts each command off after 8, keeps what a try downloaded, cuts off only downloads (never dpkg halfway through an install), moves the mirror it just used to the back of the runner's mirror list before trying again, and skips the translation files. Its steps in CI have 25 minutes.
 
 ## [0.21.8] - 2026-11-24
 
