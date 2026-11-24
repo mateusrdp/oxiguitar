@@ -188,38 +188,101 @@ pub fn check(oxp: &Path) -> Report {
     check_with(oxp, &[])
 }
 
+/// A plugin's `.slint` file, compiled (interface 1.15): its exported
+/// components.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CompiledUi {
+    /// Every exported component, windows or not.
+    pub components: Vec<UiComponent>,
+}
+
+impl CompiledUi {
+    /// The exported component `name`.
+    pub fn component(&self, name: &str) -> Option<&UiComponent> {
+        self.components.iter().find(|c| c.name == name)
+    }
+}
+
+/// An exported component of a plugin's `.slint` file: what a plugin can set
+/// and hear.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UiComponent {
+    /// Its name.
+    pub name: String,
+    /// Its own public properties (`in`, `out`, `in-out`), sorted.
+    pub properties: Vec<String>,
+    /// Its own callbacks, sorted.
+    pub callbacks: Vec<String>,
+}
+
 /// Compiles a plugin's `.slint` file as OxiGuitar does (interface 1.15):
-/// Slint's interpreter, the window's Fluent style; the errors by line.
-pub fn compile_ui(source: String) -> Result<slint_interpreter::CompilationResult, String> {
-    let mut compiler = slint_interpreter::Compiler::default();
-    compiler.set_style("fluent".into());
-    // Every exported component, as the app compiles them: embedded views
-    // don't inherit Window.
-    compiler
-        .compiler_configuration(i_slint_core::InternalToken)
-        .components_to_generate = i_slint_compiler::ComponentSelection::AllExported;
-    let mut future = std::pin::pin!(
-        compiler.build_from_source(source, std::path::PathBuf::from("plugin.slint"))
+/// Slint's compiler at the app's version, the window's Fluent style, every
+/// exported component kept. Only the compiler: the suite needs no UI
+/// runtime, so a plugin's tests need no system libraries for it. The errors
+/// by line.
+pub fn compile_ui(source: String) -> Result<CompiledUi, String> {
+    use i_slint_compiler::diagnostics::BuildDiagnostics;
+    use i_slint_compiler::langtype::Type;
+    use i_slint_compiler::native_class::PropertyVisibility;
+    let mut config = i_slint_compiler::CompilerConfiguration::new(
+        i_slint_compiler::generator::OutputFormat::Interpreter,
     );
+    config.style = Some("fluent".into());
+    config.components_to_generate = i_slint_compiler::ComponentSelection::AllExported;
+    let mut diagnostics = BuildDiagnostics::default();
+    let path = i_slint_compiler::source_path::SourcePath::new("plugin.slint");
+    let node = i_slint_compiler::parser::parse(source, Some(path), &mut diagnostics);
+    let mut future = std::pin::pin!(i_slint_compiler::compile_syntax_node(
+        node,
+        diagnostics,
+        config
+    ));
     let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
-    let result = loop {
+    let (document, diagnostics, _) = loop {
         if let std::task::Poll::Ready(r) = future.as_mut().poll(&mut cx) {
             break r;
         }
     };
-    let errors: Vec<String> = result
-        .diagnostics()
-        .filter(|d| d.level() == slint_interpreter::DiagnosticLevel::Error)
+    let errors: Vec<String> = diagnostics
+        .iter()
+        .filter(|d| d.level() == i_slint_compiler::diagnostics::DiagnosticLevel::Error)
         .map(|d| {
             let (line, column) = d.line_column();
             format!("line {line}, column {column}: {}", d.message())
         })
         .collect();
-    if errors.is_empty() {
-        Ok(result)
-    } else {
-        Err(errors.join("; "))
+    if !errors.is_empty() {
+        return Err(errors.join("; "));
     }
+    let components = document
+        .exported_roots()
+        .map(|c| {
+            let root = c.root_element.borrow();
+            let mut properties = Vec::new();
+            let mut callbacks = Vec::new();
+            for (name, declaration) in &root.property_declarations {
+                match (&declaration.property_type, declaration.visibility) {
+                    (Type::Callback(_), PropertyVisibility::Private) => {}
+                    (Type::Callback(_), _) => callbacks.push(name.to_string()),
+                    (
+                        _,
+                        PropertyVisibility::Input
+                        | PropertyVisibility::Output
+                        | PropertyVisibility::InOut,
+                    ) => properties.push(name.to_string()),
+                    _ => {}
+                }
+            }
+            properties.sort();
+            callbacks.sort();
+            UiComponent {
+                name: c.id.to_string(),
+                properties,
+                callbacks,
+            }
+        })
+        .collect();
+    Ok(CompiledUi { components })
 }
 
 /// [`check`] for a plugin that `needs` others: the plugin files in

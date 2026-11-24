@@ -3356,14 +3356,12 @@ name = "oxiguitar-plugin-test"
 version = "1.15.0"
 dependencies = [
  "i-slint-compiler",
- "i-slint-core",
  "libc",
  "oxiguitar-edit",
  "oxiguitar-host",
  "oxiguitar-model",
  "oxiguitar-play",
  "serde_json",
- "slint-interpreter",
 ]
 
 [[package]]

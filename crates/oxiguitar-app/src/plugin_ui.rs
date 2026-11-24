@@ -455,6 +455,15 @@ pub(crate) fn factory(
     track: Option<TrackView>,
     refresh: impl FnOnce(ComponentFactory) + 'static,
 ) -> ComponentFactory {
+    make_factory(id, track, Box::new(refresh))
+}
+
+/// [`factory`] with its `refresh` boxed: it calls itself.
+fn make_factory(
+    id: &ViewId,
+    track: Option<TrackView>,
+    refresh: Box<dyn FnOnce(ComponentFactory)>,
+) -> ComponentFactory {
     let Some((component, _)) = spec_of(id) else {
         return ComponentFactory::default();
     };
@@ -465,7 +474,7 @@ pub(crate) fn factory(
                 .and_then(|(c, _)| definition(&id.plugin, &c))
                 .is_some()
             {
-                refresh(factory(&id, track, |_| {}));
+                refresh(make_factory(&id, track, Box::new(|_| {})));
             }
         });
         return ComponentFactory::default();
