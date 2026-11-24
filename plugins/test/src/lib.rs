@@ -66,8 +66,8 @@ use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{Score, ScoreInfo};
 use oxiguitar_plugin::{
     Availability, Canvas, Error, ErrorKind, Event, FormatReader, FormatWriter, Host, Level,
-    LogEntry, Plugin, PointerKind, Read, Row, Selection2, Service, Tab, TabContent, TabEvent, Tool,
-    TrackInfo, TrackSection, Widget, Written,
+    LogEntry, Plugin, PluginFileState, PointerKind, Read, Row, Selection2, Service, Tab,
+    TabContent, TabEvent, Tool, TrackInfo, TrackSection, Widget, Written,
 };
 
 use oxiguitar_plugin::serde_json;
@@ -1076,6 +1076,29 @@ impl Service for TestPlugin {
                 .score_file()?
                 .map(|p| p.to_string_lossy().into_owned().into_bytes())
                 .unwrap_or_default()),
+            // The user's plugin folder, then a line a plugin file: its
+            // folder's kind, state, id and path (interface 1.15).
+            "plugin-files" => {
+                let found = self.host.plugin_files()?;
+                let mut out = format!("{}\n", found.user_folder);
+                for f in found.files {
+                    let state = match f.state {
+                        PluginFileState::Used => "used",
+                        PluginFileState::Disabled => "disabled",
+                        PluginFileState::Replaced(_) => "replaced",
+                        PluginFileState::Unusable(_) => "unusable",
+                        PluginFileState::Unmet(_) => "unmet",
+                        PluginFileState::Withdrawn(_) => "withdrawn",
+                    };
+                    out.push_str(&format!(
+                        "{:?} {state} {} {}\n",
+                        f.folder,
+                        f.id.as_deref().unwrap_or("-"),
+                        f.path
+                    ));
+                }
+                Ok(out.into_bytes())
+            }
             // How many times it was asked to draw (interface 1.8).
             // How many times it was asked to play a track (interface 1.8).
             // Sets the plugin's own detune for playing (interface 1.12).

@@ -1102,6 +1102,77 @@ pub enum HostRequest<'a> {
     /// would. Answered with [`HostAnswer::Done`]; an error when no score is
     /// open or it has no such place. Since interface 1.14.
     Select(crate::event::Selection2),
+    /// Every plugin file the host found in the plugin folders, usable or
+    /// not, copies another file replaces included, and the user's plugin
+    /// folder: for a plugin that manages the others. Answered with
+    /// [`HostAnswer::PluginFiles`]. Since interface 1.15.
+    PluginFiles,
+}
+
+/// What [`HostRequest::PluginFiles`] answers. Since interface 1.15.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PluginFiles {
+    /// The user's plugin folder, an absolute path as UTF-8 text: where a
+    /// plugin the user adds goes. The host creates it at start.
+    pub user_folder: String,
+    /// Every `.oxp` file found, in the order the host examined them:
+    /// folder by folder in search order, then by name.
+    pub files: Vec<PluginFile>,
+}
+
+/// A plugin file the host found ([`HostRequest::PluginFiles`]). Since
+/// interface 1.15.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PluginFile {
+    /// The file, an absolute path as UTF-8 text.
+    pub path: String,
+    /// What kind of folder holds it.
+    pub folder: PluginFolderKind,
+    /// The id its manifest gives; `None` when the manifest can't be read.
+    pub id: Option<String>,
+    /// The name its manifest gives, empty when it can't be read.
+    pub name: String,
+    /// The version its manifest gives, empty when it can't be read.
+    pub version: String,
+    /// The homepage its manifest gives, empty when it can't be read.
+    pub homepage: String,
+    /// Whether the host uses it, and why not.
+    pub state: PluginFileState,
+    /// Whether its code is loaded in this session.
+    pub loaded: bool,
+}
+
+/// What kind of plugin folder a file is in. Since interface 1.15.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PluginFolderKind {
+    /// The user's own plugin folder.
+    User,
+    /// The folder beside the program: a portable copy's, the AppImage's,
+    /// the macOS app's own, or wherever the program was installed outside
+    /// the system's places.
+    Program,
+    /// A system folder packages install into.
+    System,
+    /// A folder settings.json's `plugin_folders` lists that is none of the
+    /// above.
+    Listed,
+}
+
+/// Whether the host uses a plugin file. Since interface 1.15.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PluginFileState {
+    /// It is used, loaded when first needed.
+    Used,
+    /// settings.json disables it.
+    Disabled,
+    /// Another file holds the same plugin and is used instead: its path.
+    Replaced(String),
+    /// It can't be used here; the text says why.
+    Unusable(String),
+    /// A plugin it needs is missing or can't be used; the text says which.
+    Unmet(String),
+    /// It failed this session and was withdrawn; the text says how.
+    Withdrawn(String),
 }
 
 /// The owner [`HostRequest::RunTool`] names for the core's own tools.
@@ -1362,6 +1433,8 @@ pub enum HostAnswer<'a> {
     /// What a tool did: its report for the footer, which may be empty.
     /// Since interface 1.14.
     Report(String),
+    /// Every plugin file found. Since interface 1.15.
+    PluginFiles(PluginFiles),
 }
 
 impl HostAnswer<'_> {
@@ -1381,6 +1454,7 @@ impl HostAnswer<'_> {
             HostAnswer::Measured(m) => HostAnswer::Measured(m),
             HostAnswer::Tools(t) => HostAnswer::Tools(t),
             HostAnswer::Report(r) => HostAnswer::Report(r),
+            HostAnswer::PluginFiles(f) => HostAnswer::PluginFiles(f),
         }
     }
 }
@@ -1717,6 +1791,13 @@ mod tests {
         assert_eq!(
             first(encode(&HostAnswer::Report(String::new())).unwrap()),
             12
+        );
+
+        // Interface 1.15.
+        assert_eq!(first(encode(&HostRequest::PluginFiles).unwrap()), 22);
+        assert_eq!(
+            first(encode(&HostAnswer::PluginFiles(PluginFiles::default())).unwrap()),
+            13
         );
     }
 

@@ -70,6 +70,11 @@ pub struct Folders {
     /// System plugin folders, which packages install into. OxiGuitar only
     /// reads them; it never creates or writes them.
     pub system_plugins: Vec<PathBuf>,
+    /// The one of `system_plugins` that comes with the program, found from
+    /// where it is (a portable copy, the AppImage, the macOS app, a build
+    /// installed outside the system's places); `None` when the program's
+    /// own folder is one of the system's (installed by a package).
+    pub program_plugins: Option<PathBuf>,
 }
 
 impl Folders {
@@ -132,6 +137,7 @@ impl Folders {
             },
         };
         let bin = exe.and_then(Path::parent);
+        let mut program_plugins = None;
         let system_plugins = match system {
             // /usr/bin/oxiguitar → /usr/lib/oxiguitar/plugins; the same
             // rule finds /usr/local, the AppImage's own tree and a build
@@ -151,6 +157,7 @@ impl Folders {
                 if let Some(p) = derived
                     && !fallbacks.contains(&p)
                 {
+                    program_plugins = Some(p.clone());
                     out.push(p);
                 }
                 out.extend(fallbacks);
@@ -159,23 +166,30 @@ impl Folders {
             // OxiGuitar.app/Contents/MacOS/oxiguitar → Contents/PlugIns.
             // When the derived path is missing (no exe path), fall back to
             // the system-wide plugin folder.
-            System::MacOs => bin
-                .and_then(Path::parent)
-                .map(|contents| contents.join("PlugIns"))
-                .into_iter()
-                .chain([PathBuf::from(
-                    "/Library/Application Support/OxiGuitar/plugins",
-                )])
-                .collect(),
+            System::MacOs => {
+                program_plugins = bin
+                    .and_then(Path::parent)
+                    .map(|contents| contents.join("PlugIns"));
+                program_plugins
+                    .clone()
+                    .into_iter()
+                    .chain([PathBuf::from(
+                        "/Library/Application Support/OxiGuitar/plugins",
+                    )])
+                    .collect()
+            }
             // The portable zip: plugins\ beside oxiguitar.exe. When the
             // derived path is missing (a dev build that hasn't been
             // installed), fall back to the standard Windows plugin
             // directory.
-            System::Windows => bin
-                .map(|b| b.join("plugins"))
-                .into_iter()
-                .chain([PathBuf::from("C:/Program Files/OxiGuitar/plugins")])
-                .collect(),
+            System::Windows => {
+                let installed = PathBuf::from("C:/Program Files/OxiGuitar/plugins");
+                program_plugins = bin.map(|b| b.join("plugins")).filter(|p| *p != installed);
+                bin.map(|b| b.join("plugins"))
+                    .into_iter()
+                    .chain([installed])
+                    .collect()
+            }
         };
         Some(Folders {
             user_plugins: data.join("plugins"),
@@ -183,6 +197,7 @@ impl Folders {
             data,
             cache,
             system_plugins,
+            program_plugins,
         })
     }
 
@@ -317,6 +332,8 @@ pub(crate) mod tests {
                 PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
             ]
         );
+        // A package's program: its folder is a system one.
+        assert_eq!(f.program_plugins, None);
         assert_eq!(f.default_plugin_folders()[0], f.system_plugins[0]);
         // The second fallback comes before the user folder.
         assert_eq!(
@@ -337,6 +354,28 @@ pub(crate) mod tests {
             f.named("soundfonts"),
             PathBuf::from("/home/mat/.local/share/oxiguitar/soundfonts")
         );
+    }
+
+    #[test]
+    fn the_program_s_own_folder_is_told_apart() {
+        let appimage = Folders::resolve(
+            System::Linux,
+            env(&[("HOME", "/home/mat")]),
+            Some(Path::new("/tmp/.mount_OxiGu/usr/bin/oxiguitar")),
+        )
+        .unwrap();
+        let own = PathBuf::from("/tmp/.mount_OxiGu/usr/lib/oxiguitar/plugins");
+        assert_eq!(appimage.program_plugins.as_ref(), Some(&own));
+        assert_eq!(appimage.system_plugins[0], own);
+        let installed = Folders::resolve(
+            System::Windows,
+            env(&[("APPDATA", "C:/Users/mat/AppData/Roaming")]),
+            Some(Path::new("C:/Program Files/OxiGuitar/oxiguitar.exe")),
+        )
+        .unwrap();
+        assert_eq!(installed.program_plugins, None);
+        let none = Folders::resolve(System::Linux, env(&[("HOME", "/home/mat")]), None).unwrap();
+        assert_eq!(none.program_plugins, None);
     }
 
     #[test]
@@ -376,6 +415,7 @@ pub(crate) mod tests {
             mac.system_plugins[0],
             PathBuf::from("/Applications/OxiGuitar.app/Contents/PlugIns")
         );
+        assert_eq!(mac.program_plugins.as_ref(), Some(&mac.system_plugins[0]));
         let win = Folders::resolve(
             System::Windows,
             env(&[("APPDATA", "C:/Users/mat/AppData/Roaming")]),
@@ -392,6 +432,10 @@ pub(crate) mod tests {
                 PathBuf::from("D:/OxiGuitar/plugins"),
                 PathBuf::from("C:/Program Files/OxiGuitar/plugins"),
             ]
+        );
+        assert_eq!(
+            win.program_plugins,
+            Some(PathBuf::from("D:/OxiGuitar/plugins"))
         );
         assert_eq!(
             win.cache,

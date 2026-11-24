@@ -74,3 +74,15 @@ Such a folder sits beside `plugins`, in each of OxiGuitar's folders:
 ## The score's file (interface 1.13)
 
 A plugin that keeps paths to files the user picked can keep them relative to the open score, so a folder holding the score, its `.oxg` file and those files can be moved or shared whole: `host.score_file()` answers with the score's file as an absolute path, or `None` when no score is open or it was never saved. Resolve a relative path against its folder each time you need the file, since the score may have been saved elsewhere since. OxiGuitar opens no files for a plugin: a plugin that lets the user pick one shows its own file dialog.
+
+## The plugin files (interface 1.15)
+
+A plugin that manages the others (lists them, adds or removes their files) asks for what OxiGuitar found: `host.plugin_files()` answers with `PluginFiles`, holding `user_folder`, the user's plugin folder, where a plugin the user adds goes, and `files`, every `.oxp` file in the plugin folders, in the order OxiGuitar examined them (folder by folder in search order, then by name). Each `PluginFile` has:
+
+- `path`, the file;
+- `folder`, its folder's kind: `User`, `Program` (the folder that comes with the program: a portable copy's, the AppImage's, the macOS app's), `System` (where packages install) or `Listed` (another folder settings.json's `plugin_folders` names);
+- `id`, `name`, `version` and `homepage`, from its manifest (`id` is `None` and the rest empty when the manifest can't be read);
+- `state`: `Used`, `Disabled`, `Replaced(path)` (another copy of the same plugin is used), `Unusable(why)`, `Unmet(why)` (a plugin it needs is missing) or `Withdrawn(why)` (it failed this session);
+- `loaded`, whether its code is loaded now.
+
+Copies another file replaces are listed too, so a plugin can show every copy of a plugin and the one that is used. What changes in the folders takes effect at the next start: OxiGuitar reads the folders once, and never unloads a plugin.

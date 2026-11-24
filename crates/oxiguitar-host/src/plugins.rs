@@ -67,8 +67,8 @@ use oxiguitar_plugin_api::manifest::{
 use oxiguitar_plugin_api::message::{
     Answer, Availability, Clicked, DrawPlace, DrawTimes, Drawn, Engraving, Error, ErrorKind,
     FolderPlaces, HostAnswer, HostRequest, Link, LogEntry, PERFORMED_MAX, Perform, PlayedBeat,
-    PlayedNote, PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo,
-    decode, encode, outcome,
+    PlayedNote, PluginFile, PluginFileState, PluginFiles, PluginFolderKind, PluginFolders, Prepare,
+    PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
@@ -2724,6 +2724,7 @@ impl Plugins {
             HostRequest::Folder { name } => {
                 self.folder_places(manifest, &name).map(HostAnswer::Folder)
             }
+            HostRequest::PluginFiles => self.plugin_files(manifest).map(HostAnswer::PluginFiles),
             HostRequest::Advise(given) => {
                 if !manifest.knows_minor(4) {
                     Err(Error::new(
@@ -2771,6 +2772,68 @@ impl Plugins {
     /// Where the shared folder `name` of the plugin with `manifest` is
     /// (interface 1.8): the user's, created on the way, and the ones that
     /// exist beside the system's plugin folders.
+    /// Every plugin file found and the user's plugin folder (interface
+    /// 1.15), for a plugin that manages the others.
+    fn plugin_files(&self, manifest: &Manifest) -> Result<PluginFiles, Error> {
+        if !manifest.knows_minor(15) {
+            return Err(Error::new(
+                ErrorKind::Unsupported,
+                "asking for the plugin files needs interface 1.15",
+            ));
+        }
+        let Some(folders) = self.0.folders.get() else {
+            return Err(Error::not_found(
+                "this program keeps no folders for plugins",
+            ));
+        };
+        let text = |path: &Path| {
+            path.to_str().map(str::to_owned).ok_or_else(|| {
+                Error::new(
+                    ErrorKind::Unsupported,
+                    format!("the path {} is not UTF-8 text", path.display()),
+                )
+            })
+        };
+        let kind = |path: &Path| {
+            let folder = path.parent().unwrap_or(path);
+            if folder == folders.user_plugins {
+                PluginFolderKind::User
+            } else if folders.program_plugins.as_deref() == Some(folder) {
+                PluginFolderKind::Program
+            } else if folders.system_plugins.iter().any(|p| p == folder) {
+                PluginFolderKind::System
+            } else {
+                PluginFolderKind::Listed
+            }
+        };
+        let mut files = Vec::with_capacity(self.0.found.len());
+        for found in &self.0.found {
+            let state = match (&found.state, found.failure()) {
+                (_, Some(why)) => PluginFileState::Withdrawn(why.to_owned()),
+                (State::Ready, None) => PluginFileState::Used,
+                (State::Disabled, None) => PluginFileState::Disabled,
+                (State::Replaced(by), None) => PluginFileState::Replaced(text(by)?),
+                (State::Unusable(why), None) => PluginFileState::Unusable(why.clone()),
+                (State::Unmet(why), None) => PluginFileState::Unmet(why.clone()),
+            };
+            let m = found.manifest.as_ref();
+            files.push(PluginFile {
+                path: text(&found.path)?,
+                folder: kind(&found.path),
+                id: m.map(|m| m.id.clone()),
+                name: m.map(|m| m.name.clone()).unwrap_or_default(),
+                version: m.map(|m| m.version.to_string()).unwrap_or_default(),
+                homepage: m.map(|m| m.homepage.clone()).unwrap_or_default(),
+                state,
+                loaded: matches!(found.loaded.get(), Some(Ok(_))),
+            });
+        }
+        Ok(PluginFiles {
+            user_folder: text(&folders.user_plugins)?,
+            files,
+        })
+    }
+
     fn folder_places(&self, manifest: &Manifest, name: &str) -> Result<FolderPlaces, Error> {
         if !manifest.knows_minor(8) {
             return Err(Error::new(

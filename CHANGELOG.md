@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **Plugin interface 1.15: the plugin files** (#344). A plugin can ask for every plugin file OxiGuitar found, copies replaced by another included, with its folder's kind (the user's, the program's, the system's or one settings.json lists), its manifest's id, name, version and homepage, whether it is used and why not, and whether it is loaded, and for the user's plugin folder (`Host::plugin_files`). It is what a plugin that manages the others needs (oxiguitar-plugin-manager). The SDK crates are at 1.15.0. The plugin guide's versions page now says interface 1.14 came with 0.21.5.
+
 ## [0.21.9] - 2026-11-24
 
 ### Fixed

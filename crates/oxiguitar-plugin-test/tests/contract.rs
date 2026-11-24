@@ -2643,6 +2643,61 @@ fn interface_1_13_the_score_s_file() {
     );
 }
 
+/// Interface 1.15: a plugin lists every plugin file found, with its
+/// folder's kind and whether it is used, and the user's plugin folder.
+#[test]
+fn interface_1_15_the_plugin_files() {
+    use oxiguitar_host::{Folders, System};
+    let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("contract-plugin-files");
+    let _ = std::fs::remove_dir_all(&home);
+    let folders = Folders::resolve(
+        System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    let mut folders = folders;
+    let system = home.join("system/plugins");
+    let program = home.join("program/plugins");
+    folders.system_plugins = vec![program.clone(), system.clone()];
+    folders.program_plugins = Some(program.clone());
+    for dir in [&system, &program, &folders.user_plugins] {
+        std::fs::create_dir_all(dir).unwrap();
+    }
+    // The same plugin in the system's folder and the user's, which wins;
+    // a damaged file beside the program.
+    std::fs::copy(test_oxp(), system.join("test.oxp")).unwrap();
+    std::fs::copy(test_oxp(), folders.user_plugins.join("test.oxp")).unwrap();
+    std::fs::write(program.join("broken.oxp"), b"not a plugin").unwrap();
+    let (plugins, _) = discover(&folders.default_plugin_folders(), SharedSettings::default());
+    // No folders, no list.
+    let e = plugins
+        .call_service("test-echo", "plugin-files", b"")
+        .unwrap_err();
+    assert!(e.message.contains("keeps no folders"), "{e}");
+    plugins.use_folders(folders.clone());
+    let answer = plugins
+        .call_service("test-echo", "plugin-files", b"")
+        .unwrap();
+    let answer = String::from_utf8(answer).unwrap();
+    let path = |p: PathBuf| p.to_str().unwrap().to_owned();
+    assert_eq!(
+        answer.lines().collect::<Vec<_>>(),
+        [
+            path(folders.user_plugins.clone()),
+            format!("Program unusable - {}", path(program.join("broken.oxp"))),
+            format!(
+                "System replaced oxiguitar.test {}",
+                path(system.join("test.oxp"))
+            ),
+            format!(
+                "User used oxiguitar.test {}",
+                path(folders.user_plugins.join("test.oxp"))
+            ),
+        ]
+    );
+}
+
 /// A core that measures, copies, selects and runs tools, for interface
 /// 1.14: what it was asked, and the plugins, to run their tools through.
 #[derive(Default)]

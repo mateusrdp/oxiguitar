@@ -61,6 +61,7 @@ and takes the lock only to read or change `State`.
 | `folders()` | The plugin's own data and cache folders ([Settings](settings.md)) | 1.3 |
 | `folder(name)` | Every place a shared folder of the plugin's own name is ([Settings](settings.md#shared-folders)) | 1.8 |
 | `score_file()` | The open score's file, or `None` before it is saved ([Settings](settings.md#the-scores-file-interface-113)) | 1.13 |
+| `plugin_files()` | Every plugin file found and the user's plugin folder ([Settings](settings.md#the-plugin-files-interface-115)) | 1.15 |
 | `advise(advice)` | Asks the core to show a dialog with a title, a text and up to three links, once the window is up, with a "Don't show this again" box ([Advice](advice.md)) | 1.4 |
 
 `Host::detached()` answers like a host with no window, no settings and no services: for unit tests.

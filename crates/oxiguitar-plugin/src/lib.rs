@@ -61,8 +61,8 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::message::{
     Advice, Availability, CORE_TOOLS, Clicked, DrawPlace, DrawTimes, Drawn, DrawnRun, Error,
-    ErrorKind, Level, LogEntry, Perform, PerformStaff, PlayedBar, PlayedNote, TextMeasure,
-    ToolEntry, TrackInfo,
+    ErrorKind, Level, LogEntry, Perform, PerformStaff, PlayedBar, PlayedNote, PluginFile,
+    PluginFileState, PluginFiles, PluginFolderKind, TextMeasure, ToolEntry, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -946,6 +946,16 @@ impl Host {
         }
     }
 
+    /// Every plugin file OxiGuitar found in its plugin folders, usable or
+    /// not, copies another file replaces included, and the user's plugin
+    /// folder (interface 1.15): for a plugin that manages the others.
+    pub fn plugin_files(&self) -> Result<PluginFiles, Error> {
+        match self.0.request(HostRequest::PluginFiles)? {
+            HostAnswer::PluginFiles(f) => Ok(f),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// The open score's file (interface 1.13), as an absolute path; `None`
     /// when no score is open or it was never saved. For paths kept relative
     /// to the score.
@@ -1137,7 +1147,7 @@ impl HostServices for Detached {
             HostRequest::Service { interface, .. } => Err(Error::not_found(format!(
                 "no service of {interface:?} (a detached host has none)"
             ))),
-            HostRequest::Folders | HostRequest::Folder { .. } => {
+            HostRequest::Folders | HostRequest::Folder { .. } | HostRequest::PluginFiles => {
                 Err(Error::not_found("a detached host has no folders"))
             }
             HostRequest::Copy { .. } => Ok(HostAnswer::Done),
