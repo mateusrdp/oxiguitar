@@ -363,6 +363,43 @@ pub enum Request<'a> {
         /// The options, JSON text.
         options: String,
     },
+    /// The plugin's `.slint` file, whose components its views show
+    /// (manifest `views`). Answered with [`Answer::Ui`]. Asked once a
+    /// session, the first time a view is shown. Since interface 1.15.
+    Ui,
+    /// The view `view` was made: a window opened, a panel's tab shown, the
+    /// Track tab showing `track` (for a [`crate::view::Place::Track`] view:
+    /// the track and its settings for the plugin), the export dialog
+    /// showing the exporter. Its properties are as the plugin last set
+    /// them; set any that depend on what it is shown for. Answered with
+    /// [`Answer::Done`]. Since interface 1.15.
+    ViewShown {
+        /// The view's id.
+        view: String,
+        /// The track, for a section of the track dialog.
+        track: Option<crate::view::TrackView>,
+    },
+    /// A callback of the view's component was called: `callback` by its
+    /// name in the `.slint` file, with its arguments. Answered with
+    /// [`Answer::Done`]; a callback returns nothing to the UI. Since
+    /// interface 1.15.
+    ViewCallback {
+        /// The view's id.
+        view: String,
+        /// The callback's name.
+        callback: String,
+        /// Its arguments.
+        args: Vec<crate::view::Value>,
+    },
+    /// The view is gone: its window closed, or the export dialog it was in
+    /// closed, `accepted` when with OK (or the export's format changed). Answered
+    /// with [`Answer::Done`]. Since interface 1.15.
+    ViewClosed {
+        /// The view's id.
+        view: String,
+        /// The dialog it was in was accepted.
+        accepted: bool,
+    },
 }
 
 /// A click on a drawing ([`Request::Clicked`]). Since interface 1.8.
@@ -799,6 +836,8 @@ pub enum Answer<'a> {
     /// changed, added or left out as the plugin plays them. Since
     /// interface 1.8.
     Performed(Vec<PlayedNote>),
+    /// The plugin's `.slint` file. Since interface 1.15.
+    Ui(String),
 }
 
 impl Answer<'_> {
@@ -840,6 +879,7 @@ impl Answer<'_> {
             Answer::Updated(applied) => Answer::Updated(applied),
             Answer::Drawn(d) => Answer::Drawn(d),
             Answer::Performed(n) => Answer::Performed(n),
+            Answer::Ui(s) => Answer::Ui(s),
         }
     }
 }
@@ -1102,6 +1142,116 @@ pub enum HostRequest<'a> {
     /// would. Answered with [`HostAnswer::Done`]; an error when no score is
     /// open or it has no such place. Since interface 1.14.
     Select(crate::event::Selection2),
+    /// Every plugin file the host found in the plugin folders, usable or
+    /// not, copies another file replaces included, and the user's plugin
+    /// folder: for a plugin that manages the others. Answered with
+    /// [`HostAnswer::PluginFiles`]. Since interface 1.15.
+    PluginFiles,
+    /// Show the view `view` (manifest `views`): open its window, or bring
+    /// its panel's tab to the front. Answered with [`HostAnswer::Done`]; an
+    /// error for a view shown only where the user opens it (a track
+    /// section, an export's options). A component that can't be made is
+    /// named in the footer. Since interface 1.15.
+    ShowView {
+        /// The view's id.
+        view: String,
+    },
+    /// Close the view's window. Answered with [`HostAnswer::Done`]. Since
+    /// interface 1.15.
+    CloseView {
+        /// The view's id.
+        view: String,
+    },
+    /// Set properties of the view's component, by their names in the
+    /// `.slint` file. They are kept: a view made later (a window opened
+    /// again, a panel shown again) starts with them. Answered with
+    /// [`HostAnswer::Done`] at once: a property the component doesn't have,
+    /// or a value not of its type, is named in the footer when it is set.
+    /// An image of the wrong size is an error. Since interface 1.15.
+    SetView {
+        /// The view's id.
+        view: String,
+        /// The properties and their values.
+        properties: Vec<(String, crate::view::Value)>,
+    },
+    /// The track's settings for the plugin, as its Track-tab view changed
+    /// them: they go into the track as one change the user can undo, as a
+    /// section's widgets' settings do. Answered with [`HostAnswer::Done`]
+    /// at once; an error for a view that isn't a track section's or
+    /// settings that aren't a JSON object. The footer says so when the
+    /// Track tab no longer shows the view. Since interface 1.15.
+    SetTrackSettings {
+        /// The view's id.
+        view: String,
+        /// The settings, a JSON object as text.
+        settings: String,
+    },
+}
+
+/// What [`HostRequest::PluginFiles`] answers. Since interface 1.15.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PluginFiles {
+    /// The user's plugin folder, an absolute path as UTF-8 text: where a
+    /// plugin the user adds goes. The host creates it at start.
+    pub user_folder: String,
+    /// Every `.oxp` file found, in the order the host examined them:
+    /// folder by folder in search order, then by name.
+    pub files: Vec<PluginFile>,
+}
+
+/// A plugin file the host found ([`HostRequest::PluginFiles`]). Since
+/// interface 1.15.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PluginFile {
+    /// The file, an absolute path as UTF-8 text.
+    pub path: String,
+    /// What kind of folder holds it.
+    pub folder: PluginFolderKind,
+    /// The id its manifest gives; `None` when the manifest can't be read.
+    pub id: Option<String>,
+    /// The name its manifest gives, empty when it can't be read.
+    pub name: String,
+    /// The version its manifest gives, empty when it can't be read.
+    pub version: String,
+    /// The homepage its manifest gives, empty when it can't be read.
+    pub homepage: String,
+    /// Whether the host uses it, and why not.
+    pub state: PluginFileState,
+    /// Whether its code is loaded in this session.
+    pub loaded: bool,
+}
+
+/// What kind of plugin folder a file is in. Since interface 1.15.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PluginFolderKind {
+    /// The user's own plugin folder.
+    User,
+    /// The folder beside the program: a portable copy's, the AppImage's,
+    /// the macOS app's own, or wherever the program was installed outside
+    /// the system's places.
+    Program,
+    /// A system folder packages install into.
+    System,
+    /// A folder settings.json's `plugin_folders` lists that is none of the
+    /// above.
+    Listed,
+}
+
+/// Whether the host uses a plugin file. Since interface 1.15.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PluginFileState {
+    /// It is used, loaded when first needed.
+    Used,
+    /// settings.json disables it.
+    Disabled,
+    /// Another file holds the same plugin and is used instead: its path.
+    Replaced(String),
+    /// It can't be used here; the text says why.
+    Unusable(String),
+    /// A plugin it needs is missing or can't be used; the text says which.
+    Unmet(String),
+    /// It failed this session and was withdrawn; the text says how.
+    Withdrawn(String),
 }
 
 /// The owner [`HostRequest::RunTool`] names for the core's own tools.
@@ -1362,6 +1512,8 @@ pub enum HostAnswer<'a> {
     /// What a tool did: its report for the footer, which may be empty.
     /// Since interface 1.14.
     Report(String),
+    /// Every plugin file found. Since interface 1.15.
+    PluginFiles(PluginFiles),
 }
 
 impl HostAnswer<'_> {
@@ -1381,6 +1533,7 @@ impl HostAnswer<'_> {
             HostAnswer::Measured(m) => HostAnswer::Measured(m),
             HostAnswer::Tools(t) => HostAnswer::Tools(t),
             HostAnswer::Report(r) => HostAnswer::Report(r),
+            HostAnswer::PluginFiles(f) => HostAnswer::PluginFiles(f),
         }
     }
 }
@@ -1717,6 +1870,25 @@ mod tests {
         assert_eq!(
             first(encode(&HostAnswer::Report(String::new())).unwrap()),
             12
+        );
+
+        // Interface 1.15.
+        assert_eq!(first(encode(&HostRequest::PluginFiles).unwrap()), 22);
+        assert_eq!(first(encode(&Request::Ui).unwrap()), 26);
+        let closed = Request::ViewClosed {
+            view: "v".into(),
+            accepted: false,
+        };
+        assert_eq!(first(encode(&closed).unwrap()), 29);
+        assert_eq!(first(encode(&Answer::Ui(String::new())).unwrap()), 16);
+        let set = HostRequest::SetTrackSettings {
+            view: "v".into(),
+            settings: "{}".into(),
+        };
+        assert_eq!(first(encode(&set).unwrap()), 26);
+        assert_eq!(
+            first(encode(&HostAnswer::PluginFiles(PluginFiles::default())).unwrap()),
+            13
         );
     }
 

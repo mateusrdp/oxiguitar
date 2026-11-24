@@ -1759,6 +1759,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "i-slint-backend-qt"
+version = "1.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "467b228fc48eabde7e912986b4d444353729ede05f9a487cbedcc3d927590de8"
+dependencies = [
+ "const-field-offset",
+ "i-slint-common",
+ "i-slint-core",
+ "i-slint-core-macros",
+ "vtable",
+]
+
+[[package]]
 name = "i-slint-backend-selector"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1766,6 +1779,7 @@ checksum = "b824c2cce2e9f766eb42138a0ac1ec93d095dd9cd45a2dfa650dd3e6558cdfd9"
 dependencies = [
  "cfg_aliases",
  "i-slint-backend-linuxkms",
+ "i-slint-backend-qt",
  "i-slint-backend-testing",
  "i-slint-backend-winit",
  "i-slint-common",
@@ -3222,9 +3236,11 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-app"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "i-slint-backend-winit",
+ "i-slint-compiler",
+ "i-slint-core",
  "oxiguitar-display",
  "oxiguitar-edit",
  "oxiguitar-host",
@@ -3239,12 +3255,13 @@ dependencies = [
  "serde_json",
  "slint",
  "slint-build",
+ "slint-interpreter",
  "tiny-skia 0.12.0",
 ]
 
 [[package]]
 name = "oxiguitar-cli"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-edit",
@@ -3259,7 +3276,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-display"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde",
@@ -3269,7 +3286,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-edit"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "chordparser",
  "oxiguitar-model",
@@ -3278,7 +3295,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-host"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "libc",
  "libloading",
@@ -3289,7 +3306,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-layout"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-model",
@@ -3298,14 +3315,14 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-model"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-plugin-api",
 ]
 
 [[package]]
 name = "oxiguitar-play"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-host",
  "oxiguitar-model",
@@ -3318,7 +3335,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin"
-version = "1.14.0"
+version = "1.15.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde_json",
@@ -3326,7 +3343,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-api"
-version = "1.14.0"
+version = "1.15.0"
 dependencies = [
  "miniz_oxide",
  "postcard",
@@ -3336,8 +3353,9 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-test"
-version = "1.14.0"
+version = "1.15.0"
 dependencies = [
+ "i-slint-compiler",
  "libc",
  "oxiguitar-edit",
  "oxiguitar-host",
@@ -3348,7 +3366,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-render"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "krilla",
  "oxiguitar-display",
@@ -3358,21 +3376,21 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-test-plugin"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-test-second-plugin"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-testgen"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-host",
@@ -3388,7 +3406,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-tools"
-version = "0.21.9"
+version = "0.22.0"
 dependencies = [
  "oxiguitar-model",
  "oxiguitar-plugin-test",
@@ -4315,6 +4333,34 @@ dependencies = [
  "i-slint-compiler",
  "spin_on",
  "toml_edit",
+]
+
+[[package]]
+name = "slint-interpreter"
+version = "1.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1dda5770abc07e5f660488a9ad5ff024d13ab405bb5e3a03f375ef005bc965f2"
+dependencies = [
+ "derive_more",
+ "either",
+ "hashbrown 0.16.1",
+ "i-slint-backend-linuxkms",
+ "i-slint-backend-selector",
+ "i-slint-backend-winit",
+ "i-slint-common",
+ "i-slint-compiler",
+ "i-slint-core",
+ "i-slint-core-macros",
+ "js-sys",
+ "lyon_path",
+ "num-traits",
+ "once_cell",
+ "smol_str 0.3.7",
+ "typed-index-collections",
+ "vtable",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

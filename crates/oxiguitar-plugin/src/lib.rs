@@ -61,8 +61,8 @@ pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
 pub use oxiguitar_plugin_api::message::{
     Advice, Availability, CORE_TOOLS, Clicked, DrawPlace, DrawTimes, Drawn, DrawnRun, Error,
-    ErrorKind, Level, LogEntry, Perform, PerformStaff, PlayedBar, PlayedNote, TextMeasure,
-    ToolEntry, TrackInfo,
+    ErrorKind, Level, LogEntry, Perform, PerformStaff, PlayedBar, PlayedNote, PluginFile,
+    PluginFileState, PluginFiles, PluginFolderKind, TextMeasure, ToolEntry, TrackInfo,
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
@@ -70,6 +70,7 @@ pub use oxiguitar_plugin_api::tab::{
     Canvas, Cursor, Key, KeyName, Pointer, PointerButton, PointerKind, Row, Surface, TabContent,
     TabEvent, Widget,
 };
+pub use oxiguitar_plugin_api::view::{Place, TrackView, Value};
 /// serde_json, as the SDK uses it: plugin settings and track sections'
 /// settings are its JSON objects, so a plugin needs no dependency of its
 /// own (interface 1.3).
@@ -160,6 +161,12 @@ pub trait Plugin: Send + Sync + 'static {
     /// What plays the notes its own way, for a manifest with `performs`
     /// (interface 1.8).
     fn performer(&self) -> Option<&dyn Performer> {
+        None
+    }
+
+    /// Its own UI, for a manifest with `views` (interface 1.15): its
+    /// `.slint` file and what its views' callbacks do.
+    fn ui(&self) -> Option<&dyn Ui> {
         None
     }
 
@@ -362,6 +369,37 @@ pub trait Drawer: Send + Sync {
     }
 }
 
+/// A plugin's own UI (interface 1.15; #346): one `.slint` file whose
+/// components the manifest's `views` place, which OxiGuitar compiles with
+/// Slint's interpreter and shows with its own Slint, widgets and style.
+/// The plugin draws nothing itself and carries no widget code: it sets
+/// properties ([`Host::set_view`]) and is told of callbacks here. Every
+/// method is called off OxiGuitar's UI thread.
+pub trait Ui: Send + Sync {
+    /// The `.slint` file, usually `include_str!("../ui/NAME.slint")`.
+    fn source(&self) -> String;
+
+    /// The view `view` was made (a window opened, a panel shown, the
+    /// track dialog opened on `track`, the export dialog showing the
+    /// exporter). Its properties are as last set; set any that depend on
+    /// what it shows. The default does nothing.
+    fn shown(&self, view: &str, track: Option<&TrackView>) -> Result<(), Error> {
+        let _ = (view, track);
+        Ok(())
+    }
+
+    /// The callback `callback` of the view's component was called, with
+    /// `args`.
+    fn callback(&self, view: &str, callback: &str, args: Vec<Value>) -> Result<(), Error>;
+
+    /// The view is gone: its window closed, or the dialog it was in,
+    /// `accepted` when with OK. The default does nothing.
+    fn closed(&self, view: &str, accepted: bool) -> Result<(), Error> {
+        let _ = (view, accepted);
+        Ok(())
+    }
+}
+
 /// Plays the notes its own way (interface 1.8): given a track's notes as
 /// the score gives them, gives them back as they should sound, changed,
 /// added or left out. Asked when the song is got ready to play or export
@@ -461,6 +499,12 @@ impl audio::Keeper for NoKeeper {
     }
 }
 
+fn ui_of<P: Plugin + ?Sized>(plugin: &P) -> Result<&dyn Ui, Error> {
+    plugin
+        .ui()
+        .ok_or_else(|| Error::not_found("this plugin has no UI of its own"))
+}
+
 /// [`dispatch`], with prepared instruments and effects kept by `keeper`.
 pub fn dispatch_kept(
     plugin: &dyn Plugin,
@@ -551,6 +595,23 @@ pub fn dispatch_kept(
                 .tool(&tool)
                 .ok_or_else(|| Error::not_found(format!("this plugin has no tool {tool:?}")))?;
             Ok(Answer::Report(tool.run()?))
+        }
+        Request::Ui => Ok(Answer::Ui(ui_of(plugin)?.source())),
+        Request::ViewShown { view, track } => {
+            ui_of(plugin)?.shown(&view, track.as_ref())?;
+            Ok(Answer::Done)
+        }
+        Request::ViewCallback {
+            view,
+            callback,
+            args,
+        } => {
+            ui_of(plugin)?.callback(&view, &callback, args)?;
+            Ok(Answer::Done)
+        }
+        Request::ViewClosed { view, accepted } => {
+            ui_of(plugin)?.closed(&view, accepted)?;
+            Ok(Answer::Done)
         }
         Request::Tool2 { tool, options } => {
             let found = plugin
@@ -946,6 +1007,58 @@ impl Host {
         }
     }
 
+    /// Shows the view `view` (interface 1.15): opens its window, or brings
+    /// its panel's tab to the front.
+    pub fn show_view(&self, view: &str) -> Result<(), Error> {
+        self.done(HostRequest::ShowView { view: view.into() })
+    }
+
+    /// Closes the view's window (interface 1.15).
+    pub fn close_view(&self, view: &str) -> Result<(), Error> {
+        self.done(HostRequest::CloseView { view: view.into() })
+    }
+
+    /// Sets properties of the view's component by their names in the
+    /// `.slint` file (interface 1.15). They are kept for when the view is
+    /// made again.
+    pub fn set_view(&self, view: &str, properties: Vec<(String, Value)>) -> Result<(), Error> {
+        self.done(HostRequest::SetView {
+            view: view.into(),
+            properties,
+        })
+    }
+
+    /// The track's settings for this plugin, as its track-dialog view
+    /// changed them (interface 1.15): kept for the track when the dialog
+    /// is accepted.
+    pub fn set_track_settings(
+        &self,
+        view: &str,
+        settings: &serde_json::Map<String, serde_json::Value>,
+    ) -> Result<(), Error> {
+        self.done(HostRequest::SetTrackSettings {
+            view: view.into(),
+            settings: serde_json::Value::Object(settings.clone()).to_string(),
+        })
+    }
+
+    fn done(&self, request: HostRequest<'_>) -> Result<(), Error> {
+        match self.0.request(request)? {
+            HostAnswer::Done => Ok(()),
+            other => Err(unexpected(&other)),
+        }
+    }
+
+    /// Every plugin file OxiGuitar found in its plugin folders, usable or
+    /// not, copies another file replaces included, and the user's plugin
+    /// folder (interface 1.15): for a plugin that manages the others.
+    pub fn plugin_files(&self) -> Result<PluginFiles, Error> {
+        match self.0.request(HostRequest::PluginFiles)? {
+            HostAnswer::PluginFiles(f) => Ok(f),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// The open score's file (interface 1.13), as an absolute path; `None`
     /// when no score is open or it was never saved. For paths kept relative
     /// to the score.
@@ -1137,7 +1250,12 @@ impl HostServices for Detached {
             HostRequest::Service { interface, .. } => Err(Error::not_found(format!(
                 "no service of {interface:?} (a detached host has none)"
             ))),
-            HostRequest::Folders | HostRequest::Folder { .. } => {
+            HostRequest::SetView { .. } | HostRequest::CloseView { .. } => Ok(HostAnswer::Done),
+            HostRequest::ShowView { .. } | HostRequest::SetTrackSettings { .. } => Err(Error::new(
+                ErrorKind::Failed,
+                "a detached host has no window to show a view in",
+            )),
+            HostRequest::Folders | HostRequest::Folder { .. } | HostRequest::PluginFiles => {
                 Err(Error::not_found("a detached host has no folders"))
             }
             HostRequest::Copy { .. } => Ok(HostAnswer::Done),
@@ -1246,6 +1364,15 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
         }
     }
     for s in &manifest.track_sections {
+        // A section shown by the plugin's own view (interface 1.15) is
+        // the view's: nothing to describe.
+        if manifest
+            .views
+            .iter()
+            .any(|v| v.id == s.id && v.place == oxiguitar_plugin_api::view::Place::Track)
+        {
+            continue;
+        }
         let Some(section) = plugin.track_section(&s.id) else {
             out.push(format!(
                 "track section {:?} is declared, but not implemented",
@@ -1264,6 +1391,15 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
         };
         for p in section.content(&track, &serde_json::Map::new()).problems() {
             out.push(format!("track section {:?}: {p}", s.id));
+        }
+    }
+    if !manifest.views.is_empty() {
+        match plugin.ui() {
+            None => out.push("views are declared, but the plugin has no `Ui`".into()),
+            Some(ui) if ui.source().trim().is_empty() => {
+                out.push("views are declared, but the plugin's .slint file is empty".into());
+            }
+            Some(_) => {}
         }
     }
     for t in &manifest.tabs {

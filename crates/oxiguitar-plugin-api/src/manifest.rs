@@ -140,6 +140,10 @@ pub struct Manifest {
     /// to this one's, once. Since interface 1.4.
     #[serde(default)]
     pub replaces: Vec<String>,
+    /// Its own UI: components of its `.slint` file and where the core
+    /// shows them (#346). Since interface 1.15.
+    #[serde(default)]
+    pub views: Vec<crate::view::ViewSpec>,
 }
 
 /// A plugin another plugin can't work without (`needs`). Since interface
@@ -688,12 +692,51 @@ impl Manifest {
                     .tabs
                     .iter()
                     .any(|t| t.id == *options && t.area == crate::tab::Area::Dialog);
-                if !dialog {
+                let view = self
+                    .views
+                    .iter()
+                    .any(|v| v.id == *options && v.place == crate::view::Place::Export);
+                if !dialog && !view {
                     out.push(format!(
-                        "{at}: its options {options:?} must be one of the plugin's dialogs (a tab whose area is \"dialog\")"
+                        "{at}: its options {options:?} must be one of the plugin's views whose place is \"export\" (or, before interface 1.15, a tab whose area is \"dialog\")"
                     ));
                 }
             }
+        }
+        let mut views: Vec<&str> = Vec::new();
+        for v in &self.views {
+            let at = format!("view {:?}", v.id);
+            if !is_id(&v.id) || views.contains(&v.id.as_str()) {
+                out.push(format!("{at}: not a valid or unique id"));
+            }
+            views.push(&v.id);
+            if !crate::view::is_component_name(&v.component) {
+                out.push(format!(
+                    "{at}: the component {:?} is not a Slint component's name",
+                    v.component
+                ));
+            }
+            let named = v.place.is_area() || v.place == crate::view::Place::Track;
+            if named && v.title.trim().is_empty() {
+                out.push(format!("{at}: a panel or a track section needs a title"));
+            }
+            if v.place == crate::view::Place::Track
+                && !self.track_sections.iter().any(|t| t.id == v.id)
+            {
+                out.push(format!(
+                    "{at}: a track section's view needs a track section of the same id, which says the tracks it shows for"
+                ));
+            }
+        }
+        let since_1_15 = InterfaceVersion {
+            major: 1,
+            minor: 15,
+        };
+        if self.interface < since_1_15 && !self.views.is_empty() {
+            out.push(format!(
+                "views need interface {since_1_15}, and the manifest asks for {}",
+                self.interface
+            ));
         }
         let mut needs: Vec<&str> = Vec::new();
         for n in &self.needs {
@@ -1529,7 +1572,46 @@ mod tests {
         assert_eq!(
             m.problems(),
             [
-                "exporter \"flac\": its options \"flac-options\" must be one of the plugin's dialogs (a tab whose area is \"dialog\")"
+                "exporter \"flac\": its options \"flac-options\" must be one of the plugin's views whose place is \"export\" (or, before interface 1.15, a tab whose area is \"dialog\")"
+            ]
+        );
+    }
+
+    #[test]
+    fn views_are_checked_and_need_interface_1_15() {
+        let json = |interface: &str, views: &str| {
+            format!(
+                r#"{{"interface": "{interface}", "id": "a.b", "name": "A", "version": "1.0.0",
+                    "description": "", "authors": [], "license": "MIT", "homepage": "",
+                    "track_sections": [{{"id": "amp", "title": "Amp"}}],
+                    "exporters": [{{"id": "ogg", "name": "Ogg", "extension": "ogg",
+                        "kind": "audio", "options": "ogg-options"}}],
+                    "views": [{views}]}}"#
+            )
+        };
+        let good = r#"{"id": "m", "component": "ManagerWindow", "place": "window"},
+            {"id": "chat", "component": "Chat", "place": "right", "title": "Chat"},
+            {"id": "amp", "component": "AmpSection", "place": "track", "title": "Amp"},
+            {"id": "ogg-options", "component": "OggOptions", "place": "export"}"#;
+        let m: Manifest = serde_json::from_str(&json("1.15", good)).unwrap();
+        assert!(m.problems().is_empty(), "{:?}", m.problems());
+        let m: Manifest = serde_json::from_str(&json("1.14", good)).unwrap();
+        assert_eq!(
+            m.problems(),
+            ["views need interface 1.15, and the manifest asks for 1.14"]
+        );
+        let bad = r#"{"id": "m", "component": "9 lives", "place": "window"},
+            {"id": "m", "component": "Chat", "place": "left"},
+            {"id": "tone", "component": "Tone", "place": "track", "title": "Tone"},
+            {"id": "ogg-options", "component": "OggOptions", "place": "export"}"#;
+        let m: Manifest = serde_json::from_str(&json("1.15", bad)).unwrap();
+        assert_eq!(
+            m.problems(),
+            [
+                "view \"m\": the component \"9 lives\" is not a Slint component's name",
+                "view \"m\": not a valid or unique id",
+                "view \"m\": a panel or a track section needs a title",
+                "view \"tone\": a track section's view needs a track section of the same id, which says the tracks it shows for",
             ]
         );
     }

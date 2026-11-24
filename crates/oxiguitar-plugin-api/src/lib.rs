@@ -89,6 +89,7 @@ pub mod score;
 pub mod score2;
 pub mod signature;
 pub mod tab;
+pub mod view;
 
 mod blob;
 
@@ -96,7 +97,7 @@ pub use blob::Blob;
 pub use message::{DecodeError, decode, encode};
 
 /// The interface version this crate describes: (major, minor).
-pub const INTERFACE: (u32, u32) = (1, 14);
+pub const INTERFACE: (u32, u32) = (1, 15);
 
 /// The symbol a plugin exports. It returns a pointer to the plugin's
 /// [`abi::PluginTableV1`].

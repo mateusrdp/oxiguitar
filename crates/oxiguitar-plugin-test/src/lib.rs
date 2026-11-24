@@ -188,6 +188,114 @@ pub fn check(oxp: &Path) -> Report {
     check_with(oxp, &[])
 }
 
+/// A plugin's `.slint` file, compiled (interface 1.15): its exported
+/// components.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CompiledUi {
+    /// Every exported component, windows or not.
+    pub components: Vec<UiComponent>,
+}
+
+impl CompiledUi {
+    /// The exported component `name`.
+    pub fn component(&self, name: &str) -> Option<&UiComponent> {
+        self.components.iter().find(|c| c.name == name)
+    }
+}
+
+/// An exported component of a plugin's `.slint` file: what a plugin can set
+/// and hear.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UiComponent {
+    /// Its name.
+    pub name: String,
+    /// Its own public properties (`in`, `out`, `in-out`), sorted.
+    pub properties: Vec<String>,
+    /// Its own callbacks, sorted.
+    pub callbacks: Vec<String>,
+}
+
+/// Compiles a plugin's `.slint` file as OxiGuitar does (interface 1.15):
+/// Slint's compiler at the app's version, the window's Fluent style, every
+/// exported component kept. Only the compiler: the suite needs no UI
+/// runtime, so a plugin's tests need no system libraries for it. The errors
+/// by line.
+pub fn compile_ui(source: String) -> Result<CompiledUi, String> {
+    use i_slint_compiler::diagnostics::BuildDiagnostics;
+    use i_slint_compiler::langtype::Type;
+    use i_slint_compiler::native_class::PropertyVisibility;
+    let mut config = i_slint_compiler::CompilerConfiguration::new(
+        i_slint_compiler::generator::OutputFormat::Interpreter,
+    );
+    config.style = Some("fluent".into());
+    config.components_to_generate = i_slint_compiler::ComponentSelection::AllExported;
+    let mut diagnostics = BuildDiagnostics::default();
+    let path = i_slint_compiler::source_path::SourcePath::new("plugin.slint");
+    let node = i_slint_compiler::parser::parse(source, Some(path), &mut diagnostics);
+    let mut future = std::pin::pin!(i_slint_compiler::compile_syntax_node(
+        node,
+        diagnostics,
+        config
+    ));
+    let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+    let (document, diagnostics, _) = loop {
+        if let std::task::Poll::Ready(r) = future.as_mut().poll(&mut cx) {
+            break r;
+        }
+    };
+    let errors: Vec<String> = diagnostics
+        .iter()
+        .filter(|d| d.level() == i_slint_compiler::diagnostics::DiagnosticLevel::Error)
+        .map(|d| {
+            let (line, column) = d.line_column();
+            format!("line {line}, column {column}: {}", d.message())
+        })
+        .collect();
+    if !errors.is_empty() {
+        return Err(errors.join("; "));
+    }
+    let components = document
+        .exported_roots()
+        .map(|c| {
+            let root = c.root_element.borrow();
+            let mut properties = Vec::new();
+            let mut callbacks = Vec::new();
+            // What the component's public API has, as the interpreter
+            // shows it: the compiler's passes also lift inlined widgets'
+            // properties into the root, under made-up names.
+            for (name, declaration) in root
+                .property_declarations
+                .iter()
+                .filter(|(_, d)| d.expose_in_public_api)
+            {
+                // A member that shadows an inherited one (a `close` callback
+                // on a Window, say) is kept under a mangled name: the
+                // plugin knows it by the name it wrote.
+                let name = declaration.declared_name(name).to_string();
+                match (&declaration.property_type, declaration.visibility) {
+                    (Type::Callback(_), PropertyVisibility::Private) => {}
+                    (Type::Callback(_), _) => callbacks.push(name),
+                    (
+                        _,
+                        PropertyVisibility::Input
+                        | PropertyVisibility::Output
+                        | PropertyVisibility::InOut,
+                    ) => properties.push(name),
+                    _ => {}
+                }
+            }
+            properties.sort();
+            callbacks.sort();
+            UiComponent {
+                name: c.id.to_string(),
+                properties,
+                callbacks,
+            }
+        })
+        .collect();
+    Ok(CompiledUi { components })
+}
+
 /// [`check`] for a plugin that `needs` others: the plugin files in
 /// `needed` are copied beside it, so the need is met. Only `oxp` is
 /// checked.
@@ -394,6 +502,59 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
             );
         }
     }
+    // Its own UI in Slint (interface 1.15): its `.slint` file compiles with
+    // the window's style and has every view's component; each view is
+    // told it was made and, but for a panel, closed.
+    let views = plugins.views();
+    if let Some(first) = views.first() {
+        let id = first.id();
+        let compiled = plugins
+            .ui_source(&id.plugin)
+            .map_err(|e| e.message)
+            .and_then(compile_ui);
+        report.check(
+            "its .slint file compiles",
+            compiled.as_ref().map(|_| ()).map_err(Clone::clone),
+        );
+        if let Ok(compiled) = &compiled {
+            for view in &views {
+                let id = view.id();
+                report.check(
+                    format!(
+                        "view {}: its .slint file has its component {}",
+                        id.view, view.spec.component
+                    ),
+                    if compiled.component(&view.spec.component).is_some() {
+                        Ok(())
+                    } else {
+                        Err(format!("no exported component {:?}", view.spec.component))
+                    },
+                );
+                use oxiguitar_host::api::view::Place;
+                let track = (view.spec.place == Place::Track).then(|| {
+                    oxiguitar_host::api::view::TrackView {
+                        track: oxiguitar_host::api::message::TrackInfo {
+                            index: 0,
+                            name: "Lead".into(),
+                            class: oxiguitar_host::api::class::InstrumentClass::Fretted,
+                        },
+                        settings: "{}".into(),
+                    }
+                });
+                plugins.view_shown(&id, track);
+                if !view.spec.place.is_area() {
+                    plugins.view_closed(&id, false);
+                }
+                report.check(
+                    format!("view {}: showing and closing it is no crash", id.view),
+                    match view.plugin.failure() {
+                        None => Ok(()),
+                        Some(why) => Err(why.to_string()),
+                    },
+                );
+            }
+        }
+    }
     let events = [
         (EventKind::Score, Event::ScoreOpened { revision: 1 }),
         (EventKind::Selection, Event::Selection(None)),
@@ -581,6 +742,15 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
                 class,
             };
             let id = &section.spec.id;
+            // A section that is the plugin's own view in Slint (interface
+            // 1.15) is checked with the views.
+            let view = oxiguitar_host::ViewId {
+                plugin: section.plugin_id().to_owned(),
+                view: id.clone(),
+            };
+            if plugins.view(&view).is_some() {
+                continue;
+            }
             let answer = plugins.track_section(section, &track, "{}");
             report.check(
                 format!("track section {id}: its contents can be shown"),

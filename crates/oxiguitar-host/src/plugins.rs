@@ -67,13 +67,14 @@ use oxiguitar_plugin_api::manifest::{
 use oxiguitar_plugin_api::message::{
     Answer, Availability, Clicked, DrawPlace, DrawTimes, Drawn, Engraving, Error, ErrorKind,
     FolderPlaces, HostAnswer, HostRequest, Link, LogEntry, PERFORMED_MAX, Perform, PlayedBeat,
-    PlayedNote, PluginFolders, Prepare, PrepareEffect, PrepareFollowing, Request, TrackInfo,
-    decode, encode, outcome,
+    PlayedNote, PluginFile, PluginFileState, PluginFiles, PluginFolderKind, PluginFolders, Prepare,
+    PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
 use oxiguitar_plugin_api::signature::Sniff;
 use oxiguitar_plugin_api::tab::{Area, TabContent, TabEvent, TabSpec};
+use oxiguitar_plugin_api::view::{Place, Value as ViewValue, ViewSpec};
 use serde_json::Value;
 
 use crate::advice;
@@ -250,6 +251,34 @@ pub trait Core: Send + Sync {
     fn select(&self, selection: crate::api::event::Selection2) -> Result<(), String> {
         let _ = selection;
         Err("no score is open".to_owned())
+    }
+
+    /// A plugin shows its view (interface 1.15): opens its window, or
+    /// brings its panel's tab to the front. The error is a sentence for
+    /// the plugin. The default has no window.
+    fn show_view(&self, view: &ViewId, place: Place) -> Result<(), String> {
+        let _ = (view, place);
+        Err("this program has no window to show a plugin's view in".to_owned())
+    }
+
+    /// A plugin closes its view's window (interface 1.15).
+    fn close_view(&self, view: &ViewId) {
+        let _ = view;
+    }
+
+    /// A plugin sets properties of its view (interface 1.15): kept, and
+    /// given to the view whenever it is made. A property the component
+    /// doesn't have, or a value of the wrong type, is the app's to report.
+    fn set_view(&self, view: &ViewId, properties: Vec<(String, ViewValue)>) {
+        let _ = (view, properties);
+    }
+
+    /// A plugin's track-dialog view changed the track's settings for it
+    /// (interface 1.15). The error is a sentence for the plugin. The
+    /// default has no track dialog.
+    fn set_track_settings(&self, view: &ViewId, settings: String) -> Result<(), String> {
+        let _ = (view, settings);
+        Err("no track dialog shows this view".to_owned())
     }
 }
 
@@ -453,6 +482,40 @@ pub struct TabId {
     pub plugin: String,
     /// The tab's id, from the plugin's manifest.
     pub tab: String,
+}
+
+/// A plugin's view (interface 1.15), by the plugin's id and the view's.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ViewId {
+    /// The plugin's id.
+    pub plugin: String,
+    /// The view's id, from the plugin's manifest.
+    pub view: String,
+}
+
+/// A view a plugin declares (interface 1.15).
+#[derive(Clone, Copy, Debug)]
+pub struct ViewRef<'a> {
+    /// The plugin.
+    pub plugin: &'a Found,
+    /// The view, as its manifest declares it.
+    pub spec: &'a ViewSpec,
+    index: usize,
+}
+
+impl ViewRef<'_> {
+    /// The view's id.
+    pub fn id(&self) -> ViewId {
+        ViewId {
+            plugin: self
+                .plugin
+                .manifest
+                .as_ref()
+                .map(|m| m.id.clone())
+                .unwrap_or_default(),
+            view: self.spec.id.clone(),
+        }
+    }
 }
 
 /// A tool a plugin adds to the Tools menu (interface 1.2).
@@ -1952,6 +2015,113 @@ impl Plugins {
         }
     }
 
+    /// Every view the usable plugins declare (interface 1.15), in plugin
+    /// order.
+    pub fn views(&self) -> Vec<ViewRef<'_>> {
+        self.ready()
+            .filter(|(_, _, m)| m.knows_minor(15))
+            .flat_map(|(index, plugin, m)| {
+                m.views.iter().map(move |spec| ViewRef {
+                    plugin,
+                    spec,
+                    index,
+                })
+            })
+            .collect()
+    }
+
+    /// The view `id`, if a ready plugin declares it.
+    pub fn view(&self, id: &ViewId) -> Option<ViewRef<'_>> {
+        self.views().into_iter().find(|v| {
+            v.spec.id == id.view
+                && v.plugin
+                    .manifest
+                    .as_ref()
+                    .is_some_and(|m| m.id == id.plugin)
+        })
+    }
+
+    fn find_view(&self, id: &ViewId) -> Result<ViewRef<'_>, Error> {
+        self.view(id).ok_or_else(|| {
+            Error::not_found(format!(
+                "no usable plugin {:?} has a view {:?}",
+                id.plugin, id.view
+            ))
+        })
+    }
+
+    /// The `.slint` file of the plugin `plugin` (interface 1.15), from the
+    /// plugin (loaded first if needed).
+    pub fn ui_source(&self, plugin: &str) -> Result<String, Error> {
+        let Some(view) = self
+            .views()
+            .into_iter()
+            .find(|v| v.plugin.manifest.as_ref().is_some_and(|m| m.id == plugin))
+        else {
+            return Err(Error::not_found(format!(
+                "no usable plugin {plugin:?} has views"
+            )));
+        };
+        match self.request(view.index, &Request::Ui)? {
+            Answer::Ui(source) => Ok(source),
+            other => Err(self.unexpected(view.index, &other)),
+        }
+    }
+
+    /// Tells a view's plugin it was made (interface 1.15); `track` for a
+    /// section of the track dialog. An error the plugin answers is said in
+    /// the footer.
+    pub fn view_shown(&self, id: &ViewId, track: Option<crate::api::view::TrackView>) {
+        self.view_told(
+            id,
+            &Request::ViewShown {
+                view: id.view.clone(),
+                track,
+            },
+        );
+    }
+
+    /// Tells a view's plugin one of its callbacks was called.
+    pub fn view_callback(&self, id: &ViewId, callback: &str, args: Vec<ViewValue>) {
+        self.view_told(
+            id,
+            &Request::ViewCallback {
+                view: id.view.clone(),
+                callback: callback.to_owned(),
+                args,
+            },
+        );
+    }
+
+    /// Tells a view's plugin the view is gone, `accepted` when the dialog
+    /// it was in closed with OK.
+    pub fn view_closed(&self, id: &ViewId, accepted: bool) {
+        self.view_told(
+            id,
+            &Request::ViewClosed {
+                view: id.view.clone(),
+                accepted,
+            },
+        );
+    }
+
+    fn view_told(&self, id: &ViewId, request: &Request<'_>) {
+        let Ok(view) = self.find_view(id) else {
+            return;
+        };
+        let answered = match self.request(view.index, request) {
+            Ok(Answer::Done) => Ok(()),
+            Ok(other) => Err(self.unexpected(view.index, &other)),
+            Err(e) => Err(e),
+        };
+        if let Err(e) = answered
+            && view.plugin.failure().is_none()
+        {
+            let name = view.plugin.name();
+            self.0.core.notify(Level::Warning, format!("{name}: {e}"));
+        }
+    }
+
     fn find_tab(&self, id: &TabId) -> Result<TabRef<'_>, Error> {
         self.tab(id).ok_or_else(|| {
             Error::not_found(format!(
@@ -2407,6 +2577,7 @@ impl Plugins {
             Answer::Updated(_) => "an update's answer",
             Answer::Drawn(_) => "drawings",
             Answer::Performed(_) => "notes",
+            Answer::Ui(_) => "a .slint file",
         };
         self.fail(
             index,
@@ -2543,6 +2714,61 @@ impl Plugins {
                         manifest.name
                     )))
                 }
+            }
+            HostRequest::ShowView { view } => {
+                self.own_view(manifest, &view).and_then(|(id, place)| {
+                    if matches!(place, Place::Track | Place::Export) {
+                        return Err(Error::new(
+                            ErrorKind::Invalid,
+                            format!(
+                                "the view {view:?} shows in its dialog, when the user opens it"
+                            ),
+                        ));
+                    }
+                    self.0
+                        .core
+                        .show_view(&id, place)
+                        .map(|()| HostAnswer::Done)
+                        .map_err(|why| Error::new(ErrorKind::Failed, why))
+                })
+            }
+            HostRequest::CloseView { view } => self.own_view(manifest, &view).map(|(id, _)| {
+                self.0.core.close_view(&id);
+                HostAnswer::Done
+            }),
+            HostRequest::SetView { view, properties } => {
+                self.own_view(manifest, &view).and_then(|(id, _)| {
+                    match properties.iter().find_map(|(_, v)| v.problem()) {
+                        Some(problem) => Err(Error::new(ErrorKind::Invalid, problem)),
+                        None => {
+                            self.0.core.set_view(&id, properties);
+                            Ok(HostAnswer::Done)
+                        }
+                    }
+                })
+            }
+            HostRequest::SetTrackSettings { view, settings } => {
+                self.own_view(manifest, &view).and_then(|(id, place)| {
+                    let object = serde_json::from_str::<serde_json::Value>(&settings)
+                        .is_ok_and(|v| v.is_object());
+                    if place != Place::Track {
+                        Err(Error::new(
+                            ErrorKind::Invalid,
+                            format!("the view {view:?} isn't a section of the track dialog"),
+                        ))
+                    } else if !object {
+                        Err(Error::new(
+                            ErrorKind::Invalid,
+                            "a track's settings are a JSON object",
+                        ))
+                    } else {
+                        self.0
+                            .core
+                            .set_track_settings(&id, settings)
+                            .map(|()| HostAnswer::Done)
+                            .map_err(|why| Error::new(ErrorKind::Failed, why))
+                    }
+                })
             }
             HostRequest::OpenDialog { tab } => {
                 let dialog = manifest
@@ -2724,6 +2950,7 @@ impl Plugins {
             HostRequest::Folder { name } => {
                 self.folder_places(manifest, &name).map(HostAnswer::Folder)
             }
+            HostRequest::PluginFiles => self.plugin_files(manifest).map(HostAnswer::PluginFiles),
             HostRequest::Advise(given) => {
                 if !manifest.knows_minor(4) {
                     Err(Error::new(
@@ -2771,6 +2998,92 @@ impl Plugins {
     /// Where the shared folder `name` of the plugin with `manifest` is
     /// (interface 1.8): the user's, created on the way, and the ones that
     /// exist beside the system's plugin folders.
+    /// The plugin's own view `view` and where it is shown (interface
+    /// 1.15).
+    fn own_view(&self, manifest: &Manifest, view: &str) -> Result<(ViewId, Place), Error> {
+        if !manifest.knows_minor(15) {
+            return Err(Error::new(
+                ErrorKind::Unsupported,
+                "views need interface 1.15",
+            ));
+        }
+        match manifest.views.iter().find(|v| v.id == view) {
+            Some(spec) => Ok((
+                ViewId {
+                    plugin: manifest.id.clone(),
+                    view: view.to_owned(),
+                },
+                spec.place,
+            )),
+            None => Err(Error::not_found(format!(
+                "{} has no view {view:?} in its manifest",
+                manifest.name
+            ))),
+        }
+    }
+
+    /// Every plugin file found and the user's plugin folder (interface
+    /// 1.15), for a plugin that manages the others.
+    fn plugin_files(&self, manifest: &Manifest) -> Result<PluginFiles, Error> {
+        if !manifest.knows_minor(15) {
+            return Err(Error::new(
+                ErrorKind::Unsupported,
+                "asking for the plugin files needs interface 1.15",
+            ));
+        }
+        let Some(folders) = self.0.folders.get() else {
+            return Err(Error::not_found(
+                "this program keeps no folders for plugins",
+            ));
+        };
+        let text = |path: &Path| {
+            path.to_str().map(str::to_owned).ok_or_else(|| {
+                Error::new(
+                    ErrorKind::Unsupported,
+                    format!("the path {} is not UTF-8 text", path.display()),
+                )
+            })
+        };
+        let kind = |path: &Path| {
+            let folder = path.parent().unwrap_or(path);
+            if folder == folders.user_plugins {
+                PluginFolderKind::User
+            } else if folders.program_plugins.as_deref() == Some(folder) {
+                PluginFolderKind::Program
+            } else if folders.system_plugins.iter().any(|p| p == folder) {
+                PluginFolderKind::System
+            } else {
+                PluginFolderKind::Listed
+            }
+        };
+        let mut files = Vec::with_capacity(self.0.found.len());
+        for found in &self.0.found {
+            let state = match (&found.state, found.failure()) {
+                (_, Some(why)) => PluginFileState::Withdrawn(why.to_owned()),
+                (State::Ready, None) => PluginFileState::Used,
+                (State::Disabled, None) => PluginFileState::Disabled,
+                (State::Replaced(by), None) => PluginFileState::Replaced(text(by)?),
+                (State::Unusable(why), None) => PluginFileState::Unusable(why.clone()),
+                (State::Unmet(why), None) => PluginFileState::Unmet(why.clone()),
+            };
+            let m = found.manifest.as_ref();
+            files.push(PluginFile {
+                path: text(&found.path)?,
+                folder: kind(&found.path),
+                id: m.map(|m| m.id.clone()),
+                name: m.map(|m| m.name.clone()).unwrap_or_default(),
+                version: m.map(|m| m.version.to_string()).unwrap_or_default(),
+                homepage: m.map(|m| m.homepage.clone()).unwrap_or_default(),
+                state,
+                loaded: matches!(found.loaded.get(), Some(Ok(_))),
+            });
+        }
+        Ok(PluginFiles {
+            user_folder: text(&folders.user_plugins)?,
+            files,
+        })
+    }
+
     fn folder_places(&self, manifest: &Manifest, name: &str) -> Result<FolderPlaces, Error> {
         if !manifest.knows_minor(8) {
             return Err(Error::new(

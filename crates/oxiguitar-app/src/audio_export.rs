@@ -30,8 +30,11 @@ pub(crate) struct Target {
     /// What it makes ("WAV Audio") and its files' extension.
     pub(crate) name: String,
     pub(crate) extension: String,
-    /// Its options: one of its plugin's dialogs (interface 1.11).
+    /// Its options: one of its plugin's dialogs (interface 1.11), or of
+    /// its views (interface 1.15; the id is the view's).
     pub(crate) options: Option<TabId>,
+    /// The options are the plugin's own view in Slint.
+    pub(crate) options_view: bool,
 }
 
 impl Target {
@@ -67,6 +70,14 @@ pub(crate) fn targets(plugins: &Plugins) -> Vec<Target> {
             options: e.spec.options.as_ref().map(|tab| TabId {
                 plugin: e.plugin_id().to_owned(),
                 tab: tab.clone(),
+            }),
+            options_view: e.spec.options.as_ref().is_some_and(|view| {
+                plugins
+                    .view(&oxiguitar_host::ViewId {
+                        plugin: e.plugin_id().to_owned(),
+                        view: view.clone(),
+                    })
+                    .is_some_and(|v| v.spec.place == oxiguitar_host::api::view::Place::Export)
             }),
         })
         .collect()
@@ -204,6 +215,7 @@ mod tests {
             name: "WAV Audio".into(),
             extension: "wav".into(),
             options: None,
+            options_view: false,
         }
     }
 

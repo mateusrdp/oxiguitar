@@ -35,6 +35,9 @@ pub(crate) struct Shown {
     /// What it shows: `None` until the plugin answers, then its contents
     /// or why they can't be shown.
     pub(crate) content: Option<Result<TabContent, String>>,
+    /// The section is its plugin's own view in Slint (interface 1.15),
+    /// which the plugin is never asked to describe.
+    pub(crate) view: bool,
 }
 
 /// The sections for one track, asked once (until the caret moves to
@@ -73,11 +76,20 @@ impl TrackSections {
         let sections = plugins
             .track_sections(class)
             .into_iter()
-            .map(|s| Shown {
-                plugin: s.plugin_id().to_owned(),
-                section: s.spec.id.clone(),
-                title: s.spec.title.clone(),
-                content: None,
+            .map(|s| {
+                let id = oxiguitar_host::ViewId {
+                    plugin: s.plugin_id().to_owned(),
+                    view: s.spec.id.clone(),
+                };
+                Shown {
+                    plugin: id.plugin.clone(),
+                    section: s.spec.id.clone(),
+                    title: s.spec.title.clone(),
+                    content: None,
+                    view: plugins
+                        .view(&id)
+                        .is_some_and(|v| v.spec.place == oxiguitar_host::api::view::Place::Track),
+                }
             })
             .collect();
         let mut out = TrackSections {
@@ -180,7 +192,7 @@ impl TrackSections {
     /// What to ask the tab thread when the user used `widget` of the
     /// section at `index` (`None` for its contents alone).
     pub(crate) fn ask(&self, index: usize, event: Option<(String, TabEvent)>) -> Option<Request> {
-        let s = self.sections.get(index)?;
+        let s = self.sections.get(index).filter(|s| !s.view)?;
         Some(Request::Section {
             dialog: self.dialog,
             track: self.track.clone(),
@@ -270,6 +282,7 @@ mod tests {
                 section: section.into(),
                 title: section.into(),
                 content: None,
+                view: false,
             });
         }
         s
@@ -329,6 +342,7 @@ mod tests {
             section: section.into(),
             title: section.into(),
             content: None,
+            view: false,
         };
         s.sections = vec![
             shown("me.amp", "amp"),

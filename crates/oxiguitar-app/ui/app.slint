@@ -144,6 +144,9 @@ export struct AreaState {
     collapsed: bool,
     // The open tab is a plugin's.
     plugin: bool,
+    // The open tab is a plugin's own panel in Slint (interface 1.15),
+    // shown in a ComponentContainer.
+    view: bool,
 }
 
 // One link of an advice dialog (plugin interface 1.4).
@@ -923,7 +926,10 @@ component TrackTab inherits Rectangle {
                         clicked => { root.section-moved(i, false); }
                     }
                 }
-                PluginRows {
+                if section.view : ComponentContainer {
+                    component-factory: section.factory;
+                }
+                if !section.view : PluginRows {
                     rows: section.rows;
                     message: section.message;
                     clicked(id) => { root.section-clicked(i, id); }
@@ -1663,6 +1669,10 @@ export component AppWindow inherits Window {
     in-out property <int> export-format;
     callback export-format-picked(int);
     in property <bool> export-has-options;
+    // The export's options are its plugin's own view in Slint (interface
+    // 1.15): the factory that makes it.
+    in property <bool> export-options-view;
+    in property <component-factory> export-options-factory;
     in property <[PluginRow]> export-plugin-rows;
     in property <string> export-plugin-message;
     in property <bool> export-has-selection;
@@ -1751,6 +1761,12 @@ export component AppWindow inherits Window {
     // Plugins' tabs (plugin_tab.slint), by area number (0 top, 1 bottom,
     // 2 left, 3 right): their rows, or a message instead; what the user does
     // to their widgets; a canvas's room.
+    // Plugins' own panels in Slint (interface 1.15; src/plugin_ui.rs), by
+    // area: the factory that makes the open one.
+    in property <component-factory> top-view;
+    in property <component-factory> bottom-view;
+    in property <component-factory> left-view;
+    in property <component-factory> right-view;
     in property <[PluginRow]> top-plugin-rows;
     in property <string> top-plugin-message;
     in property <[PluginRow]> bottom-plugin-rows;
@@ -2267,6 +2283,11 @@ export component AppWindow inherits Window {
                         }
                     }
                 }
+                if root.top-area.view : ComponentContainer {
+                    component-factory: root.top-view;
+                    vertical-stretch: 1;
+                    horizontal-stretch: 1;
+                }
                 if root.top-area.plugin : PluginTab {
                     view: 0;
                     rows: root.top-plugin-rows;
@@ -2328,7 +2349,12 @@ export component AppWindow inherits Window {
                             tool-clicked(id) => { root.palette-tool-clicked(id); }
                           }
                         }
-                        if root.left-area.plugin : PluginTab {
+                        if root.left-area.view : ComponentContainer {
+                    component-factory: root.left-view;
+                    vertical-stretch: 1;
+                    horizontal-stretch: 1;
+                }
+                if root.left-area.plugin : PluginTab {
                     view: 2;
                     rows: root.left-plugin-rows;
                     message: root.left-plugin-message;
@@ -2644,7 +2670,12 @@ export component AppWindow inherits Window {
                             edited(id, text) => { root.song-edited(id, text); }
                             go-to-section(i) => { root.go-to-section(i); }
                         }
-                        if root.right-area.plugin : PluginTab {
+                        if root.right-area.view : ComponentContainer {
+                    component-factory: root.right-view;
+                    vertical-stretch: 1;
+                    horizontal-stretch: 1;
+                }
+                if root.right-area.plugin : PluginTab {
                     view: 3;
                     rows: root.right-plugin-rows;
                     message: root.right-plugin-message;
@@ -2809,6 +2840,11 @@ export component AppWindow inherits Window {
                             Rectangle { width: 2px; }
                         }
                     }
+                }
+                if root.bottom-area.view : ComponentContainer {
+                    component-factory: root.bottom-view;
+                    vertical-stretch: 1;
+                    horizontal-stretch: 1;
                 }
                 if root.bottom-area.plugin : PluginTab {
                     view: 1;
@@ -3011,6 +3047,8 @@ export component AppWindow inherits Window {
         has-options: root.export-has-options;
         options: root.export-plugin-rows;
         options-message: root.export-plugin-message;
+        options-view: root.export-options-view;
+        options-factory: root.export-options-factory;
         clicked(id) => { root.plugin-clicked(5, id); }
         toggled(id, on) => { root.plugin-toggled(5, id, on); }
         slid(id, v) => { root.plugin-slid(5, id, v); }
