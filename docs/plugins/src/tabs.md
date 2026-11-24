@@ -1,5 +1,7 @@
 # Tabs: widgets and canvases
 
+From interface 1.15 a plugin writes its UI in Slint instead ([Your own UI in Slint](ui.md)); the widgets on this page stay for plugins built before it, until OxiGuitar 1.0 retires them.
+
 A tab sits in one of the window's four areas, beside the core's own (Player, Tracks, Palette). Its contents are rows of standard widgets that the core draws in the window's own style, so it looks like the rest of OxiGuitar and follows the dark or light interface by itself, and, if it needs one, a canvas the plugin draws. Tabs need interface 1.1.
 
 ## Declaring a tab

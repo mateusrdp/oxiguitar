@@ -317,6 +317,10 @@ export struct PluginSection {
     message: string,
     up: bool,
     down: bool,
+    // The section is its plugin's own view in Slint (interface 1.15),
+    // made by `factory`, instead of rows.
+    view: bool,
+    factory: component-factory,
 }
 
 // A plugin's rows in a vertical form layout: each widget gets the full

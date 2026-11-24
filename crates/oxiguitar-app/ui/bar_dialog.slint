@@ -846,6 +846,9 @@ export component ExportDialog inherits Rectangle {
     // message while they are asked for; nothing when it has none.
     in property <bool> has-options: false;
     in property <[PluginRow]> options;
+    // The options are the plugin's own view in Slint (interface 1.15).
+    in property <bool> options-view;
+    in property <component-factory> options-factory;
     in property <string> options-message;
     in property <bool> has-selection: false;
     in-out property <bool> selection: false;
@@ -881,7 +884,10 @@ export component ExportDialog inherits Rectangle {
                     }
                 }
             }
-            if root.has-options : PluginRows {
+            if root.has-options && root.options-view : ComponentContainer {
+                component-factory: root.options-factory;
+            }
+            if root.has-options && !root.options-view : PluginRows {
                 rows: root.options;
                 message: root.options-message;
                 clicked(id) => { root.clicked(id); }

@@ -124,10 +124,11 @@ fn the_test_plugin_passes_the_contract() {
     // forms; 5 tools; the track section and its 2 widgets; 2 instruments
     // and an effect, 4 real-time checks each; the effect's 3 checks of an
     // update (interface 1.5); the exporter's 3 checks; its drawing and its
-    // playing of a track (interface 1.8).
+    // playing of a track (interface 1.8); its .slint file compiling, and its
+    // 3 views' components and showing them (interface 1.15).
     assert_eq!(
         report.passed.len(),
-        12 + 4 + 10 + 13 + 4 + 1 + 2 + 1 + 3 + 4 + 5 + 3 + 3 * 4 + 3 + 3 + 1 + 1,
+        12 + 4 + 10 + 13 + 4 + 1 + 2 + 1 + 3 + 4 + 5 + 3 + 3 * 4 + 3 + 3 + 1 + 1 + 1 + 3 * 2,
         "{:#?}",
         report.passed
     );
@@ -2640,6 +2641,196 @@ fn interface_1_13_the_score_s_file() {
         none.call_service("test-echo", "score-file", b"")
             .unwrap()
             .is_empty()
+    );
+}
+
+/// Interface 1.15: a plugin lists every plugin file found, with its
+/// folder's kind and whether it is used, and the user's plugin folder.
+#[test]
+fn interface_1_15_the_plugin_files() {
+    use oxiguitar_host::{Folders, System};
+    let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("contract-plugin-files");
+    let _ = std::fs::remove_dir_all(&home);
+    let folders = Folders::resolve(
+        System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    let mut folders = folders;
+    let system = home.join("system").join("plugins");
+    let program = home.join("program").join("plugins");
+    folders.system_plugins = vec![program.clone(), system.clone()];
+    folders.program_plugins = Some(program.clone());
+    for dir in [&system, &program, &folders.user_plugins] {
+        std::fs::create_dir_all(dir).unwrap();
+    }
+    // The same plugin in the system's folder and the user's, which wins;
+    // a damaged file beside the program.
+    std::fs::copy(test_oxp(), system.join("test.oxp")).unwrap();
+    std::fs::copy(test_oxp(), folders.user_plugins.join("test.oxp")).unwrap();
+    std::fs::write(program.join("broken.oxp"), b"not a plugin").unwrap();
+    let (plugins, _) = discover(&folders.default_plugin_folders(), SharedSettings::default());
+    // No folders, no list.
+    let e = plugins
+        .call_service("test-echo", "plugin-files", b"")
+        .unwrap_err();
+    assert!(e.message.contains("keeps no folders"), "{e}");
+    plugins.use_folders(folders.clone());
+    let answer = plugins
+        .call_service("test-echo", "plugin-files", b"")
+        .unwrap();
+    let answer = String::from_utf8(answer).unwrap();
+    let path = |p: PathBuf| p.to_str().unwrap().to_owned();
+    assert_eq!(
+        answer.lines().collect::<Vec<_>>(),
+        [
+            path(folders.user_plugins.clone()),
+            format!("Program unusable - {}", path(program.join("broken.oxp"))),
+            format!(
+                "System replaced oxiguitar.test {}",
+                path(system.join("test.oxp"))
+            ),
+            format!(
+                "User used oxiguitar.test {}",
+                path(folders.user_plugins.join("test.oxp"))
+            ),
+        ]
+    );
+}
+
+/// A core that shows views, for interface 1.15: what it was asked.
+#[derive(Default)]
+struct Viewing(Mutex<Vec<String>>);
+
+impl Core for Viewing {
+    fn notify(&self, _level: Level, _text: String) {}
+
+    fn show_view(
+        &self,
+        view: &oxiguitar_host::ViewId,
+        place: oxiguitar_host::api::view::Place,
+    ) -> Result<(), String> {
+        self.0
+            .lock()
+            .unwrap()
+            .push(format!("show {} {place:?}", view.view));
+        Ok(())
+    }
+
+    fn close_view(&self, view: &oxiguitar_host::ViewId) {
+        self.0.lock().unwrap().push(format!("close {}", view.view));
+    }
+
+    fn set_view(
+        &self,
+        view: &oxiguitar_host::ViewId,
+        properties: Vec<(String, oxiguitar_host::api::view::Value)>,
+    ) {
+        self.0
+            .lock()
+            .unwrap()
+            .push(format!("set {} {properties:?}", view.view));
+    }
+
+    fn set_track_settings(
+        &self,
+        view: &oxiguitar_host::ViewId,
+        settings: String,
+    ) -> Result<(), String> {
+        self.0
+            .lock()
+            .unwrap()
+            .push(format!("settings {} {settings}", view.view));
+        Ok(())
+    }
+}
+
+/// Interface 1.15: a plugin's own UI in Slint. Its file is asked for; its
+/// views are shown, set and closed through the core; it hears them made,
+/// their callbacks and their closing; a track section's view hands back
+/// the track's settings; and only its own views can be named.
+#[test]
+fn interface_1_15_views_in_slint() {
+    use oxiguitar_host::api::view::{TrackView, Value};
+    let dir = folder("views", &["test.oxp"]);
+    let core = Arc::new(Viewing::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        core.clone(),
+    );
+    let source = plugins.ui_source("oxiguitar.test").unwrap();
+    let compiled = oxiguitar_plugin_test::compile_ui(source).unwrap();
+    for component in ["TestWindow", "TestPanel", "TestSection"] {
+        assert!(compiled.component(component).is_some(), "{component}");
+    }
+    // What a plugin can set and hear, and nothing the compiler made; a
+    // callback that shadows one of Window's by the name the file gives.
+    let window = compiled.component("TestWindow").unwrap();
+    assert_eq!(window.callbacks, ["close", "pressed"]);
+    let panel = compiled.component("TestPanel").unwrap();
+    assert_eq!(panel.properties, ["said"]);
+    assert_eq!(panel.callbacks, ["pressed"]);
+    let section = compiled.component("TestSection").unwrap();
+    assert_eq!(section.properties, ["level"]);
+    assert_eq!(section.callbacks, ["level-changed"]);
+    let ask = |what: &str| plugins.call_service("test-echo", "view", what.as_bytes());
+    ask("show window").unwrap();
+    ask("show slint-panel").unwrap();
+    ask("set window hello").unwrap();
+    ask("close window").unwrap();
+    let e = ask("show slint-section").unwrap_err();
+    assert!(e.message.contains("in its dialog"), "{e}");
+    let e = ask("show nowhere").unwrap_err();
+    assert!(e.message.contains("no view \"nowhere\""), "{e}");
+    let id = |view: &str| oxiguitar_host::ViewId {
+        plugin: "oxiguitar.test".into(),
+        view: view.into(),
+    };
+    plugins.view_shown(&id("window"), None);
+    plugins.view_callback(&id("window"), "pressed", vec![Value::Number(1.0)]);
+    plugins.view_closed(&id("window"), false);
+    let track = TrackView {
+        track: oxiguitar_host::api::message::TrackInfo {
+            index: 2,
+            name: "Lead".into(),
+            class: oxiguitar_host::api::class::InstrumentClass::Fretted,
+        },
+        settings: "{}".into(),
+    };
+    plugins.view_shown(&id("slint-section"), Some(track));
+    plugins.view_callback(
+        &id("slint-section"),
+        "level-changed",
+        vec![Value::Number(0.25)],
+    );
+    let heard = plugins
+        .call_service("test-echo", "views-heard", b"")
+        .unwrap();
+    assert_eq!(
+        String::from_utf8(heard)
+            .unwrap()
+            .lines()
+            .collect::<Vec<_>>(),
+        [
+            "shown window",
+            "window pressed [Number(1.0)]",
+            "closed window false",
+            "shown slint-section track 2 {}",
+            "slint-section level-changed [Number(0.25)]",
+        ]
+    );
+    assert_eq!(
+        *core.0.lock().unwrap(),
+        [
+            "show window Window",
+            "show slint-panel Left",
+            "set window [(\"said\", String(\"hello\"))]",
+            "close window",
+            "settings slint-section {\"level\":0.25}",
+        ]
     );
 }
 

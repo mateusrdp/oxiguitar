@@ -22,6 +22,7 @@ use std::thread::JoinHandle;
 use oxiguitar_display::{FontSet, Rgba, Theme};
 use oxiguitar_host::api::message::TrackInfo;
 use oxiguitar_host::api::tab::{Area, Key, KeyName, PointerKind, TabContent, TabEvent, Widget};
+use oxiguitar_host::api::view::Place;
 use oxiguitar_host::{Plugins, TabId};
 use oxiguitar_render::{Raster, View};
 
@@ -71,14 +72,33 @@ pub(crate) fn add_to(shell: &mut Shell, plugins: &Plugins) {
     }
 }
 
+/// Adds every panel (a plugin's own view in Slint placed in an area,
+/// interface 1.15) to its area, after the plugins' tabs.
+pub(crate) fn add_views_to(shell: &mut Shell, plugins: &Plugins) {
+    for view in plugins.views() {
+        let side = match view.spec.place {
+            Place::Top => Side::Top,
+            Place::Bottom => Side::Bottom,
+            Place::Left => Side::Left,
+            Place::Right => Side::Right,
+            Place::Window | Place::Track | Place::Export => continue,
+        };
+        shell.area_mut(side).tabs.push(Tab {
+            id: crate::plugin_ui::shell_id(&view.id()),
+            title: view.spec.title.clone(),
+        });
+    }
+}
+
 /// Takes away every tab of the plugin `id`, which was withdrawn: as if it
 /// had never been installed. Whether any went.
 pub(crate) fn remove_from(shell: &mut Shell, id: &str) -> bool {
     let mut any = false;
     for side in Side::ALL {
-        any |= shell
-            .area_mut(side)
-            .remove(|tab| tab_of(tab).is_some_and(|t| t.plugin == id));
+        any |= shell.area_mut(side).remove(|tab| {
+            tab_of(tab).is_some_and(|t| t.plugin == id)
+                || crate::plugin_ui::view_of(tab).is_some_and(|v| v.plugin == id)
+        });
     }
     any
 }

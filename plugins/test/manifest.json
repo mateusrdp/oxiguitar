@@ -1,5 +1,5 @@
 {
-  "interface": "1.14",
+  "interface": "1.15",
   "id": "oxiguitar.test",
   "name": "Test plugin",
   "version": "0.21.9",
@@ -52,10 +52,16 @@
   "draws": true,
   "performs": true,
   "track_sections": [
-    { "id": "test", "title": "Test section", "does_not_play": ["drums"] }
+    { "id": "test", "title": "Test section", "does_not_play": ["drums"] },
+    { "id": "slint-section", "title": "Test Slint section", "does_not_play": ["drums"] }
   ],
   "folders": ["soundfonts", "test-files"],
   "exporters": [
     { "id": "raw", "name": "Raw Test Audio", "extension": "oxgraw", "kind": "audio", "options": "raw-options" }
+  ],
+  "views": [
+    { "id": "window", "component": "TestWindow", "place": "window" },
+    { "id": "slint-panel", "component": "TestPanel", "place": "left", "title": "Test Slint" },
+    { "id": "slint-section", "component": "TestSection", "place": "track", "title": "Test Slint section" }
   ]
 }

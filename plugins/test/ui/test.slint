@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+// The test plugin's own UI (plugin interface 1.15): a window, a panel and a
+// track section, each with a property the plugin sets and a callback it
+// hears.
+
+import { Button, Slider } from "std-widgets.slint";
+
+export component TestWindow inherits Window {
+    title: "Test Window";
+    in property <string> said;
+    callback pressed(int);
+    // Shadows something of Window's: known by this name all the same.
+    callback close();
+    VerticalLayout {
+        padding: 8px;
+        Text { text: root.said; }
+        Button {
+            text: "Press";
+            clicked => { root.pressed(1); }
+        }
+    }
+}
+
+export component TestPanel {
+    in property <string> said;
+    callback pressed(int);
+    VerticalLayout {
+        Text { text: root.said; }
+        Button {
+            text: "Press";
+            clicked => { root.pressed(2); }
+        }
+    }
+}
+
+export component TestSection {
+    in-out property <float> level: 0.5;
+    callback level-changed(float);
+    Slider {
+        minimum: 0;
+        maximum: 1;
+        value <=> root.level;
+        released(v) => { root.level-changed(v); }
+    }
+}

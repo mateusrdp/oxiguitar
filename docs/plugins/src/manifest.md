@@ -40,6 +40,7 @@ The template's:
 | `exporters` | no | Its formats in File → Export Audio…; interface 1.4, and 1.11 for an exporter's `options` ([Exporters](exporters.md)) |
 | `needs` | no | The plugins it can't work without, each `{"id": …, "version": …}` with the lowest version that will do; interface 1.4 (below) |
 | `replaces` | no | The ids of plugins it succeeds; interface 1.4 (below) |
+| `views` | no | Its own UI in Slint: windows, panels, track sections and export options; interface 1.15 ([Your own UI in Slint](ui.md)) |
 
 **Unknown keys are refused when you build and ignored when OxiGuitar reads.** The test `export_plugin!` adds fails on a key the SDK doesn't know, so a typing mistake (`"servces"`) shows up in `cargo test`. An older OxiGuitar reading a newer plugin's manifest skips keys it doesn't know, so new keys never stop a plugin from loading.
 

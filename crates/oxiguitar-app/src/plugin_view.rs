@@ -65,6 +65,7 @@ pub(crate) fn plugin_tab_at(s: &App, view: View) -> Option<TabId> {
 /// Shows area `side`'s plugin tab, asking its plugin for the contents when
 /// there are none yet or the plugin asked for a redraw while it was hidden.
 pub(crate) fn show_plugin_tab(app: &Shared, side: Side) {
+    show_plugin_panel(app, side);
     let Some(tab) = plugin_tab_on_screen(&app.borrow(), side) else {
         let mut s = app.borrow_mut();
         let view = &mut s.plugin_views[side.index()];
@@ -82,6 +83,34 @@ pub(crate) fn show_plugin_tab(app: &Shared, side: Side) {
         }
     }
     refresh_plugin_view(app, View::Area(side), &tab);
+}
+
+/// Puts area `side`'s panel, a plugin's own view in Slint (interface
+/// 1.15), in the area's container, when the area shows one.
+fn show_plugin_panel(app: &Shared, side: Side) {
+    let (view, ui) = {
+        let s = app.borrow();
+        let area = s.shell.area(side);
+        let view = (area.shown && !area.collapsed)
+            .then(|| plugin_ui::view_of(area.active_id()))
+            .flatten();
+        (view, s.ui.clone())
+    };
+    let Some(id) = view else {
+        plugin_ui::no_panel(side.index());
+        return;
+    };
+    let set: Rc<dyn Fn(slint::ComponentFactory)> = Rc::new(move |f| {
+        if let Some(ui) = ui.upgrade() {
+            match side {
+                Side::Top => ui.set_top_view(f),
+                Side::Bottom => ui.set_bottom_view(f),
+                Side::Left => ui.set_left_view(f),
+                Side::Right => ui.set_right_view(f),
+            }
+        }
+    });
+    plugin_ui::panel(side.index(), &id, set);
 }
 
 /// The plugin asked for its tab to be shown again.
@@ -147,14 +176,24 @@ pub(crate) fn plugin_dialog_done(app: &Shared, ok: bool) {
 /// A plugin asks for its tab at the front of its area (interface 1.8): the
 /// area opens if it was closed.
 pub(crate) fn plugin_tab_wanted(app: &Shared, tab: &TabId) {
+    bring_forward(app, &plugin_tabs::shell_id(tab));
+}
+
+/// A plugin asked for its panel (a view in an area, interface 1.15) to be
+/// brought to the front.
+pub(crate) fn plugin_panel_wanted(app: &Shared, view: &oxiguitar_host::ViewId) {
+    bring_forward(app, &plugin_ui::shell_id(view));
+}
+
+/// Opens the tab `id` in whichever area has it, showing the area.
+fn bring_forward(app: &Shared, id: &str) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
     };
-    let id = plugin_tabs::shell_id(tab);
     let Some(side) = Side::ALL
         .iter()
         .copied()
-        .find(|&side| app.borrow_mut().shell.area_mut(side).open(&id))
+        .find(|&side| app.borrow_mut().shell.area_mut(side).open(id))
     else {
         return;
     };

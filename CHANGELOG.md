@@ -4,6 +4,11 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Added
+
+- **Plugins write their UI in Slint** (#346, plugin interface 1.15): a plugin hands over a `.slint` file, and OxiGuitar compiles it with Slint's interpreter and runs it with its own Slint, widgets, fonts and light or dark colours, so the core draws nothing of a plugin's and a plugin carries no widget code. The manifest's `views` place its components: a window of its own, a panel in one of the window's areas, a section of the Track tab, or an export's options. The plugin sets their properties and hears their callbacks (`Host::set_view`, `show_view`, `close_view`, `set_track_settings`; the SDK's `Ui`). Panels, track sections and export options use Slint's `ComponentContainer`, experimental in Slint 1.19. The contract suite compiles a plugin's file and checks its views. The plugin guide has a new page, "Your own UI in Slint", and ADR 0013 records the decision. The older widget tabs, dialogs and sections keep working for plugins built before 1.15.
+- **Plugin interface 1.15: the plugin files** (#344). A plugin can ask for every plugin file OxiGuitar found, copies replaced by another included, with its folder's kind (the user's, the program's, the system's or one settings.json lists), its manifest's id, name, version and homepage, whether it is used and why not, and whether it is loaded, and for the user's plugin folder (`Host::plugin_files`). It is what a plugin that manages the others needs. The SDK crates are at 1.15.0. The plugin guide's versions page now says interface 1.14 came with 0.21.5.
+
 ## [0.21.9] - 2026-11-24
 
 ### Fixed

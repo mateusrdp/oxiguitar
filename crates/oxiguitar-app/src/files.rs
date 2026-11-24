@@ -316,7 +316,7 @@ pub(crate) fn export_format_picked(app: &Shared, i: i32) {
         }
         close_export_options(&mut s, false);
         s.export_options = target.options.clone();
-        if let Some(tab) = &target.options {
+        if let Some(tab) = target.options.as_ref().filter(|_| !target.options_view) {
             // What an earlier opening showed is not what this one shows.
             s.plugin_tabs.remove(tab);
             if let Some(thread) = &s.tab_thread {
@@ -326,16 +326,56 @@ pub(crate) fn export_format_picked(app: &Shared, i: i32) {
         target.options
     };
     ui.set_export_has_options(options.is_some());
-    match options {
-        Some(tab) => refresh_plugin_view(app, View::Export, &tab),
-        None => set_plugin_area(&ui, View::Export, None, ""),
+    let view = options.as_ref().and_then(options_view);
+    ui.set_export_options_view(view.is_some());
+    match (options, view) {
+        // The plugin's own view (interface 1.15), made when shown.
+        (Some(_), Some(id)) => {
+            let weak = ui.as_weak();
+            let shown = id.clone();
+            let f = plugin_ui::factory(&id, None, move |f| {
+                let still = APP
+                    .with(|a| a.borrow().clone())
+                    .and_then(|app| app.borrow().export_options.as_ref().and_then(options_view))
+                    .is_some_and(|v| v == shown);
+                if let Some(ui) = weak.upgrade().filter(|_| still) {
+                    ui.set_export_options_factory(f);
+                }
+            });
+            ui.set_export_options_factory(f);
+        }
+        (Some(tab), None) => refresh_plugin_view(app, View::Export, &tab),
+        (None, _) => set_plugin_area(&ui, View::Export, None, ""),
     }
+}
+
+/// The export options `tab`, when they are a plugin's own view in Slint
+/// (interface 1.15).
+fn options_view(tab: &TabId) -> Option<oxiguitar_host::ViewId> {
+    let id = oxiguitar_host::ViewId {
+        plugin: tab.plugin.clone(),
+        view: tab.tab.clone(),
+    };
+    plugin_ui::spec_of(&id)
+        .filter(|(_, place)| *place == oxiguitar_host::api::view::Place::Export)
+        .map(|_| id)
 }
 
 /// Closes the export dialog's options, if it shows some, telling their
 /// plugin whether the user pressed OK; which ones they were.
 pub(crate) fn close_export_options(s: &mut App, ok: bool) -> Option<TabId> {
     let tab = s.export_options.take()?;
+    if let Some(id) = options_view(&tab) {
+        // The plugin hears it first; the export waiting for it goes on
+        // once it has.
+        let closed = tab.clone();
+        plugin_ui::closed_then(&id, ok, move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                export_options_closed(&app, &closed);
+            }
+        });
+        return Some(tab);
+    }
     let view = &mut s.plugin_views[View::Export.index()];
     view.tab = None;
     view.content = None;

@@ -58,6 +58,7 @@ mod palette;
 mod player;
 mod playing;
 mod plugin_tabs;
+mod plugin_ui;
 mod prefs;
 mod shell;
 mod song;
@@ -465,6 +466,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let save_formats = SaveFormat::writable(&startup.plugins);
     let mut shell = Shell::default();
     plugin_tabs::add_to(&mut shell, &startup.plugins);
+    plugin_tabs::add_views_to(&mut shell, &startup.plugins);
     let (toolbar_tools, toolbar_icons) = plugin_toolbar_tools(&startup.plugins);
     let (plugin_keys, key_lines, key_clashes) = {
         let (tools, clashes) = startup.plugins.shortcut_tools();
@@ -742,6 +744,7 @@ fn main() -> Result<(), slint::PlatformError> {
         if let Some(tabs) = &s.tab_thread {
             tabs.send(plugin_tabs::Request::Dark(s.dark_interface));
         }
+        plugin_ui::init(s.plugins.clone(), s.dark_interface);
         // Settings: the count-in and metronome a session starts with.
         s.player.set_count_in(prefs.count_in);
         s.player.set_metronome(prefs.metronome);
@@ -1787,6 +1790,7 @@ fn settings_changed(app: &Shared) {
     if let Some(tabs) = &s.tab_thread {
         tabs.send(plugin_tabs::Request::Dark(dark));
     }
+    plugin_ui::dark(dark);
     if let Some(m) = &s.manager {
         m.set_dark_interface(dark);
     }

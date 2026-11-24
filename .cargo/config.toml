@@ -1,0 +1,9 @@
+# Environment for every build in this workspace.
+
+[env]
+# Slint's ComponentContainer, experimental in Slint 1.19: the window's
+# panels, track sections and export options embed plugins' interpreted
+# `.slint` views in it (#346; crates/oxiguitar-app/src/plugin_ui.rs).
+# Mateus, 24 Nov 2026: use it, and follow Slint if it changes on an
+# upgrade.
+SLINT_ENABLE_EXPERIMENTAL_FEATURES = "component-container"

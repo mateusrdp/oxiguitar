@@ -3,7 +3,7 @@ name = "oxiguitar-plugin-test"
 description = "The OxiGuitar plugin contract suite: builds a plugin as an .oxp file and checks it against the plugin interface."
 # The SDK follows the plugin interface's version, not the program's
 # (#165): 1.11.0 until interface 1.12.
-version = "1.14.0"
+version = "1.15.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -20,6 +20,11 @@ released = ["dep:oxiguitar-model"]
 [dependencies]
 oxiguitar-host.workspace = true
 oxiguitar-model = { workspace = true, features = ["wire"], optional = true }
+# Compiling a plugin's `.slint` file as the app does (interface 1.15):
+# Slint's compiler alone, at the app's version, with no UI runtime (no
+# system libraries for a plugin's tests). Its compiler configuration keeps
+# every exported component.
+i-slint-compiler = { version = "=1.19.0", default-features = false, features = ["std"] }
 
 # Catching system calls while a plugin renders (src/syscalls.rs): fork,
 # seccomp and a signal handler.
