@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.9] - 2026-11-24
+
 ### Fixed
 
 - **apt is stopped only when it is stuck, never for being slow** (24 Nov 2026: the v0.21.8 packages' AppImage job failed three times on a 185 kB/s mirror although each try had downloaded more). `scripts/apt-install.sh` watches the bytes in apt's download folders and stops apt only when they have not grown for 2 minutes (`APT_STALL_SECONDS`), then tries again on the next mirror, up to 5 times (`APT_TRIES`); while they grow, it lets apt finish however long that takes. Its steps' timeouts are 60 minutes, as a last resort. The script is the same file in every repository; `scripts/new-repo.sh` gives a new plugin repository its copy and a CI that uses it.
