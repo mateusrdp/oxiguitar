@@ -2657,8 +2657,8 @@ fn interface_1_15_the_plugin_files() {
     )
     .unwrap();
     let mut folders = folders;
-    let system = home.join("system/plugins");
-    let program = home.join("program/plugins");
+    let system = home.join("system").join("plugins");
+    let program = home.join("program").join("plugins");
     folders.system_plugins = vec![program.clone(), system.clone()];
     folders.program_plugins = Some(program.clone());
     for dir in [&system, &program, &folders.user_plugins] {
