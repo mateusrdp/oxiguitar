@@ -1759,6 +1759,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "i-slint-backend-qt"
+version = "1.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "467b228fc48eabde7e912986b4d444353729ede05f9a487cbedcc3d927590de8"
+dependencies = [
+ "const-field-offset",
+ "i-slint-common",
+ "i-slint-core",
+ "i-slint-core-macros",
+ "vtable",
+]
+
+[[package]]
 name = "i-slint-backend-selector"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1766,6 +1779,7 @@ checksum = "b824c2cce2e9f766eb42138a0ac1ec93d095dd9cd45a2dfa650dd3e6558cdfd9"
 dependencies = [
  "cfg_aliases",
  "i-slint-backend-linuxkms",
+ "i-slint-backend-qt",
  "i-slint-backend-testing",
  "i-slint-backend-winit",
  "i-slint-common",
@@ -3225,6 +3239,8 @@ name = "oxiguitar-app"
 version = "0.21.9"
 dependencies = [
  "i-slint-backend-winit",
+ "i-slint-compiler",
+ "i-slint-core",
  "oxiguitar-display",
  "oxiguitar-edit",
  "oxiguitar-host",
@@ -3239,6 +3255,7 @@ dependencies = [
  "serde_json",
  "slint",
  "slint-build",
+ "slint-interpreter",
  "tiny-skia 0.12.0",
 ]
 
@@ -3338,12 +3355,15 @@ dependencies = [
 name = "oxiguitar-plugin-test"
 version = "1.15.0"
 dependencies = [
+ "i-slint-compiler",
+ "i-slint-core",
  "libc",
  "oxiguitar-edit",
  "oxiguitar-host",
  "oxiguitar-model",
  "oxiguitar-play",
  "serde_json",
+ "slint-interpreter",
 ]
 
 [[package]]
@@ -4315,6 +4335,34 @@ dependencies = [
  "i-slint-compiler",
  "spin_on",
  "toml_edit",
+]
+
+[[package]]
+name = "slint-interpreter"
+version = "1.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1dda5770abc07e5f660488a9ad5ff024d13ab405bb5e3a03f375ef005bc965f2"
+dependencies = [
+ "derive_more",
+ "either",
+ "hashbrown 0.16.1",
+ "i-slint-backend-linuxkms",
+ "i-slint-backend-selector",
+ "i-slint-backend-winit",
+ "i-slint-common",
+ "i-slint-compiler",
+ "i-slint-core",
+ "i-slint-core-macros",
+ "js-sys",
+ "lyon_path",
+ "num-traits",
+ "once_cell",
+ "smol_str 0.3.7",
+ "typed-index-collections",
+ "vtable",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

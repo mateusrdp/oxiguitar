@@ -110,6 +110,63 @@ impl oxiguitar_host::Core for WindowCore {
         })
     }
 
+    fn show_view(
+        &self,
+        view: &oxiguitar_host::ViewId,
+        place: oxiguitar_host::api::view::Place,
+    ) -> Result<(), String> {
+        use oxiguitar_host::api::view::Place;
+        let view = view.clone();
+        match place {
+            Place::Window => slint::invoke_from_event_loop(move || plugin_ui::open_window(&view))
+                .map_err(|_| "the window is closing".to_owned()),
+            Place::Top | Place::Bottom | Place::Left | Place::Right => {
+                slint::invoke_from_event_loop(move || {
+                    if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                        plugin_panel_wanted(&app, &view);
+                    }
+                })
+                .map_err(|_| "the window is closing".to_owned())
+            }
+            Place::Track | Place::Export => Err(
+                "a track section's or an export's view shows in its dialog, when the user opens it"
+                    .to_owned(),
+            ),
+        }
+    }
+
+    fn close_view(&self, view: &oxiguitar_host::ViewId) {
+        let view = view.clone();
+        let _ = slint::invoke_from_event_loop(move || plugin_ui::close_window(&view));
+    }
+
+    fn set_view(
+        &self,
+        view: &oxiguitar_host::ViewId,
+        properties: Vec<(String, oxiguitar_host::api::view::Value)>,
+    ) {
+        let view = view.clone();
+        let _ = slint::invoke_from_event_loop(move || plugin_ui::set(&view, properties));
+    }
+
+    fn set_track_settings(
+        &self,
+        view: &oxiguitar_host::ViewId,
+        settings: String,
+    ) -> Result<(), String> {
+        // Asked from any thread: done on the window's, answered at once.
+        let view = view.clone();
+        slint::invoke_from_event_loop(move || {
+            if let Some(app) = APP.with(|a| a.borrow().clone())
+                && let Err(why) = view_set_track_settings(&app, &view, settings)
+            {
+                app.borrow_mut().footer.push(Level::Warning, why);
+                sync_footer(&app);
+            }
+        })
+        .map_err(|_| "the window is closing".to_owned())
+    }
+
     fn show_tab(&self, tab: &TabId) {
         let tab = tab.clone();
         let _ = slint::invoke_from_event_loop(move || {
@@ -339,6 +396,7 @@ pub(crate) fn run_core_tool(
 /// The plugin `id` failed and was withdrawn: its tabs go, as if it had
 /// never been installed, and the plugin manager shows why.
 pub(crate) fn plugin_withdrawn(app: &Shared, id: &str) {
+    plugin_ui::withdrawn(id);
     let gone = {
         let mut s = app.borrow_mut();
         s.plugin_tabs.retain(|tab, _| tab.plugin != id);

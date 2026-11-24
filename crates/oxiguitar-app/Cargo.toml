@@ -63,6 +63,22 @@ slint = { version = "=1.19.0", default-features = false, features = [
 # systems. Pinned with Slint (Slint itself pins it to its own exact
 # version). No features of its own: the build's feature picks the backend.
 i-slint-backend-winit = { version = "=1.19.0", default-features = false }
+# Plugins' own UI (#346, plugin interface 1.15): their `.slint` files,
+# compiled when first shown and run with the window's own Slint, at its
+# exact version. `internal` gives `create_embedded`, how an interpreted
+# component goes into a `ComponentContainer` (a panel, a track section,
+# export options), which Slint 1.19 marks experimental; src/plugin_ui.rs.
+slint-interpreter = { version = "=1.19.0", default-features = false, features = [
+    "std",
+    "compat-1-2",
+    "internal",
+] }
+# Every exported component of a plugin's `.slint` file, windows or not
+# (`ComponentSelection::AllExported`): set through the interpreter's
+# `internal` compiler configuration, which takes Slint's `InternalToken`.
+# At Slint's exact version, with the interpreter.
+i-slint-compiler = { version = "=1.19.0", default-features = false }
+i-slint-core = { version = "=1.19.0", default-features = false }
 # The system's own Open and Save dialogs: the XDG desktop portal on Linux
 # (pure Rust, no GTK), the native dialogs on Windows and macOS. Its
 # `wayland` feature comes with the Wayland build.

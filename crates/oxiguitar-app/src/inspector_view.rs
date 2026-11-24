@@ -418,6 +418,36 @@ pub(crate) fn track_changed(app: &Shared, id: &str, value: i32, text: &str) {
     }
 }
 
+/// A plugin's own track-section view changed the track's settings for it
+/// (interface 1.15): as a section's widget would, they go into the track
+/// as one change. The error is a sentence for the plugin.
+pub(crate) fn view_set_track_settings(
+    app: &Shared,
+    id: &oxiguitar_host::ViewId,
+    settings: String,
+) -> Result<(), String> {
+    {
+        let mut s = app.borrow_mut();
+        let Some(sections) = s.sections.as_mut() else {
+            return Err("no track's sections are shown".to_owned());
+        };
+        if !sections
+            .sections
+            .iter()
+            .any(|x| x.view && x.plugin == id.plugin && x.section == id.view)
+        {
+            return Err(format!("the Track tab doesn't show the view {:?}", id.view));
+        }
+        if settings == sections.settings_of(&id.plugin) {
+            return Ok(());
+        }
+        sections.settings.insert(id.plugin.clone(), settings);
+        s.sections_touched = true;
+    }
+    apply_section_settings(app);
+    Ok(())
+}
+
 /// A plugin's section changed the track's settings for it, or a section
 /// was moved: they go into the track as one change.
 pub(crate) fn apply_section_settings(app: &Shared) {
@@ -535,12 +565,38 @@ pub(crate) fn sync_track_sections(app: &Shared) {
                 Some(Ok(content)) => (plain_rows(content), String::new()),
                 Some(Err(why)) => (ModelRc::default(), why.clone()),
             };
+            // A plugin's own view (interface 1.15), made once for this
+            // opening of the sections, with the track and its settings.
+            let factory = s
+                .sections
+                .as_ref()
+                .filter(|_| shown.view)
+                .map(|t| {
+                    let id = oxiguitar_host::ViewId {
+                        plugin: shown.plugin.clone(),
+                        view: shown.section.clone(),
+                    };
+                    let track = oxiguitar_host::api::view::TrackView {
+                        track: t.track.clone(),
+                        settings: t.settings_of(&shown.plugin).to_owned(),
+                    };
+                    plugin_ui::section(&id, t.dialog, track, || {
+                        let _ = slint::invoke_from_event_loop(|| {
+                            if let Some(app) = APP.with(|a| a.borrow().clone()) {
+                                sync_track_sections(&app);
+                            }
+                        });
+                    })
+                })
+                .unwrap_or_default();
             PluginSection {
                 title: shown.title.as_str().into(),
                 rows,
                 message: message.into(),
                 up,
                 down,
+                view: shown.view,
+                factory,
             }
         })
         .collect();

@@ -188,6 +188,40 @@ pub fn check(oxp: &Path) -> Report {
     check_with(oxp, &[])
 }
 
+/// Compiles a plugin's `.slint` file as OxiGuitar does (interface 1.15):
+/// Slint's interpreter, the window's Fluent style; the errors by line.
+pub fn compile_ui(source: String) -> Result<slint_interpreter::CompilationResult, String> {
+    let mut compiler = slint_interpreter::Compiler::default();
+    compiler.set_style("fluent".into());
+    // Every exported component, as the app compiles them: embedded views
+    // don't inherit Window.
+    compiler
+        .compiler_configuration(i_slint_core::InternalToken)
+        .components_to_generate = i_slint_compiler::ComponentSelection::AllExported;
+    let mut future = std::pin::pin!(
+        compiler.build_from_source(source, std::path::PathBuf::from("plugin.slint"))
+    );
+    let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+    let result = loop {
+        if let std::task::Poll::Ready(r) = future.as_mut().poll(&mut cx) {
+            break r;
+        }
+    };
+    let errors: Vec<String> = result
+        .diagnostics()
+        .filter(|d| d.level() == slint_interpreter::DiagnosticLevel::Error)
+        .map(|d| {
+            let (line, column) = d.line_column();
+            format!("line {line}, column {column}: {}", d.message())
+        })
+        .collect();
+    if errors.is_empty() {
+        Ok(result)
+    } else {
+        Err(errors.join("; "))
+    }
+}
+
 /// [`check`] for a plugin that `needs` others: the plugin files in
 /// `needed` are copied beside it, so the need is met. Only `oxp` is
 /// checked.
@@ -394,6 +428,59 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
             );
         }
     }
+    // Its own UI in Slint (interface 1.15): its `.slint` file compiles with
+    // the window's style and has every view's component; each view is
+    // told it was made and, but for a panel, closed.
+    let views = plugins.views();
+    if let Some(first) = views.first() {
+        let id = first.id();
+        let compiled = plugins
+            .ui_source(&id.plugin)
+            .map_err(|e| e.message)
+            .and_then(compile_ui);
+        report.check(
+            "its .slint file compiles",
+            compiled.as_ref().map(|_| ()).map_err(Clone::clone),
+        );
+        if let Ok(compiled) = &compiled {
+            for view in &views {
+                let id = view.id();
+                report.check(
+                    format!(
+                        "view {}: its .slint file has its component {}",
+                        id.view, view.spec.component
+                    ),
+                    if compiled.component(&view.spec.component).is_some() {
+                        Ok(())
+                    } else {
+                        Err(format!("no exported component {:?}", view.spec.component))
+                    },
+                );
+                use oxiguitar_host::api::view::Place;
+                let track = (view.spec.place == Place::Track).then(|| {
+                    oxiguitar_host::api::view::TrackView {
+                        track: oxiguitar_host::api::message::TrackInfo {
+                            index: 0,
+                            name: "Lead".into(),
+                            class: oxiguitar_host::api::class::InstrumentClass::Fretted,
+                        },
+                        settings: "{}".into(),
+                    }
+                });
+                plugins.view_shown(&id, track);
+                if !view.spec.place.is_area() {
+                    plugins.view_closed(&id, false);
+                }
+                report.check(
+                    format!("view {}: showing and closing it is no crash", id.view),
+                    match view.plugin.failure() {
+                        None => Ok(()),
+                        Some(why) => Err(why.to_string()),
+                    },
+                );
+            }
+        }
+    }
     let events = [
         (EventKind::Score, Event::ScoreOpened { revision: 1 }),
         (EventKind::Selection, Event::Selection(None)),
@@ -581,6 +668,15 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
                 class,
             };
             let id = &section.spec.id;
+            // A section that is the plugin's own view in Slint (interface
+            // 1.15) is checked with the views.
+            let view = oxiguitar_host::ViewId {
+                plugin: section.plugin_id().to_owned(),
+                view: id.clone(),
+            };
+            if plugins.view(&view).is_some() {
+                continue;
+            }
             let answer = plugins.track_section(section, &track, "{}");
             report.check(
                 format!("track section {id}: its contents can be shown"),

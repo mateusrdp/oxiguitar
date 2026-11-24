@@ -40,7 +40,7 @@ pub use oxiguitar_plugin_api as api;
 pub use plugins::{
     AudioExport, Core, DISABLED_KEY, ExportEnd, ExporterRef, FormatRef, Found, InstrumentRef,
     OpenError, OpenedFile, Plugins, ReadScore, SERVICES_KEY, SectionRef, ServiceRef, State, TabId,
-    TabRef, Unheard, Unrecognised, WrittenFile, in_effect_order, is_https,
+    TabRef, Unheard, Unrecognised, ViewId, ViewRef, WrittenFile, in_effect_order, is_https,
 };
 pub use settings::{Settings, SharedSettings};
 

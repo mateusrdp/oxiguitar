@@ -303,6 +303,7 @@ pub(crate) fn sync_areas(app: &Shared) {
             active_id: area.active_id().into(),
             collapsed: area.collapsed,
             plugin: plugin_tabs::tab_of(area.active_id()).is_some(),
+            view: plugin_ui::view_of(area.active_id()).is_some(),
         }
     };
     ui.set_top_area(state(Side::Top));

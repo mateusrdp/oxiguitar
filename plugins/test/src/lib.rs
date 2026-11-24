@@ -96,6 +96,60 @@ pub struct TestPlugin {
     raw_options: RawOptions,
     drawer: StampDrawer,
     performer: StampPerformer,
+    ui: TestUi,
+}
+
+/// The test plugin's own UI (interface 1.15): what it was told.
+#[derive(Debug)]
+pub struct TestUi {
+    host: Host,
+    heard: Mutex<Vec<String>>,
+}
+
+impl oxiguitar_plugin::Ui for TestUi {
+    fn source(&self) -> String {
+        include_str!("../ui/test.slint").into()
+    }
+
+    fn shown(&self, view: &str, track: Option<&oxiguitar_plugin::TrackView>) -> Result<(), Error> {
+        let track = track.map_or(String::new(), |t| {
+            format!(" track {} {}", t.track.index, t.settings)
+        });
+        self.heard
+            .lock()
+            .unwrap()
+            .push(format!("shown {view}{track}"));
+        Ok(())
+    }
+
+    fn callback(
+        &self,
+        view: &str,
+        callback: &str,
+        args: Vec<oxiguitar_plugin::Value>,
+    ) -> Result<(), Error> {
+        self.heard
+            .lock()
+            .unwrap()
+            .push(format!("{view} {callback} {args:?}"));
+        // The section's level goes into the track's settings.
+        if callback == "level-changed"
+            && let Some(oxiguitar_plugin::Value::Number(level)) = args.first()
+        {
+            let mut settings = serde_json::Map::new();
+            settings.insert("level".into(), (*level).into());
+            self.host.set_track_settings(view, &settings)?;
+        }
+        Ok(())
+    }
+
+    fn closed(&self, view: &str, accepted: bool) -> Result<(), Error> {
+        self.heard
+            .lock()
+            .unwrap()
+            .push(format!("closed {view} {accepted}"));
+        Ok(())
+    }
 }
 
 /// The first bytes of a file the exporter `raw` writes: then the rate
@@ -875,8 +929,16 @@ impl Plugin for TestPlugin {
                 host: host.clone(),
                 asked: std::sync::atomic::AtomicU32::new(0),
             },
+            ui: TestUi {
+                host: host.clone(),
+                heard: Mutex::new(Vec::new()),
+            },
             host,
         })
+    }
+
+    fn ui(&self) -> Option<&dyn oxiguitar_plugin::Ui> {
+        Some(&self.ui)
     }
 
     fn drawer(&self) -> Option<&dyn oxiguitar_plugin::Drawer> {
@@ -1068,6 +1130,24 @@ impl Service for TestPlugin {
                     first_bar,
                     last_bar,
                 })?;
+                Ok(Vec::new())
+            }
+            // What its views were told, a line each (interface 1.15).
+            "views-heard" => Ok(self.ui.heard.lock().unwrap().join("\n").into_bytes()),
+            // `show VIEW`, `close VIEW`, `set VIEW TEXT` (the property
+            // `said`): asked of the host (interface 1.15).
+            "view" => {
+                let text = String::from_utf8_lossy(input).into_owned();
+                let mut words = text.splitn(3, ' ');
+                match (words.next(), words.next(), words.next()) {
+                    (Some("show"), Some(view), None) => self.host.show_view(view)?,
+                    (Some("close"), Some(view), None) => self.host.close_view(view)?,
+                    (Some("set"), Some(view), Some(said)) => self.host.set_view(
+                        view,
+                        vec![("said".into(), oxiguitar_plugin::Value::String(said.into()))],
+                    )?,
+                    _ => return Err(Error::new(ErrorKind::Invalid, "show, close or set a view")),
+                }
                 Ok(Vec::new())
             }
             // The open score's file, or nothing (interface 1.13).

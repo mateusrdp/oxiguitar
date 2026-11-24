@@ -89,6 +89,7 @@ pub mod score;
 pub mod score2;
 pub mod signature;
 pub mod tab;
+pub mod view;
 
 mod blob;
 
