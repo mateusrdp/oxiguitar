@@ -6,7 +6,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ### Changed
 
-- **The menus are shorter** (#339): Edit keeps Undo, Redo, Select All and the clipboard, and one **Beats, Bars and Tracks** submenu holds the beat, bar and track commands (each in a submenu of its own). Chord, Text, Type Lyrics and Custom N-tuplet left Edit, as the palette has them (their keys work as before). **Transpose Selection…** and **Find Fingering for Selection** moved to Tools beside their whole-score versions. **View** is second last, before Help.
+- **The menus are shorter** (#339): Edit keeps Undo, Redo, Select All and the clipboard, and the beat, bar and track commands are in a **Beat**, a **Bar** and a **Track** submenu. Chord, Text, Type Lyrics and Custom N-tuplet left Edit, as the palette has them (their keys work as before). **Transpose Selection…** and **Find Fingering for Selection** moved to Tools beside their whole-score versions. **View** is second last, before Help.
 - **View → Settings…** is a new dialog for what you set once: Dark interface, Dark page and Paper size (it left File), Play the beat after each note edit, and, new, whether a session starts with the count-in and the metronome on. Each control applies at once and is remembered in settings.json.
 - **The Song tab lists the score's sections** under "Structure"; a click puts the caret at the section's bar. It replaces Edit → Go to Section.
 - **Help → Manual** opens the manual in your browser, first in the menu.

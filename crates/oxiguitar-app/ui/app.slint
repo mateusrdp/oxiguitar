@@ -1841,43 +1841,40 @@ export component AppWindow inherits Window {
             MenuItem { title: "Paste (Ctrl + V)"; enabled: root.has-score; activated => { root.edit-command("paste"); } }
             MenuSeparator { }
             // The palette has Chord, Text, Lyrics and Custom N-tuplet, so the
-            // menu doesn't (#339); their keys work as before. Note entry's
-            // keys are taken on the page (editing.rs); these items name
-            // them, and do the same.
+            // menu doesn't (#339); their keys work as before. Beat, Bar and
+            // Track each have a submenu of their own. The keys are taken on
+            // the page (editing.rs); these items name them, and do the same.
             Menu {
-                title: "Beats, Bars and Tracks";
+                title: "Beat";
+                MenuItem { title: "Insert Beat (Ctrl + Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-beat"); } }
+                MenuItem { title: "Delete Beats (Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-beats"); } }
+                MenuItem { title: "Clear Beats (Ctrl + Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("clear-beats"); } }
+                MenuItem { title: "Move Beat Left"; enabled: root.has-score; activated => { root.edit-command("move-left"); } }
+                MenuItem { title: "Move Beat Right"; enabled: root.has-score; activated => { root.edit-command("move-right"); } }
                 Menu {
-                    title: "Beat";
-                    MenuItem { title: "Insert Beat (Ctrl + Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-beat"); } }
-                    MenuItem { title: "Delete Beats (Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-beats"); } }
-                    MenuItem { title: "Clear Beats (Ctrl + Shift + Delete)"; enabled: root.has-score; activated => { root.edit-command("clear-beats"); } }
-                    MenuItem { title: "Move Beat Left"; enabled: root.has-score; activated => { root.edit-command("move-left"); } }
-                    MenuItem { title: "Move Beat Right"; enabled: root.has-score; activated => { root.edit-command("move-right"); } }
-                    Menu {
-                        title: "Move Beat to Voice";
-                        MenuItem { title: "Voice 1 (Alt + 1)"; enabled: root.has-score; activated => { root.edit-command("voice-1"); } }
-                        MenuItem { title: "Voice 2 (Alt + 2)"; enabled: root.has-score; activated => { root.edit-command("voice-2"); } }
-                        MenuItem { title: "Voice 3 (Alt + 3)"; enabled: root.has-score; activated => { root.edit-command("voice-3"); } }
-                        MenuItem { title: "Voice 4 (Alt + 4)"; enabled: root.has-score; activated => { root.edit-command("voice-4"); } }
-                    }
-                    MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
+                    title: "Move Beat to Voice";
+                    MenuItem { title: "Voice 1 (Alt + 1)"; enabled: root.has-score; activated => { root.edit-command("voice-1"); } }
+                    MenuItem { title: "Voice 2 (Alt + 2)"; enabled: root.has-score; activated => { root.edit-command("voice-2"); } }
+                    MenuItem { title: "Voice 3 (Alt + 3)"; enabled: root.has-score; activated => { root.edit-command("voice-3"); } }
+                    MenuItem { title: "Voice 4 (Alt + 4)"; enabled: root.has-score; activated => { root.edit-command("voice-4"); } }
                 }
-                Menu {
-                    title: "Bar";
-                    MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
-                    MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
-                    MenuItem { title: "Clear Bar"; enabled: root.has-score; activated => { root.edit-command("clear-bar"); } }
-                    MenuSeparator { }
-                    MenuItem { title: "Cut Bars… (Ctrl + Shift + X)"; enabled: root.has-score; activated => { root.edit-command("cut-bars"); } }
-                    MenuItem { title: "Copy Bars… (Ctrl + Shift + C)"; enabled: root.has-score; activated => { root.edit-command("copy-bars"); } }
-                    MenuItem { title: "Paste Bars… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("paste-bars"); } }
-                }
-                Menu {
-                    title: "Track";
-                    MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
-                    MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
-                    MenuItem { title: "Merge Track Into…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("merge-track"); } }
-                }
+                MenuItem { title: "Remove Unused Voices"; enabled: root.has-score; activated => { root.edit-command("remove-unused-voices"); } }
+            }
+            Menu {
+                title: "Bar";
+                MenuItem { title: "Insert Bar (Insert)"; enabled: root.has-score; activated => { root.edit-command("insert-bar"); } }
+                MenuItem { title: "Delete Bars (Ctrl + Delete)"; enabled: root.has-score; activated => { root.edit-command("delete-bars"); } }
+                MenuItem { title: "Clear Bar"; enabled: root.has-score; activated => { root.edit-command("clear-bar"); } }
+                MenuSeparator { }
+                MenuItem { title: "Cut Bars… (Ctrl + Shift + X)"; enabled: root.has-score; activated => { root.edit-command("cut-bars"); } }
+                MenuItem { title: "Copy Bars… (Ctrl + Shift + C)"; enabled: root.has-score; activated => { root.edit-command("copy-bars"); } }
+                MenuItem { title: "Paste Bars… (Ctrl + Shift + V)"; enabled: root.has-score; activated => { root.edit-command("paste-bars"); } }
+            }
+            Menu {
+                title: "Track";
+                MenuItem { title: "Add Track"; enabled: root.has-score; activated => { root.edit-command("add-track"); } }
+                MenuItem { title: "Delete Track…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("delete-track"); } }
+                MenuItem { title: "Merge Track Into…"; enabled: root.has-score && root.tracks.length > 1; activated => { root.edit-command("merge-track"); } }
             }
             if root.plugin-items-edit.length > 0 : MenuSeparator { }
             for it in root.plugin-items-edit : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
