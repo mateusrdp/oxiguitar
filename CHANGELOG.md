@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.21.8] - 2026-11-24
+
 ### Changed
 
 - **The menus are shorter** (#339): Edit keeps Undo, Redo, Select All and the clipboard, and the beat, bar and track commands are in a **Beat**, a **Bar** and a **Track** submenu. Chord, Text, Type Lyrics and Custom N-tuplet left Edit, as the palette has them (their keys work as before). **Transpose Selection…** and **Find Fingering for Selection** moved to Tools beside their whole-score versions. **View** is second last, before Help.
