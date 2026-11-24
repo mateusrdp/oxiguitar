@@ -25,11 +25,14 @@
 #
 # Give the step a generous timeout-minutes (60): it is only a last resort.
 #
+# The same file in every OxiGuitar repository (the core, oxiguitar-packages
+# and each plugin): change it in all of them at once.
+#
 # Usage: scripts/apt-install.sh [--recommends] PACKAGE...
 #   --recommends also installs the packages' recommended packages.
 # Environment: APT_STALL_SECONDS (default 120), APT_TRIES (stuck tries
 # allowed, default 5). APT_CHECK_SECONDS, APT_PAUSE_SECONDS, APT_WATCH_DIRS and
-# APT_MIRRORS are for the tests (oxiguitar-packages: tests/test-apt-install.sh).
+# APT_MIRRORS are for the tests (tests/test-apt-install.sh in oxiguitar-packages).
 
 set -euo pipefail
 
