@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! Opening a web address in the system's browser, only when the user clicks
-//! a link (Help → About's credits link and donation button; the player's
+//! a link (Help → Manual, Help → About's credits link and donation button; the player's
 //! link to better sounds, M4). OxiGuitar itself never connects anywhere: the browser does,
 //! as a program of its own.
 
@@ -15,6 +15,10 @@ pub(crate) const DONATE: &str = "https://www.paypal.com/donate/?business=4QYDZY4
 /// (Mateus, 16 Nov 2026: Help → About links to CREDITS.md and lists none
 /// itself). The packages also install the file beside the program.
 pub(crate) const CREDITS: &str = "https://github.com/mateusrdp/oxiguitar/blob/main/CREDITS.md";
+
+/// The core's manual, published from `main` by the Manual workflow
+/// (`docs.yml`): Help's first entry (#339).
+pub(crate) const MANUAL: &str = "https://mateusrdp.github.io/oxiguitar/";
 
 /// The system's command that opens an address in the default browser.
 fn opener(url: &str) -> Command {
@@ -82,5 +86,11 @@ mod tests {
         assert!(oxiguitar_host::is_https(CREDITS));
         assert!(CREDITS.starts_with("https://github.com/mateusrdp/oxiguitar/"));
         assert!(CREDITS.ends_with("/CREDITS.md"));
+    }
+
+    #[test]
+    fn the_manual_is_the_cores_own_page() {
+        assert!(oxiguitar_host::is_https(MANUAL));
+        assert_eq!(MANUAL, "https://mateusrdp.github.io/oxiguitar/");
     }
 }
