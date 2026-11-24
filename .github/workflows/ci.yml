@@ -49,7 +49,7 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: scripts/apt-install.sh libfontconfig1-dev libxkbcommon-dev libwayland-dev
-        timeout-minutes: 15
+        timeout-minutes: 60
       # Each problem also becomes an annotation on the pull request.
       # The app takes one display feature at a time (ADR 0011): every other
       # crate with all its features, then the app's default (Wayland) build.
@@ -107,7 +107,7 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: scripts/apt-install.sh libfontconfig1-dev libxkbcommon-dev libwayland-dev
-        timeout-minutes: 15
+        timeout-minutes: 60
       - env:
           CARGO_TERM_COLOR: never
         run: |
@@ -148,7 +148,7 @@ jobs:
       # The desktop app (Slint, winit) needs these headers to build on Linux.
       - if: runner.os == 'Linux'
         run: scripts/apt-install.sh libfontconfig1-dev libxkbcommon-dev libwayland-dev
-        timeout-minutes: 15
+        timeout-minutes: 60
       # Failing tests also become an annotation, so they can be read without
       # downloading the job log. Bash on every runner, Windows included.
       # Tests that need real plugins (Guitar Pro files, a sound set, a WAV
@@ -268,7 +268,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: scripts/apt-install.sh libfontconfig1-dev libxkbcommon-dev libwayland-dev
-        timeout-minutes: 15
+        timeout-minutes: 60
       # The contract's speed tests take the latest release of
       # oxiguitar-guitarpro (scripts/released-plugins.sh): without the token
       # the GitHub API's anonymous limit, shared by the runners, answers 403.
@@ -310,7 +310,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: scripts/apt-install.sh strace xvfb weston libxkbcommon-x11-0 libgl1-mesa-dri libegl1 libfontconfig1-dev libxkbcommon-dev libwayland-dev
-        timeout-minutes: 15
+        timeout-minutes: 60
       # Both Linux builds of the app: the X11 one in a target folder of its
       # own, then copied beside the Wayland one so both find the plugins in
       # target/lib/oxiguitar/plugins/ (released ones, below).

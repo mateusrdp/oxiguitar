@@ -420,6 +420,9 @@ chmod +x "$files/scripts/check-dco.sh"
 # both, so no feature lands without its tests.
 mkdir -p "$files/tests/support" "$files/docs/manual/src"
 raw scripts/test-all.py "$default_branch" > "$files/scripts/test-all.py"
+# So is the apt installer CI uses on Linux, which outlasts a slow mirror.
+raw scripts/apt-install.sh "$default_branch" > "$files/scripts/apt-install.sh"
+chmod +x "$files/scripts/apt-install.sh"
 raw tests/support/corpus.rs "$default_branch" > "$files/tests/support/corpus.rs"
 cat > "$files/tests/suite.json" << EOF
 {
@@ -564,8 +567,8 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@$cache
       - if: env.APT_PACKAGES != ''
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends \$APT_PACKAGES
-        timeout-minutes: 15
+        run: scripts/apt-install.sh \$APT_PACKAGES
+        timeout-minutes: 60
       - name: Clippy
         run: |
           set -o pipefail
@@ -604,8 +607,8 @@ jobs:
         with:
           key: \${{ matrix.toolchain }}
       - if: runner.os == 'Linux' && env.APT_PACKAGES != ''
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends \$APT_PACKAGES
-        timeout-minutes: 15
+        run: scripts/apt-install.sh \$APT_PACKAGES
+        timeout-minutes: 60
       # Failing tests also become an annotation, so they can be read without
       # downloading the job log. Bash on every runner, Windows included.
       - name: cargo test

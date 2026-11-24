@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.21.9" date="2026-11-24" type="development">
+      <description>
+        <p>apt is stopped only when it is stuck, never for being slow (24 Nov 2026: the v0.21.8 packages' AppImage job failed three times on a 185 kB/s mirror although each try had downloaded more). scripts/apt-install.sh watches the bytes in apt's download folders and stops apt only when they have not grown ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.21.9</url>
+    </release>
     <release version="0.21.8" date="2026-11-24" type="development">
       <description>
         <p>The menus are shorter (#339): Edit keeps Undo, Redo, Select All and the clipboard, and the beat, bar and track commands are in a Beat, a Bar and a Track submenu. Chord, Text, Type Lyrics and Custom N-tuplet left Edit, as the palette has them (their keys work as before). Transpose Selection… and ...</p>
