@@ -2766,6 +2766,13 @@ fn interface_1_15_views_in_slint() {
     for component in ["TestWindow", "TestPanel", "TestSection"] {
         assert!(compiled.component(component).is_some(), "{component}");
     }
+    // What a plugin can set and hear, and nothing the compiler made.
+    let panel = compiled.component("TestPanel").unwrap();
+    assert_eq!(panel.properties, ["said"]);
+    assert_eq!(panel.callbacks, ["pressed"]);
+    let section = compiled.component("TestSection").unwrap();
+    assert_eq!(section.properties, ["level"]);
+    assert_eq!(section.callbacks, ["level-changed"]);
     let ask = |what: &str| plugins.call_service("test-echo", "view", what.as_bytes());
     ask("show window").unwrap();
     ask("show slint-panel").unwrap();

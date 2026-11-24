@@ -260,7 +260,14 @@ pub fn compile_ui(source: String) -> Result<CompiledUi, String> {
             let root = c.root_element.borrow();
             let mut properties = Vec::new();
             let mut callbacks = Vec::new();
-            for (name, declaration) in &root.property_declarations {
+            // What the component's public API has, as the interpreter
+            // shows it: the compiler's passes also lift inlined widgets'
+            // properties into the root, under made-up names.
+            for (name, declaration) in root
+                .property_declarations
+                .iter()
+                .filter(|(_, d)| d.expose_in_public_api)
+            {
                 match (&declaration.property_type, declaration.visibility) {
                     (Type::Callback(_), PropertyVisibility::Private) => {}
                     (Type::Callback(_), _) => callbacks.push(name.to_string()),
