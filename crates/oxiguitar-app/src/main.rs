@@ -742,6 +742,9 @@ fn main() -> Result<(), slint::PlatformError> {
         if let Some(tabs) = &s.tab_thread {
             tabs.send(plugin_tabs::Request::Dark(s.dark_interface));
         }
+        // Settings: the count-in and metronome a session starts with.
+        s.player.set_count_in(prefs.count_in);
+        s.player.set_metronome(prefs.metronome);
     }
     // Establish the scrollable area dimensions for the restored zoom.
     set_content_size(&app, &ui);
@@ -756,10 +759,6 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_edit_command(move |name| {
         match name.as_str() {
-            "tuplet-dialog" => return open_edit_dialog(&a, editing::Dialog::Tuplet),
-            "chord-dialog" => return open_edit_dialog(&a, editing::Dialog::Chord),
-            "text-dialog" => return open_edit_dialog(&a, editing::Dialog::Text),
-            "lyrics" => return open_edit_dialog(&a, editing::Dialog::Lyrics),
             "cut" => return clipboard(&a, editing::ClipKey::Cut),
             "copy" => return clipboard(&a, editing::ClipKey::Copy),
             "paste" => return clipboard(&a, editing::ClipKey::Paste),
@@ -1316,6 +1315,12 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
     let a = app.clone();
+    ui.on_open_manual(move || {
+        if let Err(e) = links::open(links::MANUAL) {
+            message(&a, Level::Error, e);
+        }
+    });
+    let a = app.clone();
     ui.on_open_donation(move || {
         if let Err(e) = links::open(links::DONATE) {
             message(&a, Level::Error, e);
@@ -1445,6 +1450,8 @@ fn apply_prefs(ui: &AppWindow, p: ViewPrefs) {
     ui.set_dark_page(p.dark_page);
     ui.set_dynamics(p.dynamics);
     ui.set_play_engraved_beat(p.play_engraved_beat);
+    ui.set_count_in_default(p.count_in);
+    ui.set_metronome_default(p.metronome);
     let index = |found: Option<usize>| found.unwrap_or(0) as i32;
     ui.invoke_pick_layout(index(Layout::ALL.iter().position(|l| *l == p.layout)));
     ui.invoke_pick_paper(index(Paper::ALL.iter().position(|q| *q == p.paper)));
@@ -1731,7 +1738,7 @@ fn sync_edit_state(app: &Shared, edit: &document::EditState) {
     sync_toolbar(app);
 }
 
-/// The settings from the window's View menu and track list.
+/// The settings from the window's View menu, Settings dialog and track list.
 fn settings_changed(app: &Shared) {
     let Some(ui) = app.borrow().ui.upgrade() else {
         return;
@@ -1761,6 +1768,8 @@ fn settings_changed(app: &Shared) {
         score_zoom: s.zoom,
         ui_zoom: s.ui_zoom,
         play_engraved_beat: ui.get_play_engraved_beat(),
+        count_in: ui.get_count_in_default(),
+        metronome: ui.get_metronome_default(),
     };
     if prefs != s.prefs {
         s.prefs = prefs;

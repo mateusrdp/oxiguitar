@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The View menu's settings that last from one session to the next, kept
-//! under the `view` key of settings.json. They are things a user sets once
-//! (Mateus, 18 Oct 2026), so the app remembers them. No window code here.
+//! The settings that last from one session to the next, kept
+//! under the `view` key of settings.json: the View menu's and, since #339,
+//! the Settings dialog's. They are things a user sets once (Mateus, 18 Oct
+//! 2026), so the app remembers them. No window code here.
 
 use oxiguitar_layout::{Layout, Paper};
 use serde_json::{Map, Value, json};
@@ -37,6 +38,11 @@ pub(crate) struct ViewPrefs {
     pub(crate) ui_zoom: f32,
     /// Play a 1-beat preview after each note edit (#246); on by default.
     pub(crate) play_engraved_beat: bool,
+    /// Settings → the player's count-in and metronome at the start of a
+    /// session (#339); the Player tab's buttons still change them for the
+    /// session only. Both off by default.
+    pub(crate) count_in: bool,
+    pub(crate) metronome: bool,
 }
 
 // f32 doesn't implement Eq (NaN != NaN), but our zoom values are never NaN.
@@ -53,6 +59,8 @@ impl Default for ViewPrefs {
             score_zoom: 1.0,
             ui_zoom: 1.0,
             play_engraved_beat: true,
+            count_in: false,
+            metronome: false,
         }
     }
 }
@@ -92,6 +100,8 @@ impl ViewPrefs {
                 .map(|v| v as f32)
                 .unwrap_or(d.ui_zoom),
             play_engraved_beat: flag("play_engraved_beat", d.play_engraved_beat),
+            count_in: flag("count_in", d.count_in),
+            metronome: flag("metronome", d.metronome),
         }
     }
 
@@ -126,6 +136,8 @@ impl ViewPrefs {
         map.insert("score_zoom".into(), json!(self.score_zoom));
         map.insert("ui_zoom".into(), json!(self.ui_zoom));
         map.insert("play_engraved_beat".into(), json!(self.play_engraved_beat));
+        map.insert("count_in".into(), json!(self.count_in));
+        map.insert("metronome".into(), json!(self.metronome));
         Value::Object(map)
     }
 }
@@ -144,6 +156,15 @@ mod tests {
     }
 
     #[test]
+    fn a_session_starts_without_count_in_or_metronome_until_settings_say_so() {
+        let d = ViewPrefs::from_value(None);
+        assert!(!d.count_in && !d.metronome);
+        let on = ViewPrefs::from_value(Some(&json!({"count_in": true, "metronome": true})));
+        assert!(on.count_in && on.metronome);
+        assert_eq!(on.to_value(None)["metronome"], json!(true));
+    }
+
+    #[test]
     fn round_trip_keeps_unknown_keys() {
         let p = ViewPrefs {
             dark_interface: Some(false),
@@ -154,6 +175,8 @@ mod tests {
             score_zoom: 2.0,
             ui_zoom: 1.25,
             play_engraved_beat: true,
+            count_in: true,
+            metronome: true,
         };
         let v = p.to_value(Some(&json!({"later": 3})));
         assert_eq!(v["layout"], json!("horizontal"));

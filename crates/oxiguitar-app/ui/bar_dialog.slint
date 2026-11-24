@@ -976,3 +976,77 @@ export component ExportProgress inherits Rectangle {
     }
 }
 
+
+// Settings… (#339): what a user sets once for the viewer, the editor and
+// the player. Each control applies as it is used and is kept in
+// settings.json (`view`), so there is nothing to confirm: Close, Enter or
+// Escape leaves. The Player's own buttons still change the count-in and
+// the metronome for the session; the ticks here are what a session starts
+// with.
+export component SettingsDialog inherits Rectangle {
+    // 0 = A4, 1 = Letter (`Paper::ALL`'s order).
+    in property <int> paper;
+    in property <bool> dark-interface;
+    in-out property <bool> dark-page;
+    in-out property <bool> play-engraved-beat;
+    in-out property <bool> count-in;
+    in-out property <bool> metronome;
+    callback paper-picked(int);
+    callback dark-interface-picked(bool);
+    // Any of the in-out settings changed: the window saves and applies it.
+    callback changed();
+    callback done();
+    Card {
+        width: root.width;
+        height: root.height;
+        heading: "Settings";
+        card-width: 420px;
+        show-buttons: false;
+        done(ok) => { root.done(); }
+        VerticalLayout {
+            spacing: 6px;
+            Text { text: "Viewer"; font-size: 12px; font-weight: 700; }
+            CheckBox {
+                text: "Dark interface";
+                checked: root.dark-interface;
+                toggled => { root.dark-interface-picked(self.checked); }
+            }
+            CheckBox {
+                text: "Dark page";
+                checked: root.dark-page;
+                toggled => { root.dark-page = self.checked; root.changed(); }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Label { text: "Paper size"; min-width: 0px; }
+                ComboBox {
+                    horizontal-stretch: 1;
+                    model: ["A4", "Letter"];
+                    current-index: root.paper;
+                    selected => { root.paper-picked(self.current-index); }
+                }
+            }
+            Text { text: "Editor"; font-size: 12px; font-weight: 700; }
+            CheckBox {
+                text: "Play the beat after each note edit";
+                checked: root.play-engraved-beat;
+                toggled => { root.play-engraved-beat = self.checked; root.changed(); }
+            }
+            Text { text: "Player"; font-size: 12px; font-weight: 700; }
+            CheckBox {
+                text: "Start with the count-in on";
+                checked: root.count-in;
+                toggled => { root.count-in = self.checked; root.changed(); }
+            }
+            CheckBox {
+                text: "Start with the metronome on";
+                checked: root.metronome;
+                toggled => { root.metronome = self.checked; root.changed(); }
+            }
+            HorizontalLayout {
+                alignment: end;
+                Button { text: "Close"; primary: true; clicked => { root.done(); } }
+            }
+        }
+    }
+}
