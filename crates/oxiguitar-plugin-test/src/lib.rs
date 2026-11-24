@@ -268,15 +268,19 @@ pub fn compile_ui(source: String) -> Result<CompiledUi, String> {
                 .iter()
                 .filter(|(_, d)| d.expose_in_public_api)
             {
+                // A member that shadows an inherited one (a `close` callback
+                // on a Window, say) is kept under a mangled name: the
+                // plugin knows it by the name it wrote.
+                let name = declaration.declared_name(name).to_string();
                 match (&declaration.property_type, declaration.visibility) {
                     (Type::Callback(_), PropertyVisibility::Private) => {}
-                    (Type::Callback(_), _) => callbacks.push(name.to_string()),
+                    (Type::Callback(_), _) => callbacks.push(name),
                     (
                         _,
                         PropertyVisibility::Input
                         | PropertyVisibility::Output
                         | PropertyVisibility::InOut,
-                    ) => properties.push(name.to_string()),
+                    ) => properties.push(name),
                     _ => {}
                 }
             }

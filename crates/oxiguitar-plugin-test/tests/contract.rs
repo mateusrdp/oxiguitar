@@ -2766,7 +2766,10 @@ fn interface_1_15_views_in_slint() {
     for component in ["TestWindow", "TestPanel", "TestSection"] {
         assert!(compiled.component(component).is_some(), "{component}");
     }
-    // What a plugin can set and hear, and nothing the compiler made.
+    // What a plugin can set and hear, and nothing the compiler made; a
+    // callback that shadows one of Window's by the name the file gives.
+    let window = compiled.component("TestWindow").unwrap();
+    assert_eq!(window.callbacks, ["close", "pressed"]);
     let panel = compiled.component("TestPanel").unwrap();
     assert_eq!(panel.properties, ["said"]);
     assert_eq!(panel.callbacks, ["pressed"]);

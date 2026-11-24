@@ -11,6 +11,8 @@ export component TestWindow inherits Window {
     title: "Test Window";
     in property <string> said;
     callback pressed(int);
+    // Shadows something of Window's: known by this name all the same.
+    callback close();
     VerticalLayout {
         padding: 8px;
         Text { text: root.said; }
