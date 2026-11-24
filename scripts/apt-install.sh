@@ -5,30 +5,31 @@
 # Installs packages on a GitHub Actions Ubuntu runner without letting a bad
 # mirror fail the job.
 #
-# Two things go wrong with a runner's mirror. It stops answering in the
-# middle of `apt-get update` or an install (19 Nov 2026, twice), or it
-# answers at a crawl: on 24 Nov 2026 the NET-5 job got 140 kB/s for its 77 MB
-# and three tries of 5 minutes each did not fit in the step's 15 minutes.
-# The release then stopped on a red `ci-success`.
+# A runner's mirror is sometimes slow: 140 to 185 kB/s for 75 MB on 24 Nov
+# 2026, when tries cut off after a fixed 5 minutes failed CI and the
+# v0.21.8 packages three times, although every try had downloaded more. And
+# sometimes it stops answering altogether (19 Nov 2026).
 #
-# So:
-# - A stalled connection is dropped after 30 seconds (apt's own timeout).
-# - Each download (the index, then the packages) is cut off after TRY
-#   minutes, and tries go on until the whole has taken BUDGET minutes. What
-#   a try downloaded stays in apt's cache, so the next one only fetches the
-#   rest. The install itself, from the cache, is never cut off.
+# So apt is never stopped for being slow, only for being stuck:
+# - While apt downloads (the index, then the packages), this watches the
+#   bytes in apt's download folders. If they have not grown for STALL
+#   seconds, apt is stopped and tried again; as long as they grow, it may
+#   take as long as it needs.
+# - What a try downloaded stays in apt's cache, so the next one only
+#   fetches the rest.
 # - Before each new try, the mirror that was just used goes to the back of
-#   the runner's mirror list (/etc/apt/apt-mirrors.txt), so a slow mirror is
-#   not used again while another is listed.
+#   the runner's mirror list (/etc/apt/apt-mirrors.txt).
+# - The install itself, from the cache, is never stopped: a dpkg stopped
+#   half way leaves every later try refusing ("dpkg was interrupted").
 # - No translations are downloaded (they were a fifth of the index).
 #
-# The step that runs this needs a timeout-minutes above BUDGET (25 for the
-# default of 20).
+# Give the step a generous timeout-minutes (60): it is only a last resort.
 #
 # Usage: scripts/apt-install.sh [--recommends] PACKAGE...
 #   --recommends also installs the packages' recommended packages.
-# Environment: APT_INSTALL_BUDGET (minutes, default 20),
-#              APT_INSTALL_TRY (minutes, default 8).
+# Environment: APT_STALL_SECONDS (default 120), APT_TRIES (stuck tries
+# allowed, default 5). APT_CHECK_SECONDS, APT_PAUSE_SECONDS, APT_WATCH_DIRS and
+# APT_MIRRORS are for the tests (oxiguitar-packages: tests/test-apt-install.sh).
 
 set -euo pipefail
 
@@ -39,9 +40,11 @@ if [[ "${1:-}" == --recommends ]]; then
 fi
 (( $# > 0 )) || { echo "usage: $0 [--recommends] PACKAGE..." >&2; exit 2; }
 
-budget=$(( ${APT_INSTALL_BUDGET:-20} * 60 ))
-try=$(( ${APT_INSTALL_TRY:-8} * 60 ))
-mirrors=/etc/apt/apt-mirrors.txt
+stall="${APT_STALL_SECONDS:-120}"
+tries="${APT_TRIES:-5}"
+check="${APT_CHECK_SECONDS:-10}"
+read -r -a watched <<< "${APT_WATCH_DIRS:-/var/lib/apt/lists /var/cache/apt/archives}"
+mirrors="${APT_MIRRORS:-/etc/apt/apt-mirrors.txt}"
 opts=(
   -o Acquire::Retries=3
   -o Acquire::http::Timeout=30
@@ -49,6 +52,40 @@ opts=(
   -o Acquire::Languages=none
   -o APT::Keep-Downloaded-Packages=true
 )
+
+# Bytes in apt's download folders (partial files included).
+downloaded() {
+  sudo du -sb "${watched[@]}" 2> /dev/null | awk '{ s += $1 } END { print s + 0 }'
+}
+
+# Runs `apt-get ARGS...` and returns its status, or 124 when its downloads
+# did not grow for STALL seconds (apt is then stopped).
+watched_apt() {
+  sudo apt-get "${opts[@]}" "$@" &
+  local apt=$! ticker finished status last now since=$SECONDS
+  last="$(downloaded)"
+  while :; do
+    sleep "$check" &
+    ticker=$!
+    status=0
+    wait -n -p finished "$apt" "$ticker" || status=$?
+    if [[ "$finished" == "$apt" ]]; then
+      kill "$ticker" 2> /dev/null || true
+      wait "$ticker" 2> /dev/null || true
+      return "$status"
+    fi
+    now="$(downloaded)"
+    if [[ "$now" != "$last" ]]; then
+      last="$now"
+      since=$SECONDS
+    elif (( SECONDS - since >= stall )); then
+      echo "::warning::apt downloaded nothing for $stall seconds: stopping it"
+      sudo kill -TERM "$apt" 2> /dev/null || true
+      wait "$apt" 2> /dev/null || true
+      return 124
+    fi
+  done
+}
 
 # Moves the mirror with the best priority to the back of the list and
 # numbers them again. Mirrors without a priority count as last, as apt does.
@@ -83,30 +120,18 @@ for _, _, uri, _ in entries:
 EOF
 }
 
-# Seconds the next command may take: what is left of BUDGET, at most TRY.
-limit() {
-  local left=$(( budget - (SECONDS - start) ))
-  (( left > 1 )) || left=1
-  (( left < try )) && echo "$left" || echo "$try"
-}
-
 start=$SECONDS
-attempt=0
-while :; do
-  attempt=$((attempt + 1))
-  # Only the downloads are cut off: a dpkg stopped half way would leave the
-  # system for every later try to refuse ("dpkg was interrupted").
-  if sudo timeout "$(limit)" apt-get "${opts[@]}" update \
-    && sudo timeout "$(limit)" apt-get "${opts[@]}" "${install[@]}" --download-only "$@" \
-    && sudo apt-get "${opts[@]}" "${install[@]}" "$@"; then
+for (( attempt = 1; ; attempt++ )); do
+  if watched_apt update && watched_apt "${install[@]}" --download-only "$@"; then
+    sudo apt-get "${opts[@]}" "${install[@]}" "$@"
     (( attempt == 1 )) || echo "::notice::apt finished on try $attempt, after $(( (SECONDS - start) / 60 )) minutes"
     exit 0
   fi
-  if (( SECONDS - start + 60 >= budget )); then
-    echo "::error::apt did not finish in $(( budget / 60 )) minutes ($attempt tries): $*"
+  if (( attempt >= tries )); then
+    echo "::error::apt failed $attempt times: $*"
     exit 1
   fi
-  echo "::warning::apt did not finish (try $attempt); trying again with the next mirror"
+  echo "::warning::apt did not finish (try $attempt of $tries); trying again with the next mirror"
   rotate_mirrors || echo "::warning::could not reorder $mirrors"
-  sleep 10
+  sleep "${APT_PAUSE_SECONDS:-10}"
 done
