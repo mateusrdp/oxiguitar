@@ -141,7 +141,7 @@ pub(crate) fn spec_of(id: &ViewId) -> Option<(String, Place)> {
 }
 
 /// Compiles a plugin's `.slint` file with the window's style.
-fn compile(source: String) -> Result<CompilationResult, String> {
+fn compile(source: oxiguitar_host::UiSource) -> Result<CompilationResult, String> {
     let mut compiler = slint_interpreter::Compiler::default();
     compiler.set_style(STYLE.into());
     // Every exported component, not only windows: panels, track sections
@@ -149,7 +149,14 @@ fn compile(source: String) -> Result<CompilationResult, String> {
     compiler
         .compiler_configuration(i_slint_core::InternalToken)
         .components_to_generate = i_slint_compiler::ComponentSelection::AllExported;
-    let result = spin_on(compiler.build_from_source(source, PathBuf::from("plugin.slint")));
+    // A file in the folder the plugin was unpacked in (interface 1.16)
+    // finds its imports and pictures beside it.
+    let result = match source {
+        oxiguitar_host::UiSource::Text(text) => {
+            spin_on(compiler.build_from_source(text, PathBuf::from("plugin.slint")))
+        }
+        oxiguitar_host::UiSource::File(file) => spin_on(compiler.build_from_path(file)),
+    };
     let errors: Vec<String> = result
         .diagnostics()
         .filter(|d| d.level() == slint_interpreter::DiagnosticLevel::Error)
@@ -222,7 +229,10 @@ fn when_compiled(plugin: &str, then: impl FnOnce() + 'static) {
 }
 
 /// `plugin`'s `.slint` file came: compiled, then what waited runs.
-fn compiled(plugin: &str, source: Result<String, oxiguitar_host::api::message::Error>) {
+fn compiled(
+    plugin: &str,
+    source: Result<oxiguitar_host::UiSource, oxiguitar_host::api::message::Error>,
+) {
     let result = source.map_err(|e| e.message).and_then(compile).map(Rc::new);
     if let Err(why) = &result {
         say(
@@ -646,17 +656,40 @@ mod tests {
 
     #[test]
     fn a_plugin_s_file_compiles_with_the_window_s_style_or_says_where_it_is_wrong() {
-        let ok = compile(
+        use oxiguitar_host::UiSource;
+        let ok = compile(UiSource::Text(
             r#"import { Button } from "std-widgets.slint";
             export component Panel { in property <string> name; callback pressed(int);
                 Button { text: name; clicked => { pressed(1); } } }"#
                 .into(),
-        )
+        ))
         .unwrap();
         let def = ok.component("Panel").unwrap();
         assert_eq!(def.callbacks().collect::<Vec<_>>(), ["pressed"]);
-        let wrong = compile("export component Panel { Nope { } }".into()).unwrap_err();
+        let wrong =
+            compile(UiSource::Text("export component Panel { Nope { } }".into())).unwrap_err();
         assert!(wrong.starts_with("line 1, column"), "{wrong}");
+    }
+
+    #[test]
+    fn a_plugin_s_file_on_disk_imports_what_is_beside_it() {
+        use oxiguitar_host::UiSource;
+        let dir = std::env::temp_dir().join(format!("oxiguitar-ui-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("ui")).unwrap();
+        std::fs::write(
+            dir.join("ui/parts.slint"),
+            "export component Part inherits Rectangle { in property <string> said; }",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("ui/main.slint"),
+            r#"import { Part } from "parts.slint";
+            export component Panel { in property <string> said; Part { said: said; } }"#,
+        )
+        .unwrap();
+        let ok = compile(UiSource::File(dir.join("ui/main.slint"))).unwrap();
+        assert!(ok.component("Panel").is_some());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

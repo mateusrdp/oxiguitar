@@ -42,6 +42,7 @@ The core's direct dependencies, all Rust (the desktop app also links the system'
 | [chordparser](https://github.com/PauSala/chordparser) | Pau Sala | MIT | Chord names read in any convention and a diagram's notes named (the chord dialog, chord notation styles). It uses [enum-bitset](https://github.com/glueball/enum-bitset) (MIT) |
 | [rtrb](https://github.com/mgeier/rtrb) | Matthias Geier and contributors | MIT OR Apache-2.0 | The player's lock-free queues to and from the audio thread |
 | [object](https://github.com/gimli-rs/object) | The gimli-rs developers | Apache-2.0 OR MIT | Reading a plugin's manifest section without loading the plugin |
+| [tar](https://github.com/alexcrichton/tar-rs) | Alex Crichton and contributors | MIT OR Apache-2.0 | Reading and unpacking plugin files, which are tar archives. It uses [filetime](https://github.com/alexcrichton/filetime) (MIT OR Apache-2.0) |
 | [libloading](https://github.com/nagisa/rust_libloading) | Simonas Kazlauskas | ISC | Loading plugins |
 | [libc](https://github.com/rust-lang/libc) | The Rust Project Developers | MIT OR Apache-2.0 | Catching a crash in a plugin to say which plugin it was (Unix) |
 | [quick-xml](https://github.com/tafia/quick-xml) | Johann Tuffe, Mingun and contributors | MIT | GPIF (Guitar Pro 6–8) in the test songs (`oxiguitar-testgen`) |

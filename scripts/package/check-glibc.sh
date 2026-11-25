@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 #
-# Fails if any ELF file given (or found in a folder given) needs a glibc
+# Fails if any ELF file given (or found in a folder given), or the library
+# in a plugin file (a tar archive), needs a glibc
 # newer than MAX, weak references included: the AppImage catalog's test
 # (appimage.github.io) refuses an AppImage when any of its files names a
 # glibc version its test system lacks, even one only referenced weakly.
@@ -17,16 +18,28 @@ max="${1:?usage: check-glibc.sh MAX PATH...}"
 shift
 [[ $# -gt 0 ]] || { echo "usage: check-glibc.sh MAX PATH..." >&2; exit 2; }
 
+# A plugin file is a tar archive (oxiguitar#347): its library, the second
+# member, is what is checked, under the plugin file's name.
+unpacked="$(mktemp -d)"
+trap 'rm -rf "$unpacked"' EXIT
+
 checked=0
 failed=0
 while IFS= read -r -d '' f; do
-    [[ "$(head -c 4 "$f" | od -An -tx1 | tr -d ' \n')" == 7f454c46 ]] || continue
+    if [[ "$(dd if="$f" bs=1 skip=257 count=5 2> /dev/null)" == ustar ]]; then
+        [[ "$(tar -tf "$f" 2> /dev/null | sed -n 2p)" == plugin.so ]] || continue
+        library="$unpacked/$checked.so"
+        tar -xOf "$f" plugin.so > "$library"
+    else
+        library="$f"
+    fi
+    [[ "$(head -c 4 "$library" | od -An -tx1 | tr -d ' \n')" == 7f454c46 ]] || continue
     checked=$((checked + 1))
-    newest="$(objdump -T "$f" 2> /dev/null | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)+' \
+    newest="$(objdump -T "$library" 2> /dev/null | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)+' \
         | sed 's/^GLIBC_//' | sort -uV | tail -n 1 || true)"
     if [[ -n "$newest" ]] && [[ "$(printf '%s\n%s\n' "$newest" "$max" | sort -V | tail -n 1)" != "$max" ]]; then
         echo "::error::$f needs glibc $newest, newer than $max:" >&2
-        objdump -T "$f" | grep -F "(GLIBC_$newest)" >&2 || true
+        objdump -T "$library" | grep -F "(GLIBC_$newest)" >&2 || true
         failed=1
     else
         echo "$f: glibc ${newest:-none} at most"

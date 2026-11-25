@@ -37,11 +37,14 @@
 //! oxiguitar_plugin::export_plugin!(Gp5);
 //! ```
 //!
-//! Build the `.oxp` file with
+//! Build the library with
 //! `cargo rustc --release -p NAME --features oxp --crate-type cdylib`, then
-//! copy the library (`libNAME.so`, `libNAME.dylib` or `NAME.dll`) to
-//! `NAME.oxp`. The `oxiguitar-plugin-test` tool does both and checks the
-//! result against the interface.
+//! pack it into `NAME.oxp`, an uncompressed tar archive holding
+//! `manifest.json` first, the library second as `plugin.so`, `plugin.dll`
+//! or `plugin.dylib`, then the crate's [`PACKED_FOLDERS`]
+//! ([`api::oxp`]; the plugin guide's "Packaging" page has the commands).
+//! The `oxiguitar-plugin-test` tool builds and packs one and checks it
+//! against the interface.
 //!
 //! Plugin authors write no `unsafe` code. `export_plugin!` expands to the
 //! entry symbol and the manifest section (two `unsafe` attributes), and the
@@ -56,6 +59,12 @@
 //! of the session and carries on as if it weren't installed.
 
 pub use oxiguitar_plugin_api as api;
+
+/// The folders beside a plugin's `Cargo.toml` that go into its `.oxp`
+/// file under their own names, when they exist (#347): its `.slint` files
+/// and what else it ships. OxiGuitar unpacks them with the plugin
+/// ([`Host::own_files`]).
+pub const PACKED_FOLDERS: [&str; 2] = oxiguitar_plugin_api::oxp::FOLDERS;
 pub use oxiguitar_plugin_api::class::InstrumentClass;
 pub use oxiguitar_plugin_api::display;
 pub use oxiguitar_plugin_api::event::{Event, Playback, Position, Selection, Selection2};
@@ -376,8 +385,13 @@ pub trait Drawer: Send + Sync {
 /// properties ([`Host::set_view`]) and is told of callbacks here. Every
 /// method is called off OxiGuitar's UI thread.
 pub trait Ui: Send + Sync {
-    /// The `.slint` file, usually `include_str!("../ui/NAME.slint")`.
-    fn source(&self) -> String;
+    /// The `.slint` file's text, for a plugin that asks for interface 1.15
+    /// (`include_str!("../ui/NAME.slint")`). From interface 1.16 the
+    /// manifest's `ui` names the file in the plugin's `.oxp` file instead,
+    /// and OxiGuitar never asks: the default, an empty text, is for that.
+    fn source(&self) -> String {
+        String::new()
+    }
 
     /// The view `view` was made (a window opened, a panel shown, the
     /// track dialog opened on `track`, the export dialog showing the
@@ -1059,6 +1073,18 @@ impl Host {
         }
     }
 
+    /// The folder the plugin's `.oxp` file was unpacked into (interface
+    /// 1.16; #347): its `manifest.json`, its library and its
+    /// [`PACKED_FOLDERS`] as packed, so `assets/model.bin` is
+    /// `own_files()?.join("assets").join("model.bin")`. To read only:
+    /// OxiGuitar unpacks the file again when it changes.
+    pub fn own_files(&self) -> Result<std::path::PathBuf, Error> {
+        match self.0.request(HostRequest::OwnFiles)? {
+            HostAnswer::OwnFiles(f) => Ok(f.into()),
+            other => Err(unexpected(&other)),
+        }
+    }
+
     /// The open score's file (interface 1.13), as an absolute path; `None`
     /// when no score is open or it was never saved. For paths kept relative
     /// to the score.
@@ -1255,9 +1281,10 @@ impl HostServices for Detached {
                 ErrorKind::Failed,
                 "a detached host has no window to show a view in",
             )),
-            HostRequest::Folders | HostRequest::Folder { .. } | HostRequest::PluginFiles => {
-                Err(Error::not_found("a detached host has no folders"))
-            }
+            HostRequest::Folders
+            | HostRequest::Folder { .. }
+            | HostRequest::PluginFiles
+            | HostRequest::OwnFiles => Err(Error::not_found("a detached host has no folders")),
             HostRequest::Copy { .. } => Ok(HostAnswer::Done),
             HostRequest::Tools => Ok(HostAnswer::Tools(Vec::new())),
             HostRequest::MeasureText { .. }
@@ -1268,6 +1295,35 @@ impl HostServices for Detached {
             )),
         }
     }
+}
+
+/// What is wrong with the files a plugin crate at `crate_dir` packs into
+/// its `.oxp` file (#347): the `.slint` file the manifest's `ui` names must
+/// be in one of its [`PACKED_FOLDERS`]. Run by `export_plugin!`'s test with
+/// [`check`].
+pub fn check_files(manifest_json: &str, crate_dir: &std::path::Path) -> Vec<String> {
+    let Ok(manifest) = Manifest::parse(manifest_json.as_bytes()) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    if let Some(ui) = &manifest.ui {
+        let top = ui.split('/').next().unwrap_or_default();
+        if !PACKED_FOLDERS.contains(&top) {
+            out.push(format!(
+                "ui {ui:?} isn't in a folder that is packed ({})",
+                PACKED_FOLDERS.join(" or ")
+            ));
+        } else if !ui
+            .split('/')
+            .fold(crate_dir.to_path_buf(), |p, part| p.join(part))
+            .is_file()
+        {
+            out.push(format!(
+                "ui {ui:?}: there is no such file beside Cargo.toml"
+            ));
+        }
+    }
+    out
 }
 
 /// Everything wrong with a plugin's manifest and the contributions it
@@ -1396,11 +1452,14 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
     if !manifest.views.is_empty() {
         match plugin.ui() {
             None => out.push("views are declared, but the plugin has no `Ui`".into()),
-            Some(ui) if ui.source().trim().is_empty() => {
-                out.push("views are declared, but the plugin's .slint file is empty".into());
+            Some(ui) if manifest.ui.is_none() && ui.source().trim().is_empty() => {
+                out.push("views are declared, but the manifest names no .slint file (`ui`)".into());
             }
             Some(_) => {}
         }
+    }
+    if manifest.ui.is_some() && manifest.views.is_empty() {
+        out.push("ui names a .slint file, but no views are declared".into());
     }
     for t in &manifest.tabs {
         match plugin.tab(&t.id) {
@@ -1517,8 +1576,12 @@ macro_rules! export_plugin {
 
             #[test]
             fn the_manifest_matches_the_plugin() {
-                let problems =
+                let mut problems =
                     $crate::check::<$plugin>(super::MANIFEST_JSON, env!("CARGO_PKG_VERSION"));
+                problems.extend($crate::check_files(
+                    super::MANIFEST_JSON,
+                    ::std::path::Path::new(env!("CARGO_MANIFEST_DIR")),
+                ));
                 assert!(
                     problems.is_empty(),
                     "{}: {}",

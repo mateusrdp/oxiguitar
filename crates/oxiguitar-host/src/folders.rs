@@ -254,14 +254,25 @@ impl Folders {
     }
 
     /// Where plugins are looked for, in order, unless settings.json lists
-    /// its own: the system's folders first, then the user's. Later folders
-    /// override earlier ones for the same plugin ID.
+    /// its own: the system's folders first, then the user's, then the one
+    /// beside the program, if it has its own. A later folder's copy of a
+    /// plugin is used over an earlier one's, whatever their versions
+    /// (#347).
     pub fn default_plugin_folders(&self) -> Vec<PathBuf> {
+        let program = self.program_plugins.as_ref();
         self.system_plugins
             .iter()
+            .filter(|p| Some(*p) != program)
             .cloned()
             .chain(std::iter::once(self.user_plugins.clone()))
+            .chain(program.cloned())
             .collect()
+    }
+
+    /// Where plugin files are unpacked to be used (#347): `unpacked` in the
+    /// data folder, one folder per plugin, kept from one start to the next.
+    pub fn unpacked(&self) -> PathBuf {
+        self.data.join("unpacked")
     }
 
     /// Makes sure the settings folder, the user's plugin folder and
@@ -473,21 +484,17 @@ pub(crate) mod tests {
                 PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
             ]
         );
-        // System folders still come before user folders.
+        // The system's folders, then the user's, then the program's own,
+        // whose copy of a plugin is used (#347).
         let folders = f.default_plugin_folders();
-        assert_eq!(folders.len(), 4);
         assert_eq!(
-            folders[0],
-            PathBuf::from("/home/mat/src/oxiguitar/target/lib/oxiguitar/plugins")
-        );
-        assert_eq!(folders[1], PathBuf::from("/usr/lib/oxiguitar/plugins"));
-        assert_eq!(
-            folders[2],
-            PathBuf::from("/usr/local/lib/oxiguitar/plugins")
-        );
-        assert_eq!(
-            folders[3],
-            PathBuf::from("/home/mat/.local/share/oxiguitar/plugins")
+            folders,
+            vec![
+                PathBuf::from("/usr/lib/oxiguitar/plugins"),
+                PathBuf::from("/usr/local/lib/oxiguitar/plugins"),
+                PathBuf::from("/home/mat/.local/share/oxiguitar/plugins"),
+                PathBuf::from("/home/mat/src/oxiguitar/target/lib/oxiguitar/plugins"),
+            ]
         );
     }
 
@@ -509,8 +516,8 @@ pub(crate) mod tests {
         );
         assert_eq!(folders[2], PathBuf::from("/tmp/og-test-var/plugins"));
         // The user folder overrides the system folder for the same plugin ID
-        // because, on a tie, the choice prefers the later folder
-        // (Plugins::find), and the system folder comes first.
+        // because the choice prefers the later folder (Plugins::find), and
+        // the system folder comes first.
         assert!(
             folders
                 .iter()

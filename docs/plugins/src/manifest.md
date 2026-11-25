@@ -2,9 +2,19 @@
 
 ## The file
 
-A plugin file is the plugin crate built as a C dynamic library, renamed to `NAME.oxp`. Inside it are the plugin's code and its manifest, in a section of its own (`oxg_manifest`; `oxgmanif` on Windows, whose section names hold eight characters). OxiGuitar reads that section with a parser of library files, so it learns what the plugin adds without running any of its code. Plugin files carry no signature: OxiGuitar checks that the file is whole (a truncated download is refused before it is loaded), that it is a library for this system and processor, and that it asks for an interface version OxiGuitar has.
+A plugin file, `NAME.oxp`, is an uncompressed tar archive (since OxiGuitar 0.23) holding, in this order:
 
-You never write the section yourself: you write `manifest.json` beside `Cargo.toml`, and `export_plugin!` puts its bytes in the section when the file is built.
+1. `manifest.json`, your manifest;
+2. your plugin crate built as a C dynamic library, as `plugin.so` (Linux), `plugin.dll` (Windows) or `plugin.dylib` (macOS);
+3. your crate's `ui` and `assets` folders, if it has them: your `.slint` files, pictures, data.
+
+The library also carries the manifest, in a section of its own (`oxg_manifest`; `oxgmanif` on Windows, whose section names hold eight characters), and the two must be the same. OxiGuitar reads the archive's first members and that section with a parser of library files, so it learns what the plugin adds without running any of its code or unpacking anything. Plugin files carry no signature: OxiGuitar checks that the file is whole (a truncated download is refused before it is loaded), that its library is for this system and processor, and that it asks for an interface version OxiGuitar has.
+
+You never write the section yourself: you write `manifest.json` beside `Cargo.toml`, `export_plugin!` puts its bytes in the section when the library is built, and `build-oxp.sh` packs the same file first ([Building for every system](building.md)). A plugin file made before OxiGuitar 0.23, the library alone renamed, is refused, saying it is of the old format.
+
+## Your own files
+
+The first time your plugin is loaded, OxiGuitar unpacks its file into the user's OxiGuitar folder (`unpacked/` in the data folder) and keeps it there, so later starts unpack nothing; it unpacks again only when the file changes. From interface 1.16, `host.own_files()` is that folder: `own_files()?.join("assets").join("model.bin")` is your `assets/model.bin`. Read from it, never write: it is replaced when your file is.
 
 ## manifest.json
 
@@ -41,6 +51,7 @@ The template's:
 | `needs` | no | The plugins it can't work without, each `{"id": …, "version": …}` with the lowest version that will do; interface 1.4 (below) |
 | `replaces` | no | The ids of plugins it succeeds; interface 1.4 (below) |
 | `views` | no | Its own UI in Slint: windows, panels, track sections and export options; interface 1.15 ([Your own UI in Slint](ui.md)) |
+| `ui` | no | The `.slint` file its views' components are in, a path inside the plugin file such as `"ui/main.slint"`: in the crate's `ui` or `assets` folder; interface 1.16 ([Your own UI in Slint](ui.md)) |
 
 **Unknown keys are refused when you build and ignored when OxiGuitar reads.** The test `export_plugin!` adds fails on a key the SDK doesn't know, so a typing mistake (`"servces"`) shows up in `cargo test`. An older OxiGuitar reading a newer plugin's manifest skips keys it doesn't know, so new keys never stop a plugin from loading.
 

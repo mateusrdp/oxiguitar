@@ -6,7 +6,7 @@ Your Rust code never touches the UI directly. It **sets properties** and **hears
 
 ## Requirements
 
-- **Interface 1.15**, and the SDK of an OxiGuitar release with it.
+- **Interface 1.15**, and the SDK of an OxiGuitar release with it; **1.16** to name your file in the manifest (below).
 - **Slint's language at OxiGuitar's version**: OxiGuitar compiles your file with the Slint it is built with (Slint 1.19 for interface 1.15). A file that uses something newer is refused, with the compiler's message in the footer. Write for that version: [its language reference](https://slint.dev/releases/1.19.0/docs/slint/).
 - **No compiler or Slint version to match.** Your plugin isn't built against Slint at all: only the `.slint` text crosses the interface.
 
@@ -41,16 +41,20 @@ Panels, track sections and export options sit inside OxiGuitar's window, in Slin
 
 ## The file and the callbacks
 
-Give the plugin a `Ui` (from `oxiguitar_plugin`) with your file, and say what each callback does:
+Put your `.slint` file in your crate's `ui` folder, which goes into your plugin file ([The plugin file](manifest.md)), and name it in the manifest (interface 1.16):
+
+```json
+"ui": "ui/my-plugin.slint"
+```
+
+OxiGuitar compiles it from where your plugin file is unpacked, so it can import your other `.slint` files (`import { Row } from "row.slint";`) and use your pictures (`@image-url("../assets/logo.png")`), as in any Slint project. A plugin that asks for interface 1.15 has no `ui` key: its `Ui` hands over the file's text instead, with `fn source(&self) -> String { include_str!("../ui/my-plugin.slint").into() }`, and imports only Slint's own widgets.
+
+Give the plugin a `Ui` (from `oxiguitar_plugin`), and say what each callback does:
 
 ```rust,ignore
 struct MyUi { host: Host }
 
 impl oxiguitar_plugin::Ui for MyUi {
-    fn source(&self) -> String {
-        include_str!("../ui/my-plugin.slint").into()
-    }
-
     fn shown(&self, view: &str, track: Option<&TrackView>) -> Result<(), Error> {
         // The view was made: set what depends on what it shows.
         Ok(())

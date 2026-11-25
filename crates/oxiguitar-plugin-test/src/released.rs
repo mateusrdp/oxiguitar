@@ -71,6 +71,7 @@ pub fn folder(names: &[&str]) -> PathBuf {
          of .oxp files to use a local build): {}",
         String::from_utf8_lossy(&output.stderr)
     );
+    // The script packs releases of bare libraries as archives (#347).
     PathBuf::from(String::from_utf8_lossy(&output.stdout).trim())
 }
 

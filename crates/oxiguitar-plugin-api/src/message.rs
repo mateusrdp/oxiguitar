@@ -365,7 +365,9 @@ pub enum Request<'a> {
     },
     /// The plugin's `.slint` file, whose components its views show
     /// (manifest `views`). Answered with [`Answer::Ui`]. Asked once a
-    /// session, the first time a view is shown. Since interface 1.15.
+    /// session, the first time a view is shown. Since interface 1.15; from
+    /// 1.16 a plugin names a `.slint` file in its `.oxp` instead (manifest
+    /// `ui`), and is never asked.
     Ui,
     /// The view `view` was made: a window opened, a panel's tab shown, the
     /// Track tab showing `track` (for a [`crate::view::Place::Track`] view:
@@ -1186,6 +1188,12 @@ pub enum HostRequest<'a> {
         /// The settings, a JSON object as text.
         settings: String,
     },
+    /// The folder the plugin's `.oxp` file was unpacked into: its
+    /// manifest, its library and whatever else it ships (its `.slint`
+    /// files, pictures, data), as packed. To read: the host unpacks it
+    /// again whenever the plugin file changes. Answered with
+    /// [`HostAnswer::OwnFiles`]. Since interface 1.16.
+    OwnFiles,
 }
 
 /// What [`HostRequest::PluginFiles`] answers. Since interface 1.15.
@@ -1514,6 +1522,9 @@ pub enum HostAnswer<'a> {
     Report(String),
     /// Every plugin file found. Since interface 1.15.
     PluginFiles(PluginFiles),
+    /// The folder a plugin's file was unpacked into, an absolute path as
+    /// UTF-8 text. Since interface 1.16.
+    OwnFiles(String),
 }
 
 impl HostAnswer<'_> {
@@ -1534,6 +1545,7 @@ impl HostAnswer<'_> {
             HostAnswer::Tools(t) => HostAnswer::Tools(t),
             HostAnswer::Report(r) => HostAnswer::Report(r),
             HostAnswer::PluginFiles(f) => HostAnswer::PluginFiles(f),
+            HostAnswer::OwnFiles(f) => HostAnswer::OwnFiles(f),
         }
     }
 }
@@ -1886,6 +1898,13 @@ mod tests {
             settings: "{}".into(),
         };
         assert_eq!(first(encode(&set).unwrap()), 26);
+
+        // Interface 1.16.
+        assert_eq!(first(encode(&HostRequest::OwnFiles).unwrap()), 27);
+        assert_eq!(
+            first(encode(&HostAnswer::OwnFiles(String::new())).unwrap()),
+            14
+        );
         assert_eq!(
             first(encode(&HostAnswer::PluginFiles(PluginFiles::default())).unwrap()),
             13

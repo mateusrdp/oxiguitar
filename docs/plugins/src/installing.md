@@ -28,7 +28,9 @@ Only `.oxp` files directly in a folder count, not in subfolders. The file's name
 
 At the next start, OxiGuitar reads the file's manifest and lists it in **Tools → Plugins**, with a tickbox to enable or disable it from the next start (it writes the plugin's id under `disabled` in settings.json). The plugin is loaded the first time one of its contributions is used.
 
-When two files carry the same plugin `id`, the higher version is used and the other is listed as replaced; on a tie, the build needing more of the processor's features (the `cpu` condition), then the file in the later folder, then the earlier name in one folder. So a user who installs your new version beside an old one gets the new one, and a user's own copy wins over a package's of the same version.
+When two files carry the same plugin `id`, the one in the later folder is used, whatever their versions, and the other is listed as replaced: the folder beside the program (a portable copy, the AppImage, the macOS app) over the user's folder, the user's over the system's. So a user can go back to an older version by putting it in their own folder over a package's. In one folder, the higher version is used, then the build needing more of the processor's features (the `cpu` condition), then the earlier name: a user who drops your new version beside an old one gets the new one.
+
+The first time the plugin is used, OxiGuitar unpacks the file it chose into the user's OxiGuitar folder and loads it from there; later starts reuse that copy until the file changes ([The plugin file](manifest.md#your-own-files)).
 
 A file that can't be used is listed with the reason: another system's or processor's file, a damaged file, a manifest problem, an interface newer than this OxiGuitar has, or conditions that don't hold here.
 

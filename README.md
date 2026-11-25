@@ -230,7 +230,7 @@ cargo run --release -p oxiguitar-cli -- play path/to/your/song.gp --wav song.wav
 
 ## Writing plugins
 
-Every file format, tool and tab in OxiGuitar is a plugin: one `.oxp` file, a native library with a small manifest, built from Rust with our SDK. The [plugin developer guide](https://mateusrdp.github.io/oxiguitar/plugin-guide/) walks through it from its template (`docs/plugins/template/`), and plugins may use any GPL-compatible license, since the interface and the SDK are MIT OR Apache-2.0.
+Every file format, tool and tab in OxiGuitar is a plugin: one `.oxp` file, an archive of a small manifest, a native library built from Rust with our SDK and any files the plugin ships. The [plugin developer guide](https://mateusrdp.github.io/oxiguitar/plugin-guide/) walks through it from its template (`docs/plugins/template/`), and plugins may use any GPL-compatible license, since the interface and the SDK are MIT OR Apache-2.0.
 
 ## Testers wanted
 
