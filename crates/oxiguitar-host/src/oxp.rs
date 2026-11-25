@@ -19,8 +19,8 @@
 //! a Windows folder, or an ARM64 plugin on an x86_64 computer, is reported
 //! here instead of failing to load later.
 //!
-//! The copy that is used is unpacked once into the user's folder
-//! ([`unpack`]) and kept: a later start finds it by the plugin file's
+//! The copy that is used is unpacked once into the user's folder and
+//! kept: a later start finds it by the plugin file's
 //! version, size and time, with one look at the disk.
 
 use std::fs::File;
@@ -320,18 +320,12 @@ static COUNT: AtomicU64 = AtomicU64::new(0);
 /// OxiGuitar has its library loaded); what other places' copies unpacked is
 /// kept for them.
 pub(crate) fn unpack(path: &Path, id: &str, version: &str, root: &Path) -> Result<PathBuf, String> {
-    let meta = std::fs::metadata(path).map_err(|e| format!("it can't be read ({e})"))?;
-    let time = meta
-        .modified()
-        .ok()
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map_or(0, |d| d.as_nanos());
-    let plugin = root.join(id);
-    let place = format!("{:016x}-", place(path));
-    let dir = plugin.join(format!("{place}{version}-{}-{time}", meta.len()));
+    let dir = unpacked_dir(path, id, version, root)?;
     if dir.join(library()).is_file() {
         return Ok(dir);
     }
+    let plugin = root.join(id);
+    let place = format!("{:016x}-", place(path));
     let cant = |e: std::io::Error| format!("it can't be unpacked into {} ({e})", plugin.display());
     std::fs::create_dir_all(&plugin).map_err(cant)?;
     let part = plugin.join(format!(
@@ -390,6 +384,31 @@ fn place(path: &Path) -> u64 {
         .fold(0xcbf2_9ce4_8422_2325, |h, &b| {
             (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
         })
+}
+
+/// The folder [`unpack`] unpacks the plugin file at `path` in under `root`,
+/// unpacked or not.
+fn unpacked_dir(path: &Path, id: &str, version: &str, root: &Path) -> Result<PathBuf, String> {
+    let meta = std::fs::metadata(path).map_err(|e| format!("it can't be read ({e})"))?;
+    let time = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |d| d.as_nanos());
+    Ok(root.join(id).join(format!(
+        "{:016x}-{version}-{}-{time}",
+        place(path),
+        meta.len()
+    )))
+}
+
+/// The folder an earlier [`unpack`] under `root` left for the plugin file at
+/// `path`, if there is one: for a program that only reads the user's
+/// folders (`oxiguitar-cli`).
+pub(crate) fn kept(path: &Path, id: &str, version: &str, root: &Path) -> Option<PathBuf> {
+    unpacked_dir(path, id, version, root)
+        .ok()
+        .filter(|dir| dir.join(library()).is_file())
 }
 
 /// Unpacks the plugin file at `path` into the new folder `into`: plain

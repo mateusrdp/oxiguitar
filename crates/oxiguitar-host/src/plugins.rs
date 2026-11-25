@@ -2096,7 +2096,9 @@ impl Plugins {
     /// The folder the plugin file at `index` is unpacked in (#347),
     /// unpacking it the first time: in the user's folder
     /// ([`Folders::unpacked`]), or the system's temporary folder for a
-    /// program that keeps no folders (tests).
+    /// program that keeps no folders (tests) or only reads them
+    /// (`oxiguitar-cli`, which uses what the app unpacked when it is
+    /// there).
     fn unpacked(&self, index: usize) -> Result<PathBuf, String> {
         let found = &self.0.found[index];
         if let Some(dir) = found.unpacked.get() {
@@ -2105,11 +2107,17 @@ impl Plugins {
         let Some(m) = &found.manifest else {
             return Err("its manifest can't be read".into());
         };
-        let root = self.0.folders.get().map_or_else(
-            || std::env::temp_dir().join("oxiguitar-unpacked"),
-            Folders::unpacked,
-        );
-        let dir = oxp::unpack(&found.path, &m.id, &m.version.to_string(), &root)?;
+        let version = m.version.to_string();
+        let temp = std::env::temp_dir().join("oxiguitar-unpacked");
+        let read_only = self.0.read_only.load(std::sync::atomic::Ordering::Relaxed);
+        let dir = match self.0.folders.get() {
+            Some(f) if !read_only => oxp::unpack(&found.path, &m.id, &version, &f.unpacked())?,
+            Some(f) => match oxp::kept(&found.path, &m.id, &version, &f.unpacked()) {
+                Some(dir) => dir,
+                None => oxp::unpack(&found.path, &m.id, &version, &temp)?,
+            },
+            None => oxp::unpack(&found.path, &m.id, &version, &temp)?,
+        };
         Ok(found.unpacked.get_or_init(|| dir).clone())
     }
 
