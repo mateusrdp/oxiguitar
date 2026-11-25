@@ -6,7 +6,7 @@ Your Rust code never touches the UI directly. It **sets properties** and **hears
 
 ## Requirements
 
-- **Interface 1.15**, and the SDK of an OxiGuitar release with it; **1.16** to name your file in the manifest (below).
+- **Interface 2.0** and its SDK (views came with 1.15, the manifest's `ui` with 1.16; since 2.0 views are the only UI a plugin has).
 - **Slint's language at OxiGuitar's version**: OxiGuitar compiles your file with the Slint it is built with (Slint 1.19 for interface 1.15). A file that uses something newer is refused, with the compiler's message in the footer. Write for that version: [its language reference](https://slint.dev/releases/1.19.0/docs/slint/).
 - **No compiler or Slint version to match.** Your plugin isn't built against Slint at all: only the `.slint` text crosses the interface.
 
@@ -34,7 +34,7 @@ Each place your UI appears is a **view**: an exported component of your file, an
 | --- | --- | --- |
 | `window` | A window of its own, which your plugin opens and closes, and the user can close | inherits `Window`, or `Dialog` for a dialog with Slint's standard buttons |
 | `top`, `bottom`, `left`, `right` | A panel: a tab in that area of OxiGuitar's window | an ordinary component, not a `Window` |
-| `track` | A section of the Track tab, in place of a track section's widgets; the manifest's `track_sections` needs an entry of the same id, which says which tracks it shows for | an ordinary component |
+| `track` | A section of the Track tab; the manifest's `track_sections` needs an entry of the same id, which says which tracks it shows for ([Track sections](track-sections.md)) | an ordinary component |
 | `export` | An exporter's options in File → Export Audio…; the exporter's `options` names the view | an ordinary component |
 
 Panels, track sections and export options sit inside OxiGuitar's window, in Slint's `ComponentContainer`, which Slint 1.19 marks as experimental. OxiGuitar follows Slint if it changes; your file doesn't depend on it.
@@ -107,6 +107,6 @@ OxiGuitar keeps the values you set for each view. A view made again (a window re
 
 The contract suite (`oxiguitar_plugin_test::check`) compiles your file as OxiGuitar does and checks that every view's component is in it, then tells each view it was made and closed. `oxiguitar_plugin_test::compile_ui(source)` compiles it in your own tests, so a mistake in the file fails `cargo test`, not your users' window.
 
-## Before interface 1.15
+## Before interface 2.0
 
-Tabs, dialogs, track sections and export options were rows of widgets that OxiGuitar drew ([Tabs](tabs.md)). They still work, for plugins built before 1.15, until OxiGuitar 1.0 retires them; new plugins should use views.
+Interface 1 also had tabs, dialogs, track sections and export options made of rows of widgets and canvases that OxiGuitar drew. Interface 2.0 retired them (#346): views are a plugin's only UI.

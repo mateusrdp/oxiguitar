@@ -4,8 +4,8 @@
 
 In the template, `cargo test` runs three kinds of test:
 
-1. **Your unit tests**, on the plugin as an ordinary Rust library: call your reader on sample files, your tab's `on` and `content`, your service's `call`, with `Host::detached()` where a host is needed. The template's are in each module of `src/`.
-2. **`the_manifest_matches_the_plugin`**, which `export_plugin!` adds: the manifest is valid and has no unknown key, its interface is one the SDK has, its version is the crate's, every declared format, service, tab, tool, settings window and track section is implemented, and the first contents of every tab, settings window and track section can be shown.
+1. **Your unit tests**, on the plugin as an ordinary Rust library: call your reader on sample files, your views' properties and callbacks, your service's `call`, with `Host::detached()` where a host is needed. The template's are in each module of `src/`.
+2. **`the_manifest_matches_the_plugin`**, which `export_plugin!` adds: the manifest is valid and has no unknown key, its interface is one the SDK has, its version is the crate's, every declared format, service, tool and view is implemented, and every track section has its view.
 3. **The contract suite**, in `tests/contract.rs`:
 
    ```rust,ignore
@@ -20,7 +20,7 @@ In the template, `cargo test` runs three kinds of test:
    - every format it reads answers an empty file, a kilobyte of zeros and its own signature alone with a score or an error, never a crash;
    - every format it writes answers an empty score;
    - every service answers its probe;
-   - every tab's contents can be shown, before and after a plausible use of each widget;
+   - its `.slint` file compiles and has every view's component, and every view is told it was made and closed without a crash;
    - every kind of event it subscribes to is taken without an error;
    - every tool runs with no score open;
    - its track sections show contents that can be shown, before and after a plausible use of each widget, and a section hands back its track's settings as a JSON object;

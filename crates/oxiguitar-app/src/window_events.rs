@@ -226,9 +226,7 @@ pub(crate) fn apply_interface_scale(a: &Shared) {
             physical.height as f32 / scale,
         ),
     });
-    // Tiles and plugins' canvases are drawn for device pixels: draw them
-    // again.
-    resend_canvas_rooms(a, scale);
+    // Tiles are drawn for device pixels: draw them again.
     {
         let mut s = a.borrow_mut();
         s.paint += 1;

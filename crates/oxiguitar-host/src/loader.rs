@@ -59,7 +59,7 @@ unsafe impl Send for Loaded {}
 unsafe impl Sync for Loaded {}
 
 /// The entry symbol's name, with the terminating zero `libloading` wants.
-const ENTRY: &[u8] = b"oxiguitar_plugin_v1\0";
+const ENTRY: &[u8] = b"oxiguitar_plugin_v2\0";
 
 /// Loads the plugin library at `path`, checks its table against `manifest`
 /// (the bytes of its manifest section) and starts it, handing it a host
@@ -96,7 +96,7 @@ pub(crate) fn load(
     // the library is never unloaded.
     let entry: EntryV1 = unsafe { library.get::<EntryV1>(ENTRY) }
         .map(|symbol| *symbol)
-        .map_err(|_| "it has no oxiguitar_plugin_v1 entry: it was built for another interface version, or isn't an OxiGuitar plugin".to_owned())?;
+        .map_err(|_| "it has no oxiguitar_plugin_v2 entry: it was built for another interface version, or isn't an OxiGuitar plugin".to_owned())?;
     // SAFETY: `entry` is the plugin's entry function, loaded just above and
     // valid for the rest of the process; it takes no arguments.
     let table = unsafe { entry() };
@@ -118,9 +118,9 @@ pub(crate) fn load(
     // fields as the start of `PluginTableV1`. It is never written by either
     // side once returned.
     let table: &'static PluginTableV1_0 = unsafe { &*table.cast::<PluginTableV1_0>() };
-    // Interface 1.3's real-time table, read only from a table that holds
-    // the field and a plugin built for 1.3 or later.
-    let realtime = if size >= PLUGIN_TABLE_V1_SIZE && table.interface_minor >= 3 {
+    // The real-time table (interface 1.3), read only from a table that
+    // holds the field.
+    let realtime = if size >= PLUGIN_TABLE_V1_SIZE {
         // SAFETY: the table is a whole `PluginTableV1` (its size, checked
         // just above), so its `realtime` field is there to read.
         let rt = unsafe { (*std::ptr::from_ref(table).cast::<PluginTableV1>()).realtime };
@@ -159,7 +159,7 @@ pub(crate) fn load(
     let host_minor = oxiguitar_plugin_api::INTERFACE.1;
     if table.interface_minor > host_minor {
         return Err(format!(
-            "it needs interface 1.{}, and this OxiGuitar has 1.{host_minor}: update OxiGuitar",
+            "it needs interface 2.{}, and this OxiGuitar has 2.{host_minor}: update OxiGuitar",
             table.interface_minor
         ));
     }

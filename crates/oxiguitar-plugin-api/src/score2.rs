@@ -39,7 +39,8 @@ use crate::score::{
 
 /// The interface minor version that first knows an extension.
 pub trait Since {
-    /// The minor version of interface 1 that added this variant.
+    /// The minor version of interface 2 that added this variant: 0 for
+    /// everything interface 1 had (its docs say which 1.x brought it).
     fn since(&self) -> u32;
 }
 
@@ -69,8 +70,8 @@ pub enum ScoreExt {
 impl Since for ScoreExt {
     fn since(&self) -> u32 {
         match self {
-            ScoreExt::Layout(_) => 6,
-            ScoreExt::Plugin { .. } => 8,
+            ScoreExt::Layout(_) => 0,
+            ScoreExt::Plugin { .. } => 0,
         }
     }
 }
@@ -106,9 +107,9 @@ pub enum MasterBarExt {
 impl Since for MasterBarExt {
     fn since(&self) -> u32 {
         match self {
-            MasterBarExt::FreeTime => 2,
-            MasterBarExt::Fermata(_) => 6,
-            MasterBarExt::Plugin { .. } => 8,
+            MasterBarExt::FreeTime => 0,
+            MasterBarExt::Fermata(_) => 0,
+            MasterBarExt::Plugin { .. } => 0,
         }
     }
 }
@@ -162,9 +163,9 @@ pub enum TrackExt {
 impl Since for TrackExt {
     fn since(&self) -> u32 {
         match self {
-            TrackExt::Layout(_) => 6,
-            TrackExt::ChordsFrom(_) => 7,
-            TrackExt::ChordsVoiceIndex(_) => 7,
+            TrackExt::Layout(_) => 0,
+            TrackExt::ChordsFrom(_) => 0,
+            TrackExt::ChordsVoiceIndex(_) => 0,
         }
     }
 }
@@ -215,8 +216,8 @@ pub enum BarExt {
 impl Since for BarExt {
     fn since(&self) -> u32 {
         match self {
-            BarExt::Simile(_) => 6,
-            BarExt::Plugin { .. } => 8,
+            BarExt::Simile(_) => 0,
+            BarExt::Plugin { .. } => 0,
         }
     }
 }
@@ -332,8 +333,8 @@ pub const MARK_MAX: usize = 16;
 impl Since for BeatExt {
     fn since(&self) -> u32 {
         match self {
-            BeatExt::Plugin { .. } | BeatExt::Mark { .. } => 8,
-            _ => 6,
+            BeatExt::Plugin { .. } | BeatExt::Mark { .. } => 0,
+            _ => 0,
         }
     }
 }
@@ -479,8 +480,8 @@ pub enum NoteExt {
 impl Since for NoteExt {
     fn since(&self) -> u32 {
         match self {
-            NoteExt::Plugin { .. } => 8,
-            _ => 6,
+            NoteExt::Plugin { .. } => 0,
+            _ => 0,
         }
     }
 }
@@ -901,20 +902,26 @@ impl Score2 {
     /// many times), for the losses of a plugin built for an earlier
     /// interface version.
     pub fn extensions_used(&self) -> Vec<(&'static str, usize, usize)> {
-        self.extensions_newer_than(0)
+        self.extensions_where(&|_| true)
     }
 
     /// What [`Score2::keep_known`] with `minor` leaves out, as (what, first
     /// bar from 1, how many times), for the losses of a plugin built for
-    /// interface 1.`minor`.
+    /// interface 2.`minor`.
     pub fn extensions_newer_than(&self, minor: u32) -> Vec<(&'static str, usize, usize)> {
+        self.extensions_where(&|since| since > minor)
+    }
+
+    /// The extensions whose minor version passes `keep`, counted as
+    /// [`Score2::extensions_newer_than`] counts them.
+    fn extensions_where(&self, keep: &dyn Fn(u32) -> bool) -> Vec<(&'static str, usize, usize)> {
         fn count<T: Since + Named>(
             out: &mut Vec<(&'static str, usize, usize)>,
             ext: &[T],
             bar: usize,
-            minor: u32,
+            minor: &dyn Fn(u32) -> bool,
         ) {
-            for e in ext.iter().filter(|e| e.since() > minor) {
+            for e in ext.iter().filter(|e| minor(e.since())) {
                 let what = e.what();
                 match out.iter_mut().find(|o| o.0 == what) {
                     Some(o) => {
@@ -926,22 +933,22 @@ impl Score2 {
             }
         }
         let mut out: Vec<(&'static str, usize, usize)> = Vec::new();
-        count(&mut out, &self.ext, 1, minor);
+        count(&mut out, &self.ext, 1, keep);
         for (i, m) in self.master_bars.iter().enumerate() {
-            count(&mut out, &m.ext, i + 1, minor);
+            count(&mut out, &m.ext, i + 1, keep);
         }
         for t in &self.tracks {
-            count(&mut out, &t.ext, 1, minor);
+            count(&mut out, &t.ext, 1, keep);
             for s in &t.staves {
-                count(&mut out, &s.ext, 1, minor);
+                count(&mut out, &s.ext, 1, keep);
                 for (i, b) in s.bars.iter().enumerate() {
-                    count(&mut out, &b.ext, i + 1, minor);
+                    count(&mut out, &b.ext, i + 1, keep);
                     for v in &b.voices {
-                        count(&mut out, &v.ext, i + 1, minor);
+                        count(&mut out, &v.ext, i + 1, keep);
                         for beat in &v.beats {
-                            count(&mut out, &beat.ext, i + 1, minor);
+                            count(&mut out, &beat.ext, i + 1, keep);
                             for n in &beat.notes {
-                                count(&mut out, &n.ext, i + 1, minor);
+                                count(&mut out, &n.ext, i + 1, keep);
                             }
                         }
                     }
@@ -981,7 +988,7 @@ impl Score2 {
         }
     }
 
-    /// Leaves out every extension that interface 1.`minor` doesn't know,
+    /// Leaves out every extension that interface 2.`minor` doesn't know,
     /// so a plugin built for it can read the score.
     pub fn keep_known(&mut self, minor: u32) {
         fn keep<T: Since>(ext: &mut Vec<T>, minor: u32) {
@@ -1068,7 +1075,7 @@ mod tests {
     }
 
     #[test]
-    fn version_1_round_trips_and_extensions_are_left_out() {
+    fn version_1_round_trips_and_interface_2_0_keeps_every_extension() {
         let mut s = small();
         let v1 = s.to_v1();
         assert_eq!(Score2::from_v1(v1.clone()), s);
@@ -1076,11 +1083,10 @@ mod tests {
         assert!(s.master_bars[0].free_time());
         assert_eq!(s.to_v1(), v1);
         assert_eq!(s.extensions_used(), vec![("free time", 1, 1)]);
-        let mut for_1_1 = s.clone();
-        for_1_1.keep_known(1);
-        assert!(!for_1_1.master_bars[0].free_time());
-        s.keep_known(2);
+        // Interface 2.0 knows every extension interface 1 had.
+        s.keep_known(0);
         assert!(s.master_bars[0].free_time());
+        assert!(s.extensions_newer_than(0).is_empty());
     }
 
     #[test]

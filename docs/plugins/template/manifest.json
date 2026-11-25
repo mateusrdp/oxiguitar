@@ -1,5 +1,5 @@
 {
-  "interface": "1.1",
+  "interface": "2.0",
   "id": "yourname.example",
   "name": "Example",
   "version": "0.1.0",
@@ -20,8 +20,9 @@
   "services": [
     { "interface": "note-names", "id": "example", "name": "Example note names" }
   ],
-  "tabs": [
-    { "id": "statistics", "title": "Statistics", "area": "right" }
+  "ui": "ui/example.slint",
+  "views": [
+    { "id": "statistics", "component": "Statistics", "place": "right", "title": "Statistics" }
   ],
   "events": ["score"]
 }

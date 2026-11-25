@@ -26,8 +26,8 @@ members = ["."]
 debug = 1
 
 [[bin]]
-name = "plugin_tab"
-path = "fuzz_targets/plugin_tab.rs"
+name = "plugin_drawing"
+path = "fuzz_targets/plugin_drawing.rs"
 test = false
 doc = false
 bench = false

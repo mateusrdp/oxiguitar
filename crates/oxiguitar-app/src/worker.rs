@@ -959,7 +959,7 @@ mod tests {
 
     #[test]
     fn opening_a_score_tells_the_plugins_that_listen_and_they_can_read_it() {
-        use oxiguitar_host::api::tab::{TabEvent, Widget};
+        use oxiguitar_host::api::view::Value;
         let host = crate::test_support::tab_host();
         let (tx, rx) = channel();
         let worker = Worker::start(host.plugins.clone(), host.open.clone(), move |e| {
@@ -975,25 +975,22 @@ mod tests {
         )
         .unwrap();
         assert!(events.contains("ScoreOpened"), "{events}");
-        // The test plugin asks for its tab to be redrawn after a score
-        // opens, and reads the open score when its button is clicked.
-        assert!(
-            host.redraws
+        // The test plugin shows a score being opened in its panel, and
+        // reads the open score when its button asks for it.
+        let set = |name: &str| {
+            host.views
                 .lock()
                 .unwrap()
-                .contains(&crate::test_support::panel())
-        );
+                .iter()
+                .rev()
+                .filter(|(v, _)| v == "panel")
+                .find_map(|(_, p)| p.iter().find(|(n, _)| n == name).map(|p| p.1.clone()))
+        };
+        assert!(set("events").is_some());
         let title = host.open.wire().expect("a score is open").info.title;
-        let content = host
-            .plugins
-            .tab_event(&crate::test_support::panel(), "score", TabEvent::Clicked)
-            .unwrap();
-        assert!(
-            content.rows.iter().flat_map(|r| &r.widgets).any(
-                |w| matches!(w, Widget::Label { text, .. } if *text == format!("Score: {title}"))
-            ),
-            "{content:?}"
-        );
+        host.plugins
+            .view_callback(&crate::test_support::panel(), "ask-score", vec![]);
+        assert_eq!(set("score"), Some(Value::String(format!("Score: {title}"))));
     }
 
     #[test]

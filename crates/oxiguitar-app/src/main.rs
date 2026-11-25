@@ -13,10 +13,10 @@
 //!
 //! At start, the plugin host (`oxiguitar-host`) makes sure the user folder,
 //! settings.json and the plugin folder exist, and the footer says what is
-//! missing (docs/design/plugins.md). Plugins' tabs join the four areas
-//! ([`plugin_tabs`]): a thread of their own asks the plugins for their
-//! contents and draws their canvases, and the worker tells the plugins
-//! that subscribe when a score is opened or changed.
+//! missing (docs/design/plugins.md). Plugins' panels, their own views in
+//! Slint, join the four areas ([`plugin_tabs`], [`plugin_ui`]), and the
+//! worker tells the plugins that subscribe when a score is opened or
+//! changed.
 //!
 //! Tools → Plugins opens the plugin manager ([`manager`]), and
 //! `--safe-mode` starts with no plugins at all; Help → About lists the
@@ -99,11 +99,7 @@ use i_slint_backend_winit::winit::event::{
 use i_slint_backend_winit::winit::keyboard::{Key, KeyCode, PhysicalKey};
 use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
 use oxiguitar_display::Rect;
-use oxiguitar_host::api::display::Point as CanvasPoint;
-use oxiguitar_host::api::tab::{
-    Cursor, Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget,
-};
-use oxiguitar_host::{Level, TabId};
+use oxiguitar_host::Level;
 use oxiguitar_layout::{Layout, Paper};
 use slint::{
     ComponentHandle, Image, Model, ModelRc, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel,
@@ -113,7 +109,6 @@ use slint::{
 use crate::canvas::{Sheets, TILE};
 use crate::document::{OpenScore, SaveFormat, Settings, ToolEntry, TrackInfo};
 use crate::footer::{Footer, level_code};
-use crate::plugin_tabs::TabThread;
 use crate::prefs::ViewPrefs;
 use crate::shell::{Shell, Side, item};
 use crate::tracks::{Mixer, Tracks};
@@ -127,8 +122,8 @@ mod ui {
 use ui::{
     AdviceLink, AppWindow, AreaState, BoxItem, FooterRow, GridPoint, InspectorField,
     InspectorVoice, ManagerRow, PaletteGroupRow, PaletteToolRow, PluginLinks, PluginManagerWindow,
-    PluginMenu, PluginMenuItem, PluginRow, PluginSection, PluginSurfaces, PluginWidget,
-    ShortcutLine, SongField, TileItem, ToolRow, ToolbarItemRow, ToolbarSectionRow, TrackRow,
+    PluginMenu, PluginMenuItem, PluginSection, ShortcutLine, SongField, TileItem, ToolRow,
+    ToolbarItemRow, ToolbarSectionRow, TrackRow,
 };
 
 // The window's modules split out of this file (23 Nov 2026), each with its
@@ -231,14 +226,6 @@ struct App {
     dark_interface: bool,
     /// A dropped file is being opened; the rest of the same drop is ignored.
     drop_pending: bool,
-    /// The thread that asks plugins for their tabs and draws their
-    /// canvases; what it last answered for each tab; what each area shows.
-    tab_thread: Option<TabThread>,
-    plugin_tabs: HashMap<TabId, PluginTabState>,
-    plugin_views: [PluginView; 6],
-    /// The plugin dialog that is open (a tab whose area is `dialog`,
-    /// interface 1.8).
-    plugin_dialog: Option<TabId>,
     /// Every plugin file found, for the plugin manager, and its window
     /// once opened (hidden, not dropped, when closed).
     plugins: oxiguitar_host::Plugins,
@@ -326,7 +313,7 @@ struct App {
     /// the stop switch of the export under way.
     exporters: Vec<audio_export::Target>,
     export_with: Option<usize>,
-    export_options: Option<TabId>,
+    export_options: Option<oxiguitar_host::ViewId>,
     export_waiting: Option<audio_export::Waiting>,
     export_cancel: Option<Arc<std::sync::atomic::AtomicBool>>,
 }
@@ -358,31 +345,6 @@ enum Then {
     Open(PathBuf),
     /// Quit.
     Quit,
-}
-
-/// A plugin tab's last contents (or why it can't be shown) and its
-/// canvases as drawn.
-#[derive(Default)]
-struct PluginTabState {
-    content: Option<Result<TabContent, String>>,
-    canvases: HashMap<String, Image>,
-    /// The plugin asked for the tab to be redrawn while it was hidden.
-    stale: bool,
-    /// The last error put in the footer, so it is said once.
-    told: Option<String>,
-    /// Each canvas's room, in logical pixels, for when the scale changes.
-    rooms: HashMap<String, (f32, f32)>,
-}
-
-/// What an area shows of a plugin tab: the tab, the contents its models
-/// hold, and the models (kept, and changed in place where the rows keep
-/// their shape, so a canvas being dragged on is never rebuilt).
-#[derive(Default)]
-struct PluginView {
-    tab: Option<TabId>,
-    content: Option<TabContent>,
-    rows: Rc<VecModel<PluginRow>>,
-    row_models: Vec<Rc<VecModel<PluginWidget>>>,
 }
 
 type Shared = Rc<RefCell<App>>;
@@ -465,7 +427,6 @@ fn main() -> Result<(), slint::PlatformError> {
     let open_extensions = startup.plugins.read_extensions();
     let save_formats = SaveFormat::writable(&startup.plugins);
     let mut shell = Shell::default();
-    plugin_tabs::add_to(&mut shell, &startup.plugins);
     plugin_tabs::add_views_to(&mut shell, &startup.plugins);
     let (toolbar_tools, toolbar_icons) = plugin_toolbar_tools(&startup.plugins);
     let (plugin_keys, key_lines, key_clashes) = {
@@ -483,21 +444,6 @@ fn main() -> Result<(), slint::PlatformError> {
         (keys, lines, clashes)
     };
     shell.set_plugin_tools(&toolbar_tools);
-    // Only when a plugin has tabs or track sections.
-    let uses_tab_thread = !startup.plugins.tabs().is_empty()
-        || oxiguitar_host::api::class::InstrumentClass::ALL
-            .iter()
-            .any(|&c| !startup.plugins.track_sections(c).is_empty());
-    let tab_thread = uses_tab_thread.then(|| {
-        TabThread::start(startup.plugins.clone(), true, |answer| {
-            let _ = slint::invoke_from_event_loop(move || {
-                if let Some(app) = APP.with(|a| a.borrow().clone()) {
-                    plugin_answer(&app, answer);
-                }
-            });
-        })
-    });
-
     let (sound, control) = sound::Sound::start(startup.plugins.clone(), |m| {
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(app) = APP.with(|a| a.borrow().clone()) {
@@ -549,10 +495,6 @@ fn main() -> Result<(), slint::PlatformError> {
         prefs: ViewPrefs::default(),
         dark_interface: false,
         drop_pending: false,
-        tab_thread,
-        plugin_tabs: HashMap::new(),
-        plugin_views: Default::default(),
-        plugin_dialog: None,
         plugins: startup.plugins.clone(),
         manager: None,
         sections: None,
@@ -741,9 +683,6 @@ fn main() -> Result<(), slint::PlatformError> {
         s.zoom = prefs.score_zoom;
         s.ui_zoom = prefs.ui_zoom;
         s.dark_interface = ui.get_dark_interface();
-        if let Some(tabs) = &s.tab_thread {
-            tabs.send(plugin_tabs::Request::Dark(s.dark_interface));
-        }
         plugin_ui::init(s.plugins.clone(), s.dark_interface);
         // Settings: the count-in and metronome a session starts with.
         s.player.set_count_in(prefs.count_in);
@@ -879,10 +818,6 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_track_changed(move |id, value| track_changed(&a, id.as_str(), value, ""));
     let a = app.clone();
     ui.on_track_edited(move |id, text| track_changed(&a, id.as_str(), 0, text.as_str()));
-    let a = app.clone();
-    ui.on_track_section_event(move |i, widget, kind, on, value, text, chosen| {
-        track_section_event(&a, i, &widget, widget_event(kind, on, value, &text, chosen));
-    });
     let a = app.clone();
     ui.on_track_section_moved(move |i, up| track_section_moved(&a, i, up));
     let a = app.clone();
@@ -1301,7 +1236,6 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-    install_plugin_tab_callbacks(&ui, &app);
     install_plugin_links(&ui.global::<PluginLinks<'_>>(), &app);
     let a = app.clone();
     ui.on_open_plugin_manager(move || open_plugin_manager(&a));
@@ -1786,9 +1720,6 @@ fn settings_changed(app: &Shared) {
     }
     if before.0 != s.settings.layout {
         ui.invoke_scroll_to(0.0, 0.0);
-    }
-    if let Some(tabs) = &s.tab_thread {
-        tabs.send(plugin_tabs::Request::Dark(dark));
     }
     plugin_ui::dark(dark);
     if let Some(m) = &s.manager {

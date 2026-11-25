@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-// The test plugin's own UI (plugin interface 1.15): a window, a panel and a
-// track section, each with a property the plugin sets and a callback it
-// hears.
+// The test plugin's own UI (plugin interface 2.0): a window, two panels, a
+// track section, a settings window and an export's options, each with
+// properties the plugin sets and callbacks it hears.
 
-import { Button, Slider } from "std-widgets.slint";
+import { Button, CheckBox, ComboBox, LineEdit, Slider } from "std-widgets.slint";
 
 export component TestWindow inherits Window {
     title: "Test Window";
@@ -35,13 +35,87 @@ export component TestPanel {
     }
 }
 
+// The events heard, and the open score's title when asked for.
+export component TestEvents {
+    in property <string> events;
+    in property <string> score: "Score: not asked for";
+    callback ask-score();
+    VerticalLayout {
+        Text { text: root.events; }
+        Text { text: root.score; }
+        Button {
+            text: "Score";
+            clicked => { root.ask-score(); }
+        }
+    }
+}
+
+// A level and a nickname per track.
 export component TestSection {
     in-out property <float> level: 0.5;
+    in-out property <string> nickname;
+    in property <string> placeholder;
     callback level-changed(float);
-    Slider {
-        minimum: 0;
-        maximum: 1;
-        value <=> root.level;
-        released(v) => { root.level-changed(v); }
+    callback nickname-edited(string);
+    VerticalLayout {
+        Slider {
+            minimum: 0;
+            maximum: 1;
+            value <=> root.level;
+            released(v) => { root.level-changed(v); }
+        }
+        LineEdit {
+            text <=> root.nickname;
+            placeholder-text: root.placeholder;
+            edited(t) => { root.nickname-edited(t); }
+        }
+    }
+}
+
+// The plugin's settings: kept with OK, forgotten with Cancel.
+export component TestSettings inherits Window {
+    title: "Test Settings";
+    in-out property <bool> greet;
+    in-out property <string> name;
+    in property <string> greeting;
+    callback greet-toggled(bool);
+    callback name-edited(string);
+    callback ok();
+    callback cancel();
+    VerticalLayout {
+        padding: 8px;
+        CheckBox {
+            text: "Greet";
+            checked <=> root.greet;
+            toggled => { root.greet-toggled(self.checked); }
+        }
+        LineEdit {
+            text <=> root.name;
+            placeholder-text: "Your name";
+            edited(t) => { root.name-edited(t); }
+        }
+        Text { text: root.greeting; }
+        HorizontalLayout {
+            Button {
+                text: "OK";
+                clicked => { root.ok(); }
+            }
+            Button {
+                text: "Cancel";
+                clicked => { root.cancel(); }
+            }
+        }
+    }
+}
+
+// The exporter raw's rate.
+export component RawOptions {
+    in property <[string]> rates;
+    in-out property <int> rate;
+    callback rate-chosen(int);
+    ComboBox {
+        model: root.rates;
+        current-index <=> root.rate;
+        selected => { root.rate-chosen(self.current-index); }
     }
 }

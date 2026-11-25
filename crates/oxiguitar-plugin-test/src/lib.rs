@@ -15,15 +15,11 @@
 //!   signature alone) with an error or a score, never a crash;
 //! - every format it writes answers an empty score;
 //! - every service it declares answers its probe;
-//! - every tab it adds (interface 1.1) shows contents the core can draw,
-//!   and a plausible use of each widget (a click, a tick, the slider's
-//!   lowest value, an empty field, the first option, a press, drag and
-//!   release in the middle of a canvas) answers with contents it can draw;
+//! - its `.slint` file compiles as the window compiles it and has every
+//!   view's component, and every view (its windows, panels, track sections
+//!   and export options) is told it was made and closed without a crash;
 //! - every kind of event it subscribes to is delivered without an error;
-//! - every tool it adds (interface 1.2) runs with no score open;
-//! - its sections of the track dialog (interface 1.3) show contents the
-//!   core can draw, before and after a plausible use of each widget, and a
-//!   section hands back its track's settings as a JSON object.
+//! - every tool it adds runs with no score open;
 //!
 //! - every instrument and effect it offers (interface 1.3) prepares; an
 //!   instrument starts a note within its declared resolution of the frame
@@ -47,14 +43,11 @@ use std::time::{Duration, Instant};
 
 use oxiguitar_host::api::Blob;
 use oxiguitar_host::api::class::InstrumentClass;
-use oxiguitar_host::api::display::Point;
 use oxiguitar_host::api::event::{Event, EventKind, Playback, Position};
 use oxiguitar_host::api::message::{
     Answer, Error, PlayedBeat, Prepare, PrepareEffect, PreparedTrack, Request, TrackInfo,
 };
 use oxiguitar_host::api::realtime::{RtEvent, RtEventKind, RtNote};
-use oxiguitar_host::api::score::Score;
-use oxiguitar_host::api::tab::{Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget};
 use oxiguitar_host::realtime::Instance;
 use oxiguitar_host::{Core, ExporterRef, Folders, Level, Plugins, SharedSettings, State, System};
 
@@ -491,17 +484,9 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
         }
     }
     for format in manifest.formats.iter().filter(|f| f.write) {
-        // Version 2 of the score for a plugin built for interface 1.2.
-        let request = if manifest.knows_minor(2) {
-            Request::Write2 {
-                format: format.id.clone(),
-                score: Box::default(),
-            }
-        } else {
-            Request::Write {
-                format: format.id.clone(),
-                score: Box::new(Score::default()),
-            }
+        let request = Request::Write2 {
+            format: format.id.clone(),
+            score: Box::default(),
         };
         let answer = plugins.send(found, &request);
         report.check(
@@ -535,40 +520,6 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
     }
     for exporter in plugins.exporters() {
         check_audio_export(&plugins, exporter, &mut report);
-    }
-    for tab in plugins.tabs() {
-        let id = tab.id();
-        let content = plugins.tab_content(&id);
-        report.check(
-            format!("tab {}: its contents can be shown", id.tab),
-            content.as_ref().map(drop).map_err(|e| e.message.clone()),
-        );
-        let Ok(content) = content else { continue };
-        for (widget, event) in plausible_events(&content) {
-            let answer = plugins.tab_event(&id, &widget, event.clone());
-            report.check(
-                format!(
-                    "tab {}: {event:?} on {widget} answers with contents it can show",
-                    id.tab
-                ),
-                match answer {
-                    Ok(_) => Ok(()),
-                    Err(e) if e.message.contains("can't be shown") => Err(e.message),
-                    Err(e) => not_a_crash(&e),
-                },
-            );
-        }
-        // A dialog (interface 1.8) is told it was closed, as by Cancel.
-        if tab.spec.area == oxiguitar_host::api::tab::Area::Dialog {
-            plugins.tab_closed(&id, false);
-            report.check(
-                format!("dialog {}: closing it is no crash", id.tab),
-                match tab.plugin.failure() {
-                    None => Ok(()),
-                    Some(why) => Err(why.to_string()),
-                },
-            );
-        }
     }
     // Its own UI in Slint (interface 1.15): its `.slint` file compiles with
     // the window's style and has every view's component; each view is
@@ -792,56 +743,6 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
                 Err(e) => not_a_crash(&e),
             },
         );
-    }
-    // The track dialog's sections (interface 1.3).
-    for class in InstrumentClass::ALL {
-        for section in plugins.track_sections(class) {
-            // Each section once, for the first class it shows for.
-            if InstrumentClass::ALL
-                .iter()
-                .take_while(|&&c| c != class)
-                .any(|&c| section.spec.shows_for(c))
-            {
-                continue;
-            }
-            let track = TrackInfo {
-                index: 0,
-                name: "Track 1".into(),
-                class,
-            };
-            let id = &section.spec.id;
-            // A section that is the plugin's own view in Slint (interface
-            // 1.15) is checked with the views.
-            let view = oxiguitar_host::ViewId {
-                plugin: section.plugin_id().to_owned(),
-                view: id.clone(),
-            };
-            if plugins.view(&view).is_some() {
-                continue;
-            }
-            let answer = plugins.track_section(section, &track, "{}");
-            report.check(
-                format!("track section {id}: its contents can be shown"),
-                answer.as_ref().map(drop).map_err(|e| e.message.clone()),
-            );
-            let Ok((content, settings)) = answer else {
-                continue;
-            };
-            for (widget, event) in plausible_events(&content) {
-                let answer =
-                    plugins.track_section_event(section, &track, &settings, &widget, event.clone());
-                report.check(
-                    format!(
-                        "track section {id}: {event:?} on {widget} answers with contents it can show and settings"
-                    ),
-                    match answer {
-                        Ok(_) => Ok(()),
-                        Err(e) if e.message.contains("can't be shown") => Err(e.message),
-                        Err(e) => not_a_crash(&e),
-                    },
-                );
-            }
-        }
     }
     // Only the checked plugin's instruments and effects: the plugins it
     // needs are there to meet the need, not to be checked.
@@ -1211,96 +1112,6 @@ fn watched(f: impl FnOnce()) -> Result<(), String> {
         let _ = f;
         Ok(())
     }
-}
-
-/// One thing a user could do to each widget of `content`: a click, a tick,
-/// the slider's lowest value, an empty field, the first option, a press,
-/// drag and release in the middle of a canvas, and on a surface a bit of
-/// everything it hears.
-fn plausible_events(content: &TabContent) -> Vec<(String, TabEvent)> {
-    let mut out = Vec::new();
-    for widget in content.rows.iter().flat_map(|r| &r.widgets) {
-        let Some(id) = widget.id().map(str::to_owned) else {
-            continue;
-        };
-        match widget {
-            Widget::Button { .. } => out.push((id, TabEvent::Clicked)),
-            Widget::Toggle { on, .. } => out.push((id, TabEvent::Toggled(!on))),
-            Widget::Slider { min, .. } => out.push((id, TabEvent::Slid(*min))),
-            Widget::Field { .. } => out.push((id, TabEvent::Edited(String::new()))),
-            Widget::Choice { options, .. } if !options.is_empty() => {
-                out.push((id, TabEvent::Chosen(0)));
-            }
-            Widget::List { items, .. } if !items.is_empty() => {
-                out.push((id, TabEvent::Chosen(0)));
-            }
-            Widget::Canvas(c) => {
-                let at = Point::new(c.width / 2.0, c.height / 2.0);
-                for kind in [PointerKind::Down, PointerKind::Drag, PointerKind::Up] {
-                    out.push((
-                        id.clone(),
-                        TabEvent::Pointer(Pointer {
-                            kind,
-                            at,
-                            button: PointerButton::Primary,
-                        }),
-                    ));
-                }
-            }
-            // A surface (interface 1.14): its size, the pointer over and
-            // on it, the wheel, the keyboard and text.
-            Widget::Surface(surface) => {
-                let at = Point::new(10.0, 10.0);
-                let pointer = |kind| {
-                    TabEvent::Pointer(Pointer {
-                        kind,
-                        at,
-                        button: PointerButton::Primary,
-                    })
-                };
-                let key = |name| {
-                    TabEvent::Key(oxiguitar_host::api::tab::Key {
-                        name,
-                        shift: false,
-                        ctrl: false,
-                        alt: false,
-                    })
-                };
-                use oxiguitar_host::api::tab::KeyName;
-                let height = if surface.height > 0.0 {
-                    surface.height
-                } else {
-                    300.0
-                };
-                for event in [
-                    TabEvent::Resized {
-                        width: 320.0,
-                        height,
-                    },
-                    pointer(PointerKind::Move),
-                    pointer(PointerKind::Down),
-                    pointer(PointerKind::Drag),
-                    pointer(PointerKind::Up),
-                    pointer(PointerKind::Leave),
-                    TabEvent::Wheel {
-                        at,
-                        dx: 0.0,
-                        dy: 40.0,
-                    },
-                    TabEvent::Focus(true),
-                    TabEvent::Typed("Hello, é".into()),
-                    key(KeyName::Backspace),
-                    key(KeyName::Left),
-                    key(KeyName::Enter),
-                    TabEvent::Focus(false),
-                ] {
-                    out.push((id.clone(), event));
-                }
-            }
-            _ => {}
-        }
-    }
-    out
 }
 
 static COUNT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);

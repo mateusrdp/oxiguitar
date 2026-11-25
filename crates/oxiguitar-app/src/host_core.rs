@@ -71,15 +71,6 @@ impl oxiguitar_host::Core for WindowCore {
         });
     }
 
-    fn redraw(&self, tab: &TabId) {
-        let tab = tab.clone();
-        let _ = slint::invoke_from_event_loop(move || {
-            if let Some(app) = APP.with(|a| a.borrow().clone()) {
-                plugin_tab_changed(&app, tab);
-            }
-        });
-    }
-
     fn engraving(&self) -> Option<oxiguitar_host::api::message::Engraving> {
         self.open.engraving()
     }
@@ -90,24 +81,6 @@ impl oxiguitar_host::Core for WindowCore {
 
     fn score_file(&self) -> Option<PathBuf> {
         self.open.file()
-    }
-
-    fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
-        // Asked from any thread: whether one is open is known here, and
-        // the window shows it when its turn comes.
-        if DIALOG_OPEN.swap(true, std::sync::atomic::Ordering::SeqCst) {
-            return Err("another dialog is open".to_owned());
-        }
-        let (tab, title) = (tab.clone(), title.to_owned());
-        let queued =
-            slint::invoke_from_event_loop(move || match APP.with(|a| a.borrow().clone()) {
-                Some(app) => open_plugin_dialog(&app, tab, &title),
-                None => DIALOG_OPEN.store(false, std::sync::atomic::Ordering::SeqCst),
-            });
-        queued.map_err(|_| {
-            DIALOG_OPEN.store(false, std::sync::atomic::Ordering::SeqCst);
-            "the window is closing".to_owned()
-        })
     }
 
     fn show_view(
@@ -165,15 +138,6 @@ impl oxiguitar_host::Core for WindowCore {
             }
         })
         .map_err(|_| "the window is closing".to_owned())
-    }
-
-    fn show_tab(&self, tab: &TabId) {
-        let tab = tab.clone();
-        let _ = slint::invoke_from_event_loop(move || {
-            if let Some(app) = APP.with(|a| a.borrow().clone()) {
-                plugin_tab_wanted(&app, &tab);
-            }
-        });
     }
 
     fn score(&self) -> Option<oxiguitar_host::api::score::Score> {
@@ -349,7 +313,7 @@ pub(crate) fn run_core_tool(
         if s.open_score.playing() {
             return fail("the score is playing: it can be changed once it is paused or stopped");
         }
-        if s.question.is_some() || DIALOG_OPEN.load(std::sync::atomic::Ordering::SeqCst) {
+        if s.question.is_some() {
             return fail("the window is asking the user something: try again once it is answered");
         }
     }
@@ -393,13 +357,12 @@ pub(crate) fn run_core_tool(
     });
 }
 
-/// The plugin `id` failed and was withdrawn: its tabs go, as if it had
+/// The plugin `id` failed and was withdrawn: its panels go, as if it had
 /// never been installed, and the plugin manager shows why.
 pub(crate) fn plugin_withdrawn(app: &Shared, id: &str) {
     plugin_ui::withdrawn(id);
     let gone = {
         let mut s = app.borrow_mut();
-        s.plugin_tabs.retain(|tab, _| tab.plugin != id);
         plugin_tabs::remove_from(&mut s.shell, id)
     };
     if gone {

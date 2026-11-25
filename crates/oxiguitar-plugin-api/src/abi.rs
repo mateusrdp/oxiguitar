@@ -102,7 +102,7 @@ pub struct PluginTableV1 {
     pub call: unsafe extern "C" fn(request: RawBytes, answer: *mut RawSink) -> Status,
     /// The functions the audio thread calls (interface 1.3): null for a
     /// plugin with no instrument or effect. Read only when `size` covers
-    /// it and `interface_minor` is 3 or more.
+    /// it.
     pub realtime: *const crate::realtime::RealtimeTableV1,
 }
 

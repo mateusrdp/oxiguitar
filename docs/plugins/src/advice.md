@@ -47,7 +47,7 @@ host.advise(Advice {
 
 ## Links
 
-A plugin can't open anything itself. The links in an advice dialog open in the system's browser only when the user clicks them, and only `https://` addresses are taken, as with `Widget::Link` ([Tabs](tabs.md)) and the footer's links. OxiGuitar sends nothing anywhere on its own, and nothing about the click goes back to your plugin.
+A plugin can't open anything itself. The links in an advice dialog open in the system's browser only when the user clicks them, and only `https://` addresses are taken as with the footer's links. OxiGuitar sends nothing anywhere on its own, and nothing about the click goes back to your plugin.
 
 Link to a page you keep up to date, and say in the text what to do there: the page may change, the dialog's words can't.
 
@@ -60,4 +60,4 @@ Link to a page you keep up to date, and say in the text what to do there: the pa
 
 ## Which interface
 
-A plugin that calls `advise` must ask for interface 1.4 in its manifest (`"interface": "1.4"`); the host refuses the call from a plugin built for an earlier minor version. See [Interface versions](versions.md).
+Advice came with interface 1.4, and every plugin of interface 2.0 has it. See [Interface versions](versions.md).

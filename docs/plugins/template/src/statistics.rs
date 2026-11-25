@@ -1,35 +1,26 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The tab "Statistics", in the window's right area: how many notes each
+//! The panel "Statistics", in the window's right area: how many notes each
 //! string of a track plays in the open score, as a small bar chart. Click a
 //! bar to see its count; "Count tied notes" is remembered in settings.json.
 //!
-//! It shows the parts of a tab: widgets the core draws (labels, a choice, a
-//! toggle), a canvas the plugin draws and gets pointer events on, score
-//! events, asking the host for the open score, redrawing, and settings.
+//! It shows the parts of a plugin's UI: a view of the plugin's own
+//! `ui/example.slint` (the component `Statistics`), its properties set
+//! from Rust and its callbacks heard, score events, asking the host for the
+//! open score, and settings.
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{NotePlace, Score};
-use oxiguitar_plugin::{
-    Canvas, Error, ErrorKind, Event, Host, Level, Pointer, PointerKind, Row, Tab, TabContent,
-    TabEvent, Widget,
-};
+use oxiguitar_plugin::{Error, ErrorKind, Event, Host, Level, TrackView, Ui, Value};
 
-/// The tab's id in `manifest.json`.
+/// The view's id in `manifest.json`.
 pub const ID: &str = "statistics";
 
-/// The canvas's size, in its own units (the core scales it to fit).
-const WIDTH: f32 = 120.0;
-const HEIGHT: f32 = 60.0;
-/// Room under the bars for the strings' numbers.
-const LABELS: f32 = 12.0;
-
 // ANCHOR: state
-/// The tab. Calls may come from any thread at once, so what changes lives
-/// behind a lock.
+/// The panel. Calls may come from any thread at once, so what changes
+/// lives behind a lock.
 pub struct Statistics {
     host: Host,
     state: Mutex<State>,
@@ -64,7 +55,7 @@ struct Counts {
 // ANCHOR_END: state
 
 impl Statistics {
-    /// The tab, with its settings read.
+    /// The panel, with its settings read.
     pub fn new(host: Host) -> Statistics {
         // ANCHOR: settings_read
         let count_tied = host
@@ -88,8 +79,7 @@ impl Statistics {
 
     // ANCHOR: event
     /// A score event (the manifest subscribes to `score`). It comes on the
-    /// host's event thread: note it and ask for a redraw, and leave the work
-    /// to `content`, which runs only while the tab is on screen.
+    /// host's event thread: note it, count the score again and show it.
     pub fn event(&self, event: &Event) {
         match event {
             Event::ScoreOpened { .. } | Event::ScoreChanged { .. } => self.state().stale = true,
@@ -102,7 +92,7 @@ impl Statistics {
             }
             _ => return,
         }
-        self.host.redraw(ID);
+        self.show();
     }
     // ANCHOR_END: event
 
@@ -189,177 +179,125 @@ impl State {
     }
 }
 
-impl Tab for Statistics {
-    // ANCHOR: content
-    fn content(&self) -> TabContent {
-        self.refresh();
+impl Statistics {
+    // ANCHOR: properties
+    /// What the panel shows: the view's properties, by the names
+    /// `ui/example.slint` gives them.
+    fn properties(&self) -> Vec<(String, Value)> {
         let s = self.state();
-        let label = |text: String, muted: bool| Widget::Label { text, muted };
+        let text = |t: &str| Value::String(t.to_owned());
         if s.tracks.is_empty() {
-            return TabContent {
-                rows: vec![Row {
-                    widgets: vec![label("Open a score to count its notes".into(), true)],
-                }],
-            };
+            return vec![
+                ("title".into(), text("Open a score to count its notes")),
+                ("has-score".into(), Value::Bool(false)),
+                ("bars".into(), Value::List(Vec::new())),
+            ];
         }
         let counts = s.per_string();
         let total: u32 = counts.iter().sum();
+        let most = counts.iter().copied().max().unwrap_or(0).max(1);
         let detail = match s.picked.and_then(|i| Some((i, counts.get(i)?))) {
             Some((i, n)) => format!("String {}: {n} notes", i + 1),
             None if counts.is_empty() => "This track has no strings".into(),
             None => format!("{total} notes; click a bar"),
         };
-        let mut rows = vec![
-            Row {
-                widgets: vec![label(s.title.clone(), false)],
-            },
-            Row {
-                widgets: vec![Widget::Choice {
-                    id: "track".into(),
-                    options: s.tracks.iter().map(|t| t.name.clone()).collect(),
-                    selected: s.track as u32,
-                    enabled: s.tracks.len() > 1,
-                }],
-            },
-            Row {
-                widgets: vec![Widget::Toggle {
-                    id: "tied".into(),
-                    text: "Count tied notes".into(),
-                    on: s.count_tied,
-                    enabled: true,
-                }],
-            },
-            Row {
-                widgets: vec![label(detail, s.picked.is_none())],
-            },
-        ];
-        if !counts.is_empty() {
-            rows.push(Row {
-                widgets: vec![Widget::Canvas(Canvas {
-                    id: "chart".into(),
-                    width: WIDTH,
-                    height: HEIGHT,
-                    items: draw(&counts, s.picked),
-                })],
-            });
-        }
-        TabContent { rows }
+        let bars = counts
+            .iter()
+            .enumerate()
+            .map(|(i, n)| {
+                Value::Struct(vec![
+                    ("label".into(), Value::String((i + 1).to_string())),
+                    (
+                        "height".into(),
+                        Value::Number(f64::from(*n) / f64::from(most)),
+                    ),
+                    ("picked".into(), Value::Bool(s.picked == Some(i))),
+                ])
+            })
+            .collect();
+        vec![
+            ("title".into(), text(&s.title)),
+            ("has-score".into(), Value::Bool(true)),
+            (
+                "tracks".into(),
+                Value::List(s.tracks.iter().map(|t| text(&t.name)).collect()),
+            ),
+            ("track".into(), Value::Number(s.track as f64)),
+            ("count-tied".into(), Value::Bool(s.count_tied)),
+            ("detail".into(), Value::String(detail)),
+            ("bars".into(), Value::List(bars)),
+        ]
     }
-    // ANCHOR_END: content
+    // ANCHOR_END: properties
 
-    // ANCHOR: on
-    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-        match (widget, event) {
-            ("chart", TabEvent::Pointer(pointer)) => {
+    /// Counts the score again if it changed, and sets the panel's
+    /// properties. A panel not made yet takes them when it is.
+    fn show(&self) {
+        self.refresh();
+        if let Err(e) = self.host.set_view(ID, self.properties()) {
+            self.host.notify(Level::Warning, format!("Statistics: {e}"));
+        }
+    }
+}
+
+// ANCHOR: ui
+impl Ui for Statistics {
+    /// The panel was made: it shows what is counted.
+    fn shown(&self, _view: &str, _track: Option<&TrackView>) -> Result<(), Error> {
+        self.show();
+        Ok(())
+    }
+
+    /// What the user did in the panel.
+    fn callback(&self, _view: &str, callback: &str, args: Vec<Value>) -> Result<(), Error> {
+        let index = match args.first() {
+            Some(Value::Number(n)) if *n >= 0.0 => Some(*n as usize),
+            _ => None,
+        };
+        match (callback, args.first()) {
+            ("bar-clicked", _) => {
                 let mut s = self.state();
-                let strings = s.per_string().len();
-                if let Some(string) = bar_at(pointer, strings) {
-                    s.picked = Some(string);
+                if let Some(i) = index.filter(|i| *i < s.per_string().len()) {
+                    s.picked = Some(i);
                 }
             }
-            ("track", TabEvent::Chosen(i)) => {
+            ("track-chosen", _) => {
                 let mut s = self.state();
-                if (i as usize) < s.tracks.len() {
-                    s.track = i as usize;
+                if let Some(i) = index.filter(|i| *i < s.tracks.len()) {
+                    s.track = i;
                     s.picked = None;
                 }
             }
-            ("tied", TabEvent::Toggled(on)) => {
-                self.state().count_tied = on;
+            ("tied-toggled", Some(Value::Bool(on))) => {
+                self.state().count_tied = *on;
                 // Not being able to save it is worth knowing, not worth
-                // losing the tab over.
-                if let Err(e) = self.save(on) {
+                // losing the panel over.
+                if let Err(e) = self.save(*on) {
                     let text = format!("\"Count tied notes\" can't be remembered: {e}");
                     self.host.notify(Level::Warning, text);
                 }
             }
-            (widget, event) => {
+            (callback, _) => {
                 return Err(Error::new(
                     ErrorKind::Invalid,
-                    format!("the widget {widget:?} doesn't take {event:?}"),
+                    format!("the panel has no callback {callback:?} with {args:?}"),
                 ));
             }
         }
-        // The core asks for the contents again after every event.
+        self.show();
         Ok(())
     }
-    // ANCHOR_END: on
 }
-
-/// The width of each string's slot on the canvas.
-fn slot(strings: usize) -> f32 {
-    WIDTH / strings.max(1) as f32
-}
-
-// ANCHOR: pointer
-/// The string whose bar is under the pointer when a button goes down.
-fn bar_at(pointer: Pointer, strings: usize) -> Option<usize> {
-    let Point { x, y } = pointer.at;
-    let inside = (0.0..WIDTH).contains(&x) && (0.0..HEIGHT).contains(&y);
-    (pointer.kind == PointerKind::Down && inside && strings > 0)
-        .then(|| ((x / slot(strings)) as usize).min(strings - 1))
-}
-// ANCHOR_END: pointer
-
-// ANCHOR: draw
-/// A bar per string, as tall as its share of the busiest string, with the
-/// strings' numbers under them. Paints are roles, so the chart follows the
-/// window's theme.
-fn draw(counts: &[u32], picked: Option<usize>) -> Vec<Item> {
-    let most = counts.iter().copied().max().unwrap_or(0).max(1) as f32;
-    let slot = slot(counts.len());
-    let room = HEIGHT - LABELS;
-    let mut items = vec![Item::Line {
-        from: Point::new(0.0, room),
-        to: Point::new(WIDTH, room),
-        width: 0.5,
-        paint: Paint::Muted,
-    }];
-    for (i, &n) in counts.iter().enumerate() {
-        let x = i as f32 * slot;
-        let height = room * n as f32 / most;
-        items.push(Item::Rect {
-            at: Point::new(x + slot * 0.15, room - height),
-            width: slot * 0.7,
-            height,
-            paint: if picked == Some(i) {
-                Paint::Accent
-            } else {
-                Paint::Ink
-            },
-        });
-        items.push(Item::Text {
-            text: (i + 1).to_string(),
-            at: Point::new(x + slot / 2.0, HEIGHT - 2.0),
-            size: 8.0,
-            font: Font::Sans,
-            anchor: Anchor::Middle,
-            paint: Paint::Muted,
-        });
-    }
-    items
-}
-// ANCHOR_END: draw
+// ANCHOR_END: ui
 
 #[cfg(test)]
 mod tests {
-    use oxiguitar_plugin::{FormatReader, PointerButton};
+    use oxiguitar_plugin::FormatReader;
 
     use super::*;
 
-    fn down(x: f32, y: f32) -> TabEvent {
-        TabEvent::Pointer(Pointer {
-            kind: PointerKind::Down,
-            at: Point::new(x, y),
-            button: PointerButton::Primary,
-        })
-    }
-
-    fn label(content: &TabContent, row: usize) -> String {
-        match &content.rows[row].widgets[0] {
-            Widget::Label { text, .. } => text.clone(),
-            other => panic!("{other:?}"),
-        }
+    fn get(p: &[(String, Value)], name: &str) -> Value {
+        p.iter().find(|(n, _)| n == name).unwrap().1.clone()
     }
 
     fn sample() -> Score {
@@ -378,26 +316,53 @@ mod tests {
 
     #[test]
     fn shows_nothing_without_a_score_and_follows_clicks() {
-        let tab = Statistics::new(Host::detached());
-        let empty = tab.content();
-        assert!(empty.problems().is_empty());
-        assert!(label(&empty, 0).starts_with("Open a score"));
+        let panel = Statistics::new(Host::detached());
+        let title = |p: &[(String, Value)]| get(p, "title");
+        assert_eq!(
+            title(&panel.properties()),
+            Value::String("Open a score to count its notes".into())
+        );
         // A detached host has no score open.
-        tab.event(&Event::ScoreOpened { revision: 1 });
-        assert!(label(&tab.content(), 0).starts_with("Open a score"));
+        panel.event(&Event::ScoreOpened { revision: 1 });
+        assert_eq!(get(&panel.properties(), "has-score"), Value::Bool(false));
 
-        tab.state().title = "Open Strings".into();
-        tab.state().tracks = count(&sample());
-        let content = tab.content();
-        assert!(content.problems().is_empty());
-        assert_eq!(label(&content, 3), "29 notes; click a bar");
+        panel.state().title = "Open Strings".into();
+        panel.state().tracks = count(&sample());
+        let detail = |panel: &Statistics| get(&panel.properties(), "detail");
+        assert_eq!(
+            detail(&panel),
+            Value::String("29 notes; click a bar".into())
+        );
         // The third bar: string 3.
-        tab.on("chart", down(slot(6) * 2.5, 30.0)).unwrap();
-        assert_eq!(label(&tab.content(), 3), "String 3: 6 notes");
-        tab.on("chart", down(500.0, 30.0)).unwrap();
-        assert_eq!(label(&tab.content(), 3), "String 3: 6 notes");
-        tab.on("tied", TabEvent::Toggled(true)).unwrap();
-        assert!(tab.state().count_tied);
-        assert!(tab.on("tied", TabEvent::Clicked).is_err());
+        panel
+            .callback(ID, "bar-clicked", vec![Value::Number(2.0)])
+            .unwrap();
+        assert_eq!(detail(&panel), Value::String("String 3: 6 notes".into()));
+        panel
+            .callback(ID, "bar-clicked", vec![Value::Number(9.0)])
+            .unwrap();
+        assert_eq!(detail(&panel), Value::String("String 3: 6 notes".into()));
+        panel
+            .callback(ID, "tied-toggled", vec![Value::Bool(true)])
+            .unwrap();
+        assert!(panel.state().count_tied);
+        assert!(panel.callback(ID, "other", vec![]).is_err());
+    }
+
+    /// The file compiles as OxiGuitar compiles it, with every property the
+    /// panel sets.
+    #[test]
+    fn the_slint_file_has_what_the_panel_sets() {
+        let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("ui/example.slint");
+        let compiled = oxiguitar_plugin_test::compile_ui_file(&file).unwrap();
+        let panel = compiled.component("Statistics").unwrap();
+        let shown = Statistics::new(Host::detached());
+        shown.state().tracks = count(&sample());
+        for (name, _) in shown.properties() {
+            assert!(panel.properties.contains(&name), "{name}");
+        }
+        for name in ["track-chosen", "tied-toggled", "bar-clicked"] {
+            assert!(panel.callbacks.iter().any(|c| c == name), "{name}");
+        }
     }
 }

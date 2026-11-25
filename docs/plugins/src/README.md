@@ -1,6 +1,6 @@
 # Writing OxiGuitar plugins
 
-OxiGuitar is a small core with plugins. The core holds the score, shows it, exports it as a PDF, edits it and plays it; everything else comes from plugins: every file format, every sound, other exports, and tabs in the window's panels. Our own Guitar Pro readers are plugins like any you write, and the app makes no distinction between ours and yours.
+OxiGuitar is a small core with plugins. The core holds the score, shows it, exports it as a PDF, edits it and plays it; everything else comes from plugins: every file format, every sound, other exports, and panels in the window's areas, in the plugins' own Slint. Our own Guitar Pro readers are plugins like any you write, and the app makes no distinction between ours and yours.
 
 This guide shows how to write one, in Rust, with the SDK (`oxiguitar-plugin`). The fastest way in is to copy the [template plugin](template.md): it builds, passes the contract suite and opens in the app as it is, and each part of it is explained in the pages that follow.
 
@@ -19,7 +19,6 @@ This guide shows how to write one, in Rust, with the SDK (`oxiguitar-plugin`). T
 | [The plugin file and its manifest](manifest.md) | The `.oxp` file and `manifest.json`, key by key |
 | [The SDK](sdk.md) | The `Plugin` trait, `export_plugin!`, the host, errors and threads |
 | [Formats](formats.md) | Reading a file into a score, writing a score into a file |
-| [Tabs](tabs.md) | A tab in one of the window's areas: widgets and a canvas |
 | [Events and the open score](events.md) | Following the score, the selection and playback |
 | [Services](services.md) | Implementations of an interface, chosen per system |
 | [Instruments](instruments.md) | What comes with the player |

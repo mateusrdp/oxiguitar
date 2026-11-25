@@ -9,9 +9,9 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 fixtures="$here/../fixtures"
 corpus="$here/corpus"
-mkdir -p "$corpus/plugin_tab"
+mkdir -p "$corpus/plugin_drawing"
 
-cp "$fixtures"/plugin/*.answer "$corpus/plugin_tab/"
+cp "$fixtures"/plugin/*.answer "$corpus/plugin_drawing/"
 for t in "$corpus"/*/; do
     echo "$(basename "$t"): $(ls "$t" | wc -l) seed(s)"
 done

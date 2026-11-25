@@ -30,27 +30,36 @@ pub(crate) fn test_plugins() -> &'static Plugins {
     })
 }
 
-/// A second host for the plugin tab and event tests: copies (so they load
+/// A second host for the plugin view and event tests: copies (so they load
 /// apart from [`test_plugins`]'s) of our Guitar Pro 7–8 plugin and of the
-/// test plugin, which has tabs and hears every event. It hands plugins the
-/// score the worker keeps, and keeps the redraws they ask for.
+/// test plugin, which has views and hears every event. It hands plugins
+/// the score the worker keeps, and keeps the views' properties they set,
+/// The views' properties a plugin set, by view, in order.
+type SetViews =
+    Arc<std::sync::Mutex<Vec<(String, Vec<(String, oxiguitar_host::api::view::Value)>)>>>;
+
+/// by view, in order.
 pub(crate) struct TabHost {
     pub(crate) plugins: Plugins,
     pub(crate) open: crate::document::OpenScore,
-    pub(crate) redraws: Arc<std::sync::Mutex<Vec<oxiguitar_host::TabId>>>,
+    pub(crate) views: SetViews,
 }
 
 struct Recorder {
     open: crate::document::OpenScore,
-    redraws: Arc<std::sync::Mutex<Vec<oxiguitar_host::TabId>>>,
+    views: SetViews,
 }
 
 impl oxiguitar_host::Core for Recorder {
     fn notify(&self, _level: oxiguitar_host::Level, _text: String) {}
 
-    fn redraw(&self, tab: &oxiguitar_host::TabId) {
-        if let Ok(mut r) = self.redraws.lock() {
-            r.push(tab.clone());
+    fn set_view(
+        &self,
+        view: &oxiguitar_host::ViewId,
+        properties: Vec<(String, oxiguitar_host::api::view::Value)>,
+    ) {
+        if let Ok(mut v) = self.views.lock() {
+            v.push((view.view.clone(), properties));
         }
     }
 
@@ -114,28 +123,28 @@ pub(crate) fn tab_host() -> &'static TabHost {
         std::fs::copy(&gp, folder.join("gp.oxp")).expect("gp.oxp copied");
         std::fs::copy(test, folder.join("test.oxp")).expect("test.oxp copied");
         let open = crate::document::OpenScore::default();
-        let redraws = Arc::default();
+        let views = Arc::default();
         let plugins = Plugins::discover(
             &[folder],
             SharedSettings::default(),
             crate::DISPLAY_SYSTEM,
             Arc::new(Recorder {
                 open: open.clone(),
-                redraws: Arc::clone(&redraws),
+                views: Arc::clone(&views),
             }),
         );
         TabHost {
             plugins,
             open,
-            redraws,
+            views,
         }
     })
 }
 
-/// The test plugin's tab `panel`.
-pub(crate) fn panel() -> oxiguitar_host::TabId {
-    oxiguitar_host::TabId {
+/// The test plugin's panel `panel`.
+pub(crate) fn panel() -> oxiguitar_host::ViewId {
+    oxiguitar_host::ViewId {
         plugin: "oxiguitar.test".into(),
-        tab: "panel".into(),
+        view: "panel".into(),
     }
 }

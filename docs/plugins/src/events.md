@@ -22,11 +22,11 @@ Positions are a bar and a beat of the bar's first voice, both from 0; tracks are
 fn event(&self, event: &Event) { … }
 ```
 
-`Plugin::event` is called on one thread of the host's, which delivers every plugin's events in order. **Keep it short**: note what happened, call `host.redraw` for a tab that should show it, and return. While one plugin's `event` runs, the next plugin's events wait.
+`Plugin::event` is called on one thread of the host's, which delivers every plugin's events in order. **Keep it short**: note what happened, set the properties of a view that should show it (`host.set_view`), and return. While one plugin's `event` runs, the next plugin's events wait.
 
 Events that say where something is now (the selection, the playback position, a score's revision) replace one of the same kind still waiting for your plugin, so a slow plugin gets the latest rather than a backlog. A plugin that panics on an event is withdrawn, like any plugin that fails ([What a plugin is](what.md)).
 
-The template's tab:
+The template's panel:
 
 ```rust,ignore
 {{#include ../template/src/statistics.rs:event}}

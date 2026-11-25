@@ -17,24 +17,26 @@
 //! need a new interface version, never a plain dependency bump.
 //!
 //! Contributions are named by the ids in the plugin's manifest: a format's
-//! `id`, a service's `interface` and `id`, a tab's `id`.
+//! `id`, a service's `interface` and `id`, a view's `id`.
 //!
-//! Interface 1.1 added tabs ([`Request::Tab`], [`Request::TabEvent`],
-//! [`HostRequest::Redraw`]) and pushed events ([`Request::Event`],
-//! [`HostRequest::Score`]). The host sends them only to plugins whose
-//! manifest asks for interface 1.1 or later and declares the tab or the
-//! event kind.
+//! Interface 2.0 (OxiGuitar 0.24) holds everything below, without the
+//! plugin UI the core drew for interface 1 (tabs, dialogs, widgets, the
+//! canvas, surfaces, track sections' widgets) and the settings windows and
+//! named shared folders 1.9 and 1.10 retired; a plugin's UI is its views
+//! ([`Request::Ui`]). The rest tells which interface 1 minor version
+//! brought what.
+//!
+//! Interface 1.1 added pushed events ([`Request::Event`],
+//! [`HostRequest::Score`]), sent to plugins that declare the event kind.
 //!
 //! Interface 1.2 added the score version 2 ([`Request::Write2`],
 //! [`Answer::Read2`], [`HostRequest::Score2`]), tools ([`Request::Tool`],
 //! [`Answer::Report`]) and edits ([`HostRequest::Apply`]). The host sends
-//! a plugin built for 1.2 or later [`Request::Write2`] instead of
-//! [`Request::Write`], and takes either answer to a [`Request::Read`].
+//! [`Request::Write2`], never [`Request::Write`], and takes either answer
+//! to a [`Request::Read`].
 //!
-//! Interface 1.3 added settings windows (retired in 1.9: see
-//! [`Request::RetiredSettingsWindow`]), sections of the track dialog
-//! ([`Request::TrackSection`], [`Request::TrackSectionEvent`],
-//! [`Answer::TrackSection`]), footer messages with a link
+//! Interface 1.3 added sections of the Track tab (drawn by a view since
+//! interface 2.0), footer messages with a link
 //! ([`HostRequest::Notify2`]) and the plugin's folders
 //! ([`HostRequest::Folders`]); then instruments and effects, prepared here
 //! ([`Request::Prepare`], [`Request::PrepareEffect`], [`Answer::Prepared`],
@@ -58,7 +60,6 @@ use crate::class::InstrumentClass;
 use crate::event::Event;
 use crate::score::Score;
 use crate::score2::Score2;
-use crate::tab::{TabContent, TabEvent};
 
 /// Encodes a message.
 pub fn encode<T: Serialize + ?Sized>(message: &T) -> Result<Vec<u8>, DecodeError> {
@@ -167,22 +168,6 @@ pub enum Request<'a> {
         #[serde(borrow)]
         input: Blob<'a>,
     },
-    /// What the tab `tab` (an id from the manifest) shows now. Answered with
-    /// [`Answer::Tab`]. Since interface 1.1.
-    Tab {
-        /// The tab's id.
-        tab: String,
-    },
-    /// The user used the widget `widget` of the tab `tab`. Answered with
-    /// [`Answer::Tab`], the tab's contents after it. Since interface 1.1.
-    TabEvent {
-        /// The tab's id.
-        tab: String,
-        /// The widget's id.
-        widget: String,
-        /// What the user did.
-        event: TabEvent,
-    },
     /// Something the plugin subscribed to happened. Answered with
     /// [`Answer::Done`]. Since interface 1.1.
     Event(Event),
@@ -203,50 +188,6 @@ pub enum Request<'a> {
     Tool {
         /// The tool's id.
         tool: String,
-    },
-    /// Retired in interface 1.9, never sent: the settings window that
-    /// OxiGuitar 0.9 to 0.20 drew for a plugin (the manifest's
-    /// `settings_window`). A plugin shows its settings in a dialog of its
-    /// own instead, opened by a tool that doesn't edit the score
-    /// ([`crate::manifest::ToolSpec::edits`]). The slot stays so that the
-    /// requests after it keep their encoding.
-    RetiredSettingsWindow,
-    /// Retired in interface 1.9, never sent: see
-    /// [`Request::RetiredSettingsWindow`].
-    RetiredSettingsEvent {
-        /// The widget's id.
-        widget: String,
-        /// What the user did.
-        event: TabEvent,
-    },
-    /// What the track dialog's section `section` (an id from the manifest's
-    /// `track_sections`) shows for `track`, whose settings for this plugin
-    /// are `settings` (a JSON object, `{}` at first). Answered with
-    /// [`Answer::TrackSection`]. Since interface 1.3.
-    TrackSection {
-        /// The section's id.
-        section: String,
-        /// The track the dialog is open for.
-        track: TrackInfo,
-        /// The track's settings for this plugin, as JSON text.
-        settings: String,
-    },
-    /// The user used the widget `widget` of the section `section` for
-    /// `track`. Answered with [`Answer::TrackSection`]: the section's
-    /// contents and the track's settings after it. The dialog keeps them
-    /// until the user presses OK, which makes them one change the user can
-    /// undo; Cancel drops them. Since interface 1.3.
-    TrackSectionEvent {
-        /// The section's id.
-        section: String,
-        /// The track the dialog is open for.
-        track: TrackInfo,
-        /// The track's settings for this plugin, as the dialog holds them.
-        settings: String,
-        /// The widget's id.
-        widget: String,
-        /// What the user did.
-        event: TabEvent,
     },
     /// Get the instrument `prepare.instrument` ready to play its tracks:
     /// load their sounds now, off the audio thread. Answered with
@@ -319,15 +260,6 @@ pub enum Request<'a> {
     /// track's marked beats as they will be played. Answered with
     /// [`Answer::Prepared`]. Since interface 1.8.
     PrepareFollowing(Box<PrepareFollowing>),
-    /// The user closed the dialog `tab` (a tab whose area is `dialog`),
-    /// with OK (`ok`) or with Cancel or Escape. Answered with
-    /// [`Answer::Done`]. Since interface 1.8.
-    TabClosed {
-        /// The tab's id.
-        tab: String,
-        /// Closed with OK.
-        ok: bool,
-    },
     /// Draw at these places of the open score, each a staff's bar or a beat
     /// that carries the plugin's data or marks (on the beat or on one of
     /// its notes). Sent each time the score is engraved, when the places
@@ -772,8 +704,6 @@ pub enum Answer<'a> {
     Probe(Availability),
     /// A service method's output.
     Service(#[serde(borrow)] Blob<'a>),
-    /// What a tab shows. Since interface 1.1.
-    Tab(Box<TabContent>),
     /// Done. Since interface 1.1.
     Done,
     /// The score read from a file, version 2, and what couldn't be carried
@@ -787,14 +717,6 @@ pub enum Answer<'a> {
     /// What a tool did, in a sentence for the footer ("Transposed 3
     /// tracks up a tone."); empty to say nothing. Since interface 1.2.
     Report(String),
-    /// What a section of the track dialog shows, and the track's settings
-    /// for this plugin. Since interface 1.3.
-    TrackSection {
-        /// The section's contents.
-        content: Box<TabContent>,
-        /// The track's settings for this plugin, a JSON object as text.
-        settings: String,
-    },
     /// An instrument or effect, ready. Since interface 1.3.
     Prepared {
         /// The instance the audio thread names in its calls.
@@ -853,13 +775,9 @@ impl Answer<'_> {
             },
             Answer::Probe(a) => Answer::Probe(a),
             Answer::Service(b) => Answer::Service(b.into_owned()),
-            Answer::Tab(t) => Answer::Tab(t),
             Answer::Done => Answer::Done,
             Answer::Read2 { score, log } => Answer::Read2 { score, log },
             Answer::Report(r) => Answer::Report(r),
-            Answer::TrackSection { content, settings } => {
-                Answer::TrackSection { content, settings }
-            }
             Answer::Prepared {
                 instance,
                 latency,
@@ -1012,13 +930,6 @@ pub enum HostRequest<'a> {
         #[serde(borrow)]
         input: Blob<'a>,
     },
-    /// Show the tab `tab` (an id from the manifest) again: the host asks
-    /// for its contents ([`Request::Tab`]) when it is next on screen.
-    /// Answered with [`HostAnswer::Done`]. Since interface 1.1.
-    Redraw {
-        /// The tab's id.
-        tab: String,
-    },
     /// The open score, as plugins see it. Answered with
     /// [`HostAnswer::Score`]. Since interface 1.1.
     Score,
@@ -1062,24 +973,6 @@ pub enum HostRequest<'a> {
     /// not: a plugin can't tell, and asks again whenever its reason holds.
     /// Since interface 1.4.
     Advise(Advice),
-    /// Bring the tab `tab` (an id from the manifest) to the front of its
-    /// area, opening the area if it is closed: for a tool whose controls
-    /// are in a tab. Answered with [`HostAnswer::Done`]; a program without
-    /// a window does nothing. Since interface 1.8.
-    ShowTab {
-        /// The tab's id.
-        tab: String,
-    },
-    /// Open the dialog `tab` (an id of a tab whose area is `dialog`) over
-    /// the window: the host asks for its contents as for any tab, and
-    /// tells the plugin when the user closes it ([`Request::TabClosed`]).
-    /// One dialog at a time: a request while another is open is refused.
-    /// Answered with [`HostAnswer::Done`]; a program without a window
-    /// refuses. Since interface 1.8.
-    OpenDialog {
-        /// The tab's id.
-        tab: String,
-    },
     /// The open score as it is engraved in the window now: every page's
     /// drawing and where each beat is on it. Answered with
     /// [`HostAnswer::Engraving`]. Since interface 1.8.
@@ -1101,9 +994,8 @@ pub enum HostRequest<'a> {
     /// it. Answered with [`HostAnswer::ScoreFile`]. Since interface 1.13.
     ScoreFile,
     /// Where each character of `text` would be drawn on one line, in the
-    /// core's font `font` at `size` (the font's em): what a plugin needs
-    /// to wrap lines and place a caret on a surface
-    /// ([`crate::tab::Widget::Surface`]). Answered with
+    /// core's font `font` at `size` (the font's em), as a drawing on the
+    /// page would place it. Answered with
     /// [`HostAnswer::Measured`]. Since interface 1.14.
     MeasureText {
         /// The text.
@@ -1113,9 +1005,8 @@ pub enum HostRequest<'a> {
         /// The font.
         font: crate::display::Font,
     },
-    /// Put `text` on the system's clipboard, for a plugin whose surface
-    /// copies what the user selected (pasting comes to the surface as
-    /// [`crate::tab::TabEvent::Typed`], and no plugin reads the clipboard).
+    /// Put `text` on the system's clipboard (a Copy button of a plugin's
+    /// view, say; no plugin reads the clipboard).
     /// Answered with [`HostAnswer::Done`]. Since interface 1.14.
     Copy {
         /// The text.
@@ -1459,12 +1350,6 @@ pub struct PluginFolders {
     /// for what it can make again (a decoded sound set), which the system
     /// or the user may delete at any time. Created when this is asked for.
     pub cache: String,
-    /// Retired in interface 1.10, always empty: interface 1.3's two named
-    /// shared folders (`soundfonts` and `nam`, as indices). A plugin asks
-    /// where its shared folders are by name ([`HostRequest::Folder`]). The
-    /// field stays, with the same encoding, so older plugins still read
-    /// this answer.
-    pub retired_shared: Vec<(u32, String)>,
 }
 
 /// Where a shared folder of a plugin's is (paths as UTF-8 text). Since
@@ -1668,42 +1553,6 @@ mod tests {
 
     #[test]
     fn interface_1_3_messages_round_trip() {
-        let track = TrackInfo {
-            index: 2,
-            name: "Lead".into(),
-            class: InstrumentClass::Fretted,
-        };
-        let requests = [
-            Request::RetiredSettingsWindow,
-            Request::RetiredSettingsEvent {
-                widget: "on".into(),
-                event: TabEvent::Toggled(true),
-            },
-            Request::TrackSection {
-                section: "amp".into(),
-                track: track.clone(),
-                settings: "{}".into(),
-            },
-            Request::TrackSectionEvent {
-                section: "amp".into(),
-                track,
-                settings: r#"{"level":0.5}"#.into(),
-                widget: "level".into(),
-                event: TabEvent::Slid(0.25),
-            },
-        ];
-        for request in requests {
-            let bytes = encode(&request).unwrap();
-            assert_eq!(decode::<Request<'_>>(&bytes).unwrap(), request);
-        }
-        let answer = Answer::TrackSection {
-            content: Box::default(),
-            settings: "{}".into(),
-        };
-        assert_eq!(
-            decode::<Answer<'_>>(&encode(&answer).unwrap()).unwrap(),
-            answer
-        );
         let host = [
             HostRequest::Notify2 {
                 level: Level::Warning,
@@ -1731,7 +1580,6 @@ mod tests {
         let folders = HostAnswer::Folders(PluginFolders {
             data: "/d".into(),
             cache: "/c".into(),
-            retired_shared: Vec::new(),
         });
         assert_eq!(
             decode::<HostAnswer<'_>>(&encode(&folders).unwrap()).unwrap(),
@@ -1764,151 +1612,163 @@ mod tests {
     /// The encoding of each enum's variants is its position. This test
     /// pins it, so a variant inserted anywhere but at the end fails here
     /// instead of breaking built plugins.
+    /// Interface 2.0's variant numbers (postcard writes a variant's index
+    /// first): frozen, so a 2.x minor version only adds at the ends.
     #[test]
     fn variant_positions_are_frozen() {
         let first = |b: Vec<u8>| b[0];
-        assert_eq!(first(encode(&HostRequest::Settings).unwrap()), 1);
-        assert_eq!(
-            first(encode(&HostRequest::SetSettings { json: "{}".into() }).unwrap()),
-            2
-        );
-        let probe = Request::Probe {
-            interface: "a".into(),
-            id: "b".into(),
-        };
-        assert_eq!(first(encode(&probe).unwrap()), 2);
-        assert_eq!(
-            first(encode(&Answer::Probe(Availability::Available)).unwrap()),
-            2
-        );
-        assert_eq!(first(encode(&ErrorKind::Failed).unwrap()), 4);
-        assert_eq!(first(encode(&Level::Error).unwrap()), 2);
-
-        // Interface 1.1, at the end of each enum.
-        assert_eq!(first(encode(&Request::Tab { tab: "t".into() }).unwrap()), 4);
-        let event = Request::TabEvent {
-            tab: "t".into(),
-            widget: "w".into(),
-            event: TabEvent::Clicked,
-        };
-        assert_eq!(first(encode(&event).unwrap()), 5);
-        assert_eq!(
-            first(encode(&Request::Event(Event::ScoreClosed)).unwrap()),
-            6
-        );
-        assert_eq!(first(encode(&Answer::Tab(Box::default())).unwrap()), 4);
-        assert_eq!(first(encode(&Answer::Done).unwrap()), 5);
-        assert_eq!(
-            first(encode(&HostRequest::Redraw { tab: "t".into() }).unwrap()),
-            4
-        );
-        assert_eq!(first(encode(&HostRequest::Score).unwrap()), 5);
-        assert_eq!(first(encode(&HostAnswer::Score(None)).unwrap()), 3);
-
-        // Interface 1.2.
-        let write2 = Request::Write2 {
-            format: "gp".into(),
-            score: Box::default(),
-        };
-        assert_eq!(first(encode(&write2).unwrap()), 7);
-        assert_eq!(
-            first(encode(&Request::Tool { tool: "t".into() }).unwrap()),
-            8
-        );
-        let read2 = Answer::Read2 {
-            score: Box::default(),
-            log: vec![],
-        };
-        assert_eq!(first(encode(&read2).unwrap()), 6);
-        assert_eq!(first(encode(&Answer::Report(String::new())).unwrap()), 7);
-        assert_eq!(first(encode(&HostRequest::Score2).unwrap()), 6);
-        let apply = HostRequest::Apply {
-            revision: 3,
-            name: "Transpose".into(),
-            score: Box::default(),
-        };
-        assert_eq!(first(encode(&apply).unwrap()), 7);
-        let score2 = HostAnswer::Score2 {
-            revision: 1,
-            score: None,
-        };
-        assert_eq!(first(encode(&score2).unwrap()), 4);
-
-        // Interface 1.3 and 1.4.
-        assert_eq!(first(encode(&HostRequest::Folders).unwrap()), 9);
-        let advise = HostRequest::Advise(Advice {
-            id: "a".into(),
-            title: "t".into(),
-            text: "x".into(),
-            links: vec![],
-        });
-        assert_eq!(first(encode(&advise).unwrap()), 10);
-
-        // Interface 1.14.
-        let tool2 = Request::Tool2 {
-            tool: "t".into(),
-            options: "{}".into(),
-        };
-        assert_eq!(first(encode(&tool2).unwrap()), 25);
-        let measure = HostRequest::MeasureText {
-            text: "a".into(),
-            size: 12.0,
-            font: crate::display::Font::Sans,
-        };
-        assert_eq!(first(encode(&measure).unwrap()), 17);
-        assert_eq!(
-            first(encode(&HostRequest::Copy { text: "a".into() }).unwrap()),
-            18
-        );
-        assert_eq!(first(encode(&HostRequest::Tools).unwrap()), 19);
-        let run = HostRequest::RunTool {
-            owner: CORE_TOOLS.into(),
-            tool: "t".into(),
-            options: None,
-        };
-        assert_eq!(first(encode(&run).unwrap()), 20);
-        let select = HostRequest::Select(crate::event::Selection2::Bars {
-            first_track: 0,
-            last_track: 0,
-            first_bar: 0,
-            last_bar: 1,
-        });
-        assert_eq!(first(encode(&select).unwrap()), 21);
-        assert_eq!(
-            first(encode(&HostAnswer::Measured(TextMeasure::default())).unwrap()),
-            10
-        );
-        assert_eq!(first(encode(&HostAnswer::Tools(vec![])).unwrap()), 11);
-        assert_eq!(
-            first(encode(&HostAnswer::Report(String::new())).unwrap()),
-            12
-        );
-
-        // Interface 1.15.
-        assert_eq!(first(encode(&HostRequest::PluginFiles).unwrap()), 22);
-        assert_eq!(first(encode(&Request::Ui).unwrap()), 26);
-        let closed = Request::ViewClosed {
-            view: "v".into(),
-            accepted: false,
-        };
-        assert_eq!(first(encode(&closed).unwrap()), 29);
-        assert_eq!(first(encode(&Answer::Ui(String::new())).unwrap()), 16);
-        let set = HostRequest::SetTrackSettings {
-            view: "v".into(),
-            settings: "{}".into(),
-        };
-        assert_eq!(first(encode(&set).unwrap()), 26);
-
-        // Interface 1.16.
-        assert_eq!(first(encode(&HostRequest::OwnFiles).unwrap()), 27);
-        assert_eq!(
-            first(encode(&HostAnswer::OwnFiles(String::new())).unwrap()),
-            14
-        );
-        assert_eq!(
-            first(encode(&HostAnswer::PluginFiles(PluginFiles::default())).unwrap()),
-            13
-        );
+        let s = || String::from("a");
+        let requests = [
+            (
+                Request::Probe {
+                    interface: s(),
+                    id: s(),
+                },
+                2,
+            ),
+            (Request::Event(Event::ScoreClosed), 4),
+            (
+                Request::Write2 {
+                    format: s(),
+                    score: Box::default(),
+                },
+                5,
+            ),
+            (Request::Tool { tool: s() }, 6),
+            (Request::Release { instance: 0 }, 9),
+            (Request::ExportStart { exporter: s() }, 10),
+            (
+                Request::ExportFinish {
+                    exporter: s(),
+                    cancelled: false,
+                },
+                12,
+            ),
+            (
+                Request::Tool2 {
+                    tool: s(),
+                    options: "{}".into(),
+                },
+                18,
+            ),
+            (Request::Ui, 19),
+            (
+                Request::ViewShown {
+                    view: s(),
+                    track: None,
+                },
+                20,
+            ),
+            (
+                Request::ViewCallback {
+                    view: s(),
+                    callback: s(),
+                    args: vec![],
+                },
+                21,
+            ),
+            (
+                Request::ViewClosed {
+                    view: s(),
+                    accepted: false,
+                },
+                22,
+            ),
+        ];
+        for (request, n) in requests {
+            assert_eq!(first(encode(&request).unwrap()), n, "{request:?}");
+        }
+        let answers = [
+            (Answer::Probe(Availability::Available), 2),
+            (Answer::Done, 4),
+            (
+                Answer::Read2 {
+                    score: Box::default(),
+                    log: vec![],
+                },
+                5,
+            ),
+            (Answer::Report(String::new()), 6),
+            (Answer::Exported(Blob::owned(Vec::new())), 9),
+            (Answer::Updated(true), 11),
+            (Answer::Ui(String::new()), 14),
+        ];
+        for (answer, n) in answers {
+            assert_eq!(first(encode(&answer).unwrap()), n, "{answer:?}");
+        }
+        let host = [
+            (HostRequest::Settings, 1),
+            (HostRequest::SetSettings { json: "{}".into() }, 2),
+            (HostRequest::Score, 4),
+            (HostRequest::Score2, 5),
+            (
+                HostRequest::Apply {
+                    revision: 3,
+                    name: s(),
+                    score: Box::default(),
+                },
+                6,
+            ),
+            (HostRequest::Folders, 8),
+            (
+                HostRequest::Advise(Advice {
+                    id: s(),
+                    title: s(),
+                    text: s(),
+                    links: vec![],
+                }),
+                9,
+            ),
+            (
+                HostRequest::MeasureText {
+                    text: s(),
+                    size: 12.0,
+                    font: crate::display::Font::Sans,
+                },
+                14,
+            ),
+            (HostRequest::Copy { text: s() }, 15),
+            (HostRequest::Tools, 16),
+            (
+                HostRequest::RunTool {
+                    owner: CORE_TOOLS.into(),
+                    tool: s(),
+                    options: None,
+                },
+                17,
+            ),
+            (HostRequest::PluginFiles, 19),
+            (HostRequest::ShowView { view: s() }, 20),
+            (
+                HostRequest::SetTrackSettings {
+                    view: s(),
+                    settings: "{}".into(),
+                },
+                23,
+            ),
+            (HostRequest::OwnFiles, 24),
+        ];
+        for (request, n) in host {
+            assert_eq!(first(encode(&request).unwrap()), n, "{request:?}");
+        }
+        let answers = [
+            (HostAnswer::Score(None), 3),
+            (
+                HostAnswer::Score2 {
+                    revision: 1,
+                    score: None,
+                },
+                4,
+            ),
+            (HostAnswer::Measured(TextMeasure::default()), 10),
+            (HostAnswer::Tools(vec![]), 11),
+            (HostAnswer::Report(String::new()), 12),
+            (HostAnswer::PluginFiles(PluginFiles::default()), 13),
+            (HostAnswer::OwnFiles(String::new()), 14),
+        ];
+        for (answer, n) in answers {
+            assert_eq!(first(encode(&answer).unwrap()), n, "{answer:?}");
+        }
     }
 
     fn advice(id: &str, links: &[&str]) -> Advice {

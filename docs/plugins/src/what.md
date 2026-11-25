@@ -7,7 +7,7 @@ A plugin is **one file**, `NAME.oxp`: an archive holding a manifest that says wh
 | Contribution | What it is | Since |
 | --- | --- | --- |
 | [A format](formats.md) | Reads one file format into a score, writes a score into it, or both | 1.0 |
-| [A tab](tabs.md) | A tab in the window's top, bottom, left or right area, made of standard widgets and, if it needs one, a canvas it draws | 1.1 |
+| [Its own UI](ui.md) | Windows, panels in the window's areas, sections of the Track tab and an export's options, from the plugin's own `.slint` file | 2.0 |
 | [Events](events.md) | Being told when a score is opened, changed or closed, when the selection changes and when playback moves | 1.1 |
 | [A service](services.md) | An implementation of an interface, chosen per system: an audio device, a MIDI device, anything another plugin needs | 1.0 |
 | [An instrument](instruments.md) | Sound for the player's tracks. Declared in 1.0; the interface itself comes with the player | (later) |
@@ -23,8 +23,8 @@ One plugin can add any mix of these. Tools for the Tools menu, other exports (PN
 
 ## When it runs
 
-1. **At start**, OxiGuitar reads the manifest of every `.oxp` file in the plugin folders, without loading any code or unpacking anything. Your plugin's tabs, formats and services are known from that alone, and reading 30 manifests takes about a millisecond.
-2. **On first use**, it loads the plugin and calls its `start`: when a file of its format is opened, its tab is first shown, one of its services is first needed, or an event it subscribes to first fires.
+1. **At start**, OxiGuitar reads the manifest of every `.oxp` file in the plugin folders, without loading any code or unpacking anything. Your plugin's views, formats and services are known from that alone, and reading 30 manifests takes about a millisecond.
+2. **On first use**, it loads the plugin and calls its `start`: when a file of its format is opened, one of its views is first shown, one of its services is first needed, or an event it subscribes to first fires.
 3. **Then** it calls the plugin whenever one of its contributions is used, from any thread, possibly several at once.
 4. **At the end of the program**, the plugin goes with it.
 
