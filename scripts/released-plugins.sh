@@ -105,9 +105,6 @@ with zipfile.ZipFile(sys.argv[1]) as z:
 PY
     versions+=("oxiguitar-$name $version")
 done
-# Releases from before 0.23 hold bare libraries: packed as archives (#347),
-# until every plugin repository releases archives.
-"$py" "$(dirname "$0")/repack-plugins.py" "$out/files"
 
 {
     echo "$want"

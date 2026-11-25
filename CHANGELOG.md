@@ -4,6 +4,10 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Removed
+
+- `scripts/repack-plugins.py` and its step in `scripts/released-plugins.sh` (#347): every plugin is now released as an archive, so the core's tests and release builds take the releases as they are.
+
 ## [0.23.0] - 2026-11-25
 
 ### Changed
