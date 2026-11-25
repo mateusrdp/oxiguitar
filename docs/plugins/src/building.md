@@ -1,6 +1,6 @@
 # Building for every system
 
-A plugin file holds native code for one system and processor, so you build one file for each system you support. OxiGuitar runs on six targets, which make five files (one macOS file serves both Mac processors):
+A plugin file holds native code for one system and processor, beside your manifest and any files you ship, so you build one file for each system you support. OxiGuitar runs on six targets, which make five files (one macOS file serves both Mac processors):
 
 | File | Rust target | Library cargo builds |
 | --- | --- | --- |
@@ -21,26 +21,31 @@ The template's `build-oxp.sh` builds the release file for the system it runs on 
 # dist/example-0.1.0-linux-x86_64.oxp
 ```
 
-Change its `NAME` (your file's name) and `LIBRARY` (above) when you rename the plugin. What it does is one cargo command and a copy:
+Change its `NAME` (your file's name) and `LIBRARY` (above) when you rename the plugin. What it does is one cargo command and a `tar`:
 
 ```sh
 cargo rustc --release --features oxp --crate-type cdylib
-cp target/release/libexample_plugin.so dist/example-0.1.0-linux-x86_64.oxp
+mkdir stage
+cp manifest.json stage/
+cp target/release/libexample_plugin.so stage/plugin.so
+cp -R ui assets stage/        # the folders you have, if any
+(cd stage && tar --format=ustar -cf ../dist/example-0.1.0-linux-x86_64.oxp \
+    manifest.json plugin.so ui assets)
 ```
 
-with `libexample_plugin.dylib` on macOS and `example_plugin.dll` on Windows. On macOS it builds both processors and joins them with `lipo` into one universal file:
+The order matters: `manifest.json` first and the library second, so OxiGuitar reads a plugin's manifest from the start of its file. The library is `plugin.dylib` on macOS (from `libexample_plugin.dylib`) and `plugin.dll` on Windows (from `example_plugin.dll`); Git Bash and macOS both have a `tar` that does this (on macOS, set `COPYFILE_DISABLE=1` so it adds no `._` files). The archive is not compressed, so OxiGuitar unpacks it as fast as it copies it; the zips you publish compress it. On macOS the script builds both processors and joins them with `lipo` into one universal library before packing it:
 
 ```sh
 rustup target add aarch64-apple-darwin x86_64-apple-darwin   # once
 for target in aarch64-apple-darwin x86_64-apple-darwin; do
     cargo rustc --release --features oxp --crate-type cdylib --target "$target"
 done
-lipo -create -output dist/example-0.1.0-macos-universal.oxp \
+lipo -create -output target/libexample_plugin-universal.dylib \
     target/aarch64-apple-darwin/release/libexample_plugin.dylib \
     target/x86_64-apple-darwin/release/libexample_plugin.dylib
 ```
 
-The template's release profile (`lto = "thin"`, `codegen-units = 1`, `strip = "symbols"`) keeps files small: our Guitar Pro plugins are 475 to 796 KB. Stripping keeps the entry point, which is exported. Check each file before you publish it: `oxiguitar-plugin-test dist/*.oxp` ([Testing](testing.md)).
+The template's release profile (`lto = "thin"`, `codegen-units = 1`, `strip = "symbols"`) keeps files small: our Guitar Pro plugins' libraries are 475 to 796 KB. Stripping keeps the entry point, which is exported. Check each file before you publish it: `oxiguitar-plugin-test dist/*.oxp` ([Testing](testing.md)).
 
 ## Every system, on GitHub
 

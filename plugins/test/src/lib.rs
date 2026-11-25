@@ -107,10 +107,6 @@ pub struct TestUi {
 }
 
 impl oxiguitar_plugin::Ui for TestUi {
-    fn source(&self) -> String {
-        include_str!("../ui/test.slint").into()
-    }
-
     fn shown(&self, view: &str, track: Option<&oxiguitar_plugin::TrackView>) -> Result<(), Error> {
         let track = track.map_or(String::new(), |t| {
             format!(" track {} {}", t.track.index, t.settings)
@@ -1156,6 +1152,14 @@ impl Service for TestPlugin {
                 .score_file()?
                 .map(|p| p.to_string_lossy().into_owned().into_bytes())
                 .unwrap_or_default()),
+            // The folder its file was unpacked in, then what its
+            // assets/hello.txt holds (interface 1.16).
+            "own-files" => {
+                let dir = self.host.own_files()?;
+                let hello = std::fs::read_to_string(dir.join("assets").join("hello.txt"))
+                    .map_err(|e| Error::new(ErrorKind::Failed, e.to_string()))?;
+                Ok(format!("{}\n{hello}", dir.display()).into_bytes())
+            }
             // The user's plugin folder, then a line a plugin file: its
             // folder's kind, state, id and path (interface 1.15).
             "plugin-files" => {

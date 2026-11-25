@@ -1,6 +1,6 @@
 # 0008 — A small core; formats, sound, exports and platform code as plugins
 
-- Status: accepted (18 Oct 2026, with Mateus's answers below); amended three times on 18 Oct 2026 (see "Amendments")
+- Status: accepted (18 Oct 2026, with Mateus's answers below); amended three times on 18 Oct 2026 (see "Amendments"); what the plugin file is replaced by ADR 0014 (24 Nov 2026: a tar archive holding the library)
 - Date: 2026-10-18
 - Milestone: M2 (moved forward from M5)
 

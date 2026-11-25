@@ -144,6 +144,13 @@ pub struct Manifest {
     /// shows them (#346). Since interface 1.15.
     #[serde(default)]
     pub views: Vec<crate::view::ViewSpec>,
+    /// The `.slint` file its views' components are in, a path inside its
+    /// `.oxp` file (`ui/main.slint`): compiled from where the file is
+    /// unpacked, so it can import the plugin's other `.slint` files and use
+    /// its pictures (#347). Since interface 1.16; before, the plugin
+    /// handed over its file's text ([`crate::message::Request::Ui`]).
+    #[serde(default)]
+    pub ui: Option<String>,
 }
 
 /// A plugin another plugin can't work without (`needs`). Since interface
@@ -728,6 +735,23 @@ impl Manifest {
                 ));
             }
         }
+        if let Some(ui) = &self.ui {
+            if !is_packed_path(ui) || !ui.ends_with(".slint") {
+                out.push(format!(
+                    "ui {ui:?}: a .slint file's path inside the plugin file, such as \"ui/main.slint\""
+                ));
+            }
+            let since_1_16 = InterfaceVersion {
+                major: 1,
+                minor: 16,
+            };
+            if self.interface < since_1_16 {
+                out.push(format!(
+                    "ui needs interface {since_1_16}, and the manifest asks for {}",
+                    self.interface
+                ));
+            }
+        }
         let since_1_15 = InterfaceVersion {
             major: 1,
             minor: 15,
@@ -931,6 +955,18 @@ impl Manifest {
             .filter(|f| f.read)
             .find(|f| f.signatures.iter().any(|s| s.matches(file)))
     }
+}
+
+/// Whether `path` can name a file inside a plugin file: relative, with `/`
+/// between its parts, none of them empty, `.` or `..`.
+pub fn is_packed_path(path: &str) -> bool {
+    !path.is_empty()
+        && !path.starts_with('/')
+        && !path.contains('\\')
+        && !path.contains(':')
+        && path
+            .split('/')
+            .all(|part| !part.is_empty() && part != "." && part != "..")
 }
 
 /// Whether `s` is a valid id: 1–64 characters, lowercase ASCII letters and

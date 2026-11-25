@@ -71,7 +71,32 @@ pub fn folder(names: &[&str]) -> PathBuf {
          of .oxp files to use a local build): {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    PathBuf::from(String::from_utf8_lossy(&output.stdout).trim())
+    let files = PathBuf::from(String::from_utf8_lossy(&output.stdout).trim());
+    repack(&files);
+    files
+}
+
+/// Packs each plugin file in `folder` that is a bare library, as plugin
+/// files were before OxiGuitar 0.23, into an archive (#347), in place;
+/// archives are left as they are. Only until every plugin repository has
+/// released archives: the core's tests take the latest releases.
+fn repack(folder: &Path) {
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return;
+    };
+    for path in entries.flatten().map(|e| e.path()) {
+        if path.extension().is_none_or(|e| e != "oxp") {
+            continue;
+        }
+        let part = path.with_extension("oxp.part");
+        // A plugin archive isn't a library, so packing it fails.
+        if oxiguitar_host::oxp::pack(&path, &[], &part).is_ok() {
+            std::fs::rename(&part, &path)
+                .unwrap_or_else(|e| panic!("can't repack {}: {e}", path.display()));
+        } else {
+            let _ = std::fs::remove_file(&part);
+        }
+    }
 }
 
 /// Guitar Pro files through the released Guitar Pro plugins.

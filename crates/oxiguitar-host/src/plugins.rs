@@ -345,6 +345,17 @@ impl Drop for Inner {
 /// there is none.
 type Choice = Result<(usize, String), String>;
 
+/// Where a plugin's `.slint` file is (interface 1.15).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UiSource {
+    /// Its text, which the plugin handed over (interface 1.15).
+    Text(String),
+    /// The file, in the folder its plugin file was unpacked in, so it can
+    /// import the plugin's other `.slint` files and use its pictures
+    /// (manifest `ui`, interface 1.16).
+    File(PathBuf),
+}
+
 /// One plugin file and what became of it.
 pub struct Found {
     /// The file.
@@ -354,6 +365,8 @@ pub struct Found {
     /// Whether it can be used.
     pub state: State,
     manifest_bytes: Vec<u8>,
+    /// The folder the file was unpacked into, once it was (#347).
+    unpacked: OnceLock<PathBuf>,
     loaded: OnceLock<Result<Loaded, String>>,
     /// Why it was withdrawn, once it failed.
     failed: OnceLock<String>,
@@ -864,10 +877,11 @@ impl Plugins {
                 (n, examine(path, &env, &disabled))
             })
             .unzip();
-        // One file per plugin id: the highest version wins; on a version
-        // tie, the build needing more processor features; then the file in
-        // the later folder (the user's over the system's); in one folder,
-        // the earlier file name.
+        // One file per plugin id: the file in the later folder wins (the
+        // program's own over the user's over the system's), whatever its
+        // version, so a user can go back to an older one (#347); in one
+        // folder, the higher version, then the build needing more
+        // processor features, then the earlier file name.
         for i in 0..found.len() {
             let Some(id) = found[i].ready().map(|m| m.id.clone()) else {
                 continue;
@@ -878,8 +892,8 @@ impl Plugins {
                     let (b, c) = (found[best].ready(), found[j].ready());
                     match (b, c) {
                         (Some(b), Some(c))
-                            if better(c, b)
-                                || (!better(b, c) && folder_of[j] > folder_of[best]) =>
+                            if folder_of[j] > folder_of[best]
+                                || (folder_of[j] == folder_of[best] && better(c, b)) =>
                         {
                             j
                         }
@@ -2052,7 +2066,7 @@ impl Plugins {
 
     /// The `.slint` file of the plugin `plugin` (interface 1.15), from the
     /// plugin (loaded first if needed).
-    pub fn ui_source(&self, plugin: &str) -> Result<String, Error> {
+    pub fn ui_source(&self, plugin: &str) -> Result<UiSource, Error> {
         let Some(view) = self
             .views()
             .into_iter()
@@ -2062,10 +2076,41 @@ impl Plugins {
                 "no usable plugin {plugin:?} has views"
             )));
         };
+        // Since interface 1.16, a file in the plugin file (#347).
+        if let Some(ui) = view.plugin.manifest.as_ref().and_then(|m| m.ui.as_ref()) {
+            let dir = self.unpacked(view.index).map_err(|why| {
+                Error::new(
+                    ErrorKind::Failed,
+                    format!("{}: {why}", view.plugin.path.display()),
+                )
+            })?;
+            let file = ui.split('/').fold(dir, |p, part| p.join(part));
+            return Ok(UiSource::File(file));
+        }
         match self.request(view.index, &Request::Ui)? {
-            Answer::Ui(source) => Ok(source),
+            Answer::Ui(source) => Ok(UiSource::Text(source)),
             other => Err(self.unexpected(view.index, &other)),
         }
+    }
+
+    /// The folder the plugin file at `index` is unpacked in (#347),
+    /// unpacking it the first time: in the user's folder
+    /// ([`Folders::unpacked`]), or the system's temporary folder for a
+    /// program that keeps no folders (tests).
+    fn unpacked(&self, index: usize) -> Result<PathBuf, String> {
+        let found = &self.0.found[index];
+        if let Some(dir) = found.unpacked.get() {
+            return Ok(dir.clone());
+        }
+        let Some(m) = &found.manifest else {
+            return Err("its manifest can't be read".into());
+        };
+        let root = self.0.folders.get().map_or_else(
+            || std::env::temp_dir().join("oxiguitar-unpacked"),
+            Folders::unpacked,
+        );
+        let dir = oxp::unpack(&found.path, &m.id, &m.version.to_string(), &root)?;
+        Ok(found.unpacked.get_or_init(|| dir).clone())
     }
 
     /// Tells a view's plugin it was made (interface 1.15); `track` for a
@@ -2466,13 +2511,15 @@ impl Plugins {
                 }
                 let result = found.loaded.get_or_init(|| {
                     STARTING.with(|s| s.borrow_mut().push(index));
-                    let crash = crate::crash::register(found.crash_name());
-                    let result = loader::load(
-                        &found.path,
-                        &found.manifest_bytes,
-                        self.host_calls(index),
-                        crash,
-                    );
+                    let result = self.unpacked(index).and_then(|dir| {
+                        let crash = crate::crash::register(found.crash_name());
+                        loader::load(
+                            &dir.join(oxiguitar_plugin_api::oxp::library()),
+                            &found.manifest_bytes,
+                            self.host_calls(index),
+                            crash,
+                        )
+                    });
                     STARTING.with(|s| s.borrow_mut().retain(|&i| i != index));
                     result
                 });
@@ -2951,6 +2998,10 @@ impl Plugins {
                 self.folder_places(manifest, &name).map(HostAnswer::Folder)
             }
             HostRequest::PluginFiles => self.plugin_files(manifest).map(HostAnswer::PluginFiles),
+            HostRequest::OwnFiles => self
+                .unpacked(index)
+                .map(|dir| HostAnswer::OwnFiles(dir.to_string_lossy().into_owned()))
+                .map_err(|why| Error::new(ErrorKind::Failed, why)),
             HostRequest::Advise(given) => {
                 if !manifest.knows_minor(4) {
                     Err(Error::new(
@@ -3230,6 +3281,7 @@ fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
         manifest,
         state,
         manifest_bytes: bytes,
+        unpacked: OnceLock::new(),
         loaded: OnceLock::new(),
         failed: OnceLock::new(),
     }
@@ -3499,6 +3551,7 @@ mod tests {
             manifest: Some(manifest),
             state: State::Ready,
             manifest_bytes: Vec::new(),
+            unpacked: OnceLock::new(),
             loaded: OnceLock::new(),
             failed: OnceLock::new(),
         }

@@ -53,7 +53,7 @@ Start OxiGuitar. Tools → Plugins lists "Example", not loaded yet. Open `sample
 1. **Rename it.** In `Cargo.toml`, the package's `name`. In `manifest.json`: `id` (lowercase letters and digits joined by `.` or `-`, starting with your own name: `jane.chord-finder`), `name`, `description`, `authors`, `license` and `homepage`. In `build-oxp.sh`, `NAME` (your file's name) and `LIBRARY` (the package's name with `_` for `-`); in `.github/workflows/build.yml`, `NAME` again. In `tests/contract.rs`, the file's name.
 2. **Delete what you don't need.** Each contribution is a module, a line in `src/lib.rs`'s `impl Plugin`, and an entry in `manifest.json`. Remove all three; `cargo test` says if the manifest and the code disagree.
 3. **Write your own.** The next pages explain each part: [the manifest](manifest.md), [the SDK](sdk.md), [formats](formats.md), [tabs](tabs.md), [events](events.md), [services](services.md), [settings](settings.md).
-4. **Keep the versions equal.** The version in `manifest.json` must be the crate's, and you raise both with each release: when two files of the same plugin are installed, OxiGuitar uses the higher version.
+4. **Keep the versions equal.** The version in `manifest.json` must be the crate's, and you raise both with each release: when two files of the same plugin are installed in one folder, OxiGuitar uses the higher version.
 
 ## What's in the folder
 

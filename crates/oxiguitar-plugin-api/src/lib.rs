@@ -97,7 +97,7 @@ pub use blob::Blob;
 pub use message::{DecodeError, decode, encode};
 
 /// The interface version this crate describes: (major, minor).
-pub const INTERFACE: (u32, u32) = (1, 15);
+pub const INTERFACE: (u32, u32) = (1, 16);
 
 /// The symbol a plugin exports. It returns a pointer to the plugin's
 /// [`abi::PluginTableV1`].
@@ -118,6 +118,47 @@ pub const PE_MANIFEST_SECTION: &str = "oxgmanif";
 
 /// A plugin file's extension, without the dot.
 pub const PLUGIN_EXTENSION: &str = "oxp";
+
+/// What a plugin file holds (since OxiGuitar 0.23; #347). An `.oxp` file
+/// is an uncompressed tar archive (ustar or GNU format):
+///
+/// 1. [`oxp::MANIFEST`], always the first member, so a host reads a
+///    plugin's id and version from the first few kilobytes of the file;
+/// 2. [`oxp::library`], the plugin's code for the system the file is
+///    built for;
+/// 3. anything else the plugin ships (its `.slint` files, pictures, data),
+///    under any path, as plain files and folders.
+///
+/// The host unpacks the copy it uses into the user's OxiGuitar folder once
+/// and keeps it there, loading the library from there and giving the
+/// plugin that folder ([`message::HostRequest::OwnFiles`]); it unpacks
+/// again only when the file it uses changes. Links, absolute paths and
+/// paths with `..` are refused.
+pub mod oxp {
+    /// The manifest's name in a plugin file: the archive's first member.
+    pub const MANIFEST: &str = "manifest.json";
+
+    /// The library's name in a plugin file for each system: Linux, Windows,
+    /// macOS (one universal file for both processors).
+    pub const LIBRARIES: [&str; 3] = ["plugin.so", "plugin.dll", "plugin.dylib"];
+
+    /// The folders beside a plugin crate's `Cargo.toml` that go into its
+    /// plugin file under their own names, when they exist: its `.slint`
+    /// files and what else it ships.
+    pub const FOLDERS: [&str; 2] = ["ui", "assets"];
+
+    /// The library's name in a plugin file for the system this is built
+    /// for.
+    pub const fn library() -> &'static str {
+        if cfg!(target_os = "windows") {
+            LIBRARIES[1]
+        } else if cfg!(target_vendor = "apple") {
+            LIBRARIES[2]
+        } else {
+            LIBRARIES[0]
+        }
+    }
+}
 
 /// The largest manifest a host reads, in bytes. Real manifests are a few
 /// kilobytes; the limit stops a damaged file from costing time at start.

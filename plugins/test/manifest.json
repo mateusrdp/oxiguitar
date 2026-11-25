@@ -1,5 +1,5 @@
 {
-  "interface": "1.15",
+  "interface": "1.16",
   "id": "oxiguitar.test",
   "name": "Test plugin",
   "version": "0.22.0",
@@ -8,6 +8,7 @@
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/mateusrdp/oxiguitar",
   "requires": ["test-echo"],
+  "ui": "ui/test.slint",
   "formats": [
     {
       "id": "oxgtest",
