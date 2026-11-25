@@ -1,6 +1,6 @@
 # What a plugin is
 
-A plugin is **one file**, `NAME.oxp`: a native library for one system (a `.so` on Linux, a `.dylib` on macOS, a `.dll` on Windows, renamed), with a manifest inside it that says what the plugin adds. The user drops the file in a plugin folder; OxiGuitar finds it at the next start.
+A plugin is **one file**, `NAME.oxp`: an archive holding a manifest that says what the plugin adds, a native library for one system (a `.so` on Linux, a `.dylib` on macOS, a `.dll` on Windows) and any files the plugin ships, such as its `.slint` files. The user drops the file in a plugin folder; OxiGuitar finds it at the next start.
 
 ## What a plugin can add
 
@@ -23,7 +23,7 @@ One plugin can add any mix of these. Tools for the Tools menu, other exports (PN
 
 ## When it runs
 
-1. **At start**, OxiGuitar reads the manifest of every `.oxp` file in the plugin folders, without loading any code. Your plugin's tabs, formats and services are known from that alone, and reading 30 manifests takes about a millisecond.
+1. **At start**, OxiGuitar reads the manifest of every `.oxp` file in the plugin folders, without loading any code or unpacking anything. Your plugin's tabs, formats and services are known from that alone, and reading 30 manifests takes about a millisecond.
 2. **On first use**, it loads the plugin and calls its `start`: when a file of its format is opened, its tab is first shown, one of its services is first needed, or an event it subscribes to first fires.
 3. **Then** it calls the plugin whenever one of its contributions is used, from any thread, possibly several at once.
 4. **At the end of the program**, the plugin goes with it.

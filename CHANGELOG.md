@@ -4,6 +4,18 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-25
+
+### Changed
+
+- **Plugin files are archives** (#347, [ADR 0014](docs/adr/0014-plugin-files-are-tar-archives.md)). An `.oxp` file is now an uncompressed tar archive: `manifest.json` first, the plugin's library second (`plugin.so`, `plugin.dll` or `plugin.dylib`), then any files it ships (its `.slint` files, pictures, data). OxiGuitar reads only the manifest at start, and the first time a plugin is used it unpacks the file into `unpacked/` in the user's data folder and keeps it there, so later starts unpack nothing; a file that changes is unpacked again. Plugin files of the old format (the library alone) are refused, saying so. Links, absolute paths and `..` in an archive are refused.
+- **Of several copies of a plugin, the one in the later folder is used, whatever the versions** (#347): the folder beside the program (portable zip, AppImage, macOS app) over the user's folder, the user's over the system's, so a user can go back to an older version or pick one. In one folder the higher version is still used, then the build for this processor.
+
+### Added
+
+- **Plugin interface 1.16** (#347; the SDK crates are at 1.16.0): the manifest's `ui` names a plugin's `.slint` file inside its plugin file, which OxiGuitar compiles from where it is unpacked, so it can import the plugin's other `.slint` files and use its pictures; `Host::own_files` is the folder the plugin's file was unpacked in. `oxiguitar_host::oxp::pack` packs a library and folders into a plugin file, and `oxiguitar_plugin_test::build` uses it; the template's `build-oxp.sh` packs with `tar`. The plugin guide's versions page says interface 1.15 came with 0.22.0.
+- `scripts/test-all.py` 1.1.0 (the same file in every repository) packs a plugin repository's plugins as archives when the core it tests against reads them. Until every plugin repository releases archives, `scripts/released-plugins.sh` repacks the bare libraries of the releases it takes (`scripts/repack-plugins.py`).
+
 ## [0.22.0] - 2026-11-24
 
 ### Added

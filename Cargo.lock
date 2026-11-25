@@ -3236,7 +3236,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-app"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "i-slint-backend-winit",
  "i-slint-compiler",
@@ -3261,7 +3261,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-cli"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-edit",
@@ -3276,7 +3276,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-display"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde",
@@ -3286,7 +3286,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-edit"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "chordparser",
  "oxiguitar-model",
@@ -3295,18 +3295,19 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-host"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "libc",
  "libloading",
  "object",
  "oxiguitar-plugin-api",
  "serde_json",
+ "tar",
 ]
 
 [[package]]
 name = "oxiguitar-layout"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-model",
@@ -3315,14 +3316,14 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-model"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-plugin-api",
 ]
 
 [[package]]
 name = "oxiguitar-play"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-host",
  "oxiguitar-model",
@@ -3335,7 +3336,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "oxiguitar-plugin-api",
  "serde_json",
@@ -3343,7 +3344,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-api"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "miniz_oxide",
  "postcard",
@@ -3353,7 +3354,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-plugin-test"
-version = "1.15.0"
+version = "1.16.0"
 dependencies = [
  "i-slint-compiler",
  "libc",
@@ -3366,7 +3367,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-render"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "krilla",
  "oxiguitar-display",
@@ -3376,21 +3377,21 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-test-plugin"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-test-second-plugin"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-plugin",
 ]
 
 [[package]]
 name = "oxiguitar-testgen"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-display",
  "oxiguitar-host",
@@ -3406,7 +3407,7 @@ dependencies = [
 
 [[package]]
 name = "oxiguitar-tools"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "oxiguitar-model",
  "oxiguitar-plugin-test",

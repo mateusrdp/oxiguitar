@@ -2666,7 +2666,7 @@ fn interface_1_15_the_plugin_files() {
         std::fs::create_dir_all(dir).unwrap();
     }
     // The same plugin in the system's folder and the user's, which wins;
-    // a damaged file beside the program.
+    // a damaged file beside the program, whose folder is searched last.
     std::fs::copy(test_oxp(), system.join("test.oxp")).unwrap();
     std::fs::copy(test_oxp(), folders.user_plugins.join("test.oxp")).unwrap();
     std::fs::write(program.join("broken.oxp"), b"not a plugin").unwrap();
@@ -2686,7 +2686,6 @@ fn interface_1_15_the_plugin_files() {
         answer.lines().collect::<Vec<_>>(),
         [
             path(folders.user_plugins.clone()),
-            format!("Program unusable - {}", path(program.join("broken.oxp"))),
             format!(
                 "System replaced oxiguitar.test {}",
                 path(system.join("test.oxp"))
@@ -2695,8 +2694,54 @@ fn interface_1_15_the_plugin_files() {
                 "User used oxiguitar.test {}",
                 path(folders.user_plugins.join("test.oxp"))
             ),
+            format!("Program unusable - {}", path(program.join("broken.oxp"))),
         ]
     );
+}
+
+/// Interface 1.16 (#347): a plugin file is an archive, unpacked once into
+/// the user's folder with everything packed in it, which the plugin reads
+/// and its `.slint` file is compiled from; a later start uses what is
+/// there.
+#[test]
+fn interface_1_16_a_plugin_file_is_unpacked_and_kept() {
+    use oxiguitar_host::{Folders, System, UiSource};
+    let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("contract-unpacked");
+    let _ = std::fs::remove_dir_all(&home);
+    let folders = Folders::resolve(
+        System::this(),
+        |name| (name == oxiguitar_host::HOME_VARIABLE).then(|| home.clone().into()),
+        None,
+    )
+    .unwrap();
+    let dir = folder("unpacked", &["test.oxp"]);
+    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    plugins.use_folders(folders.clone());
+    let answer = plugins.call_service("test-echo", "own-files", b"").unwrap();
+    let answer = String::from_utf8(answer).unwrap();
+    let (unpacked, hello) = answer.split_once('\n').unwrap();
+    let unpacked = PathBuf::from(unpacked);
+    assert!(
+        unpacked.starts_with(folders.unpacked().join("oxiguitar.test")),
+        "{}",
+        unpacked.display()
+    );
+    assert_eq!(hello, "Packed with the test plugin.\n");
+    assert!(unpacked.join("manifest.json").is_file());
+    assert_eq!(
+        plugins.ui_source("oxiguitar.test").unwrap(),
+        UiSource::File(unpacked.join("ui").join("test.slint"))
+    );
+    // Kept: the next start finds it and writes nothing (the plugin isn't
+    // loaded again: one process loads one library once).
+    std::fs::write(unpacked.join("mark"), b"").unwrap();
+    let (again, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    again.use_folders(folders.clone());
+    assert_eq!(
+        again.ui_source("oxiguitar.test").unwrap(),
+        UiSource::File(unpacked.join("ui").join("test.slint"))
+    );
+    assert!(unpacked.join("mark").is_file());
 }
 
 /// A core that shows views, for interface 1.15: what it was asked.
@@ -2762,7 +2807,7 @@ fn interface_1_15_views_in_slint() {
         core.clone(),
     );
     let source = plugins.ui_source("oxiguitar.test").unwrap();
-    let compiled = oxiguitar_plugin_test::compile_ui(source).unwrap();
+    let compiled = oxiguitar_plugin_test::compile_ui_source(source).unwrap();
     for component in ["TestWindow", "TestPanel", "TestSection"] {
         assert!(compiled.component(component).is_some(), "{component}");
     }

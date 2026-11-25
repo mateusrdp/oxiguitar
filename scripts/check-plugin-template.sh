@@ -105,8 +105,12 @@ test -f "$plugin/target/oxp/example.oxp"
 oxp="$(./build-oxp.sh | tail -n 1)"
 test -f "$oxp"
 "$bin/oxiguitar-plugin-test$exe" "$oxp"
+# An archive with the manifest first and the library second (#347).
+[[ "$(tar -tf "$oxp" | head -n 1)" == manifest.json ]]
+[[ "$(tar -tf "$oxp" | sed -n 2p)" == plugin.* ]]
 if [[ "$oxp" == *macos-universal.oxp ]]; then
-    lipo -info "$oxp" | grep -q "x86_64 arm64"
+    tar -xOf "$oxp" plugin.dylib > "$work/plugin.dylib"
+    lipo -info "$work/plugin.dylib" | grep -q "x86_64 arm64"
 fi
 
 # Where a user puts the file: a plugin folder (OXIGUITAR_HOME's plugins/

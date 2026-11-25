@@ -61,7 +61,8 @@ use oxiguitar_host::{Core, ExporterRef, Folders, Level, Plugins, SharedSettings,
 /// Builds the plugin crate `package` of the workspace at `workspace` as
 /// `NAME.oxp` (with its `oxp` feature, as a `cdylib`), in the workspace's
 /// `target/oxp/` folder (its own, so a build started from a test doesn't
-/// wait for the test's own build folder). Returns the file's path.
+/// wait for the test's own build folder), packed with the crate's `ui` and
+/// `assets` folders (`oxiguitar_host::oxp::pack`). Returns the file's path.
 pub fn build(
     workspace: &Path,
     package: &str,
@@ -117,16 +118,58 @@ pub fn build(
         std::process::id(),
         COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
-    std::fs::copy(&library, &part)
-        .and_then(|_| std::fs::rename(&part, &oxp))
-        .map_err(|e| {
+    let dir = crate_folder(workspace, package)?;
+    let folders: Vec<PathBuf> = oxiguitar_host::api::oxp::FOLDERS
+        .iter()
+        .map(|f| dir.join(f))
+        .filter(|f| f.is_dir())
+        .collect();
+    let folders: Vec<&Path> = folders.iter().map(PathBuf::as_path).collect();
+    let packed = oxiguitar_host::oxp::pack(&library, &folders, &part).and_then(|()| {
+        std::fs::rename(&part, &oxp)
+            .map_err(|e| format!("cannot move {} to {}: {e}", part.display(), oxp.display()))
+    });
+    if packed.is_err() {
+        let _ = std::fs::remove_file(&part);
+    }
+    packed.map(|()| oxp)
+}
+
+/// The folder of the crate `package` in the workspace at `workspace`.
+fn crate_folder(workspace: &Path, package: &str) -> Result<PathBuf, String> {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let output = std::process::Command::new(cargo)
+        .current_dir(workspace)
+        .args([
+            "metadata",
+            "--no-deps",
+            "--offline",
+            "--format-version",
+            "1",
+        ])
+        .output()
+        .map_err(|e| format!("cargo metadata didn't run ({e})"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "cargo metadata failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| format!("cargo metadata said something unreadable ({e})"))?;
+    metadata["packages"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|p| p["name"] == package)
+        .and_then(|p| p["manifest_path"].as_str())
+        .and_then(|m| Path::new(m).parent().map(Path::to_path_buf))
+        .ok_or_else(|| {
             format!(
-                "cannot copy {} to {}: {e}",
-                library.display(),
-                oxp.display()
+                "the workspace at {} has no package {package}",
+                workspace.display()
             )
-        })?;
-    Ok(oxp)
+        })
 }
 
 /// The sound set the suite puts in the `soundfonts` folder of every plugin
@@ -221,6 +264,28 @@ pub struct UiComponent {
 /// runtime, so a plugin's tests need no system libraries for it. The errors
 /// by line.
 pub fn compile_ui(source: String) -> Result<CompiledUi, String> {
+    compile_slint(source, Path::new("plugin.slint"))
+}
+
+/// [`compile_ui`] for a `.slint` file on disk (interface 1.16; #347), as
+/// OxiGuitar compiles the one a plugin's manifest names (`ui`) from where
+/// its `.oxp` file is unpacked: its imports and pictures are found beside
+/// it.
+pub fn compile_ui_file(file: &Path) -> Result<CompiledUi, String> {
+    let source =
+        std::fs::read_to_string(file).map_err(|e| format!("can't read {}: {e}", file.display()))?;
+    compile_slint(source, file)
+}
+
+/// [`compile_ui`] or [`compile_ui_file`], as the host hands it over.
+pub fn compile_ui_source(source: oxiguitar_host::UiSource) -> Result<CompiledUi, String> {
+    match source {
+        oxiguitar_host::UiSource::Text(text) => compile_ui(text),
+        oxiguitar_host::UiSource::File(file) => compile_ui_file(&file),
+    }
+}
+
+fn compile_slint(source: String, file: &Path) -> Result<CompiledUi, String> {
     use i_slint_compiler::diagnostics::BuildDiagnostics;
     use i_slint_compiler::langtype::Type;
     use i_slint_compiler::native_class::PropertyVisibility;
@@ -230,8 +295,11 @@ pub fn compile_ui(source: String) -> Result<CompiledUi, String> {
     config.style = Some("fluent".into());
     config.components_to_generate = i_slint_compiler::ComponentSelection::AllExported;
     let mut diagnostics = BuildDiagnostics::default();
-    let path = i_slint_compiler::source_path::SourcePath::new("plugin.slint");
-    let node = i_slint_compiler::parser::parse(source, Some(path), &mut diagnostics);
+    let node = i_slint_compiler::parser::parse(
+        source,
+        Some(i_slint_compiler::source_path::SourcePath::new(file)),
+        &mut diagnostics,
+    );
     let mut future = std::pin::pin!(i_slint_compiler::compile_syntax_node(
         node,
         diagnostics,
@@ -511,7 +579,7 @@ pub fn check_with(oxp: &Path, needed: &[&Path]) -> Report {
         let compiled = plugins
             .ui_source(&id.plugin)
             .map_err(|e| e.message)
-            .and_then(compile_ui);
+            .and_then(compile_ui_source);
         report.check(
             "its .slint file compiles",
             compiled.as_ref().map(|_| ()).map_err(Clone::clone),

@@ -8,7 +8,7 @@ members = ["crates/*", "plugins/*"]
 exclude = ["spikes", "fuzz", "docs/plugins/template"]
 
 [workspace.package]
-version = "0.22.0"
+version = "0.23.0"
 edition = "2024"
 # Rust from rustup, raised only when something needs it, so Debian unstable
 # can catch up before an upload (CONTRIBUTING.md, "Minimum Rust version").
@@ -53,6 +53,8 @@ object = { version = "0.41", default-features = false, features = ["read_core", 
 # libloading 0.8, and a second copy would be the only gain. On update: move
 # when winit does.
 libloading = "0.8.9"
+# Plugin files are tar archives (#347); no extended attributes.
+tar = { version = "0.4.46", default-features = false }
 # Fonts: skrifa reads outlines and metrics; keep it on the version krilla
 # uses, since the PDF writer shares our faces. Upstream (krilla 0.8.2):
 # krilla, the newest, takes skrifa 0.42, while Slint 1.19 brings 0.44 for
