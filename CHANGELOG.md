@@ -4,6 +4,8 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-25
+
 ### Changed
 
 - **Plugin files are archives** (#347, [ADR 0014](docs/adr/0014-plugin-files-are-tar-archives.md)). An `.oxp` file is now an uncompressed tar archive: `manifest.json` first, the plugin's library second (`plugin.so`, `plugin.dll` or `plugin.dylib`), then any files it ships (its `.slint` files, pictures, data). OxiGuitar reads only the manifest at start, and the first time a plugin is used it unpacks the file into `unpacked/` in the user's data folder and keeps it there, so later starts unpack nothing; a file that changes is unpacked again. Plugin files of the old format (the library alone) are refused, saying so. Links, absolute paths and `..` in an archive are refused.

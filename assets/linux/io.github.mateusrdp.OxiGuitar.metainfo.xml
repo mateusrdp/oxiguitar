@@ -85,6 +85,12 @@
   </branding>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.23.0" date="2026-11-25" type="development">
+      <description>
+        <p>Plugin files are archives (#347, ADR 0014). An .oxp file is now an uncompressed tar archive: manifest.json first, the plugin's library second (plugin.so, plugin.dll or plugin.dylib), then any files it ships (its .slint files, pictures, data). OxiGuitar reads only the manifest at start, and the ...</p>
+      </description>
+      <url>https://github.com/mateusrdp/oxiguitar/releases/tag/v0.23.0</url>
+    </release>
     <release version="0.22.0" date="2026-11-24" type="development">
       <description>
         <p>Plugins write their UI in Slint (#346, plugin interface 1.15): a plugin hands over a .slint file, and OxiGuitar compiles it with Slint's interpreter and runs it with its own Slint, widgets, fonts and light or dark colours, so the core draws nothing of a plugin's and a plugin carries no widget code. ...</p>
