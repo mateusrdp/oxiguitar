@@ -12,6 +12,7 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 ### Added
 
 - **Plugin interface 1.16** (#347; the SDK crates are at 1.16.0): the manifest's `ui` names a plugin's `.slint` file inside its plugin file, which OxiGuitar compiles from where it is unpacked, so it can import the plugin's other `.slint` files and use its pictures; `Host::own_files` is the folder the plugin's file was unpacked in. `oxiguitar_host::oxp::pack` packs a library and folders into a plugin file, and `oxiguitar_plugin_test::build` uses it; the template's `build-oxp.sh` packs with `tar`. The plugin guide's versions page says interface 1.15 came with 0.22.0.
+- `scripts/test-all.py` 1.1.0 (the same file in every repository) packs a plugin repository's plugins as archives when the core it tests against reads them. Until every plugin repository releases archives, `scripts/released-plugins.sh` repacks the bare libraries of the releases it takes (`scripts/repack-plugins.py`).
 
 ## [0.22.0] - 2026-11-24
 

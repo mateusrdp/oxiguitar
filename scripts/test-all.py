@@ -54,7 +54,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-RUNNER_VERSION = "1.0.0"
+RUNNER_VERSION = "1.1.0"
 ROOT = Path(__file__).resolve().parent.parent
 SUITE_FILE = ROOT / "tests" / "suite.json"
 MAX_HASH_BYTES = 64 * 1024 * 1024  # corpus files larger than this are not hashed
@@ -735,9 +735,45 @@ def prepare_core(args, out, env):
             "checker": bins / exe("oxiguitar-plugin-test")}, "OxiGuitar %s" % tag
 
 
-def build_plugin_files(suite, args, out, env, dest):
-    """This repository's plugins as .oxp files for this system, in `dest`.
-    Returns (paths, note)."""
+def core_reads_archives(core):
+    """Whether the core at `core` reads plugin files as tar archives
+    (mateusrdp/oxiguitar#347, OxiGuitar 0.23); older cores read the bare
+    library."""
+    api = Path(core["path"]) / "crates" / "oxiguitar-plugin-api" / "src" / "lib.rs"
+    try:
+        return "pub mod oxp" in api.read_text(encoding="utf-8")
+    except OSError:
+        return True
+
+
+def pack_plugin(library, manifest, folder, file):
+    """The plugin file `file` (mateusrdp/oxiguitar#347): an uncompressed tar
+    archive of `manifest` as manifest.json, then `library` as plugin.so,
+    plugin.dll or plugin.dylib, then the `ui` and `assets` folders beside
+    the manifest in `folder`, their files in name order."""
+    import tarfile
+
+    def add(tar, path, name, mode):
+        info = tarfile.TarInfo(name)
+        info.size = path.stat().st_size
+        info.mode = mode
+        with open(path, "rb") as data:
+            tar.addfile(info, data)
+
+    with tarfile.open(str(file), "w", format=tarfile.USTAR_FORMAT) as tar:
+        add(tar, manifest, "manifest.json", 0o644)
+        add(tar, library, "plugin" + library.suffix, 0o755)
+        for top in ("ui", "assets"):
+            base = folder / top
+            if base.is_dir():
+                for path in sorted(p for p in base.rglob("*") if p.is_file()):
+                    add(tar, path, path.relative_to(folder).as_posix(), 0o644)
+
+
+def build_plugin_files(suite, args, out, env, dest, archives=True):
+    """This repository's plugins as .oxp files for this system, in `dest`:
+    archives (`archives`, for a core that reads them), or the bare library
+    for an older core. Returns (paths, note)."""
     out.section("Plugin files")
     dest.mkdir(parents=True, exist_ok=True)
     target = cargo_target_dir(ROOT, env)
@@ -754,7 +790,11 @@ def build_plugin_files(suite, args, out, env, dest):
         if status != 0 or not built.exists():
             return made, "%s.oxp did not build (exit status %d)" % (p["name"], status)
         file = dest / ("%s.oxp" % p["name"])
-        shutil.copyfile(str(built), str(file))
+        if archives:
+            manifest = ROOT / p.get("manifest", "manifest.json")
+            pack_plugin(built, manifest, manifest.parent, file)
+        else:
+            shutil.copyfile(str(built), str(file))
         made.append(file)
     return made, "%d plugin file(s)" % len(made)
 
@@ -1252,7 +1292,8 @@ def main():
         if core:
             info["core"] = core["tag"]
             plugin_dir = out_dir / "plugins"
-            made, note = build_plugin_files({"plugins": plugins}, args, out, env, plugin_dir)
+            made, note = build_plugin_files({"plugins": plugins}, args, out, env, plugin_dir,
+                                            core_reads_archives(core))
             ok = len(made) == len(plugins)
             stages["plugin files"] = {"status": "passed" if ok else "failed", "note": note}
             out.say("  plugin files: %s (%s)" % (stages["plugin files"]["status"], note), "ok" if ok else "bad")
