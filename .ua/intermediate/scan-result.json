@@ -1,377 +1,24 @@
 {
-  "project": {
-    "name": "OxiGuitar",
-    "description": "Free, open-source fully modular guitar tablature and score viewer, editor and player for Windows, macOS and Linux. Written entirely in Rust. Supports Guitar Pro 3-8, MuseScore, MusicXML, ABC and MIDI file formats via a plugin architecture. Features standard notation and tablature display, playback with SoundFont synthesis and Neural Amp Modeler support, and PDF/PNG export.",
-    "version": "0.10.0",
-    "license": "GPL-3.0-or-later",
-    "pluginApiLicense": "MIT OR Apache-2.0",
-    "authors": [
-      "Mateus Rocha de Paula",
-      "The OxiGuitar contributors"
-    ],
-    "repository": "https://github.com/mateusrdp/oxiguitar",
-    "homepage": "https://github.com/mateusrdp/oxiguitar",
-    "platforms": [
-      "Windows",
-      "macOS",
-      "Linux"
-    ]
-  },
-  "rust": {
-    "edition": "2024",
-    "rustVersion": "1.99",
-    "resolver": "3",
-    "lints": {
-      "unsafeCode": "forbid",
-      "missingDocs": "warn",
-      "clippy": {
-        "all": "warn",
-        "dbgMacro": "warn",
-        "todo": "warn",
-        "printStderr": "allow"
-      }
-    },
-    "releaseProfile": {
-      "lto": "thin",
-      "codegenUnits": 1,
-      "strip": "symbols"
-    }
-  },
-  "languages": [
-    {
-      "name": "Rust",
-      "count": 235,
-      "primary": true
-    },
-    {
-      "name": "Guitar Pro (gp)",
-      "count": 108,
-      "primary": false
-    },
-    {
-      "name": "Markdown",
-      "count": 77,
-      "primary": false
-    },
-    {
-      "name": "Guitar Pro 5 (gp5)",
-      "count": 56,
-      "primary": false
-    },
-    {
-      "name": "Events",
-      "count": 55,
-      "primary": false
-    },
-    {
-      "name": "TOML",
-      "count": 46,
-      "primary": false
-    },
-    {
-      "name": "Shell",
-      "count": 17,
-      "primary": false
-    },
-    {
-      "name": "JSON",
-      "count": 15,
-      "primary": false
-    },
-    {
-      "name": "YAML",
-      "count": 10,
-      "primary": false
-    },
-    {
-      "name": "Guitar Pro IF (gpif)",
-      "count": 10,
-      "primary": false
-    },
-    {
-      "name": "Slint",
-      "count": 5,
-      "primary": false
-    }
-  ],
-  "languagesAll": {
-    "rust": 235,
-    "gp": 108,
-    "markdown": 77,
-    "gp5": 56,
-    "events": 55,
-    "toml": 46,
-    "shell": 17,
-    "json": 15,
-    "unknown": 13,
-    "yaml": 10,
-    "gpif": 10,
-    "txt": 5,
-    "slint": 5,
-    "python": 3,
-    "xml": 2,
-    "flac": 2,
-    "otf": 1,
-    "desktop": 1,
-    "sf2": 1,
-    "docs": 1,
-    "manpages": 1,
-    "extab": 1,
-    "gp3": 1,
-    "gp4": 1,
-    "gpx": 1,
-    "ogg": 1,
-    "dict": 1,
-    "javascript": 1,
-    "hbs": 1
-  },
-  "fileCategories": {
-    "code": 504,
-    "docs": 82,
-    "config": 64,
-    "script": 17,
-    "infra": 9
-  },
-  "frameworks": [
-    {
-      "name": "Slint",
-      "purpose": "GUI toolkit (UI definition in .slint files)",
-      "evidence": "crates/oxiguitar-app/ui/*.slint"
-    },
-    {
-      "name": "tiny-skia",
-      "purpose": "2D pixel rendering (screen output, PNG, visual regression tests)",
-      "evidence": "Cargo.toml workspace dependency"
-    },
-    {
-      "name": "krilla",
-      "purpose": "PDF output / rendering",
-      "evidence": "Cargo.toml workspace dependency"
-    },
-    {
-      "name": "libloading",
-      "purpose": "Dynamic plugin loading (native .oxp libraries)",
-      "evidence": "Cargo.toml workspace dependency"
-    },
-    {
-      "name": "winit",
-      "purpose": "Windowing system integration (via Slint transitive dependency)",
-      "evidence": "Cargo.toml"
-    }
-  ],
-  "dependencies": {
-    "serialization": [
-      "serde",
-      "serde_json",
-      "postcard"
-    ],
-    "fileParsing": [
-      "object",
-      "zip",
-      "quick-xml"
-    ],
-    "audio": [
-      "rtrb",
-      "rustysynth",
-      "lewton",
-      "claxon"
-    ],
-    "rendering": [
-      "tiny-skia",
-      "krilla",
-      "skrifa"
-    ],
-    "pluginLoading": [
-      "libloading"
-    ]
-  },
-  "crates": {
-    "core": [
-      {
-        "name": "oxiguitar-model",
-        "description": "Core data model for guitar tablature and score"
-      },
-      {
-        "name": "oxiguitar-formats",
-        "description": "File format parsing (Guitar Pro 3-8, MusicXML, ABC, MIDI)"
-      },
-      {
-        "name": "oxiguitar-display",
-        "description": "Score display and typesetting"
-      },
-      {
-        "name": "oxiguitar-layout",
-        "description": "Layout engine for notation rendering"
-      },
-      {
-        "name": "oxiguitar-render",
-        "description": "Rendering to pixels, PNG, and PDF"
-      },
-      {
-        "name": "oxiguitar-tools",
-        "description": "Utility tools and helpers"
-      },
-      {
-        "name": "oxiguitar-play",
-        "description": "Playback engine with lock-free audio queues"
-      },
-      {
-        "name": "oxiguitar-edit",
-        "description": "Editing functionality"
-      },
-      {
-        "name": "oxiguitar-host",
-        "description": "Plugin host infrastructure"
-      },
-      {
-        "name": "oxiguitar-testgen",
-        "description": "Test data generation"
-      }
-    ],
-    "applications": [
-      {
-        "name": "oxiguitar-app",
-        "description": "GUI application (Slint-based desktop app)"
-      },
-      {
-        "name": "oxiguitar-cli",
-        "description": "Command-line interface"
-      }
-    ],
-    "plugins": [
-      {
-        "name": "oxiguitar-plugin-api",
-        "description": "Plugin interface and message protocol (postcard-based serialization)"
-      },
-      {
-        "name": "oxiguitar-plugin",
-        "description": "Plugin base library"
-      },
-      {
-        "name": "oxiguitar-plugin-test",
-        "description": "Plugin testing utilities"
-      }
-    ],
-    "audioBackends": [
-      {
-        "name": "oxiguitar-audio-cpal",
-        "description": "CPAL audio backend"
-      }
-    ]
-  },
-  "plugins": {
-    "format": ".oxp (native shared library with manifest)",
-    "buildScript": "scripts/build-plugins.sh",
-    "architecture": "Every file format, tool, and output method is a plugin",
-    "formatPlugins": [
-      "gp",
-      "gp3",
-      "gp4",
-      "gp5",
-      "gpx"
-    ],
-    "audioPlugins": [
-      "audio-alsa",
-      "audio-coreaudio",
-      "audio-pipewire",
-      "audio-wasapi"
-    ],
-    "otherPlugins": [
-      "soundfont"
-    ],
-    "testPlugins": [
-      "test",
-      "test-second"
-    ]
-  },
-  "testFixtures": {
-    "guitarProFiles": {
-      "extensions": [
-        ".gp",
-        ".gp3",
-        ".gp4",
-        ".gp5",
-        ".gpx",
-        ".gpif"
-      ],
-      "totalFiles": 231
-    },
-    "eventFiles": {
-      "extension": ".events",
-      "totalFiles": 55
-    },
-    "corpus": "corpus/ directory with MANIFEST.toml and README.md"
-  },
-  "infrastructure": {
-    "ci": {
-      "provider": "GitHub Actions",
-      "workflows": [
-        "builds.yml",
-        "ci.yml",
-        "debian.yml",
-        "docs.yml",
-        "fuzz.yml",
-        "interop.yml",
-        "listening.yml",
-        "release.yml",
-        "spikes.yml"
-      ]
-    },
-    "linuxPackaging": {
-      "directory": "debian/",
-      "desktopFile": "assets/linux/io.github.mateusrdp.OxiGuitar.desktop",
-      "mimeTypes": "assets/linux/io.github.mateusrdp.OxiGuitar.xml",
-      "manPages": [
-        "assets/linux/man/oxiguitar-cli.1",
-        "assets/linux/man/oxiguitar.1"
-      ]
-    },
-    "macOSPackaging": {
-      "infoPlist": "assets/macos/Info.plist"
-    }
-  },
-  "documentation": {
-    "type": "mdBook",
-    "directories": [
-      "docs/manual/",
-      "docs/plugins/"
-    ],
-    "architectureDecisions": "docs/adr/",
-    "rootDocs": [
-      "ARCHITECTURE.md",
-      "CHANGELOG.md",
-      "CONTRIBUTING.md",
-      "CREDITS.md",
-      "ROADMAP.md"
-    ]
-  },
-  "assets": {
-    "fonts": {
-      "bravura": "assets/fonts/bravura/ (Bravura music font)",
-      "notoSans": "assets/fonts/noto-sans/ (Noto Sans font)"
-    },
-    "icons": "assets/icon/",
-    "linuxAssets": "assets/linux/",
-    "macOSAssets": "assets/macos/"
-  },
-  "scan": {
-    "totalFiles": 676,
-    "totalLines": 181457,
-    "filesWithImports": 77,
-    "totalImportEdges": 255,
-    "complexity": "very-large",
-    "excluded": [
-      "spikes",
-      "fuzz",
-      "docs/plugins/template"
-    ]
-  },
+  "scriptCompleted": true,
+  "contentDigest": "a8c0f1fbf234933436a22522abe60cde007fc0482b304096ecda6b286e373747",
   "files": [
+    {
+      "path": ".cargo/config.toml",
+      "language": "toml",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
     {
       "path": ".gitattributes",
       "language": "unknown",
       "sizeLines": 16,
       "fileCategory": "code"
+    },
+    {
+      "path": ".github/FUNDING.yml",
+      "language": "yaml",
+      "sizeLines": 1,
+      "fileCategory": "config"
     },
     {
       "path": ".github/pull_request_template.md",
@@ -382,19 +29,19 @@
     {
       "path": ".github/workflows/builds.yml",
       "language": "yaml",
-      "sizeLines": 140,
+      "sizeLines": 111,
       "fileCategory": "infra"
     },
     {
       "path": ".github/workflows/ci.yml",
       "language": "yaml",
-      "sizeLines": 326,
+      "sizeLines": 380,
       "fileCategory": "infra"
     },
     {
       "path": ".github/workflows/debian.yml",
       "language": "yaml",
-      "sizeLines": 145,
+      "sizeLines": 144,
       "fileCategory": "infra"
     },
     {
@@ -406,73 +53,91 @@
     {
       "path": ".github/workflows/fuzz.yml",
       "language": "yaml",
-      "sizeLines": 142,
+      "sizeLines": 139,
       "fileCategory": "infra"
     },
     {
-      "path": ".github/workflows/interop.yml",
+      "path": ".github/workflows/publish.yml",
       "language": "yaml",
-      "sizeLines": 95,
-      "fileCategory": "infra"
-    },
-    {
-      "path": ".github/workflows/listening.yml",
-      "language": "yaml",
-      "sizeLines": 289,
+      "sizeLines": 61,
       "fileCategory": "infra"
     },
     {
       "path": ".github/workflows/release.yml",
       "language": "yaml",
-      "sizeLines": 548,
+      "sizeLines": 727,
       "fileCategory": "infra"
     },
     {
       "path": ".github/workflows/spikes.yml",
       "language": "yaml",
-      "sizeLines": 266,
+      "sizeLines": 270,
       "fileCategory": "infra"
+    },
+    {
+      "path": ".ua/intermediate/scan-result.json",
+      "language": "json",
+      "sizeLines": 4104,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".ua/knowledge-graph.json",
+      "language": "json",
+      "sizeLines": 17829,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".ua/meta.json",
+      "language": "json",
+      "sizeLines": 25,
+      "fileCategory": "config"
+    },
+    {
+      "path": "AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 102,
+      "fileCategory": "docs"
     },
     {
       "path": "ARCHITECTURE.md",
       "language": "markdown",
-      "sizeLines": 69,
+      "sizeLines": 104,
       "fileCategory": "docs"
     },
     {
       "path": "CHANGELOG.md",
       "language": "markdown",
-      "sizeLines": 273,
+      "sizeLines": 683,
       "fileCategory": "docs"
     },
     {
       "path": "CONTRIBUTING.md",
       "language": "markdown",
-      "sizeLines": 124,
+      "sizeLines": 147,
       "fileCategory": "docs"
     },
     {
       "path": "CREDITS.md",
       "language": "markdown",
-      "sizeLines": 78,
+      "sizeLines": 76,
       "fileCategory": "docs"
     },
     {
       "path": "Cargo.toml",
       "language": "toml",
-      "sizeLines": 89,
+      "sizeLines": 111,
       "fileCategory": "config"
     },
     {
       "path": "README.md",
       "language": "markdown",
-      "sizeLines": 145,
+      "sizeLines": 269,
       "fileCategory": "docs"
     },
     {
       "path": "ROADMAP.md",
       "language": "markdown",
-      "sizeLines": 233,
+      "sizeLines": 257,
       "fileCategory": "docs"
     },
     {
@@ -524,6 +189,12 @@
       "fileCategory": "code"
     },
     {
+      "path": "assets/linux/io.github.mateusrdp.OxiGuitar.metainfo.xml",
+      "language": "xml",
+      "sizeLines": 287,
+      "fileCategory": "config"
+    },
+    {
       "path": "assets/linux/io.github.mateusrdp.OxiGuitar.xml",
       "language": "xml",
       "sizeLines": 36,
@@ -568,7 +239,7 @@
     {
       "path": "crates/oxiguitar-app/Cargo.toml",
       "language": "toml",
-      "sizeLines": 98,
+      "sizeLines": 110,
       "fileCategory": "config"
     },
     {
@@ -578,9 +249,27 @@
       "fileCategory": "code"
     },
     {
+      "path": "crates/oxiguitar-app/src/advice.rs",
+      "language": "rust",
+      "sizeLines": 100,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/audio_export.rs",
+      "language": "rust",
+      "sizeLines": 281,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/automation.rs",
+      "language": "rust",
+      "sizeLines": 319,
+      "fileCategory": "code"
+    },
+    {
       "path": "crates/oxiguitar-app/src/bar_form.rs",
       "language": "rust",
-      "sizeLines": 351,
+      "sizeLines": 637,
       "fileCategory": "code"
     },
     {
@@ -592,43 +281,91 @@
     {
       "path": "crates/oxiguitar-app/src/canvas.rs",
       "language": "rust",
-      "sizeLines": 195,
+      "sizeLines": 201,
       "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/chord-styles.json",
+      "language": "json",
+      "sizeLines": 102,
+      "fileCategory": "config"
     },
     {
       "path": "crates/oxiguitar-app/src/chord_form.rs",
       "language": "rust",
-      "sizeLines": 410,
+      "sizeLines": 635,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/chord_prefs.rs",
+      "language": "rust",
+      "sizeLines": 182,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/chrome.rs",
+      "language": "rust",
+      "sizeLines": 321,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/cursor.rs",
       "language": "rust",
-      "sizeLines": 277,
+      "sizeLines": 279,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/dialogs.rs",
+      "language": "rust",
+      "sizeLines": 469,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/document.rs",
       "language": "rust",
-      "sizeLines": 1160,
+      "sizeLines": 1530,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/drawings.rs",
+      "language": "rust",
+      "sizeLines": 350,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/editing.rs",
       "language": "rust",
-      "sizeLines": 1913,
+      "sizeLines": 2681,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/effect_form.rs",
       "language": "rust",
-      "sizeLines": 706,
+      "sizeLines": 956,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/engraving.rs",
+      "language": "rust",
+      "sizeLines": 118,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/files.rs",
+      "language": "rust",
+      "sizeLines": 590,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/footer.rs",
       "language": "rust",
-      "sizeLines": 134,
+      "sizeLines": 162,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/host_core.rs",
+      "language": "rust",
+      "sizeLines": 412,
       "fileCategory": "code"
     },
     {
@@ -644,57 +381,93 @@
       "fileCategory": "code"
     },
     {
+      "path": "crates/oxiguitar-app/src/inspector_view.rs",
+      "language": "rust",
+      "sizeLines": 679,
+      "fileCategory": "code"
+    },
+    {
       "path": "crates/oxiguitar-app/src/links.rs",
       "language": "rust",
-      "sizeLines": 74,
+      "sizeLines": 96,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/main.rs",
       "language": "rust",
-      "sizeLines": 4491,
+      "sizeLines": 1989,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/manager.rs",
       "language": "rust",
-      "sizeLines": 355,
+      "sizeLines": 350,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/manager_view.rs",
+      "language": "rust",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/page.rs",
+      "language": "rust",
+      "sizeLines": 260,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/palette.rs",
       "language": "rust",
-      "sizeLines": 1534,
+      "sizeLines": 1728,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/palette_view.rs",
+      "language": "rust",
+      "sizeLines": 217,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/player.rs",
       "language": "rust",
-      "sizeLines": 880,
+      "sizeLines": 1022,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/playing.rs",
       "language": "rust",
-      "sizeLines": 540,
+      "sizeLines": 693,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/plugin_tabs.rs",
       "language": "rust",
-      "sizeLines": 698,
+      "sizeLines": 924,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/plugin_ui.rs",
+      "language": "rust",
+      "sizeLines": 704,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/plugin_view.rs",
+      "language": "rust",
+      "sizeLines": 731,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/prefs.rs",
       "language": "rust",
-      "sizeLines": 135,
+      "sizeLines": 214,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/shell.rs",
       "language": "rust",
-      "sizeLines": 307,
+      "sizeLines": 363,
       "fileCategory": "code"
     },
     {
@@ -706,85 +479,91 @@
     {
       "path": "crates/oxiguitar-app/src/sound.rs",
       "language": "rust",
-      "sizeLines": 366,
+      "sizeLines": 494,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/speed.rs",
       "language": "rust",
-      "sizeLines": 291,
+      "sizeLines": 292,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/test_support.rs",
       "language": "rust",
-      "sizeLines": 137,
+      "sizeLines": 141,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/tool_dialogs.rs",
+      "language": "rust",
+      "sizeLines": 551,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/track_form.rs",
       "language": "rust",
-      "sizeLines": 432,
+      "sizeLines": 606,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/track_sections.rs",
       "language": "rust",
-      "sizeLines": 234,
+      "sizeLines": 395,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/tracks.rs",
       "language": "rust",
-      "sizeLines": 468,
+      "sizeLines": 512,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/window_events.rs",
+      "language": "rust",
+      "sizeLines": 250,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/src/worker.rs",
       "language": "rust",
-      "sizeLines": 1124,
+      "sizeLines": 1809,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-app/src/zoom.rs",
+      "language": "rust",
+      "sizeLines": 182,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/ui/app.slint",
       "language": "slint",
-      "sizeLines": 2412,
+      "sizeLines": 3153,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/ui/bar_dialog.slint",
       "language": "slint",
-      "sizeLines": 906,
+      "sizeLines": 1058,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/ui/plugin_manager.slint",
       "language": "slint",
-      "sizeLines": 214,
+      "sizeLines": 152,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-app/ui/plugin_tab.slint",
       "language": "slint",
-      "sizeLines": 230,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-audio-cpal/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 20,
-      "fileCategory": "config"
-    },
-    {
-      "path": "crates/oxiguitar-audio-cpal/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 306,
+      "sizeLines": 407,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-cli/Cargo.toml",
       "language": "toml",
-      "sizeLines": 29,
+      "sizeLines": 30,
       "fileCategory": "config"
     },
     {
@@ -800,33 +579,39 @@
       "fileCategory": "code"
     },
     {
+      "path": "crates/oxiguitar-cli/src/export.rs",
+      "language": "rust",
+      "sizeLines": 185,
+      "fileCategory": "code"
+    },
+    {
       "path": "crates/oxiguitar-cli/src/info.rs",
       "language": "rust",
-      "sizeLines": 344,
+      "sizeLines": 348,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-cli/src/main.rs",
       "language": "rust",
-      "sizeLines": 105,
+      "sizeLines": 113,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-cli/src/play.rs",
       "language": "rust",
-      "sizeLines": 401,
+      "sizeLines": 430,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-cli/src/plugins.rs",
       "language": "rust",
-      "sizeLines": 113,
+      "sizeLines": 184,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-cli/src/render.rs",
       "language": "rust",
-      "sizeLines": 275,
+      "sizeLines": 280,
       "fileCategory": "code"
     },
     {
@@ -844,7 +629,7 @@
     {
       "path": "crates/oxiguitar-cli/tests/cli.rs",
       "language": "rust",
-      "sizeLines": 432,
+      "sizeLines": 556,
       "fileCategory": "code"
     },
     {
@@ -856,7 +641,7 @@
     {
       "path": "crates/oxiguitar-display/src/fonts.rs",
       "language": "rust",
-      "sizeLines": 283,
+      "sizeLines": 317,
       "fileCategory": "code"
     },
     {
@@ -868,7 +653,7 @@
     {
       "path": "crates/oxiguitar-display/src/list.rs",
       "language": "rust",
-      "sizeLines": 573,
+      "sizeLines": 601,
       "fileCategory": "code"
     },
     {
@@ -886,73 +671,121 @@
     {
       "path": "crates/oxiguitar-display/src/wire.rs",
       "language": "rust",
-      "sizeLines": 217,
+      "sizeLines": 246,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/Cargo.toml",
       "language": "toml",
-      "sizeLines": 19,
+      "sizeLines": 20,
       "fileCategory": "config"
     },
     {
       "path": "crates/oxiguitar-edit/src/bars.rs",
       "language": "rust",
-      "sizeLines": 792,
+      "sizeLines": 984,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/caret.rs",
       "language": "rust",
-      "sizeLines": 588,
+      "sizeLines": 828,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/check.rs",
       "language": "rust",
-      "sizeLines": 250,
+      "sizeLines": 234,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-edit/src/chord_names.rs",
+      "language": "rust",
+      "sizeLines": 471,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/clip.rs",
       "language": "rust",
-      "sizeLines": 664,
+      "sizeLines": 1063,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/effects.rs",
       "language": "rust",
-      "sizeLines": 1059,
+      "sizeLines": 1439,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/entry.rs",
       "language": "rust",
-      "sizeLines": 1600,
+      "sizeLines": 1979,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-edit/src/fingering.rs",
+      "language": "rust",
+      "sizeLines": 1903,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-edit/src/fit.rs",
+      "language": "rust",
+      "sizeLines": 1509,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-edit/src/harmonize.rs",
+      "language": "rust",
+      "sizeLines": 853,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-edit/src/harmonize/numbers.rs",
+      "language": "rust",
+      "sizeLines": 686,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-edit/src/harmonize/tests.rs",
+      "language": "rust",
+      "sizeLines": 552,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/harmony.rs",
       "language": "rust",
-      "sizeLines": 744,
+      "sizeLines": 720,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/history.rs",
       "language": "rust",
-      "sizeLines": 514,
+      "sizeLines": 569,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/lib.rs",
       "language": "rust",
-      "sizeLines": 54,
+      "sizeLines": 86,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-edit/src/marks.rs",
+      "language": "rust",
+      "sizeLines": 728,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-edit/src/merge.rs",
+      "language": "rust",
+      "sizeLines": 1074,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/notation.rs",
       "language": "rust",
-      "sizeLines": 427,
+      "sizeLines": 509,
       "fileCategory": "code"
     },
     {
@@ -964,218 +797,62 @@
     {
       "path": "crates/oxiguitar-edit/src/tracks.rs",
       "language": "rust",
-      "sizeLines": 509,
+      "sizeLines": 641,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/src/transpose.rs",
       "language": "rust",
-      "sizeLines": 541,
+      "sizeLines": 627,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/tests/corpus.rs",
       "language": "rust",
-      "sizeLines": 126,
+      "sizeLines": 129,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-edit/tests/entry.rs",
       "language": "rust",
-      "sizeLines": 723,
+      "sizeLines": 874,
       "fileCategory": "code"
     },
     {
-      "path": "crates/oxiguitar-formats/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 42,
-      "fileCategory": "config"
-    },
-    {
-      "path": "crates/oxiguitar-formats/examples/corpus_manifest/main.rs",
+      "path": "crates/oxiguitar-edit/tests/fingering_corpus.rs",
       "language": "rust",
-      "sizeLines": 93,
+      "sizeLines": 343,
       "fileCategory": "code"
     },
     {
-      "path": "crates/oxiguitar-formats/examples/corpus_manifest/sha256.rs",
+      "path": "crates/oxiguitar-edit/tests/fit_corpus.rs",
       "language": "rust",
-      "sizeLines": 94,
+      "sizeLines": 214,
       "fileCategory": "code"
     },
     {
-      "path": "crates/oxiguitar-formats/examples/write_gp.rs",
+      "path": "crates/oxiguitar-edit/tests/harmonize_corpus.rs",
       "language": "rust",
-      "sizeLines": 191,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/binary.rs",
-      "language": "rust",
-      "sizeLines": 252,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/container.rs",
-      "language": "rust",
-      "sizeLines": 371,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/detect.rs",
-      "language": "rust",
-      "sizeLines": 339,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/error.rs",
-      "language": "rust",
-      "sizeLines": 183,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/gp/effects.rs",
-      "language": "rust",
-      "sizeLines": 349,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/gp/mod.rs",
-      "language": "rust",
-      "sizeLines": 1061,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/gp/write.rs",
-      "language": "rust",
-      "sizeLines": 1695,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/gpif/effects.rs",
-      "language": "rust",
-      "sizeLines": 553,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/gpif/mod.rs",
-      "language": "rust",
-      "sizeLines": 1182,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/gpif/write/chord.rs",
-      "language": "rust",
-      "sizeLines": 476,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/gpif/write/mod.rs",
-      "language": "rust",
-      "sizeLines": 1794,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/gpif/write/tables.rs",
-      "language": "rust",
-      "sizeLines": 424,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 174,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/plugin.rs",
-      "language": "rust",
-      "sizeLines": 151,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/src/xml.rs",
-      "language": "rust",
-      "sizeLines": 391,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/corpus.rs",
-      "language": "rust",
-      "sizeLines": 169,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/gp5_round_trip.rs",
-      "language": "rust",
-      "sizeLines": 485,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/gpif.rs",
-      "language": "rust",
-      "sizeLines": 275,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/guitar_pro.rs",
-      "language": "rust",
-      "sizeLines": 104,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/guitar_pro_7_6_own.rs",
-      "language": "rust",
-      "sizeLines": 136,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/plugin_formats.rs",
-      "language": "rust",
-      "sizeLines": 30,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/round_trip.rs",
-      "language": "rust",
-      "sizeLines": 489,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/support/compare.rs",
-      "language": "rust",
-      "sizeLines": 279,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/support/gp_writer.rs",
-      "language": "rust",
-      "sizeLines": 351,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/support/gpif_writer.rs",
-      "language": "rust",
-      "sizeLines": 353,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/support/song_check.rs",
-      "language": "rust",
-      "sizeLines": 91,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-formats/tests/wire.rs",
-      "language": "rust",
-      "sizeLines": 82,
+      "sizeLines": 260,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/Cargo.toml",
       "language": "toml",
-      "sizeLines": 31,
+      "sizeLines": 37,
       "fileCategory": "config"
+    },
+    {
+      "path": "crates/oxiguitar-host/src/advice.rs",
+      "language": "rust",
+      "sizeLines": 138,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-host/src/crash.rs",
+      "language": "rust",
+      "sizeLines": 813,
+      "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/events.rs",
@@ -1186,55 +863,55 @@
     {
       "path": "crates/oxiguitar-host/src/folders.rs",
       "language": "rust",
-      "sizeLines": 410,
+      "sizeLines": 596,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/inventory.rs",
       "language": "rust",
-      "sizeLines": 287,
+      "sizeLines": 448,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/lib.rs",
       "language": "rust",
-      "sizeLines": 342,
+      "sizeLines": 451,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/loader.rs",
       "language": "rust",
-      "sizeLines": 405,
+      "sizeLines": 425,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/oxp.rs",
       "language": "rust",
-      "sizeLines": 189,
+      "sizeLines": 1072,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/plugins.rs",
       "language": "rust",
-      "sizeLines": 2025,
+      "sizeLines": 3803,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/realtime.rs",
       "language": "rust",
-      "sizeLines": 271,
+      "sizeLines": 342,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/settings.rs",
       "language": "rust",
-      "sizeLines": 242,
+      "sizeLines": 267,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-host/src/sidecar.rs",
       "language": "rust",
-      "sizeLines": 298,
+      "sizeLines": 959,
       "fileCategory": "code"
     },
     {
@@ -1246,19 +923,25 @@
     {
       "path": "crates/oxiguitar-layout/src/draw.rs",
       "language": "rust",
-      "sizeLines": 455,
+      "sizeLines": 591,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-layout/src/drawing.rs",
+      "language": "rust",
+      "sizeLines": 330,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-layout/src/effects.rs",
       "language": "rust",
-      "sizeLines": 666,
+      "sizeLines": 1271,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-layout/src/engrave.rs",
       "language": "rust",
-      "sizeLines": 2075,
+      "sizeLines": 2535,
       "fileCategory": "code"
     },
     {
@@ -1276,13 +959,13 @@
     {
       "path": "crates/oxiguitar-layout/src/hits.rs",
       "language": "rust",
-      "sizeLines": 593,
+      "sizeLines": 646,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-layout/src/lib.rs",
       "language": "rust",
-      "sizeLines": 334,
+      "sizeLines": 355,
       "fileCategory": "code"
     },
     {
@@ -1294,31 +977,31 @@
     {
       "path": "crates/oxiguitar-layout/src/pitch.rs",
       "language": "rust",
-      "sizeLines": 299,
+      "sizeLines": 271,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-layout/src/plan.rs",
       "language": "rust",
-      "sizeLines": 798,
+      "sizeLines": 1061,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-layout/src/rhythm.rs",
       "language": "rust",
-      "sizeLines": 252,
+      "sizeLines": 265,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-layout/src/system.rs",
       "language": "rust",
-      "sizeLines": 505,
+      "sizeLines": 647,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-layout/tests/engrave.rs",
       "language": "rust",
-      "sizeLines": 851,
+      "sizeLines": 1393,
       "fileCategory": "code"
     },
     {
@@ -1330,49 +1013,55 @@
     {
       "path": "crates/oxiguitar-model/src/bar.rs",
       "language": "rust",
-      "sizeLines": 186,
+      "sizeLines": 478,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-model/src/drums.rs",
+      "language": "rust",
+      "sizeLines": 197,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-model/src/duration.rs",
       "language": "rust",
-      "sizeLines": 207,
+      "sizeLines": 209,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-model/src/lib.rs",
       "language": "rust",
-      "sizeLines": 50,
+      "sizeLines": 52,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-model/src/lyrics.rs",
       "language": "rust",
-      "sizeLines": 291,
+      "sizeLines": 336,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-model/src/note.rs",
       "language": "rust",
-      "sizeLines": 219,
+      "sizeLines": 403,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-model/src/ratio.rs",
       "language": "rust",
-      "sizeLines": 236,
+      "sizeLines": 241,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-model/src/score.rs",
       "language": "rust",
-      "sizeLines": 295,
+      "sizeLines": 549,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-model/src/track.rs",
       "language": "rust",
-      "sizeLines": 220,
+      "sizeLines": 377,
       "fileCategory": "code"
     },
     {
@@ -1384,13 +1073,13 @@
     {
       "path": "crates/oxiguitar-model/src/wire.rs",
       "language": "rust",
-      "sizeLines": 987,
+      "sizeLines": 1670,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-play/Cargo.toml",
       "language": "toml",
-      "sizeLines": 37,
+      "sizeLines": 38,
       "fileCategory": "config"
     },
     {
@@ -1402,19 +1091,25 @@
     {
       "path": "crates/oxiguitar-play/src/engine.rs",
       "language": "rust",
-      "sizeLines": 1067,
+      "sizeLines": 1146,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-play/src/events.rs",
       "language": "rust",
-      "sizeLines": 764,
+      "sizeLines": 1582,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-play/src/export.rs",
+      "language": "rust",
+      "sizeLines": 237,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-play/src/lib.rs",
       "language": "rust",
-      "sizeLines": 96,
+      "sizeLines": 105,
       "fileCategory": "code"
     },
     {
@@ -1426,13 +1121,13 @@
     {
       "path": "crates/oxiguitar-play/src/plugin_source.rs",
       "language": "rust",
-      "sizeLines": 270,
+      "sizeLines": 725,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-play/src/schedule.rs",
       "language": "rust",
-      "sizeLines": 205,
+      "sizeLines": 207,
       "fileCategory": "code"
     },
     {
@@ -1444,25 +1139,25 @@
     {
       "path": "crates/oxiguitar-play/src/time.rs",
       "language": "rust",
-      "sizeLines": 435,
+      "sizeLines": 549,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-play/tests/common/mod.rs",
       "language": "rust",
-      "sizeLines": 170,
+      "sizeLines": 177,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-play/tests/corpus.rs",
       "language": "rust",
-      "sizeLines": 157,
+      "sizeLines": 142,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-play/tests/engine.rs",
       "language": "rust",
-      "sizeLines": 308,
+      "sizeLines": 379,
       "fileCategory": "code"
     },
     {
@@ -1474,13 +1169,19 @@
     {
       "path": "crates/oxiguitar-play/tests/golden.rs",
       "language": "rust",
-      "sizeLines": 75,
+      "sizeLines": 77,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-play/tests/practice.rs",
+      "language": "rust",
+      "sizeLines": 192,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-api/Cargo.toml",
       "language": "toml",
-      "sizeLines": 20,
+      "sizeLines": 25,
       "fileCategory": "config"
     },
     {
@@ -1522,7 +1223,7 @@
     {
       "path": "crates/oxiguitar-plugin-api/src/display.rs",
       "language": "rust",
-      "sizeLines": 282,
+      "sizeLines": 365,
       "fileCategory": "code"
     },
     {
@@ -1534,25 +1235,25 @@
     {
       "path": "crates/oxiguitar-plugin-api/src/lib.rs",
       "language": "rust",
-      "sizeLines": 107,
+      "sizeLines": 165,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-api/src/manifest.rs",
       "language": "rust",
-      "sizeLines": 942,
+      "sizeLines": 1819,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-api/src/message.rs",
       "language": "rust",
-      "sizeLines": 822,
+      "sizeLines": 1963,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-api/src/realtime.rs",
       "language": "rust",
-      "sizeLines": 251,
+      "sizeLines": 259,
       "fileCategory": "code"
     },
     {
@@ -1564,43 +1265,55 @@
     {
       "path": "crates/oxiguitar-plugin-api/src/score2.rs",
       "language": "rust",
-      "sizeLines": 643,
+      "sizeLines": 1095,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-api/src/signature.rs",
       "language": "rust",
-      "sizeLines": 258,
+      "sizeLines": 839,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-api/src/tab.rs",
       "language": "rust",
-      "sizeLines": 421,
+      "sizeLines": 695,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-plugin-api/src/view.rs",
+      "language": "rust",
+      "sizeLines": 186,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-test/Cargo.toml",
       "language": "toml",
-      "sizeLines": 42,
+      "sizeLines": 58,
       "fileCategory": "config"
     },
     {
       "path": "crates/oxiguitar-plugin-test/src/lib.rs",
       "language": "rust",
-      "sizeLines": 904,
+      "sizeLines": 1385,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-test/src/main.rs",
       "language": "rust",
-      "sizeLines": 66,
+      "sizeLines": 160,
+      "fileCategory": "code"
+    },
+    {
+      "path": "crates/oxiguitar-plugin-test/src/released.rs",
+      "language": "rust",
+      "sizeLines": 178,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-test/src/syscalls.rs",
       "language": "rust",
-      "sizeLines": 261,
+      "sizeLines": 313,
       "fileCategory": "code"
     },
     {
@@ -1612,25 +1325,19 @@
     {
       "path": "crates/oxiguitar-plugin-test/tests/contract.rs",
       "language": "rust",
-      "sizeLines": 1300,
-      "fileCategory": "code"
-    },
-    {
-      "path": "crates/oxiguitar-plugin-test/tests/ours.rs",
-      "language": "rust",
-      "sizeLines": 429,
+      "sizeLines": 3118,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin-test/tests/unsafe_audit.rs",
       "language": "rust",
-      "sizeLines": 74,
+      "sizeLines": 80,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin/Cargo.toml",
       "language": "toml",
-      "sizeLines": 31,
+      "sizeLines": 33,
       "fileCategory": "config"
     },
     {
@@ -1648,19 +1355,19 @@
     {
       "path": "crates/oxiguitar-plugin/src/audio.rs",
       "language": "rust",
-      "sizeLines": 214,
+      "sizeLines": 318,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin/src/glue.rs",
       "language": "rust",
-      "sizeLines": 603,
+      "sizeLines": 737,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-plugin/src/lib.rs",
       "language": "rust",
-      "sizeLines": 1555,
+      "sizeLines": 2140,
       "fileCategory": "code"
     },
     {
@@ -1678,25 +1385,25 @@
     {
       "path": "crates/oxiguitar-render/src/pdf.rs",
       "language": "rust",
-      "sizeLines": 246,
+      "sizeLines": 248,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-render/src/raster.rs",
       "language": "rust",
-      "sizeLines": 377,
+      "sizeLines": 420,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-testgen/Cargo.toml",
       "language": "toml",
-      "sizeLines": 33,
+      "sizeLines": 32,
       "fileCategory": "config"
     },
     {
       "path": "crates/oxiguitar-testgen/src/big.rs",
       "language": "rust",
-      "sizeLines": 302,
+      "sizeLines": 306,
       "fileCategory": "code"
     },
     {
@@ -1714,7 +1421,7 @@
     {
       "path": "crates/oxiguitar-testgen/src/references.rs",
       "language": "rust",
-      "sizeLines": 801,
+      "sizeLines": 814,
       "fileCategory": "code"
     },
     {
@@ -1726,13 +1433,13 @@
     {
       "path": "crates/oxiguitar-testgen/tests/guitar_pro_7_6.rs",
       "language": "rust",
-      "sizeLines": 182,
+      "sizeLines": 189,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-testgen/tests/guitar_pro_check.rs",
       "language": "rust",
-      "sizeLines": 74,
+      "sizeLines": 79,
       "fileCategory": "code"
     },
     {
@@ -1744,13 +1451,13 @@
     {
       "path": "crates/oxiguitar-testgen/tests/read.rs",
       "language": "rust",
-      "sizeLines": 42,
+      "sizeLines": 43,
       "fileCategory": "code"
     },
     {
       "path": "crates/oxiguitar-testgen/tests/visual.rs",
       "language": "rust",
-      "sizeLines": 508,
+      "sizeLines": 506,
       "fileCategory": "code"
     },
     {
@@ -1774,7 +1481,7 @@
     {
       "path": "crates/oxiguitar-tools/tests/corpus.rs",
       "language": "rust",
-      "sizeLines": 52,
+      "sizeLines": 38,
       "fileCategory": "code"
     },
     {
@@ -1786,13 +1493,13 @@
     {
       "path": "debian/control",
       "language": "unknown",
-      "sizeLines": 65,
+      "sizeLines": 58,
       "fileCategory": "code"
     },
     {
       "path": "debian/copyright",
       "language": "unknown",
-      "sizeLines": 171,
+      "sizeLines": 192,
       "fileCategory": "code"
     },
     {
@@ -1810,7 +1517,7 @@
     {
       "path": "debian/rules",
       "language": "unknown",
-      "sizeLines": 102,
+      "sizeLines": 82,
       "fileCategory": "code"
     },
     {
@@ -1840,7 +1547,7 @@
     {
       "path": "deny.toml",
       "language": "toml",
-      "sizeLines": 82,
+      "sizeLines": 81,
       "fileCategory": "config"
     },
     {
@@ -1882,19 +1589,19 @@
     {
       "path": "docs/adr/0006-wayland-file-drops.md",
       "language": "markdown",
-      "sizeLines": 38,
+      "sizeLines": 39,
       "fileCategory": "docs"
     },
     {
       "path": "docs/adr/0007-macos-open-document-events.md",
       "language": "markdown",
-      "sizeLines": 36,
+      "sizeLines": 37,
       "fileCategory": "docs"
     },
     {
       "path": "docs/adr/0008-plugin-architecture.md",
       "language": "markdown",
-      "sizeLines": 94,
+      "sizeLines": 100,
       "fileCategory": "docs"
     },
     {
@@ -1904,33 +1611,105 @@
       "fileCategory": "docs"
     },
     {
+      "path": "docs/adr/0010-zoom-persistence.md",
+      "language": "markdown",
+      "sizeLines": 52,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adr/0011-no-environment-checks.md",
+      "language": "markdown",
+      "sizeLines": 37,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adr/0012-the-core-owns-nothing-of-a-plugin.md",
+      "language": "markdown",
+      "sizeLines": 33,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adr/0013-plugin-ui-in-interpreted-slint.md",
+      "language": "markdown",
+      "sizeLines": 28,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adr/0014-plugin-files-are-tar-archives.md",
+      "language": "markdown",
+      "sizeLines": 28,
+      "fileCategory": "docs"
+    },
+    {
       "path": "docs/debian.md",
       "language": "markdown",
-      "sizeLines": 39,
+      "sizeLines": 40,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/design/clean-and-distorted.md",
+      "language": "markdown",
+      "sizeLines": 85,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/design/drums.md",
+      "language": "markdown",
+      "sizeLines": 67,
       "fileCategory": "docs"
     },
     {
       "path": "docs/design/editor.md",
       "language": "markdown",
-      "sizeLines": 113,
+      "sizeLines": 117,
       "fileCategory": "docs"
     },
     {
       "path": "docs/design/engraving.md",
       "language": "markdown",
-      "sizeLines": 102,
+      "sizeLines": 113,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/design/fingering.md",
+      "language": "markdown",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/design/fit-bars.md",
+      "language": "markdown",
+      "sizeLines": 56,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/design/flatpak.md",
+      "language": "markdown",
+      "sizeLines": 124,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/design/harmonize.md",
+      "language": "markdown",
+      "sizeLines": 106,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/design/palette.md",
+      "language": "markdown",
+      "sizeLines": 111,
       "fileCategory": "docs"
     },
     {
       "path": "docs/design/player.md",
       "language": "markdown",
-      "sizeLines": 223,
+      "sizeLines": 259,
       "fileCategory": "docs"
     },
     {
       "path": "docs/design/plugins.md",
       "language": "markdown",
-      "sizeLines": 264,
+      "sizeLines": 367,
       "fileCategory": "docs"
     },
     {
@@ -1942,7 +1721,7 @@
     {
       "path": "docs/design/ui.md",
       "language": "markdown",
-      "sizeLines": 98,
+      "sizeLines": 102,
       "fileCategory": "docs"
     },
     {
@@ -1978,49 +1757,73 @@
     {
       "path": "docs/manual/src/README.md",
       "language": "markdown",
-      "sizeLines": 11,
+      "sizeLines": 39,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/SUMMARY.md",
       "language": "markdown",
-      "sizeLines": 20,
+      "sizeLines": 25,
       "fileCategory": "docs"
     },
     {
-      "path": "docs/manual/src/better-sounds.md",
+      "path": "docs/manual/src/credits.md",
       "language": "markdown",
-      "sizeLines": 73,
+      "sizeLines": 61,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/editing.md",
       "language": "markdown",
-      "sizeLines": 197,
+      "sizeLines": 341,
       "fileCategory": "docs"
     },
     {
-      "path": "docs/manual/src/hear-it.md",
+      "path": "docs/manual/src/features.md",
       "language": "markdown",
-      "sizeLines": 45,
+      "sizeLines": 124,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/manual/src/install-linux.md",
+      "language": "markdown",
+      "sizeLines": 23,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/manual/src/install-macos.md",
+      "language": "markdown",
+      "sizeLines": 23,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/manual/src/install-windows.md",
+      "language": "markdown",
+      "sizeLines": 17,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/installing.md",
       "language": "markdown",
-      "sizeLines": 77,
+      "sizeLines": 68,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/keys.md",
       "language": "markdown",
-      "sizeLines": 42,
+      "sizeLines": 44,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/layouts.md",
       "language": "markdown",
       "sizeLines": 12,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/manual/src/official-plugins.md",
+      "language": "markdown",
+      "sizeLines": 11,
       "fileCategory": "docs"
     },
     {
@@ -2038,37 +1841,43 @@
     {
       "path": "docs/manual/src/playback.md",
       "language": "markdown",
-      "sizeLines": 49,
+      "sizeLines": 79,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/plugins.md",
       "language": "markdown",
-      "sizeLines": 71,
+      "sizeLines": 101,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/saving.md",
       "language": "markdown",
-      "sizeLines": 41,
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/manual/src/testing.md",
+      "language": "markdown",
+      "sizeLines": 95,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/tools.md",
       "language": "markdown",
-      "sizeLines": 11,
+      "sizeLines": 15,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/tracks.md",
       "language": "markdown",
-      "sizeLines": 47,
+      "sizeLines": 62,
       "fileCategory": "docs"
     },
     {
       "path": "docs/manual/src/view.md",
       "language": "markdown",
-      "sizeLines": 7,
+      "sizeLines": 9,
       "fileCategory": "docs"
     },
     {
@@ -2081,6 +1890,12 @@
       "path": "docs/manual/src/zoom.md",
       "language": "markdown",
       "sizeLines": 19,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/parity.md",
+      "language": "markdown",
+      "sizeLines": 228,
       "fileCategory": "docs"
     },
     {
@@ -2098,13 +1913,25 @@
     {
       "path": "docs/plugins/src/SUMMARY.md",
       "language": "markdown",
-      "sizeLines": 20,
+      "sizeLines": 25,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/plugins/src/advice.md",
+      "language": "markdown",
+      "sizeLines": 63,
       "fileCategory": "docs"
     },
     {
       "path": "docs/plugins/src/building.md",
       "language": "markdown",
-      "sizeLines": 62,
+      "sizeLines": 98,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/plugins/src/drawing.md",
+      "language": "markdown",
+      "sizeLines": 76,
       "fileCategory": "docs"
     },
     {
@@ -2114,51 +1941,63 @@
       "fileCategory": "docs"
     },
     {
+      "path": "docs/plugins/src/exporters.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
       "path": "docs/plugins/src/formats.md",
       "language": "markdown",
-      "sizeLines": 124,
+      "sizeLines": 128,
       "fileCategory": "docs"
     },
     {
       "path": "docs/plugins/src/installing.md",
       "language": "markdown",
-      "sizeLines": 55,
+      "sizeLines": 57,
       "fileCategory": "docs"
     },
     {
       "path": "docs/plugins/src/instruments.md",
       "language": "markdown",
-      "sizeLines": 50,
+      "sizeLines": 105,
       "fileCategory": "docs"
     },
     {
       "path": "docs/plugins/src/manifest.md",
       "language": "markdown",
-      "sizeLines": 77,
+      "sizeLines": 119,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/plugins/src/playing.md",
+      "language": "markdown",
+      "sizeLines": 48,
       "fileCategory": "docs"
     },
     {
       "path": "docs/plugins/src/sdk.md",
       "language": "markdown",
-      "sizeLines": 89,
+      "sizeLines": 94,
       "fileCategory": "docs"
     },
     {
       "path": "docs/plugins/src/services.md",
       "language": "markdown",
-      "sizeLines": 85,
+      "sizeLines": 92,
       "fileCategory": "docs"
     },
     {
       "path": "docs/plugins/src/settings.md",
       "language": "markdown",
-      "sizeLines": 40,
+      "sizeLines": 88,
       "fileCategory": "docs"
     },
     {
       "path": "docs/plugins/src/tabs.md",
       "language": "markdown",
-      "sizeLines": 120,
+      "sizeLines": 160,
       "fileCategory": "docs"
     },
     {
@@ -2176,7 +2015,7 @@
     {
       "path": "docs/plugins/src/tools.md",
       "language": "markdown",
-      "sizeLines": 39,
+      "sizeLines": 113,
       "fileCategory": "docs"
     },
     {
@@ -2186,9 +2025,15 @@
       "fileCategory": "docs"
     },
     {
+      "path": "docs/plugins/src/ui.md",
+      "language": "markdown",
+      "sizeLines": 112,
+      "fileCategory": "docs"
+    },
+    {
       "path": "docs/plugins/src/versions.md",
       "language": "markdown",
-      "sizeLines": 21,
+      "sizeLines": 52,
       "fileCategory": "docs"
     },
     {
@@ -2200,7 +2045,7 @@
     {
       "path": "docs/plugins/template/.github/workflows/build.yml",
       "language": "yaml",
-      "sizeLines": 76,
+      "sizeLines": 78,
       "fileCategory": "config"
     },
     {
@@ -2218,7 +2063,7 @@
     {
       "path": "docs/plugins/template/build-oxp.sh",
       "language": "shell",
-      "sizeLines": 56,
+      "sizeLines": 78,
       "fileCategory": "script"
     },
     {
@@ -2270,9 +2115,21 @@
       "fileCategory": "code"
     },
     {
+      "path": "docs/superpowers/plans/2026-11-10-custom-bar-colours.md",
+      "language": "markdown",
+      "sizeLines": 598,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-11-10-custom-bar-colours-design.md",
+      "language": "markdown",
+      "sizeLines": 203,
+      "fileCategory": "docs"
+    },
+    {
       "path": "docs/testing.md",
       "language": "markdown",
-      "sizeLines": 86,
+      "sizeLines": 88,
       "fileCategory": "docs"
     },
     {
@@ -2297,6 +2154,12 @@
       "path": "fixtures/events/beams-and-flags.gp.events",
       "language": "events",
       "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "fixtures/events/beat-text-in-voice-2.gp.events",
+      "language": "events",
+      "sizeLines": 44,
       "fileCategory": "code"
     },
     {
@@ -2762,6 +2625,18 @@
       "fileCategory": "code"
     },
     {
+      "path": "fixtures/guitar-pro-check/beat-text-in-voice-2.gp",
+      "language": "gp",
+      "sizeLines": 12,
+      "fileCategory": "code"
+    },
+    {
+      "path": "fixtures/guitar-pro-check/beat-text-in-voice-2.gp5",
+      "language": "gp5",
+      "sizeLines": 4,
+      "fileCategory": "code"
+    },
+    {
       "path": "fixtures/guitar-pro-check/beat-text.gp",
       "language": "gp",
       "sizeLines": 5,
@@ -2812,7 +2687,7 @@
     {
       "path": "fixtures/guitar-pro-check/conversions.txt",
       "language": "txt",
-      "sizeLines": 248,
+      "sizeLines": 250,
       "fileCategory": "docs"
     },
     {
@@ -3406,7 +3281,7 @@
     {
       "path": "fixtures/reference/README.md",
       "language": "markdown",
-      "sizeLines": 56,
+      "sizeLines": 57,
       "fileCategory": "docs"
     },
     {
@@ -3425,6 +3300,12 @@
       "path": "fixtures/reference/beams-and-flags.gp",
       "language": "gp",
       "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "fixtures/reference/beat-text-in-voice-2.gp",
+      "language": "gp",
+      "sizeLines": 13,
       "fileCategory": "code"
     },
     {
@@ -3710,82 +3591,16 @@
       "fileCategory": "code"
     },
     {
-      "path": "fixtures/sfz/README.md",
-      "language": "markdown",
-      "sizeLines": 11,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "fixtures/sfz/sine-16.flac",
-      "language": "flac",
-      "sizeLines": 2,
-      "fileCategory": "code"
-    },
-    {
-      "path": "fixtures/sfz/sine-24.flac",
-      "language": "flac",
-      "sizeLines": 15,
-      "fileCategory": "code"
-    },
-    {
-      "path": "fixtures/sfz/sine.ogg",
-      "language": "ogg",
-      "sizeLines": 13,
-      "fileCategory": "code"
-    },
-    {
       "path": "fuzz/Cargo.toml",
       "language": "toml",
-      "sizeLines": 92,
+      "sizeLines": 33,
       "fileCategory": "config"
     },
     {
       "path": "fuzz/README.md",
       "language": "markdown",
-      "sizeLines": 43,
+      "sizeLines": 34,
       "fileCategory": "docs"
-    },
-    {
-      "path": "fuzz/fuzz_targets/any_file.rs",
-      "language": "rust",
-      "sizeLines": 15,
-      "fileCategory": "code"
-    },
-    {
-      "path": "fuzz/fuzz_targets/gp_writer.rs",
-      "language": "rust",
-      "sizeLines": 33,
-      "fileCategory": "code"
-    },
-    {
-      "path": "fuzz/fuzz_targets/gpif.rs",
-      "language": "rust",
-      "sizeLines": 27,
-      "fileCategory": "code"
-    },
-    {
-      "path": "fuzz/fuzz_targets/guitar_pro_3_5.rs",
-      "language": "rust",
-      "sizeLines": 20,
-      "fileCategory": "code"
-    },
-    {
-      "path": "fuzz/fuzz_targets/guitar_pro_6.rs",
-      "language": "rust",
-      "sizeLines": 16,
-      "fileCategory": "code"
-    },
-    {
-      "path": "fuzz/fuzz_targets/guitar_pro_7.rs",
-      "language": "rust",
-      "sizeLines": 17,
-      "fileCategory": "code"
-    },
-    {
-      "path": "fuzz/fuzz_targets/plugin_dispatch.rs",
-      "language": "rust",
-      "sizeLines": 45,
-      "fileCategory": "code"
     },
     {
       "path": "fuzz/fuzz_targets/plugin_tab.rs",
@@ -3794,292 +3609,16 @@
       "fileCategory": "code"
     },
     {
-      "path": "fuzz/gpif.dict",
-      "language": "dict",
-      "sizeLines": 758,
-      "fileCategory": "code"
-    },
-    {
       "path": "fuzz/run.sh",
       "language": "shell",
-      "sizeLines": 46,
+      "sizeLines": 43,
       "fileCategory": "script"
     },
     {
       "path": "fuzz/seeds.sh",
       "language": "shell",
-      "sizeLines": 27,
+      "sizeLines": 17,
       "fileCategory": "script"
-    },
-    {
-      "path": "plugins/audio-alsa/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 42,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/audio-alsa/manifest.json",
-      "language": "json",
-      "sizeLines": 25,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/audio-alsa/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 56,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/audio-coreaudio/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 42,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/audio-coreaudio/manifest.json",
-      "language": "json",
-      "sizeLines": 25,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/audio-coreaudio/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 60,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/audio-pipewire/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 43,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/audio-pipewire/manifest.json",
-      "language": "json",
-      "sizeLines": 25,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/audio-pipewire/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 56,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/audio-wasapi/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 42,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/audio-wasapi/manifest.json",
-      "language": "json",
-      "sizeLines": 25,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/audio-wasapi/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 56,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/gp/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 41,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gp/manifest.json",
-      "language": "json",
-      "sizeLines": 22,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gp/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 99,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/gp3/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 41,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gp3/manifest.json",
-      "language": "json",
-      "sizeLines": 30,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gp3/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 72,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/gp4/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 41,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gp4/manifest.json",
-      "language": "json",
-      "sizeLines": 30,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gp4/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 72,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/gp5/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 41,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gp5/manifest.json",
-      "language": "json",
-      "sizeLines": 30,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gp5/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 101,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/gpx/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 41,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gpx/manifest.json",
-      "language": "json",
-      "sizeLines": 23,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/gpx/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 72,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/Cargo.toml",
-      "language": "toml",
-      "sizeLines": 37,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/soundfont/manifest.json",
-      "language": "json",
-      "sizeLines": 15,
-      "fileCategory": "config"
-    },
-    {
-      "path": "plugins/soundfont/src/dls.rs",
-      "language": "rust",
-      "sizeLines": 842,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/lib.rs",
-      "language": "rust",
-      "sizeLines": 364,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/play.rs",
-      "language": "rust",
-      "sizeLines": 1430,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/riff.rs",
-      "language": "rust",
-      "sizeLines": 115,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sets.rs",
-      "language": "rust",
-      "sizeLines": 284,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/settings.rs",
-      "language": "rust",
-      "sizeLines": 462,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sf2.rs",
-      "language": "rust",
-      "sizeLines": 399,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sf3.rs",
-      "language": "rust",
-      "sizeLines": 280,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sfz/instrument.rs",
-      "language": "rust",
-      "sizeLines": 532,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sfz/maps.rs",
-      "language": "rust",
-      "sizeLines": 247,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sfz/mod.rs",
-      "language": "rust",
-      "sizeLines": 254,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sfz/region.rs",
-      "language": "rust",
-      "sizeLines": 1537,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sfz/sample.rs",
-      "language": "rust",
-      "sizeLines": 475,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sfz/sampler.rs",
-      "language": "rust",
-      "sizeLines": 2089,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sfz/sinc.rs",
-      "language": "rust",
-      "sizeLines": 185,
-      "fileCategory": "code"
-    },
-    {
-      "path": "plugins/soundfont/src/sfz/text.rs",
-      "language": "rust",
-      "sizeLines": 544,
-      "fileCategory": "code"
     },
     {
       "path": "plugins/test-second/Cargo.toml",
@@ -4106,9 +3645,15 @@
       "fileCategory": "config"
     },
     {
+      "path": "plugins/test/assets/hello.txt",
+      "language": "txt",
+      "sizeLines": 1,
+      "fileCategory": "docs"
+    },
+    {
       "path": "plugins/test/manifest.json",
       "language": "json",
-      "sizeLines": 49,
+      "sizeLines": 68,
       "fileCategory": "config"
     },
     {
@@ -4120,13 +3665,19 @@
     {
       "path": "plugins/test/src/lib.rs",
       "language": "rust",
-      "sizeLines": 722,
+      "sizeLines": 1611,
       "fileCategory": "code"
     },
     {
       "path": "plugins/test/src/sine.rs",
       "language": "rust",
-      "sizeLines": 222,
+      "sizeLines": 306,
+      "fileCategory": "code"
+    },
+    {
+      "path": "plugins/test/ui/test.slint",
+      "language": "slint",
+      "sizeLines": 47,
       "fileCategory": "code"
     },
     {
@@ -4136,33 +3687,33 @@
       "fileCategory": "config"
     },
     {
-      "path": "scripts/build-plugins.sh",
+      "path": "scripts/apt-install.sh",
       "language": "shell",
-      "sizeLines": 95,
+      "sizeLines": 140,
       "fileCategory": "script"
     },
     {
       "path": "scripts/check-dco.sh",
       "language": "shell",
-      "sizeLines": 53,
+      "sizeLines": 70,
       "fileCategory": "script"
     },
     {
       "path": "scripts/check-display-crates.sh",
       "language": "shell",
-      "sizeLines": 58,
+      "sizeLines": 63,
       "fileCategory": "script"
     },
     {
       "path": "scripts/check-plugin-template.sh",
       "language": "shell",
-      "sizeLines": 114,
+      "sizeLines": 129,
       "fileCategory": "script"
     },
     {
       "path": "scripts/debian/crate-audit.py",
       "language": "python",
-      "sizeLines": 200,
+      "sizeLines": 195,
       "fileCategory": "code"
     },
     {
@@ -4172,10 +3723,16 @@
       "fileCategory": "script"
     },
     {
-      "path": "scripts/guitar-pro-check.sh",
+      "path": "scripts/enable-pages.sh",
       "language": "shell",
-      "sizeLines": 30,
+      "sizeLines": 163,
       "fileCategory": "script"
+    },
+    {
+      "path": "scripts/harmony/measure.py",
+      "language": "python",
+      "sizeLines": 620,
+      "fileCategory": "code"
     },
     {
       "path": "scripts/install-desktop-entry.sh",
@@ -4184,22 +3741,16 @@
       "fileCategory": "script"
     },
     {
-      "path": "scripts/interop/alphatab.mjs",
-      "language": "javascript",
-      "sizeLines": 159,
-      "fileCategory": "code"
+      "path": "scripts/lib/packages-token.sh",
+      "language": "shell",
+      "sizeLines": 44,
+      "fileCategory": "script"
     },
     {
-      "path": "scripts/interop/musescore.py",
-      "language": "python",
-      "sizeLines": 241,
-      "fileCategory": "code"
-    },
-    {
-      "path": "scripts/interop/package.json",
-      "language": "json",
-      "sizeLines": 9,
-      "fileCategory": "config"
+      "path": "scripts/new-repo.sh",
+      "language": "shell",
+      "sizeLines": 1028,
+      "fileCategory": "script"
     },
     {
       "path": "scripts/no-network.sh",
@@ -4208,10 +3759,40 @@
       "fileCategory": "script"
     },
     {
+      "path": "scripts/package/AppRun",
+      "language": "unknown",
+      "sizeLines": 15,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/package/appimage-catalog-test.sh",
+      "language": "shell",
+      "sizeLines": 110,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/package/build-linux.sh",
+      "language": "shell",
+      "sizeLines": 78,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/package/check-glibc.sh",
+      "language": "shell",
+      "sizeLines": 50,
+      "fileCategory": "script"
+    },
+    {
       "path": "scripts/package/in-wayland.sh",
       "language": "shell",
       "sizeLines": 32,
       "fileCategory": "script"
+    },
+    {
+      "path": "scripts/package/io.github.mateusrdp.OxiGuitar.yml",
+      "language": "yaml",
+      "sizeLines": 92,
+      "fileCategory": "config"
     },
     {
       "path": "scripts/package/licenses.hbs",
@@ -4222,7 +3803,7 @@
     {
       "path": "scripts/package/licenses.sh",
       "language": "shell",
-      "sizeLines": 77,
+      "sizeLines": 78,
       "fileCategory": "script"
     },
     {
@@ -4234,20 +3815,20 @@
     {
       "path": "scripts/package/linux.sh",
       "language": "shell",
-      "sizeLines": 436,
+      "sizeLines": 354,
       "fileCategory": "script"
     },
     {
       "path": "scripts/package/macos.sh",
       "language": "shell",
-      "sizeLines": 85,
+      "sizeLines": 66,
       "fileCategory": "script"
     },
     {
-      "path": "scripts/package/plugins-README.txt",
-      "language": "txt",
-      "sizeLines": 22,
-      "fileCategory": "docs"
+      "path": "scripts/package/oxiguitar-start",
+      "language": "unknown",
+      "sizeLines": 16,
+      "fileCategory": "code"
     },
     {
       "path": "scripts/package/release-notes.md",
@@ -4260,6 +3841,42 @@
       "language": "shell",
       "sizeLines": 31,
       "fileCategory": "script"
+    },
+    {
+      "path": "scripts/release/bump.sh",
+      "language": "shell",
+      "sizeLines": 118,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/released-plugins.sh",
+      "language": "shell",
+      "sizeLines": 114,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/split-history.sh",
+      "language": "shell",
+      "sizeLines": 103,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/test-all.py",
+      "language": "python",
+      "sizeLines": 1393,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-no-network.sh",
+      "language": "shell",
+      "sizeLines": 31,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/upstream-notes.py",
+      "language": "python",
+      "sizeLines": 82,
+      "fileCategory": "code"
     },
     {
       "path": "scripts/wayland-dnd-test/Cargo.toml",
@@ -4288,7 +3905,7 @@
     {
       "path": "spikes/README.md",
       "language": "markdown",
-      "sizeLines": 67,
+      "sizeLines": 71,
       "fileCategory": "docs"
     },
     {
@@ -4422,6 +4039,67 @@
       "language": "rust",
       "sizeLines": 89,
       "fileCategory": "code"
+    },
+    {
+      "path": "tests/suite.json",
+      "language": "json",
+      "sizeLines": 86,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tests/support/corpus.rs",
+      "language": "rust",
+      "sizeLines": 211,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/support/guitar_pro.rs",
+      "language": "rust",
+      "sizeLines": 41,
+      "fileCategory": "code"
     }
-  ]
+  ],
+  "totalFiles": 676,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "very-large",
+  "failures": [],
+  "stats": {
+    "filesScanned": 676,
+    "byCategory": {
+      "config": 50,
+      "code": 485,
+      "docs": 107,
+      "infra": 8,
+      "script": 26
+    },
+    "byLanguage": {
+      "1": 2,
+      "toml": 35,
+      "unknown": 15,
+      "yaml": 11,
+      "markdown": 102,
+      "json": 9,
+      "otf": 1,
+      "txt": 5,
+      "desktop": 1,
+      "xml": 3,
+      "rust": 212,
+      "slint": 6,
+      "sf2": 1,
+      "docs": 1,
+      "manpages": 1,
+      "shell": 26,
+      "extab": 1,
+      "events": 56,
+      "gp": 110,
+      "gp3": 1,
+      "gp4": 1,
+      "gp5": 57,
+      "gpx": 1,
+      "gpif": 10,
+      "answer": 2,
+      "python": 5,
+      "hbs": 1
+    }
+  }
 }
