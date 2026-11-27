@@ -146,6 +146,14 @@ impl PluginMenus {
         ui.set_plugin_items_help(model(self.help));
         ui.set_plugin_items_page(model(self.page));
         ui.set_plugin_items_track(model(self.track));
+        // Flatten all own-menu items for the flat Plugins menu.
+        let flat: Vec<PluginMenuItem> = self
+            .own
+            .iter()
+            .flat_map(|(_, items)| items)
+            .cloned()
+            .collect();
+        ui.set_plugin_items_plugins(model(flat));
         ui.set_plugin_menus(ModelRc::new(VecModel::from(
             self.own
                 .into_iter()
