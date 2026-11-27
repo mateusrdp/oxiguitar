@@ -1,5 +1,5 @@
 {
-  "interface": "1.16",
+  "interface": "2.0",
   "id": "oxiguitar.test",
   "name": "Test plugin",
   "version": "0.23.0",
@@ -34,20 +34,13 @@
     { "interface": "test-echo", "id": "elsewhere", "name": "Only on Plan 9", "priority": 20, "conditions": { "os": ["plan9"] } },
     { "interface": "audio-device", "id": "fake", "name": "Fake output (a test)", "priority": -100 }
   ],
-  "tabs": [
-    { "id": "panel", "title": "Test", "area": "bottom" },
-    { "id": "side", "title": "Test side", "area": "right" },
-    { "id": "ask", "title": "Test Dialog", "area": "dialog" },
-    { "id": "settings", "title": "Test Settings", "area": "dialog" },
-    { "id": "raw-options", "title": "Raw Test Audio", "area": "dialog" }
-  ],
   "events": ["score", "selection", "playback"],
   "tools": [
     { "id": "mark", "name": "Mark the Title", "description": "Adds an exclamation mark to the score's title, as one change.",
       "options": { "type": "object", "properties": { "suffix": { "type": "string" } }, "required": ["suffix"] } },
     { "id": "link", "name": "Show a Footer Link", "description": "Shows a warning in the footer with a link to the plugin guide.", "palette": { "text": "Lnk" }, "menu": "Tools" },
     { "id": "stamp", "name": "Stamp the First Beat", "description": "Keeps the test plugin's data on the first beat with notes, which its gain then silences.", "palette": { "section": "Effects", "text": "T!" }, "menu": "Test", "shortcut": "Ctrl+Alt+J" },
-    { "id": "ask", "name": "Open the Test Dialog", "description": "Opens the test plugin's dialog and shows its side tab.", "palette": { "section": "Test tools", "symbol": "U+E4A0" }, "menu": "Page", "toolbar": { "text": "Ask" } },
+    { "id": "ask", "name": "Open the Test Window", "description": "Opens the test plugin's window and shows its panel.", "palette": { "section": "Test tools", "symbol": "U+E4A0" }, "menu": "Page", "toolbar": { "text": "Ask" } },
     { "id": "settings", "name": "Test Settings…", "description": "Opens the test plugin's settings, kept with OK and forgotten with Cancel.", "edits": false }
   ],
   "draws": true,
@@ -63,6 +56,10 @@
   "views": [
     { "id": "window", "component": "TestWindow", "place": "window" },
     { "id": "slint-panel", "component": "TestPanel", "place": "left", "title": "Test Slint" },
-    { "id": "slint-section", "component": "TestSection", "place": "track", "title": "Test Slint section" }
+    { "id": "slint-section", "component": "TestSection", "place": "track", "title": "Test Slint section" },
+    { "id": "test", "component": "TestSection", "place": "track", "title": "Test section" },
+    { "id": "panel", "component": "TestEvents", "place": "bottom", "title": "Test" },
+    { "id": "settings", "component": "TestSettings", "place": "window" },
+    { "id": "raw-options", "component": "RawOptions", "place": "export" }
   ]
 }

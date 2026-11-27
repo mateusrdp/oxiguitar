@@ -7,15 +7,13 @@ Since interface 1.4, a plugin can add formats to **File → Export Audio…**: t
 List each exporter under `exporters`, with an `id`, the `name` of what it makes (the Format list shows "FLAC Audio", and so does the file dialog), the files' `extension` (lowercase, without the dot), its `kind`, `"audio"`, and, if it has choices of its own, its `options` (interface 1.11, below):
 
 ```json
-"tabs": [
-  { "id": "flac-options", "title": "FLAC", "area": "dialog" }
+"views": [
+  { "id": "flac-options", "component": "FlacOptions", "place": "export" }
 ],
 "exporters": [
   { "id": "flac", "name": "FLAC Audio", "extension": "flac", "kind": "audio", "options": "flac-options" }
 ]
 ```
-
-A manifest with `exporters` must ask for interface 1.4, and one whose exporters have `options` for 1.11.
 
 ## In the plugin
 
@@ -35,12 +33,11 @@ Before the file dialog, OxiGuitar asks for the format and what to export: the wh
 
 ### The export's options (interface 1.11)
 
-The file's own choices (bit depth, rate, bitrate, compression) are yours. Name one of your plugin's [dialogs](settings.md#a-settings-dialog) (a tab whose `area` is `"dialog"`) as the exporter's `options`, and the export dialog shows its widgets under the Format list while your format is picked. It is a dialog like any other:
+The file's own choices (bit depth, rate, bitrate, compression) are yours. Name one of your plugin's [views](ui.md) whose place is `export` as the exporter's `options`, and the export dialog shows it under the Format list while your format is picked:
 
-- OxiGuitar asks for its `content` when your format is picked, and sends your `on` the user's changes. Keep them in a draft, as a settings dialog does.
-- It shows as a form, as a [track section](track-sections.md) does: standard widgets, each on the dialog's width, and no canvas.
-- **OK** on the export dialog calls your `closed(true)` **before** your exporter's `start`: save the draft to your settings there, and read your settings in `start`. **Cancel**, or picking another format, calls `closed(false)`: forget the draft.
-- The same dialog may also open from a tool of yours (`"edits": false`), so the choices can be set without exporting.
+- OxiGuitar makes the view when your format is picked (`Ui::shown`), and sends its callbacks as the user changes things. Keep them in a draft, as a settings window does.
+- **OK** on the export dialog calls your `closed(view, true)` **before** your exporter's `start`: save the draft to your settings there, and read your settings in `start`. **Cancel**, or picking another format, calls `closed(view, false)`: forget the draft.
+- A window of yours (`"edits": false` tool) can show the same choices, so they can be set without exporting.
 
 `oxiguitar-cli export FILE NEW-FILE` exports the same way, through the exporter whose extension the new file has.
 

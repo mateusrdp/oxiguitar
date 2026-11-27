@@ -8,7 +8,7 @@ This folder is its own Cargo workspace, outside the main one, and needs nightly 
 
 | Target | What it reads | Seeds |
 | --- | --- | --- |
-| `plugin_tab` | a plugin's answer with a tab's contents (interface 1.1), as the core takes it: decoded, checked, and each canvas turned into a display list and drawn | `fixtures/plugin/*.answer`: the test plugin's tab, and the canvas line this target found |
+| `plugin_drawing` | a plugin's answer with what it draws on the page (interface 1.8), as the core takes it: decoded, checked, and each drawing turned into a display list and drawn | `fixtures/plugin/*.answer`: the test plugin's stamp, and the far line the earlier `plugin_tab` target found in a tab's canvas |
 
 Seeds come from the public fixtures only (`seeds.sh`), never from the private corpus.
 
@@ -17,9 +17,9 @@ Seeds come from the public fixtures only (`seeds.sh`), never from the private co
 ```sh
 cargo install cargo-fuzz
 fuzz/seeds.sh                        # fills fuzz/corpus/<target>/
-fuzz/run.sh plugin_tab 600                # ten minutes on every core
+fuzz/run.sh plugin_drawing 600                # ten minutes on every core
 # or by hand:
-cd fuzz && cargo +nightly fuzz run plugin_tab corpus/plugin_tab
+cd fuzz && cargo +nightly fuzz run plugin_drawing corpus/plugin_drawing
 ```
 
 `run.sh` uses libFuzzer's fork mode on every core, stops at the first crash, an input that takes over 30 s, or one that needs over 2 GB, and then shrinks the corpus (`cargo fuzz cmin`). An input that failed is in `fuzz/artifacts/<target>/`; `cargo fuzz run <target> <file>` replays it. Fix the reader and add the input to that reader's tests, so it stays fixed.
@@ -29,6 +29,6 @@ cd fuzz && cargo +nightly fuzz run plugin_tab corpus/plugin_tab
 `.github/workflows/fuzz.yml`:
 
 - **Pull requests** that touch `oxiguitar-model`, `oxiguitar-display`, `oxiguitar-render`, the plugin interface or SDK, `fixtures/` or this folder: four minutes of every target.
-- **By hand** (Actions → Fuzz → Run workflow, "minutes" per reader, 360 by default): the target `plugin_tab`, in two jobs of half the time, the second continuing from the first one's corpus (a job on a standard runner may take at most six hours). At most four fuzz jobs run at a time. The final corpora are kept as artifacts for 30 days.
+- **By hand** (Actions → Fuzz → Run workflow, "minutes" per reader, 360 by default): the target `plugin_drawing`, in two jobs of half the time, the second continuing from the first one's corpus (a job on a standard runner may take at most six hours). At most four fuzz jobs run at a time. The final corpora are kept as artifacts for 30 days.
 
 A crash fails the job, its message becomes an error on the run, and the input is kept as the artifact "fuzz-crash \<target\>".

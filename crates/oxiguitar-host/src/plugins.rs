@@ -30,17 +30,17 @@
 //! In safe mode (`oxiguitar --safe-mode`) every manifest is still read, so
 //! the plugin manager can list them, but no plugin is used or loaded.
 //!
-//! Plugins with tabs (interface 1.1) are asked for their contents when the
-//! window shows the tab, and told when the user uses a widget. Events
+//! A plugin's views (its own `.slint` file) are made by the window, which
+//! tells the plugin when one is shown, called back or closed. Events
 //! (score, selection, playback) are pushed to the plugins that subscribe
 //! to them, in order, on a thread of their own that sleeps until there is
 //! something to deliver.
 //!
 //! A plugin that fails (it can't be loaded or started, it crashes, or it
 //! breaks the interface's contract: an answer that can't be read, of the
-//! wrong kind, or tab contents the core can't show) is withdrawn for the
+//! wrong kind) is withdrawn for the
 //! rest of the session, and everything goes on as if it weren't installed
-//! (Mateus, 19 Oct 2026): its formats, tabs, services, instruments and
+//! (Mateus, 19 Oct 2026): its formats, views, services, instruments and
 //! events are gone, a file it would have read goes to the next plugin
 //! that recognises it, and a service is chosen again among the others. The
 //! footer says so once, as an error; [`Core::withdrawn`] lets the window
@@ -68,12 +68,11 @@ use oxiguitar_plugin_api::message::{
     Answer, Availability, Clicked, DrawPlace, DrawTimes, Drawn, Engraving, Error, ErrorKind,
     FolderPlaces, HostAnswer, HostRequest, Link, LogEntry, PERFORMED_MAX, Perform, PlayedBeat,
     PlayedNote, PluginFile, PluginFileState, PluginFiles, PluginFolderKind, PluginFolders, Prepare,
-    PrepareEffect, PrepareFollowing, Request, TrackInfo, decode, encode, outcome,
+    PrepareEffect, PrepareFollowing, Request, decode, encode, outcome,
 };
 use oxiguitar_plugin_api::score::Score;
 use oxiguitar_plugin_api::score2::{Score2, Since};
 use oxiguitar_plugin_api::signature::Sniff;
-use oxiguitar_plugin_api::tab::{Area, TabContent, TabEvent, TabSpec};
 use oxiguitar_plugin_api::view::{Place, Value as ViewValue, ViewSpec};
 use serde_json::Value;
 
@@ -107,13 +106,6 @@ pub trait Core: Send + Sync {
         self.notify(level, format!("{text} {}: {}", link.text, link.url));
     }
 
-    /// The plugin's tab `tab` has changed: ask for its contents
-    /// ([`Plugins::tab_content`]) when it is next on screen. The default
-    /// does nothing, for programs without a window.
-    fn redraw(&self, tab: &TabId) {
-        let _ = tab;
-    }
-
     /// The open score as engraved in the window (interface 1.8), or `None`
     /// when none is. The default, for programs without a window, has none.
     fn engraving(&self) -> Option<Engraving> {
@@ -125,23 +117,6 @@ pub trait Core: Send + Sync {
     /// window, has none.
     fn selection(&self) -> Option<crate::api::event::Selection2> {
         None
-    }
-
-    /// A plugin asks for its dialog `tab` (a tab whose area is `dialog`,
-    /// interface 1.8), titled `title`, to be opened over the window. The
-    /// window asks for its contents ([`Plugins::tab_content`]) and says
-    /// how the user closed it ([`Plugins::tab_closed`]). The error is a
-    /// sentence for the plugin. The default has no window.
-    fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
-        let _ = (tab, title);
-        Err("there is no window to show a dialog in".to_owned())
-    }
-
-    /// A plugin asks for its tab `tab` to be brought to the front of its
-    /// area (interface 1.8). The default does nothing, for programs
-    /// without a window.
-    fn show_tab(&self, tab: &TabId) {
-        let _ = tab;
     }
 
     /// The open score's file, or `None` when none is open or it was never
@@ -488,15 +463,6 @@ impl ServiceRef<'_> {
     }
 }
 
-/// A plugin's tab, by the plugin's id and the tab's.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TabId {
-    /// The plugin's id.
-    pub plugin: String,
-    /// The tab's id, from the plugin's manifest.
-    pub tab: String,
-}
-
 /// A plugin's view (interface 1.15), by the plugin's id and the view's.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ViewId {
@@ -655,7 +621,6 @@ pub struct SectionRef<'a> {
     pub plugin: &'a Found,
     /// The section, as its manifest declares it.
     pub spec: &'a TrackSectionSpec,
-    index: usize,
 }
 
 impl SectionRef<'_> {
@@ -663,31 +628,6 @@ impl SectionRef<'_> {
     /// settings.
     pub fn plugin_id(&self) -> &str {
         self.plugin.manifest.as_ref().map_or("", |m| m.id.as_str())
-    }
-}
-
-/// A tab a plugin adds to the window.
-#[derive(Clone, Copy, Debug)]
-pub struct TabRef<'a> {
-    /// The plugin.
-    pub plugin: &'a Found,
-    /// The tab, as its manifest declares it.
-    pub spec: &'a TabSpec,
-    index: usize,
-}
-
-impl TabRef<'_> {
-    /// The tab's id.
-    pub fn id(&self) -> TabId {
-        TabId {
-            plugin: self
-                .plugin
-                .manifest
-                .as_ref()
-                .map(|m| m.id.clone())
-                .unwrap_or_default(),
-            tab: self.spec.id.clone(),
-        }
     }
 }
 
@@ -1002,7 +942,6 @@ impl Plugins {
     pub fn shared_folders(&self) -> Vec<String> {
         let mut out: Vec<String> = self
             .ready()
-            .filter(|(_, _, m)| m.knows_minor(3))
             .flat_map(|(_, _, m)| m.folders.iter().cloned())
             .collect();
         out.sort();
@@ -1196,45 +1135,22 @@ impl Plugins {
             .manifest
             .as_ref()
             .map_or(0, |m| m.interface.minor);
-        let lost: Vec<LogEntry>;
-        let request = if minor >= 2 {
-            let name = format.plugin.name();
-            lost = score
-                .extensions_newer_than(minor)
-                .into_iter()
-                .map(|(what, bar, count)| LogEntry {
-                    level: oxiguitar_plugin_api::message::Level::Warning,
-                    message: format!(
-                        "{what} can't be passed to {name}, made for an older OxiGuitar"
-                    ),
-                    place: format!("bar {bar}"),
-                    count: u32::try_from(count).unwrap_or(u32::MAX),
-                })
-                .collect();
-            let mut score = score.clone();
-            score.keep_known(minor);
-            Request::Write2 {
-                format: format.spec.id.clone(),
-                score: Box::new(score),
-            }
-        } else {
-            let name = format.plugin.name();
-            lost = score
-                .extensions_used()
-                .into_iter()
-                .map(|(what, bar, count)| LogEntry {
-                    level: oxiguitar_plugin_api::message::Level::Warning,
-                    message: format!(
-                        "{what} can't be passed to {name}, made for an older OxiGuitar"
-                    ),
-                    place: format!("bar {bar}"),
-                    count: u32::try_from(count).unwrap_or(u32::MAX),
-                })
-                .collect();
-            Request::Write {
-                format: format.spec.id.clone(),
-                score: Box::new(score.to_v1()),
-            }
+        let name = format.plugin.name();
+        let lost: Vec<LogEntry> = score
+            .extensions_newer_than(minor)
+            .into_iter()
+            .map(|(what, bar, count)| LogEntry {
+                level: oxiguitar_plugin_api::message::Level::Warning,
+                message: format!("{what} can't be passed to {name}, made for an older OxiGuitar"),
+                place: format!("bar {bar}"),
+                count: u32::try_from(count).unwrap_or(u32::MAX),
+            })
+            .collect();
+        let mut score = score.clone();
+        score.keep_known(minor);
+        let request = Request::Write2 {
+            format: format.spec.id.clone(),
+            score: Box::new(score),
         };
         match self.request(format.index, &request)? {
             Answer::Written { data, mut losses } => {
@@ -1266,7 +1182,7 @@ impl Plugins {
     pub fn playable(&self, class: InstrumentClass) -> Vec<InstrumentRef<'_>> {
         self.instruments_for(class)
             .into_iter()
-            .filter(|i| i.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(3)))
+            .filter(|i| i.plugin.manifest.as_ref().is_some())
             .collect()
     }
 
@@ -1274,7 +1190,6 @@ impl Plugins {
     /// 1.3), in plugin order.
     pub fn effects_for(&self, class: InstrumentClass) -> Vec<InstrumentRef<'_>> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(3))
             .flat_map(|(_, plugin, m)| {
                 m.effects
                     .iter()
@@ -1332,12 +1247,7 @@ impl Plugins {
     /// Whether `effect` follows the score (interface 1.8): it is prepared
     /// with its track's marked beats ([`Plugins::prepare_effect_following`]).
     pub fn follows_score(&self, effect: InstrumentRef<'_>) -> bool {
-        effect.spec.follows_score
-            && effect
-                .plugin
-                .manifest
-                .as_ref()
-                .is_some_and(|m| m.knows_minor(8))
+        effect.spec.follows_score && effect.plugin.manifest.as_ref().is_some()
     }
 
     /// Prepares `effect` for one track whose marked beats are played as
@@ -1534,7 +1444,7 @@ impl Plugins {
         self.tools()
             .into_iter()
             .filter_map(|t| {
-                let newer = t.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(8));
+                let newer = t.plugin.manifest.as_ref().is_some();
                 let menu = if newer {
                     t.spec.menu_key()?
                 } else {
@@ -1552,10 +1462,7 @@ impl Plugins {
     pub fn palette_tools(&self) -> Vec<ToolRef<'_>> {
         self.tools()
             .into_iter()
-            .filter(|t| {
-                t.spec.palette.is_some()
-                    && t.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(8))
-            })
+            .filter(|t| t.spec.palette.is_some() && t.plugin.manifest.as_ref().is_some())
             .collect()
     }
 
@@ -1565,10 +1472,7 @@ impl Plugins {
     pub fn toolbar_tools(&self) -> Vec<ToolRef<'_>> {
         self.tools()
             .into_iter()
-            .filter(|t| {
-                t.spec.toolbar.is_some()
-                    && t.plugin.manifest.as_ref().is_some_and(|m| m.knows_minor(8))
-            })
+            .filter(|t| t.spec.toolbar.is_some() && t.plugin.manifest.as_ref().is_some())
             .collect()
     }
 
@@ -1576,7 +1480,6 @@ impl Plugins {
     /// built for interface 1.2 or later have tools.
     pub fn tools(&self) -> Vec<ToolRef<'_>> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(2))
             .flat_map(|(index, plugin, m)| {
                 m.tools.iter().map(move |spec| ToolRef {
                     plugin,
@@ -1594,12 +1497,7 @@ impl Plugins {
         let mut out: Vec<(Shortcut, ToolRef<'_>)> = Vec::new();
         let mut clashes = Vec::new();
         for tool in self.tools() {
-            if !tool
-                .plugin
-                .manifest
-                .as_ref()
-                .is_some_and(|m| m.knows_minor(8))
-            {
+            if !tool.plugin.manifest.as_ref().is_some() {
                 continue;
             }
             let Some(keys) = tool.spec.shortcut.as_deref().and_then(Shortcut::parse) else {
@@ -1624,7 +1522,7 @@ impl Plugins {
     /// (interface 1.8), in plugin order: the order they take turns in.
     pub fn performers(&self) -> Vec<String> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(12) && m.performs)
+            .filter(|(_, _, m)| m.performs)
             .map(|(_, _, m)| m.id.clone())
             .collect()
     }
@@ -1637,7 +1535,7 @@ impl Plugins {
     pub fn perform(&self, plugin: &str, track: Perform) -> Option<Vec<PlayedNote>> {
         let (_, found, _) = self
             .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(12) && m.performs)?;
+            .find(|(_, _, m)| m.id == plugin && m.performs)?;
         match self.try_perform(plugin, track) {
             Ok(notes) => Some(notes),
             Err(e) => {
@@ -1658,7 +1556,7 @@ impl Plugins {
     pub fn try_perform(&self, plugin: &str, track: Perform) -> Result<Vec<PlayedNote>, Error> {
         let (index, _, _) = self
             .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(12) && m.performs)
+            .find(|(_, _, m)| m.id == plugin && m.performs)
             .ok_or_else(|| Error::not_found(format!("no ready plugin {plugin} plays notes")))?;
         let key = (index, track.track);
         let visits = track.visits.len();
@@ -1703,7 +1601,7 @@ impl Plugins {
     pub fn drawing_clicked(&self, plugin: &str, click: Clicked) -> Result<String, Error> {
         let (index, _, _) = self
             .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(13) && m.draws)
+            .find(|(_, _, m)| m.id == plugin && m.draws)
             .ok_or_else(|| Error::not_found(format!("no ready plugin {plugin} draws")))?;
         match self.request(index, &Request::Clicked(Box::new(click)))? {
             Answer::Report(report) => Ok(report),
@@ -1716,7 +1614,7 @@ impl Plugins {
     /// in plugin order.
     pub fn drawers(&self) -> Vec<String> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(13) && m.draws)
+            .filter(|(_, _, m)| m.draws)
             .map(|(_, _, m)| m.id.clone())
             .collect()
     }
@@ -1727,9 +1625,7 @@ impl Plugins {
     /// plugin that can't draw, or answers with a drawing that breaks the
     /// interface's limits, draws nothing, and the footer says why.
     pub fn draw(&self, plugin: &str, places: Vec<DrawPlace>, times: DrawTimes) -> Vec<Drawn> {
-        let Some((index, found, _)) = self
-            .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(13) && m.draws)
+        let Some((index, found, _)) = self.ready().find(|(_, _, m)| m.id == plugin && m.draws)
         else {
             return Vec::new();
         };
@@ -1786,10 +1682,7 @@ impl Plugins {
         places: Vec<DrawPlace>,
         times: DrawTimes,
     ) -> Result<Vec<Drawn>, Error> {
-        let Some((index, _, _)) = self
-            .ready()
-            .find(|(_, _, m)| m.id == plugin && m.knows_minor(13) && m.draws)
-        else {
+        let Some((index, _, _)) = self.ready().find(|(_, _, m)| m.id == plugin && m.draws) else {
             return Err(Error::not_found(format!(
                 "no usable plugin {plugin:?} draws"
             )));
@@ -1841,11 +1734,7 @@ impl Plugins {
     /// tool whose manifest has an options schema, in a plugin built for
     /// 1.14 or later, which another plugin runs. Returns its report.
     pub fn run_tool_with(&self, tool: ToolRef<'_>, options: String) -> Result<String, Error> {
-        let knows = tool
-            .plugin
-            .manifest
-            .as_ref()
-            .is_some_and(|m| m.knows_minor(14));
+        let knows = tool.plugin.manifest.as_ref().is_some();
         if !knows || tool.spec.options.is_none() {
             return Err(Error::new(
                 ErrorKind::Unsupported,
@@ -1881,12 +1770,7 @@ impl Plugins {
                 name: t.spec.name.clone(),
                 description: t.spec.description.clone(),
                 edits: t.spec.edits,
-                options: t
-                    .spec
-                    .options
-                    .as_ref()
-                    .filter(|_| m.knows_minor(14))
-                    .map(serde_json::Value::to_string),
+                options: t.spec.options.as_ref().map(serde_json::Value::to_string),
             })
         }));
         out
@@ -1896,7 +1780,6 @@ impl Plugins {
     /// order. Only plugins built for interface 1.4 or later have them.
     pub fn exporters(&self) -> Vec<ExporterRef<'_>> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(4))
             .flat_map(|(index, plugin, m)| {
                 m.exporters.iter().map(move |spec| ExporterRef {
                     plugin,
@@ -1941,99 +1824,10 @@ impl Plugins {
         }
     }
 
-    /// Every tab the ready plugins add, in plugin order. Only plugins built
-    /// for interface 1.1 or later have tabs.
-    pub fn tabs(&self) -> Vec<TabRef<'_>> {
-        self.ready()
-            .filter(|(_, _, m)| m.knows_minor(1))
-            .flat_map(|(index, plugin, m)| {
-                m.tabs.iter().map(move |spec| TabRef {
-                    plugin,
-                    spec,
-                    index,
-                })
-            })
-            .collect()
-    }
-
-    /// The tab `id`, if a ready plugin adds it.
-    pub fn tab(&self, id: &TabId) -> Option<TabRef<'_>> {
-        self.tabs().into_iter().find(|t| {
-            t.spec.id == id.tab
-                && t.plugin
-                    .manifest
-                    .as_ref()
-                    .is_some_and(|m| m.id == id.plugin)
-        })
-    }
-
-    /// What the tab `id` shows now, from its plugin (loaded first if
-    /// needed). Contents the core can't show are an error that says why.
-    pub fn tab_content(&self, id: &TabId) -> Result<TabContent, Error> {
-        let tab = self.find_tab(id)?;
-        self.tab_answer(
-            tab,
-            &Request::Tab {
-                tab: id.tab.clone(),
-            },
-        )
-    }
-
-    /// Tells the tab's plugin that the user used its widget `widget`, and
-    /// returns the tab's contents after it.
-    pub fn tab_event(
-        &self,
-        id: &TabId,
-        widget: &str,
-        event: TabEvent,
-    ) -> Result<TabContent, Error> {
-        let tab = self.find_tab(id)?;
-        let answer = self.tab_answer(
-            tab,
-            &Request::TabEvent {
-                tab: id.tab.clone(),
-                widget: widget.to_owned(),
-                event,
-            },
-        );
-        match answer {
-            // An ordinary error (the plugin refused the event): said in the
-            // footer, and the tab keeps showing what it shows now.
-            Err(e) if tab.plugin.failure().is_none() => {
-                let name = tab.plugin.name();
-                self.0.core.notify(Level::Warning, format!("{name}: {e}"));
-                self.tab_content(id)
-            }
-            answer => answer,
-        }
-    }
-
-    /// Tells the dialog's plugin that the user closed it (interface 1.8),
-    /// with OK or not. An error the plugin answers is said in the footer.
-    pub fn tab_closed(&self, id: &TabId, ok: bool) {
-        let Ok(tab) = self.find_tab(id) else {
-            return;
-        };
-        let answered = self.request(
-            tab.index,
-            &Request::TabClosed {
-                tab: id.tab.clone(),
-                ok,
-            },
-        );
-        if let Err(e) = answered
-            && tab.plugin.failure().is_none()
-        {
-            let name = tab.plugin.name();
-            self.0.core.notify(Level::Warning, format!("{name}: {e}"));
-        }
-    }
-
     /// Every view the usable plugins declare (interface 1.15), in plugin
     /// order.
     pub fn views(&self) -> Vec<ViewRef<'_>> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(15))
             .flat_map(|(index, plugin, m)| {
                 m.views.iter().map(move |spec| ViewRef {
                     plugin,
@@ -2175,123 +1969,17 @@ impl Plugins {
         }
     }
 
-    fn find_tab(&self, id: &TabId) -> Result<TabRef<'_>, Error> {
-        self.tab(id).ok_or_else(|| {
-            Error::not_found(format!(
-                "no usable plugin {:?} has a tab {:?}",
-                id.plugin, id.tab
-            ))
-        })
-    }
-
-    fn tab_answer(&self, tab: TabRef<'_>, request: &Request<'_>) -> Result<TabContent, Error> {
-        match self.request(tab.index, request)? {
-            Answer::Tab(content) => match content.problems().into_iter().next() {
-                None => Ok(*content),
-                Some(problem) => Err(self.fail(
-                    tab.index,
-                    format!("its tab {} can't be shown ({problem})", tab.spec.title),
-                )),
-            },
-            other => Err(self.unexpected(tab.index, &other)),
-        }
-    }
-
     /// The sections the ready plugins add to the track dialog for a track
     /// of class `class` (interface 1.3), in plugin order.
     pub fn track_sections(&self, class: InstrumentClass) -> Vec<SectionRef<'_>> {
         self.ready()
-            .filter(|(_, _, m)| m.knows_minor(3))
-            .flat_map(|(index, plugin, m)| {
+            .flat_map(|(_, plugin, m)| {
                 m.track_sections
                     .iter()
                     .filter(move |spec| spec.shows_for(class))
-                    .map(move |spec| SectionRef {
-                        plugin,
-                        spec,
-                        index,
-                    })
+                    .map(move |spec| SectionRef { plugin, spec })
             })
             .collect()
-    }
-
-    /// What `section` shows for `track`, whose settings for the section's
-    /// plugin are `settings` (a JSON object), loading the plugin if needed:
-    /// the contents and the settings the plugin hands back.
-    pub fn track_section(
-        &self,
-        section: SectionRef<'_>,
-        track: &TrackInfo,
-        settings: &str,
-    ) -> Result<(TabContent, String), Error> {
-        self.section_answer(
-            section,
-            &Request::TrackSection {
-                section: section.spec.id.clone(),
-                track: track.clone(),
-                settings: settings.to_owned(),
-            },
-        )
-    }
-
-    /// Tells the plugin of `section` that the user used its widget `widget`
-    /// for `track`; returns the section's contents and the track's settings
-    /// after it. An ordinary error is said in the footer, and the settings
-    /// stay as they were.
-    pub fn track_section_event(
-        &self,
-        section: SectionRef<'_>,
-        track: &TrackInfo,
-        settings: &str,
-        widget: &str,
-        event: TabEvent,
-    ) -> Result<(TabContent, String), Error> {
-        let answer = self.section_answer(
-            section,
-            &Request::TrackSectionEvent {
-                section: section.spec.id.clone(),
-                track: track.clone(),
-                settings: settings.to_owned(),
-                widget: widget.to_owned(),
-                event,
-            },
-        );
-        match answer {
-            Err(e) if section.plugin.failure().is_none() => {
-                let name = section.plugin.name();
-                self.0.core.notify(Level::Warning, format!("{name}: {e}"));
-                self.track_section(section, track, settings)
-            }
-            answer => answer,
-        }
-    }
-
-    fn section_answer(
-        &self,
-        section: SectionRef<'_>,
-        request: &Request<'_>,
-    ) -> Result<(TabContent, String), Error> {
-        match self.request(section.index, request)? {
-            Answer::TrackSection { content, settings } => {
-                let problem = content.problems().into_iter().next().or_else(|| {
-                    match serde_json::from_str::<Value>(&settings) {
-                        Ok(Value::Object(_)) => None,
-                        _ => Some("its settings are not a JSON object".to_owned()),
-                    }
-                });
-                match problem {
-                    None => Ok((*content, settings)),
-                    Some(problem) => Err(self.fail(
-                        section.index,
-                        format!(
-                            "its track section {} can't be shown ({problem})",
-                            section.spec.title
-                        ),
-                    )),
-                }
-            }
-            other => Err(self.unexpected(section.index, &other)),
-        }
     }
 
     /// Whether any ready plugin subscribes to events of `kind`, so the core
@@ -2342,13 +2030,9 @@ impl Plugins {
 
     fn deliver(&self, event: &Event) {
         let kind = event.kind();
-        // The selection comes in two forms: plugins built for 1.2 or later
-        // get the editor's, older ones the one they know.
-        let for_version = |m: &Manifest| match event {
-            Event::Selection(_) => !m.knows_minor(2),
-            Event::Selection2(_) => m.knows_minor(2),
-            _ => true,
-        };
+        // The selection comes in two forms: plugins built for interface 2
+        // get the editor's, never the one interface 1.1 knew.
+        let for_version = |_: &Manifest| !matches!(event, Event::Selection(_));
         let subscribers: Vec<usize> = self
             .ready()
             .filter(|(_, _, m)| m.wants(kind) && for_version(m))
@@ -2620,11 +2304,9 @@ impl Plugins {
             Answer::Written { .. } => "a file",
             Answer::Probe(_) => "a probe",
             Answer::Service(_) => "a service's output",
-            Answer::Tab(_) => "a tab's contents",
             Answer::Done => "\"done\"",
             Answer::Read2 { .. } => "a score",
             Answer::Report(_) => "a report",
-            Answer::TrackSection { .. } => "a track section",
             Answer::Prepared { .. } => "a prepared instrument",
             Answer::ExportStarted { .. } | Answer::Exported(_) | Answer::ExportFinished { .. } => {
                 "an export's bytes"
@@ -2756,20 +2438,6 @@ impl Plugins {
                     .notify(level.into(), format!("{}: {text}", manifest.name));
                 Ok(HostAnswer::Done)
             }
-            HostRequest::Redraw { tab } => {
-                if manifest.knows_minor(1) && manifest.tabs.iter().any(|t| t.id == tab) {
-                    self.0.core.redraw(&TabId {
-                        plugin: manifest.id.clone(),
-                        tab,
-                    });
-                    Ok(HostAnswer::Done)
-                } else {
-                    Err(Error::not_found(format!(
-                        "{} has no tab {tab:?} in its manifest",
-                        manifest.name
-                    )))
-                }
-            }
             HostRequest::ShowView { view } => {
                 self.own_view(manifest, &view).and_then(|(id, place)| {
                     if matches!(place, Place::Track | Place::Export) {
@@ -2825,82 +2493,10 @@ impl Plugins {
                     }
                 })
             }
-            HostRequest::OpenDialog { tab } => {
-                let dialog = manifest
-                    .tabs
-                    .iter()
-                    .find(|t| t.id == tab && t.area == Area::Dialog)
-                    .filter(|_| manifest.knows_minor(8));
-                match dialog {
-                    Some(spec) => self
-                        .0
-                        .core
-                        .open_dialog(
-                            &TabId {
-                                plugin: manifest.id.clone(),
-                                tab,
-                            },
-                            &spec.title,
-                        )
-                        .map(|()| HostAnswer::Done)
-                        .map_err(|why| Error::new(ErrorKind::Failed, why)),
-                    None => Err(Error::not_found(format!(
-                        "{} has no dialog {tab:?} in its manifest",
-                        manifest.name
-                    ))),
-                }
-            }
-            HostRequest::ShowTab { tab } => {
-                if manifest.knows_minor(8)
-                    && manifest
-                        .tabs
-                        .iter()
-                        .any(|t| t.id == tab && t.area != Area::Dialog)
-                {
-                    self.0.core.show_tab(&TabId {
-                        plugin: manifest.id.clone(),
-                        tab,
-                    });
-                    Ok(HostAnswer::Done)
-                } else {
-                    Err(Error::not_found(format!(
-                        "{} has no tab {tab:?} in its manifest",
-                        manifest.name
-                    )))
-                }
-            }
             HostRequest::Engraving => {
-                if manifest.knows_minor(8) {
-                    Ok(HostAnswer::Engraving(self.0.core.engraving().map(Box::new)))
-                } else {
-                    Err(Error::new(
-                        ErrorKind::Unsupported,
-                        "the engraving needs interface 1.8",
-                    ))
-                }
+                Ok(HostAnswer::Engraving(self.0.core.engraving().map(Box::new)))
             }
-            HostRequest::Selection => {
-                if manifest.knows_minor(8) {
-                    Ok(HostAnswer::Selection(self.0.core.selection()))
-                } else {
-                    Err(Error::new(
-                        ErrorKind::Unsupported,
-                        "asking for the selection needs interface 1.8",
-                    ))
-                }
-            }
-            HostRequest::MeasureText { .. }
-            | HostRequest::Copy { .. }
-            | HostRequest::Tools
-            | HostRequest::RunTool { .. }
-            | HostRequest::Select(_)
-                if !manifest.knows_minor(14) =>
-            {
-                Err(Error::new(
-                    ErrorKind::Unsupported,
-                    "measuring text, the clipboard, running tools and selecting need interface 1.14",
-                ))
-            }
+            HostRequest::Selection => Ok(HostAnswer::Selection(self.0.core.selection())),
             HostRequest::MeasureText { text, size, font } => self.measure(&text, size, font),
             HostRequest::Copy { text } => {
                 self.0.core.copy(text);
@@ -2918,21 +2514,12 @@ impl Plugins {
                 .select(selection)
                 .map(|()| HostAnswer::Done)
                 .map_err(|e| Error::new(ErrorKind::Failed, e)),
-            HostRequest::ScoreFile => {
-                if manifest.knows_minor(13) {
-                    Ok(HostAnswer::ScoreFile(
-                        self.0
-                            .core
-                            .score_file()
-                            .and_then(|p| p.to_str().map(str::to_owned)),
-                    ))
-                } else {
-                    Err(Error::new(
-                        ErrorKind::Unsupported,
-                        "asking for the score's file needs interface 1.13",
-                    ))
-                }
-            }
+            HostRequest::ScoreFile => Ok(HostAnswer::ScoreFile(
+                self.0
+                    .core
+                    .score_file()
+                    .and_then(|p| p.to_str().map(str::to_owned)),
+            )),
             HostRequest::Score => Ok(HostAnswer::Score(self.0.core.score().map(Box::new))),
             HostRequest::Score2 => {
                 let (revision, score) = match self.0.core.score2() {
@@ -3005,21 +2592,13 @@ impl Plugins {
             HostRequest::Folder { name } => {
                 self.folder_places(manifest, &name).map(HostAnswer::Folder)
             }
-            HostRequest::PluginFiles => self.plugin_files(manifest).map(HostAnswer::PluginFiles),
+            HostRequest::PluginFiles => self.plugin_files().map(HostAnswer::PluginFiles),
             HostRequest::OwnFiles => self
                 .unpacked(index)
                 .map(|dir| HostAnswer::OwnFiles(dir.to_string_lossy().into_owned()))
                 .map_err(|why| Error::new(ErrorKind::Failed, why)),
             HostRequest::Advise(given) => {
-                if !manifest.knows_minor(4) {
-                    Err(Error::new(
-                        ErrorKind::Invalid,
-                        format!(
-                            "{} asks for interface 1.{}, and advice came with 1.4",
-                            manifest.name, manifest.interface.minor
-                        ),
-                    ))
-                } else if let Some(problem) = given.problem() {
+                if let Some(problem) = given.problem() {
                     Err(Error::new(ErrorKind::Invalid, problem))
                 } else {
                     self.advise(manifest, given);
@@ -3060,12 +2639,6 @@ impl Plugins {
     /// The plugin's own view `view` and where it is shown (interface
     /// 1.15).
     fn own_view(&self, manifest: &Manifest, view: &str) -> Result<(ViewId, Place), Error> {
-        if !manifest.knows_minor(15) {
-            return Err(Error::new(
-                ErrorKind::Unsupported,
-                "views need interface 1.15",
-            ));
-        }
         match manifest.views.iter().find(|v| v.id == view) {
             Some(spec) => Ok((
                 ViewId {
@@ -3083,13 +2656,7 @@ impl Plugins {
 
     /// Every plugin file found and the user's plugin folder (interface
     /// 1.15), for a plugin that manages the others.
-    fn plugin_files(&self, manifest: &Manifest) -> Result<PluginFiles, Error> {
-        if !manifest.knows_minor(15) {
-            return Err(Error::new(
-                ErrorKind::Unsupported,
-                "asking for the plugin files needs interface 1.15",
-            ));
-        }
+    fn plugin_files(&self) -> Result<PluginFiles, Error> {
         let Some(folders) = self.0.folders.get() else {
             return Err(Error::not_found(
                 "this program keeps no folders for plugins",
@@ -3144,12 +2711,6 @@ impl Plugins {
     }
 
     fn folder_places(&self, manifest: &Manifest, name: &str) -> Result<FolderPlaces, Error> {
-        if !manifest.knows_minor(8) {
-            return Err(Error::new(
-                ErrorKind::Unsupported,
-                "asking for a folder by name needs interface 1.8",
-            ));
-        }
         if !manifest.folders.iter().any(|f| f == name) {
             return Err(Error::not_found(format!(
                 "the manifest lists no folder {name:?}"
@@ -3219,7 +2780,6 @@ impl Plugins {
         Ok(PluginFolders {
             data: text(&data)?,
             cache: text(&cache)?,
-            retired_shared: Vec::new(),
         })
     }
 }
@@ -3264,9 +2824,14 @@ fn examine(path: PathBuf, env: &Environment, disabled: &[String]) -> Found {
         Ok(file) => {
             let m = &file.manifest;
             let (major, minor) = oxiguitar_plugin_api::INTERFACE;
-            let state = if m.interface.major != major {
+            let state = if m.interface.major < major {
                 State::Unusable(format!(
-                    "it is built for interface {}, and this OxiGuitar has {major}.{minor}",
+                    "it is built for interface {}, and this OxiGuitar has {major}.{minor}: update the plugin",
+                    m.interface
+                ))
+            } else if m.interface.major != major {
+                State::Unusable(format!(
+                    "it is built for interface {}, and this OxiGuitar has {major}.{minor}: update OxiGuitar",
                     m.interface
                 ))
             } else if m.interface.minor > minor {
@@ -3453,7 +3018,7 @@ mod missing {
             Some("@rpath/libfoo.dylib")
         );
         assert_eq!(
-            super::missing_library("it has no oxiguitar_plugin_v1 entry"),
+            super::missing_library("it has no oxiguitar_plugin_v2 entry"),
             None
         );
     }
@@ -3530,7 +3095,7 @@ mod tests {
     fn the_highest_version_wins_then_the_build_for_this_processor() {
         let m = |version: &str, cpu: &[&str]| -> Manifest {
             let mut m: Manifest = serde_json::from_str(&format!(
-                r#"{{"interface": "1.3", "id": "me.nam", "name": "NAM", "version": "{version}"}}"#
+                r#"{{"interface": "2.0", "id": "me.nam", "name": "NAM", "version": "{version}"}}"#
             ))
             .unwrap();
             m.conditions.cpu = cpu.iter().map(|f| (*f).to_owned()).collect();
@@ -3565,14 +3130,14 @@ mod tests {
         }
     }
 
-    const MIDI: &str = r#"{"interface": "1.4", "id": "oxiguitar.midi", "name": "MIDI",
+    const MIDI: &str = r#"{"interface": "2.0", "id": "oxiguitar.midi", "name": "MIDI",
         "version": "1.0.0", "replaces": ["oxiguitar.soundfont"]}"#;
-    const SOUNDFONT: &str = r#"{"interface": "1.4", "id": "oxiguitar.soundfont",
+    const SOUNDFONT: &str = r#"{"interface": "2.0", "id": "oxiguitar.soundfont",
         "name": "SoundFont", "version": "0.11.0"}"#;
 
     fn nam(needs: &str) -> String {
         format!(
-            r#"{{"interface": "1.4", "id": "oxiguitar.nam", "name": "NAM", "version": "1.0.0",
+            r#"{{"interface": "2.0", "id": "oxiguitar.nam", "name": "NAM", "version": "1.0.0",
             "needs": [{needs}]}}"#
         )
     }
@@ -3657,7 +3222,7 @@ mod tests {
             ),
             ready(
                 "pedals.oxp",
-                r#"{"interface": "1.4", "id": "me.pedals", "name": "Pedals", "version": "0.1.0",
+                r#"{"interface": "2.0", "id": "me.pedals", "name": "Pedals", "version": "0.1.0",
                 "needs": [{"id": "oxiguitar.nam", "version": "1.0.0"}]}"#,
             ),
         ];
@@ -3789,7 +3354,7 @@ mod tests {
             Unrecognised::SafeMode
         );
         assert!(Unrecognised::SafeMode.to_string().contains("--safe-mode"));
-        assert!(plugins.tabs().is_empty() && plugins.load_all().is_empty());
+        assert!(plugins.views().is_empty() && plugins.load_all().is_empty());
         assert!(!plain(std::slice::from_ref(&dir)).safe_mode());
         let _ = std::fs::remove_dir_all(&dir);
     }

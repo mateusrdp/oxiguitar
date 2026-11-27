@@ -13,14 +13,12 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use oxiguitar_host::api::class::InstrumentClass;
-use oxiguitar_host::api::display::{Item, Paint, Point};
+
 use oxiguitar_host::api::event::{Event, EventKind, Playback, Position, Selection, Selection2};
 use oxiguitar_host::api::message::ErrorKind;
 use oxiguitar_host::api::score::{Score, ScoreInfo, Track};
-use oxiguitar_host::api::tab::{
-    Area, Pointer, PointerButton, PointerKind, TabContent, TabEvent, Widget,
-};
-use oxiguitar_host::{Core, Level, Plugins, Settings, SharedSettings, State, TabId};
+use oxiguitar_host::api::view::Value as ViewValue;
+use oxiguitar_host::{Core, Level, Plugins, Settings, SharedSettings, State, ViewId};
 
 /// The test plugin, built once for all the tests here.
 fn test_oxp() -> &'static Path {
@@ -76,23 +74,40 @@ fn make_folder(name: &str, copies: &[&str], link: bool) -> PathBuf {
     dir
 }
 
-/// The rest of the core, as plugins see it: what they said, which tabs
-/// asked to be redrawn, a score that is open, and the plugins withdrawn.
+/// The views' properties a plugin set, by view, in order.
+type SetViews = Vec<(String, Vec<(String, ViewValue)>)>;
+
+/// The rest of the core, as plugins see it: what they said, the views'
+/// properties they set (by view, in order), a score that is open, and the
+/// plugins withdrawn.
 #[derive(Default)]
 struct Heard(
     Mutex<Vec<(Level, String)>>,
-    Mutex<Vec<TabId>>,
+    Mutex<SetViews>,
     Option<Score>,
     Mutex<Vec<String>>,
 );
+
+impl Heard {
+    /// The last value set for the property `name` of the view `view`.
+    fn property(&self, view: &str, name: &str) -> Option<ViewValue> {
+        self.1
+            .lock()
+            .unwrap()
+            .iter()
+            .rev()
+            .filter(|(v, _)| v == view)
+            .find_map(|(_, p)| p.iter().find(|(n, _)| n == name).map(|(_, v)| v.clone()))
+    }
+}
 
 impl Core for Heard {
     fn notify(&self, level: Level, text: String) {
         self.0.lock().unwrap().push((level, text));
     }
 
-    fn redraw(&self, tab: &TabId) {
-        self.1.lock().unwrap().push(tab.clone());
+    fn set_view(&self, view: &ViewId, properties: Vec<(String, ViewValue)>) {
+        self.1.lock().unwrap().push((view.view.clone(), properties));
     }
 
     fn score(&self) -> Option<Score> {
@@ -114,21 +129,14 @@ fn discover(folders: &[PathBuf], settings: SharedSettings) -> (Plugins, Arc<Hear
 fn the_test_plugin_passes_the_contract() {
     let report = oxiguitar_plugin_test::check(test_oxp());
     assert!(report.ok(), "failed: {:#?}", report.failed);
-    // 12 for formats and services; 4 tabs; 10 uses of the panel's widgets
-    // (2 buttons, 5 other widgets, 3 pointer events on its canvas), 13 of
-    // the side tab's surface (interface 1.14) and 4
-    // of the dialog `ask`'s (its button, 3 pointer events), which is then
-    // closed (interface 1.8); the settings dialog's 2 widgets, then closed
-    // (interface 1.9); the exporter's options, a dialog with 1 widget, then
-    // closed (interface 1.11); 3 kinds of event, the selection in both its
-    // forms; 5 tools; the track section and its 2 widgets; 2 instruments
-    // and an effect, 4 real-time checks each; the effect's 3 checks of an
-    // update (interface 1.5); the exporter's 3 checks; its drawing and its
-    // playing of a track (interface 1.8); its .slint file compiling, and its
-    // 3 views' components and showing them (interface 1.15).
+    // 12 for formats and services; its .slint file compiling and its 7
+    // views' components and showing them; 3 kinds of event, the selection
+    // in both its forms; 5 tools; 2 instruments, 4 real-time checks each,
+    // and an effect with those and its 3 checks of an update; the
+    // exporter's 3 checks; its drawing and its playing of a track.
     assert_eq!(
         report.passed.len(),
-        12 + 4 + 10 + 13 + 4 + 1 + 2 + 1 + 3 + 4 + 5 + 3 + 3 * 4 + 3 + 3 + 1 + 1 + 1 + 3 * 2,
+        12 + 1 + 7 * 2 + 4 + 5 + 4 * 2 + 4 + 3 + 3 + 1 + 1,
         "{:#?}",
         report.passed
     );
@@ -145,7 +153,7 @@ fn the_test_plugin_passes_the_contract() {
         report
             .messages
             .iter()
-            .any(|m| m.contains("The test dialog was closed with Cancel")),
+            .any(|m| m.contains("The test window was closed.")),
         "{:?}",
         report.messages
     );
@@ -592,181 +600,6 @@ fn speed_budget_thirty_manifests() {
     );
 }
 
-fn panel() -> TabId {
-    TabId {
-        plugin: "oxiguitar.test".into(),
-        tab: "panel".into(),
-    }
-}
-
-fn label(content: &TabContent, row: usize, at: usize) -> &str {
-    match &content.rows[row].widgets[at] {
-        Widget::Label { text, .. } => text,
-        other => panic!("not a label: {other:?}"),
-    }
-}
-
-#[test]
-fn tabs_come_from_the_manifest_and_their_widgets_from_the_plugin() {
-    let dir = folder("tabs", &["test.oxp"]);
-    let (plugins, heard) = discover(std::slice::from_ref(&dir), SharedSettings::default());
-    // Listed, with their areas, before the plugin is loaded.
-    let tabs: Vec<(String, String, Area)> = plugins
-        .tabs()
-        .iter()
-        .map(|t| (t.spec.id.clone(), t.spec.title.clone(), t.spec.area))
-        .collect();
-    assert_eq!(
-        tabs,
-        [
-            ("panel".into(), "Test".into(), Area::Bottom),
-            ("side".into(), "Test side".into(), Area::Right),
-            ("ask".into(), "Test Dialog".into(), Area::Dialog),
-            ("settings".into(), "Test Settings".into(), Area::Dialog),
-            ("raw-options".into(), "Raw Test Audio".into(), Area::Dialog),
-        ]
-    );
-    assert!(!plugins.found()[0].is_loaded());
-
-    // Shown: the plugin loads and answers with its widgets.
-    let content = plugins.tab_content(&panel()).unwrap();
-    assert!(plugins.found()[0].is_loaded());
-    assert_eq!(label(&content, 0, 0), "Clicks: 0");
-    let kinds: Vec<&str> = content
-        .rows
-        .iter()
-        .flat_map(|r| &r.widgets)
-        .map(|w| match w {
-            Widget::Label { .. } => "label",
-            Widget::Button { .. } => "button",
-            Widget::Toggle { .. } => "toggle",
-            Widget::Slider { .. } => "slider",
-            Widget::Field { .. } => "field",
-            Widget::Choice { .. } => "choice",
-            Widget::List { .. } => "list",
-            Widget::Canvas(_) => "canvas",
-            Widget::Link { .. } => "link",
-            Widget::Surface(_) => "surface",
-        })
-        .collect();
-    assert_eq!(
-        kinds,
-        [
-            "label", "button", "button", "toggle", "slider", "field", "choice", "list", "canvas",
-            "label", "label", "link"
-        ]
-    );
-
-    // Every widget's event reaches the plugin, which answers with its new
-    // contents.
-    let after = |widget: &str, event: TabEvent| plugins.tab_event(&panel(), widget, event).unwrap();
-    assert_eq!(label(&after("click", TabEvent::Clicked), 0, 0), "Clicks: 1");
-    let c = after("toggle", TabEvent::Toggled(true));
-    assert!(matches!(
-        c.widget("toggle"),
-        Some(Widget::Toggle { on: true, .. })
-    ));
-    let c = after("slider", TabEvent::Slid(7.5));
-    assert!(matches!(c.widget("slider"), Some(Widget::Slider { value, .. }) if *value == 7.5));
-    let c = after("field", TabEvent::Edited("Lá".into()));
-    assert!(matches!(c.widget("field"), Some(Widget::Field { text, .. }) if text == "Lá"));
-    let c = after("choice", TabEvent::Chosen(2));
-    assert!(matches!(
-        c.widget("choice"),
-        Some(Widget::Choice { selected: 2, .. })
-    ));
-    let c = after("list", TabEvent::Chosen(1));
-    assert!(matches!(
-        c.widget("list"),
-        Some(Widget::List {
-            selected: Some(1),
-            ..
-        })
-    ));
-
-    // The canvas: pointer events in its own units, and its display list
-    // back.
-    for kind in [PointerKind::Down, PointerKind::Drag] {
-        let c = after(
-            "canvas",
-            TabEvent::Pointer(Pointer {
-                kind,
-                at: Point::new(30.0, 20.0),
-                button: PointerButton::Primary,
-            }),
-        );
-        let Some(Widget::Canvas(canvas)) = c.widget("canvas") else {
-            panic!("no canvas");
-        };
-        assert_eq!(
-            (canvas.width, canvas.height),
-            oxiguitar_test_plugin_canvas()
-        );
-        assert!(canvas.items.contains(&Item::Rect {
-            at: Point::new(28.0, 18.0),
-            width: 4.0,
-            height: 4.0,
-            paint: Paint::Accent,
-        }));
-        assert!(
-            canvas
-                .items
-                .iter()
-                .any(|i| matches!(i, Item::Text { text, .. } if *text == format!("{kind:?}")))
-        );
-    }
-
-    // The plugin's own refusal, in its words, goes to the footer, and the
-    // tab keeps its contents; a tab nobody has.
-    let kept = plugins
-        .tab_event(&panel(), "click", TabEvent::Toggled(true))
-        .unwrap();
-    assert_eq!(label(&kept, 0, 0), "Clicks: 1");
-    {
-        let told = heard.0.lock().unwrap();
-        assert_eq!(told.len(), 1);
-        assert_eq!(told[0].0, Level::Warning);
-        assert!(
-            told[0].1.starts_with("Test plugin: ") && told[0].1.contains("doesn't take"),
-            "{told:?}"
-        );
-    }
-    let nobody = TabId {
-        plugin: "oxiguitar.test".into(),
-        tab: "nothing".into(),
-    };
-    assert_eq!(
-        plugins.tab_content(&nobody).unwrap_err().kind,
-        ErrorKind::NotFound
-    );
-
-    // The other tab, in another area.
-    let side = plugins.tabs()[1].id();
-    assert_eq!(
-        label(&plugins.tab_content(&side).unwrap(), 0, 0),
-        "The test plugin's other tab."
-    );
-
-    // Contents the core can't show break the contract: the plugin is
-    // withdrawn, its tabs with it, as if it weren't installed.
-    plugins.call_service("test-echo", "break", b"").unwrap();
-    let e = plugins.tab_content(&panel()).unwrap_err();
-    assert!(
-        e.message
-            .starts_with("Test plugin stopped working: its tab Test can't be shown (")
-            && e.message.contains("used twice"),
-        "{e}"
-    );
-    assert!(plugins.tabs().is_empty());
-    assert_eq!(
-        plugins.tab_content(&side).unwrap_err().kind,
-        ErrorKind::NotFound
-    );
-    assert_eq!(*heard.3.lock().unwrap(), ["oxiguitar.test"]);
-    let told = heard.0.lock().unwrap();
-    assert_eq!(told.last().map(|t| t.0), Some(Level::Error));
-}
-
 #[test]
 fn a_plugin_that_fails_is_withdrawn_as_if_it_were_not_installed() {
     // The test plugin first, the second test plugin in a later folder:
@@ -781,7 +614,7 @@ fn a_plugin_that_fails_is_withdrawn_as_if_it_were_not_installed() {
     let opened = plugins.open(file, Some("oxgtest")).unwrap();
     assert_eq!(opened.format.plugin.name(), "Test plugin");
     assert_eq!(opened.read.score.info.title, "Tarde em Itapuã");
-    assert_eq!(plugins.tabs().len(), 5);
+    assert_eq!(plugins.views().len(), 7);
     assert!(plugins.wants(EventKind::Score));
 
     // An ordinary error is an answer, not a failure.
@@ -803,11 +636,11 @@ fn a_plugin_that_fails_is_withdrawn_as_if_it_were_not_installed() {
         "{failed:?}"
     );
     // From now on it is as if it weren't installed: every file of the
-    // format goes to the second plugin, and its tabs, services and events
+    // format goes to the second plugin, and its views, services and events
     // are gone.
     let opened = plugins.open(file, Some("oxgtest")).unwrap();
     assert_eq!(opened.format.plugin.name(), "Second test plugin");
-    assert!(plugins.tabs().is_empty());
+    assert!(plugins.views().is_empty());
     assert!(!plugins.wants(EventKind::Score));
     assert!(plugins.service("test-echo").is_err());
     let e = plugins
@@ -879,11 +712,6 @@ fn oxiguitar_test_second_title() -> &'static str {
     "Read by the second plugin"
 }
 
-/// The test plugin's canvas size, from its source.
-fn oxiguitar_test_plugin_canvas() -> (f32, f32) {
-    (100.0, 50.0)
-}
-
 #[test]
 fn events_are_pushed_in_order_and_the_plugin_asks_for_the_score() {
     let dir = folder("events", &["test.oxp"]);
@@ -909,15 +737,20 @@ fn events_are_pushed_in_order_and_the_plugin_asks_for_the_score() {
     assert!(plugins.wants(EventKind::Selection) && plugins.wants(EventKind::Playback));
     assert!(!plugins.found()[0].is_loaded());
 
-    // The first event loads the plugin; a score being opened makes it ask
-    // for its tab to be redrawn.
+    // The first event loads the plugin; a score being opened shows in its
+    // panel at once.
     plugins.push(Event::ScoreOpened { revision: 1 });
     plugins.wait_for_events();
     assert!(plugins.found()[0].is_loaded());
-    assert_eq!(*heard.1.lock().unwrap(), [panel()]);
+    assert_eq!(
+        heard.property("panel", "events"),
+        Some(ViewValue::String(format!(
+            "{:?}",
+            Event::ScoreOpened { revision: 1 }
+        )))
+    );
 
-    // The test plugin is built for interface 1.2: it hears the editor's
-    // selection, not 1.1's.
+    // A plugin hears the editor's selection, never interface 1.1's.
     plugins.push(Event::Selection(Some(Selection {
         track: 0,
         from: Position { bar: 1, beat: 0 },
@@ -979,30 +812,31 @@ fn events_are_pushed_in_order_and_the_plugin_asks_for_the_score() {
     assert!(bars.windows(2).all(|w| w[0] < w[1]), "{bars:?}");
 
     // The plugin asks for the open score when it needs it.
-    let c = plugins
-        .tab_event(&panel(), "score", TabEvent::Clicked)
-        .unwrap();
-    assert_eq!(label(&c, 3, 0), "Score: Água de Beber");
+    let panel = ViewId {
+        plugin: "oxiguitar.test".into(),
+        view: "panel".into(),
+    };
+    plugins.view_callback(&panel, "ask-score", vec![]);
+    assert_eq!(
+        heard.property("panel", "score"),
+        Some(ViewValue::String("Score: Água de Beber".into()))
+    );
     assert!(heard.0.lock().unwrap().is_empty());
 }
 
 #[test]
-fn disabled_plugins_hear_no_events_and_add_no_tabs() {
+fn disabled_plugins_hear_no_events_and_add_no_views() {
     let dir = folder("events-disabled", &["test.oxp"]);
     let disabled = SharedSettings::new(
         Settings::parse(r#"{"disabled": ["oxiguitar.test"]}"#).unwrap(),
         None,
     );
     let (plugins, _) = discover(std::slice::from_ref(&dir), disabled);
-    assert!(plugins.tabs().is_empty());
+    assert!(plugins.views().is_empty());
     assert!(!plugins.wants(EventKind::Score));
     plugins.push(Event::ScoreOpened { revision: 1 });
     plugins.wait_for_events();
     assert!(!plugins.found()[0].is_loaded());
-    assert_eq!(
-        plugins.tab_content(&panel()).unwrap_err().kind,
-        ErrorKind::NotFound
-    );
 }
 
 /// The rest of the core for interface 1.2: a score at a revision, the
@@ -1043,7 +877,7 @@ impl Core for Editor {
 }
 
 #[test]
-fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
+fn interface_1_2_tools_edits_the_score_v2_and_the_selection() {
     use oxiguitar_host::api::score2::{MasterBarExt, Score2};
     let dir = folder("one-two", &["test.oxp"]);
     std::fs::copy(second_oxp(), dir.join("second.oxp")).unwrap();
@@ -1156,8 +990,8 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
         written.losses
     );
 
-    // The selection: the test plugin (1.2) hears the editor's, the second
-    // plugin (1.1) the one it knows.
+    // The selection: every plugin hears the editor's, never interface
+    // 1.1's.
     plugins.push(Event::Selection(Some(Selection {
         track: 0,
         from: Position { bar: 0, beat: 1 },
@@ -1179,16 +1013,19 @@ fn interface_1_2_tools_edits_the_score_v2_and_both_selections() {
     let said = core.said.lock().unwrap().clone();
     assert!(
         said.iter()
-            .any(|s| s.contains("heard Selection(Some(Selection")),
+            .any(|s| s.contains("heard Selection2(Some(Caret")),
         "{said:?}"
     );
-    assert!(!said.iter().any(|s| s.contains("Selection2")), "{said:?}");
+    assert!(
+        !said.iter().any(|s| s.contains("Selection(Some")),
+        "{said:?}"
+    );
 }
 
 /// The rest of the core for interface 1.3: footer messages with their
-/// links.
+/// links, the views' properties and the track settings views hand back.
 #[derive(Default)]
-struct Linked(Mutex<Vec<Said>>);
+struct Linked(Mutex<Vec<Said>>, Mutex<SetViews>, Mutex<Vec<String>>);
 
 /// A footer message, and its link's words and address if it has one.
 type Said = (Level, String, Option<(String, String)>);
@@ -1208,6 +1045,15 @@ impl Core for Linked {
             .lock()
             .unwrap()
             .push((level, text, Some((link.text, link.url))));
+    }
+
+    fn set_view(&self, view: &ViewId, properties: Vec<(String, ViewValue)>) {
+        self.1.lock().unwrap().push((view.view.clone(), properties));
+    }
+
+    fn set_track_settings(&self, _view: &ViewId, settings: String) -> Result<(), String> {
+        self.2.lock().unwrap().push(settings);
+        Ok(())
     }
 }
 
@@ -1241,27 +1087,41 @@ fn interface_1_3_track_sections_links_and_folders() {
         name: "Lead".into(),
         class: InstrumentClass::Fretted,
     };
-    let (content, settings) = plugins.track_section(section, &track, "{}").unwrap();
-    assert_eq!(settings, "{}");
-    assert!(matches!(
-        &content.rows[1].widgets[0],
-        Widget::Field { placeholder, .. } if placeholder == "A nickname for Lead"
-    ));
-    let (_, settings) = plugins
-        .track_section_event(section, &track, &settings, "level", TabEvent::Slid(0.25))
-        .unwrap();
-    assert_eq!(settings, r#"{"level":0.25}"#);
+    // The section is the plugin's view of the same id: it is told the
+    // track and its settings, and hands back the settings it changes.
+    let view = ViewId {
+        plugin: "oxiguitar.test".into(),
+        view: section.spec.id.clone(),
+    };
+    plugins.view_shown(
+        &view,
+        Some(oxiguitar_host::api::view::TrackView {
+            track: track.clone(),
+            settings: "{}".into(),
+        }),
+    );
+    let placeholder = core.1.lock().unwrap().iter().find_map(|(v, p)| {
+        (v == "test")
+            .then(|| {
+                p.iter()
+                    .find(|(n, _)| n == "placeholder")
+                    .map(|(_, v)| v.clone())
+            })
+            .flatten()
+    });
+    assert_eq!(
+        placeholder,
+        Some(ViewValue::String("A nickname for Lead".into()))
+    );
+    plugins.view_callback(&view, "level-changed", vec![ViewValue::Number(0.25)]);
+    assert_eq!(*core.2.lock().unwrap(), [r#"{"level":0.25}"#]);
     // A refused value: said in the footer, and the settings stay.
-    let (_, kept) = plugins
-        .track_section_event(
-            section,
-            &track,
-            &settings,
-            "nickname",
-            TabEvent::Edited("refuse".into()),
-        )
-        .unwrap();
-    assert_eq!(kept, settings);
+    plugins.view_callback(
+        &view,
+        "nickname-edited",
+        vec![ViewValue::String("refuse".into())],
+    );
+    assert_eq!(core.2.lock().unwrap().len(), 1);
     assert!(
         core.0
             .lock()
@@ -1733,8 +1593,12 @@ fn the_player_puts_each_track_s_effects_after_its_instrument() {
 struct Window {
     score: Mutex<Option<(u64, oxiguitar_host::api::score2::Score2)>>,
     said: Mutex<Vec<String>>,
-    dialogs: Mutex<Vec<(TabId, String)>>,
-    shown: Mutex<Vec<TabId>>,
+    /// The views shown, in order.
+    shown: Mutex<Vec<String>>,
+    /// The views closed by the plugin, in order.
+    closed: Mutex<Vec<String>>,
+    /// The views' properties as last set.
+    properties: Mutex<Vec<(String, String, ViewValue)>>,
     /// The plugins whose settings changed, in order (interface 1.9).
     changed: Mutex<Vec<String>>,
     engraving: Mutex<Option<oxiguitar_host::api::message::Engraving>>,
@@ -1761,12 +1625,25 @@ impl Core for Window {
         Ok(())
     }
 
-    fn open_dialog(&self, tab: &TabId, title: &str) -> Result<(), String> {
-        self.dialogs
-            .lock()
-            .unwrap()
-            .push((tab.clone(), title.to_owned()));
+    fn show_view(
+        &self,
+        view: &ViewId,
+        _place: oxiguitar_host::api::view::Place,
+    ) -> Result<(), String> {
+        self.shown.lock().unwrap().push(view.view.clone());
         Ok(())
+    }
+
+    fn close_view(&self, view: &ViewId) {
+        self.closed.lock().unwrap().push(view.view.clone());
+    }
+
+    fn set_view(&self, view: &ViewId, properties: Vec<(String, ViewValue)>) {
+        let mut kept = self.properties.lock().unwrap();
+        for (name, value) in properties {
+            kept.retain(|(v, n, _)| !(*v == view.view && *n == name));
+            kept.push((view.view.clone(), name, value));
+        }
     }
 
     fn engraving(&self) -> Option<oxiguitar_host::api::message::Engraving> {
@@ -1777,21 +1654,29 @@ impl Core for Window {
         *self.selection.lock().unwrap()
     }
 
-    fn show_tab(&self, tab: &TabId) {
-        self.shown.lock().unwrap().push(tab.clone());
-    }
-
     fn settings_changed(&self, id: &str) {
         self.changed.lock().unwrap().push(id.to_owned());
     }
 }
 
-/// Interface 1.9: a plugin shows its settings in a dialog of its own,
-/// opened by a tool that doesn't edit the score; the dialog keeps them
+impl Window {
+    /// The property `name` of the view `view`, as last set.
+    fn property(&self, view: &str, name: &str) -> Option<ViewValue> {
+        self.properties
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(v, n, _)| v == view && n == name)
+            .map(|p| p.2.clone())
+    }
+}
+
+/// Interface 1.9: a plugin shows its settings in a window of its own,
+/// opened by a tool that doesn't edit the score; the window keeps them
 /// with OK and forgets them with Cancel, and the window hears when they
 /// changed (to prepare the sound again).
 #[test]
-fn interface_1_9_a_plugins_settings_dialog() {
+fn interface_1_9_a_plugins_settings_window() {
     let dir = folder("one-nine", &["test.oxp"]);
     let core = Arc::new(Window::default());
     let plugins = Plugins::discover(
@@ -1809,54 +1694,55 @@ fn interface_1_9_a_plugins_settings_dialog() {
             .filter(|t| t.spec.id != "settings")
             .all(|t| t.spec.edits)
     );
-    let dialog = TabId {
+    let window = ViewId {
         plugin: "oxiguitar.test".into(),
-        tab: "settings".into(),
+        view: "settings".into(),
     };
     let saved = || plugins.settings().get("oxiguitar.test");
     let edit = || {
         assert_eq!(plugins.run_tool(*tool).unwrap(), "");
-        let content = plugins.tab_content(&dialog).unwrap();
-        assert!(matches!(
-            &content.rows[0].widgets[0],
-            Widget::Toggle { on: false, .. }
-        ));
-        plugins
-            .tab_event(&dialog, "greet", TabEvent::Toggled(true))
-            .unwrap();
-        let content = plugins
-            .tab_event(&dialog, "name", TabEvent::Edited("Mateus".into()))
-            .unwrap();
-        assert!(matches!(
-            &content.rows[2].widgets[0],
-            Widget::Label { text, .. } if text == "Hello, Mateus."
-        ));
+        assert_eq!(
+            core.property("settings", "greet"),
+            Some(ViewValue::Bool(false))
+        );
+        plugins.view_callback(&window, "greet-toggled", vec![ViewValue::Bool(true)]);
+        plugins.view_callback(
+            &window,
+            "name-edited",
+            vec![ViewValue::String("Mateus".into())],
+        );
+        assert_eq!(
+            core.property("settings", "greeting"),
+            Some(ViewValue::String("Hello, Mateus.".into()))
+        );
     };
     edit();
     assert_eq!(saved(), None, "nothing is kept before OK");
-    plugins.tab_closed(&dialog, false);
+    plugins.view_callback(&window, "cancel", vec![]);
     assert_eq!(saved(), None, "Cancel forgets");
     assert!(core.changed.lock().unwrap().is_empty());
     edit();
-    plugins.tab_closed(&dialog, true);
+    plugins.view_callback(&window, "ok", vec![]);
     assert_eq!(
         saved(),
         Some(serde_json::json!({"greet": true, "name": "Mateus"}))
     );
     assert_eq!(*core.changed.lock().unwrap(), ["oxiguitar.test"]);
-    assert_eq!(
-        *core.dialogs.lock().unwrap(),
-        [
-            (dialog.clone(), "Test Settings".to_owned()),
-            (dialog.clone(), "Test Settings".to_owned())
-        ]
+    assert_eq!(*core.shown.lock().unwrap(), ["settings", "settings"]);
+    assert_eq!(*core.closed.lock().unwrap(), ["settings", "settings"]);
+    // Closing the window keeps nothing either.
+    assert_eq!(plugins.run_tool(*tool).unwrap(), "");
+    plugins.view_callback(
+        &window,
+        "name-edited",
+        vec![ViewValue::String("Ana".into())],
     );
+    plugins.view_closed(&window, false);
+    assert_eq!(core.changed.lock().unwrap().len(), 1);
     // OK with the same settings again changes nothing.
     assert_eq!(plugins.run_tool(*tool).unwrap(), "");
-    plugins
-        .tab_event(&dialog, "greet", TabEvent::Toggled(true))
-        .unwrap();
-    plugins.tab_closed(&dialog, true);
+    plugins.view_callback(&window, "greet-toggled", vec![ViewValue::Bool(true)]);
+    plugins.view_callback(&window, "ok", vec![]);
     assert_eq!(core.changed.lock().unwrap().len(), 1);
 }
 
@@ -2090,35 +1976,20 @@ fn interface_1_8_palette_tools_menus_dialogs_beat_data_and_following_effects() {
     // The other tool brings a tab to the front and opens its dialog, a tab
     // in no area; the dialog is told how the user closed it.
     assert_eq!(plugins.run_tool(tool("ask")).unwrap(), "");
-    let side = TabId {
+    // The tool shows the panel and opens the window; the window closed
+    // with OK says so in the footer.
+    assert_eq!(*core.shown.lock().unwrap(), ["panel", "window"]);
+    let window = ViewId {
         plugin: "oxiguitar.test".into(),
-        tab: "side".into(),
+        view: "window".into(),
     };
-    let ask = TabId {
-        plugin: "oxiguitar.test".into(),
-        tab: "ask".into(),
-    };
-    assert_eq!(*core.shown.lock().unwrap(), [side]);
-    assert_eq!(
-        *core.dialogs.lock().unwrap(),
-        [(ask.clone(), "Test Dialog".to_owned())]
-    );
-    let content = plugins.tab_content(&ask).unwrap();
-    assert!(
-        matches!(&content.rows[0].widgets[0], Widget::Button { text, .. } if text == "Clicked 0 times")
-    );
-    assert!(matches!(&content.rows[1].widgets[0], Widget::Canvas(_)));
-    let content = plugins.tab_event(&ask, "more", TabEvent::Clicked).unwrap();
-    assert!(
-        matches!(&content.rows[0].widgets[0], Widget::Button { text, .. } if text == "Clicked 1 times")
-    );
-    plugins.tab_closed(&ask, true);
+    plugins.view_closed(&window, true);
     assert!(
         core.said
             .lock()
             .unwrap()
             .iter()
-            .any(|s| s.contains("closed with OK after 1 clicks")),
+            .any(|s| s.contains("The test window was closed with OK.")),
         "{:?}",
         core.said.lock().unwrap()
     );
@@ -2432,7 +2303,7 @@ fn an_audio_export_writes_the_song_through_the_exporter() {
     );
 }
 
-/// Interface 1.11: an export's options are one of its plugin's dialogs.
+/// Interface 1.11: an export's options are one of its plugin's views.
 /// What they show changes a draft; closed with OK before the export
 /// starts, they are what the export uses, and Cancel forgets them.
 #[test]
@@ -2440,15 +2311,21 @@ fn interface_1_11_an_exports_options() {
     use oxiguitar_play::export::{self, Plan};
 
     let dir = folder("one-eleven", &["test.oxp"]);
-    let (plugins, _) = discover(std::slice::from_ref(&dir), SharedSettings::default());
+    let heard = Arc::new(Heard::default());
+    let plugins = Plugins::discover(
+        std::slice::from_ref(&dir),
+        SharedSettings::default(),
+        "x11",
+        heard.clone(),
+    );
     let exporters = plugins.exporters();
-    let options = TabId {
+    let options = ViewId {
         plugin: "oxiguitar.test".into(),
-        tab: exporters[0].spec.options.clone().unwrap(),
+        view: exporters[0].spec.options.clone().unwrap(),
     };
-    assert_eq!(options.tab, "raw-options");
-    let picked = |content: &TabContent| match &content.rows[0].widgets[1] {
-        Widget::Choice { selected, .. } => *selected,
+    assert_eq!(options.view, "raw-options");
+    let picked = || match heard.property("raw-options", "rate") {
+        Some(ViewValue::Number(n)) => n,
         other => panic!("{other:?}"),
     };
     let rate_of = |out: &Path| {
@@ -2460,31 +2337,28 @@ fn interface_1_11_an_exports_options() {
     let plan = Plan::whole(&score);
     let out = dir.join("options.oxgraw");
 
-    assert_eq!(picked(&plugins.tab_content(&options).unwrap()), 0);
-    let content = plugins
-        .tab_event(&options, "rate", TabEvent::Chosen(1))
-        .unwrap();
-    assert_eq!(picked(&content), 1, "the draft shows at once");
-    plugins.tab_closed(&options, false);
+    plugins.view_shown(&options, None);
+    assert_eq!(picked(), 0.0);
+    plugins.view_callback(&options, "rate-chosen", vec![ViewValue::Number(1.0)]);
+    plugins.view_closed(&options, false);
+    let made = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |_| true).unwrap();
     assert_eq!(
-        picked(&plugins.tab_content(&options).unwrap()),
-        0,
+        (made.rate, rate_of(&out)),
+        (44_100, 44_100),
         "Cancel forgets"
     );
-    let made = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |_| true).unwrap();
-    assert_eq!((made.rate, rate_of(&out)), (44_100, 44_100));
 
-    plugins
-        .tab_event(&options, "rate", TabEvent::Chosen(1))
-        .unwrap();
-    plugins.tab_closed(&options, true);
+    plugins.view_shown(&options, None);
+    plugins.view_callback(&options, "rate-chosen", vec![ViewValue::Number(1.0)]);
+    plugins.view_closed(&options, true);
     let made = export::export(&plugins, exporters[0], &score, &plan, &out, &mut |_| true).unwrap();
     assert_eq!(
         (made.rate, rate_of(&out)),
         (22_050, 22_050),
         "OK keeps them"
     );
-    assert_eq!(picked(&plugins.tab_content(&options).unwrap()), 1);
+    plugins.view_shown(&options, None);
+    assert_eq!(picked(), 1.0);
 }
 
 /// The rest of the core for interface 1.4's advice: what was asked of the
@@ -2819,8 +2693,8 @@ fn interface_1_15_views_in_slint() {
     assert_eq!(panel.properties, ["said"]);
     assert_eq!(panel.callbacks, ["pressed"]);
     let section = compiled.component("TestSection").unwrap();
-    assert_eq!(section.properties, ["level"]);
-    assert_eq!(section.callbacks, ["level-changed"]);
+    assert_eq!(section.properties, ["level", "nickname", "placeholder"]);
+    assert_eq!(section.callbacks, ["level-changed", "nickname-edited"]);
     let ask = |what: &str| plugins.call_service("test-echo", "view", what.as_bytes());
     ask("show window").unwrap();
     ask("show slint-panel").unwrap();
@@ -2874,6 +2748,7 @@ fn interface_1_15_views_in_slint() {
             "show slint-panel Left",
             "set window [(\"said\", String(\"hello\"))]",
             "close window",
+            "set slint-section [(\"level\", Number(0.5)), (\"nickname\", String(\"\")), (\"placeholder\", String(\"A nickname for Lead\"))]",
             "settings slint-section {\"level\":0.25}",
         ]
     );
@@ -2974,9 +2849,9 @@ impl Core for Automated {
 
 /// Interface 1.14: a plugin lists every tool and runs them, the core's and
 /// other plugins' (with options as told), measures text, copies and
-/// selects; and its surface hears its size, the keyboard and text.
+/// selects.
 #[test]
-fn interface_1_14_tools_text_and_surfaces() {
+fn interface_1_14_tools_text_and_selecting() {
     let dir = folder("automation", &["test.oxp"]);
     let core = Arc::new(Automated::default());
     let plugins = Plugins::discover(
@@ -3048,52 +2923,6 @@ fn interface_1_14_tools_text_and_surfaces() {
             .any(|a| a == "run oxiguitar/tidy for oxiguitar.test with Some(\"{}\")"),
         "{asked:?}"
     );
-
-    // The surface: its size first, then the keyboard and text.
-    let side = TabId {
-        plugin: "oxiguitar.test".into(),
-        tab: "side".into(),
-    };
-    let surface = |content: &TabContent| match content.widget("pad") {
-        Some(Widget::Surface(s)) => s.clone(),
-        other => panic!("{other:?}"),
-    };
-    let first = plugins.tab_content(&side).unwrap();
-    assert!(surface(&first).keys);
-    for event in [
-        TabEvent::Resized {
-            width: 12.0,
-            height: 60.0,
-        },
-        TabEvent::Focus(true),
-        TabEvent::Key(oxiguitar_host::api::tab::Key {
-            name: oxiguitar_host::api::tab::KeyName::Enter,
-            shift: false,
-            ctrl: false,
-            alt: false,
-        }),
-        TabEvent::Wheel {
-            at: Point::new(1.0, 1.0),
-            dx: 0.0,
-            dy: 3.0,
-        },
-        TabEvent::Typed("hello there".into()),
-    ] {
-        let content = plugins.tab_event(&side, "pad", event).unwrap();
-        assert!(content.problems().is_empty());
-    }
-    // The last thing heard, cut to the 12 pixels measured: one character
-    // of 6.
-    let last = plugins.tab_content(&side).unwrap();
-    let shown = surface(&last)
-        .items
-        .iter()
-        .find_map(|i| match i {
-            Item::Text { text, .. } => Some(text.clone()),
-            _ => None,
-        })
-        .unwrap();
-    assert_eq!(shown, "Ty");
 }
 
 /// `check_with` checks the plugin file it is given, and not the plugins

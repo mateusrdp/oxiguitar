@@ -19,29 +19,26 @@
 //!   both a sine per note (interface 1.3: [`sine`]), and the effect `gain`,
 //!   which scales a track by its section's level (half by default) and
 //!   follows a new level while it runs (interface 1.5);
-//! - two tabs (interface 1.1): `panel`, in the bottom area, with one widget
-//!   of every kind and a canvas that marks where the pointer last went
-//!   down, and `side`, in the right area, with one line of text. `panel`'s
-//!   button `score` asks the host for the open score and shows its title;
+//! - its own UI, `ui/test.slint` (interface 2.0): the window `window`,
+//!   the panels `slint-panel` and `panel` (the events it heard, and the
+//!   open score's title when its button asks the host for it), the track
+//!   sections `test` and `slint-section` (a level and a nickname per
+//!   track), the window `settings` and the exporter `raw`'s options;
 //! - every kind of event (score, selection, playback): each is written down
-//!   and shown in `panel`, and a score being opened asks the host to
-//!   redraw `panel`. Built for interface 1.2, it hears the editor's
-//!   selection (`Event::Selection2`);
+//!   and shown in `panel`. It hears the editor's selection
+//!   (`Event::Selection2`);
 //! - the tool `mark` (interface 1.2), "Mark the Title": it asks for the
 //!   score (version 2), adds `!` to its title and hands it back as one
 //!   change;
-//! - interface 1.3: the track dialog's section `test` for every track
-//!   but drums (a level slider and a name field, kept per track), the tool
+//! - interface 1.3: the track sections, for every track but drums, the tool
 //!   `link`, "Show a Footer Link" (a warning in the footer with a link to
 //!   the plugin guide), and the shared folder `soundfonts`;
 //! - the audio device `fake` (interface 1.3, [`fake`]): an output with no
 //!   speaker, priority -100, so a real device always wins;
 //! - interface 1.9: the tool `settings`, "Test Settings…", which doesn't
-//!   edit the score and opens the dialog `settings` (a toggle and a field,
+//!   edit the score and opens the window `settings` (a toggle and a field,
 //!   kept in the plugin's settings with OK, forgotten with Cancel).
-//! - interface 1.14: the tab `side` holds the surface `pad`, which writes
-//!   down what it hears (its size, the pointer, the wheel, the keyboard
-//!   and text) and draws the last of it with text it measures; `mark` has
+//! - interface 1.14: `mark` has
 //!   an options schema (`suffix`, what to add to the title), so other
 //!   plugins can run it as told; and the service methods `tools`,
 //!   `run-tool`, `measure`, `copy` and `select` call the host's new
@@ -51,8 +48,7 @@
 //! the host's services, `via-host` calls `test-echo` back through the host
 //! (a plugin calling a service, here itself, while answering a call), and
 //! `panic` and `fail` check that both cross the interface as errors.
-//! `events` returns the events received so far, one per line, and `break`
-//! makes `panel`'s contents unshowable from then on (an id used twice).
+//! `events` returns the events received so far, one per line.
 //! `link` shows a footer warning linking to the address it is given, and
 //! `folders` writes `hello.txt` into the plugin's data folder and returns
 //! the data, cache and `soundfonts` folders, one per line.
@@ -65,9 +61,8 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use oxiguitar_plugin::display::{Anchor, Font, Item, Paint, Point};
 use oxiguitar_plugin::score::{Score, ScoreInfo};
 use oxiguitar_plugin::{
-    Availability, Canvas, Error, ErrorKind, Event, FormatReader, FormatWriter, Host, Level,
-    LogEntry, Plugin, PluginFileState, PointerKind, Read, Row, Selection2, Service, Tab,
-    TabContent, TabEvent, Tool, TrackInfo, TrackSection, Widget, Written,
+    Availability, Error, ErrorKind, Event, FormatReader, FormatWriter, Host, Level, LogEntry,
+    Plugin, PluginFileState, Read, Selection2, Service, Tool, Written,
 };
 
 use oxiguitar_plugin::serde_json;
@@ -82,40 +77,169 @@ pub const MAGIC: &str = "OXGTEST\n";
 #[derive(Debug)]
 pub struct TestPlugin {
     host: Host,
-    panel: Panel,
-    side: Side,
     mark: Mark,
     link: LinkTool,
     stamp: Stamp,
-    ask: Ask,
     ask_tool: AskTool,
-    settings: Arc<SettingsDialog>,
     settings_tool: SettingsTool,
     fake: fake::Fake,
     raw: Raw,
-    raw_options: RawOptions,
     drawer: StampDrawer,
     performer: StampPerformer,
-    ui: TestUi,
+    ui: Arc<TestUi>,
 }
 
-/// The test plugin's own UI (interface 1.15): what it was told.
+/// A JSON object, as the plugin keeps its settings and a track's.
+type Object = serde_json::Map<String, serde_json::Value>;
+
+/// The test plugin's own UI (`ui/test.slint`): what it was told, the
+/// events it heard (shown in the panel `panel`), and the drafts of the
+/// window `settings` and of the exporter `raw`'s options, kept with OK and
+/// forgotten with Cancel.
 #[derive(Debug)]
 pub struct TestUi {
     host: Host,
     heard: Mutex<Vec<String>>,
+    events: Mutex<Vec<String>>,
+    settings: Mutex<Option<Object>>,
+    raw: Mutex<Option<Object>>,
+    /// Each track section's track settings, as shown.
+    sections: Mutex<std::collections::HashMap<String, Object>>,
+}
+
+fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+impl TestUi {
+    fn new(host: Host) -> TestUi {
+        TestUi {
+            host,
+            heard: Mutex::new(Vec::new()),
+            events: Mutex::new(Vec::new()),
+            settings: Mutex::new(None),
+            raw: Mutex::new(None),
+            sections: Mutex::default(),
+        }
+    }
+
+    /// A draft, or what is saved when there is none yet.
+    fn draft(&self, draft: &Mutex<Option<Object>>) -> Object {
+        lock(draft)
+            .clone()
+            .unwrap_or_else(|| self.host.settings().unwrap_or_default())
+    }
+
+    /// What the window `settings` shows.
+    fn settings_properties(&self) -> Vec<(String, oxiguitar_plugin::Value)> {
+        use oxiguitar_plugin::Value;
+        let settings = self.draft(&self.settings);
+        let greet = settings
+            .get("greet")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let name = settings
+            .get("name")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let greeting = if greet && !name.is_empty() {
+            format!("Hello, {name}.")
+        } else {
+            "Nothing to say.".to_owned()
+        };
+        vec![
+            ("greet".into(), Value::Bool(greet)),
+            ("name".into(), Value::String(name)),
+            ("greeting".into(), Value::String(greeting)),
+        ]
+    }
+
+    /// What the exporter `raw`'s options show.
+    fn raw_properties(&self) -> Vec<(String, oxiguitar_plugin::Value)> {
+        use oxiguitar_plugin::Value;
+        let rate = raw_rate(&self.draft(&self.raw));
+        vec![
+            (
+                "rates".into(),
+                Value::List(
+                    RAW_RATES
+                        .iter()
+                        .map(|r| Value::String(format!("{r} Hz")))
+                        .collect(),
+                ),
+            ),
+            (
+                "rate".into(),
+                Value::Number(RAW_RATES.iter().position(|r| *r == rate).unwrap_or(0) as f64),
+            ),
+        ]
+    }
+
+    /// What the panel `panel` shows of the events.
+    fn show_events(&self) -> Result<(), Error> {
+        let events = lock(&self.events).join("\n");
+        self.host.set_view(
+            "panel",
+            vec![("events".into(), oxiguitar_plugin::Value::String(events))],
+        )
+    }
+
+    /// Opens the window `settings` on what is saved.
+    fn open_settings(&self) -> Result<(), Error> {
+        *lock(&self.settings) = None;
+        self.host.set_view("settings", self.settings_properties())?;
+        self.host.show_view("settings")
+    }
+
+    /// Keeps a draft in the plugin's settings with OK, forgets it otherwise.
+    fn finish(&self, draft: &Mutex<Option<Object>>, ok: bool) -> Result<(), Error> {
+        match lock(draft).take() {
+            Some(settings) if ok => self.host.set_settings(&settings),
+            _ => Ok(()),
+        }
+    }
 }
 
 impl oxiguitar_plugin::Ui for TestUi {
     fn shown(&self, view: &str, track: Option<&oxiguitar_plugin::TrackView>) -> Result<(), Error> {
-        let track = track.map_or(String::new(), |t| {
+        use oxiguitar_plugin::Value;
+        let told = track.map_or(String::new(), |t| {
             format!(" track {} {}", t.track.index, t.settings)
         });
-        self.heard
-            .lock()
-            .unwrap()
-            .push(format!("shown {view}{track}"));
-        Ok(())
+        lock(&self.heard).push(format!("shown {view}{told}"));
+        match view {
+            "settings" => self.host.set_view(view, self.settings_properties()),
+            "raw-options" => {
+                *lock(&self.raw) = None;
+                self.host.set_view(view, self.raw_properties())
+            }
+            "panel" => self.show_events(),
+            "test" | "slint-section" => {
+                let Some(t) = track else { return Ok(()) };
+                let settings: Object = serde_json::from_str(&t.settings).unwrap_or_default();
+                let number =
+                    |k: &str, d: f64| settings.get(k).and_then(|v| v.as_f64()).unwrap_or(d);
+                let text = |k: &str| {
+                    settings
+                        .get(k)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default()
+                        .to_owned()
+                };
+                let properties = vec![
+                    ("level".into(), Value::Number(number("level", 0.5))),
+                    ("nickname".into(), Value::String(text("nickname"))),
+                    (
+                        "placeholder".into(),
+                        Value::String(format!("A nickname for {}", t.track.name)),
+                    ),
+                ];
+                lock(&self.sections).insert(view.to_owned(), settings);
+                self.host.set_view(view, properties)
+            }
+            _ => Ok(()),
+        }
     }
 
     fn callback(
@@ -124,27 +248,80 @@ impl oxiguitar_plugin::Ui for TestUi {
         callback: &str,
         args: Vec<oxiguitar_plugin::Value>,
     ) -> Result<(), Error> {
-        self.heard
-            .lock()
-            .unwrap()
-            .push(format!("{view} {callback} {args:?}"));
-        // The section's level goes into the track's settings.
-        if callback == "level-changed"
-            && let Some(oxiguitar_plugin::Value::Number(level)) = args.first()
-        {
-            let mut settings = serde_json::Map::new();
-            settings.insert("level".into(), (*level).into());
-            self.host.set_track_settings(view, &settings)?;
+        use oxiguitar_plugin::Value;
+        lock(&self.heard).push(format!("{view} {callback} {args:?}"));
+        match (view, callback, args.first()) {
+            // A section's level and nickname go into the track's settings;
+            // the nickname "refuse" is refused.
+            ("test" | "slint-section", "level-changed" | "nickname-edited", Some(value)) => {
+                let (key, value) = match value {
+                    Value::Number(level) => ("level", serde_json::Value::from(*level)),
+                    Value::String(t) if t == "refuse" => {
+                        return Err(Error::new(ErrorKind::Invalid, "that nickname is refused"));
+                    }
+                    Value::String(t) => ("nickname", serde_json::Value::from(t.clone())),
+                    _ => return Ok(()),
+                };
+                let settings = {
+                    let mut sections = lock(&self.sections);
+                    let settings = sections.entry(view.to_owned()).or_default();
+                    settings.insert(key.into(), value);
+                    settings.clone()
+                };
+                self.host.set_track_settings(view, &settings)
+            }
+            ("panel", "ask-score", _) => {
+                let score = match self.host.score()? {
+                    Some(score) => format!("Score: {}", score.info.title),
+                    None => "Score: none open".to_owned(),
+                };
+                self.host
+                    .set_view(view, vec![("score".into(), Value::String(score))])
+            }
+            ("settings", "ok" | "cancel", _) => {
+                self.finish(&self.settings, callback == "ok")?;
+                self.host.close_view(view)
+            }
+            ("settings", "greet-toggled" | "name-edited", Some(value)) => {
+                let mut settings = self.draft(&self.settings);
+                match value {
+                    Value::Bool(on) => settings.insert("greet".into(), (*on).into()),
+                    Value::String(t) => settings.insert("name".into(), t.clone().into()),
+                    _ => return Ok(()),
+                };
+                *lock(&self.settings) = Some(settings);
+                self.host.set_view(view, self.settings_properties())
+            }
+            ("raw-options", "rate-chosen", Some(Value::Number(i))) => {
+                let rate = RAW_RATES
+                    .get(*i as usize)
+                    .ok_or_else(|| Error::new(ErrorKind::Failed, format!("no rate {i}")))?;
+                let mut settings = self.draft(&self.raw);
+                settings.insert("raw-rate".into(), (*rate).into());
+                *lock(&self.raw) = Some(settings);
+                Ok(())
+            }
+            _ => Ok(()),
         }
-        Ok(())
     }
 
     fn closed(&self, view: &str, accepted: bool) -> Result<(), Error> {
-        self.heard
-            .lock()
-            .unwrap()
-            .push(format!("closed {view} {accepted}"));
-        Ok(())
+        lock(&self.heard).push(format!("closed {view} {accepted}"));
+        match view {
+            "settings" => self.finish(&self.settings, false),
+            "raw-options" => self.finish(&self.raw, accepted),
+            "window" => {
+                self.host.notify(
+                    Level::Warning,
+                    format!(
+                        "The test window was closed{}.",
+                        if accepted { " with OK" } else { "" }
+                    ),
+                );
+                Ok(())
+            }
+            _ => Ok(()),
+        }
     }
 }
 
@@ -222,73 +399,6 @@ impl oxiguitar_plugin::AudioExporter for Raw {
     }
 }
 
-/// The options of the exporter `raw` (interface 1.11): a dialog the export
-/// dialog shows under its list of formats, with the rate. As any dialog,
-/// it changes a draft until it is closed: OK keeps the rate in the
-/// plugin's settings (`raw-rate`), Cancel forgets it.
-#[derive(Debug)]
-struct RawOptions {
-    host: Host,
-    draft: Mutex<Option<serde_json::Map<String, serde_json::Value>>>,
-}
-
-impl RawOptions {
-    fn current(&self) -> serde_json::Map<String, serde_json::Value> {
-        self.draft
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone()
-            .unwrap_or_else(|| self.host.settings().unwrap_or_default())
-    }
-}
-
-impl Tab for RawOptions {
-    fn content(&self) -> TabContent {
-        let rate = raw_rate(&self.current());
-        TabContent {
-            rows: vec![Row {
-                widgets: vec![
-                    Widget::Label {
-                        text: "Rate".into(),
-                        muted: false,
-                    },
-                    Widget::Choice {
-                        id: "rate".into(),
-                        options: RAW_RATES.iter().map(|r| format!("{r} Hz")).collect(),
-                        selected: RAW_RATES.iter().position(|r| *r == rate).unwrap_or(0) as u32,
-                        enabled: true,
-                    },
-                ],
-            }],
-        }
-    }
-
-    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-        let ("rate", TabEvent::Chosen(i)) = (widget, event) else {
-            return Err(Error::not_found(format!("no widget {widget:?}")));
-        };
-        let rate = RAW_RATES
-            .get(i as usize)
-            .ok_or_else(|| Error::new(ErrorKind::Failed, format!("no rate {i}")))?;
-        let mut settings = self.current();
-        settings.insert("raw-rate".into(), (*rate).into());
-        *self.draft.lock().unwrap_or_else(PoisonError::into_inner) = Some(settings);
-        Ok(())
-    }
-
-    fn closed(&self, ok: bool) -> Result<(), Error> {
-        let draft = self
-            .draft
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .take();
-        match draft {
-            Some(settings) if ok => self.host.set_settings(&settings),
-            _ => Ok(()),
-        }
-    }
-}
-
 /// The tool `link`.
 #[derive(Debug)]
 struct LinkTool {
@@ -308,220 +418,23 @@ impl Tool for LinkTool {
 }
 
 /// The tool `settings` (interface 1.9): it doesn't edit the score, so it
-/// runs with no score open and while the song plays, and opens the dialog
+/// runs with no score open and while the song plays, and opens the window
 /// `settings` with what is saved.
 #[derive(Debug)]
 struct SettingsTool {
-    host: Host,
-    dialog: Arc<SettingsDialog>,
+    ui: Arc<TestUi>,
 }
 
 impl Tool for SettingsTool {
     fn run(&self) -> Result<String, Error> {
-        self.dialog.forget();
-        self.host.open_dialog("settings")?;
+        self.ui.open_settings()?;
         Ok(String::new())
-    }
-}
-
-/// The dialog `settings`: a toggle and a field, kept in the plugin's
-/// settings (`greet` and `name`) when the user presses OK. Until then the
-/// dialog changes a draft, and Cancel forgets it: how a plugin shows its
-/// settings since the core's settings windows were retired (1.9).
-#[derive(Debug)]
-struct SettingsDialog {
-    host: Host,
-    draft: Mutex<Option<serde_json::Map<String, serde_json::Value>>>,
-}
-
-impl SettingsDialog {
-    /// The draft, or what is saved when there is none yet.
-    fn current(&self) -> serde_json::Map<String, serde_json::Value> {
-        self.draft
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone()
-            .unwrap_or_else(|| self.host.settings().unwrap_or_default())
-    }
-
-    fn forget(&self) {
-        *self.draft.lock().unwrap_or_else(PoisonError::into_inner) = None;
-    }
-}
-
-impl Tab for SettingsDialog {
-    fn content(&self) -> TabContent {
-        let settings = self.current();
-        let greet = settings
-            .get("greet")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
-        let name = settings
-            .get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_owned();
-        let greeting = if greet && !name.is_empty() {
-            format!("Hello, {name}.")
-        } else {
-            "Nothing to say.".to_owned()
-        };
-        TabContent {
-            rows: vec![
-                Row {
-                    widgets: vec![Widget::Toggle {
-                        id: "greet".into(),
-                        text: "Greet".into(),
-                        on: greet,
-                        enabled: true,
-                    }],
-                },
-                Row {
-                    widgets: vec![Widget::Field {
-                        id: "name".into(),
-                        text: name,
-                        placeholder: "Your name".into(),
-                        enabled: true,
-                    }],
-                },
-                Row {
-                    widgets: vec![Widget::Label {
-                        text: greeting,
-                        muted: true,
-                    }],
-                },
-            ],
-        }
-    }
-
-    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-        let mut settings = self.current();
-        match (widget, event) {
-            ("greet", TabEvent::Toggled(on)) => settings.insert("greet".into(), on.into()),
-            ("name", TabEvent::Edited(text)) => settings.insert("name".into(), text.into()),
-            _ => return Err(Error::not_found(format!("no widget {widget:?}"))),
-        };
-        *self.draft.lock().unwrap_or_else(PoisonError::into_inner) = Some(settings);
-        Ok(())
-    }
-
-    fn closed(&self, ok: bool) -> Result<(), Error> {
-        let draft = self
-            .draft
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .take();
-        match draft {
-            Some(settings) if ok => self.host.set_settings(&settings),
-            _ => Ok(()),
-        }
-    }
-}
-
-/// The track dialog's section `test`: a level (0 to 1, `level`) and a
-/// nickname (`nickname`) per track.
-#[derive(Debug)]
-struct TestSection;
-
-impl TrackSection for TestSection {
-    fn content(
-        &self,
-        track: &TrackInfo,
-        settings: &serde_json::Map<String, serde_json::Value>,
-    ) -> TabContent {
-        let level = settings
-            .get("level")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.5);
-        let nickname = settings
-            .get("nickname")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default();
-        TabContent {
-            rows: vec![
-                Row {
-                    widgets: vec![
-                        Widget::Label {
-                            text: "Level".into(),
-                            muted: false,
-                        },
-                        Widget::Slider {
-                            id: "level".into(),
-                            value: level as f32,
-                            min: 0.0,
-                            max: 1.0,
-                            enabled: true,
-                        },
-                    ],
-                },
-                Row {
-                    widgets: vec![Widget::Field {
-                        id: "nickname".into(),
-                        text: nickname.into(),
-                        placeholder: format!("A nickname for {}", track.name),
-                        enabled: true,
-                    }],
-                },
-            ],
-        }
-    }
-
-    fn on(
-        &self,
-        _track: &TrackInfo,
-        settings: &mut serde_json::Map<String, serde_json::Value>,
-        widget: &str,
-        event: TabEvent,
-    ) -> Result<(), Error> {
-        match (widget, event) {
-            ("level", TabEvent::Slid(v)) => {
-                settings.insert("level".into(), f64::from(v).into());
-            }
-            ("nickname", TabEvent::Edited(text)) if text == "refuse" => {
-                return Err(Error::new(ErrorKind::Invalid, "that nickname is refused"));
-            }
-            ("nickname", TabEvent::Edited(text)) => {
-                settings.insert("nickname".into(), text.into());
-            }
-            _ => return Err(Error::not_found(format!("no widget {widget:?}"))),
-        }
-        Ok(())
     }
 }
 
 /// The service that is never available.
 #[derive(Debug)]
 struct Unavailable;
-
-/// The tab `panel`: what its widgets hold, and the events received.
-#[derive(Debug)]
-struct Panel {
-    host: Host,
-    state: Mutex<PanelState>,
-}
-
-#[derive(Debug, Default)]
-struct PanelState {
-    clicks: u32,
-    on: bool,
-    level: f32,
-    text: String,
-    choice: u32,
-    line: Option<u32>,
-    /// The last pointer event on the canvas: what, and where.
-    pointer: Option<(PointerKind, Point)>,
-    events: Vec<String>,
-    broken: bool,
-    title: Option<String>,
-}
-
-/// The tab `side`, with the surface `pad` (interface 1.14).
-#[derive(Debug)]
-struct Side {
-    host: Host,
-    /// What the surface heard, oldest first, and its size.
-    heard: Mutex<(Vec<String>, (f32, f32))>,
-}
 
 /// The tool `mark`.
 #[derive(Debug)]
@@ -627,8 +540,8 @@ impl Tool for Stamp {
 }
 
 /// The tool `ask`, a palette button with a symbol and an entry of the
-/// page's right-click menu: opens the dialog `ask` and brings the tab
-/// `side` to the front (interface 1.8).
+/// page's right-click menu: brings the panel `panel` to the front and
+/// opens the window `window`.
 #[derive(Debug)]
 struct AskTool {
     host: Host,
@@ -636,65 +549,9 @@ struct AskTool {
 
 impl Tool for AskTool {
     fn run(&self) -> Result<String, Error> {
-        self.host.show_tab("side");
-        self.host.open_dialog("ask")?;
+        self.host.show_view("panel")?;
+        self.host.show_view("window")?;
         Ok(String::new())
-    }
-}
-
-/// The dialog `ask` (a tab whose area is `dialog`): a button that counts
-/// its clicks and a canvas; closing it says how in the footer.
-#[derive(Debug)]
-struct Ask {
-    host: Host,
-    clicks: Mutex<u32>,
-}
-
-impl Tab for Ask {
-    fn content(&self) -> TabContent {
-        let clicks = *self.clicks.lock().unwrap_or_else(PoisonError::into_inner);
-        TabContent {
-            rows: vec![
-                Row {
-                    widgets: vec![Widget::Button {
-                        id: "more".into(),
-                        text: format!("Clicked {clicks} times"),
-                        enabled: true,
-                    }],
-                },
-                Row {
-                    widgets: vec![Widget::Canvas(Canvas {
-                        id: "sketch".into(),
-                        width: CANVAS.0,
-                        height: CANVAS.1,
-                        items: vec![Item::Line {
-                            from: Point::new(0.0, CANVAS.1),
-                            to: Point::new(CANVAS.0, 0.0),
-                            width: 1.0,
-                            paint: Paint::Accent,
-                        }],
-                    })],
-                },
-            ],
-        }
-    }
-
-    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-        if (widget, &event) == ("more", &TabEvent::Clicked) {
-            *self.clicks.lock().unwrap_or_else(PoisonError::into_inner) += 1;
-        }
-        Ok(())
-    }
-
-    fn closed(&self, ok: bool) -> Result<(), Error> {
-        let clicks =
-            std::mem::take(&mut *self.clicks.lock().unwrap_or_else(PoisonError::into_inner));
-        let how = if ok { "OK" } else { "Cancel" };
-        self.host.notify(
-            Level::Warning,
-            format!("The test dialog was closed with {how} after {clicks} clicks."),
-        );
-        Ok(())
     }
 }
 
@@ -880,61 +737,32 @@ impl oxiguitar_plugin::Drawer for StampDrawer {
     }
 }
 
-/// The panel canvas's size, in its own units.
-pub const CANVAS: (f32, f32) = (100.0, 50.0);
-
 impl Plugin for TestPlugin {
     fn start(host: Host) -> Result<TestPlugin, Error> {
-        let settings = Arc::new(SettingsDialog {
-            host: host.clone(),
-            draft: Mutex::new(None),
-        });
+        let ui = Arc::new(TestUi::new(host.clone()));
         Ok(TestPlugin {
-            panel: Panel {
-                host: host.clone(),
-                state: Mutex::default(),
-            },
-            side: Side {
-                host: host.clone(),
-                heard: Mutex::default(),
-            },
             mark: Mark { host: host.clone() },
             link: LinkTool { host: host.clone() },
             stamp: Stamp { host: host.clone() },
-            ask: Ask {
-                host: host.clone(),
-                clicks: Mutex::new(0),
-            },
             ask_tool: AskTool { host: host.clone() },
-            settings: settings.clone(),
-            settings_tool: SettingsTool {
-                host: host.clone(),
-                dialog: settings,
-            },
+            settings_tool: SettingsTool { ui: ui.clone() },
             fake: fake::Fake::new(host.clone()),
             raw: Raw {
                 host: host.clone(),
                 frames: Mutex::new(None),
-            },
-            raw_options: RawOptions {
-                host: host.clone(),
-                draft: Mutex::new(None),
             },
             drawer: StampDrawer::default(),
             performer: StampPerformer {
                 host: host.clone(),
                 asked: std::sync::atomic::AtomicU32::new(0),
             },
-            ui: TestUi {
-                host: host.clone(),
-                heard: Mutex::new(Vec::new()),
-            },
+            ui,
             host,
         })
     }
 
     fn ui(&self) -> Option<&dyn oxiguitar_plugin::Ui> {
-        Some(&self.ui)
+        Some(&*self.ui)
     }
 
     fn drawer(&self) -> Option<&dyn oxiguitar_plugin::Drawer> {
@@ -960,10 +788,6 @@ impl Plugin for TestPlugin {
         }
     }
 
-    fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
-        (id == "test").then_some(&TestSection as &dyn TrackSection)
-    }
-
     fn instrument(&self, id: &str) -> Option<&dyn oxiguitar_plugin::Instrument> {
         matches!(id, "drums" | "no-drums")
             .then_some(&sine::Sine as &dyn oxiguitar_plugin::Instrument)
@@ -973,21 +797,11 @@ impl Plugin for TestPlugin {
         (id == "gain").then_some(&sine::Gain as &dyn oxiguitar_plugin::Effect)
     }
 
-    fn tab(&self, id: &str) -> Option<&dyn Tab> {
-        match id {
-            "panel" => Some(&self.panel),
-            "side" => Some(&self.side),
-            "ask" => Some(&self.ask),
-            "settings" => Some(&*self.settings),
-            "raw-options" => Some(&self.raw_options),
-            _ => None,
-        }
-    }
-
     fn event(&self, event: &Event) {
-        self.panel.state().events.push(format!("{event:?}"));
+        lock(&self.ui.events).push(format!("{event:?}"));
+        // A score being opened shows in the panel at once.
         if matches!(event, Event::ScoreOpened { .. }) {
-            self.host.redraw("panel");
+            let _ = self.ui.show_events();
         }
     }
 
@@ -1236,11 +1050,7 @@ impl Service for TestPlugin {
                 ..Error::new(ErrorKind::Invalid, "failed on purpose")
             }),
             "panic" => panic!("panicked on purpose"),
-            "events" => Ok(self.panel.state().events.join("\n").into_bytes()),
-            "break" => {
-                self.panel.state().broken = true;
-                Ok(Vec::new())
-            }
+            "events" => Ok(lock(&self.ui.events).join("\n").into_bytes()),
             "link" => {
                 let url = String::from_utf8_lossy(input).into_owned();
                 self.host
@@ -1295,228 +1105,6 @@ impl Service for Unavailable {
     }
 }
 
-impl Panel {
-    fn state(&self) -> MutexGuard<'_, PanelState> {
-        self.state.lock().unwrap_or_else(PoisonError::into_inner)
-    }
-}
-
-impl Tab for Panel {
-    fn content(&self) -> TabContent {
-        let s = self.state();
-        if s.broken {
-            let button = Widget::Button {
-                id: "same".into(),
-                text: "Same".into(),
-                enabled: true,
-            };
-            return TabContent {
-                rows: vec![Row {
-                    widgets: vec![button.clone(), button],
-                }],
-            };
-        }
-        let (w, h) = CANVAS;
-        let mut items = vec![Item::Rect {
-            at: Point::new(0.0, 0.0),
-            width: w,
-            height: h,
-            paint: Paint::Muted,
-        }];
-        if let Some((kind, at)) = s.pointer {
-            items.push(Item::Rect {
-                at: Point::new(at.x - 2.0, at.y - 2.0),
-                width: 4.0,
-                height: 4.0,
-                paint: Paint::Accent,
-            });
-            items.push(Item::Text {
-                text: format!("{kind:?}"),
-                at: Point::new(w / 2.0, h - 4.0),
-                size: 10.0,
-                font: Font::Sans,
-                anchor: Anchor::Middle,
-                paint: Paint::Ink,
-            });
-        }
-        let label = |text: String| Widget::Label { text, muted: false };
-        let button = |id: &str, text: &str| Widget::Button {
-            id: id.into(),
-            text: text.into(),
-            enabled: true,
-        };
-        TabContent {
-            rows: vec![
-                Row {
-                    widgets: vec![
-                        label(format!("Clicks: {}", s.clicks)),
-                        button("click", "Click"),
-                        button("score", "Score"),
-                    ],
-                },
-                Row {
-                    widgets: vec![
-                        Widget::Toggle {
-                            id: "toggle".into(),
-                            text: "On".into(),
-                            on: s.on,
-                            enabled: true,
-                        },
-                        Widget::Slider {
-                            id: "slider".into(),
-                            value: s.level,
-                            min: 0.0,
-                            max: 10.0,
-                            enabled: true,
-                        },
-                        Widget::Field {
-                            id: "field".into(),
-                            text: s.text.clone(),
-                            placeholder: "Type here".into(),
-                            enabled: true,
-                        },
-                        Widget::Choice {
-                            id: "choice".into(),
-                            options: vec!["One".into(), "Two".into(), "Three".into()],
-                            selected: s.choice,
-                            enabled: true,
-                        },
-                        Widget::List {
-                            id: "list".into(),
-                            items: vec!["First".into(), "Second".into()],
-                            selected: s.line,
-                        },
-                    ],
-                },
-                Row {
-                    widgets: vec![Widget::Canvas(Canvas {
-                        id: "canvas".into(),
-                        width: w,
-                        height: h,
-                        items,
-                    })],
-                },
-                Row {
-                    widgets: vec![
-                        Widget::Label {
-                            text: format!(
-                                "Score: {}",
-                                s.title.as_deref().unwrap_or("not asked for")
-                            ),
-                            muted: true,
-                        },
-                        label(format!("Events: {}", s.events.len())),
-                        // Interface 1.4: a link, which the core opens.
-                        Widget::Link {
-                            text: "OxiGuitar".into(),
-                            url: "https://github.com/mateusrdp/oxiguitar".into(),
-                        },
-                    ],
-                },
-            ],
-        }
-    }
-
-    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-        let mut s = self.state();
-        match (widget, event) {
-            ("click", TabEvent::Clicked) => s.clicks += 1,
-            ("score", TabEvent::Clicked) => {
-                // Not with the state locked: the host may take a while.
-                drop(s);
-                let title = match self.host.score()? {
-                    Some(score) => score.info.title,
-                    None => "none open".into(),
-                };
-                self.state().title = Some(title);
-            }
-            ("toggle", TabEvent::Toggled(on)) => s.on = on,
-            ("slider", TabEvent::Slid(v)) => s.level = v.clamp(0.0, 10.0),
-            ("field", TabEvent::Edited(text)) => s.text = text,
-            ("choice", TabEvent::Chosen(i)) if i < 3 => s.choice = i,
-            ("list", TabEvent::Chosen(i)) if i < 2 => s.line = Some(i),
-            ("canvas", TabEvent::Pointer(p)) => s.pointer = Some((p.kind, p.at)),
-            (widget, event) => {
-                return Err(Error::new(
-                    ErrorKind::Invalid,
-                    format!("the widget {widget:?} doesn't take {event:?}"),
-                ));
-            }
-        }
-        Ok(())
-    }
-}
-
-impl Side {
-    fn heard(&self) -> MutexGuard<'_, (Vec<String>, (f32, f32))> {
-        self.heard.lock().unwrap_or_else(PoisonError::into_inner)
-    }
-}
-
-impl Tab for Side {
-    fn content(&self) -> TabContent {
-        let (last, (width, _)) = {
-            let h = self.heard();
-            (h.0.last().cloned().unwrap_or_default(), h.1)
-        };
-        // The last thing heard, cut to the surface's width with the
-        // core's own measure (no fonts of its own); detached, unmeasured.
-        let shown = match self.host.measure_text(&last, 12.0, Font::Sans) {
-            Ok(m) => {
-                let fits = m.edges.iter().take_while(|x| **x <= width.max(1.0)).count();
-                last.chars().take(fits.saturating_sub(1)).collect()
-            }
-            Err(_) => last,
-        };
-        TabContent {
-            rows: vec![
-                Row {
-                    widgets: vec![Widget::Label {
-                        text: "The test plugin's other tab.".into(),
-                        muted: false,
-                    }],
-                },
-                Row {
-                    widgets: vec![Widget::Surface(oxiguitar_plugin::Surface {
-                        id: "pad".into(),
-                        height: 60.0,
-                        items: vec![
-                            Item::Rect {
-                                at: Point::new(0.0, 0.0),
-                                width: width.max(1.0),
-                                height: 60.0,
-                                paint: Paint::Muted,
-                            },
-                            Item::Text {
-                                text: shown,
-                                at: Point::new(4.0, 20.0),
-                                size: 12.0,
-                                font: Font::Sans,
-                                anchor: Anchor::Start,
-                                paint: Paint::Ink,
-                            },
-                        ],
-                        keys: true,
-                        cursor: oxiguitar_plugin::Cursor::Text,
-                    })],
-                },
-            ],
-        }
-    }
-
-    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-        if widget != "pad" {
-            return Err(Error::not_found(format!("the side tab has no {widget:?}")));
-        }
-        let mut h = self.heard();
-        if let TabEvent::Resized { width, height } = event {
-            h.1 = (width, height);
-        }
-        h.0.push(format!("{event:?}"));
-        Ok(())
-    }
-}
-
 oxiguitar_plugin::export_plugin!(TestPlugin);
 
 /// Writes where no program may: the crash a plugin's bug would be.
@@ -1557,55 +1145,96 @@ mod tests {
         assert_eq!(problems, Vec::<String>::new());
     }
 
-    /// `fixtures/plugin/panel.answer`, the fuzz target `plugin_tab`'s seed:
-    /// the panel's contents after a pointer went down, as the plugin
-    /// answers with them. `OXIGUITAR_BLESS=1` rewrites it.
+    /// The fuzz target `plugin_drawing`'s seeds, `fixtures/plugin/*.answer`:
+    /// the stamp's drawing as the plugin answers with it, and one whose line
+    /// runs far off its box (what the fuzzer found of a canvas on 18 Oct
+    /// 2026). `OXIGUITAR_BLESS=1` rewrites them.
     #[test]
-    fn the_fuzzing_seed_is_the_panel_s_answer() {
-        use oxiguitar_plugin::api::message::{Answer, Request};
+    fn the_fuzzing_seeds_are_drawings() {
+        use oxiguitar_plugin::api::message::{Answer, DrawPlace, DrawTimes, Request};
+        use oxiguitar_plugin::score::{BeatEffects, BeatKind, Duration, NoteValue};
+        use oxiguitar_plugin::score2::{Beat2, BeatExt};
         let plugin = TestPlugin::start(Host::detached()).unwrap();
-        let pointer = TabEvent::Pointer(oxiguitar_plugin::Pointer {
-            kind: PointerKind::Down,
-            at: Point::new(30.0, 20.0),
-            button: oxiguitar_plugin::PointerButton::Primary,
-        });
-        let request = Request::TabEvent {
-            tab: "panel".into(),
-            widget: "canvas".into(),
-            event: pointer,
+        let beat = Beat2 {
+            kind: BeatKind::Rest,
+            duration: Duration {
+                value: NoteValue::Quarter,
+                dots: 0,
+                tuplets: Vec::new(),
+            },
+            notes: Vec::new(),
+            grace: None,
+            effects: BeatEffects::default(),
+            chord: None,
+            text: String::new(),
+            ext: vec![BeatExt::Plugin {
+                plugin: ID.into(),
+                data: STAMP.into(),
+            }],
+        };
+        let request = Request::Draw {
+            places: vec![DrawPlace::Beat {
+                at: [0; 5],
+                beat: Box::new(beat),
+            }],
+            times: DrawTimes::default(),
         };
         let answer = oxiguitar_plugin::dispatch(&plugin, request).unwrap();
-        assert!(matches!(&answer, Answer::Tab(_)));
-        let bytes = oxiguitar_plugin::api::encode(&answer).unwrap();
-        let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../fixtures/plugin/panel.answer");
-        if std::env::var_os("OXIGUITAR_BLESS").is_some() {
-            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
-            std::fs::write(&file, &bytes).unwrap();
+        let Answer::Drawn(stamp) = &answer else {
+            panic!("{answer:?}")
+        };
+        let mut far = stamp.clone();
+        far[0].items = vec![Item::Line {
+            from: Point::new(0.0, 0.0),
+            to: Point::new(1.0e30, -1.0e30),
+            width: 1.0,
+            paint: Paint::Accent,
+        }];
+        for (name, answer) in [("stamp", answer.clone()), ("far-line", Answer::Drawn(far))] {
+            let bytes = oxiguitar_plugin::api::encode(&answer).unwrap();
+            let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join(format!("../../fixtures/plugin/{name}.answer"));
+            if std::env::var_os("OXIGUITAR_BLESS").is_some() {
+                std::fs::write(&file, &bytes).unwrap();
+            }
+            assert_eq!(
+                std::fs::read(&file).expect("run with OXIGUITAR_BLESS=1 to write it"),
+                bytes,
+                "{name} changed: run with OXIGUITAR_BLESS=1"
+            );
         }
-        assert_eq!(
-            std::fs::read(&file).expect("run with OXIGUITAR_BLESS=1 to write it"),
-            bytes,
-            "the panel changed: run with OXIGUITAR_BLESS=1"
-        );
     }
 
+    /// The settings window keeps its draft with OK and forgets it with
+    /// Cancel; the export's options keep the rate when the export dialog's
+    /// OK closes them.
     #[test]
-    fn the_panel_follows_its_widgets_and_breaks_on_purpose() {
-        let plugin = TestPlugin::start(Host::detached()).unwrap();
-        let panel = plugin.tab("panel").unwrap();
-        panel.on("click", TabEvent::Clicked).unwrap();
-        panel.on("score", TabEvent::Clicked).unwrap();
-        let content = panel.content();
-        assert!(content.problems().is_empty());
-        assert!(
-            matches!(&content.rows[0].widgets[0], Widget::Label { text, .. } if text == "Clicks: 1")
+    fn drafts_are_kept_with_ok_and_forgotten_otherwise() {
+        use oxiguitar_plugin::{Ui, Value};
+        let ui = TestUi::new(Host::detached());
+        ui.callback("settings", "greet-toggled", vec![Value::Bool(true)])
+            .unwrap();
+        ui.callback("settings", "name-edited", vec![Value::String("Ana".into())])
+            .unwrap();
+        assert_eq!(
+            ui.settings_properties()[2].1,
+            Value::String("Hello, Ana.".into())
         );
-        assert!(
-            matches!(&content.rows[3].widgets[0], Widget::Label { text, .. } if text == "Score: none open")
+        ui.closed("settings", false).unwrap();
+        assert_eq!(
+            ui.settings_properties()[2].1,
+            Value::String("Nothing to say.".into())
         );
-        assert!(panel.on("click", TabEvent::Toggled(true)).is_err());
-        plugin.call("break", b"").unwrap();
-        assert!(panel.content().problems()[0].contains("used twice"));
+        ui.callback("raw-options", "rate-chosen", vec![Value::Number(1.0)])
+            .unwrap();
+        assert_eq!(ui.raw_properties()[1].1, Value::Number(1.0));
+        assert!(
+            ui.callback(
+                "test",
+                "nickname-edited",
+                vec![Value::String("refuse".into())]
+            )
+            .is_err()
+        );
     }
 }

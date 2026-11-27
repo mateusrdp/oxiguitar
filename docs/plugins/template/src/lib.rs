@@ -8,8 +8,9 @@
 //!
 //! - [`format`]: reads and writes "Example tab" files (`.extab`), a tiny
 //!   text format of eighth notes on a guitar;
-//! - [`statistics`]: a tab in the right area counting the notes on each
-//!   string of a track of the open score, as a small chart;
+//! - [`statistics`]: a panel in the right area, drawn by the plugin's own
+//!   `ui/example.slint`, counting the notes on each string of a track of
+//!   the open score, as a small chart;
 //! - [`service`]: the service `note-names`, which other plugins call to
 //!   name a pitch.
 //!
@@ -20,7 +21,7 @@ pub mod notes;
 pub mod service;
 pub mod statistics;
 
-use oxiguitar_plugin::{Error, FormatReader, FormatWriter, Host, Plugin, Service, Tab};
+use oxiguitar_plugin::{Error, FormatReader, FormatWriter, Host, Plugin, Service, Ui};
 
 // ANCHOR: plugin
 /// The plugin: built once, when OxiGuitar first uses one of its
@@ -51,8 +52,8 @@ impl Plugin for Example {
             .then_some(&service::NoteNames as &dyn Service)
     }
 
-    fn tab(&self, id: &str) -> Option<&dyn Tab> {
-        (id == statistics::ID).then_some(&self.statistics as &dyn Tab)
+    fn ui(&self) -> Option<&dyn Ui> {
+        Some(&self.statistics)
     }
 
     fn event(&self, event: &oxiguitar_plugin::Event) {

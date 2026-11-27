@@ -58,7 +58,7 @@ impl Processor for Scale {
 }
 ```
 
-The update reaches the processor before its next `process` call; if the user moves a slider faster than the audio thread runs, only the newest update is taken. The SDK's glue keeps the two threads apart with no lock. The contract suite hands each effect an update and checks that taking it allocates nothing and makes no system call. Ask for interface 1.5 in the manifest (`"interface": "1.5"`).
+The update reaches the processor before its next `process` call; if the user moves a slider faster than the audio thread runs, only the newest update is taken. The SDK's glue keeps the two threads apart with no lock. The contract suite hands each effect an update and checks that taking it allocates nothing and makes no system call. It came with interface 1.5.
 
 ## Following the score
 

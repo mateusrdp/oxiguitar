@@ -288,11 +288,6 @@ pub(crate) fn sync_track(app: &Shared, ui: &AppWindow) {
             s.dialogs_opened += 1;
             let sections =
                 track_sections::TrackSections::open(&s.plugins, s.dialogs_opened, t, track);
-            if let Some(thread) = &s.tab_thread {
-                for ask in sections.asks() {
-                    thread.send(ask);
-                }
-            }
             s.sections = Some(sections);
             s.sections_touched = false;
         }
@@ -434,7 +429,7 @@ pub(crate) fn view_set_track_settings(
         if !sections
             .sections
             .iter()
-            .any(|x| x.view && x.plugin == id.plugin && x.section == id.view)
+            .any(|x| x.plugin == id.plugin && x.section == id.view)
         {
             return Err(format!("the Track tab doesn't show the view {:?}", id.view));
         }
@@ -560,17 +555,11 @@ pub(crate) fn sync_track_sections(app: &Shared) {
                 .map(move |(i, x)| (t.moves(i), x))
         })
         .map(|((up, down), shown)| {
-            let (rows, message) = match &shown.content {
-                None => (ModelRc::default(), "…".to_owned()),
-                Some(Ok(content)) => (plain_rows(content), String::new()),
-                Some(Err(why)) => (ModelRc::default(), why.clone()),
-            };
-            // A plugin's own view (interface 1.15), made once for this
-            // opening of the sections, with the track and its settings.
+            // The plugin's own view, made once for this opening of the
+            // sections, with the track and its settings.
             let factory = s
                 .sections
                 .as_ref()
-                .filter(|_| shown.view)
                 .map(|t| {
                     let id = oxiguitar_host::ViewId {
                         plugin: shown.plugin.clone(),
@@ -591,50 +580,13 @@ pub(crate) fn sync_track_sections(app: &Shared) {
                 .unwrap_or_default();
             PluginSection {
                 title: shown.title.as_str().into(),
-                rows,
-                message: message.into(),
                 up,
                 down,
-                view: shown.view,
                 factory,
             }
         })
         .collect();
     ui.set_track_sections(ModelRc::new(VecModel::from(sections)));
-}
-
-/// A plugin's rows without canvases, as settings windows and track
-/// sections show them: rebuilt whole each time (they are small, and their
-/// widgets answer only when let go).
-pub(crate) fn plain_rows(content: &TabContent) -> ModelRc<PluginRow> {
-    let none = HashMap::new();
-    ModelRc::new(VecModel::from(
-        content
-            .rows
-            .iter()
-            .map(|r| PluginRow {
-                widgets: ModelRc::new(VecModel::from(
-                    r.widgets
-                        .iter()
-                        .map(|w| plugin_widget(w, &none))
-                        .collect::<Vec<_>>(),
-                )),
-                stretch: r.widgets.iter().any(|w| matches!(w, Widget::List { .. })),
-            })
-            .collect::<Vec<_>>(),
-    ))
-}
-
-/// What a use of a widget in the window's plugin callbacks comes to: the
-/// kind (0 clicked, 1 toggled, 2 slid, 3 edited, 4 chosen) and its value.
-pub(crate) fn widget_event(kind: i32, on: bool, value: f32, text: &str, chosen: i32) -> TabEvent {
-    match kind {
-        1 => TabEvent::Toggled(on),
-        2 => TabEvent::Slid(value),
-        3 => TabEvent::Edited(text.to_owned()),
-        4 => TabEvent::Chosen(u32::try_from(chosen).unwrap_or(0)),
-        _ => TabEvent::Clicked,
-    }
 }
 
 /// The Track tab's section `index` was moved up or down: the order of the
@@ -660,20 +612,5 @@ pub(crate) fn track_section_moved(app: &Shared, index: i32, up: bool) {
     if moved {
         sync_track_sections(app);
         apply_section_settings(app);
-    }
-}
-
-/// A widget of the Track tab's section `index` was used.
-pub(crate) fn track_section_event(app: &Shared, index: i32, widget: &str, event: TabEvent) {
-    app.borrow_mut().sections_touched = true;
-    let s = app.borrow();
-    let (Some(sections), Some(thread)) = (&s.sections, &s.tab_thread) else {
-        return;
-    };
-    if let Some(ask) = usize::try_from(index)
-        .ok()
-        .and_then(|i| sections.ask(i, Some((widget.to_owned(), event))))
-    {
-        thread.send(ask);
     }
 }

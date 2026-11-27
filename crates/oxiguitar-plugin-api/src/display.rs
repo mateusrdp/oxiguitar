@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
-//! The display list as plugins draw with it, version 1: what a tab's
-//! canvas ([`crate::tab::Widget::Canvas`]) shows.
+//! The display list as plugins draw with it, version 1: what a plugin
+//! draws on the page ([`crate::message::Request::Draw`]).
 //!
 //! It mirrors the core's own display list (`oxiguitar-display`), which
 //! engraves the score, item for item, with one difference: text crosses as

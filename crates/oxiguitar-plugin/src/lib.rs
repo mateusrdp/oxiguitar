@@ -8,7 +8,7 @@
 //! 1. writes its manifest as `manifest.json` beside its `Cargo.toml`
 //!    ([`api::manifest`] describes the keys);
 //! 2. implements [`Plugin`], handing out a [`FormatReader`],
-//!    [`FormatWriter`], [`Service`] or [`Tab`] for each contribution its
+//!    [`FormatWriter`], [`Service`], [`Tool`] or [`Ui`] for each contribution its
 //!    manifest declares, and handling the [`Event`]s it subscribes to;
 //! 3. calls [`export_plugin!`] once, in its `lib.rs`;
 //! 4. has a Cargo feature named `oxp` (`oxp = []`), which the `.oxp` build
@@ -75,10 +75,6 @@ pub use oxiguitar_plugin_api::message::{
 };
 pub use oxiguitar_plugin_api::score;
 pub use oxiguitar_plugin_api::score2;
-pub use oxiguitar_plugin_api::tab::{
-    Canvas, Cursor, Key, KeyName, Pointer, PointerButton, PointerKind, Row, Surface, TabContent,
-    TabEvent, Widget,
-};
 pub use oxiguitar_plugin_api::view::{Place, TrackView, Value};
 /// serde_json, as the SDK uses it: plugin settings and track sections'
 /// settings are its JSON objects, so a plugin needs no dependency of its
@@ -127,16 +123,10 @@ pub trait Plugin: Send + Sync + 'static {
         None
     }
 
-    /// The tab `id` (an id from the manifest's `tabs`).
-    fn tab(&self, id: &str) -> Option<&dyn Tab> {
-        let _ = id;
-        None
-    }
-
     /// Something the manifest's `events` subscribe to happened. Called on
-    /// any thread, as it happens; keep it short, and call
-    /// [`Host::redraw`] for a tab that should show it. The default does
-    /// nothing.
+    /// any thread, as it happens; keep it short, and set a view's
+    /// properties ([`Host::set_view`]) for one that should show it. The
+    /// default does nothing.
     fn event(&self, event: &Event) {
         let _ = event;
     }
@@ -176,13 +166,6 @@ pub trait Plugin: Send + Sync + 'static {
     /// Its own UI, for a manifest with `views` (interface 1.15): its
     /// `.slint` file and what its views' callbacks do.
     fn ui(&self) -> Option<&dyn Ui> {
-        None
-    }
-
-    /// The track dialog's section `id` (an id from the manifest's
-    /// `track_sections`; interface 1.3).
-    fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
-        let _ = id;
         None
     }
 
@@ -249,32 +232,6 @@ pub struct ExportEnd {
     /// Bytes to write over the file's start once all is written, or none:
     /// at most as long as the whole file.
     pub start: Option<Vec<u8>>,
-}
-
-/// A section of the track dialog (interface 1.3): rows of widgets for one
-/// track, whose values the host keeps per track and saves beside the score
-/// (`song.gp.oxg`). The plugin keeps nothing itself: every call gets the
-/// track's settings, a JSON object (empty at first).
-pub trait TrackSection: Send + Sync {
-    /// What the section shows for `track` with `settings`.
-    fn content(
-        &self,
-        track: &TrackInfo,
-        settings: &serde_json::Map<String, serde_json::Value>,
-    ) -> TabContent;
-
-    /// The user used the widget `widget`: change `settings` to match. The
-    /// contents are asked for again afterwards. The default does nothing.
-    fn on(
-        &self,
-        track: &TrackInfo,
-        settings: &mut serde_json::Map<String, serde_json::Value>,
-        widget: &str,
-        event: TabEvent,
-    ) -> Result<(), Error> {
-        let _ = (track, settings, widget, event);
-        Ok(())
-    }
 }
 
 /// A plugin's folders (interface 1.3; [`Host::folders`]).
@@ -422,31 +379,6 @@ pub trait Ui: Send + Sync {
 pub trait Performer: Send + Sync {
     /// The track's notes as they should sound.
     fn perform(&self, track: &Perform) -> Result<Vec<PlayedNote>, Error>;
-}
-
-/// A tab in one of the window's areas (docs/design/plugins.md, "What
-/// plugins contribute"): standard widgets the core draws, and a canvas the
-/// plugin draws.
-pub trait Tab: Send + Sync {
-    /// What the tab shows now. The core asks when the tab is shown, after
-    /// every [`Tab::on`], and after [`Host::redraw`].
-    fn content(&self) -> TabContent;
-
-    /// The user used the widget `widget` (its id). The tab's contents are
-    /// asked for again afterwards. The default does nothing.
-    fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-        let _ = (widget, event);
-        Ok(())
-    }
-
-    /// For a dialog (a tab whose area is `dialog`, interface 1.8): the
-    /// user closed it, with OK (`ok`) or with Cancel or Escape. What the
-    /// dialog changes, it changes now ([`Host::apply`] for the score). An
-    /// error is shown in the footer. The default does nothing.
-    fn closed(&self, ok: bool) -> Result<(), Error> {
-        let _ = ok;
-        Ok(())
-    }
 }
 
 /// Reads one file format into a score.
@@ -654,51 +586,9 @@ pub fn dispatch_kept(
                 service.call(&method, input.as_slice())?,
             )))
         }
-        Request::Tab { tab } => Ok(Answer::Tab(Box::new(find_tab(plugin, &tab)?.content()))),
-        Request::TabEvent { tab, widget, event } => {
-            let tab = find_tab(plugin, &tab)?;
-            tab.on(&widget, event)?;
-            Ok(Answer::Tab(Box::new(tab.content())))
-        }
-        Request::TabClosed { tab, ok } => {
-            find_tab(plugin, &tab)?.closed(ok)?;
-            Ok(Answer::Done)
-        }
         Request::Event(event) => {
             plugin.event(&event);
             Ok(Answer::Done)
-        }
-        // Retired in interface 1.9: no host sends them.
-        Request::RetiredSettingsWindow | Request::RetiredSettingsEvent { .. } => Err(
-            Error::not_found("settings windows were retired in interface 1.9"),
-        ),
-        Request::TrackSection {
-            section,
-            track,
-            settings,
-        } => {
-            let s = find_section(plugin, &section)?;
-            let map = settings_object(&settings)?;
-            Ok(Answer::TrackSection {
-                content: Box::new(s.content(&track, &map)),
-                settings,
-            })
-        }
-        Request::TrackSectionEvent {
-            section,
-            track,
-            settings,
-            widget,
-            event,
-        } => {
-            let s = find_section(plugin, &section)?;
-            let mut map = settings_object(&settings)?;
-            s.on(&track, &mut map, &widget, event)?;
-            let content = s.content(&track, &map);
-            Ok(Answer::TrackSection {
-                content: Box::new(content),
-                settings: serde_json::Value::Object(map).to_string(),
-            })
         }
         Request::Prepare(p) => {
             let instrument = plugin.instrument(&p.instrument).ok_or_else(|| {
@@ -798,32 +688,10 @@ fn prepared(
     }
 }
 
-fn find_section<'p>(plugin: &'p dyn Plugin, id: &str) -> Result<&'p dyn TrackSection, Error> {
-    plugin
-        .track_section(id)
-        .ok_or_else(|| Error::not_found(format!("this plugin has no track section {id:?}")))
-}
-
-fn settings_object(json: &str) -> Result<serde_json::Map<String, serde_json::Value>, Error> {
-    match serde_json::from_str(json) {
-        Ok(serde_json::Value::Object(map)) => Ok(map),
-        _ => Err(Error::new(
-            ErrorKind::Invalid,
-            "a track's settings must be a JSON object",
-        )),
-    }
-}
-
 fn writer2<'p>(plugin: &'p dyn Plugin, format: &str) -> Result<&'p dyn FormatWriter2, Error> {
     plugin
         .writer2(format)
         .ok_or_else(|| Error::not_found(format!("this plugin doesn't write {format:?}")))
-}
-
-fn find_tab<'p>(plugin: &'p dyn Plugin, id: &str) -> Result<&'p dyn Tab, Error> {
-    plugin
-        .tab(id)
-        .ok_or_else(|| Error::not_found(format!("this plugin has no tab {id:?}")))
 }
 
 fn find_service<'p>(
@@ -986,13 +854,6 @@ impl Host {
         self.0.audio_out()
     }
 
-    /// Asks the core to show the tab `tab` (an id from the manifest) again:
-    /// it asks for [`Tab::content`] when the tab is next on screen. A
-    /// request that can't be made is dropped.
-    pub fn redraw(&self, tab: &str) {
-        let _ = self.0.request(HostRequest::Redraw { tab: tab.into() });
-    }
-
     /// The open score as it is engraved in the window now (interface 1.8):
     /// every page's drawing, and where each beat is on it. `None` when no
     /// score is open. To put something on the page, give a beat a mark
@@ -1106,29 +967,6 @@ impl Host {
         }
     }
 
-    /// Asks the core to open the dialog `tab` (the id of a tab whose area
-    /// is `dialog`) over the window (interface 1.8): it asks for the
-    /// dialog's [`Tab::content`], sends its widgets' events to [`Tab::on`]
-    /// and tells [`Tab::closed`] how the user closed it. An error when it
-    /// can't be opened: another dialog is open, or there is no window.
-    pub fn open_dialog(&self, tab: &str) -> Result<(), Error> {
-        match self
-            .0
-            .request(HostRequest::OpenDialog { tab: tab.into() })?
-        {
-            HostAnswer::Done => Ok(()),
-            other => Err(unexpected(&other)),
-        }
-    }
-
-    /// Asks the core to bring the tab `tab` (an id from the manifest) to
-    /// the front of its area, opening the area if it is closed (interface
-    /// 1.8): for a tool whose controls are in a tab. A request that can't
-    /// be made is dropped.
-    pub fn show_tab(&self, tab: &str) {
-        let _ = self.0.request(HostRequest::ShowTab { tab: tab.into() });
-    }
-
     /// The open score, or `None` when none is open: what a plugin asks for
     /// after [`Event::ScoreOpened`] or [`Event::ScoreChanged`].
     pub fn score(&self) -> Result<Option<score::Score>, Error> {
@@ -1169,8 +1007,8 @@ impl Host {
 impl Host {
     /// Where each character of `text` would be drawn on one line in the
     /// core's `font` at `size` (interface 1.14): the left edge of each and,
-    /// last, the end, with the font's ascent and descent. For laying out a
-    /// [`Surface`]: wrapping lines, placing a caret, hitting a character.
+    /// last, the end, with the font's ascent and descent: for laying out
+    /// text a drawing puts on the page.
     pub fn measure_text(
         &self,
         text: &str,
@@ -1187,8 +1025,7 @@ impl Host {
         }
     }
 
-    /// Puts `text` on the system's clipboard (interface 1.14). Pasting
-    /// comes to a surface as [`TabEvent::Typed`].
+    /// Puts `text` on the system's clipboard (interface 1.14).
     pub fn copy(&self, text: &str) -> Result<(), Error> {
         match self.0.request(HostRequest::Copy { text: text.into() })? {
             HostAnswer::Done => Ok(()),
@@ -1253,16 +1090,10 @@ impl HostServices for Detached {
             HostRequest::Notify { .. }
             | HostRequest::Notify2 { .. }
             | HostRequest::SetSettings { .. }
-            | HostRequest::Redraw { .. }
-            | HostRequest::ShowTab { .. }
             | HostRequest::Advise(_) => Ok(HostAnswer::Done),
             HostRequest::Engraving => Ok(HostAnswer::Engraving(None)),
             HostRequest::Selection => Ok(HostAnswer::Selection(None)),
             HostRequest::ScoreFile => Ok(HostAnswer::ScoreFile(None)),
-            HostRequest::OpenDialog { .. } => Err(Error::new(
-                ErrorKind::Failed,
-                "a detached host has no window to show a dialog in",
-            )),
             HostRequest::Settings => Ok(HostAnswer::Settings("{}".into())),
             HostRequest::Score => Ok(HostAnswer::Score(None)),
             HostRequest::Score2 => Ok(HostAnswer::Score2 {
@@ -1359,14 +1190,7 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
             return out;
         }
     };
-    let knows_1_2 = manifest.knows_minor(2);
     for f in &manifest.formats {
-        if !knows_1_2 && (plugin.reader2(&f.id).is_some() || plugin.writer2(&f.id).is_some()) {
-            out.push(format!(
-                "format {:?} uses the score version 2, which needs interface 1.2 in the manifest",
-                f.id
-            ));
-        }
         if f.read && plugin.reader(&f.id).is_none() && plugin.reader2(&f.id).is_none() {
             out.push(format!(
                 "format {:?} is declared as read, but has no reader",
@@ -1388,22 +1212,20 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
             ));
         }
     }
-    if manifest.knows_minor(3) {
-        for i in &manifest.instruments {
-            if plugin.instrument(&i.id).is_none() {
-                out.push(format!(
-                    "instrument {:?} is declared, but not implemented",
-                    i.id
-                ));
-            }
+    for i in &manifest.instruments {
+        if plugin.instrument(&i.id).is_none() {
+            out.push(format!(
+                "instrument {:?} is declared, but not implemented",
+                i.id
+            ));
         }
-        for e in &manifest.effects {
-            if plugin.effect(&e.id).is_none() {
-                out.push(format!(
-                    "effect {:?} is declared, but not implemented",
-                    e.id
-                ));
-            }
+    }
+    for e in &manifest.effects {
+        if plugin.effect(&e.id).is_none() {
+            out.push(format!(
+                "effect {:?} is declared, but not implemented",
+                e.id
+            ));
         }
     }
     for t in &manifest.tools {
@@ -1420,33 +1242,17 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
         }
     }
     for s in &manifest.track_sections {
-        // A section shown by the plugin's own view (interface 1.15) is
-        // the view's: nothing to describe.
-        if manifest
+        // A track section is shown by the plugin's view of the same id;
+        // the section says which tracks it shows for.
+        if !manifest
             .views
             .iter()
             .any(|v| v.id == s.id && v.place == oxiguitar_plugin_api::view::Place::Track)
         {
-            continue;
-        }
-        let Some(section) = plugin.track_section(&s.id) else {
             out.push(format!(
-                "track section {:?} is declared, but not implemented",
+                "track section {:?} has no view of the same id whose place is \"track\" to show it",
                 s.id
             ));
-            continue;
-        };
-        let class = InstrumentClass::ALL
-            .into_iter()
-            .find(|&c| s.shows_for(c))
-            .unwrap_or(InstrumentClass::Other);
-        let track = TrackInfo {
-            index: 0,
-            name: "Track 1".into(),
-            class,
-        };
-        for p in section.content(&track, &serde_json::Map::new()).problems() {
-            out.push(format!("track section {:?}: {p}", s.id));
         }
     }
     if !manifest.views.is_empty() {
@@ -1460,16 +1266,6 @@ pub fn check<P: Plugin>(manifest_json: &str, crate_version: &str) -> Vec<String>
     }
     if manifest.ui.is_some() && manifest.views.is_empty() {
         out.push("ui names a .slint file, but no views are declared".into());
-    }
-    for t in &manifest.tabs {
-        match plugin.tab(&t.id) {
-            None => out.push(format!("tab {:?} is declared, but not implemented", t.id)),
-            Some(tab) => {
-                for p in tab.content().problems() {
-                    out.push(format!("tab {:?}: {p}", t.id));
-                }
-            }
-        }
     }
     out
 }
@@ -1564,7 +1360,7 @@ macro_rules! export_plugin {
 
             /// The plugin's entry point (oxiguitar_plugin_api::ENTRY_SYMBOL).
             #[unsafe(no_mangle)]
-            pub extern "C" fn oxiguitar_plugin_v1() -> *const $crate::api::abi::PluginTableV1 {
+            pub extern "C" fn oxiguitar_plugin_v2() -> *const $crate::api::abi::PluginTableV1 {
                 TABLE.get()
             }
         };
@@ -1619,7 +1415,7 @@ mod tests {
     }
 
     const ECHO: &str = r#"{
-        "interface": "1.0", "id": "test.echo", "name": "Echo", "version": "0.1.0",
+        "interface": "2.0", "id": "test.echo", "name": "Echo", "version": "0.1.0",
         "services": [{"interface": "echo", "id": "echo"}]
     }"#;
 
@@ -1678,14 +1474,17 @@ mod tests {
             vec!["service \"other\" of \"echo\" is declared, but not implemented"]
         );
         let (major, minor) = oxiguitar_plugin_api::INTERFACE;
-        let later = ECHO.replace("\"1.0\"", &format!("\"{major}.{}\"", minor + 1));
+        let later = ECHO.replace("\"2.0\"", &format!("\"{major}.{}\"", minor + 1));
         assert!(
             check::<Echo>(&later, "0.1.0")[0].contains(&format!("this SDK is {major}.{minor}"))
         );
+        // A plugin built for interface 1 is told it needs rebuilding.
+        let old = ECHO.replace("\"2.0\"", "\"1.16\"");
+        assert!(check::<Echo>(&old, "0.1.0")[0].contains("this SDK is 2.0"));
     }
 
-    /// A plugin of interface 1.2: a reader into the score version 2, a
-    /// version-1 writer, and a tool.
+    /// A plugin with a reader into the score version 2, a version-1 writer,
+    /// and a tool.
     struct Two;
 
     impl Plugin for Two {
@@ -1788,19 +1587,13 @@ mod tests {
                 .kind,
             ErrorKind::NotFound
         );
-        // Version 2 needs interface 1.2 in the manifest.
-        let manifest = r#"{"interface": "1.1", "id": "two", "name": "Two", "version": "0.1.0",
+        let manifest = r#"{"interface": "2.0", "id": "two", "name": "Two", "version": "0.1.0",
             "formats": [{"id": "two", "name": "Two", "extensions": ["two"], "read": true,
             "signatures": [{"at": 0, "text": "TWO"}]}]}"#;
-        assert!(
-            check::<Two>(manifest, "0.1.0")
-                .iter()
-                .any(|p| p.contains("needs interface 1.2"))
-        );
-        assert!(check::<Two>(&manifest.replace("1.1", "1.2"), "0.1.0").is_empty());
+        assert!(check::<Two>(manifest, "0.1.0").is_empty());
     }
 
-    /// A tab counting its button's clicks, and events.
+    /// A plugin counting the events it hears.
     struct Counter(std::sync::atomic::AtomicU32);
 
     impl Plugin for Counter {
@@ -1808,89 +1601,25 @@ mod tests {
             Ok(Counter(0.into()))
         }
 
-        fn tab(&self, id: &str) -> Option<&dyn Tab> {
-            (id == "count").then_some(self as &dyn Tab)
-        }
-
         fn event(&self, _event: &Event) {
             self.0.fetch_add(10, std::sync::atomic::Ordering::Relaxed);
         }
     }
 
-    impl Tab for Counter {
-        fn content(&self) -> TabContent {
-            let n = self.0.load(std::sync::atomic::Ordering::Relaxed);
-            TabContent {
-                rows: vec![Row {
-                    widgets: vec![Widget::Button {
-                        id: "more".into(),
-                        text: n.to_string(),
-                        enabled: true,
-                    }],
-                }],
-            }
-        }
-
-        fn on(&self, widget: &str, event: TabEvent) -> Result<(), Error> {
-            match (widget, event) {
-                ("more", TabEvent::Clicked) => {
-                    self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                    Ok(())
-                }
-                _ => Err(Error::not_found(widget)),
-            }
-        }
-    }
-
-    fn text_of(answer: Answer<'_>) -> String {
-        match answer {
-            Answer::Tab(t) => match &t.rows[0].widgets[0] {
-                Widget::Button { text, .. } => text.clone(),
-                other => panic!("{other:?}"),
-            },
-            other => panic!("{other:?}"),
-        }
-    }
-
     #[test]
-    fn tabs_answer_with_their_contents_and_events_reach_the_plugin() {
+    fn events_reach_the_plugin() {
         let counter = Counter::start(Host::detached()).unwrap();
-        let tab = |tab: &str| dispatch(&counter, Request::Tab { tab: tab.into() });
-        assert_eq!(text_of(tab("count").unwrap()), "0");
-        assert_eq!(tab("other").unwrap_err().kind, ErrorKind::NotFound);
-        let click = Request::TabEvent {
-            tab: "count".into(),
-            widget: "more".into(),
-            event: TabEvent::Clicked,
-        };
-        assert_eq!(text_of(dispatch(&counter, click).unwrap()), "1");
-        let wrong = Request::TabEvent {
-            tab: "count".into(),
-            widget: "less".into(),
-            event: TabEvent::Clicked,
-        };
-        assert_eq!(
-            dispatch(&counter, wrong).unwrap_err().kind,
-            ErrorKind::NotFound
-        );
         let event = Request::Event(Event::ScoreOpened { revision: 1 });
         assert_eq!(dispatch(&counter, event), Ok(Answer::Done));
-        assert_eq!(text_of(tab("count").unwrap()), "11");
-
+        assert_eq!(counter.0.load(std::sync::atomic::Ordering::Relaxed), 10);
         let manifest = r#"{
-            "interface": "1.1", "id": "test.counter", "name": "Counter", "version": "0.1.0",
-            "tabs": [{"id": "count", "title": "Count", "area": "bottom"}],
+            "interface": "2.0", "id": "test.counter", "name": "Counter", "version": "0.1.0",
             "events": ["score"]
         }"#;
         assert_eq!(check::<Counter>(manifest, "0.1.0"), Vec::<String>::new());
-        let missing = manifest.replace("\"id\": \"count\"", "\"id\": \"other\"");
-        assert_eq!(
-            check::<Counter>(&missing, "0.1.0"),
-            vec!["tab \"other\" is declared, but not implemented"]
-        );
     }
 
-    /// A plugin with a track section holding a level per track.
+    /// A plugin with a view for its track section.
     struct Amp;
 
     impl Plugin for Amp {
@@ -1898,106 +1627,43 @@ mod tests {
             Ok(Amp)
         }
 
-        fn track_section(&self, id: &str) -> Option<&dyn TrackSection> {
-            (id == "amp").then_some(self as &dyn TrackSection)
+        fn ui(&self) -> Option<&dyn Ui> {
+            Some(self)
         }
     }
 
-    impl TrackSection for Amp {
-        fn content(
-            &self,
-            track: &TrackInfo,
-            settings: &serde_json::Map<String, serde_json::Value>,
-        ) -> TabContent {
-            let level = settings
-                .get("level")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(1.0);
-            TabContent {
-                rows: vec![Row {
-                    widgets: vec![Widget::Slider {
-                        id: format!("level-{}", track.index),
-                        value: level as f32,
-                        min: 0.0,
-                        max: 1.0,
-                        enabled: true,
-                    }],
-                }],
-            }
-        }
-
-        fn on(
-            &self,
-            _track: &TrackInfo,
-            settings: &mut serde_json::Map<String, serde_json::Value>,
-            _widget: &str,
-            event: TabEvent,
-        ) -> Result<(), Error> {
-            if let TabEvent::Slid(v) = event {
-                settings.insert("level".into(), f64::from(v).into());
-            }
+    impl Ui for Amp {
+        fn callback(&self, _view: &str, _callback: &str, _args: Vec<Value>) -> Result<(), Error> {
             Ok(())
         }
     }
 
+    /// A track section is a view's; one without the view, or a manifest
+    /// that still declares tabs or a settings window, is told so.
     #[test]
-    fn track_sections_answer_and_settings_windows_are_retired() {
-        let amp = Amp::start(Host::detached()).unwrap();
-        let track = TrackInfo {
-            index: 3,
-            name: "Lead".into(),
-            class: InstrumentClass::Fretted,
-        };
-        let slid = Request::TrackSectionEvent {
-            section: "amp".into(),
-            track: track.clone(),
-            settings: r#"{"model":"5150"}"#.into(),
-            widget: "level-3".into(),
-            event: TabEvent::Slid(0.5),
-        };
-        match dispatch(&amp, slid).unwrap() {
-            Answer::TrackSection { content, settings } => {
-                assert_eq!(settings, r#"{"level":0.5,"model":"5150"}"#);
-                assert!(matches!(
-                    &content.rows[0].widgets[0],
-                    Widget::Slider { value, .. } if *value == 0.5
-                ));
-            }
-            other => panic!("{other:?}"),
-        }
-        let not_json = Request::TrackSection {
-            section: "amp".into(),
-            track,
-            settings: "[]".into(),
-        };
-        assert_eq!(
-            dispatch(&amp, not_json).unwrap_err().kind,
-            ErrorKind::Invalid
-        );
-        assert_eq!(
-            dispatch(&amp, Request::RetiredSettingsWindow)
-                .unwrap_err()
-                .kind,
-            ErrorKind::NotFound
-        );
-
+    fn a_track_section_is_shown_by_its_view() {
         let manifest = r#"{
-            "interface": "1.3", "id": "test.amp", "name": "Amp", "version": "0.1.0",
-            "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}]
+            "interface": "2.0", "id": "test.amp", "name": "Amp", "version": "0.1.0",
+            "ui": "ui/amp.slint",
+            "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}],
+            "views": [{"id": "amp", "component": "AmpSection", "place": "track", "title": "Amp"}]
         }"#;
         assert_eq!(check::<Amp>(manifest, "0.1.0"), Vec::<String>::new());
-        // A manifest that still declares a settings window is told so.
         let old = manifest
             .replace(
                 "\"track_sections\"",
-                "\"settings_window\": true, \"track_sections\"",
+                "\"settings_window\": true, \"tabs\": [], \"track_sections\"",
             )
-            .replace("\"id\": \"amp\"", "\"id\": \"cab\"");
+            .replace(
+                "\"plays\": [\"fretted\"]}",
+                "\"plays\": [\"fretted\"]}, {\"id\": \"cab\", \"title\": \"Cab\"}",
+            );
         assert_eq!(
             check::<Amp>(&old, "0.1.0"),
             vec![
                 "the manifest key \"settings_window\" is unknown",
-                "track section \"cab\" is declared, but not implemented",
+                "the manifest key \"tabs\" is unknown",
+                "track section \"cab\" has no view of the same id whose place is \"track\" to show it",
             ]
         );
     }
@@ -2134,7 +1800,6 @@ mod tests {
         assert!(host.set_settings(&serde_json::Map::new()).is_ok());
         let e = host.call_service("audio-device", "open", b"").unwrap_err();
         assert_eq!(e.kind, ErrorKind::NotFound);
-        host.redraw("count");
         assert_eq!(host.score(), Ok(None));
     }
 }

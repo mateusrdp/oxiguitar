@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
+
+// The example plugin's UI (plugin interface 2.0): the panel "Statistics".
+// The plugin sets every property (src/statistics.rs) and hears what the
+// user does; OxiGuitar draws it with its own widgets and colours.
+
+import { CheckBox, ComboBox, Palette } from "std-widgets.slint";
+
+// One string's bar: its number, and its height from 0 to 1.
+export struct Bar {
+    label: string,
+    height: float,
+    picked: bool,
+}
+
+export component Statistics {
+    // The score's title, or what to do while none is open.
+    in property <string> title;
+    in property <bool> has-score;
+    in property <[string]> tracks;
+    in-out property <int> track;
+    in-out property <bool> count-tied;
+    // "12 notes; click a bar", or the clicked bar's count.
+    in property <string> detail;
+    in property <[Bar]> bars;
+    callback track-chosen(int);
+    callback tied-toggled(bool);
+    callback bar-clicked(int);
+
+    VerticalLayout {
+        padding: 8px;
+        spacing: 6px;
+        alignment: start;
+        Text {
+            text: root.title;
+            wrap: word-wrap;
+            opacity: root.has-score ? 1 : 0.7;
+        }
+        if root.has-score: ComboBox {
+            model: root.tracks;
+            current-index <=> root.track;
+            enabled: root.tracks.length > 1;
+            selected => { root.track-chosen(self.current-index); }
+        }
+        if root.has-score: CheckBox {
+            text: "Count tied notes";
+            checked <=> root.count-tied;
+            toggled => { root.tied-toggled(self.checked); }
+        }
+        if root.has-score: Text {
+            text: root.detail;
+            opacity: 0.7;
+        }
+        if root.bars.length > 0: HorizontalLayout {
+            height: 90px;
+            spacing: 4px;
+            for bar[i] in root.bars: VerticalLayout {
+                alignment: end;
+                spacing: 2px;
+                TouchArea {
+                    height: max(1px, 70px * bar.height);
+                    clicked => { root.bar-clicked(i); }
+                    Rectangle {
+                        background: bar.picked ? Palette.accent-background : Palette.foreground.transparentize(40%);
+                    }
+                }
+                Text {
+                    text: bar.label;
+                    horizontal-alignment: center;
+                    font-size: 11px;
+                }
+            }
+        }
+    }
+}

@@ -1554,14 +1554,10 @@ mod tests {
                 })
         );
         assert_eq!(from_wire2(wire.clone()).unwrap(), score);
-        // A plugin built for interface 1.7 sees none of it, and format
-        // plugins never get it.
-        for strip in [
-            |w: &mut w2::Score2| w.keep_known(7),
-            |w: &mut w2::Score2| w.drop_plugin_data(),
-        ] {
+        // Format plugins never get it.
+        {
             let mut w = wire.clone();
-            strip(&mut w);
+            w.drop_plugin_data();
             let back = from_wire2(w).unwrap();
             assert!(back.plugins.is_empty());
             assert!(back.master_bars[0].plugins.is_empty());
@@ -1639,7 +1635,7 @@ mod tests {
     }
 
     #[test]
-    fn a_plugin_for_1_5_sees_version_1_s_part_of_each_mark_and_its_losses_are_named() {
+    fn a_version_1_writer_sees_version_1_s_part_of_each_mark_and_its_losses_are_named() {
         let mut score = marked();
         // A fade in and a wide bridge vibrato are version 1's own fields.
         score.tracks[0].staves[0].bars[0].voices[0].beats[0]
@@ -1648,16 +1644,17 @@ mod tests {
         score.tracks[0].staves[0].bars[0].voices[0].beats[0]
             .effects
             .bridge_vibrato = Some(Vibrato::Wide);
-        let mut wire = to_wire2(&score);
-        let lost = wire.extensions_newer_than(5);
+        let wire = to_wire2(&score);
+        // Interface 2.0 knows every extension; a writer of version 1 loses
+        // these, and the SDK names them.
+        assert!(wire.extensions_newer_than(0).is_empty());
+        let lost = wire.extensions_used();
         let names: Vec<&str> = lost.iter().map(|l| l.0).collect();
         assert!(names.contains(&"fermatas"));
         assert!(names.contains(&"hairpins"));
         assert!(names.contains(&"chosen spellings"));
         assert!(!names.contains(&"fade-outs"));
-        assert!(wire.extensions_newer_than(6).is_empty());
-        wire.keep_known(5);
-        let old = from_wire2(wire).unwrap();
+        let old = from_wire(wire.to_v1()).unwrap();
         let beat = &old.tracks[0].staves[0].bars[0].voices[0].beats[0];
         assert_eq!(beat.effects.fade, Some(Fade::In));
         assert_eq!(beat.effects.bridge_vibrato, Some(Vibrato::Wide));

@@ -3,7 +3,7 @@
 The template plugin is a complete plugin you copy and change. It lives in OxiGuitar's repository as [`docs/plugins/template/`](https://github.com/mateusrdp/oxiguitar/tree/main/docs/plugins/template), and adds one of each common thing:
 
 - a **format**, "Example tab" (`.extab`): a tiny text format of eighth notes on a guitar, read and written;
-- a **tab**, "Statistics", in the right area: how many notes each string of a track plays in the open score, as a small chart you can click, with a setting remembered in settings.json;
+- a **panel**, "Statistics", in the right area, drawn by its own `ui/example.slint`: how many notes each string of a track plays in the open score, as a small chart you can click, with a setting remembered in settings.json;
 - a **service**, `note-names`, which other plugins can call to name a pitch.
 
 Each is one file in `src/`; you delete what you don't need.
@@ -30,7 +30,7 @@ cargo test
 The first run downloads and builds the SDK and the contract suite, which takes a minute. Then it runs:
 
 - the template's own unit tests (`src/*.rs`);
-- `the_manifest_matches_the_plugin`, a test `export_plugin!` adds: the manifest is valid, its version is the crate's, and every format, service and tab it declares is implemented, with contents the core can show;
+- `the_manifest_matches_the_plugin`, a test `export_plugin!` adds: the manifest is valid, its version is the crate's, and every format, service and view it declares is implemented;
 - `tests/contract.rs`, which builds the plugin file `target/oxp/example.oxp` and checks it through OxiGuitar's own plugin host ([Testing](testing.md)).
 
 ## 3. Try it in OxiGuitar
@@ -52,7 +52,7 @@ Start OxiGuitar. Tools → Plugins lists "Example", not loaded yet. Open `sample
 
 1. **Rename it.** In `Cargo.toml`, the package's `name`. In `manifest.json`: `id` (lowercase letters and digits joined by `.` or `-`, starting with your own name: `jane.chord-finder`), `name`, `description`, `authors`, `license` and `homepage`. In `build-oxp.sh`, `NAME` (your file's name) and `LIBRARY` (the package's name with `_` for `-`); in `.github/workflows/build.yml`, `NAME` again. In `tests/contract.rs`, the file's name.
 2. **Delete what you don't need.** Each contribution is a module, a line in `src/lib.rs`'s `impl Plugin`, and an entry in `manifest.json`. Remove all three; `cargo test` says if the manifest and the code disagree.
-3. **Write your own.** The next pages explain each part: [the manifest](manifest.md), [the SDK](sdk.md), [formats](formats.md), [tabs](tabs.md), [events](events.md), [services](services.md), [settings](settings.md).
+3. **Write your own.** The next pages explain each part: [the manifest](manifest.md), [the SDK](sdk.md), [formats](formats.md), [your own UI](ui.md), [events](events.md), [services](services.md), [settings](settings.md).
 4. **Keep the versions equal.** The version in `manifest.json` must be the crate's, and you raise both with each release: when two files of the same plugin are installed in one folder, OxiGuitar uses the higher version.
 
 ## What's in the folder
@@ -63,7 +63,7 @@ Start OxiGuitar. Tools → Plugins lists "Example", not loaded yet. Open `sample
 | `manifest.json` | What the plugin adds, read by OxiGuitar without loading the plugin |
 | `src/lib.rs` | The plugin type, which hands out each contribution, and `export_plugin!` |
 | `src/format.rs` | The Example tab format |
-| `src/statistics.rs` | The Statistics tab |
+| `src/statistics.rs`, `ui/example.slint` | The Statistics panel |
 | `src/service.rs` | The `note-names` service |
 | `src/notes.rs` | Note names and standard tuning, shared by the last two |
 | `tests/contract.rs` | Builds the `.oxp` file and runs the contract suite on it |

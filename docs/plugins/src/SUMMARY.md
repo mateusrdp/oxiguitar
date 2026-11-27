@@ -8,7 +8,6 @@
 - [The SDK](sdk.md)
 - [Formats: reading and writing files](formats.md)
 - [Your own UI in Slint](ui.md)
-- [Tabs: widgets and canvases](tabs.md)
 - [Events and the open score](events.md)
 - [Tools and changes to the score](tools.md)
 - [Drawing on the page](drawing.md)

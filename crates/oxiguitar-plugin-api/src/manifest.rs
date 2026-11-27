@@ -13,7 +13,7 @@
 //!
 //! ```json
 //! {
-//!   "interface": "1.0",
+//!   "interface": "2.0",
 //!   "id": "oxiguitar.gp5",
 //!   "name": "Guitar Pro 5",
 //!   "version": "0.2.0",
@@ -44,7 +44,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::class::InstrumentClass;
 use crate::event::EventKind;
 use crate::signature::{Signature, Sniff};
-use crate::tab::TabSpec;
 
 /// A plugin's manifest.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -89,9 +88,6 @@ pub struct Manifest {
     /// The services it implements.
     #[serde(default)]
     pub services: Vec<ServiceSpec>,
-    /// The tabs it adds to the window's areas. Since interface 1.1.
-    #[serde(default)]
-    pub tabs: Vec<TabSpec>,
     /// The kinds of event it wants pushed to it. Since interface 1.1.
     #[serde(default)]
     pub events: Vec<EventKind>,
@@ -176,14 +172,13 @@ pub struct ExporterSpec {
     pub extension: String,
     /// What it is handed to write.
     pub kind: ExportKind,
-    /// The id of one of the plugin's dialogs (a tab whose area is
-    /// `dialog`) holding this export's own choices: the export dialog shows
-    /// its widgets under the list of formats while this export is picked.
-    /// The plugin keeps what the user picks in a draft, as in any dialog:
-    /// OK on the export dialog closes it with OK before the export starts
-    /// (`Request::TabClosed`), so the plugin has saved the choices when
-    /// it is asked to start; Cancel, or picking another format, closes it
-    /// with Cancel. Since interface 1.11.
+    /// The id of one of the plugin's views whose place is `export`,
+    /// holding this export's own choices: the export dialog shows it under
+    /// the list of formats while this export is picked. OK on the export
+    /// dialog tells the plugin before the export starts
+    /// (`Request::ViewClosed` with `accepted`), so the plugin has saved the
+    /// choices when it is asked to start. Since interface 1.11, a view
+    /// since 2.0.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub options: Option<String>,
 }
@@ -589,16 +584,6 @@ impl Manifest {
                 out.push(format!("requires {r:?}: not a valid interface name"));
             }
         }
-        let mut tabs: Vec<&str> = Vec::new();
-        for t in &self.tabs {
-            if !is_id(&t.id) || tabs.contains(&t.id.as_str()) {
-                out.push(format!("tab {:?}: not a valid or unique id", t.id));
-            }
-            tabs.push(&t.id);
-            if t.title.trim().is_empty() {
-                out.push(format!("tab {:?}: the title is empty", t.id));
-            }
-        }
         let mut tools: Vec<&str> = Vec::new();
         for t in &self.tools {
             if !is_id(&t.id) || tools.contains(&t.id.as_str()) {
@@ -695,17 +680,13 @@ impl Manifest {
                 ));
             }
             if let Some(options) = &e.options {
-                let dialog = self
-                    .tabs
-                    .iter()
-                    .any(|t| t.id == *options && t.area == crate::tab::Area::Dialog);
                 let view = self
                     .views
                     .iter()
                     .any(|v| v.id == *options && v.place == crate::view::Place::Export);
-                if !dialog && !view {
+                if !view {
                     out.push(format!(
-                        "{at}: its options {options:?} must be one of the plugin's views whose place is \"export\" (or, before interface 1.15, a tab whose area is \"dialog\")"
+                        "{at}: its options {options:?} must be one of the plugin's views whose place is \"export\""
                     ));
                 }
             }
@@ -735,31 +716,11 @@ impl Manifest {
                 ));
             }
         }
-        if let Some(ui) = &self.ui {
-            if !is_packed_path(ui) || !ui.ends_with(".slint") {
-                out.push(format!(
-                    "ui {ui:?}: a .slint file's path inside the plugin file, such as \"ui/main.slint\""
-                ));
-            }
-            let since_1_16 = InterfaceVersion {
-                major: 1,
-                minor: 16,
-            };
-            if self.interface < since_1_16 {
-                out.push(format!(
-                    "ui needs interface {since_1_16}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
-        }
-        let since_1_15 = InterfaceVersion {
-            major: 1,
-            minor: 15,
-        };
-        if self.interface < since_1_15 && !self.views.is_empty() {
+        if let Some(ui) = &self.ui
+            && (!is_packed_path(ui) || !ui.ends_with(".slint"))
+        {
             out.push(format!(
-                "views need interface {since_1_15}, and the manifest asks for {}",
-                self.interface
+                "ui {ui:?}: a .slint file's path inside the plugin file, such as \"ui/main.slint\""
             ));
         }
         let mut needs: Vec<&str> = Vec::new();
@@ -784,168 +745,21 @@ impl Manifest {
             }
             replaces.push(r);
         }
-        let since_1_4 = InterfaceVersion { major: 1, minor: 4 };
-        if self.interface < since_1_4 {
-            for (what, used) in [
-                ("exporters need", !self.exporters.is_empty()),
-                ("the key \"needs\" needs", !self.needs.is_empty()),
-                ("the key \"replaces\" needs", !self.replaces.is_empty()),
-            ] {
-                if used {
-                    out.push(format!(
-                        "{what} interface {since_1_4}, and the manifest asks for {}",
-                        self.interface
-                    ));
-                }
-            }
-        }
-        let since_1_3 = InterfaceVersion { major: 1, minor: 3 };
-        if self.interface < since_1_3 {
-            for (what, used) in [
-                ("track sections need", !self.track_sections.is_empty()),
-                ("shared folders need", !self.folders.is_empty()),
-                ("effects need", !self.effects.is_empty()),
-                // A host before 1.3 would ignore the condition and load
-                // code its processor can't run: such a host refuses a 1.3
-                // manifest, so the key may appear only in one.
-                (
-                    "processor features (conditions \"cpu\") need",
-                    !self.conditions.cpu.is_empty()
-                        || self.services.iter().any(|s| !s.conditions.cpu.is_empty()),
-                ),
-            ] {
-                if used {
-                    out.push(format!(
-                        "{what} interface {since_1_3}, and the manifest asks for {}",
-                        self.interface
-                    ));
-                }
-            }
-        }
-        let since_1_2 = InterfaceVersion { major: 1, minor: 2 };
-        if self.interface < since_1_2 && !self.tools.is_empty() {
-            out.push(format!(
-                "tools need interface {since_1_2}, and the manifest asks for {}",
-                self.interface
-            ));
-        }
-        let since_1_8 = InterfaceVersion { major: 1, minor: 8 };
-        if self.interface < since_1_8 {
-            if self.tools.iter().any(|t| {
-                t.palette.is_some()
-                    || t.menu.is_some()
-                    || t.toolbar.is_some()
-                    || t.shortcut.is_some()
-            }) {
-                out.push(format!(
-                    "a tool's palette, toolbar and menu need interface {since_1_8}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
-            if self.tabs.iter().any(|t| t.area == crate::tab::Area::Dialog) {
-                out.push(format!(
-                    "dialogs need interface {since_1_8}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
-            if self.effects.iter().any(|e| e.follows_score) {
-                out.push(format!(
-                    "effects that follow the score need interface {since_1_8}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
-        }
-        // Interface 1.12 gave Request::Perform the track's program, strings
-        // and settings; no plugin released before it performed, so the
-        // request was extended in place rather than given a second form.
-        let since_1_12 = InterfaceVersion {
-            major: 1,
-            minor: 12,
-        };
-        // Interface 1.13 gave Request::Draw the places' times and Drawn its
-        // run; no plugin released before it drew, so both were extended in
-        // place.
-        let since_1_13 = InterfaceVersion {
-            major: 1,
-            minor: 13,
-        };
-        if self.interface < since_1_13 {
-            if self.draws {
-                out.push(format!(
-                    "drawing on the page needs interface {since_1_13}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
-            if self.effects.iter().any(|e| !e.chord_voice) {
-                out.push(format!(
-                    "an effect's chord_voice needs interface {since_1_13}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
-        }
-        let since_1_14 = InterfaceVersion {
-            major: 1,
-            minor: 14,
-        };
-        if self.interface < since_1_14 && self.tools.iter().any(|t| t.options.is_some()) {
-            out.push(format!(
-                "a tool's options need interface {since_1_14}, and the manifest asks for {}",
-                self.interface
-            ));
-        }
-        if self.interface < since_1_12 && self.performs {
-            out.push(format!(
-                "playing the notes its own way needs interface {since_1_12}, and the manifest asks for {}",
-                self.interface
-            ));
-        }
-        let since_1_11 = InterfaceVersion {
-            major: 1,
-            minor: 11,
-        };
-        if self.interface < since_1_11 && self.exporters.iter().any(|e| e.options.is_some()) {
-            out.push(format!(
-                "an export's options need interface {since_1_11}, and the manifest asks for {}",
-                self.interface
-            ));
-        }
-        let since_1_9 = InterfaceVersion { major: 1, minor: 9 };
-        if self.interface < since_1_9 && self.tools.iter().any(|t| !t.edits) {
-            out.push(format!(
-                "a tool that doesn't edit the score (\"edits\": false) needs interface {since_1_9}, and the manifest asks for {}",
-                self.interface
-            ));
-        }
         if self.instruments.iter().any(|i| i.follows_score) {
             out.push("only an effect can follow the score (follows_score)".into());
-        }
-        let since_1_1 = InterfaceVersion { major: 1, minor: 1 };
-        if self.interface < since_1_1 {
-            if !self.tabs.is_empty() {
-                out.push(format!(
-                    "tabs need interface {since_1_1}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
-            if !self.events.is_empty() {
-                out.push(format!(
-                    "events need interface {since_1_1}, and the manifest asks for {}",
-                    self.interface
-                ));
-            }
         }
         out
     }
 
-    /// Whether the plugin knows interface 1.1 (tabs, events, the score)
-    /// and later minor versions up to `minor`.
+    /// Whether the plugin knows minor version `minor` of interface 2 and
+    /// what came before it. Everything of interface 1 is in 2.0.
     pub fn knows_minor(&self, minor: u32) -> bool {
         self.interface.minor >= minor
     }
 
     /// Whether the plugin wants events of `kind`.
     pub fn wants(&self, kind: EventKind) -> bool {
-        self.knows_minor(1) && self.events.contains(&kind)
+        self.events.contains(&kind)
     }
 
     /// The first format this plugin reads whose signatures match `file`.
@@ -1337,7 +1151,7 @@ mod tests {
     use super::*;
 
     const GP5: &str = r#"{
-        "interface": "1.0",
+        "interface": "2.0",
         "id": "oxiguitar.gp5",
         "name": "Guitar Pro 5",
         "version": "0.2.0",
@@ -1378,7 +1192,7 @@ mod tests {
         bytes.extend([0; 300]);
         let m = Manifest::parse(&bytes).unwrap();
         assert_eq!(m.id, "oxiguitar.gp5");
-        assert_eq!(m.interface, InterfaceVersion { major: 1, minor: 0 });
+        assert_eq!(m.interface, InterfaceVersion { major: 2, minor: 0 });
         assert_eq!(m.version.to_string(), "0.2.0");
         let file = Sniff::new(b"\x18FICHIER GUITAR PRO v5.10 and so on");
         assert_eq!(m.format_for(&file).map(|f| f.id.as_str()), Some("gp5"));
@@ -1396,7 +1210,7 @@ mod tests {
                 .contains("UTF-8")
         );
         assert!(err(&GP5.replace("0.2.0", "0.2")).contains("not a version"));
-        assert!(err(&GP5.replace("\"1.0\"", "\"1\"")).contains("interface version"));
+        assert!(err(&GP5.replace("\"2.0\"", "\"2\"")).contains("interface version"));
         assert!(err(&GP5.replace("oxiguitar.gp5", "OxiGuitar GP5")).contains("id"));
         assert!(
             err(&GP5
@@ -1406,32 +1220,16 @@ mod tests {
         );
         assert!(err(&GP5.replace("[\"gp5\"]", "[\".gp5\"]")).contains("extension"));
         assert!(err(&GP5.replace("\"read\": true,", "")).contains("neither"));
-        let tabbed = GP5.replace(
-            "\"formats\"",
-            "\"tabs\": [{\"id\": \"t\", \"title\": \"T\", \"area\": \"left\"}], \"events\": [\"score\"], \"formats\"",
-        );
-        assert!(err(&tabbed).contains("tabs need interface 1.1"));
-        let m = Manifest::parse(tabbed.replace("\"1.0\"", "\"1.1\"").as_bytes()).unwrap();
+        let evented = GP5.replace("\"formats\"", "\"events\": [\"score\"], \"formats\"");
+        let m = Manifest::parse(evented.as_bytes()).unwrap();
         assert!(m.wants(EventKind::Score) && !m.wants(EventKind::Playback));
-        assert!(
-            err(&tabbed
-                .replace("\"1.0\"", "\"1.1\"")
-                .replace("\"T\"", "\" \""))
-            .contains("title")
-        );
         let tooled = GP5.replace(
             "\"formats\"",
             "\"tools\": [{\"id\": \"up\", \"name\": \"Up an Octave\"}], \"formats\"",
         );
-        assert!(err(&tooled).contains("tools need interface 1.2"));
-        let m = Manifest::parse(tooled.replace("\"1.0\"", "\"1.2\"").as_bytes()).unwrap();
+        let m = Manifest::parse(tooled.as_bytes()).unwrap();
         assert_eq!(m.tools[0].name, "Up an Octave");
-        assert!(
-            err(&tooled
-                .replace("\"1.0\"", "\"1.2\"")
-                .replace("\"Up an Octave\"", "\"\""))
-            .contains("name is empty")
-        );
+        assert!(err(&tooled.replace("\"Up an Octave\"", "\"\"")).contains("name is empty"));
         let big = vec![b' '; crate::MAX_MANIFEST_LEN + 1];
         assert!(Manifest::parse(&big).unwrap_err().contains("more than"));
     }
@@ -1460,98 +1258,67 @@ mod tests {
         }
     }
 
-    /// A tool edits the score unless it says otherwise, which needs 1.9;
-    /// the retired `settings_window` is a key like any unknown one.
+    /// A tool edits the score unless it says otherwise; the settings
+    /// window interface 1.9 retired is a key like any unknown one.
     #[test]
-    fn a_tool_that_doesnt_edit_needs_interface_1_9() {
-        let json = |interface: &str, tool: &str| {
+    fn a_tool_edits_unless_it_says_otherwise() {
+        let json = |tool: &str| {
             format!(
-                r#"{{"interface": "{interface}", "id": "me.sets", "name": "Sets",
+                r#"{{"interface": "2.0", "id": "me.sets", "name": "Sets",
                     "version": "0.1.0", "settings_window": true,
                     "tools": [{{"id": "sets", "name": "Sound Sets…" {tool}}}]}}"#
             )
         };
-        let m: Manifest = serde_json::from_str(&json("1.2", "")).unwrap();
+        let m: Manifest = serde_json::from_str(&json("")).unwrap();
         assert!(m.tools[0].edits);
         assert!(m.problems().is_empty(), "{:?}", m.problems());
-        let m: Manifest = serde_json::from_str(&json("1.9", r#", "edits": false"#)).unwrap();
+        let m: Manifest = serde_json::from_str(&json(r#", "edits": false"#)).unwrap();
         assert!(!m.tools[0].edits);
         assert!(m.problems().is_empty(), "{:?}", m.problems());
-        let m: Manifest = serde_json::from_str(&json("1.8", r#", "edits": false"#)).unwrap();
-        assert_eq!(
-            m.problems(),
-            [
-                "a tool that doesn't edit the score (\"edits\": false) needs interface 1.9, and the manifest asks for 1.8"
-            ]
-        );
     }
 
-    /// Playing the notes its own way needs 1.12, whose request grew in
-    /// place (#294).
+    /// A plugin that plays the notes its own way says so.
     #[test]
-    fn performing_needs_interface_1_12() {
-        let json = |interface: &str| {
-            format!(
-                r#"{{"interface": "{interface}", "id": "me.tunes", "name": "Tunes",
-                    "version": "0.1.0", "performs": true}}"#
-            )
-        };
-        let m: Manifest = serde_json::from_str(&json("1.12")).unwrap();
+    fn performing_is_declared() {
+        let m: Manifest = serde_json::from_str(
+            r#"{"interface": "2.0", "id": "me.tunes", "name": "Tunes",
+                "version": "0.1.0", "performs": true}"#,
+        )
+        .unwrap();
         assert!(m.performs && m.problems().is_empty(), "{:?}", m.problems());
-        let m: Manifest = serde_json::from_str(&json("1.8")).unwrap();
-        assert_eq!(
-            m.problems(),
-            ["playing the notes its own way needs interface 1.12, and the manifest asks for 1.8"]
-        );
     }
 
-    /// Drawing and an effect off the chord voice need 1.13, whose drawing
-    /// request grew in place (#240).
+    /// Drawing on the page, and an effect off the chord voice.
     #[test]
-    fn drawing_and_chord_voice_need_interface_1_13() {
-        let json = |interface: &str| {
-            format!(
-                r#"{{"interface": "{interface}", "id": "me.clips", "name": "Clips",
-                    "version": "0.1.0", "draws": true,
-                    "effects": [{{"id": "play", "name": "Play", "chord_voice": false}}]}}"#
-            )
-        };
-        let m: Manifest = serde_json::from_str(&json("1.13")).unwrap();
+    fn drawing_and_chord_voice_are_declared() {
+        let m: Manifest = serde_json::from_str(
+            r#"{"interface": "2.0", "id": "me.clips", "name": "Clips",
+                "version": "0.1.0", "draws": true,
+                "effects": [{"id": "play", "name": "Play", "chord_voice": false}]}"#,
+        )
+        .unwrap();
         assert!(m.problems().is_empty(), "{:?}", m.problems());
-        assert!(!m.effects[0].chord_voice);
-        let m: Manifest = serde_json::from_str(&json("1.12")).unwrap();
-        assert_eq!(
-            m.problems(),
-            [
-                "drawing on the page needs interface 1.13, and the manifest asks for 1.12",
-                "an effect's chord_voice needs interface 1.13, and the manifest asks for 1.12"
-            ]
-        );
+        assert!(m.draws && !m.effects[0].chord_voice);
         // Without the key, an effect runs on chord voices too.
         let e: InstrumentSpec = serde_json::from_str(r#"{"id": "e", "name": "E"}"#).unwrap();
         assert!(e.chord_voice);
     }
 
-    /// A tool's options schema needs 1.14 and is an object.
+    /// A tool's options schema is an object.
     #[test]
-    fn a_tools_options_need_interface_1_14() {
-        let json = |interface: &str, options: &str| {
+    fn a_tools_options_are_a_schema() {
+        let json = |options: &str| {
             format!(
-                r#"{{"interface": "{interface}", "id": "me.tools", "name": "Tools",
+                r#"{{"interface": "2.0", "id": "me.tools", "name": "Tools",
                     "version": "0.1.0",
                     "tools": [{{"id": "up", "name": "Up", "options": {options}}}]}}"#
             )
         };
         let schema = r#"{"type": "object", "properties": {"by": {"type": "integer"}}}"#;
-        let m: Manifest = serde_json::from_str(&json("1.14", schema)).unwrap();
+        let m: Manifest = serde_json::from_str(&json(schema)).unwrap();
         assert!(m.problems().is_empty(), "{:?}", m.problems());
         assert!(m.tools[0].options.is_some());
-        let m: Manifest = serde_json::from_str(&json("1.13", schema)).unwrap();
-        assert_eq!(
-            m.problems(),
-            ["a tool's options need interface 1.14, and the manifest asks for 1.13"]
-        );
-        let m: Manifest = serde_json::from_str(&json("1.14", "3")).unwrap();
+        let m: Manifest = serde_json::from_str(&json("3")).unwrap();
         assert!(m.problems()[0].contains("JSON Schema"));
     }
 
@@ -1580,41 +1347,38 @@ mod tests {
         assert!(drawn(10.0, 1.5).problem().is_some());
     }
 
-    /// An export's options name one of the plugin's dialogs, and need 1.11.
+    /// An export's options name one of the plugin's views whose place is
+    /// the export dialog.
     #[test]
-    fn an_exports_options_are_a_dialog_and_need_interface_1_11() {
-        let json = |interface: &str, area: &str, options: &str| {
+    fn an_exports_options_are_an_export_view() {
+        let json = |place: &str, options: &str| {
             format!(
-                r#"{{"interface": "{interface}", "id": "me.export", "name": "Export",
-                    "version": "0.1.0",
-                    "tabs": [{{"id": "flac-options", "title": "FLAC", "area": "{area}"}}],
+                r#"{{"interface": "2.0", "id": "me.export", "name": "Export",
+                    "version": "0.1.0", "ui": "ui/export.slint",
+                    "views": [{{"id": "flac-options", "component": "Flac", "place": "{place}",
+                        "title": "FLAC"}}],
                     "exporters": [{{"id": "flac", "name": "FLAC Audio", "extension": "flac",
                         "kind": "audio" {options}}}]}}"#
             )
         };
-        let m: Manifest = serde_json::from_str(&json("1.4", "right", "")).unwrap();
+        let m: Manifest = serde_json::from_str(&json("export", "")).unwrap();
         assert_eq!(m.exporters[0].options, None);
         assert!(m.problems().is_empty(), "{:?}", m.problems());
         let with = r#", "options": "flac-options""#;
-        let m: Manifest = serde_json::from_str(&json("1.11", "dialog", with)).unwrap();
+        let m: Manifest = serde_json::from_str(&json("export", with)).unwrap();
         assert_eq!(m.exporters[0].options.as_deref(), Some("flac-options"));
         assert!(m.problems().is_empty(), "{:?}", m.problems());
-        let m: Manifest = serde_json::from_str(&json("1.10", "dialog", with)).unwrap();
-        assert_eq!(
-            m.problems(),
-            ["an export's options need interface 1.11, and the manifest asks for 1.10"]
-        );
-        let m: Manifest = serde_json::from_str(&json("1.11", "right", with)).unwrap();
+        let m: Manifest = serde_json::from_str(&json("right", with)).unwrap();
         assert_eq!(
             m.problems(),
             [
-                "exporter \"flac\": its options \"flac-options\" must be one of the plugin's views whose place is \"export\" (or, before interface 1.15, a tab whose area is \"dialog\")"
+                "exporter \"flac\": its options \"flac-options\" must be one of the plugin's views whose place is \"export\""
             ]
         );
     }
 
     #[test]
-    fn views_are_checked_and_need_interface_1_15() {
+    fn views_are_checked() {
         let json = |interface: &str, views: &str| {
             format!(
                 r#"{{"interface": "{interface}", "id": "a.b", "name": "A", "version": "1.0.0",
@@ -1629,18 +1393,13 @@ mod tests {
             {"id": "chat", "component": "Chat", "place": "right", "title": "Chat"},
             {"id": "amp", "component": "AmpSection", "place": "track", "title": "Amp"},
             {"id": "ogg-options", "component": "OggOptions", "place": "export"}"#;
-        let m: Manifest = serde_json::from_str(&json("1.15", good)).unwrap();
+        let m: Manifest = serde_json::from_str(&json("2.0", good)).unwrap();
         assert!(m.problems().is_empty(), "{:?}", m.problems());
-        let m: Manifest = serde_json::from_str(&json("1.14", good)).unwrap();
-        assert_eq!(
-            m.problems(),
-            ["views need interface 1.15, and the manifest asks for 1.14"]
-        );
         let bad = r#"{"id": "m", "component": "9 lives", "place": "window"},
             {"id": "m", "component": "Chat", "place": "left"},
             {"id": "tone", "component": "Tone", "place": "track", "title": "Tone"},
             {"id": "ogg-options", "component": "OggOptions", "place": "export"}"#;
-        let m: Manifest = serde_json::from_str(&json("1.15", bad)).unwrap();
+        let m: Manifest = serde_json::from_str(&json("2.0", bad)).unwrap();
         assert_eq!(
             m.problems(),
             [
@@ -1653,7 +1412,7 @@ mod tests {
     }
 
     #[test]
-    fn interface_1_3_keys_are_checked() {
+    fn folders_track_sections_and_cpu_are_checked() {
         let json = |interface: &str, extra: &str| {
             format!(
                 r#"{{"interface": "{interface}", "id": "me.nam", "name": "NAM",
@@ -1663,7 +1422,7 @@ mod tests {
         let keys = r#", "folders": ["nam", "soundfonts"],
             "track_sections": [{"id": "amp", "title": "Amp", "plays": ["fretted"]}],
             "conditions": {"arch": ["x86_64"], "cpu": ["avx2", "fma"]}"#;
-        let m: Manifest = serde_json::from_str(&json("1.3", keys)).unwrap();
+        let m: Manifest = serde_json::from_str(&json("2.0", keys)).unwrap();
         assert!(m.problems().is_empty(), "{:?}", m.problems());
         assert_eq!(m.folders, ["nam", "soundfonts"]);
         // A folder of the plugin's own needs a name
@@ -1674,13 +1433,13 @@ mod tests {
                     .unwrap();
             m.problems()
         };
-        assert!(own("1.8", "impulses").is_empty());
-        assert!(own("1.8", "my-captures2").is_empty());
+        assert!(own("2.0", "impulses").is_empty());
+        assert!(own("2.0", "my-captures2").is_empty());
         for bad in [
             "plugins", "data", "cache", "a.b", "../x", "Up", "", "a/b", "a--b",
         ] {
             assert!(
-                own("1.8", bad)
+                own("2.0", bad)
                     .iter()
                     .any(|p| p.contains("a folder's name")),
                 "{bad}"
@@ -1689,19 +1448,10 @@ mod tests {
         assert!(!is_folder_name(&"a".repeat(FOLDER_NAME_MAX + 1)));
         assert!(m.track_sections[0].shows_for(InstrumentClass::Fretted));
         assert!(!m.track_sections[0].shows_for(InstrumentClass::Drums));
-        let old: Manifest = serde_json::from_str(&json("1.2", keys)).unwrap();
-        assert_eq!(
-            old.problems(),
-            [
-                "track sections need interface 1.3, and the manifest asks for 1.2",
-                "shared folders need interface 1.3, and the manifest asks for 1.2",
-                "processor features (conditions \"cpu\") need interface 1.3, and the manifest asks for 1.2",
-            ]
-        );
         assert_eq!(m.conditions.cpu, ["avx2", "fma"]);
         let bad = r#", "folders": ["nam", "nam"],
             "track_sections": [{"id": "Amp", "title": " ", "plays": []}]"#;
-        let m: Manifest = serde_json::from_str(&json("1.3", bad)).unwrap();
+        let m: Manifest = serde_json::from_str(&json("2.0", bad)).unwrap();
         assert_eq!(m.problems().len(), 4, "{:?}", m.problems());
     }
 
@@ -1773,7 +1523,7 @@ mod tests {
     }
 
     #[test]
-    fn needs_and_replaces_are_checked_and_need_interface_1_4() {
+    fn needs_and_replaces_are_checked() {
         let m = |interface: &str, rest: &str| -> Manifest {
             serde_json::from_str(&format!(
                 r#"{{"interface": "{interface}", "id": "me.amp", "name": "Amp",
@@ -1783,17 +1533,10 @@ mod tests {
         };
         let good = r#", "needs": [{"id": "oxiguitar.midi", "version": "1.0.0"}],
             "replaces": ["me.old-amp"]"#;
-        assert!(m("1.4", good).problems().is_empty());
-        assert_eq!(
-            m("1.3", good).problems(),
-            [
-                "the key \"needs\" needs interface 1.4, and the manifest asks for 1.3",
-                "the key \"replaces\" needs interface 1.4, and the manifest asks for 1.3",
-            ]
-        );
+        assert!(m("2.0", good).problems().is_empty());
         assert_eq!(
             m(
-                "1.4",
+                "2.0",
                 r#", "needs": [{"id": "me.amp", "version": "1.0.0"},
                                {"id": "Bad Id", "version": "1.0.0"},
                                {"id": "oxiguitar.midi", "version": "1.0.0"}],
@@ -1810,7 +1553,7 @@ mod tests {
         // A need's version is a version.
         assert!(
             serde_json::from_str::<Manifest>(
-                r#"{"interface": "1.4", "id": "me.amp", "name": "Amp", "version": "1.0.0",
+                r#"{"interface": "2.0", "id": "me.amp", "name": "Amp", "version": "1.0.0",
             "needs": [{"id": "oxiguitar.midi", "version": "one"}]}"#
             )
             .is_err()

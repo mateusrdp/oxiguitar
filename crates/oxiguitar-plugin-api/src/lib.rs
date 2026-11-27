@@ -19,8 +19,9 @@
 //!   2 grows through lists of extensions instead of new versions.
 //! - [`signature`] and [`class`]: how the host picks a format plugin for a
 //!   file and an instrument plugin for a track, from the manifest alone.
-//! - [`tab`] and [`display`]: plugin tabs, made of standard widgets the
-//!   core draws and a canvas the plugin draws (interface 1.1).
+//! - [`view`]: the plugin's own UI, components of its `.slint` file that
+//!   the core runs (#346), and [`display`]: what a plugin draws on the
+//!   page.
 //! - [`event`]: what the core pushes to plugins as it happens: the score
 //!   opened or changed, the selection, the playback position (interface
 //!   1.1).
@@ -44,33 +45,29 @@
 //!   with its own size), new manifest keys. Nothing that exists changes. A
 //!   plugin states the minor version it was built for; the host sends it
 //!   only what that minor version knows.
-//! - Interface 1 is frozen from OxiGuitar 0.2: what it holds never
-//!   changes, and later versions only add.
-//! - 1.0: formats, instruments (declared), services, footer messages and
-//!   settings. 1.1: tabs, the canvas's display list, pushed events, the
-//!   open score. 1.2 (frozen with OxiGuitar 0.5): the score version 2, a
-//!   selection that names voice, string and several tracks, and edits a
-//!   plugin submits as undoable commands, with plugin tools in the Tools
-//!   menu. 1.3 (frozen with OxiGuitar 0.9, for the player;
-//!   docs/design/player.md): a settings window per plugin (retired in 1.9),
-//!   sections of the
-//!   track dialog, footer messages with a link, the plugin's own folders
-//!   and the shared ones, instruments, effects and audio devices on the
-//!   audio thread, and the `cpu` condition. 1.4 (frozen with OxiGuitar 0.11): a link among a tab's widgets,
-//!   exporters in File → Export (`exporters` in the manifest; audio exports,
-//!   which the core renders and the plugin encodes), plugins that need or
-//!   replace other plugins (`needs`, `replaces`) and advice dialogs. 1.5
-//!   (frozen with OxiGuitar 0.14): effects that follow their track's settings while
-//!   the song plays (`message::Request::UpdateEffect`). 1.6 and 1.7: the
-//!   score version 2's notation and XML signatures. 1.8 (OxiGuitar 0.20):
-//!   tools on the palette, menus and toolbar, dialogs, plugin data, drawing
-//!   and performing. 1.9: tools that don't edit the score (`edits: false`),
-//!   which open a plugin's own settings dialog; the core's settings
-//!   windows are retired. 1.10: the two shared folders 1.3 named
-//!   (`soundfonts`, `nam`) are retired: a plugin asks for its folders by
-//!   name (1.8). 1.11: an export's own choices (`options` on an
-//!   exporter, one of the plugin's dialogs), shown in the export dialog
-//!   under its list of formats.
+//! - Interface 2.0 (OxiGuitar 0.24, mateusrdp/oxiguitar#346) is interface
+//!   1.16 without the plugin UI the core drew: tabs and dialogs made of
+//!   widget rows, the canvas and surfaces, track sections' widgets, and the
+//!   settings windows and named shared folders 1.9 and 1.10 had already
+//!   retired. A plugin's UI is its own `.slint` file ([`view`]). A host for
+//!   interface 2 loads no plugin built for interface 1.
+//! - What interface 2.0 holds from 1.x, by the minor version that brought
+//!   it. 1.0: formats, instruments (declared), services, footer messages
+//!   and settings. 1.1: pushed events, the open score. 1.2: the score
+//!   version 2, a selection that names voice, string and several tracks,
+//!   and edits a plugin submits as undoable commands, with plugin tools.
+//!   1.3: track sections, footer messages with a link, the plugin's own
+//!   folders and the shared ones, instruments, effects and audio devices
+//!   on the audio thread, and the `cpu` condition. 1.4: exporters in File
+//!   → Export, plugins that need or replace other plugins and advice
+//!   dialogs. 1.5: effects that follow their track's settings while the
+//!   song plays. 1.6 and 1.7: the score version 2's notation and XML
+//!   signatures. 1.8: tools on the palette, menus and toolbar, plugin
+//!   data, drawing and performing. 1.9: tools that don't edit the score.
+//!   1.11: an export's own choices. 1.12 and 1.13: performing and drawing
+//!   as they are now. 1.14: running tools, measuring text, copying. 1.15:
+//!   views in Slint and the plugin's files. 1.16: plugin files as
+//!   archives, with the `.slint` file and assets beside the manifest.
 //!
 //! # Licence
 //!
@@ -88,7 +85,6 @@ pub mod realtime;
 pub mod score;
 pub mod score2;
 pub mod signature;
-pub mod tab;
 pub mod view;
 
 mod blob;
@@ -97,11 +93,11 @@ pub use blob::Blob;
 pub use message::{DecodeError, decode, encode};
 
 /// The interface version this crate describes: (major, minor).
-pub const INTERFACE: (u32, u32) = (1, 16);
+pub const INTERFACE: (u32, u32) = (2, 0);
 
 /// The symbol a plugin exports. It returns a pointer to the plugin's
 /// [`abi::PluginTableV1`].
-pub const ENTRY_SYMBOL: &str = "oxiguitar_plugin_v1";
+pub const ENTRY_SYMBOL: &str = "oxiguitar_plugin_v2";
 
 /// The name of the section holding the manifest, on ELF (Linux, Android)
 /// and Mach-O (macOS; in the `__DATA` segment).

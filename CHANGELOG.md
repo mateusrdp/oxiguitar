@@ -4,7 +4,15 @@ All notable changes to OxiGuitar. The format follows [Keep a Changelog](https://
 
 ## [Unreleased]
 
+### Changed
+
+- **Plugin interface 2.0** (#346, [ADR 0015](docs/adr/0015-interface-2.md); the SDK crates are at 2.0.0): interface 1.16 without the plugin UI OxiGuitar drew itself. A plugin's UI is its own `.slint` file: windows, panels, Track-tab sections and an export's options. **Plugins built for interface 1 no longer load**, and Tools → Plugins says they need updating; every plugin is released again for 2.0. The plugin guide's pages, the template (its Statistics tab is now a panel in Slint) and the versions page say so.
+- `scripts/released-plugins.sh` takes the latest release of each plugin whose files are built for this core's interface major version.
+
 ### Removed
+
+- **The core's plugin tabs, dialogs and widgets** (#346): tabs and dialogs made of widget rows, the canvas, surfaces, links among widgets and Track-tab sections drawn from widgets, with their messages (`Request::Tab`, `TabEvent`, `TabClosed`, `TrackSection`, `TrackSectionEvent`; `HostRequest::Redraw`, `ShowTab`, `OpenDialog`), the manifest's `tabs`, and what interfaces 1.9 and 1.10 had retired. The window's tab thread, plugin dialog card and canvas drawing go with them.
+- The fuzz target `plugin_tab`; `plugin_drawing` reads a plugin's drawings instead.
 
 - `scripts/repack-plugins.py` and its step in `scripts/released-plugins.sh` (#347): every plugin is now released as an archive, so the core's tests and release builds take the releases as they are.
 

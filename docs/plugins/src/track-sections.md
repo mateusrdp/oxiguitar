@@ -10,12 +10,17 @@ Declare each section in the manifest:
 ]
 ```
 
-`plays` and `does_not_play` pick the tracks by [instrument class](instruments.md), as instruments do; without them a section shows for every track. Then return it from `Plugin::track_section(id)`, as a value implementing `TrackSection`:
+`plays` and `does_not_play` pick the tracks by [instrument class](instruments.md), as instruments do; without them a section shows for every track. The section itself is one of your [views](ui.md), whose place is `track`, with the same id:
 
-- `content(track, settings)` returns the rows to show: the widgets of a [tab](tabs.md), without a canvas. `track` is a `TrackInfo` (its index, name and class); `settings` is the track's settings for this plugin, a JSON object, empty the first time.
-- `on(track, settings, widget, event)` changes `settings` to match what the user did; the section is shown again from the new settings.
+```json
+"views": [
+  { "id": "amp", "component": "AmpSection", "place": "track", "title": "Amp" }
+]
+```
 
-The plugin keeps nothing itself: OxiGuitar holds each track's settings and sends them with every call. They change with every use of a widget, and OxiGuitar then writes them into the track as one change the user can undo. A section works while the song plays too (OxiGuitar 0.14): its settings are the one edit allowed then. An effect built for interface 1.5 follows them at once, as it plays ([Following settings while the song plays](instruments.md#following-settings-while-the-song-plays)); anything else (an instrument's settings, an effect that can't follow) takes them when the song next starts. Moving a section up or down, which changes the order of the track's effects, waits for the song to stop. Merely showing a section changes nothing. An error from `on` is said in the footer, and the settings stay as they were.
+When the Track tab shows a track the section is for, OxiGuitar makes the view and calls `Ui::shown(view, Some(track))`: `track.track` is a `TrackInfo` (its index, name and class), `track.settings` the track's settings for this plugin, a JSON object, `{}` the first time. Set the view's properties from them. When the user changes something, change the settings and hand them back with `host.set_track_settings(view, &settings)`; OxiGuitar writes them into the track as one change the user can undo. The contract suite refuses a track section with no view of its own (since interface 2.0, when OxiGuitar stopped drawing sections' widgets itself).
+
+A section works while the song plays too (OxiGuitar 0.14): its settings are the one edit allowed then. An effect built for interface 1.5 or later follows them at once, as it plays ([Following settings while the song plays](instruments.md#following-settings-while-the-song-plays)); anything else (an instrument's settings, an effect that can't follow) takes them when the song next starts. Moving a section up or down, which changes the order of the track's effects, waits for the song to stop. Merely showing a section changes nothing. An error from a callback is said in the footer, and the settings stay as they were.
 
 No score format holds a plugin's settings, so OxiGuitar saves them beside the score: `song.gp3` keeps them in `song.gp3.oxg`, a small JSON file, one entry per track. Saving the score writes it, opening reads it, and `oxiguitar-cli convert` carries it to the new file. A track whose place changed (because another program moved tracks) finds its entry by name. A plugin gets a track's settings again when the player prepares that track (with the instrument interface).
 

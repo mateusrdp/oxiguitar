@@ -9,10 +9,9 @@
 //! the next plugin that recognises it, as if the test plugin had never been
 //! installed (docs/design/plugins.md, "How the host loads and chooses").
 //!
-//! Built for interface 1.1, it hears the selection as 1.1 gives it
-//! (`Event::Selection`, where the test plugin, built for 1.2, hears
-//! `Event::Selection2`), and says each in the footer as a warning,
-//! starting "heard", for the contract tests to see.
+//! It hears the selection (`Event::Selection2`; interface 2 sends no
+//! other), and says each in the footer as a warning, starting "heard",
+//! for the contract tests to see.
 
 use oxiguitar_plugin::score::{Score, ScoreInfo};
 use oxiguitar_plugin::{Error, ErrorKind, Event, FormatReader, Host, Level, Plugin, Read};

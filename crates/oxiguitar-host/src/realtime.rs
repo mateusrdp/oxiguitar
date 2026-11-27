@@ -219,13 +219,6 @@ impl Updater {
     /// preparing again for these settings).
     pub fn update(&self, prepare: PrepareEffect, previous: &str) -> Result<bool, Error> {
         let h = &self.held;
-        let knows = h.plugins.found()[h.index]
-            .manifest
-            .as_ref()
-            .is_some_and(|m| m.knows_minor(5));
-        if !knows {
-            return Ok(false);
-        }
         match h.plugins.send_index(
             h.index,
             &Request::UpdateEffect {

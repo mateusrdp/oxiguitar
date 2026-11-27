@@ -73,6 +73,11 @@ sha256() {
     "$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
 }
 
+# The interface major version this core loads, from the interface crate.
+here="$(cd "$(dirname "$0")" && pwd)"
+major="$(sed -n 's/^pub const INTERFACE: (u32, u32) = (\([0-9]*\), [0-9]*);$/\1/p' \
+    "$here/../crates/oxiguitar-plugin-api/src/lib.rs")"
+[[ -n "$major" ]] || { echo "released-plugins.sh: the interface version wasn't found" >&2; exit 1; }
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 rm -rf "$out/files"
@@ -81,28 +86,55 @@ versions=()
 for name in "$@"; do
     repo="mateusrdp/oxiguitar-$name"
     # The latest release that is not a draft (a pre-release counts while the
-    # plugins are 0.x).
-    tag="$(api "https://api.github.com/repos/$repo/releases?per_page=10" \
+    # plugins are 0.x) whose plugin files are built for this core's
+    # interface major version: after a new major version (interface 2.0,
+    # OxiGuitar 0.24) the releases before it can't be loaded, and a
+    # pre-release built for the new one serves until the plugin's release.
+    found=""
+    for tag in $(api "https://api.github.com/repos/$repo/releases?per_page=10" \
         | "$py" -c 'import json,sys
 for r in json.load(sys.stdin):
     if not r["draft"]:
-        print(r["tag_name"]); break')"
-    [[ -n "$tag" ]] || { echo "released-plugins.sh: $repo has no published release" >&2; exit 1; }
-    version="${tag#v}"
-    zip="oxiguitar-$name-$version-$target.zip"
-    base="https://github.com/$repo/releases/download/$tag"
-    curl -fsSL --retry 5 -o "$work/$zip" "$base/$zip"
-    curl -fsSL --retry 5 -o "$work/SHA256SUMS" "$base/SHA256SUMS"
-    wanted="$(awk -v n="$zip" '$2 == n || $2 == "*" n { print $1 }' "$work/SHA256SUMS")"
-    [[ -n "$wanted" && "$wanted" == "$(sha256 "$work/$zip")" ]] \
-        || { echo "released-plugins.sh: $zip does not match SHA256SUMS" >&2; exit 1; }
-    "$py" - "$work/$zip" "$out/files" <<'PY'
-import sys, zipfile
-with zipfile.ZipFile(sys.argv[1]) as z:
+        print(r["tag_name"])'); do
+        version="${tag#v}"
+        zip="oxiguitar-$name-$version-$target.zip"
+        base="https://github.com/$repo/releases/download/$tag"
+        curl -fsSL --retry 5 -o "$work/$zip" "$base/$zip" || continue
+        curl -fsSL --retry 5 -o "$work/SHA256SUMS" "$base/SHA256SUMS"
+        wanted="$(awk -v n="$zip" '$2 == n || $2 == "*" n { print $1 }' "$work/SHA256SUMS")"
+        [[ -n "$wanted" && "$wanted" == "$(sha256 "$work/$zip")" ]] \
+            || { echo "released-plugins.sh: $zip does not match SHA256SUMS" >&2; exit 1; }
+        if "$py" - "$work/$zip" "$out/files" "$major" <<'PY'
+import io, json, sys, tarfile, zipfile
+zip_path, out, major = sys.argv[1], sys.argv[2], sys.argv[3]
+files = {}
+with zipfile.ZipFile(zip_path) as z:
     for n in z.namelist():
         if n.endswith(".oxp") and "/" not in n:
-            open(f"{sys.argv[2]}/{n}", "wb").write(z.read(n))
+            files[n] = z.read(n)
+def interface_major(data):
+    # A plugin file is a tar archive whose first member is manifest.json.
+    try:
+        with tarfile.open(fileobj=io.BytesIO(data)) as t:
+            m = t.extractfile(t.getmember("manifest.json")).read()
+        return json.loads(m)["interface"].split(".")[0]
+    except Exception:
+        return None
+if not files or any(interface_major(d) != major for d in files.values()):
+    sys.exit(1)
+for n, d in files.items():
+    open(f"{out}/{n}", "wb").write(d)
 PY
+        then
+            found="$version"
+            break
+        fi
+    done
+    [[ -n "$found" ]] || {
+        echo "released-plugins.sh: no release of $repo among its last ten is built for plugin interface $major" >&2
+        exit 1
+    }
+    version="$found"
     versions+=("oxiguitar-$name $version")
 done
 

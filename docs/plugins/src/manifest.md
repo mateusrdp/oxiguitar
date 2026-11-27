@@ -26,7 +26,7 @@ The template's:
 
 | Key | Required | What it is |
 | --- | --- | --- |
-| `interface` | yes | The interface version the plugin was built for, `"MAJOR.MINOR"`: `"1.0"`, or the version that brought what it uses ([Interface versions](versions.md)) |
+| `interface` | yes | The interface version the plugin was built for, `"MAJOR.MINOR"`: `"2.0"` ([Interface versions](versions.md)) |
 | `id` | yes | Unique among all plugins: 1 to 64 lowercase letters and digits, in parts joined by single `.` or `-`. Start it with your own name (`jane.chord-finder`); ids starting `oxiguitar.` are ours. Never change it once released: settings and the disabled list refer to it |
 | `name` | yes | What users see, in the plugin manager and in footer messages |
 | `version` | yes | `MAJOR.MINOR.PATCH`, optionally `-PRERELEASE` (`1.2.0-beta.1`), equal to the crate's version. Of two files with the same `id`, the higher version is used |
@@ -40,12 +40,11 @@ The template's:
 | `services` | no | The services it implements ([Services](services.md)) |
 | `instruments` | no | The instruments it offers the player; used from interface 1.3 ([Instruments](instruments.md)) |
 | `effects` | no | The effects it offers a track, after its instrument; interface 1.3 ([Instruments](instruments.md)) |
-| `tabs` | no | Its tabs, and from interface 1.8 its dialogs; interface 1.1 ([Tabs](tabs.md)) |
 | `events` | no | The kinds of event it wants: `"score"`, `"selection"`, `"playback"`; interface 1.1 ([Events](events.md)) |
 | `draws` | no | It draws on the page where it keeps data; interface 1.13 (1.8 to 1.12 had a shorter request) ([Drawing on the page](drawing.md)) |
 | `performs` | no | It plays each track's notes its own way; interface 1.12 (1.8 to 1.11 had a shorter request) ([Playing the notes your own way](playing.md)) |
 | `tools` | no | Its entries in the Tools menu, and from interface 1.8 in any menu and on the palette; interface 1.2. From interface 1.14 a tool's `options`, a JSON Schema, lets other plugins run it as told ([Tools](tools.md)) |
-| `track_sections` | no | Its sections of the Track tab; interface 1.3 ([Track sections](track-sections.md)) |
+| `track_sections` | no | Its sections of the Track tab, each shown by a view of the same id; interface 1.3 ([Track sections](track-sections.md)) |
 | `folders` | no | The folders it shares with the user, by name, beside `plugins` in OxiGuitar's folders; OxiGuitar creates the user's at start, and the plugin asks where each is by its name (interface 1.8) ([Settings](settings.md#shared-folders)) |
 | `exporters` | no | Its formats in File → Export Audio…; interface 1.4, and 1.11 for an exporter's `options` ([Exporters](exporters.md)) |
 | `needs` | no | The plugins it can't work without, each `{"id": …, "version": …}` with the lowest version that will do; interface 1.4 (below) |
@@ -103,17 +102,16 @@ A plugin whose conditions don't hold is listed in Tools → Plugins with the rea
 
 OxiGuitar refuses a manifest that breaks these, and Tools → Plugins names the first problem; `cargo test` (through `export_plugin!`) names them all:
 
-- the ids are valid and unique: the plugin's; each format's; each instrument's; each tab's; each service's within its interface;
-- names and tab titles aren't empty;
+- the ids are valid and unique: the plugin's; each format's; each instrument's; each view's; each service's within its interface;
+- names and views' titles aren't empty;
 - a format reads or writes, and one that reads has at least one signature;
 - extensions are lowercase and without the dot (`"gp5"`, not `".GP5"`);
-- tabs and events need interface 1.1;
-- `draws` and an effect's `chord_voice` need interface 1.13, `performs` 1.12;
-- a toolbar button, a folder of the plugin's own name (1 to 24 lowercase letters, digits and single hyphens; not `plugins`, `data` or `cache`),
-- a palette button, a menu, a dialog, `follows_score` and `order` need interface 1.8, and a palette button has a symbol or a text of at most 5 characters.
+- a folder of the plugin's own name has 1 to 24 lowercase letters, digits and single hyphens, and isn't `plugins`, `data` or `cache`;
+- a palette button has a symbol or a text of at most 5 characters;
+- a track section's view has a track section of the same id, and an export's `options` name a view whose place is `export`.
 
 `cargo test` also checks what only the code can tell:
 
-- the manifest asks for an interface this SDK has (1.0 or 1.1), and its version is the crate's;
-- it has no key the SDK doesn't know;
-- every format, service and tab declared is implemented, and every tab's contents can be shown.
+- the manifest asks for an interface this SDK has (2.0 or an earlier 2.x), and its version is the crate's;
+- it has no key the SDK doesn't know (a plugin of interface 1 that still declares `tabs` is told so);
+- every format, service, tool and view declared is implemented, and every track section has its view.

@@ -46,7 +46,7 @@ A `Drawn` is a box measured in **staff spaces** (the distance between two lines 
 
 - `place`: the index of its place in `places`;
 - `width` and `height`: the box, at most 40 staff spaces each;
-- `items`: what is in it, the same items as a canvas's ([Tabs](tabs.md#the-canvas)), from the box's top left corner, y downwards, a text's `size` in staff spaces too; at most 2000.
+- `items`: what is in it ([Items](#items), below), from the box's top left corner, y downwards, a text's `size` in staff spaces too; at most 2000.
 
 OxiGuitar stands every box on the baseline of a lane of its own above the staff (above the tablature when the staff has one), the outermost of the lanes of marks, as tall as the tallest box in that line of music. A beat's boxes start at its column and go rightwards; a bar's are drawn at its first beat, before the beat's own. The column is made wide enough for them. Draw in the four colour roles; they follow the page's theme.
 
@@ -74,3 +74,24 @@ A shift-click only selects, and a click while the song plays moves the playing p
 ## What it isn't
 
 A drawing is the plugin's view of its data, made anew when the data changes; it isn't kept anywhere. To keep something, keep data ([Tools](tools.md#your-own-data-and-marks-on-beats)). A plugin draws nothing at places without its data: data on the score itself or on a bar of every track has no place on the page yet.
+
+## Items
+
+A drawing's `items` are drawn in order, later ones over earlier ones (`oxiguitar_plugin::display`):
+
+| Item | Draws |
+| --- | --- |
+| `Line { from, to, width, paint }` | A straight line with square ends |
+| `Rect { at, width, height, paint }` | A filled rectangle, `at` its top-left corner |
+| `Path { cmds, fill, stroke }` | A shape of `MoveTo`, `LineTo`, `CubicTo` and `Close`, filled (non-zero winding), stroked (`(width, paint)`), or both |
+| `Text { text, at, size, font, anchor, paint }` | One line of text on its baseline at `at`, starting, centred or ending there (`Anchor::Start`, `Middle`, `End`); `size` is the font's em in the drawing's units |
+| `Image { at, width, height, columns, rows, pixels }` (interface 1.14) | A picture of `columns` × `rows` pixels (each side 1 to 4096), premultiplied RGBA a byte a channel, row by row from the top, scaled to fill the box. A drawing on the page leaves pictures out |
+
+Colours are **roles**, resolved by the page's theme, so a drawing follows the dark interface by itself:
+
+| `Paint` | For |
+| --- | --- |
+| `Ink` | Lines, shapes and text |
+| `Page` | The page's background colour: for knocking shapes out |
+| `Accent` | Highlights: the selection, the playing note |
+| `Muted` | Secondary marks |

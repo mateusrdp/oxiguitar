@@ -2,11 +2,10 @@
 // Copyright (C) 2026 Mateus Rocha de Paula and the OxiGuitar contributors
 
 //! The plugins' sections of the Track tab (plugin interface 1.3): which
-//! sections the dialog shows for a track, what each shows, and what the
-//! track's settings for each plugin become while the dialog is open. On
-//! OK they go into the track as part of the dialog's one change; on Cancel
-//! they are dropped. The plugins keep nothing: the settings travel with
-//! every request. The sections of plugins with effects for the track come
+//! sections the tab shows for a track, and what the track's settings for
+//! each plugin become. Each section is its plugin's own view in Slint
+//! (`plugin_ui.rs`), told the track and its settings when it is made; the
+//! settings it hands back come here. The sections of plugins with effects for the track come
 //! last, in the order the effects run, and can be moved up and down, which
 //! changes that order (#152). No window code here.
 
@@ -15,10 +14,7 @@ use std::collections::BTreeMap;
 use oxiguitar_host::Plugins;
 use oxiguitar_host::api::class::InstrumentClass;
 use oxiguitar_host::api::message::TrackInfo;
-use oxiguitar_host::api::tab::{TabContent, TabEvent};
 use oxiguitar_model::Track;
-
-use crate::plugin_tabs::Request;
 
 /// The settings a plugin starts from for a track that has none.
 pub(crate) const NONE: &str = "{}";
@@ -32,12 +28,6 @@ pub(crate) struct Shown {
     pub(crate) section: String,
     /// Its heading.
     pub(crate) title: String,
-    /// What it shows: `None` until the plugin answers, then its contents
-    /// or why they can't be shown.
-    pub(crate) content: Option<Result<TabContent, String>>,
-    /// The section is its plugin's own view in Slint (interface 1.15),
-    /// which the plugin is never asked to describe.
-    pub(crate) view: bool,
 }
 
 /// The sections for one track, asked once (until the caret moves to
@@ -73,23 +63,24 @@ impl TrackSections {
                 effects.push(id.to_owned());
             }
         }
+        // A section is shown by its plugin's view of the same id; one with
+        // none (a manifest the contract suite refuses) isn't shown.
         let sections = plugins
             .track_sections(class)
             .into_iter()
-            .map(|s| {
+            .filter(|s| {
                 let id = oxiguitar_host::ViewId {
                     plugin: s.plugin_id().to_owned(),
                     view: s.spec.id.clone(),
                 };
-                Shown {
-                    plugin: id.plugin.clone(),
-                    section: s.spec.id.clone(),
-                    title: s.spec.title.clone(),
-                    content: None,
-                    view: plugins
-                        .view(&id)
-                        .is_some_and(|v| v.spec.place == oxiguitar_host::api::view::Place::Track),
-                }
+                plugins
+                    .view(&id)
+                    .is_some_and(|v| v.spec.place == oxiguitar_host::api::view::Place::Track)
+            })
+            .map(|s| Shown {
+                plugin: s.plugin_id().to_owned(),
+                section: s.spec.id.clone(),
+                title: s.spec.title.clone(),
             })
             .collect();
         let mut out = TrackSections {
@@ -181,81 +172,14 @@ impl TrackSections {
     pub(crate) fn settings_of(&self, plugin: &str) -> &str {
         self.settings.get(plugin).map_or(NONE, String::as_str)
     }
-
-    /// What to ask the tab thread for every section's contents.
-    pub(crate) fn asks(&self) -> Vec<Request> {
-        (0..self.sections.len())
-            .filter_map(|i| self.ask(i, None))
-            .collect()
-    }
-
-    /// What to ask the tab thread when the user used `widget` of the
-    /// section at `index` (`None` for its contents alone).
-    pub(crate) fn ask(&self, index: usize, event: Option<(String, TabEvent)>) -> Option<Request> {
-        let s = self.sections.get(index).filter(|s| !s.view)?;
-        Some(Request::Section {
-            dialog: self.dialog,
-            track: self.track.clone(),
-            plugin: s.plugin.clone(),
-            section: s.section.clone(),
-            settings: self.settings_of(&s.plugin).to_owned(),
-            event,
-        })
-    }
-
-    /// The tab thread answered for a section: its contents, and the track's
-    /// settings for its plugin. Returns whether anything shown changed.
-    /// Answers for another opening of the dialog change nothing.
-    pub(crate) fn answered(
-        &mut self,
-        dialog: u64,
-        plugin: &str,
-        section: &str,
-        answer: Result<(TabContent, String), String>,
-    ) -> bool {
-        if dialog != self.dialog {
-            return false;
-        }
-        let Some(shown) = self
-            .sections
-            .iter_mut()
-            .find(|s| s.plugin == plugin && s.section == section)
-        else {
-            return false;
-        };
-        match answer {
-            Ok((content, settings)) => {
-                shown.content = Some(Ok(content));
-                // A plugin's untouched settings aren't written into the
-                // track: `{}` stays absent.
-                if settings != self.settings_of(plugin) {
-                    self.settings.insert(plugin.to_owned(), settings);
-                }
-            }
-            Err(why) => shown.content = Some(Err(why)),
-        }
-        true
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use oxiguitar_host::api::tab::{Row, Widget};
     use oxiguitar_host::{SharedSettings, Unheard};
     use oxiguitar_model::Instrument;
 
     use super::*;
-
-    fn content(text: &str) -> TabContent {
-        TabContent {
-            rows: vec![Row {
-                widgets: vec![Widget::Label {
-                    text: text.into(),
-                    muted: false,
-                }],
-            }],
-        }
-    }
 
     fn sections() -> TrackSections {
         let plugins = Plugins::discover(
@@ -281,57 +205,18 @@ mod tests {
                 plugin: plugin.into(),
                 section: section.into(),
                 title: section.into(),
-                content: None,
-                view: false,
             });
         }
         s
     }
 
     #[test]
-    fn sections_start_from_the_track_s_settings_and_keep_the_plugins_answers() {
-        let mut s = sections();
+    fn sections_start_from_the_track_s_settings() {
+        let s = sections();
         assert_eq!(s.track.index, 3);
         assert_eq!(s.track.class, InstrumentClass::Fretted);
-        let asks = s.asks();
-        assert_eq!(asks.len(), 2);
-        assert!(matches!(
-            &asks[0],
-            Request::Section { dialog: 7, settings, event: None, .. } if settings == r#"{"gain":2}"#
-        ));
-        assert!(matches!(&asks[1], Request::Section { settings, .. } if settings == NONE));
-
-        // An untouched plugin's `{}` isn't written into the track.
-        assert!(s.answered(7, "me.cab", "cab", Ok((content("Cab"), NONE.into()))));
-        assert!(!s.settings.contains_key("me.cab"));
-        assert!(s.answered(
-            7,
-            "me.amp",
-            "amp",
-            Ok((content("Amp"), r#"{"gain":3}"#.into()))
-        ));
-        assert_eq!(s.settings_of("me.amp"), r#"{"gain":3}"#);
-        assert_eq!(s.sections[0].content, Some(Ok(content("Amp"))));
-
-        // A failure is shown in the section; the settings stay.
-        assert!(s.answered(7, "me.amp", "amp", Err("it crashed".into())));
-        assert_eq!(s.sections[0].content, Some(Err("it crashed".into())));
-        assert_eq!(s.settings_of("me.amp"), r#"{"gain":3}"#);
-
-        // An answer for an earlier opening, or a section it doesn't have,
-        // changes nothing.
-        assert!(!s.answered(6, "me.amp", "amp", Ok((content("Old"), "{}".into()))));
-        assert!(!s.answered(7, "me.amp", "other", Ok((content("No"), "{}".into()))));
-        assert_eq!(s.settings_of("me.amp"), r#"{"gain":3}"#);
-
-        let event = s
-            .ask(0, Some(("gain".into(), TabEvent::Slid(4.0))))
-            .unwrap();
-        assert!(matches!(
-            event,
-            Request::Section { settings, event: Some(_), .. } if settings == r#"{"gain":3}"#
-        ));
-        assert!(s.ask(5, None).is_none());
+        assert_eq!(s.settings_of("me.amp"), r#"{"gain":2}"#);
+        assert_eq!(s.settings_of("me.cab"), NONE);
     }
 
     #[test]
@@ -341,8 +226,6 @@ mod tests {
             plugin: plugin.into(),
             section: section.into(),
             title: section.into(),
-            content: None,
-            view: false,
         };
         s.sections = vec![
             shown("me.amp", "amp"),
