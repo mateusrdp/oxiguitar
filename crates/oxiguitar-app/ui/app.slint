@@ -1784,6 +1784,8 @@ export component AppWindow inherits Window {
     in property <[PluginMenuItem]> plugin-items-help;
     in property <[PluginMenuItem]> plugin-items-page;
     in property <[PluginMenuItem]> plugin-items-track;
+    // All plugin items, flat, for the Plugins menu.
+    in property <[PluginMenuItem]> plugin-items-plugins;
     in property <[PluginMenu]> plugin-menus;
     callback plugin-tool-picked(string);
     in property <bool> plugin-dialog-shown: false;
@@ -1835,6 +1837,7 @@ export component AppWindow inherits Window {
             MenuItem { title: "Open…"; shortcut: @keys(Control + O); activated => { root.open-file(); } }
             MenuItem { title: "Save"; enabled: root.has-score; shortcut: @keys(Control + S); activated => { root.save(); } }
             MenuItem { title: "Save As…"; enabled: root.has-score; shortcut: @keys(Control + Shift + S); activated => { root.save-as(); } }
+            MenuSeparator { }
             MenuItem { title: "Export PDF…"; enabled: root.has-score; activated => { root.export-pdf(); } }
             if root.exporters.length > 0 : MenuItem {
                 title: "Export Audio…";
@@ -1843,6 +1846,7 @@ export component AppWindow inherits Window {
             }
             if root.plugin-items-file.length > 0 : MenuSeparator { }
             for it in root.plugin-items-file : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
+            MenuSeparator { }
             MenuSeparator { }
             MenuItem { title: "Quit"; shortcut: @keys(Control + Q); activated => { root.quit(); } }
         }
@@ -1902,22 +1906,18 @@ export component AppWindow inherits Window {
                 enabled: (root.has-score || !tool.edits) && tool.enabled;
                 activated => { root.tool-picked(i); }
             }
-            MenuSeparator {}
-            // Guitar Pro 8's "Check bar duration" key.
-            MenuItem { title: "Next Bar That Doesn't Add Up"; enabled: root.bad-bars; shortcut: @keys(F4); activated => { root.next-bad-bar(); } }
-            MenuSeparator {}
             MenuItem { title: "Transpose…"; enabled: root.has-score; activated => { root.edit-command("transpose-all"); } }
             MenuItem { title: "Transpose Selection…"; enabled: root.has-score; activated => { root.edit-command("transpose-selection"); } }
             MenuItem { title: "Find Fingering"; enabled: root.has-score; activated => { root.edit-command("fingering-all"); } }
             MenuItem { title: "Find Fingering for Selection"; enabled: root.has-score; activated => { root.edit-command("fingering-selection"); } }
             MenuItem { title: "Fit Bars to Time Signature…"; enabled: root.has-score; activated => { root.edit-command("fit-all"); } }
             MenuItem { title: "Harmonize…"; enabled: root.has-score; activated => { root.edit-command("harmonize-all"); } }
-            MenuSeparator {}
-            MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
         }
-        for m in root.plugin-menus : Menu {
-            title: m.title;
-            for it in m.items : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
+        Menu {
+            title: "Plugins";
+            MenuItem { title: "Plugins…"; activated => { root.open-plugin-manager(); } }
+            MenuSeparator { }
+            for it in root.plugin-items-plugins : MenuItem { title: it.title; enabled: root.has-score || !it.edits; activated => { root.plugin-tool-picked(it.id); } }
         }
         // Second last, just before Help (#339).
         Menu {
@@ -1932,6 +1932,7 @@ export component AppWindow inherits Window {
             }
             MenuItem { title: "Dynamics"; checkable: true; checked <=> root.dynamics; activated => { root.settings-changed(); } }
             MenuItem { title: "Design Mode"; checkable: true; checked <=> root.design-mode; activated => { root.settings-changed(); } }
+            MenuItem { title: "Next Bar That Doesn't Add Up…"; enabled: root.bad-bars; shortcut: @keys(F4); activated => { root.next-bad-bar(); } }
             MenuSeparator { }
             MenuItem { title: "Toolbar"; checkable: true; checked <=> root.toolbar-shown; }
             Menu {
